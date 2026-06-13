@@ -11,8 +11,10 @@ Quando lo sviluppo principale sara' concluso, `PIANO_DI_LAVORO.md` potra' essere
 - Cartella locale:
   `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
-- Branch corrente creato per il setup: `milestone/01-setup`.
-- Remote `origin` non configurato automaticamente.
+- Milestone 2 ha aggiunto guardrail di qualita' e documentazione operativa.
+- Branch di lavoro ordinario: `main`.
+- Remote `origin` configurato:
+  `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Nessun commit o push eseguito.
 
 Prima di ogni feature verificare:
@@ -52,6 +54,7 @@ Comandi disponibili:
 - `npm run dev`.
 - `npm run lint`.
 - `npm run typecheck`.
+- `npm test`.
 - `npm run build`.
 
 File di setup rilevanti:
@@ -64,12 +67,110 @@ File di setup rilevanti:
 - `lib/supabase/service.ts`.
 - `.env.example`.
 - `docs/setup.md`.
+- `docs/workflow.md`.
 
 Note:
 
 - `.env.local` resta non tracciato.
 - `.env.example` contiene solo placeholder e URL pubblico previsto, senza segreti.
 - Non sono state create migration e non e' stato collegato alcun database reale.
+
+## Milestone 2 - qualita' e documentazione operativa
+
+Guardrail iniziali completati in questa cartella.
+
+Deliverable:
+
+- Script `test` aggiunto in `package.json`.
+- Test runner minimo basato sul runner nativo di Node.
+- Smoke test in `tests/smoke.test.mts`.
+- Workflow operativo documentato in `docs/workflow.md`.
+- README e documentazione setup aggiornati con il comando `npm test`.
+
+Comandi standard da usare prima di chiudere milestone future:
+
+- `npm run lint`.
+- `npm run typecheck`.
+- `npm test`.
+- `npm run build`.
+
+Note:
+
+- `npm test` esegue `node --test tests/*.test.mts`.
+- Il runner e' volutamente leggero: per ora serve per test di funzioni pure e smoke test.
+- Non sono state introdotte dipendenze test esterne.
+- Non sono state create migration e non e' stato collegato alcun database reale.
+
+## Milestone 3 - schema database iniziale e RLS
+
+Schema iniziale e RLS completati come migration versionata e applicati al Supabase self-hosted Hetzner/Coolify.
+
+Deliverable:
+
+- Migration `supabase/migrations/20260613120000_initial_schema_and_rls.sql`.
+- Guida operativa `docs/supabase-workflow.md`.
+
+Schema iniziale creato:
+
+- Eventi e programma: `events`, `event_locations`, `event_moments`.
+- Profili e ruoli: `profiles`, `event_user_roles`.
+- Liste territoriali: `countries`, `cities`.
+- Gruppi e capigruppo: `groups`, `group_memberships`.
+- Persone e iscrizioni: `participants`, `registrations`, `participant_contacts`, `participant_consents`.
+- Dati sensibili di accessibilita': `accessibility_needs`.
+- Assegnazioni e presenze: `participant_group_assignments`, `event_attendance_choices`, `moment_attendance_choices`.
+- QR e accoglienza: `qr_tokens`, `check_ins`.
+- Audit: `audit_logs`.
+
+Decisioni RLS iniziali:
+
+- I cataloghi necessari al form pubblico (`events` pubblicati, luoghi/momenti pubblici, paesi/citta' attivi, gruppi attivi) sono leggibili senza esporre dati personali.
+- I dati personali sono leggibili solo da proprietario, manager/admin in scope evento o capogruppo in scope gruppo.
+- I dati di accessibilita' restano piu' stretti: proprietario e manager/admin, non accoglienza diretta.
+- Accoglienza puo' operare su QR/check-in in scope evento, ma non leggere contatti o dati sensibili completi.
+- `manager_viewer` legge dati operativi in scope ma non gestisce registrazioni.
+- `admin` e' ruolo globale con `event_id` nullo in `event_user_roles`; gli altri ruoli hanno sempre scope evento.
+- Le funzioni helper RLS vivono nello schema `app` e sono `security definer`.
+
+Applicazione su Hetzner/Coolify:
+
+- Server: `91.99.81.31`, accesso SSH riuscito come `root` con chiave locale `~/.ssh/id_ed25519_hetzner_20260613`.
+- Progetto Coolify: `iscrizioni_pace_cool`.
+- Servizio Coolify: `supabase-ammnuajlmd83t94cfy3us6cw`.
+- Network Docker Supabase: `ammnuajlmd83t94cfy3us6cw`.
+- Container database: `supabase-db-ammnuajlmd83t94cfy3us6cw`.
+- La Supabase CLI `2.106.0` e' stata installata sul server in `/usr/local/bin/supabase`.
+- La CLI raggiunge il DB interno ma fallisce con TLS verso Postgres self-hosted; la migration e' stata applicata con `psql` dentro il container database.
+- La versione e' registrata in `supabase_migrations.schema_migrations` come `20260613120000:initial_schema_and_rls`.
+
+Procedura rapida per migration future su questo Supabase self-hosted:
+
+- Creare una nuova migration versionata in `supabase/migrations/<timestamp>_<nome>.sql`.
+- Verificare staticamente il diff SQL e non inserire segreti o dati personali.
+- Applicare la migration con:
+
+```bash
+./scripts/apply-remote-migration.sh supabase/migrations/<timestamp>_<nome>.sql
+```
+
+- Lo script usa `.env.local` se presente, altrimenti i default operativi gia' noti: SSH `root@91.99.81.31`, chiave `~/.ssh/id_ed25519_hetzner_20260613`, container `supabase-db-ammnuajlmd83t94cfy3us6cw`.
+- Lo script copia il file SQL sul server, lo applica con `psql` dentro il container DB, registra la versione in `supabase_migrations.schema_migrations` e invia `notify pgrst, 'reload schema'`.
+- Non usare `supabase db push` su questo ambiente finche' la connessione CLI verso il Postgres interno continua a fallire con TLS.
+
+Verifiche eseguite dopo applicazione:
+
+- 20 tabelle pubbliche attese create.
+- 20 tabelle pubbliche con RLS attivo.
+- 45 policy RLS presenti.
+- 13 funzioni nello schema `app`.
+- `notify pgrst, 'reload schema'` eseguito.
+- REST API verificata con anon key su `events` e `countries`, risposta `200` con array vuoto.
+
+Note:
+
+- `lib/database.types.ts` non e' stato ancora generato; farlo in una milestone dedicata con accesso DB stabilizzato.
+- La verifica RLS con utenti reali per ruolo resta da fare: partecipante, capogruppo, manager, manager_viewer, admin e accoglienza.
+- `.env.local` e' stato creato localmente in questo progetto con URL/chiavi Supabase e dettagli SSH, resta non tracciato.
 
 ## Stack previsto
 
@@ -191,16 +292,17 @@ Prima di concludere:
 
 ## Strategia Git
 
-- Usare branch dedicati per milestone o feature, per esempio `milestone/01-setup`, `feature/auth-roles`, `fix/check-in-scope`.
-- Evitare di lavorare direttamente su `main` salvo richiesta esplicita.
+- Lavorare normalmente su `main`.
+- Le prove si fanno in locale; quando tutto funziona e l'utente chiede commit/push, fare commit e push direttamente su `main`.
+- Non creare branch staging/produzione o branch milestone salvo richiesta esplicita.
 - Preparare diff leggibili per review umana.
 - Non fare commit/push senza richiesta.
 - Se compaiono modifiche non fatte da Codex, trattarle come lavoro dell'utente.
 
-Remote previsto, da configurare quando richiesto:
+Remote configurato:
 
 ```bash
-git remote add origin https://github.com/giovaniperlapace/iscrizioni-pace
+git remote -v
 ```
 
 ## Supabase e Coolify
@@ -381,7 +483,7 @@ Quando gli script sono configurati, usare:
 
 - `npm run lint`.
 - `npm run typecheck`.
-- `npm test`, quando verra' aggiunto.
+- `npm test`.
 - `npm run build`.
 
 Per funzioni critiche aggiungere test su:

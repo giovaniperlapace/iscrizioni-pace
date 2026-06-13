@@ -16,6 +16,7 @@ Base tecnica per la web app multi-evento di iscrizioni, gruppi, comunicazioni, Q
 npm run dev
 npm run lint
 npm run typecheck
+npm test
 npm run build
 ```
 
@@ -33,3 +34,7 @@ Variabili previste:
 - `NEXT_PUBLIC_APP_URL`
 
 Non committare segreti.
+
+## Workflow
+
+Il ciclo operativo per milestone, lavoro su `main`, verifiche e documentazione e' in `docs/workflow.md`.

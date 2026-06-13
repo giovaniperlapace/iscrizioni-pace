@@ -15,11 +15,11 @@ Metodo da seguire per ogni milestone:
 
 - Verificare sempre cartella corrente, branch corrente e `git status --short` prima di iniziare.
 - Se la working tree e' sporca, capire se le modifiche sono pertinenti alla milestone; non sovrascrivere lavoro non compreso.
-- Usare un branch dedicato per milestone o feature, ad esempio `milestone/01-discovery` o `feature/auth-roles`.
+- Lavorare normalmente su `main`; creare branch dedicati solo se richiesto esplicitamente.
 - Non fare commit o push senza richiesta esplicita.
 - Prima di concludere ogni blocco, verificare `git diff`, file modificati, lint/typecheck/test/build quando disponibili.
 - Ogni milestone deve avere criteri di done chiari: deliverable presenti, test/verifiche passate o limiti esplicitati, nessun segreto committato, nessuna modifica fuori scope.
-- Sincronizzare con GitHub solo quando la repository locale e il branch sono chiari; evitare commit su `main` se non richiesto.
+- Sincronizzare con GitHub solo quando la repository locale e `main` sono chiari; fare commit/push su `main` solo su richiesta esplicita.
 - Documentare decisioni tecniche e assunzioni in `AGENTS.md`, `docs/decisioni.md` o documenti equivalenti quando verranno creati.
 
 Guardrail permanenti:
@@ -531,9 +531,9 @@ Prima milestone tecnica da fare solo dopo aver sistemato Git locale:
 
 - Verificare o clonare la repository corretta.
 - Impostare remote `origin` su `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Lavorare su branch dedicato.
+- Lavorare su `main`, salvo richiesta esplicita di branch dedicato.
 - Usare commit piccoli e tematici solo su richiesta.
-- Aprire PR o preparare diff locali per review umana, secondo preferenza del committente.
+- Preparare diff locali per review umana; fare push diretto su `main` quando richiesto.
 
 Regole anti-perdita lavoro:
 

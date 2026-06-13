@@ -6,15 +6,10 @@ Milestone 1 ha inizializzato la base tecnica nella cartella corrente.
 
 E' stata scelta la strada piu' semplice: inizializzare questa cartella come repository Git locale.
 
-- Branch corrente: `milestone/01-setup`.
-- Remote GitHub non configurato automaticamente.
+- Branch di lavoro ordinario: `main`.
+- Remote GitHub configurato dopo la milestone 1:
+  `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Nessun commit o push eseguito.
-
-Remote previsto, da configurare quando richiesto:
-
-```bash
-git remote add origin https://github.com/giovaniperlapace/iscrizioni-pace
-```
 
 ## Stack installato
 
@@ -41,6 +36,7 @@ git remote add origin https://github.com/giovaniperlapace/iscrizioni-pace
 npm run dev
 npm run lint
 npm run typecheck
+npm test
 npm run build
 ```
 

@@ -256,7 +256,9 @@ Se si inizializza questa cartella, aggiungere subito almeno:
 
 - `.gitignore` per Next.js, Node, env, artefatti OS e file locali;
 - remote `origin`;
-- branch dedicato, per esempio `milestone/01-setup`.
+- branch di lavoro secondo la strategia Git corrente del progetto.
+
+Nota successiva: la strategia Git e' stata aggiornata. Il lavoro ordinario avviene su `main`; branch dedicati si creano solo su richiesta esplicita.
 
 File locali da valutare prima del primo commit:
 
