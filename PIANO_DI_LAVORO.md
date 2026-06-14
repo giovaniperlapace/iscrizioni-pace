@@ -361,18 +361,74 @@ Dati sensibili e minimizzazione:
 ### Milestone 5: flusso pubblico email-prima e iscrizione iniziale
 
 - Scopo: realizzare il primo workflow partecipante.
-- Deliverable: home email, controllo email esistente, form iscrizione, consensi versionati, conferma email, creazione QR token.
+- Deliverable: home email, controllo email esistente, primo form iscrizione minimo, consensi versionati, conferma email, creazione QR token.
 - File/cartelle: `app/[locale]/page.tsx`, `app/[locale]/registrazione/*`, `lib/registrations/*`, `lib/email/*`, `lib/qrcode/*`.
 - Migration: eventuali refine su registrazioni, consensi, QR.
 - Verifiche: iscrizione nuova, email esistente magic link, validazioni, rate limit base.
 - Rischi: duplicati, consenso non tracciabile, dati sensibili troppo esposti.
 - Accettazione: partecipante puo' iscriversi e ricevere conferma.
-- Non fare: dashboard manager completa.
+- Non fare: questionario definitivo configurabile, dashboard manager completa.
+
+### Milestone 5.5: questionario iscrizione e utenti di test
+
+- Scopo: rendere testabile il sistema end-to-end prima delle dashboard complete,
+  definendo il questionario reale di iscrizione e creando i primi accessi
+  applicativi per admin, manager e partecipante.
+- Deliverable questionario:
+  - inventario completo delle domande da fare al partecipante alla prima
+    iscrizione;
+  - classificazione di ogni domanda: obbligatoria/opzionale, dato personale,
+    dato sensibile, visibilita' per ruolo, modificabile o bloccata dopo invio;
+  - modello tecnico per le domande: decidere quali restano colonne/tabelle
+    strutturate e quali diventano risposte versionate/configurabili per evento;
+  - aggiornamento del form pubblico con tutte le domande del primo evento,
+    comprese accessibilita' Washington Group, gruppo/singolo, partecipazione
+    precedente, momenti/giorni, privacy e consensi;
+  - testi IT/EN minimi per il questionario, lasciando i testi legali finali a
+    revisione umana.
+- Deliverable bootstrap/test:
+  - script o comando operativo per creare/promuovere un utente `admin` e un
+    utente `manager` su un evento di test senza esporre service role;
+  - seed dati minimi: evento pubblicato, paesi/citta' essenziali, almeno un
+    gruppo e un capogruppo/manager se utile al test;
+  - dashboard iniziali non complete per `admin` e `manager`, sufficienti a
+    verificare login, ruolo, evento assegnato e link alle sezioni future;
+  - dashboard partecipante iniziale collegata all'iscrizione appena creata,
+    anche se la dashboard completa resta nella Milestone 6;
+  - dati di test tracciati e distinguibili dai dati reali.
+- File/cartelle: `app/registrazione/*`, `lib/registrations/*`,
+  `lib/questionnaire/*` o equivalente, `lib/admin/*`, `scripts/*`,
+  `app/dashboard/admin/*`, `app/dashboard/manager/*`,
+  `app/dashboard/partecipante/*`, eventuali seed/migration Supabase.
+- Migration: eventuali tabelle per questionario versionato, risposte
+  configurabili, seed evento/ruoli/dati test se si decide di versionarli in SQL.
+- Verifiche:
+  - login magic link funzionante per admin, manager e partecipante;
+  - admin entra in `/dashboard/admin`;
+  - manager entra in `/dashboard/manager` solo per evento assegnato;
+  - partecipante si iscrive, riceve conferma, poi entra nella propria
+    dashboard e vede solo i propri dati;
+  - dati test creati senza bypassare i flussi ordinari, salvo comandi bootstrap
+    esplicitamente server-side/service role;
+  - `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+- Rischi:
+  - trasformare troppo presto il questionario in un builder complesso;
+  - salvare risposte sensibili in JSON non governato;
+  - creare seed/admin con segreti o procedure non ripetibili;
+  - confondere dati test e dati reali.
+- Accettazione: esiste un evento di test pubblicato, il questionario reale e'
+  compilabile, il database si popola con iscrizioni di prova, e tre utenti
+  reali o test (`admin`, `manager`, `partecipante`) possono fare login e
+  raggiungere la dashboard corretta.
+- Non fare: dashboard manager/admin operative complete, export, campagne email,
+  gestione capogruppo avanzata, builder questionario general-purpose se non
+  strettamente necessario.
 
 ### Milestone 6: dashboard partecipante
 
-- Scopo: permettere self-service controllato.
-- Deliverable: dashboard con dati personali, QR code, stato iscrizione, modifica campi consentiti.
+- Scopo: completare il self-service controllato del partecipante dopo il
+  bootstrap di Milestone 5.5.
+- Deliverable: dashboard con dati personali, QR code, stato iscrizione, modifica campi consentiti, riepilogo risposte questionario.
 - File/cartelle: `app/[locale]/dashboard/partecipante/*`, `lib/registrations/*`.
 - Migration: eventuale audit log modifiche.
 - Verifiche: partecipante vede solo se stesso; modifica rispettando finestre e audit.

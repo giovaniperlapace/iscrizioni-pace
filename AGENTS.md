@@ -12,6 +12,10 @@ Quando lo sviluppo principale sara' concluso, `PIANO_DI_LAVORO.md` potra' essere
   `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualita' e documentazione operativa.
+- Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
+  helper ruoli e protezione dashboard con Next `proxy.ts`.
+- Milestone 5 ha aggiunto il flusso pubblico email-prima, iscrizione iniziale,
+  invio applicativo di magic link/conferme via Gmail SMTP e QR token opaco.
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
@@ -171,6 +175,83 @@ Note:
 - `lib/database.types.ts` non e' stato ancora generato; farlo in una milestone dedicata con accesso DB stabilizzato.
 - La verifica RLS con utenti reali per ruolo resta da fare: partecipante, capogruppo, manager, manager_viewer, admin e accoglienza.
 - `.env.local` e' stato creato localmente in questo progetto con URL/chiavi Supabase e dettagli SSH, resta non tracciato.
+
+## Milestone 4 - Supabase client/server e autenticazione base
+
+Autenticazione base completata in app, senza ancora implementare il form pubblico email-prima o l'invio applicativo dei magic link.
+
+Deliverable:
+
+- Client Supabase browser/server/service confermati in `lib/supabase/*`.
+- Callback auth server-side in `app/auth/callback/route.ts`.
+- Helper ruoli e redirect in `lib/auth/roles.ts` e `lib/auth/session.ts`.
+- Protezione dashboard in `proxy.ts`.
+- Pagina `app/login/page.tsx` per errori/redirect di sessione.
+- Dashboard placeholder protette in `app/dashboard/*`.
+- Test di funzioni pure in `tests/auth-roles.test.mts`.
+
+Decisioni:
+
+- In Next.js 16.2.9 usare `proxy.ts` per la protezione route; `middleware.ts` e' deprecato.
+- `manager_viewer` condivide per ora la route `/dashboard/manager`; la UI applichera' permessi read-only nelle milestone dashboard.
+- `partecipante` non e' nell'enum database `app_role`: e' una destinazione applicativa di default per utenti autenticati/proprietari di iscrizioni.
+- Il callback supporta `code`, `token_hash` e `token` con tipi OTP Supabase noti.
+- Al callback viene fatto `upsert` del profilo applicativo in `profiles` usando la sessione utente e RLS ordinaria, non service role.
+- Il cookie `iscrizioni_requested_role` puo' ricordare una dashboard richiesta per utenti con piu' ruoli.
+- La protezione dashboard legge `event_user_roles` via client server con anon key e RLS; non usa service role nei flussi utente ordinari.
+
+Note operative:
+
+- I callback URL Supabase devono includere `/auth/callback` sugli ambienti autorizzati, per esempio `http://localhost:3000/auth/callback` in locale.
+- La login page e' provvisoria: Milestone 5 realizzera' home email-prima, preflight email esistente, magic link e form iscrizione.
+- `npm test` importa helper TypeScript reali dai test `.mts`; `tsconfig.json` abilita `allowImportingTsExtensions` per questo uso con `noEmit`.
+
+## Milestone 5 - flusso pubblico email-prima e iscrizione iniziale
+
+Flusso pubblico iniziale completato in app.
+
+Deliverable:
+
+- Home `app/page.tsx` con email-prima.
+- Pagina `app/registrazione/page.tsx` per nuova iscrizione iniziale.
+- Conferma `app/registrazione/conferma/page.tsx`.
+- Server actions in `app/actions.ts`.
+- Use case pubblico in `lib/registrations/public-flow.ts`.
+- Validazione form in `lib/registrations/validation.ts`.
+- Invio email SMTP in `lib/email/*`.
+- QR token opaco e hash in `lib/qrcode/token.ts`.
+- Rate limit base in memoria in `lib/security/rate-limit.ts`.
+- Test di funzioni pure in `tests/registration-flow.test.mts`.
+
+Decisioni:
+
+- I magic link sono generati con `supabase.auth.admin.generateLink` e inviati
+  dall'app via SMTP Gmail, non dal mailer interno Supabase.
+- L'account mittente configurato e' `registrationspeace@gmail.com`.
+- La password app resta solo in `.env.local` o nelle env del runtime; non
+  deve essere stampata o committata.
+- Variabili email supportate:
+  `EMAIL_FROM`, `EMAIL_USER`, `EMAIL_PASSWORD`, `SMTP_HOST`, `SMTP_PORT`,
+  `SMTP_SECURE`; `GMAIL_APP_PASSWORD` resta alias locale supportato.
+- Dopo callback magic link, i partecipanti con contatto email corrispondente
+  vengono collegati a `auth.users.id` tramite service role server-side.
+- Il QR code conserva in database solo `token_hash`; il token in chiaro non va
+  salvato.
+- Il rate limit e' volutamente basico e in memoria; per produzione serverless
+  andra' sostituito o affiancato da storage condiviso.
+
+Note operative:
+
+- `.env.local` contiene gli alias email necessari per lo sviluppo locale.
+- Il repository non risulta ancora collegato a Vercel tramite `.vercel/project.json`;
+  quando verra' collegato, sincronizzare almeno `EMAIL_FROM`, `EMAIL_USER`,
+  `EMAIL_PASSWORD`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `APP_URL` e
+  `NEXT_PUBLIC_APP_URL`.
+- Supabase non necessita della password Gmail per questo flusso finche' i
+  magic link sono inviati dall'app.
+- Il form usa liste pubbliche da `countries`, `cities`, `groups` e l'evento
+  pubblicato corrente; se il database non contiene un evento `published`, la
+  home mostra iscrizioni non aperte.
 
 ## Stack previsto
 
@@ -344,6 +425,7 @@ Struttura probabile:
 - `app/[locale]/dashboard/admin/*`.
 - `app/[locale]/dashboard/accoglienza/*`.
 - `app/auth/callback` per magic link.
+- `proxy.ts` per protezione route dashboard e aggiornamento sessione Supabase.
 - `app/api/*` solo per endpoint necessari.
 - `components/*` per componenti riusabili.
 - `lib/supabase/*` per client browser/server/service.
