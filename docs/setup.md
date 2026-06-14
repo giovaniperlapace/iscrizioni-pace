@@ -4,7 +4,7 @@ Milestone 1 ha inizializzato la base tecnica nella cartella corrente.
 
 ## Decisione Git
 
-E' stata scelta la strada piu' semplice: inizializzare questa cartella come repository Git locale.
+E' stata scelta la strada più semplice: inizializzare questa cartella come repository Git locale.
 
 - Branch di lavoro ordinario: `main`.
 - Remote GitHub configurato dopo la milestone 1:
@@ -38,6 +38,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
+npm run email:verify
 ```
 
 ## Note
@@ -45,3 +46,7 @@ npm run build
 - Non sono state create migration.
 - Non e' stato collegato un database reale.
 - Le chiavi Supabase reali devono restare in `.env.local`.
+- `npm run email:verify` controlla la connessione SMTP configurata in
+  `.env.local` senza inviare email e senza stampare credenziali. Con Gmail
+  serve una app password valida dell'account mittente; gli spazi visuali della
+  app password vengono rimossi automaticamente dal codice.

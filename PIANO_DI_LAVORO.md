@@ -2,7 +2,7 @@
 
 ## 1. Premessa e metodo di lavoro
 
-Questo documento e' il piano operativo iniziale per costruire una web app multi-evento per iscrizioni, gruppi, comunicazioni, QR code e check-in. Il lavoro successivo andra' svolto a milestone piccole, una per prompt, con diff brevi e verificabili.
+Questo documento e' il piano operativo iniziale per costruire una web app multi-evento per iscrizioni, gruppi, comunicazioni, QR code e check-in. Il lavoro successivo andrà svolto a milestone piccole, una per prompt, con diff brevi e verificabili.
 
 Stato locale rilevato in questo task:
 
@@ -25,14 +25,14 @@ Metodo da seguire per ogni milestone:
 Guardrail permanenti:
 
 - Segreti, token Supabase, password Gmail/Coolify e chiavi service role non devono essere inseriti in file tracciati.
-- I dati personali, soprattutto dati su disabilita', bisogni di accessibilita', minori/giovani, appartenenza a gruppi e presenza agli eventi, vanno trattati con minimizzazione, RLS stretta e audit log.
+- I dati personali, soprattutto dati su disabilità, bisogni di accessibilità, minori/giovani, appartenenza a gruppi e presenza agli eventi, vanno trattati con minimizzazione, RLS stretta e audit log.
 - Le migration Supabase vanno versionate, applicate in modo tracciabile e verificate contro drift tra repository e database reale.
 - Il service role Supabase va usato solo lato server o strumenti operativi, mai nel browser.
 - Ogni policy RLS rilevante va testata con utenti/ruoli diversi, non solo con client service role.
 
 ## 2. Sintesi del prodotto
 
-L'app gestira' iscrizioni a eventi internazionali annuali della Comunita' di Sant'Egidio, organizzati ogni anno in una citta' diversa. Deve essere multi-evento e multi-anno, per esempio Assisi 2026 o Roma 2025.
+L'app gestira' iscrizioni a eventi internazionali annuali della Comunità di Sant'Egidio, organizzati ogni anno in una città diversa. Deve essere multi-evento e multi-anno, per esempio Assisi 2026 o Roma 2025.
 
 Utenti e ruoli principali:
 
@@ -49,7 +49,7 @@ Workflow principale:
 - Se l'email corrisponde a un'iscrizione esistente, viene inviato un magic link Supabase.
 - Se l'email non e' registrata, si avvia il form di iscrizione.
 - Alla registrazione vengono salvati consensi, dati essenziali, gruppo certo o probabile, QR token e viene inviata una email di conferma.
-- In fasi successive il partecipante puo' scegliere momenti specifici del programma.
+- In fasi successive il partecipante può scegliere momenti specifici del programma.
 
 Funzioni core:
 
@@ -68,21 +68,21 @@ Funzioni core:
 Confini rispetto alla app modello:
 
 - La nuova app non deve assumere che l'evento sia residenziale.
-- Le funzionalita' di alloggio della app modello non sono core, salvo eventuali pattern di tabelle, filtri, ruoli e dashboard.
+- Le funzionalità di alloggio della app modello non sono core, salvo eventuali pattern di tabelle, filtri, ruoli e dashboard.
 - La nuova app deve gestire anche persone esterne o nuove, non solo membri Sant'Egidio.
-- La priorita' funzionale e' iscrizione, gruppi, accoglienza, QR code, comunicazioni e scelta dei momenti.
+- La priorità funzionale e' iscrizione, gruppi, accoglienza, QR code, comunicazioni e scelta dei momenti.
 
 ## 3. Assunzioni e domande aperte
 
 Assunzioni ragionevoli:
 
-- Ogni partecipante appartiene a un evento specifico; la stessa persona potra' iscriversi a piu' eventi in anni diversi.
+- Ogni partecipante appartiene a un evento specifico; la stessa persona potrà iscriversi a più eventi in anni diversi.
 - L'email e' il principale identificativo di accesso per i partecipanti, ma non e' obbligatoria per persone inserite da un capogruppo.
-- I dati di accessibilita' sono dati sensibili e devono essere separati o comunque protetti con visibilita' limitata.
+- I dati di accessibilità sono dati sensibili e devono essere separati o comunque protetti con visibilità limitata.
 - I capigruppo sono utenti Supabase Auth con profilo applicativo, non semplici contatti.
 - Le comunicazioni per persone senza email vengono indirizzate al referente/capogruppo con riferimenti espliciti alle persone interessate.
 - Il check-in deve poter funzionare su evento generale e su momenti/sotto-eventi.
-- La prima implementazione puo' essere ottimizzata per un evento attivo alla volta nella UI pubblica, mantenendo pero' il database multi-evento.
+- La prima implementazione può essere ottimizzata per un evento attivo alla volta nella UI pubblica, mantenendo però il database multi-evento.
 
 Blocchi potenzialmente bloccanti prima dell'implementazione:
 
@@ -90,7 +90,7 @@ Blocchi potenzialmente bloccanti prima dell'implementazione:
 - Definire come accedere al Supabase self-hosted: URL, anon key, service role key o token CLI/management, project ref se disponibile.
 - Definire credenziali o provider email da usare in sviluppo/staging, evitando account personali non tracciati.
 - Decidere dominio/callback URL per magic link in locale, staging e produzione.
-- Confermare requisiti legali minimi su privacy, consenso, dati di disabilita' e retention.
+- Confermare requisiti legali minimi su privacy, consenso, dati di disabilità e retention.
 
 Domande che possono restare aperte fino a milestone successive:
 
@@ -100,14 +100,14 @@ Domande che possono restare aperte fino a milestone successive:
 - Se l'accoglienza deve lavorare offline o solo online.
 - Quale formato di export serve ai manager.
 - Quali statistiche sono essenziali per il primo rilascio.
-- Come distinguere operativamente "membro Sant'Egidio gia' coinvolto" e "persona esterna/nuova".
+- Come distinguere operativamente "membro Sant'Egidio già coinvolto" e "persona esterna/nuova".
 
 Informazioni da chiedere al committente:
 
-- Evento pilota, date, citta', luoghi e momenti iniziali.
+- Evento pilota, date, città, luoghi e momenti iniziali.
 - Testo privacy e versione consenso da registrare.
-- Elenco iniziale paesi/citta' e gruppi/capigruppo.
-- Regole iniziali per associazione probabile gruppo da paese/citta'.
+- Elenco iniziale paesi/città e gruppi/capigruppo.
+- Regole iniziali per associazione probabile gruppo da paese/città.
 - Ruoli iniziali degli utenti admin, manager, capigruppo, accoglienza.
 - Provider email definitivo e policy di invio.
 - Requisiti di retention post-evento.
@@ -204,7 +204,7 @@ Supabase client/server:
 Autenticazione:
 
 - Flusso pubblico email-prima.
-- Se email gia' associata a iscrizione attiva, invio magic link.
+- Se email già associata a iscrizione attiva, invio magic link.
 - Se nuova, form pubblico con rate limit e validazione.
 - Profili applicativi collegati a Supabase Auth per ruoli non partecipante e per capigruppo.
 - Per partecipanti senza email, accesso mediato dal capogruppo/referente; valutare account delegato solo se necessario.
@@ -212,7 +212,7 @@ Autenticazione:
 Ruoli e autorizzazioni:
 
 - Ruoli in tabella profili/app memberships, non solo in metadata auth.
-- Scope per evento: manager e visualizzatori collegati a uno o piu' eventi.
+- Scope per evento: manager e visualizzatori collegati a uno o più eventi.
 - Scope per gruppo: capogruppo collegato a gruppi tramite membership.
 - Accoglienza con permessi minimi su QR/check-in e dati essenziali.
 - RLS come protezione primaria, controlli server come seconda linea.
@@ -254,21 +254,21 @@ Ambienti:
 
 ## 6. Ipotesi iniziale di modello dati
 
-Non vanno scritte migration in questo task. Ipotesi di entita' da progettare in una milestone dedicata:
+Non vanno scritte migration in questo task. Ipotesi di entità da progettare in una milestone dedicata:
 
-- `events`: evento/anno, titolo, slug, citta', date, stato, lingua default, configurazioni.
+- `events`: evento/anno, titolo, slug, città, date, stato, lingua default, configurazioni.
 - `event_locations`: luoghi, indirizzi, note operative.
-- `event_moments`: momenti del programma, fasce, capienza, luogo, tipo, visibilita'.
+- `event_moments`: momenti del programma, fasce, capienza, luogo, tipo, visibilità.
 - `profiles`: profili applicativi collegati a `auth.users`.
 - `profile_roles` o `event_user_roles`: ruoli per evento e scope.
-- `groups`: gruppi registrati, paese/citta', capogruppo principale, metadati.
+- `groups`: gruppi registrati, paese/città, capogruppo principale, metadati.
 - `group_memberships`: utenti capogruppo associati ai gruppi.
 - `registrations`: iscrizioni partecipante per evento.
 - `participants`: anagrafica essenziale, valutando separazione da `registrations`.
 - `participant_contacts`: email, telefono, referente, persone senza email.
 - `participant_consents`: privacy, consenso, versione, timestamp, ip/user-agent se legalmente utile.
 - `accessibility_needs`: risposte Washington Group e bisogni operativi, con permessi stretti.
-- `group_assignment_rules`: regole paese/citta' per proposta gruppo.
+- `group_assignment_rules`: regole paese/città per proposta gruppo.
 - `participant_group_assignments`: gruppo certo/probabile, fonte, confidence, conferma capogruppo.
 - `event_attendance_choices`: presenza evento generale e giorni.
 - `moment_attendance_choices`: scelte per momenti/sotto-eventi.
@@ -294,8 +294,8 @@ RLS particolarmente attenta:
 
 Dati sensibili e minimizzazione:
 
-- Dati di disabilita'/accessibilita': raccogliere solo quanto serve, visibile solo a chi organizza assistenza o accoglienza se necessario.
-- Data di nascita: usare per eta'/fasce, evitare esposizione in viste non necessarie.
+- Dati di disabilità/accessibilità: raccogliere solo quanto serve, visibile solo a chi organizza assistenza o accoglienza se necessario.
+- Data di nascita: usare per età/fasce, evitare esposizione in viste non necessarie.
 - Email/telefono: visibili solo a ruoli autorizzati.
 - Appartenenza o coinvolgimento Sant'Egidio: trattare come dato operativo delicato.
 - QR code: non deve contenere nome, email o dati personali in chiaro.
@@ -306,7 +306,7 @@ Dati sensibili e minimizzazione:
 ### Milestone 0: discovery repository e app modello
 
 - Scopo: mettere in sicurezza il punto di partenza.
-- Deliverable: repository Git locale corretta, stato branch chiaro, app modello analizzata in modo piu' sistematico, note in `AGENTS.md` o `docs/discovery.md`.
+- Deliverable: repository Git locale corretta, stato branch chiaro, app modello analizzata in modo più sistematico, note in `AGENTS.md` o `docs/discovery.md`.
 - File/cartelle: root progetto, `AGENTS.md`, `docs/*`.
 - Migration: nessuna.
 - Verifiche: `pwd`, `git status --short`, `git remote -v`, `git branch --show-current`, ispezione non distruttiva app modello.
@@ -325,7 +325,7 @@ Dati sensibili e minimizzazione:
 - Accettazione: home tecnica minima avviabile e buildabile.
 - Non fare: database reale, auth completa, UI definitiva.
 
-### Milestone 2: qualita' e documentazione operativa
+### Milestone 2: qualità e documentazione operativa
 
 - Scopo: fissare guardrail per lavoro incrementale.
 - Deliverable: script `lint`, `typecheck`, `test`, `build`; test runner minimo; `AGENTS.md`; docs workflow.
@@ -366,11 +366,13 @@ Dati sensibili e minimizzazione:
 - Migration: eventuali refine su registrazioni, consensi, QR.
 - Verifiche: iscrizione nuova, email esistente magic link, validazioni, rate limit base.
 - Rischi: duplicati, consenso non tracciabile, dati sensibili troppo esposti.
-- Accettazione: partecipante puo' iscriversi e ricevere conferma.
+- Accettazione: partecipante può iscriversi e ricevere conferma.
 - Non fare: questionario definitivo configurabile, dashboard manager completa.
 
 ### Milestone 5.5: questionario iscrizione e utenti di test
 
+- Stato: completata lato codice e migration remota; bootstrap utenti test pronto
+  ma da eseguire con email reali/test scelte dall'utente.
 - Scopo: rendere testabile il sistema end-to-end prima delle dashboard complete,
   definendo il questionario reale di iscrizione e creando i primi accessi
   applicativi per admin, manager e partecipante.
@@ -378,18 +380,18 @@ Dati sensibili e minimizzazione:
   - inventario completo delle domande da fare al partecipante alla prima
     iscrizione;
   - classificazione di ogni domanda: obbligatoria/opzionale, dato personale,
-    dato sensibile, visibilita' per ruolo, modificabile o bloccata dopo invio;
+    dato sensibile, visibilità per ruolo, modificabile o bloccata dopo invio;
   - modello tecnico per le domande: decidere quali restano colonne/tabelle
     strutturate e quali diventano risposte versionate/configurabili per evento;
   - aggiornamento del form pubblico con tutte le domande del primo evento,
-    comprese accessibilita' Washington Group, gruppo/singolo, partecipazione
+    comprese accessibilità Washington Group, gruppo/singolo, partecipazione
     precedente, momenti/giorni, privacy e consensi;
   - testi IT/EN minimi per il questionario, lasciando i testi legali finali a
     revisione umana.
 - Deliverable bootstrap/test:
   - script o comando operativo per creare/promuovere un utente `admin` e un
     utente `manager` su un evento di test senza esporre service role;
-  - seed dati minimi: evento pubblicato, paesi/citta' essenziali, almeno un
+  - seed dati minimi: evento pubblicato, paesi/città essenziali, almeno un
     gruppo e un capogruppo/manager se utile al test;
   - dashboard iniziali non complete per `admin` e `manager`, sufficienti a
     verificare login, ruolo, evento assegnato e link alle sezioni future;
@@ -454,8 +456,8 @@ Dati sensibili e minimizzazione:
 - File/cartelle: `dashboard/capogruppo`, `lib/registrations`, `lib/email`.
 - Migration: campi/tabelle contatti delegati e origine registrazione.
 - Verifiche: record senza email, niente magic link diretto, audit creazione.
-- Rischi: duplicati e responsabilita' consenso.
-- Accettazione: capogruppo puo' inserire persone senza rompere flusso partecipante.
+- Rischi: duplicati e responsabilità consenso.
+- Accettazione: capogruppo può inserire persone senza rompere flusso partecipante.
 - Non fare: assumere consenso senza testo/processo approvato.
 
 ### Milestone 9: dashboard manager/admin con tabelle e filtri
@@ -464,7 +466,7 @@ Dati sensibili e minimizzazione:
 - Deliverable: tabelle partecipanti, ricerca, filtri, sort, edit modal, export base, statistiche iniziali.
 - File/cartelle: `dashboard/manager`, `dashboard/admin`, `components/tables`, `lib/reports`.
 - Migration: audit export/modifiche; eventuali viste SQL.
-- Verifiche: filtri per evento, gruppo, paese, citta', stato, accessibilita' aggregata, presenza.
+- Verifiche: filtri per evento, gruppo, paese, città, stato, accessibilità aggregata, presenza.
 - Rischi: dati sensibili visibili in export.
 - Accettazione: manager gestisce evento assegnato; visualizzatore non modifica.
 - Non fare: funzioni admin globali fuori scope.
@@ -505,7 +507,7 @@ Dati sensibili e minimizzazione:
 ### Milestone 13: settori/sedute e indicazioni operative
 
 - Scopo: guidare accoglienza e flussi nei luoghi.
-- Deliverable: gestione settori, assegnazioni, indicazioni percorso, visibilita' in check-in.
+- Deliverable: gestione settori, assegnazioni, indicazioni percorso, visibilità in check-in.
 - File/cartelle: `lib/seating`, `dashboard/manager/seating`, `dashboard/accoglienza`.
 - Migration: sectors, assignments, route notes.
 - Verifiche: assegnazione manuale/import, vista check-in.
@@ -538,7 +540,7 @@ Dati sensibili e minimizzazione:
 ### Milestone 16: hardening, QA, deploy e documentazione
 
 - Scopo: preparare rilascio affidabile.
-- Deliverable: test E2E essenziali, QA responsive/accessibilita', security review, deploy staging/produzione, runbook.
+- Deliverable: test E2E essenziali, QA responsive/accessibilità, security review, deploy staging/produzione, runbook.
 - File/cartelle: test, docs, config deploy, env docs.
 - Migration: solo fix finali concordati.
 - Verifiche: lint, typecheck, test, build, test auth/RLS, smoke test deploy.
@@ -610,4 +612,4 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Procedi con la Milestone 0: discovery repository e app modello. Prima verifica se questa cartella deve essere inizializzata come repository Git o se devo clonare `https://github.com/giovaniperlapace/iscrizioni-pace` in una nuova cartella. Non implementare feature applicative. Prepara solo lo stato di lavoro, la documentazione operativa iniziale e una discovery piu' dettagliata della app modello, con diff piccolo e verificabile.
+> Procedi con la Milestone 0: discovery repository e app modello. Prima verifica se questa cartella deve essere inizializzata come repository Git o se devo clonare `https://github.com/giovaniperlapace/iscrizioni-pace` in una nuova cartella. Non implementare feature applicative. Prepara solo lo stato di lavoro, la documentazione operativa iniziale e una discovery più dettagliata della app modello, con diff piccolo e verificabile.

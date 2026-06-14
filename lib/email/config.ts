@@ -7,9 +7,11 @@ export type EmailConfig = {
   user: string;
   password: string;
   from: string;
+  deliveryMode: "smtp" | "log";
 };
 
 export function getEmailConfig(): EmailConfig {
+  const deliveryMode = process.env.EMAIL_DELIVERY_MODE === "log" ? "log" : "smtp";
   const user =
     process.env.EMAIL_USER ||
     process.env.SMTP_USER ||
@@ -20,7 +22,7 @@ export function getEmailConfig(): EmailConfig {
     process.env.SMTP_PASSWORD ||
     process.env.GMAIL_APP_PASSWORD;
 
-  if (!password) {
+  if (!password && deliveryMode === "smtp") {
     throw new Error("Missing EMAIL_PASSWORD/SMTP_PASSWORD/GMAIL_APP_PASSWORD");
   }
 
@@ -31,7 +33,8 @@ export function getEmailConfig(): EmailConfig {
       ? process.env.SMTP_SECURE === "true"
       : true,
     user,
-    password,
+    password: password?.replace(/\s+/g, "") ?? "",
     from: process.env.EMAIL_FROM || user,
+    deliveryMode,
   };
 }

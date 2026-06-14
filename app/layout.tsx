@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Iscrizioni Pace",
   description:
-    "Piattaforma per iscrizioni, gruppi e accoglienza degli eventi internazionali della Comunita' di Sant'Egidio.",
+    "Piattaforma per iscrizioni, gruppi e accoglienza degli eventi internazionali della Comunità di Sant'Egidio.",
 };
 
 export default function RootLayout({

@@ -10,7 +10,9 @@
     "lint": "eslint",
     "test": "node --test tests/*.test.mts",
     "typecheck": "tsc --noEmit",
-    "db:migrate:remote": "scripts/apply-remote-migration.sh"
+    "db:migrate:remote": "scripts/apply-remote-migration.sh",
+    "bootstrap:test-users": "node scripts/bootstrap-test-users.mjs",
+    "email:verify": "node --env-file=.env.local scripts/verify-email-config.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

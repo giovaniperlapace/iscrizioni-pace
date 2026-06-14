@@ -27,7 +27,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <h1 className="mt-4 text-3xl font-semibold">Accedi a Iscrizioni Pace</h1>
         <p className="mt-4 text-base leading-7 text-zinc-700 dark:text-zinc-300">
           L&apos;accesso tramite email e magic link verra&apos; completato nel flusso
-          pubblico della prossima milestone. Se hai gia&apos; ricevuto un link,
+          pubblico della prossima milestone. Se hai già ricevuto un link,
           questa pagina gestisce gli errori di sessione e i redirect protetti.
         </p>
 

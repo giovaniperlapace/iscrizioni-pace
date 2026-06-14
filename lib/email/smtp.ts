@@ -11,6 +11,20 @@ export type SendEmailInput = {
 
 export async function sendTransactionalEmail(input: SendEmailInput) {
   const config = getEmailConfig();
+
+  if (config.deliveryMode === "log") {
+    console.info("[email:log]", {
+      to: input.to,
+      from: config.from,
+      subject: input.subject,
+      text: input.text,
+    });
+
+    return {
+      messageId: `log-${Date.now()}`,
+    };
+  }
+
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,

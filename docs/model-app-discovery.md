@@ -45,7 +45,7 @@ La cartella non contiene ancora `package.json`, `app`, `lib`, `components`, `sup
 
 Uso probabile futuro:
 
-- Base per seed/import di comunita', quartieri o gruppi.
+- Base per seed/import di comunità, quartieri o gruppi.
 - Possibile input per regole iniziali di associazione gruppo per citta/quartiere.
 
 Limiti:

@@ -6,7 +6,7 @@ type RegistrationConfirmationInput = {
   firstName: string;
   lastName: string;
   eventTitle: string;
-  dashboardLink: string;
+  siteLink: string;
 };
 
 export function renderMagicLinkEmail(input: MagicLinkTemplateInput) {
@@ -40,8 +40,10 @@ export function renderRegistrationConfirmationEmail(
       `Ciao ${input.firstName},`,
       "",
       `abbiamo ricevuto l'iscrizione di ${participantName} per ${input.eventTitle}.`,
-      "Quando vuoi rientrare nella tua area personale puoi usare il link di accesso dall'app.",
-      input.dashboardLink,
+      "Puoi entrare nella tua dashboard tornando al sito dell'iscrizione e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.",
+      input.siteLink,
+      "",
+      "Più avanti, quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare e scaricare il QR code per l'ingresso all'evento.",
       "",
       "Grazie.",
     ].join("\n"),
@@ -50,8 +52,9 @@ export function renderRegistrationConfirmationEmail(
       `<p>abbiamo ricevuto l'iscrizione di <strong>${escapeHtml(
         participantName
       )}</strong> per <strong>${escapeHtml(input.eventTitle)}</strong>.</p>`,
-      "<p>Quando vuoi rientrare nella tua area personale puoi usare il link di accesso dall'app.</p>",
-      `<p><a href="${escapeHtml(input.dashboardLink)}">Apri l'app iscrizioni</a></p>`,
+      "<p>Puoi entrare nella tua dashboard tornando al sito dell'iscrizione e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.</p>",
+      `<p><a href="${escapeHtml(input.siteLink)}">Apri il sito iscrizioni</a></p>`,
+      "<p>Più avanti, quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare e scaricare il QR code per l'ingresso all'evento.</p>",
       "<p>Grazie.</p>",
     ].join(""),
   };

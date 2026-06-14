@@ -5,6 +5,11 @@ import {
   renderMagicLinkEmail,
   renderRegistrationConfirmationEmail,
 } from "@/lib/email/templates";
+import {
+  buildRegistrationQuestionnaireAnswers,
+  getQuestionnaireVisibilitySummary,
+  REGISTRATION_QUESTIONNAIRE_VERSION,
+} from "@/lib/questionnaire/registration";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
 import {
   PRIVACY_VERSION,
@@ -23,6 +28,8 @@ type PublicEvent = {
 type ExistingContactRow = {
   participant_id: string;
 };
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export type PublicRegistrationOptions = {
   event: PublicEvent | null;
@@ -123,14 +130,18 @@ export async function sendMagicLinkEmail(
   });
 
   const actionLink = data.properties?.action_link;
+  const hashedToken = data.properties?.hashed_token;
 
-  if (error || !actionLink) {
+  if (error || (!actionLink && !hashedToken)) {
     throw error ?? new Error("Supabase did not return a magic link");
   }
 
   await sendTransactionalEmail({
     to: email,
-    ...renderMagicLinkEmail({ actionLink }),
+    ...renderMagicLinkEmail({
+      actionLink:
+        buildAppMagicLink(redirectTo, hashedToken ?? null) ?? actionLink ?? "",
+    }),
   });
 }
 
@@ -138,7 +149,7 @@ export async function createPublicRegistration(
   supabase: SupabaseClient,
   input: RegistrationInput,
   requestMeta: { ipAddress: string | null; userAgent: string | null },
-  appUrl: string
+  publicSiteUrl: string
 ): Promise<{ registrationId: string; qrToken: string }> {
   const event = await getCurrentPublicEvent(supabase);
 
@@ -147,7 +158,7 @@ export async function createPublicRegistration(
   }
 
   if (await hasExistingRegistrationForEmail(supabase, input.email, event.id)) {
-    throw new Error("Questa email risulta gia' iscritta all'evento.");
+    throw new Error("Questa email risulta già iscritta all'evento.");
   }
 
   const { data: participant, error: participantError } = await supabase
@@ -177,6 +188,7 @@ export async function createPublicRegistration(
     .insert({
       participant_id: participant.id,
       email: input.email,
+      phone: input.phone,
       is_primary: true,
     });
 
@@ -200,6 +212,14 @@ export async function createPublicRegistration(
 
   const registrationId = registration.id;
   const qrToken = createOpaqueQrToken();
+  const allowedEventDays = getEventDayValues(event.starts_on, event.ends_on);
+
+  if (
+    !input.availabilityUnknown &&
+    input.availabilityDays.some((day) => !allowedEventDays.has(day))
+  ) {
+    throw new Error("I giorni di presenza selezionati non appartengono all'evento.");
+  }
 
   const writes = [
     supabase.from("participant_consents").insert({
@@ -217,9 +237,12 @@ export async function createPublicRegistration(
       operational_notes: input.accessibilityNotes,
       needs_operational_support: input.needsOperationalSupport,
     }),
-    supabase.from("event_attendance_choices").insert({
+    supabase.from("registration_questionnaire_answers").insert({
       registration_id: registrationId,
-      choice: input.attendanceChoice,
+      event_id: event.id,
+      questionnaire_version: REGISTRATION_QUESTIONNAIRE_VERSION,
+      answers: buildRegistrationQuestionnaireAnswers(input),
+      visibility_summary: getQuestionnaireVisibilitySummary(),
     }),
     supabase.from("qr_tokens").insert({
       registration_id: registrationId,
@@ -249,6 +272,34 @@ export async function createPublicRegistration(
     );
   }
 
+  const attendanceChoices: Array<{
+    registration_id: string;
+    day?: string;
+    choice: "yes" | "no" | "unknown";
+  }> = input.availabilityUnknown
+    ? [{ registration_id: registrationId, choice: "unknown" }]
+    : input.availabilityDays.map((day) => ({
+        registration_id: registrationId,
+        day,
+        choice: "yes",
+      }));
+
+  if (attendanceChoices.length > 0) {
+    writes.push(supabase.from("event_attendance_choices").insert(attendanceChoices));
+  }
+
+  const momentChoices = Object.entries(input.momentAttendanceChoices).map(
+    ([momentId, choice]) => ({
+      registration_id: registrationId,
+      moment_id: momentId,
+      choice,
+    })
+  );
+
+  if (momentChoices.length > 0) {
+    writes.push(supabase.from("moment_attendance_choices").insert(momentChoices));
+  }
+
   const results = await Promise.all(writes);
   const failedWrite = results.find((result) => result.error);
 
@@ -256,15 +307,19 @@ export async function createPublicRegistration(
     throw failedWrite.error;
   }
 
-  await sendTransactionalEmail({
-    to: input.email,
-    ...renderRegistrationConfirmationEmail({
-      firstName: input.firstName,
-      lastName: input.lastName,
-      eventTitle: event.title,
-      dashboardLink: `${appUrl}/dashboard/partecipante`,
-    }),
-  });
+  try {
+    await sendTransactionalEmail({
+      to: input.email,
+      ...renderRegistrationConfirmationEmail({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        eventTitle: event.title,
+        siteLink: publicSiteUrl,
+      }),
+    });
+  } catch (error) {
+    console.error("[email:registration-confirmation]", error);
+  }
 
   return { registrationId, qrToken: qrToken.token };
 }
@@ -310,4 +365,59 @@ async function getCurrentPublicEvent(
     .maybeSingle();
 
   return data ?? null;
+}
+
+function getEventDayValues(
+  startsOn: string | null,
+  endsOn: string | null
+): Set<string> {
+  if (!startsOn) {
+    return new Set();
+  }
+
+  const start = parseDateOnly(startsOn);
+  const end = parseDateOnly(endsOn ?? startsOn);
+
+  if (!start || !end || end.getTime() < start.getTime()) {
+    return new Set();
+  }
+
+  const days = new Set<string>();
+
+  for (
+    let cursor = start;
+    cursor.getTime() <= end.getTime();
+    cursor = new Date(cursor.getTime() + DAY_IN_MS)
+  ) {
+    days.add(cursor.toISOString().slice(0, 10));
+  }
+
+  return days;
+}
+
+function parseDateOnly(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return null;
+  }
+
+  return new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  );
+}
+
+function buildAppMagicLink(
+  redirectTo: string,
+  hashedToken: string | null
+): string | null {
+  if (!hashedToken) {
+    return null;
+  }
+
+  const callbackUrl = new URL(redirectTo);
+  callbackUrl.searchParams.set("token_hash", hashedToken);
+  callbackUrl.searchParams.set("type", "magiclink");
+
+  return callbackUrl.toString();
 }

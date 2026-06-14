@@ -1,6 +1,6 @@
 # Workflow operativo
 
-Questa guida fissa il ciclo minimo da usare per ogni milestone finche' non esisteranno runbook piu' specifici.
+Questa guida fissa il ciclo minimo da usare per ogni milestone finché non esisteranno runbook più specifici.
 
 ## Prima di iniziare
 
@@ -28,7 +28,7 @@ Le prove si fanno in locale. Quando tutto funziona e l'utente chiede commit/push
 
 Non creare branch staging/produzione o branch milestone salvo richiesta esplicita.
 
-## Qualita'
+## Qualità
 
 Prima di chiudere una milestone eseguire i comandi pertinenti:
 

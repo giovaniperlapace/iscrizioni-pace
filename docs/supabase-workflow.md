@@ -26,7 +26,7 @@ Per il Supabase self-hosted attuale:
 - network Docker: `ammnuajlmd83t94cfy3us6cw`;
 - servizio Coolify: `supabase-ammnuajlmd83t94cfy3us6cw`.
 
-La Supabase CLI `2.106.0` e' installata sul server in `/usr/local/bin/supabase`, ma verso il Postgres interno forza TLS e riceve `server refused TLS connection`. Finche' questo resta vero, non usare `supabase db push` per questo ambiente.
+La Supabase CLI `2.106.0` e' installata sul server in `/usr/local/bin/supabase`, ma verso il Postgres interno forza TLS e riceve `server refused TLS connection`. Finché questo resta vero, non usare `supabase db push` per questo ambiente.
 
 Usare invece lo script locale:
 
@@ -54,7 +54,7 @@ docker exec supabase-db-ammnuajlmd83t94cfy3us6cw \
   -f /tmp/iscrizioni-pace-migration-20260613120000.sql
 ```
 
-La versione e' stata registrata manualmente per compatibilita' con workflow migration futuri:
+La versione e' stata registrata manualmente per compatibilità con workflow migration futuri:
 
 ```sql
 create schema if not exists supabase_migrations;
@@ -102,7 +102,7 @@ Casi negativi minimi:
 - un capogruppo non legge registrazioni fuori dai propri gruppi;
 - un manager vede solo eventi assegnati;
 - un manager_viewer non modifica registrazioni;
-- accoglienza puo' inserire check-in ma non leggere contatti o dati di accessibilita' completi;
+- accoglienza può inserire check-in ma non leggere contatti o dati di accessibilità completi;
 - i dati sensibili restano invisibili a ruoli non autorizzati.
 
 ## Tipi TypeScript
@@ -113,4 +113,4 @@ Generare `lib/database.types.ts` solo dopo avere applicato lo schema a un ambien
 supabase gen types typescript --linked > lib/database.types.ts
 ```
 
-Se non esiste un ambiente collegato, non creare tipi manuali finti: meglio lasciare il file assente finche' non puo' essere generato dallo schema reale.
+Se non esiste un ambiente collegato, non creare tipi manuali finti: meglio lasciare il file assente finché non può essere generato dallo schema reale.

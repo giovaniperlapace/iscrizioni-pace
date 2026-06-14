@@ -50,6 +50,14 @@ SSH_OPTS=(
   -p "$SSH_PORT"
 )
 
+SCP_OPTS=(
+  -i "$SSH_KEY"
+  -o BatchMode=yes
+  -o IdentitiesOnly=yes
+  -o StrictHostKeyChecking=accept-new
+  -P "$SSH_PORT"
+)
+
 REMOTE="$SSH_USER@$SSH_HOST"
 
 echo "Checking migration $VERSION on $REMOTE..."
@@ -59,7 +67,7 @@ if ssh "${SSH_OPTS[@]}" "$REMOTE" "docker exec $DB_CONTAINER psql -U postgres -d
 fi
 
 echo "Copying $BASE_NAME to server..."
-scp "${SSH_OPTS[@]}" "$MIGRATION_PATH" "$REMOTE:$REMOTE_SQL"
+scp "${SCP_OPTS[@]}" "$MIGRATION_PATH" "$REMOTE:$REMOTE_SQL"
 
 echo "Applying migration inside $DB_CONTAINER..."
 ssh "${SSH_OPTS[@]}" "$REMOTE" "docker cp '$REMOTE_SQL' '$DB_CONTAINER:$REMOTE_SQL' && docker exec '$DB_CONTAINER' psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f '$REMOTE_SQL'"

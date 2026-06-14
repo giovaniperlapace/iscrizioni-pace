@@ -45,11 +45,17 @@ export async function startPublicEmailFlow(formData: FormData) {
     redirect(`/registrazione?email=${encodeURIComponent(email)}`);
   }
 
-  await sendMagicLinkEmail(
-    supabase,
-    email,
-    `${appUrl}/auth/callback?redirect_to=/dashboard/partecipante`
-  );
+  try {
+    await sendMagicLinkEmail(
+      supabase,
+      email,
+      `${appUrl}/auth/callback?redirect_to=/dashboard/partecipante`
+    );
+  } catch (error) {
+    redirect(
+      `/?error=${encodeURIComponent(getPublicEmailErrorMessage(error))}`
+    );
+  }
 
   redirect("/?sent=magic-link");
 }
@@ -81,16 +87,13 @@ export async function submitPublicRegistration(formData: FormData) {
       supabase,
       parsed.value,
       {
-        ipAddress,
+        ipAddress: ipAddress === "local" ? null : ipAddress,
         userAgent: headerStore.get("user-agent"),
       },
-      getAppUrl()
+      getPublicSiteUrl()
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Non e' stato possibile completare l'iscrizione.";
+    const message = getPublicRegistrationErrorMessage(error);
 
     redirect(
       `/registrazione?email=${encodeURIComponent(parsed.value.email)}&error=${encodeURIComponent(
@@ -112,6 +115,14 @@ function getAppUrl(): string {
   ).replace(/\/$/, "");
 }
 
+function getPublicSiteUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.PUBLIC_SITE_URL ||
+    getAppUrl()
+  ).replace(/\/$/, "");
+}
+
 async function getIpAddress(): Promise<string> {
   const headerStore = await headers();
 
@@ -120,4 +131,32 @@ async function getIpAddress(): Promise<string> {
     headerStore.get("x-real-ip") ||
     "local"
   );
+}
+
+function getPublicRegistrationErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (
+    message.includes("Invalid login") ||
+    message.includes("BadCredentials") ||
+    message.includes("535-5.7.8")
+  ) {
+    return "L'iscrizione è stata registrata, ma al momento non è possibile inviare l'email di conferma. Riprova l'accesso più tardi o contatta l'organizzazione.";
+  }
+
+  return message || "Non è stato possibile completare l'iscrizione.";
+}
+
+function getPublicEmailErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (
+    message.includes("Invalid login") ||
+    message.includes("BadCredentials") ||
+    message.includes("535-5.7.8")
+  ) {
+    return "Non è stato possibile inviare l'email di accesso: le credenziali del servizio email non sono accettate. Contatta l'organizzazione.";
+  }
+
+  return "Non è stato possibile inviare l'email di accesso. Riprova tra poco.";
 }

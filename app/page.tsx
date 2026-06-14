@@ -24,7 +24,7 @@ export default async function Home({ searchParams }: HomeProps) {
             Iscrizioni Pace
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[#4b5a50]">
-            Inserisci la tua email: se hai gia&apos; un&apos;iscrizione riceverai un
+            Inserisci la tua email: se hai già un&apos;iscrizione riceverai un
             magic link, altrimenti apriremo il form per una nuova iscrizione.
           </p>
         </div>

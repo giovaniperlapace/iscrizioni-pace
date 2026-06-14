@@ -2,7 +2,7 @@
 
 Questo file e' la memoria operativa stabile per Codex e per futuri agenti che lavoreranno su questa app. Deve restare aggiornato quando cambiano architettura, workflow, comandi, schema dati, ruoli, policy RLS o decisioni importanti.
 
-Quando lo sviluppo principale sara' concluso, `PIANO_DI_LAVORO.md` potra' essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
+Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
 ## Stato del progetto
 
@@ -11,11 +11,13 @@ Quando lo sviluppo principale sara' concluso, `PIANO_DI_LAVORO.md` potra' essere
 - Cartella locale:
   `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
-- Milestone 2 ha aggiunto guardrail di qualita' e documentazione operativa.
+- Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
   helper ruoli e protezione dashboard con Next `proxy.ts`.
 - Milestone 5 ha aggiunto il flusso pubblico email-prima, iscrizione iniziale,
   invio applicativo di magic link/conferme via Gmail SMTP e QR token opaco.
+- Milestone 5.5 ha aggiunto questionario iscrizione versionato, seed evento
+  test e bootstrap utenti test per admin/manager/partecipante.
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
@@ -79,7 +81,7 @@ Note:
 - `.env.example` contiene solo placeholder e URL pubblico previsto, senza segreti.
 - Non sono state create migration e non e' stato collegato alcun database reale.
 
-## Milestone 2 - qualita' e documentazione operativa
+## Milestone 2 - qualità e documentazione operativa
 
 Guardrail iniziali completati in questa cartella.
 
@@ -121,17 +123,17 @@ Schema iniziale creato:
 - Liste territoriali: `countries`, `cities`.
 - Gruppi e capigruppo: `groups`, `group_memberships`.
 - Persone e iscrizioni: `participants`, `registrations`, `participant_contacts`, `participant_consents`.
-- Dati sensibili di accessibilita': `accessibility_needs`.
+- Dati sensibili di accessibilità: `accessibility_needs`.
 - Assegnazioni e presenze: `participant_group_assignments`, `event_attendance_choices`, `moment_attendance_choices`.
 - QR e accoglienza: `qr_tokens`, `check_ins`.
 - Audit: `audit_logs`.
 
 Decisioni RLS iniziali:
 
-- I cataloghi necessari al form pubblico (`events` pubblicati, luoghi/momenti pubblici, paesi/citta' attivi, gruppi attivi) sono leggibili senza esporre dati personali.
+- I cataloghi necessari al form pubblico (`events` pubblicati, luoghi/momenti pubblici, paesi/città attivi, gruppi attivi) sono leggibili senza esporre dati personali.
 - I dati personali sono leggibili solo da proprietario, manager/admin in scope evento o capogruppo in scope gruppo.
-- I dati di accessibilita' restano piu' stretti: proprietario e manager/admin, non accoglienza diretta.
-- Accoglienza puo' operare su QR/check-in in scope evento, ma non leggere contatti o dati sensibili completi.
+- I dati di accessibilità restano più stretti: proprietario e manager/admin, non accoglienza diretta.
+- Accoglienza può operare su QR/check-in in scope evento, ma non leggere contatti o dati sensibili completi.
 - `manager_viewer` legge dati operativi in scope ma non gestisce registrazioni.
 - `admin` e' ruolo globale con `event_id` nullo in `event_user_roles`; gli altri ruoli hanno sempre scope evento.
 - Le funzioni helper RLS vivono nello schema `app` e sono `security definer`.
@@ -157,9 +159,9 @@ Procedura rapida per migration future su questo Supabase self-hosted:
 ./scripts/apply-remote-migration.sh supabase/migrations/<timestamp>_<nome>.sql
 ```
 
-- Lo script usa `.env.local` se presente, altrimenti i default operativi gia' noti: SSH `root@91.99.81.31`, chiave `~/.ssh/id_ed25519_hetzner_20260613`, container `supabase-db-ammnuajlmd83t94cfy3us6cw`.
+- Lo script usa `.env.local` se presente, altrimenti i default operativi già noti: SSH `root@91.99.81.31`, chiave `~/.ssh/id_ed25519_hetzner_20260613`, container `supabase-db-ammnuajlmd83t94cfy3us6cw`.
 - Lo script copia il file SQL sul server, lo applica con `psql` dentro il container DB, registra la versione in `supabase_migrations.schema_migrations` e invia `notify pgrst, 'reload schema'`.
-- Non usare `supabase db push` su questo ambiente finche' la connessione CLI verso il Postgres interno continua a fallire con TLS.
+- Non usare `supabase db push` su questo ambiente finché la connessione CLI verso il Postgres interno continua a fallire con TLS.
 
 Verifiche eseguite dopo applicazione:
 
@@ -197,7 +199,7 @@ Decisioni:
 - `partecipante` non e' nell'enum database `app_role`: e' una destinazione applicativa di default per utenti autenticati/proprietari di iscrizioni.
 - Il callback supporta `code`, `token_hash` e `token` con tipi OTP Supabase noti.
 - Al callback viene fatto `upsert` del profilo applicativo in `profiles` usando la sessione utente e RLS ordinaria, non service role.
-- Il cookie `iscrizioni_requested_role` puo' ricordare una dashboard richiesta per utenti con piu' ruoli.
+- Il cookie `iscrizioni_requested_role` può ricordare una dashboard richiesta per utenti con più ruoli.
 - La protezione dashboard legge `event_user_roles` via client server con anon key e RLS; non usa service role nei flussi utente ordinari.
 
 Note operative:
@@ -238,20 +240,77 @@ Decisioni:
 - Il QR code conserva in database solo `token_hash`; il token in chiaro non va
   salvato.
 - Il rate limit e' volutamente basico e in memoria; per produzione serverless
-  andra' sostituito o affiancato da storage condiviso.
+  andrà sostituito o affiancato da storage condiviso.
 
 Note operative:
 
 - `.env.local` contiene gli alias email necessari per lo sviluppo locale.
 - Il repository non risulta ancora collegato a Vercel tramite `.vercel/project.json`;
-  quando verra' collegato, sincronizzare almeno `EMAIL_FROM`, `EMAIL_USER`,
+  quando verrà collegato, sincronizzare almeno `EMAIL_FROM`, `EMAIL_USER`,
   `EMAIL_PASSWORD`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `APP_URL` e
   `NEXT_PUBLIC_APP_URL`.
-- Supabase non necessita della password Gmail per questo flusso finche' i
+- Supabase non necessita della password Gmail per questo flusso finché i
   magic link sono inviati dall'app.
 - Il form usa liste pubbliche da `countries`, `cities`, `groups` e l'evento
   pubblicato corrente; se il database non contiene un evento `published`, la
   home mostra iscrizioni non aperte.
+- I giorni di presenza mostrati nel form di iscrizione derivano da
+  `events.starts_on` e `events.ends_on`, non da valori hardcoded nel componente.
+
+## Milestone 5.5 - questionario iscrizione e utenti test
+
+Questionario reale iniziale e bootstrap end-to-end completati in app.
+
+Deliverable:
+
+- Inventario versionato in `lib/questionnaire/registration.ts`.
+- Documentazione in `docs/registration-questionnaire.md`.
+- Migration `supabase/migrations/20260614100000_registration_questionnaire_and_test_seed.sql`.
+- Tabella `registration_questionnaire_answers` per snapshot versionato di
+  risposte/configurazione questionario.
+- Form pubblico aggiornato con primo questionario essenziale e condizionale:
+  nome, cognome, data nascita, luogo di nascita libero (paese e città),
+  nazionalità cercabile da elenco mondiale, paese europeo geografico e città
+  di residenza abituale, telefono opzionale, accessibilità, partecipazione
+  precedente Sant'Egidio, eventuale gruppo, giorni di presenza previsti e privacy.
+- Salvataggio scelte momento in `moment_attendance_choices`.
+- Dashboard iniziali admin, manager e partecipante con dati minimi per
+  verificare login, ruolo, evento assegnato e visibilità RLS.
+- Script `scripts/bootstrap-test-users.mjs`.
+
+Decisioni:
+
+- Non e' stato introdotto un builder questionario general-purpose.
+- I dati stabili restano nello schema relazionale esistente: `participants`,
+  `participant_contacts`, `participant_consents`, `accessibility_needs`,
+  `event_attendance_choices`, `moment_attendance_choices` e
+  `participant_group_assignments`.
+- Lingua preferita, momenti del programma e partecipazione prevista non sono
+  richiesti nella prima iscrizione; restano supportati per passaggi successivi.
+- La lista paesi del primo form usa nazioni dell'Europa geografica, non solo
+  politica, includendo paesi transcontinentali come Russia e Turchia.
+- `registration_questionnaire_answers` conserva solo uno snapshot versionato
+  delle risposte/configurazione per audit e manutenzione futura.
+- Le domande Washington Group e le note di supporto restano dati sensibili:
+  visibili a partecipante, manager e admin, non all'accoglienza diretta.
+- L'evento test versionato e' `assisi-2026-test`; i dati creati dalla migration
+  sono distinguibili dai dati reali.
+
+Comandi aggiunti:
+
+- `npm run bootstrap:test-users`.
+
+Uso bootstrap utenti test:
+
+```bash
+TEST_ADMIN_EMAIL=admin-test@example.org \
+TEST_MANAGER_EMAIL=manager-test@example.org \
+TEST_PARTICIPANT_EMAIL=partecipante-test@example.org \
+npm run bootstrap:test-users
+```
+
+Lo script richiede `SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` e
+`SUPABASE_SERVICE_ROLE_KEY` nell'ambiente. Non stampare mai la service role.
 
 ## Stack previsto
 
@@ -268,7 +327,7 @@ Non assumere che chiavi, token, project ref o credenziali siano disponibili. Se 
 
 ## Prodotto
 
-L'app gestisce iscrizioni a eventi internazionali annuali della Comunita' di Sant'Egidio in citta' diverse. Deve essere multi-evento e multi-anno, per esempio Assisi 2026 o Roma 2025.
+L'app gestisce iscrizioni a eventi internazionali annuali della Comunità di Sant'Egidio in città diverse. Deve essere multi-evento e multi-anno, per esempio Assisi 2026 o Roma 2025.
 
 Il prodotto deve coprire:
 
@@ -294,8 +353,8 @@ Ruoli minimi da supportare:
 - `partecipante`: accede alla propria dashboard, modifica la propria iscrizione quando consentito, consulta QR code, programma e scelte.
 - `capogruppo`: utente reale dell'app; vede solo i partecipanti dei propri gruppi; conferma appartenenza/esternalita'; inserisce persone senza email; riceve notifiche.
 - `admin`: gestisce eventi, configurazioni, utenti, ruoli e impostazioni globali.
-- `manager`: collegato a uno specifico evento; vede tutti i partecipanti e gruppi dell'evento; puo' modificare dati operativi secondo permessi.
-- `manager_viewer`: vede cio' che vede il manager ma non modifica iscrizioni.
+- `manager`: collegato a uno specifico evento; vede tutti i partecipanti e gruppi dell'evento; può modificare dati operativi secondo permessi.
+- `manager_viewer`: vede ciò che vede il manager ma non modifica iscrizioni.
 - `accoglienza`: scansiona QR code e verifica iscrizioni/check-in vedendo solo dati minimi necessari.
 
 I ruoli devono vivere in profili o membership applicative, non solo nei metadata Supabase Auth. Dove serve, il ruolo deve essere scoperto da uno scope: evento, gruppo, funzione di accoglienza.
@@ -304,7 +363,7 @@ I ruoli devono vivere in profili o membership applicative, non solo nei metadata
 
 La home parte dall'email:
 
-- Se l'email corrisponde a una persona gia' iscritta, l'app invia un magic link Supabase.
+- Se l'email corrisponde a una persona già iscritta, l'app invia un magic link Supabase.
 - Se l'email non e' ancora registrata, viene avviato il form di iscrizione.
 - Alla creazione della registrazione vengono salvati dati essenziali, consensi, gruppo certo/probabile, QR token e log.
 - Viene inviata una email di conferma con dati inseriti e link di accesso.
@@ -313,14 +372,14 @@ Il form iniziale deve raccogliere almeno:
 
 - Nome, cognome, data di nascita.
 - Paese da lista preimpostata con opzione altro.
-- Citta' filtrata per paese con opzione altro.
-- Disabilita' o bisogni di accessibilita' con domande basate sul Washington Group.
+- Città filtrata per paese con opzione altro.
+- Disabilità o bisogni di accessibilità con domande basate sul Washington Group.
 - Partecipazione precedente a eventi/iniziative Sant'Egidio.
 - Partecipazione con gruppo Sant'Egidio o come singolo.
 - Se gruppo: selezione da elenco gruppi cercabile per nome gruppo e capogruppo.
 - Giorni/momenti previsti di partecipazione, con opzione "non lo so ancora".
 - Accettazione privacy e consenso al trattamento dati.
-- Versione consenso, data/ora, e quanto serve per tracciabilita' legale.
+- Versione consenso, data/ora, e quanto serve per tracciabilità legale.
 
 ## Dati sensibili e privacy
 
@@ -328,10 +387,10 @@ Privacy e sicurezza sono architettura, non dettagli finali.
 
 Trattare con attenzione:
 
-- Dati di disabilita' e accessibilita'.
-- Data di nascita ed eta'.
+- Dati di disabilità e accessibilità.
+- Data di nascita ed età.
 - Email, telefono e contatti referenti.
-- Appartenenza a gruppi o coinvolgimento nella Comunita' di Sant'Egidio.
+- Appartenenza a gruppi o coinvolgimento nella Comunità di Sant'Egidio.
 - Presenza a eventi/momenti.
 - Check-in e luoghi.
 - Minori o giovani partecipanti, se presenti.
@@ -388,7 +447,7 @@ git remote -v
 
 ## Supabase e Coolify
 
-Supabase sara' usato nelle milestone implementative, non durante la sola pianificazione.
+Supabase sarà usato nelle milestone implementative, non durante la sola pianificazione.
 
 Accessi da chiedere se mancanti:
 
@@ -443,7 +502,7 @@ Usare API routes o server actions secondo il pattern che emergera' dal progetto.
 
 ## Modello dati iniziale atteso
 
-Entita' probabili:
+Entità probabili:
 
 - `events`.
 - `event_locations`.
@@ -545,7 +604,7 @@ Regole:
 - Separare template, rendering e invio.
 - Loggare invii e destinatari.
 - Evitare invii reali massivi in sviluppo.
-- Prevedere modalita' test/preview.
+- Prevedere modalità test/preview.
 - Non salvare password/API key in repository.
 
 ## QR code e check-in
@@ -556,7 +615,7 @@ Regole:
 - Token revocabile e rigenerabile.
 - Check-in idempotente.
 - Check-in associabile a evento generale e/o momento specifico.
-- Accoglienza vede solo: identita' minima, stato iscrizione, eventuale settore/seduta/percorso, alert operativi strettamente necessari.
+- Accoglienza vede solo: identità minima, stato iscrizione, eventuale settore/seduta/percorso, alert operativi strettamente necessari.
 - Ogni scansione/check-in deve essere auditabile.
 
 ## Test e verifica
@@ -570,7 +629,7 @@ Quando gli script sono configurati, usare:
 
 Per funzioni critiche aggiungere test su:
 
-- Normalizzazione email, paesi/citta' e gruppi.
+- Normalizzazione email, paesi/città e gruppi.
 - Assegnazione gruppo certa/probabile.
 - Ruoli e scope evento/gruppo.
 - Validazione form iscrizione.
@@ -608,9 +667,9 @@ Usare documenti aggiuntivi quando il dettaglio diventa troppo lungo:
 
 ## Uso di PIANO_DI_LAVORO.md
 
-Finche' esiste, `PIANO_DI_LAVORO.md` guida le milestone principali. Prima di iniziare una milestone, leggere la sezione corrispondente.
+Finché esiste, `PIANO_DI_LAVORO.md` guida le milestone principali. Prima di iniziare una milestone, leggere la sezione corrispondente.
 
-Quando il piano verra' cancellato:
+Quando il piano verrà cancellato:
 
 - Non ricrearlo automaticamente.
 - Usare questo `AGENTS.md` come fonte primaria.
