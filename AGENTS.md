@@ -18,6 +18,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   invio applicativo di magic link/conferme via Gmail SMTP e QR token opaco.
 - Milestone 5.5 ha aggiunto questionario iscrizione versionato, seed evento
   test e bootstrap utenti test per admin/manager/partecipante.
+- Milestone 6 ha completato una prima dashboard partecipante self-service con
+  riepilogo iscrizione, QR placeholder, area panel/gruppo, modifica controllata
+  di contatti, lingua, presenze e supporto, piu' audit delle modifiche.
+- Milestone 6.1 e' pianificata per affinare struttura dashboard partecipante,
+  valutare tab/sezioni per iscrizione e QR, e preparare meglio l'area panel.
 - Il 2026-06-15 e' stata verificata e corretta la configurazione Vercel
   production: la production branch e' `main`, l'alias stabile e'
   `https://iscrizioni-pace.vercel.app`, e i magic link generati per l'ambiente
@@ -25,7 +30,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Ultimo commit/push noto su `main`: `9846d40 Implement registration questionnaire milestone`.
+- Ultimo commit/push noto su `main`: milestone 6, `Implement participant dashboard milestone`.
 
 Prima di ogni feature verificare:
 
@@ -385,6 +390,81 @@ Supabase Auth e redirect:
 - L'invio reale delle email dipende da una password app Gmail valida nelle
   variabili SMTP; il dominio del link e' stato verificato separatamente
   dall'arrivo effettivo in inbox.
+
+## Milestone 6 - dashboard partecipante
+
+Dashboard partecipante iniziale completata in app.
+
+Deliverable:
+
+- Pagina `app/dashboard/partecipante/page.tsx` sostituita con dashboard
+  utilizzabile.
+- Server action `updateParticipantDashboard` in `app/actions.ts`.
+- Helper testabili in `lib/registrations/participant-dashboard.ts`.
+- Test di parsing, finestra modifica e audit diff in
+  `tests/registration-flow.test.mts`.
+
+Funzioni disponibili:
+
+- Riepilogo iscrizione con frase introduttiva su evento/date, gruppo in card
+  separata vicino ai panel, QR placeholder e accessibilita' sintetica.
+- Codice partecipante `participants.public_code` visibile in dashboard come
+  identificativo operativo semplice dentro l'area QR con etichetta "Il tuo
+  codice"; non va duplicato nell'header.
+- Modifica controllata di telefono, lingua preferita, giorni di presenza,
+  richiesta di supporto e note pratiche.
+- Le modifiche sono consentite solo se la registrazione non e' `cancelled` e
+  se `events.registration_closes_at` non e' superato.
+- La dashboard filtra sempre le iscrizioni sul `participants.auth_user_id`
+  della sessione corrente, oltre alle RLS del database.
+- Le modifiche vengono registrate in `audit_logs` con action
+  `participant.dashboard_updated` e solo elenco dei campi cambiati, senza
+  duplicare contenuti sensibili.
+
+Decisioni:
+
+- Il QR token resta opaco: in dashboard non viene mostrato ne' ricostruito il
+  token in chiaro, perche' in database esiste solo `token_hash`.
+- La dashboard mostra stato QR/accesso evento e codice partecipante, ma una
+  futura rigenerazione/scaricamento QR richiedera' flusso dedicato con token
+  nuovo, revocabile e consegnato in modo controllato.
+- Per leggere lo stato QR e scrivere audit server-side si usa service role solo
+  dopo aver verificato la proprieta' della registrazione con sessione utente.
+- L'accessibilita' viene riepilogata senza mostrare tassonomie tecniche nella
+  UI; il partecipante puo' comunque vedere/modificare le proprie note operative.
+- I momenti del programma/panel non vanno raccolti nel form pubblico di
+  iscrizione e non sono un campo del riepilogo modificabile. Vanno trattati
+  come esperienza separata della dashboard: al momento si mostra "Panel a cui
+  sei iscritto"; quando i panel saranno disponibili, usare le tabelle esistenti
+  `event_moments` e `moment_attendance_choices` per iscrizione/tracciamento,
+  introducendo una migration solo se serviranno nuovi attributi specifici dei
+  panel.
+- Il blocco privacy/dati sensibili non viene mostrato nella dashboard
+  partecipante ordinaria: consenso e bisogni di accessibilita' restano salvati
+  e auditabili, ma non duplicati in una card separata se gia' riepilogati.
+- L'area iniziale non deve usare metriche ridondanti come stato iscrizione o
+  accesso evento: quei dati sono impliciti o gia' presenti altrove. In alto
+  vanno privilegiati panel e gruppo, cioe' informazioni operative future.
+
+Milestone 6.1 pianificata:
+
+- Valutare tab o sezioni equivalenti per separare dashboard rapida, iscrizione
+  modificabile e QR code.
+- Ridurre ulteriormente i dati personali nella prima schermata, mantenendo
+  comunque facile la verifica/modifica dell'iscrizione.
+- Preparare l'area panel per iscrizione e riepilogo quando i panel saranno
+  disponibili.
+
+Verifiche eseguite:
+
+- `npm run lint`.
+- `npm run typecheck`.
+- `npm test`.
+- `npm run build`.
+- Dev server locale avviato e dashboard verificata nel browser integrato su
+  `http://localhost:3000/dashboard/partecipante` con utente test autenticato.
+- Verificato che non compaiano piu' card privacy, check-in, metriche
+  ridondanti e duplicazione del codice partecipante in header.
 
 ## Stack previsto
 

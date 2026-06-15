@@ -9,8 +9,8 @@ Stato locale rilevato in questo task:
 - Cartella corrente: `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
 - La cartella e' ora una working copy Git su branch `main`.
 - Remote GitHub configurato: `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Milestone 1-5.5 sono state implementate e il codice e' stato pushato su
-  `main` fino al commit `9846d40 Implement registration questionnaire milestone`.
+- Milestone 1-6 sono state implementate e il codice e' stato pushato su
+  `main` fino al commit `Implement participant dashboard milestone`.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 
@@ -466,6 +466,7 @@ Dati sensibili e minimizzazione:
 
 ### Milestone 6: dashboard partecipante
 
+- Stato: completata il 2026-06-15.
 - Scopo: completare il self-service controllato del partecipante dopo il
   bootstrap di Milestone 5.5.
 - Deliverable: dashboard con dati personali, QR code, stato iscrizione, modifica campi consentiti, riepilogo risposte questionario.
@@ -475,6 +476,30 @@ Dati sensibili e minimizzazione:
 - Rischi: accesso a dati altrui.
 - Accettazione: RLS e UI impediscono letture/modifiche fuori scope.
 - Non fare: gestione capogruppo.
+
+### Milestone 6.1: affinamento dashboard partecipante
+
+- Stato: pianificata.
+- Scopo: rivedere la struttura della dashboard partecipante dopo il primo
+  utilizzo, separando meglio consultazione rapida, iscrizione modificabile e QR.
+- Deliverable:
+  - valutare una navigazione a tab o sezioni equivalenti per separare
+    riepilogo rapido, dati iscrizione modificabili, QR code e panel;
+  - ridurre ulteriormente la presenza di dati personali nella prima schermata
+    quando non servono all'azione immediata;
+  - mantenere il QR code visibile o facilmente raggiungibile, senza duplicare
+    il codice partecipante;
+  - preparare l'area panel per mostrare titolo, data, ora e informazioni
+    operative quando le iscrizioni ai panel saranno attive.
+- File/cartelle: `app/dashboard/partecipante/*`, `lib/registrations/*`.
+- Migration: nessuna prevista; usare `event_moments` e
+  `moment_attendance_choices` salvo nuovi requisiti sui panel.
+- Verifiche: controllo browser desktop/mobile, nessuna sovrapposizione testi,
+  `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+- Rischi: nascondere dati che il partecipante deve poter verificare facilmente.
+- Accettazione: la prima schermata e' piu' leggibile, QR e panel sono
+  raggiungibili, i dati modificabili restano chiari e controllati.
+- Non fare: introdurre una nuova dashboard capogruppo o manager.
 
 ### Milestone 7: gruppi e dashboard capogruppo
 

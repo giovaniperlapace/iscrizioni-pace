@@ -11,6 +11,11 @@ import {
 } from "../lib/questionnaire/registration.ts";
 import { createOpaqueQrToken, hashQrToken } from "../lib/qrcode/token.ts";
 import {
+  canParticipantEditRegistration,
+  diffParticipantDashboardUpdate,
+  parseParticipantDashboardUpdate,
+} from "../lib/registrations/participant-dashboard.ts";
+import {
   normalizeEmail,
   parseRegistrationForm,
 } from "../lib/registrations/validation.ts";
@@ -219,4 +224,120 @@ test("rate limit blocks attempts after the configured threshold", () => {
   assert.equal(checkRateLimit("test-key", { limit: 2, windowMs: 1000 }, 1), true);
   assert.equal(checkRateLimit("test-key", { limit: 2, windowMs: 1000 }, 2), false);
   assert.equal(checkRateLimit("test-key", { limit: 2, windowMs: 1000 }, 1001), true);
+});
+
+test("parseParticipantDashboardUpdate validates editable participant fields", () => {
+  const formData = new FormData();
+  formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
+  formData.set("phone", "+39 06 000000");
+  formData.set("preferredLocale", "en");
+  formData.append("availabilityDays", "2026-09-04");
+  formData.set("moment_22222222-2222-4222-8222-222222222222", "yes");
+  formData.set("hasAccessibilityNeeds", "on");
+  formData.set("accessibility_walkingOrSteps", "on");
+  formData.set("accessibilityNotes", "Preferisce ingresso senza scale.");
+
+  const parsed = parseParticipantDashboardUpdate(formData);
+
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.value.phone, "+3906000000");
+    assert.equal(parsed.value.preferredLocale, "en");
+    assert.deepEqual(parsed.value.availabilityDays, ["2026-09-04"]);
+    assert.deepEqual(parsed.value.momentAttendanceChoices, {
+      "22222222-2222-4222-8222-222222222222": "yes",
+    });
+    assert.deepEqual(parsed.value.accessibilityAnswers, {
+      walkingOrSteps: true,
+    });
+    assert.equal(parsed.value.needsOperationalSupport, true);
+  }
+});
+
+test("parseParticipantDashboardUpdate clears hidden accessibility details when support is not requested", () => {
+  const formData = new FormData();
+  formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
+  formData.append("availabilityDays", "2026-09-04");
+  formData.set("accessibility_walkingOrSteps", "on");
+  formData.set("accessibilityNotes", "Nota rimasta nel form nascosto.");
+
+  const parsed = parseParticipantDashboardUpdate(formData);
+
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.deepEqual(parsed.value.accessibilityAnswers, {});
+    assert.equal(parsed.value.needsOperationalSupport, false);
+    assert.equal(parsed.value.accessibilityNotes, null);
+  }
+});
+
+test("canParticipantEditRegistration closes cancelled and late registrations", () => {
+  assert.equal(
+    canParticipantEditRegistration({
+      status: "cancelled",
+      events: { registration_closes_at: null },
+    }),
+    false
+  );
+  assert.equal(
+    canParticipantEditRegistration(
+      {
+        status: "submitted",
+        events: { registration_closes_at: "2026-08-01T00:00:00.000Z" },
+      },
+      new Date("2026-08-02T00:00:00.000Z")
+    ),
+    false
+  );
+  assert.equal(
+    canParticipantEditRegistration(
+      {
+        status: "submitted",
+        events: { registration_closes_at: "2026-08-03T00:00:00.000Z" },
+      },
+      new Date("2026-08-02T00:00:00.000Z")
+    ),
+    true
+  );
+});
+
+test("diffParticipantDashboardUpdate returns changed field names for audit", () => {
+  const changed = diffParticipantDashboardUpdate(
+    {
+      phone: "+3906000000",
+      preferredLocale: "it",
+      availabilityDays: ["2026-09-04"],
+      availabilityUnknown: false,
+      momentAttendanceChoices: {
+        "22222222-2222-4222-8222-222222222222": "unknown",
+      },
+      accessibilityAnswers: {},
+      needsOperationalSupport: false,
+      accessibilityNotes: null,
+    },
+    {
+      registrationId: "11111111-1111-4111-8111-111111111111",
+      phone: "+3906000000",
+      preferredLocale: "en",
+      availabilityDays: ["2026-09-05"],
+      availabilityUnknown: false,
+      momentAttendanceChoices: {
+        "22222222-2222-4222-8222-222222222222": "yes",
+      },
+      accessibilityAnswers: {
+        walkingOrSteps: true,
+      },
+      needsOperationalSupport: true,
+      accessibilityNotes: "Serve supporto.",
+    }
+  );
+
+  assert.deepEqual(changed, [
+    "preferred_locale",
+    "availability_days",
+    "moment_attendance_choices",
+    "accessibility_answers",
+    "needs_operational_support",
+    "accessibility_notes",
+  ]);
 });
