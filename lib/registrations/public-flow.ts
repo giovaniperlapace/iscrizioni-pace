@@ -29,6 +29,11 @@ type ExistingContactRow = {
   participant_id: string;
 };
 
+type CreatedParticipant = {
+  id: string;
+  public_code: string;
+};
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export type PublicRegistrationOptions = {
@@ -176,17 +181,19 @@ export async function createPublicRegistration(
         input.hasPreviousSantegidioParticipation,
       participates_with_group: input.participatesWithGroup,
     })
-    .select("id")
+    .select("id,public_code")
     .single();
 
   if (participantError || !participant) {
     throw participantError ?? new Error("Impossibile creare il partecipante.");
   }
 
+  const createdParticipant = participant as CreatedParticipant;
+
   const { error: contactError } = await supabase
     .from("participant_contacts")
     .insert({
-      participant_id: participant.id,
+      participant_id: createdParticipant.id,
       email: input.email,
       phone: input.phone,
       is_primary: true,
@@ -200,7 +207,7 @@ export async function createPublicRegistration(
     .from("registrations")
     .insert({
       event_id: event.id,
-      participant_id: participant.id,
+      participant_id: createdParticipant.id,
       source: "public_form",
     })
     .select("id")
@@ -313,6 +320,7 @@ export async function createPublicRegistration(
       ...renderRegistrationConfirmationEmail({
         firstName: input.firstName,
         lastName: input.lastName,
+        participantCode: createdParticipant.public_code,
         eventTitle: event.title,
         siteLink: publicSiteUrl,
       }),

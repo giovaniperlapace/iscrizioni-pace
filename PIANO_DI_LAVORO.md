@@ -267,7 +267,9 @@ Non vanno scritte migration in questo task. Ipotesi di entità da progettare in 
 - `groups`: gruppi registrati, paese/città, capogruppo principale, metadati.
 - `group_memberships`: utenti capogruppo associati ai gruppi.
 - `registrations`: iscrizioni partecipante per evento.
-- `participants`: anagrafica essenziale, valutando separazione da `registrations`.
+- `participants`: anagrafica essenziale e codice identificativo secondario
+  breve (`public_code`) per comunicazioni e funzioni operative, mantenendo
+  l'UUID come chiave tecnica.
 - `participant_contacts`: email, telefono, referente, persone senza email.
 - `participant_consents`: privacy, consenso, versione, timestamp, ip/user-agent se legalmente utile.
 - `accessibility_needs`: risposte Washington Group e bisogni operativi, con permessi stretti.

@@ -8,7 +8,11 @@ type RegistrationRow = {
   status: string;
   submitted_at: string;
   events: Array<{ title: string; slug: string }> | null;
-  participants: Array<{ first_name: string; last_name: string }> | null;
+  participants: Array<{
+    first_name: string;
+    last_name: string;
+    public_code: string;
+  }> | null;
 };
 
 export default async function PartecipanteDashboardPage() {
@@ -22,7 +26,7 @@ export default async function PartecipanteDashboardPage() {
   const { data: registrations } = await supabase
     .from("registrations")
     .select(
-      "id,status,submitted_at,events(title,slug),participants!inner(first_name,last_name)"
+      "id,status,submitted_at,events(title,slug),participants!inner(first_name,last_name,public_code)"
     )
     .order("submitted_at", { ascending: false });
 
@@ -57,6 +61,12 @@ export default async function PartecipanteDashboardPage() {
                   </p>
                   <p className="text-sm text-[#5e6d63]">
                     {event?.title ?? "Evento"} - {registration.status}
+                  </p>
+                  <p className="text-sm text-[#5e6d63]">
+                    Codice partecipante:{" "}
+                    <span className="font-mono font-semibold text-[#1c241f]">
+                      {participant?.public_code}
+                    </span>
                   </p>
                 </div>
               );

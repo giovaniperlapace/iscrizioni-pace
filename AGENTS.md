@@ -277,6 +277,8 @@ Deliverable:
   nazionalità cercabile da elenco mondiale, paese europeo geografico e città
   di residenza abituale, telefono opzionale, accessibilità, partecipazione
   precedente Sant'Egidio, eventuale gruppo, giorni di presenza previsti e privacy.
+- Codice partecipante breve automatico in `participants.public_code`, formato
+  alfanumerico maiuscolo a 4 caratteri, univoco e generato dal database.
 - Salvataggio scelte momento in `moment_attendance_choices`.
 - Dashboard iniziali admin, manager e partecipante con dati minimi per
   verificare login, ruolo, evento assegnato e visibilità RLS.
@@ -302,6 +304,10 @@ Decisioni:
   tecnica, ma la UI deve usare formulazioni semplici e inclusive.
 - L'evento test versionato e' `assisi-2026-test`; i dati creati dalla migration
   sono distinguibili dai dati reali.
+- `participants.public_code` e' un identificativo secondario semplice per email
+  e funzioni operative. Non sostituisce `participants.id` UUID come chiave
+  tecnica e non deve essere usato come segreto, token di accesso o prova di
+  identità.
 
 Comandi aggiunti:
 

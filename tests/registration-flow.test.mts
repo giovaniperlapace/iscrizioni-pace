@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { renderMagicLinkEmail } from "../lib/email/templates.ts";
+import {
+  renderMagicLinkEmail,
+  renderRegistrationConfirmationEmail,
+} from "../lib/email/templates.ts";
 import {
   buildRegistrationQuestionnaireAnswers,
   REGISTRATION_QUESTIONS,
@@ -196,6 +199,19 @@ test("magic link template escapes action URLs", () => {
   });
 
   assert.match(rendered.html, /&quot;&lt;tag&gt;/);
+});
+
+test("registration confirmation includes the short participant code", () => {
+  const rendered = renderRegistrationConfirmationEmail({
+    firstName: "Maria",
+    lastName: "Rossi",
+    participantCode: "A7K2",
+    eventTitle: "Assisi 2026",
+    siteLink: "https://iscrizioni-pace.vercel.app",
+  });
+
+  assert.match(rendered.text, /A7K2/);
+  assert.match(rendered.html, /A7K2/);
 });
 
 test("rate limit blocks attempts after the configured threshold", () => {
