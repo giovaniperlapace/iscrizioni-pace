@@ -510,10 +510,8 @@ export function RegistrationForm({
                 Quali aspetti dobbiamo considerare?
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
-                Puoi selezionare una o più opzioni. Le prime domande
-                seguono le aree funzionali del Washington Group e ci aiutano a
-                organizzare un&apos;accoglienza rispettosa, senza definire la
-                persona attraverso la disabilità.
+                Puoi selezionare una o più opzioni utili per organizzare meglio
+                l&apos;accoglienza.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

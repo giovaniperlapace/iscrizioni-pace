@@ -7,9 +7,12 @@ Questo documento e' il piano operativo iniziale per costruire una web app multi-
 Stato locale rilevato in questo task:
 
 - Cartella corrente: `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
-- La cartella ha nome coerente con il progetto, ma al momento non risulta una working copy Git inizializzata: `git status --short` fallisce con "not a git repository".
-- File/cartelle presenti prima del piano: `Descrizione app descrizione.txt`, `materiali-dati/ComunitaEQuartieri.xlsx`, `.DS_Store`.
-- Repository GitHub prevista: `https://github.com/giovaniperlapace/iscrizioni-pace`.
+- La cartella e' ora una working copy Git su branch `main`.
+- Remote GitHub configurato: `https://github.com/giovaniperlapace/iscrizioni-pace`.
+- Milestone 1-5.5 sono state implementate e il codice e' stato pushato su
+  `main` fino al commit `9846d40 Implement registration questionnaire milestone`.
+- La produzione Vercel e' configurata su `main` con alias stabile
+  `https://iscrizioni-pace.vercel.app`.
 
 Metodo da seguire per ogni milestone:
 
@@ -371,23 +374,28 @@ Dati sensibili e minimizzazione:
 
 ### Milestone 5.5: questionario iscrizione e utenti di test
 
-- Stato: completata lato codice e migration remota; bootstrap utenti test pronto
-  ma da eseguire con email reali/test scelte dall'utente.
+- Stato: completata lato codice, migration, UI pubblica e deploy production.
+  Bootstrap utenti test pronto ma da eseguire con email reali/test scelte
+  dall'utente quando serve.
 - Scopo: rendere testabile il sistema end-to-end prima delle dashboard complete,
   definendo il questionario reale di iscrizione e creando i primi accessi
   applicativi per admin, manager e partecipante.
 - Deliverable questionario:
-  - inventario completo delle domande da fare al partecipante alla prima
-    iscrizione;
-  - classificazione di ogni domanda: obbligatoria/opzionale, dato personale,
-    dato sensibile, visibilità per ruolo, modificabile o bloccata dopo invio;
-  - modello tecnico per le domande: decidere quali restano colonne/tabelle
-    strutturate e quali diventano risposte versionate/configurabili per evento;
-  - aggiornamento del form pubblico con tutte le domande del primo evento,
-    comprese accessibilità Washington Group, gruppo/singolo, partecipazione
-    precedente, momenti/giorni, privacy e consensi;
-  - testi IT/EN minimi per il questionario, lasciando i testi legali finali a
-    revisione umana.
+  - inventario completo e versionato delle domande in
+    `lib/questionnaire/registration.ts`;
+  - classificazione di ogni domanda per obbligatorietà, dato personale o
+    sensibile, visibilità per ruolo e uso strutturato/snapshot;
+  - tabella `registration_questionnaire_answers` per snapshot versionato;
+  - form pubblico aggiornato con nome, cognome, paese/città di residenza
+    abituale, data e luogo di nascita, nazionalità, telefono opzionale,
+    accessibilità, partecipazione precedente Sant'Egidio, gruppo condizionale,
+    giorni di presenza e privacy;
+  - campi paese/città/nazionalità cercabili, con opzione altro dove serve;
+  - telefono opzionale con prefisso internazionale, opzione altro e validazione
+    formato;
+  - domande sì/no rese come pulsanti, non menu a tendina;
+  - testi UI semplificati: la UI non cita il Washington Group, anche se la
+    logica resta ispirata a standard inclusivi.
 - Deliverable bootstrap/test:
   - script o comando operativo per creare/promuovere un utente `admin` e un
     utente `manager` su un evento di test senza esporre service role;
@@ -425,6 +433,34 @@ Dati sensibili e minimizzazione:
 - Non fare: dashboard manager/admin operative complete, export, campagne email,
   gestione capogruppo avanzata, builder questionario general-purpose se non
   strettamente necessario.
+
+### Milestone 5.6: production Vercel, env e magic link
+
+- Stato: completata.
+- Scopo: rendere testabile il flusso online fuori dal localhost e assicurare
+  che magic link e callback puntino al dominio Vercel production.
+- Deliverable:
+  - progetto Vercel collegato alla repo;
+  - production branch impostata su `main`;
+  - env production impostate per Supabase, URL app e SMTP;
+  - alias stabile `https://iscrizioni-pace.vercel.app`;
+  - allowlist Supabase Auth aggiornata per localhost e domini Vercel;
+  - deployment production verificato;
+  - generazione magic link verificata senza stampare token.
+- Verifiche eseguite:
+  - `vercel inspect https://iscrizioni-pace.vercel.app` mostra target
+    `production` e stato `Ready`;
+  - `curl -I -L https://iscrizioni-pace.vercel.app/` risponde `HTTP 200`;
+  - `GOTRUE_URI_ALLOW_LIST` contiene `https://iscrizioni-pace.vercel.app/**`;
+  - un magic link generato con Supabase admin usa action host pubblico Supabase
+    e redirect a `https://iscrizioni-pace.vercel.app/auth/callback`;
+  - il link applicativo costruito con `token_hash` usa lo stesso dominio.
+- Note:
+  - le variabili secret Vercel restano sensitive/encrypted e possono apparire
+    vuote quando lette da CLI/API;
+  - le variabili pubbliche URL sono state rese verificabili con `--no-sensitive`;
+  - l'arrivo reale delle email dipende ancora dalla validità della password app
+    Gmail configurata su SMTP.
 
 ### Milestone 6: dashboard partecipante
 
@@ -612,4 +648,8 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Procedi con la Milestone 0: discovery repository e app modello. Prima verifica se questa cartella deve essere inizializzata come repository Git o se devo clonare `https://github.com/giovaniperlapace/iscrizioni-pace` in una nuova cartella. Non implementare feature applicative. Prepara solo lo stato di lavoro, la documentazione operativa iniziale e una discovery più dettagliata della app modello, con diff piccolo e verificabile.
+> Procedi con la Milestone 6: dashboard partecipante. Prima verifica branch,
+> stato Git, deploy production e schema attuale. Implementa una dashboard
+> partecipante utilizzabile con riepilogo iscrizione, QR/accesso evento, dati
+> modificabili quando consentito e riepilogo privacy/accessibilità senza esporre
+> dati sensibili oltre lo stretto necessario.

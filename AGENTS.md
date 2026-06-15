@@ -18,10 +18,14 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   invio applicativo di magic link/conferme via Gmail SMTP e QR token opaco.
 - Milestone 5.5 ha aggiunto questionario iscrizione versionato, seed evento
   test e bootstrap utenti test per admin/manager/partecipante.
+- Il 2026-06-15 e' stata verificata e corretta la configurazione Vercel
+  production: la production branch e' `main`, l'alias stabile e'
+  `https://iscrizioni-pace.vercel.app`, e i magic link generati per l'ambiente
+  online puntano a quel dominio.
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Nessun commit o push eseguito.
+- Ultimo commit/push noto su `main`: `9846d40 Implement registration questionnaire milestone`.
 
 Prima di ogni feature verificare:
 
@@ -293,6 +297,9 @@ Decisioni:
   delle risposte/configurazione per audit e manutenzione futura.
 - Le domande Washington Group e le note di supporto restano dati sensibili:
   visibili a partecipante, manager e admin, non all'accoglienza diretta.
+- Nel testo visibile all'utente non va citato il Washington Group o la
+  classificazione tecnica delle aree funzionali; la documentazione può restare
+  tecnica, ma la UI deve usare formulazioni semplici e inclusive.
 - L'evento test versionato e' `assisi-2026-test`; i dati creati dalla migration
   sono distinguibili dai dati reali.
 
@@ -311,6 +318,67 @@ npm run bootstrap:test-users
 
 Lo script richiede `SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` e
 `SUPABASE_SERVICE_ROLE_KEY` nell'ambiente. Non stampare mai la service role.
+
+## Vercel production e magic link
+
+Configurazione verificata il 2026-06-15:
+
+- Progetto Vercel: `iscrizioni-pace`.
+- Project ID: `prj_4n4oKj3S4sg5RUg5H6AsJLBAK7w6`.
+- Team/org ID: `team_ZzsE0ydPpm1T9muAU1xi2uCN`.
+- Production branch: `main`.
+- Dominio production stabile: `https://iscrizioni-pace.vercel.app`.
+- Alias production aggiuntivi:
+  `https://iscrizioni-pace-giovaniperlapaces-projects.vercel.app` e
+  `https://iscrizioni-pace-giovaniperlapace-giovaniperlapaces-projects.vercel.app`.
+- Ultimo deployment production verificato: `dpl_88vmZqKD4owNWxPgnzJnoueYYmsW`.
+
+Variabili Vercel production richieste:
+
+- `NEXT_PUBLIC_SUPABASE_URL`.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- `SUPABASE_URL`.
+- `SUPABASE_ANON_KEY`.
+- `SUPABASE_SERVICE_ROLE_KEY`.
+- `NEXT_PUBLIC_APP_URL=https://iscrizioni-pace.vercel.app`.
+- `APP_URL=https://iscrizioni-pace.vercel.app`.
+- `PUBLIC_SITE_URL=https://iscrizioni-pace.vercel.app`.
+- `EMAIL_FROM`.
+- `EMAIL_USER`.
+- `EMAIL_PASSWORD`.
+- `SMTP_HOST`.
+- `SMTP_PORT`.
+- `SMTP_SECURE`.
+- `EMAIL_DELIVERY_MODE=smtp`.
+
+Note operative Vercel:
+
+- Le variabili pubbliche e non segrete (`NEXT_PUBLIC_*`, URL app, host/porta
+  SMTP e flag booleani) possono essere create con `--no-sensitive` per essere
+  verificabili con `vercel env pull`.
+- Le variabili segrete (`SUPABASE_SERVICE_ROLE_KEY`, `EMAIL_PASSWORD` e simili)
+  devono restare sensitive/encrypted; Vercel le mostra vuote quando vengono
+  lette via CLI/API, ed e' normale.
+- Dopo la modifica di qualunque `NEXT_PUBLIC_*` serve un nuovo deploy
+  production, perché Next le incorpora nel build.
+- I push su `main` devono produrre deployment production; se tornano preview,
+  controllare che non ci siano env `Preview (main)` e che la production branch
+  sia ancora `main`.
+
+Supabase Auth e redirect:
+
+- `API_EXTERNAL_URL` di GoTrue deve essere
+  `https://iscrizioni-supabase.stefano-orlando.it`.
+- `GOTRUE_URI_ALLOW_LIST` deve includere almeno:
+  `http://localhost:3000/**`, `https://iscrizioni-pace.vercel.app/**` e gli
+  alias production Vercel.
+- La verifica del 2026-06-15 ha generato un magic link di prova senza stampare
+  token: l'action host era `iscrizioni-supabase.stefano-orlando.it`, il
+  `redirect_to` puntava a `https://iscrizioni-pace.vercel.app/auth/callback`
+  e il redirect applicativo era `/dashboard/partecipante`.
+- L'invio reale delle email dipende da una password app Gmail valida nelle
+  variabili SMTP; il dominio del link e' stato verificato separatamente
+  dall'arrivo effettivo in inbox.
 
 ## Stack previsto
 
