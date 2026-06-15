@@ -11,6 +11,8 @@ Stato locale rilevato in questo task:
 - Remote GitHub configurato: `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Milestone 1-6 sono state implementate e il codice e' stato pushato su
   `main` fino al commit `Implement participant dashboard milestone`.
+- Milestone 6.1 e' stata implementata localmente il 2026-06-15 e resta da
+  committare/pushare su richiesta.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 
@@ -479,26 +481,33 @@ Dati sensibili e minimizzazione:
 
 ### Milestone 6.1: affinamento dashboard partecipante
 
-- Stato: pianificata.
+- Stato: completata localmente il 2026-06-15, non ancora committata/pushata.
 - Scopo: rivedere la struttura della dashboard partecipante dopo il primo
   utilizzo, separando meglio consultazione rapida, iscrizione modificabile e QR.
 - Deliverable:
-  - valutare una navigazione a tab o sezioni equivalenti per separare
-    riepilogo rapido, dati iscrizione modificabili, QR code e panel;
-  - ridurre ulteriormente la presenza di dati personali nella prima schermata
-    quando non servono all'azione immediata;
-  - mantenere il QR code visibile o facilmente raggiungibile, senza duplicare
-    il codice partecipante;
-  - preparare l'area panel per mostrare titolo, data, ora e informazioni
-    operative quando le iscrizioni ai panel saranno attive.
+  - header piu' informativo: nome partecipante, evento con città/paese e date
+    in forma naturale (`dal ... al ...`), gruppo e referente separati;
+  - stato dell'assegnazione gruppo non mostrato al partecipante nella riga
+    iniziale, perché e' informazione soprattutto interna;
+  - schermata rapida ridotta ad azioni principali e area panel;
+  - due pulsanti centrati, simmetrici e con icone stilizzate per aprire QR code
+    e iscrizione modificabile;
+  - QR code e iscrizione non sono sezioni sempre visibili: si aprono in overlay
+    URL-based con `?overlay=qr` e `?overlay=iscrizione`;
+  - overlay centrati nel viewport, con chiusura tramite simbolo in alto a
+    destra e scroll interno quando necessario;
+  - area panel mantenuta come contenuto principale della dashboard rapida, in
+    attesa delle funzioni future di iscrizione/scelta momenti.
 - File/cartelle: `app/dashboard/partecipante/*`, `lib/registrations/*`.
 - Migration: nessuna prevista; usare `event_moments` e
   `moment_attendance_choices` salvo nuovi requisiti sui panel.
 - Verifiche: controllo browser desktop/mobile, nessuna sovrapposizione testi,
+  overlay centrati, pulsanti simmetrici e righe header senza overflow;
   `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 - Rischi: nascondere dati che il partecipante deve poter verificare facilmente.
-- Accettazione: la prima schermata e' piu' leggibile, QR e panel sono
-  raggiungibili, i dati modificabili restano chiari e controllati.
+- Accettazione: la prima schermata e' piu' leggibile, QR e dati modificabili
+  sono raggiungibili via overlay, i panel restano visibili, i dati modificabili
+  restano chiari e controllati.
 - Non fare: introdurre una nuova dashboard capogruppo o manager.
 
 ### Milestone 7: gruppi e dashboard capogruppo
@@ -675,8 +684,8 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Procedi con la Milestone 6: dashboard partecipante. Prima verifica branch,
-> stato Git, deploy production e schema attuale. Implementa una dashboard
-> partecipante utilizzabile con riepilogo iscrizione, QR/accesso evento, dati
-> modificabili quando consentito e riepilogo privacy/accessibilità senza esporre
-> dati sensibili oltre lo stretto necessario.
+> Procedi con la Milestone 7: gruppi e dashboard capogruppo. Prima verifica
+> branch, stato Git, schema attuale e RLS. Implementa una prima dashboard
+> capogruppo che mostri solo i partecipanti dei gruppi assegnati, con dati
+> minimi, conferma appartenenza/esternalita' e guardrail per non esporre dati
+> sensibili fuori scope.

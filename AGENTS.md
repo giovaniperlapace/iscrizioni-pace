@@ -21,8 +21,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Milestone 6 ha completato una prima dashboard partecipante self-service con
   riepilogo iscrizione, QR placeholder, area panel/gruppo, modifica controllata
   di contatti, lingua, presenze e supporto, piu' audit delle modifiche.
-- Milestone 6.1 e' pianificata per affinare struttura dashboard partecipante,
-  valutare tab/sezioni per iscrizione e QR, e preparare meglio l'area panel.
+- Milestone 6.1 ha affinato la dashboard partecipante: gruppo come informazione
+  secondaria sotto il nome, schermata rapida focalizzata sui panel e due
+  pulsanti con icone per aprire QR code o iscrizione modificabile in overlay.
 - Il 2026-06-15 e' stata verificata e corretta la configurazione Vercel
   production: la production branch e' `main`, l'alias stabile e'
   `https://iscrizioni-pace.vercel.app`, e i magic link generati per l'ambiente
@@ -446,14 +447,46 @@ Decisioni:
   accesso evento: quei dati sono impliciti o gia' presenti altrove. In alto
   vanno privilegiati panel e gruppo, cioe' informazioni operative future.
 
-Milestone 6.1 pianificata:
+## Milestone 6.1 - affinamento dashboard partecipante
 
-- Valutare tab o sezioni equivalenti per separare dashboard rapida, iscrizione
-  modificabile e QR code.
-- Ridurre ulteriormente i dati personali nella prima schermata, mantenendo
-  comunque facile la verifica/modifica dell'iscrizione.
-- Preparare l'area panel per iscrizione e riepilogo quando i panel saranno
-  disponibili.
+Affinamento completato il 2026-06-15.
+
+Deliverable:
+
+- Header dashboard aggiornato con il gruppo come informazione secondaria sotto
+  il nome del partecipante. Il gruppo e il referente sono mostrati come due
+  informazioni separate; lo stato interno dell'assegnazione gruppo non viene
+  mostrato al partecipante.
+- La riga evento sotto il nome include titolo, città, paese e date in forma
+  naturale, per esempio `dal 25 ottobre 2026 al 27 ottobre 2026`.
+- Prima schermata alleggerita: mostra azioni principali e area "Panel a cui sei
+  iscritto", senza riepilogo iscrizione o QR code gia' aperti.
+- Due pulsanti/link principali, centrati e simmetrici, aprono overlay dedicati:
+  `/dashboard/partecipante?overlay=qr` e
+  `/dashboard/partecipante?overlay=iscrizione`.
+- I pulsanti hanno icone stilizzate: QR code per l'accesso e pagina/form per
+  iscrizione e modifica dati.
+- L'overlay QR mostra placeholder QR, stato QR e codice partecipante.
+- L'overlay iscrizione mostra riepilogo e modifiche controllate gia' previste da
+  Milestone 6.
+
+Decisioni:
+
+- Non sono stati introdotti tab; la separazione usa overlay URL-based con query
+  `overlay`, cosi' il server component resta semplice e condivisibile.
+- Le sezioni QR e iscrizione non sono piu' visibili nella schermata rapida, ma
+  si aprono sopra la dashboard e si chiudono con il simbolo in alto a destra.
+- Gli overlay sono centrati nel viewport, con scroll interno se il contenuto e'
+  piu' lungo dello spazio disponibile.
+- Il gruppo non vive piu' in una card autonoma nella dashboard iniziale:
+  rimane un dato operativo secondario accanto all'identita' del partecipante.
+- La UI partecipante non mostra lo stato `probable/confirmed/rejected`
+  dell'assegnazione gruppo nella riga iniziale, perché e' soprattutto
+  informazione operativa interna.
+- L'helper del range date contiene un TODO i18n per tradurre in futuro
+  `dal/al` in `from/to` o equivalenti.
+- I panel restano il contenuto principale della schermata rapida in attesa di
+  funzioni future di iscrizione/scelta momenti.
 
 Verifiche eseguite:
 
@@ -465,6 +498,12 @@ Verifiche eseguite:
   `http://localhost:3000/dashboard/partecipante` con utente test autenticato.
 - Verificato che non compaiano piu' card privacy, check-in, metriche
   ridondanti e duplicazione del codice partecipante in header.
+- Verificati nel browser integrato gli overlay `?overlay=qr` e
+  `?overlay=iscrizione`.
+- Verificati pulsanti simmetrici con icone su desktop e viewport mobile 390px.
+- Verificato che gli overlay siano centrati su desktop e mobile.
+- Verificate righe evento e gruppo su desktop/mobile senza overflow
+  orizzontale.
 
 ## Stack previsto
 

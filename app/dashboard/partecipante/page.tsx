@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { updateParticipantDashboard } from "@/app/actions";
 import { getCurrentAuthContext } from "@/lib/auth/session";
@@ -10,6 +11,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
+
+type DashboardOverlay = "qr" | "iscrizione" | null;
 
 type RegistrationRow = {
   id: string;
@@ -119,6 +122,7 @@ export default async function PartecipanteDashboardPage({
   searchParams,
 }: PageProps) {
   const params = searchParams ? await searchParams : {};
+  const activeOverlay = parseDashboardOverlay(firstParam(params.overlay));
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "partecipante");
 
@@ -253,6 +257,7 @@ export default async function PartecipanteDashboardPage({
   const supportSummary = hasAccessibilityRequest
     ? "Supporto richiesto"
     : "Nessun supporto richiesto";
+  const groupSummary = getGroupSummary(groupAssignments);
 
   return (
     <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
@@ -269,9 +274,29 @@ export default async function PartecipanteDashboardPage({
             </h1>
             <p className="mt-3 max-w-3xl text-[#4b5a50]">
               {event
-                ? `${event.title} - ${event.city}, ${event.country}`
+                ? `${event.title} - ${event.city}, ${event.country} - ${formatDateRange(
+                    event.starts_on,
+                    event.ends_on
+                  )}`
                 : `Accesso verificato per ${auth.user.email}.`}
             </p>
+            {participant && event && groupSummary ? (
+              <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#66745f]">
+                <span>
+                  Gruppo: <span>{groupSummary.name}</span>
+                </span>
+                {" "}
+                {groupSummary.leaderName ? (
+                  <span>
+                    Referente: <span>{groupSummary.leaderName}</span>
+                  </span>
+                ) : null}
+              </p>
+            ) : participant && event ? (
+              <p className="mt-2 text-sm leading-6 text-[#66745f]">
+                Nessun gruppo collegato a questa iscrizione.
+              </p>
+            ) : null}
           </div>
           {params.saved ? (
             <p className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
@@ -295,7 +320,26 @@ export default async function PartecipanteDashboardPage({
           </section>
         ) : (
           <>
-            <section className="grid gap-4 lg:grid-cols-2">
+            <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+              <div className="mx-auto grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+                <DashboardButton
+                  href="/dashboard/partecipante?overlay=qr"
+                  active={activeOverlay === "qr"}
+                  icon="qr"
+                >
+                  Il tuo QR code
+                </DashboardButton>
+                <DashboardButton
+                  href="/dashboard/partecipante?overlay=iscrizione"
+                  active={activeOverlay === "iscrizione"}
+                  icon="form"
+                >
+                  Visualizza e modifica la tua iscrizione
+                </DashboardButton>
+              </div>
+            </section>
+
+            <section className="grid gap-4">
               <Panel title="Panel a cui sei iscritto">
                 {selectedPanels.length > 0 ? (
                   selectedPanels.map((panel) => (
@@ -317,292 +361,309 @@ export default async function PartecipanteDashboardPage({
                   </p>
                 )}
               </Panel>
+            </section>
 
-              <Panel title="Gruppo">
-                {groupAssignments.length > 0 ? (
-                  groupAssignments.map((assignment) => {
-                    const group = relatedOne(assignment.groups);
-
-                    return (
-                      <div key={`${group?.name}-${assignment.status}`}>
-                        <p className="font-medium">{group?.name ?? "Gruppo"}</p>
-                        <p className="text-sm text-[#66745f]">
-                          {group?.primary_leader_name
-                            ? `Referente: ${group.primary_leader_name}`
-                            : "Referente non indicato"}
+            {activeOverlay ? (
+              <DashboardOverlay closeHref="/dashboard/partecipante">
+                {activeOverlay === "qr" ? (
+                  <section className="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center">
+                    <QrPreview participantCode={participant.public_code ?? ""} />
+                    <div className="grid gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#66745f]">
+                          QR code evento
                         </p>
-                        <p className="text-sm text-[#66745f]">
-                          Stato: {groupStatusLabel(assignment.status)}
+                        <h2 className="mt-1 text-xl font-semibold">
+                          Area accesso pronta per il QR personale
+                        </h2>
+                      </div>
+                      <p className="text-sm leading-6 text-[#5e6d63]">
+                        Qui verrà visualizzato il QR code da usare per l&apos;accesso
+                        all&apos;evento e ai panel quando l&apos;organizzazione
+                        abiliterà la consegna sicura. Nel frattempo il codice
+                        partecipante resta il riferimento operativo da comunicare
+                        all&apos;accoglienza.
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Info
+                          label="Stato QR"
+                          value={
+                            qrStatus ? qrStatusLabel(qrStatus) : "In preparazione"
+                          }
+                        />
+                        <Info
+                          label="Il tuo codice"
+                          value={participant.public_code ?? "Non assegnato"}
+                        />
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
+
+                {activeOverlay === "iscrizione" ? (
+                  <section className="grid gap-6">
+                    <section className="flex flex-col gap-4">
+                      <div className="border-b border-[#e6eadf] pb-2">
+                        <h2 className="text-xl font-semibold">
+                          Riepilogo iscrizione
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
+                          Questo è il riepilogo della tua iscrizione per{" "}
+                          {event.title}, che si terrà nei giorni{" "}
+                          {formatDate(event.starts_on)} - {formatDate(event.ends_on)}.
                         </p>
                       </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-[#66745f]">
-                    Nessun gruppo collegato a questa iscrizione.
-                  </p>
-                )}
-              </Panel>
-            </section>
 
-            <section className="grid gap-4 rounded-lg border border-[#d8dece] bg-white p-5 md:grid-cols-[14rem_1fr] md:items-center">
-              <QrPreview participantCode={participant.public_code ?? ""} />
-              <div className="grid gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#66745f]">
-                    QR code evento
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold">
-                    Area accesso pronta per il QR personale
-                  </h2>
-                </div>
-                <p className="text-sm leading-6 text-[#5e6d63]">
-                  Qui verrà visualizzato il QR code da usare per l&apos;accesso
-                  all&apos;evento e ai panel quando l&apos;organizzazione abiliterà
-                  la consegna sicura. Nel frattempo il codice partecipante resta
-                  il riferimento operativo da comunicare all&apos;accoglienza.
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Info
-                    label="Stato QR"
-                    value={qrStatus ? qrStatusLabel(qrStatus) : "In preparazione"}
-                  />
-                  <Info
-                    label="Il tuo codice"
-                    value={participant.public_code ?? "Non assegnato"}
-                  />
-                </div>
-              </div>
-            </section>
-
-            <section className="grid gap-6">
-              <section className="flex flex-col gap-4 rounded-lg border border-[#d8dece] bg-white p-5">
-                <div className="border-b border-[#e6eadf] pb-2">
-                  <h2 className="text-xl font-semibold">Riepilogo iscrizione</h2>
-                  <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
-                    Questo è il riepilogo della tua iscrizione per {event.title},
-                    che si terrà nei giorni {formatDate(event.starts_on)} -{" "}
-                    {formatDate(event.ends_on)}.
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Info
-                    label="Iscrizione effettuata il"
-                    value={formatDateTime(selectedRegistration.submitted_at)}
-                  />
-                  <Info
-                    label="Email"
-                    value={primaryContact?.email ?? auth.user.email ?? "Non indicata"}
-                  />
-                  <EditableInfo
-                    label="Telefono"
-                    value={primaryContact?.phone ?? "Non indicato"}
-                    editable={Boolean(editable)}
-                  >
-                    <form action={updateParticipantDashboard} className="grid gap-3">
-                      <BaseDashboardFields registrationId={selectedRegistration.id} />
-                      <PreserveLocale value={participant.preferred_locale ?? "it"} />
-                      <PreserveAttendance
-                        availabilityUnknown={availabilityUnknown}
-                        selectedDays={[...selectedDays]}
-                      />
-                      <PreserveMoments momentChoices={momentChoices} />
-                      <PreserveAccessibility
-                        accessibility={accessibility}
-                      />
-                      <Field label="Telefono">
-                        <input
-                          name="phone"
-                          className="field"
-                          defaultValue={primaryContact?.phone ?? ""}
-                          placeholder="+3906000000"
-                          autoComplete="tel"
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Info
+                          label="Iscrizione effettuata il"
+                          value={formatDateTime(selectedRegistration.submitted_at)}
                         />
-                      </Field>
-                      <SaveInlineButton editable={Boolean(editable)} />
-                    </form>
-                  </EditableInfo>
-                  <EditableInfo
-                    label="Lingua preferita"
-                    value={
-                      (participant.preferred_locale ?? "it") === "en"
-                        ? "English"
-                        : "Italiano"
-                    }
-                    editable={Boolean(editable)}
-                  >
-                    <form action={updateParticipantDashboard} className="grid gap-3">
-                      <BaseDashboardFields registrationId={selectedRegistration.id} />
-                      <PreservePhone value={primaryContact?.phone ?? null} />
-                      <PreserveAttendance
-                        availabilityUnknown={availabilityUnknown}
-                        selectedDays={[...selectedDays]}
-                      />
-                      <PreserveMoments momentChoices={momentChoices} />
-                      <PreserveAccessibility
-                        accessibility={accessibility}
-                      />
-                      <Field label="Lingua preferita">
-                        <select
-                          name="preferredLocale"
-                          className="field"
-                          defaultValue={participant.preferred_locale ?? "it"}
+                        <Info
+                          label="Email"
+                          value={
+                            primaryContact?.email ??
+                            auth.user.email ??
+                            "Non indicata"
+                          }
+                        />
+                        <EditableInfo
+                          label="Telefono"
+                          value={primaryContact?.phone ?? "Non indicato"}
+                          editable={Boolean(editable)}
                         >
-                          <option value="it">Italiano</option>
-                          <option value="en">English</option>
-                        </select>
-                      </Field>
-                      <SaveInlineButton editable={Boolean(editable)} />
-                    </form>
-                  </EditableInfo>
-                  <Info
-                    label="Data di nascita"
-                    value={formatDate(participant.birth_date)}
-                  />
-                  <Info
-                    label="Luogo di nascita"
-                    value={questionnaire?.answers?.birthPlace ?? "Non indicato"}
-                  />
-                  <Info
-                    label="Nazionalità"
-                    value={questionnaire?.answers?.nationality ?? "Non indicata"}
-                  />
-                </div>
-
-                <EditableInfo
-                  label="Presenza prevista"
-                  value={attendanceSummary}
-                  editable={Boolean(editable)}
-                >
-                  <form action={updateParticipantDashboard} className="grid gap-3">
-                    <BaseDashboardFields registrationId={selectedRegistration.id} />
-                    <PreservePhone value={primaryContact?.phone ?? null} />
-                    <PreserveLocale value={participant.preferred_locale ?? "it"} />
-                    <PreserveMoments momentChoices={momentChoices} />
-                    <PreserveAccessibility accessibility={accessibility} />
-                    <fieldset
-                      disabled={!editable}
-                      className="grid gap-3 disabled:opacity-70"
-                    >
-                      <label className="flex gap-3 rounded-md border border-[#d8dece] p-3 text-sm">
-                        <input
-                          type="checkbox"
-                          name="availabilityUnknown"
-                          defaultChecked={availabilityUnknown}
-                          className="mt-1"
+                          <form
+                            action={updateParticipantDashboard}
+                            className="grid gap-3"
+                          >
+                            <BaseDashboardFields
+                              registrationId={selectedRegistration.id}
+                            />
+                            <PreserveLocale
+                              value={participant.preferred_locale ?? "it"}
+                            />
+                            <PreserveAttendance
+                              availabilityUnknown={availabilityUnknown}
+                              selectedDays={[...selectedDays]}
+                            />
+                            <PreserveMoments momentChoices={momentChoices} />
+                            <PreserveAccessibility accessibility={accessibility} />
+                            <Field label="Telefono">
+                              <input
+                                name="phone"
+                                className="field"
+                                defaultValue={primaryContact?.phone ?? ""}
+                                placeholder="+3906000000"
+                                autoComplete="tel"
+                              />
+                            </Field>
+                            <SaveInlineButton editable={Boolean(editable)} />
+                          </form>
+                        </EditableInfo>
+                        <EditableInfo
+                          label="Lingua preferita"
+                          value={
+                            (participant.preferred_locale ?? "it") === "en"
+                              ? "English"
+                              : "Italiano"
+                          }
+                          editable={Boolean(editable)}
+                        >
+                          <form
+                            action={updateParticipantDashboard}
+                            className="grid gap-3"
+                          >
+                            <BaseDashboardFields
+                              registrationId={selectedRegistration.id}
+                            />
+                            <PreservePhone value={primaryContact?.phone ?? null} />
+                            <PreserveAttendance
+                              availabilityUnknown={availabilityUnknown}
+                              selectedDays={[...selectedDays]}
+                            />
+                            <PreserveMoments momentChoices={momentChoices} />
+                            <PreserveAccessibility accessibility={accessibility} />
+                            <Field label="Lingua preferita">
+                              <select
+                                name="preferredLocale"
+                                className="field"
+                                defaultValue={participant.preferred_locale ?? "it"}
+                              >
+                                <option value="it">Italiano</option>
+                                <option value="en">English</option>
+                              </select>
+                            </Field>
+                            <SaveInlineButton editable={Boolean(editable)} />
+                          </form>
+                        </EditableInfo>
+                        <Info
+                          label="Data di nascita"
+                          value={formatDate(participant.birth_date)}
                         />
-                        <span>Comunicherò più avanti i giorni di presenza.</span>
-                      </label>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {eventDays.map((day) => (
-                          <label
-                            key={day}
-                            className="flex gap-3 rounded-md border border-[#d8dece] p-3 text-sm"
+                        <Info
+                          label="Luogo di nascita"
+                          value={questionnaire?.answers?.birthPlace ?? "Non indicato"}
+                        />
+                        <Info
+                          label="Nazionalità"
+                          value={questionnaire?.answers?.nationality ?? "Non indicata"}
+                        />
+                      </div>
+
+                      <EditableInfo
+                        label="Presenza prevista"
+                        value={attendanceSummary}
+                        editable={Boolean(editable)}
+                      >
+                        <form
+                          action={updateParticipantDashboard}
+                          className="grid gap-3"
+                        >
+                          <BaseDashboardFields
+                            registrationId={selectedRegistration.id}
+                          />
+                          <PreservePhone value={primaryContact?.phone ?? null} />
+                          <PreserveLocale
+                            value={participant.preferred_locale ?? "it"}
+                          />
+                          <PreserveMoments momentChoices={momentChoices} />
+                          <PreserveAccessibility accessibility={accessibility} />
+                          <fieldset
+                            disabled={!editable}
+                            className="grid gap-3 disabled:opacity-70"
+                          >
+                            <label className="flex gap-3 rounded-md border border-[#d8dece] p-3 text-sm">
+                              <input
+                                type="checkbox"
+                                name="availabilityUnknown"
+                                defaultChecked={availabilityUnknown}
+                                className="mt-1"
+                              />
+                              <span>
+                                Comunicherò più avanti i giorni di presenza.
+                              </span>
+                            </label>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {eventDays.map((day) => (
+                                <label
+                                  key={day}
+                                  className="flex gap-3 rounded-md border border-[#d8dece] p-3 text-sm"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    name="availabilityDays"
+                                    value={day}
+                                    defaultChecked={selectedDays.has(day)}
+                                    className="mt-1"
+                                  />
+                                  <span>{formatDate(day)}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </fieldset>
+                          <SaveInlineButton editable={Boolean(editable)} />
+                        </form>
+                      </EditableInfo>
+
+                      <EditableInfo
+                        label="Accessibilità e supporto"
+                        value={
+                          accessibility?.operational_notes
+                            ? `${supportSummary}: ${accessibility.operational_notes}`
+                            : supportSummary
+                        }
+                        editable={Boolean(editable)}
+                      >
+                        <form
+                          action={updateParticipantDashboard}
+                          className="grid gap-3"
+                        >
+                          <BaseDashboardFields
+                            registrationId={selectedRegistration.id}
+                          />
+                          <PreservePhone value={primaryContact?.phone ?? null} />
+                          <PreserveLocale
+                            value={participant.preferred_locale ?? "it"}
+                          />
+                          <PreserveAttendance
+                            availabilityUnknown={availabilityUnknown}
+                            selectedDays={[...selectedDays]}
+                          />
+                          <PreserveMoments momentChoices={momentChoices} />
+                          <fieldset
+                            disabled={!editable}
+                            className="grid gap-3 disabled:opacity-70"
                           >
                             <input
+                              id="hasAccessibilityNeeds"
                               type="checkbox"
-                              name="availabilityDays"
-                              value={day}
-                              defaultChecked={selectedDays.has(day)}
-                              className="mt-1"
+                              name="hasAccessibilityNeeds"
+                              defaultChecked={hasAccessibilityRequest}
+                              className="peer absolute ml-3 mt-4 h-4 w-4"
                             />
-                            <span>{formatDate(day)}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </fieldset>
-                    <SaveInlineButton editable={Boolean(editable)} />
-                  </form>
-                </EditableInfo>
-
-                <EditableInfo
-                  label="Accessibilità e supporto"
-                  value={
-                    accessibility?.operational_notes
-                      ? `${supportSummary}: ${accessibility.operational_notes}`
-                      : supportSummary
-                  }
-                  editable={Boolean(editable)}
-                  >
-                  <form action={updateParticipantDashboard} className="grid gap-3">
-                    <BaseDashboardFields registrationId={selectedRegistration.id} />
-                    <PreservePhone value={primaryContact?.phone ?? null} />
-                    <PreserveLocale value={participant.preferred_locale ?? "it"} />
-                    <PreserveAttendance
-                      availabilityUnknown={availabilityUnknown}
-                      selectedDays={[...selectedDays]}
-                    />
-                    <PreserveMoments momentChoices={momentChoices} />
-                    <fieldset
-                      disabled={!editable}
-                      className="grid gap-3 disabled:opacity-70"
-                    >
-                      <input
-                        id="hasAccessibilityNeeds"
-                        type="checkbox"
-                        name="hasAccessibilityNeeds"
-                        defaultChecked={hasAccessibilityRequest}
-                        className="peer absolute ml-3 mt-4 h-4 w-4"
-                      />
-                      <label
-                        htmlFor="hasAccessibilityNeeds"
-                        className="block rounded-md border border-[#d8dece] py-3 pl-10 pr-3 text-sm"
-                      >
-                        Desidero richiedere supporto per l&apos;accessibilità
-                        all&apos;evento.
-                      </label>
-                      <div className="hidden gap-3 peer-checked:grid">
-                        <div>
-                        <h3 className="font-semibold">
-                          Quali aspetti dobbiamo considerare?
-                        </h3>
-                        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
-                          Puoi selezionare una o più opzioni utili per organizzare
-                          meglio l&apos;accoglienza.
-                        </p>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (
                             <label
-                              key={difficulty.key}
-                              className="flex min-h-14 items-start gap-3 rounded-md border border-[#d8dece] p-3 text-sm text-[#38453c]"
+                              htmlFor="hasAccessibilityNeeds"
+                              className="block rounded-md border border-[#d8dece] py-3 pl-10 pr-3 text-sm"
                             >
-                              <input
-                                name={`accessibility_${difficulty.key}`}
-                                type="checkbox"
-                                defaultChecked={Boolean(
-                                  accessibility?.washington_group_answers?.[
-                                    difficulty.key
-                                  ]
-                                )}
-                                className="mt-1 h-4 w-4"
-                              />
-                              <span>{difficulty.label.it}</span>
+                              Desidero richiedere supporto per l&apos;accessibilità
+                              all&apos;evento.
                             </label>
-                          ))}
-                        </div>
-                        <Field label="Indicazioni pratiche per l'organizzazione">
-                          <textarea
-                            name="accessibilityNotes"
-                            className="field min-h-28"
-                            defaultValue={accessibility?.operational_notes ?? ""}
-                          />
-                        </Field>
-                      </div>
-                    </fieldset>
-                    <SaveInlineButton editable={Boolean(editable)} />
-                  </form>
-                </EditableInfo>
+                            <div className="hidden gap-3 peer-checked:grid">
+                              <div>
+                                <h3 className="font-semibold">
+                                  Quali aspetti dobbiamo considerare?
+                                </h3>
+                                <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+                                  Puoi selezionare una o più opzioni utili per
+                                  organizzare meglio l&apos;accoglienza.
+                                </p>
+                              </div>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (
+                                  <label
+                                    key={difficulty.key}
+                                    className="flex min-h-14 items-start gap-3 rounded-md border border-[#d8dece] p-3 text-sm text-[#38453c]"
+                                  >
+                                    <input
+                                      name={`accessibility_${difficulty.key}`}
+                                      type="checkbox"
+                                      defaultChecked={Boolean(
+                                        accessibility?.washington_group_answers?.[
+                                          difficulty.key
+                                        ]
+                                      )}
+                                      className="mt-1 h-4 w-4"
+                                    />
+                                    <span>{difficulty.label.it}</span>
+                                  </label>
+                                ))}
+                              </div>
+                              <Field label="Indicazioni pratiche per l'organizzazione">
+                                <textarea
+                                  name="accessibilityNotes"
+                                  className="field min-h-28"
+                                  defaultValue={
+                                    accessibility?.operational_notes ?? ""
+                                  }
+                                />
+                              </Field>
+                            </div>
+                          </fieldset>
+                          <SaveInlineButton editable={Boolean(editable)} />
+                        </form>
+                      </EditableInfo>
 
-                {!editable ? (
-                  <p className="text-sm text-[#66745f]">
-                    La finestra di modifica non è attiva per questa iscrizione.
-                  </p>
+                      {!editable ? (
+                        <p className="text-sm text-[#66745f]">
+                          La finestra di modifica non è attiva per questa
+                          iscrizione.
+                        </p>
+                      ) : null}
+                    </section>
+                  </section>
                 ) : null}
-              </section>
-
-            </section>
+              </DashboardOverlay>
+            ) : null}
           </>
         )}
       </section>
@@ -793,6 +854,109 @@ function SaveInlineButton({ editable }: { editable: boolean }) {
   );
 }
 
+function DashboardButton({
+  href,
+  active,
+  icon,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  icon: "qr" | "form";
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={
+        active
+          ? "flex h-16 items-center justify-center gap-3 rounded-md bg-[#2f5e46] px-4 text-center text-sm font-semibold leading-5 text-white"
+          : "flex h-16 items-center justify-center gap-3 rounded-md border border-[#cbd7c1] px-4 text-center text-sm font-semibold leading-5 text-[#2f5e46] hover:bg-[#eef3e8]"
+      }
+    >
+      <ActionIcon icon={icon} active={active} />
+      {children}
+    </Link>
+  );
+}
+
+function ActionIcon({
+  icon,
+  active,
+}: {
+  icon: "qr" | "form";
+  active: boolean;
+}) {
+  if (icon === "qr") {
+    const activeCells = new Set([0, 1, 3, 4, 5, 6, 8, 9, 12, 15, 16, 18, 20, 21, 22, 24]);
+
+    return (
+      <span
+        aria-hidden="true"
+        className="grid size-6 shrink-0 grid-cols-5 gap-0.5 rounded-sm"
+      >
+        {Array.from({ length: 25 }, (_, cell) => (
+          <span
+            key={cell}
+            className={
+              activeCells.has(cell)
+                ? active
+                  ? "rounded-[1px] bg-white"
+                  : "rounded-[1px] bg-[#2f5e46]"
+                : "rounded-[1px] bg-transparent"
+            }
+          />
+        ))}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className={
+        active
+          ? "grid size-6 shrink-0 gap-1 rounded-sm border border-white p-1"
+          : "grid size-6 shrink-0 gap-1 rounded-sm border border-[#2f5e46] p-1"
+      }
+    >
+      <span className={active ? "h-0.5 w-3 bg-white" : "h-0.5 w-3 bg-[#2f5e46]"} />
+      <span className={active ? "h-0.5 w-4 bg-white" : "h-0.5 w-4 bg-[#2f5e46]"} />
+      <span
+        className={active ? "h-0.5 w-3.5 bg-white" : "h-0.5 w-3.5 bg-[#2f5e46]"}
+      />
+    </span>
+  );
+}
+
+function DashboardOverlay({
+  closeHref,
+  children,
+}: {
+  closeHref: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#1c241f]/45 px-4 py-5 backdrop-blur-sm sm:px-6">
+      <section
+        role="dialog"
+        aria-modal="true"
+        className="relative mx-auto grid max-h-[calc(100vh-2.5rem)] w-full max-w-4xl gap-5 overflow-y-auto rounded-lg border border-[#d8dece] bg-white p-5 shadow-2xl sm:p-6"
+      >
+        <Link
+          href={closeHref}
+          aria-label="Chiudi"
+          title="Chiudi"
+          className="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-[#cbd7c1] text-xl font-semibold text-[#38453c] hover:bg-[#eef3e8]"
+        >
+          ×
+        </Link>
+        <div className="pr-9">{children}</div>
+      </section>
+    </div>
+  );
+}
+
 function Panel({
   title,
   children,
@@ -889,6 +1053,26 @@ function formatDate(value: string | null | undefined): string {
     : "Non indicata";
 }
 
+function formatDateRange(
+  startsOn: string | null | undefined,
+  endsOn: string | null | undefined
+): string {
+  if (!startsOn && !endsOn) {
+    return "Date da confermare";
+  }
+
+  if (!endsOn || startsOn === endsOn) {
+    return formatDate(startsOn);
+  }
+
+  if (!startsOn) {
+    return formatDate(endsOn);
+  }
+
+  // TODO i18n: localize "dal/al" for English and future dashboard locales.
+  return `dal ${formatDate(startsOn)} al ${formatDate(endsOn)}`;
+}
+
 function formatDateTime(value: string | null | undefined): string {
   if (!value) {
     return "Non indicata";
@@ -919,17 +1103,20 @@ function qrStatusLabel(qrStatus: QrStatusRow): string {
   return qrStatus.status;
 }
 
-function groupStatusLabel(status: string): string {
-  switch (status) {
-    case "probable":
-      return "Da confermare";
-    case "confirmed":
-      return "Confermato";
-    case "rejected":
-      return "Non confermato";
-    default:
-      return status;
+function getGroupSummary(
+  groupAssignments: GroupAssignmentRow[]
+): { name: string; leaderName: string | null } | null {
+  const assignment = groupAssignments[0];
+  const group = assignment ? relatedOne(assignment.groups) : null;
+
+  if (!assignment || !group) {
+    return null;
   }
+
+  return {
+    name: group.name,
+    leaderName: group.primary_leader_name,
+  };
 }
 
 function dashboardErrorMessage(value: string | undefined): string {
@@ -946,6 +1133,10 @@ function dashboardErrorMessage(value: string | undefined): string {
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function parseDashboardOverlay(value: string | undefined): DashboardOverlay {
+  return value === "qr" || value === "iscrizione" ? value : null;
 }
 
 function buildQrPreviewCells(seed: string): boolean[] {
