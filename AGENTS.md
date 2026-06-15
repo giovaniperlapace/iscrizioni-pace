@@ -24,6 +24,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Milestone 6.1 ha affinato la dashboard partecipante: gruppo come informazione
   secondaria sotto il nome, schermata rapida focalizzata sui panel e due
   pulsanti con icone per aprire QR code o iscrizione modificabile in overlay.
+- Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
+  iscrizioni generano un QR code reale, inviato nella email di conferma e
+  visualizzato nella dashboard partecipante.
 - Il 2026-06-15 e' stata verificata e corretta la configurazione Vercel
   production: la production branch e' `main`, l'alias stabile e'
   `https://iscrizioni-pace.vercel.app`, e i magic link generati per l'ambiente
@@ -231,7 +234,9 @@ Deliverable:
 - Use case pubblico in `lib/registrations/public-flow.ts`.
 - Validazione form in `lib/registrations/validation.ts`.
 - Invio email SMTP in `lib/email/*`.
-- QR token opaco e hash in `lib/qrcode/token.ts`.
+- QR token opaco e hash in `lib/qrcode/token.ts`, rendering QR in
+  `lib/qrcode/render.ts` e cifratura server-side del token recuperabile in
+  `lib/qrcode/secure-token.ts`.
 - Rate limit base in memoria in `lib/security/rate-limit.ts`.
 - Test di funzioni pure in `tests/registration-flow.test.mts`.
 
@@ -247,8 +252,10 @@ Decisioni:
   `SMTP_SECURE`; `GMAIL_APP_PASSWORD` resta alias locale supportato.
 - Dopo callback magic link, i partecipanti con contatto email corrispondente
   vengono collegati a `auth.users.id` tramite service role server-side.
-- Il QR code conserva in database solo `token_hash`; il token in chiaro non va
-  salvato.
+- Il QR code non contiene dati personali: contiene solo un token opaco.
+- Dal 2026-06-15 `qr_tokens` conserva `token_hash` per verifica futura e
+  `token_encrypted` per rigenerare server-side lo stesso QR in dashboard. Il
+  token non va salvato in chiaro.
 - Il rate limit e' volutamente basico e in memoria; per produzione serverless
   andrà sostituito o affiancato da storage condiviso.
 
@@ -352,6 +359,7 @@ Variabili Vercel production richieste:
 - `SUPABASE_URL`.
 - `SUPABASE_ANON_KEY`.
 - `SUPABASE_SERVICE_ROLE_KEY`.
+- `QR_TOKEN_ENCRYPTION_SECRET` consigliato per cifratura QR stabile.
 - `NEXT_PUBLIC_APP_URL=https://iscrizioni-pace.vercel.app`.
 - `APP_URL=https://iscrizioni-pace.vercel.app`.
 - `PUBLIC_SITE_URL=https://iscrizioni-pace.vercel.app`.
@@ -371,6 +379,10 @@ Note operative Vercel:
 - Le variabili segrete (`SUPABASE_SERVICE_ROLE_KEY`, `EMAIL_PASSWORD` e simili)
   devono restare sensitive/encrypted; Vercel le mostra vuote quando vengono
   lette via CLI/API, ed e' normale.
+- Se configurato, `QR_TOKEN_ENCRYPTION_SECRET` deve restare stabile tra deploy:
+  se cambia, i QR già salvati in `token_encrypted` non saranno più
+  rigenerabili in dashboard. L'app ha fallback server-side per compatibilita',
+  ma in produzione e' preferibile configurare un segreto esplicito.
 - Dopo la modifica di qualunque `NEXT_PUBLIC_*` serve un nuovo deploy
   production, perché Next le incorpora nel build.
 - I push su `main` devono produrre deployment production; se tornano preview,
@@ -407,8 +419,8 @@ Deliverable:
 
 Funzioni disponibili:
 
-- Riepilogo iscrizione con frase introduttiva su evento/date, gruppo in card
-  separata vicino ai panel, QR placeholder e accessibilita' sintetica.
+- Riepilogo iscrizione con frase introduttiva su evento/date, area panel,
+  overlay QR e accessibilita' sintetica.
 - Codice partecipante `participants.public_code` visibile in dashboard come
   identificativo operativo semplice dentro l'area QR con etichetta "Il tuo
   codice"; non va duplicato nell'header.
@@ -424,11 +436,12 @@ Funzioni disponibili:
 
 Decisioni:
 
-- Il QR token resta opaco: in dashboard non viene mostrato ne' ricostruito il
-  token in chiaro, perche' in database esiste solo `token_hash`.
-- La dashboard mostra stato QR/accesso evento e codice partecipante, ma una
-  futura rigenerazione/scaricamento QR richiedera' flusso dedicato con token
-  nuovo, revocabile e consegnato in modo controllato.
+- Il QR token resta opaco e non contiene dati personali. In dashboard viene
+  rigenerata l'immagine QR server-side decifrando `qr_tokens.token_encrypted`;
+  se il record e' precedente alla migration e non ha token cifrato, resta il
+  placeholder.
+- La dashboard mostra stato QR/accesso evento, codice partecipante e QR reale
+  quando il token cifrato e' disponibile.
 - Per leggere lo stato QR e scrivere audit server-side si usa service role solo
   dopo aver verificato la proprieta' della registrazione con sessione utente.
 - L'accessibilita' viene riepilogata senza mostrare tassonomie tecniche nella
@@ -505,6 +518,43 @@ Verifiche eseguite:
 - Verificate righe evento e gruppo su desktop/mobile senza overflow
   orizzontale.
 
+## Anticipo QR code reale
+
+Funzionalità anticipata il 2026-06-15 rispetto alla Milestone 12.
+
+Deliverable:
+
+- Dipendenza `qrcode` aggiunta per generare QR PNG/data URL reali.
+- Migration `supabase/migrations/20260615180000_store_retrievable_qr_tokens.sql`
+  aggiunta e applicata al Supabase self-hosted remoto.
+- `qr_tokens.token_encrypted` conserva il token QR opaco cifrato lato server;
+  `qr_tokens.token_hash` resta la base per la verifica futura.
+- Alla nuova iscrizione l'app genera il QR dal token opaco, lo allega/mostra
+  inline nella email di conferma e conserva il token cifrato.
+- La dashboard partecipante mostra il QR reale quando `token_encrypted` e'
+  disponibile; per iscrizioni precedenti senza token cifrato mostra ancora il
+  placeholder.
+
+Decisioni:
+
+- Il QR code contiene solo token opaco, non dati personali, nome, email o
+  codice partecipante.
+- `QR_TOKEN_ENCRYPTION_SECRET` e' il segreto consigliato per cifrare/decifrare
+  token recuperabili. Deve restare stabile tra deploy.
+- Lo scanner accoglienza e la verifica token restano da completare nella
+  Milestone 12.
+
+Verifiche eseguite:
+
+- `npm run lint`.
+- `npm run typecheck`.
+- `npm test`.
+- `npm run build`.
+- Migration remota applicata con
+  `./scripts/apply-remote-migration.sh supabase/migrations/20260615180000_store_retrievable_qr_tokens.sql`.
+- Browser integrato verificato su `?overlay=qr`: le iscrizioni precedenti alla
+  migration mostrano fallback placeholder, le nuove potranno mostrare QR reale.
+
 ## Stack previsto
 
 - Next.js 16 con App Router.
@@ -573,6 +623,50 @@ Il form iniziale deve raccogliere almeno:
 - Giorni/momenti previsti di partecipazione, con opzione "non lo so ancora".
 - Accettazione privacy e consenso al trattamento dati.
 - Versione consenso, data/ora, e quanto serve per tracciabilità legale.
+
+## Gruppi, referenti e nuovi partecipanti
+
+Decisione aggiornata il 2026-06-15:
+
+- L'aggancio a un referente o a un gruppo probabile e' funzione centrale: ogni
+  iscrizione deve essere collegata a un gruppo Sant'Egidio, a un referente
+  probabile o a un nodo territoriale dei nuovi partecipanti.
+- "Esterni" e' una categoria interna da evitare nella UI partecipante. Nome
+  provvisorio per documentazione e viste operative: `nuovi partecipanti` o
+  `non ancora membri Sant'Egidio`.
+- I nuovi partecipanti non sanno e non devono ricevere notifiche sul fatto di
+  essere stati classificati come non membri; la distinzione serve a
+  comunicazioni, statistiche e informazioni riservate.
+- I nuovi partecipanti devono comunque vivere nello stesso modello territoriale
+  ad albero dei gruppi: paese, città e, solo dove ha senso, livelli ulteriori
+  non esposti come appartenenza Sant'Egidio. Non si scende alle aree cittadine
+  se le informazioni disponibili non permettono di farlo con affidabilità.
+- L'albero gruppi previsto e' paese -> città -> eventuale area/sottogruppo. In
+  paesi con un solo referente nazionale, il nodo paese può essere direttamente
+  assegnabile.
+- L'assegnazione del referente Sant'Egidio si ferma al terzo livello: esempi
+  validi sono Torino, Regno Unito, Roma Torrevecchia.
+- Collaboratori nominati da un referente non sono un quarto livello
+  dell'albero: sono utenti con permessi sullo stesso gruppo o su sottoinsiemi
+  operativi assegnati.
+- Il form deve filtrare i gruppi affini usando paese, città di residenza ed età
+  alla data dell'evento. Fasce iniziali: fino a 25 anni gruppi giovani; dai 30
+  anni gruppi adulti; da 23 a 30 anni proporre sia giovani sia adulti.
+- Ogni gruppo può essere taggato come giovani, adulti, entrambi o non
+  dipendente dall'età.
+- Le opzioni gruppo nel form devono essere ricercabili sia per nome gruppo sia
+  per referente principale, per esempio `Giovani per la Pace - referente
+  Stefano Orlando`.
+- Deve esistere l'opzione "Non trovo il mio referente". In quel caso, oppure
+  se una persona ha già partecipato a Sant'Egidio ma dice di non partecipare
+  con un gruppo, il sistema assegna il gruppo più probabile in base a
+  territorio/età con stato `probable`.
+- Il referente vede le assegnazioni probabili in una coda interna e può
+  confermare o rifiutare. Dopo rifiuto si risale automaticamente al padre
+  dell'albero finché esiste un responsabile; se nessuno riconosce la persona,
+  l'assegnazione finisce in coda manager.
+- Il partecipante non riceve notifiche di rifiuto, risalita o
+  riclassificazione interna.
 
 ## Dati sensibili e privacy
 

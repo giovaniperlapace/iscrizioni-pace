@@ -13,6 +13,9 @@ Stato locale rilevato in questo task:
   `main` fino al commit `Implement participant dashboard milestone`.
 - Milestone 6.1 e' stata implementata localmente il 2026-06-15 e resta da
   committare/pushare su richiesta.
+- Una parte della Milestone 12 e' stata anticipata localmente il 2026-06-15:
+  generazione QR reale, invio nella email di conferma e visualizzazione in
+  dashboard. Resta da completare scanner/verifica accoglienza.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 
@@ -105,7 +108,9 @@ Domande che possono restare aperte fino a milestone successive:
 - Se l'accoglienza deve lavorare offline o solo online.
 - Quale formato di export serve ai manager.
 - Quali statistiche sono essenziali per il primo rilascio.
-- Come distinguere operativamente "membro Sant'Egidio già coinvolto" e "persona esterna/nuova".
+- Quale aggettivo usare nella UI interna per le persone non ancora membri di
+  Sant'Egidio, evitando parole respingenti come "esterni" nelle viste
+  operative. Nome provvisorio: "nuovi partecipanti".
 
 Informazioni da chiedere al committente:
 
@@ -221,6 +226,52 @@ Ruoli e autorizzazioni:
 - Scope per gruppo: capogruppo collegato a gruppi tramite membership.
 - Accoglienza con permessi minimi su QR/check-in e dati essenziali.
 - RLS come protezione primaria, controlli server come seconda linea.
+
+Gruppi, referenti e persone non ancora membri Sant'Egidio:
+
+- La relazione con un referente e' funzione centrale del prodotto, non solo un
+  filtro del form. Ogni iscrizione deve avere un aggancio operativo a un gruppo
+  certo o probabile, oppure a un nodo territoriale dei nuovi partecipanti.
+- I gruppi vanno modellati come albero multi-evento: paese, città, eventuale
+  area/sottogruppo cittadino. L'assegnazione ordinaria si ferma al terzo
+  livello, per esempio `Italia > Roma > Roma Torrevecchia`, `Italia > Torino`
+  o `Regno Unito`.
+- Alcuni paesi possono non avere livello città: se esiste un solo referente
+  nazionale, il nodo paese e' direttamente assegnabile.
+- I collaboratori nominati da un referente di un gruppo grande non sono un
+  quarto livello dell'albero: sono utenti con permessi sullo stesso gruppo o
+  su sottoinsiemi operativi assegnati dal referente.
+- I gruppi assegnabili devono avere label ricercabili per nome gruppo e nome
+  referente principale, per esempio `Giovani per la Pace - referente Stefano
+  Orlando`.
+- Il matching del form usa paese, città di residenza abituale ed età calcolata
+  rispetto alla data dell'evento. Le fasce iniziali sono:
+  - fino a 25 anni: proporre gruppi giovani;
+  - dai 30 anni: proporre gruppi adulti;
+  - da 23 a 30 anni: proporre sia giovani sia adulti, perché la realtà puo'
+    sovrapporsi.
+- Ogni gruppo assegnabile può essere taggato come `giovani`, `adulti` o
+  entrambi/nessuno quando la fascia non e' rilevante.
+- Se una persona dichiara di non aver mai partecipato a iniziative o servizi
+  Sant'Egidio, viene classificata come nuovo partecipante/non ancora membro,
+  ma resta comunque dentro lo stesso albero territoriale per paese e città. La
+  distinzione serve per comunicazioni, statistiche e informazioni riservate,
+  non deve essere comunicata al partecipante come giudizio o rigetto.
+- Anche i nuovi partecipanti devono essere aggregabili per territorio, per
+  esempio nuovi partecipanti di Roma o Torino, così manager e referenti possono
+  vedere statistiche come membri Sant'Egidio e nuovi partecipanti per città.
+- Se una persona dichiara partecipazione Sant'Egidio ma non trova il referente
+  o dice di non partecipare con un gruppo, il sistema la assegna al gruppo più
+  probabile in base a territorio/età con stato `probable` e source `rule`.
+- Il referente riceve notifiche o una coda interna per le nuove assegnazioni
+  probabili; può confermare che la persona e' del gruppo, rifiutare perché non
+  la conosce o chiedere riassegnazione.
+- Dopo un rifiuto del referente si risale automaticamente al padre dell'albero
+  finché esiste un nodo con referente responsabile. Se anche il livello padre
+  non riconosce la persona o non c'e' un responsabile chiaro, l'assegnazione va
+  in una coda manager.
+- Il partecipante non riceve notifiche di rifiuto o riclassificazione interna.
+  Questi passaggi servono solo alla gestione organizzativa.
 
 Multilingua:
 
@@ -510,15 +561,121 @@ Dati sensibili e minimizzazione:
   restano chiari e controllati.
 - Non fare: introdurre una nuova dashboard capogruppo o manager.
 
+### Milestone 6.2: anticipo QR reale in conferma e dashboard
+
+- Stato: completata localmente il 2026-06-15; migration remota applicata;
+  commit/push ancora da fare su richiesta.
+- Scopo: anticipare la parte di Milestone 12 che genera e consegna il QR code
+  personale al partecipante, senza implementare ancora scanner/check-in.
+- Deliverable:
+  - dipendenza `qrcode` per generare QR reali;
+  - migration `20260615180000_store_retrievable_qr_tokens.sql` con
+    `qr_tokens.token_encrypted`;
+  - cifratura server-side del token opaco recuperabile con
+    `QR_TOKEN_ENCRYPTION_SECRET` consigliato;
+  - email di conferma iscrizione con QR code personale allegato/inline;
+  - dashboard partecipante con QR reale quando il token cifrato e' disponibile
+    e fallback placeholder per iscrizioni precedenti.
+- File/cartelle: `lib/qrcode/*`, `lib/email/*`, `lib/registrations/*`,
+  `app/dashboard/partecipante/page.tsx`, `supabase/migrations/*`.
+- Migration: applicata al Supabase self-hosted con script operativo.
+- Verifiche: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
+  e verifica browser su overlay QR completate.
+- Nota compatibilità: le iscrizioni precedenti alla migration non hanno
+  `token_encrypted` e quindi mantengono il placeholder; le nuove iscrizioni
+  generano e salvano il token cifrato per mostrare il QR reale.
+- Rischi: rotazione o perdita di `QR_TOKEN_ENCRYPTION_SECRET` rende non
+  rigenerabili i QR cifrati gia' salvati.
+- Accettazione: nuove iscrizioni ricevono QR in email e lo stesso QR puo'
+  essere visualizzato in dashboard.
+- Non fare: scanner accoglienza, endpoint verifica token, check-in idempotente.
+
+### Milestone 6.3: albero gruppi, matching referente e nuovi partecipanti
+
+- Scopo: progettare e implementare la logica che collega ogni iscrizione a un
+  referente, a un gruppo probabile o a un nodo territoriale dei nuovi
+  partecipanti, prima di costruire la dashboard capogruppo completa.
+- Deliverable schema:
+  - estendere `groups` o aggiungere tabelle correlate per modellare
+    `parent_group_id`, tipo nodo (`country`, `city`, `area`, `newcomers` o
+    equivalente), nodo assegnabile/non assegnabile, ordine pubblico e stato
+    attivo;
+  - distinguere gruppi Sant'Egidio da nodi territoriali dei nuovi partecipanti
+    senza esporre questa classificazione al partecipante come etichetta
+    respingente;
+  - modellare tag fascia (`giovani`, `adulti`, entrambi o nessuno) e regole
+    paese/città/età per il matching;
+  - supportare referente principale e collaboratori tramite membership utente,
+    senza creare un quarto livello dell'albero;
+  - aggiungere eventuali campi su `participant_group_assignments` per
+    assegnazione corrente, motivazione, nodo da cui si e' risaliti e audit
+    minimo, se l'unicità attuale `registration_id, group_id` non basta.
+- Deliverable logica applicativa:
+  - funzione testabile in `lib/groups/*` per calcolare età alla data evento;
+  - funzione testabile per trovare candidati in base a paese, città e fascia
+    età, con sovrapposizione 23-30 anni;
+  - funzione di fallback che assegna al nodo più vicino disponibile: area se
+    riconoscibile, altrimenti città, altrimenti paese;
+  - opzione form "Non trovo il mio referente" che crea assegnazione `probable`
+    da regola invece di bloccare l'iscrizione;
+  - per chi risponde "No" alla partecipazione precedente Sant'Egidio,
+    assegnazione al ramo territoriale dei nuovi partecipanti per paese/città;
+  - per chi risponde "Sì" ma non partecipa con gruppo o non trova il gruppo,
+    assegnazione probabile a gruppo/referente più vicino.
+- Deliverable UI pubblica:
+  - lista gruppi filtrata e ricercabile solo tra candidati affini;
+  - label con nome gruppo e referente principale;
+  - nessuna esposizione al partecipante di stati interni come
+    `probable/rejected` o "esterno".
+- File/cartelle: `supabase/migrations/*`, `lib/groups/*`,
+  `lib/registrations/*`, `app/registrazione/*`, `tests/*`,
+  `docs/registration-questionnaire.md`, `AGENTS.md`.
+- Migration: sì, con diff SQL revisionabile e RLS aggiornata per non esporre
+  più del necessario nel catalogo pubblico dei gruppi.
+- Verifiche:
+  - test unitari su matching paese/città/età;
+  - casi Austria senza città, Italia con città, Roma con aree, fascia 23-30;
+  - iscrizione nuovo partecipante assegnata a nodo territoriale corretto;
+  - iscrizione Sant'Egidio senza referente scelto assegnata come `probable`;
+  - `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+- Rischi:
+  - mostrare troppi gruppi nel form e confondere il partecipante;
+  - esporre implicitamente informazioni interne sui gruppi;
+  - rendere rigida una realtà organizzativa che deve restare modificabile dai
+    manager.
+- Accettazione: ogni nuova iscrizione ha un aggancio operativo coerente e
+  verificabile, scelto dal partecipante o calcolato dal sistema, senza
+  comunicare classificazioni interne al partecipante.
+- Non fare: dashboard capogruppo completa, notifiche email definitive,
+  riassegnazione manuale manager avanzata.
+
 ### Milestone 7: gruppi e dashboard capogruppo
 
-- Scopo: dare strumenti ai capigruppo.
-- Deliverable: elenco partecipanti del gruppo, conferma membro/esterno, note operative, notifiche base.
+- Scopo: dare strumenti ai capigruppo per gestire la coda delle assegnazioni
+  certe/probabili prodotte dalla Milestone 6.3.
+- Deliverable:
+  - elenco partecipanti dei gruppi assegnati al capogruppo, con filtri per
+    confermati, probabili, rifiutati e nuovi da verificare;
+  - vista separata per nuovi partecipanti del territorio quando il capogruppo
+    deve solo conoscere il dato operativo/statistico, non confermare
+    appartenenza Sant'Egidio;
+  - azioni per confermare appartenenza al gruppo, rifiutare perché non
+    riconosciuto, aggiungere nota operativa interna e segnalare riassegnazione;
+  - risalita automatica al nodo padre dopo rifiuto: area -> città -> paese ->
+    coda manager, senza notifica al partecipante;
+  - notifiche base o badge interni per nuove assegnazioni probabili;
+  - audit log delle decisioni del referente senza duplicare contenuti
+    sensibili.
 - File/cartelle: `app/[locale]/dashboard/capogruppo/*`, `lib/groups/*`, `lib/email/*`.
-- Migration: group assignments, membership capogruppo, campi conferma.
-- Verifiche: capogruppo vede solo gruppi assegnati; manager/admin vedono tutto.
+- Migration: eventuali stati/colonne per escalation, decisione referente,
+  note interne e notifica letta/non letta, se non già coperti da Milestone 6.3.
+- Verifiche: capogruppo vede solo gruppi assegnati; manager/admin vedono tutto;
+  rifiuto risale al padre corretto; nessuna email o notifica va al
+  partecipante per rifiuti/riclassificazioni interne.
 - Rischi: scope gruppo sbagliato.
-- Accettazione: casi gruppo singolo/multiplo coperti.
+- Accettazione: casi gruppo singolo/multiplo coperti; le assegnazioni
+  probabili diventano confermate, rifiutate o passano al livello superiore in
+  modo tracciabile.
 - Non fare: inserimento manuale avanzato se non incluso.
 
 ### Milestone 8: inserimento manuale partecipanti da capogruppo
@@ -535,10 +692,14 @@ Dati sensibili e minimizzazione:
 ### Milestone 9: dashboard manager/admin con tabelle e filtri
 
 - Scopo: gestione operativa completa.
-- Deliverable: tabelle partecipanti, ricerca, filtri, sort, edit modal, export base, statistiche iniziali.
+- Deliverable: tabelle partecipanti, ricerca, filtri, sort, edit modal, export
+  base, statistiche iniziali, coda manager per assegnazioni non riconosciute
+  dopo risalita, statistiche per membri Sant'Egidio e nuovi partecipanti per
+  paese/città/gruppo.
 - File/cartelle: `dashboard/manager`, `dashboard/admin`, `components/tables`, `lib/reports`.
 - Migration: audit export/modifiche; eventuali viste SQL.
-- Verifiche: filtri per evento, gruppo, paese, città, stato, accessibilità aggregata, presenza.
+- Verifiche: filtri per evento, gruppo, paese, città, stato, classificazione
+  membro/nuovo partecipante, accessibilità aggregata, presenza.
 - Rischi: dati sensibili visibili in export.
 - Accettazione: manager gestisce evento assegnato; visualizzatore non modifica.
 - Non fare: funzioni admin globali fuori scope.
@@ -684,8 +845,10 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Procedi con la Milestone 7: gruppi e dashboard capogruppo. Prima verifica
-> branch, stato Git, schema attuale e RLS. Implementa una prima dashboard
-> capogruppo che mostri solo i partecipanti dei gruppi assegnati, con dati
-> minimi, conferma appartenenza/esternalita' e guardrail per non esporre dati
-> sensibili fuori scope.
+> Procedi con la Milestone 6.3: albero gruppi, matching referente e nuovi
+> partecipanti. Prima verifica branch, stato Git, schema attuale e RLS.
+> Progetta una migration revisionabile per l'albero gruppi e implementa le
+> funzioni testabili di matching paese/città/età, inclusa la sovrapposizione
+> 23-30 anni e l'assegnazione territoriale dei nuovi partecipanti. Aggiorna il
+> form iscrizione per mostrare solo i gruppi affini e l'opzione "Non trovo il
+> mio referente", senza esporre stati interni al partecipante.

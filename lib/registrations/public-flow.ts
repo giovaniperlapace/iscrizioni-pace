@@ -10,6 +10,8 @@ import {
   getQuestionnaireVisibilitySummary,
   REGISTRATION_QUESTIONNAIRE_VERSION,
 } from "@/lib/questionnaire/registration";
+import { renderQrPngBuffer } from "@/lib/qrcode/render";
+import { encryptQrToken } from "@/lib/qrcode/secure-token";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
 import {
   PRIVACY_VERSION,
@@ -254,6 +256,7 @@ export async function createPublicRegistration(
     supabase.from("qr_tokens").insert({
       registration_id: registrationId,
       token_hash: qrToken.tokenHash,
+      token_encrypted: encryptQrToken(qrToken.token),
     }),
     supabase.from("audit_logs").insert({
       event_id: event.id,
@@ -315,6 +318,9 @@ export async function createPublicRegistration(
   }
 
   try {
+    const qrCodeContentId = `registration-qr-${registrationId}@iscrizioni-pace`;
+    const qrCodePng = await renderQrPngBuffer(qrToken.token);
+
     await sendTransactionalEmail({
       to: input.email,
       ...renderRegistrationConfirmationEmail({
@@ -323,7 +329,16 @@ export async function createPublicRegistration(
         participantCode: createdParticipant.public_code,
         eventTitle: event.title,
         siteLink: publicSiteUrl,
+        qrCodeContentId,
       }),
+      attachments: [
+        {
+          filename: `qr-${createdParticipant.public_code}.png`,
+          content: qrCodePng,
+          contentType: "image/png",
+          cid: qrCodeContentId,
+        },
+      ],
     });
   } catch (error) {
     console.error("[email:registration-confirmation]", error);

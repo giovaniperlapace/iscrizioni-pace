@@ -9,6 +9,8 @@ import {
   buildRegistrationQuestionnaireAnswers,
   REGISTRATION_QUESTIONS,
 } from "../lib/questionnaire/registration.ts";
+import { renderQrDataUrl } from "../lib/qrcode/render.ts";
+import { decryptQrToken, encryptQrToken } from "../lib/qrcode/secure-token.ts";
 import { createOpaqueQrToken, hashQrToken } from "../lib/qrcode/token.ts";
 import {
   canParticipantEditRegistration,
@@ -198,6 +200,21 @@ test("QR tokens are opaque and only hashes are stable", () => {
   assert.notEqual(first.tokenHash, first.token);
 });
 
+test("QR tokens can be encrypted for server-side dashboard rendering", () => {
+  process.env.QR_TOKEN_ENCRYPTION_SECRET = "test-secret";
+  const token = createOpaqueQrToken().token;
+  const encrypted = encryptQrToken(token);
+
+  assert.notEqual(encrypted, token);
+  assert.equal(decryptQrToken(encrypted), token);
+});
+
+test("QR renderer returns an image data URL", async () => {
+  const dataUrl = await renderQrDataUrl("opaque-token");
+
+  assert.match(dataUrl, /^data:image\/png;base64,/);
+});
+
 test("magic link template escapes action URLs", () => {
   const rendered = renderMagicLinkEmail({
     actionLink: 'https://example.org/auth?x="<tag>',
@@ -213,10 +230,13 @@ test("registration confirmation includes the short participant code", () => {
     participantCode: "A7K2",
     eventTitle: "Assisi 2026",
     siteLink: "https://iscrizioni-pace.vercel.app",
+    qrCodeContentId: "registration-qr@example.org",
   });
 
   assert.match(rendered.text, /A7K2/);
   assert.match(rendered.html, /A7K2/);
+  assert.match(rendered.text, /QR code personale/);
+  assert.match(rendered.html, /cid:registration-qr@example\.org/);
 });
 
 test("rate limit blocks attempts after the configured threshold", () => {

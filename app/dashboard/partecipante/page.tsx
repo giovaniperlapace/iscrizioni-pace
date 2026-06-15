@@ -4,6 +4,8 @@ import Link from "next/link";
 import { updateParticipantDashboard } from "@/app/actions";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
+import { renderQrDataUrl } from "@/lib/qrcode/render";
+import { decryptQrToken } from "@/lib/qrcode/secure-token";
 import { canParticipantEditRegistration } from "@/lib/registrations/participant-dashboard";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -103,6 +105,7 @@ type QuestionnaireRow = {
 type QrStatusRow = {
   status: string;
   expires_at: string | null;
+  token_encrypted: string | null;
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("it-IT", {
@@ -220,6 +223,7 @@ export default async function PartecipanteDashboardPage({
   const questionnaire =
     ((questionnaireResult.data ?? []) as QuestionnaireRow[])[0] ?? null;
   const qrStatus = qrStatusResult.data as QrStatusRow | null;
+  const qrDataUrl = await getQrDataUrl(qrStatus);
   const editable =
     selectedRegistration &&
     canParticipantEditRegistration({
@@ -367,22 +371,24 @@ export default async function PartecipanteDashboardPage({
               <DashboardOverlay closeHref="/dashboard/partecipante">
                 {activeOverlay === "qr" ? (
                   <section className="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center">
-                    <QrPreview participantCode={participant.public_code ?? ""} />
+                    <QrPreview
+                      participantCode={participant.public_code ?? ""}
+                      qrDataUrl={qrDataUrl}
+                    />
                     <div className="grid gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#66745f]">
                           QR code evento
                         </p>
                         <h2 className="mt-1 text-xl font-semibold">
-                          Area accesso pronta per il QR personale
+                          Il tuo QR code personale
                         </h2>
                       </div>
                       <p className="text-sm leading-6 text-[#5e6d63]">
-                        Qui verrà visualizzato il QR code da usare per l&apos;accesso
-                        all&apos;evento e ai panel quando l&apos;organizzazione
-                        abiliterà la consegna sicura. Nel frattempo il codice
+                        Usa questo QR code per l&apos;accesso all&apos;evento quando
+                        l&apos;accoglienza abiliterà la scansione. Il codice
                         partecipante resta il riferimento operativo da comunicare
-                        all&apos;accoglienza.
+                        se il QR non fosse disponibile.
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <Info
@@ -676,7 +682,7 @@ async function getQrStatus(registrationId: string): Promise<{ data: QrStatusRow 
     const serviceSupabase = createSupabaseServiceClient();
     const { data } = await serviceSupabase
       .from("qr_tokens")
-      .select("status,expires_at")
+      .select("status,expires_at,token_encrypted")
       .eq("registration_id", registrationId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -688,22 +694,51 @@ async function getQrStatus(registrationId: string): Promise<{ data: QrStatusRow 
   }
 }
 
-function QrPreview({ participantCode }: { participantCode: string }) {
+async function getQrDataUrl(qrStatus: QrStatusRow | null): Promise<string | null> {
+  const token = decryptQrToken(qrStatus?.token_encrypted);
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return await renderQrDataUrl(token);
+  } catch {
+    return null;
+  }
+}
+
+function QrPreview({
+  participantCode,
+  qrDataUrl,
+}: {
+  participantCode: string;
+  qrDataUrl: string | null;
+}) {
   const cells = buildQrPreviewCells(participantCode || "PACE");
 
   return (
     <div className="mx-auto grid w-full max-w-48 gap-3">
-      <div
-        className="grid aspect-square grid-cols-9 rounded-md border border-[#cbd7c1] bg-[#f7f8f3] p-3"
-        aria-hidden="true"
-      >
-        {cells.map((active, index) => (
-          <span
-            key={index}
-            className={active ? "bg-[#1c241f]" : "bg-transparent"}
-          />
-        ))}
-      </div>
+      {qrDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={qrDataUrl}
+          alt="QR code personale"
+          className="aspect-square rounded-md border border-[#cbd7c1] bg-white p-3"
+        />
+      ) : (
+        <div
+          className="grid aspect-square grid-cols-9 rounded-md border border-[#cbd7c1] bg-[#f7f8f3] p-3"
+          aria-hidden="true"
+        >
+          {cells.map((active, index) => (
+            <span
+              key={index}
+              className={active ? "bg-[#1c241f]" : "bg-transparent"}
+            />
+          ))}
+        </div>
+      )}
       <p className="text-center font-mono text-sm font-semibold text-[#38453c]">
         {participantCode || "QR"}
       </p>

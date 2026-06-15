@@ -7,6 +7,12 @@ export type SendEmailInput = {
   subject: string;
   text: string;
   html: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType: string;
+    cid?: string;
+  }>;
 };
 
 export async function sendTransactionalEmail(input: SendEmailInput) {
@@ -18,6 +24,12 @@ export async function sendTransactionalEmail(input: SendEmailInput) {
       from: config.from,
       subject: input.subject,
       text: input.text,
+      attachments: input.attachments?.map((attachment) => ({
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        cid: attachment.cid,
+        size: attachment.content.length,
+      })),
     });
 
     return {
@@ -41,5 +53,6 @@ export async function sendTransactionalEmail(input: SendEmailInput) {
     subject: input.subject,
     text: input.text,
     html: input.html,
+    attachments: input.attachments,
   });
 }

@@ -8,6 +8,7 @@ type RegistrationConfirmationInput = {
   participantCode: string;
   eventTitle: string;
   siteLink: string;
+  qrCodeContentId?: string;
 };
 
 export function renderMagicLinkEmail(input: MagicLinkTemplateInput) {
@@ -42,10 +43,11 @@ export function renderRegistrationConfirmationEmail(
       "",
       `abbiamo ricevuto l'iscrizione di ${participantName} per ${input.eventTitle}.`,
       `Il tuo codice partecipante è: ${input.participantCode}.`,
+      "In allegato trovi anche il tuo QR code personale per l'accesso all'evento.",
       "Puoi entrare nella tua dashboard tornando al sito dell'iscrizione e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.",
       input.siteLink,
       "",
-      "Più avanti, quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare e scaricare il QR code per l'ingresso all'evento.",
+      "Quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare.",
       "",
       "Grazie.",
     ].join("\n"),
@@ -57,9 +59,15 @@ export function renderRegistrationConfirmationEmail(
       `<p>Il tuo codice partecipante è: <strong>${escapeHtml(
         input.participantCode
       )}</strong>.</p>`,
+      input.qrCodeContentId
+        ? `<p><img src="cid:${escapeHtml(
+            input.qrCodeContentId
+          )}" alt="QR code personale" width="180" height="180" /></p>`
+        : "",
+      "<p>In allegato trovi anche il tuo QR code personale per l'accesso all'evento.</p>",
       "<p>Puoi entrare nella tua dashboard tornando al sito dell'iscrizione e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.</p>",
       `<p><a href="${escapeHtml(input.siteLink)}">Apri il sito iscrizioni</a></p>`,
-      "<p>Più avanti, quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare e scaricare il QR code per l'ingresso all'evento.</p>",
+      "<p>Quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare.</p>",
       "<p>Grazie.</p>",
     ].join(""),
   };
