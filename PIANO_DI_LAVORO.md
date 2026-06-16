@@ -14,8 +14,10 @@ Stato locale rilevato in questo task:
 - Una parte della Milestone 12 e' stata anticipata il 2026-06-15: generazione
   QR reale, invio nella email di conferma e visualizzazione in dashboard. Resta
   da completare scanner/verifica accoglienza.
-- Milestone 7 e' in corso: preparazione apertura pubblica, guardrail env/Vercel
-  e caso utenti con doppio ruolo operativo + iscrizione personale.
+- Milestone 7 e' completata: preparazione apertura pubblica, guardrail
+  env/Vercel e caso utenti con doppio ruolo operativo + iscrizione personale.
+- Milestone 8 e' completata localmente: apertura controllata e monitoraggio
+  iniziale dalla dashboard admin, con log operativo e audit degli errori email.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-16: l'obiettivo principale ora e' aprire le
@@ -73,6 +75,11 @@ Regola trasversale sui ruoli operativi:
 - Le dashboard operative devono offrire un passaggio chiaro verso "La mia
   iscrizione" e segnalare se un utente con ruolo operativo non ha ancora
   completato la propria registrazione personale per l'evento.
+- La dashboard partecipante deve offrire il passaggio inverso quando lo stesso
+  utente ha ruoli operativi: admin, manager, manager_viewer, accoglienza e
+  capogruppo non devono restare bloccati nell'area partecipante dopo aver
+  aperto "La mia iscrizione". Il primo caso implementato mostra il rientro
+  all'area admin e la logica e' gia' predisposta per gli altri ruoli.
 
 Workflow principale:
 
@@ -769,17 +776,26 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 - Scopo: aprire le iscrizioni a un gruppo ristretto o al pubblico con strumenti
   minimi per osservare e correggere rapidamente problemi reali.
-- Deliverable:
-  - procedura per apertura/chiusura iscrizioni tramite stato evento e date;
-  - pagina/viste minime admin o comando operativo per contare iscrizioni,
-    errori email e casi senza gruppo certo;
-  - gestione manuale minima di duplicati o iscrizioni errate, se gia' necessaria
-    per non bloccare il lancio;
-  - log o documento di monitoraggio dei problemi emersi nelle prime iscrizioni;
-  - messaggi utente chiari per errori di email, link scaduti e iscrizioni
-    chiuse.
+- Stato: completata localmente il 2026-06-16.
+- Deliverable completati:
+  - procedura per apertura/chiusura iscrizioni tramite stato evento e date in
+    `docs/opening-monitoring-log.md`;
+  - dashboard admin con comandi auditati `Apri ora`, `Pausa`, `Nascondi`;
+  - conteggi minimi per iscrizioni, ultime 24 ore, gruppo probabile, supporto,
+    QR mancanti, email fallite e email duplicate;
+  - audit degli errori email `email.magic_link_failed` e
+    `email.registration_confirmation_failed`, senza salvare indirizzi email
+    completi nel metadata;
+  - helper testabili in `lib/registrations/opening-monitoring.ts`;
+  - rientro role-aware dalla dashboard partecipante alle aree operative
+    disponibili, a partire dall'area admin.
+- Ancora fuori scope:
+  - gestione manuale completa di duplicati o iscrizioni errate;
+  - dashboard manager/admin completa con tabelle e modifica dati;
+  - smoke production finale con credenziali reali prima dell'apertura.
 - File/cartelle: `app/dashboard/admin/*`, `lib/registrations/*`,
-  `lib/email/*`, `docs/*`, eventuali script operativi.
+  `lib/email/*`, `docs/*`, `app/dashboard/partecipante/*`, eventuali script
+  operativi.
 - Migration: solo per campi strettamente necessari a monitoraggio/supporto.
 - Verifiche:
   - iscrizioni aperte/chiuse rispettano configurazione evento;

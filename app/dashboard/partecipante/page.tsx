@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { updateParticipantDashboard } from "@/app/actions";
+import { ROLE_ROUTES, type DashboardRole } from "@/lib/auth/roles";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
 import { renderQrDataUrl } from "@/lib/qrcode/render";
@@ -262,44 +263,64 @@ export default async function PartecipanteDashboardPage({
     ? "Supporto richiesto"
     : "Nessun supporto richiesto";
   const groupSummary = getGroupSummary(groupAssignments);
+  const operationalDashboards = getOperationalDashboards(auth.eventRoles);
 
   return (
     <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
-        <header className="grid gap-3">
+        <header className="grid gap-4">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
             Area partecipante
           </p>
-          <div>
-            <h1 className="text-3xl font-semibold sm:text-4xl">
-              {participant
-                ? `${participant.first_name} ${participant.last_name}`
-                : "Dashboard partecipante"}
-            </h1>
-            <p className="mt-3 max-w-3xl text-[#4b5a50]">
-              {event
-                ? `${event.title} - ${event.city}, ${event.country} - ${formatDateRange(
-                    event.starts_on,
-                    event.ends_on
-                  )}`
-                : `Accesso verificato per ${auth.user.email}.`}
-            </p>
-            {participant && event && groupSummary ? (
-              <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#66745f]">
-                <span>
-                  Gruppo: <span>{groupSummary.name}</span>
-                </span>
-                {" "}
-                {groupSummary.leaderName ? (
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
+            <div>
+              <h1 className="text-3xl font-semibold sm:text-4xl">
+                {participant
+                  ? `${participant.first_name} ${participant.last_name}`
+                  : "Dashboard partecipante"}
+              </h1>
+              <p className="mt-3 max-w-3xl text-[#4b5a50]">
+                {event
+                  ? `${event.title} - ${event.city}, ${event.country} - ${formatDateRange(
+                      event.starts_on,
+                      event.ends_on
+                    )}`
+                  : `Accesso verificato per ${auth.user.email}.`}
+              </p>
+              {participant && event && groupSummary ? (
+                <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#66745f]">
                   <span>
-                    Referente: <span>{groupSummary.leaderName}</span>
+                    Gruppo: <span>{groupSummary.name}</span>
                   </span>
-                ) : null}
-              </p>
-            ) : participant && event ? (
-              <p className="mt-2 text-sm leading-6 text-[#66745f]">
-                Nessun gruppo collegato a questa iscrizione.
-              </p>
+                  {" "}
+                  {groupSummary.leaderName ? (
+                    <span>
+                      Referente: <span>{groupSummary.leaderName}</span>
+                    </span>
+                  ) : null}
+                </p>
+              ) : participant && event ? (
+                <p className="mt-2 text-sm leading-6 text-[#66745f]">
+                  Nessun gruppo collegato a questa iscrizione.
+                </p>
+              ) : null}
+            </div>
+
+            {operationalDashboards.length > 0 ? (
+              <nav
+                aria-label="Aree operative"
+                className="flex flex-wrap gap-2 lg:justify-end"
+              >
+                {operationalDashboards.map((dashboard) => (
+                  <Link
+                    key={dashboard.role}
+                    href={dashboard.href}
+                    className="inline-flex min-h-11 items-center justify-center rounded-md border border-[#b8c5ad] bg-white px-4 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                  >
+                    Torna all&apos;{dashboard.label}
+                  </Link>
+                ))}
+              </nav>
             ) : null}
           </div>
           {params.saved ? (
@@ -1041,6 +1062,43 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function relatedOne<T>(value: Related<T>): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
+}
+
+function getOperationalDashboards(
+  eventRoles: Array<{ role: string; eventId: string | null }>
+): Array<{ role: DashboardRole; label: string; href: string }> {
+  const roleOrder: DashboardRole[] = [
+    "admin",
+    "manager",
+    "accoglienza",
+    "manager_viewer",
+    "capogruppo",
+  ];
+  const availableRoles = new Set(eventRoles.map((role) => role.role));
+
+  return roleOrder
+    .filter((role) => availableRoles.has(role))
+    .map((role) => ({
+      role,
+      label: operationalDashboardLabel(role),
+      href: ROLE_ROUTES[role],
+    }));
+}
+
+function operationalDashboardLabel(role: DashboardRole): string {
+  switch (role) {
+    case "admin":
+      return "area admin";
+    case "manager":
+    case "manager_viewer":
+      return "area manager";
+    case "accoglienza":
+      return "area accoglienza";
+    case "capogruppo":
+      return "area capogruppo";
+    case "partecipante":
+      return "area partecipante";
+  }
 }
 
 function buildEventDays(startsOn: string | null, endsOn: string | null): string[] {

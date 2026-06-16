@@ -407,6 +407,19 @@ export async function createPublicRegistration(
       ],
     });
   } catch (error) {
+    await supabase.from("audit_logs").insert({
+      event_id: event.id,
+      action: "email.registration_confirmation_failed",
+      entity_table: "registrations",
+      entity_id: registrationId,
+      metadata: {
+        email_domain: input.email.split("@")[1]?.toLowerCase() ?? null,
+        message:
+          error instanceof Error
+            ? error.message.slice(0, 300)
+            : "Errore email sconosciuto",
+      },
+    });
     console.error("[email:registration-confirmation]", error);
   }
 

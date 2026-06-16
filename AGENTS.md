@@ -33,6 +33,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   operativa, guardrail Vercel/env, comando `opening:verify`, riconoscimento del
   ruolo capogruppo da `group_memberships` e accesso "La mia iscrizione" dalle
   dashboard operative minime.
+- Milestone 8 ha aggiunto apertura controllata e monitoraggio iniziale dalla
+  dashboard admin: comandi auditati per aprire/pausare/nascondere evento,
+  conteggi minimi iscrizioni/anomalie, logging audit degli errori email e log
+  operativo in `docs/opening-monitoring-log.md`.
 - Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
@@ -445,6 +449,48 @@ Guardrail aggiunti:
 - `app/dashboard/capogruppo/page.tsx` ora valida la sessione lato server e usa
   `group_memberships` come fonte reale dei nodi/gruppi assegnati.
 
+## Milestone 8 - apertura controllata e monitoraggio iniziale
+
+Deliverable:
+
+- Dashboard admin aggiornata in `app/dashboard/admin/page.tsx` con vista
+  operativa per evento: stato apertura, finestre `registration_opens_at` /
+  `registration_closes_at`, conteggi iscrizioni e segnali da controllare.
+- Server action `updateEventOpeningState` in `app/actions.ts` con comandi:
+  `Apri ora`, `Pausa`, `Nascondi`.
+- Ogni comando apertura scrive audit in `audit_logs` con action
+  `event.opening_open`, `event.opening_pause` o `event.opening_draft`.
+- Gli errori di invio magic link e conferma iscrizione vengono registrati in
+  `audit_logs` con action `email.magic_link_failed` e
+  `email.registration_confirmation_failed`, senza salvare segreti, token o
+  indirizzi email completi nel metadata.
+- Helper testabili in `lib/registrations/opening-monitoring.ts`.
+- Test `tests/opening-monitoring.test.mts`.
+- Log/procedura operativa `docs/opening-monitoring-log.md`, collegato alla
+  checklist apertura.
+
+Decisioni:
+
+- `Apri ora` imposta l'evento `published`, apre subito la finestra iscrizioni e
+  rimuove una chiusura passata; se la chiusura futura esiste, viene mantenuta.
+- `Pausa` lascia l'evento `published` ma porta `registration_closes_at` al
+  momento corrente, così il form pubblico non accetta nuove iscrizioni.
+- `Nascondi` imposta l'evento `draft` e porta `registration_closes_at` al
+  momento corrente.
+- La dashboard admin mostra solo conteggi e anomalie aggregate, non elenchi di
+  email o dati personali.
+- I conteggi da guardare nei primi giorni sono: iscrizioni totali, ultime 24
+  ore, senza gruppo corrente, gruppo probabile, QR mancante, errori email 24h,
+  email duplicate e richieste di supporto operativo.
+
+Verifiche previste:
+
+- Prima dell'apertura reale eseguire `npm run opening:verify`,
+  `npm run opening:verify:production`, `npm run email:verify`,
+  `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+- Dopo ogni comando admin verificare home pubblica e form in una nuova sessione
+  browser.
+
 ## Milestone 6 - dashboard partecipante
 
 Dashboard partecipante iniziale completata in app.
@@ -541,6 +587,12 @@ Decisioni:
   `dal/al` in `from/to` o equivalenti.
 - I panel restano il contenuto principale della schermata rapida in attesa di
   funzioni future di iscrizione/scelta momenti.
+- La dashboard partecipante deve sempre offrire un rientro alle aree operative
+  disponibili per lo stesso utente quando esistono ruoli aggiuntivi oltre a
+  partecipante. Questo evita che admin, manager, capogruppo o accoglienza che
+  aprono "La mia iscrizione" restino senza navigazione per tornare al proprio
+  profilo operativo. La prima implementazione mostra "Torna all'area admin" e
+  usa la stessa logica role-aware per futuri ruoli.
 
 Verifiche eseguite:
 

@@ -65,3 +65,11 @@ npm run build
 - Se qualcosa va storto dopo l'apertura, chiudere temporaneamente modificando
   stato/finestra iscrizioni dell'evento e annotare il problema in un log
   operativo.
+
+## 6. Monitoraggio iniziale
+
+- Usare `/dashboard/admin` per aprire, mettere in pausa o nascondere l'evento.
+- Controllare dopo ogni invio/invito: iscrizioni ultime 24 ore, casi senza
+  gruppo corrente, QR mancanti, errori email, email duplicate e richieste di
+  supporto operativo.
+- Annotare decisioni e problemi in `docs/opening-monitoring-log.md`.

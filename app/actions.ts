@@ -60,6 +60,13 @@ export async function startPublicEmailFlow(formData: FormData) {
       `${appUrl}/auth/callback?redirect_to=/dashboard/partecipante`
     );
   } catch (error) {
+    await logEmailFailure(supabase, {
+      eventId: event.id,
+      action: "email.magic_link_failed",
+      email,
+      error,
+    });
+
     redirect(
       `/?error=${encodeURIComponent(getPublicEmailErrorMessage(error))}`
     );
@@ -343,6 +350,68 @@ export async function updateParticipantDashboard(formData: FormData) {
   redirect("/dashboard/partecipante?saved=1");
 }
 
+export async function updateEventOpeningState(formData: FormData) {
+  const eventId = optionalText(formData.get("eventId"));
+  const intent = optionalText(formData.get("intent"));
+
+  if (!eventId || !intent) {
+    redirect("/dashboard/admin?openingError=invalid");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "admin");
+
+  if (!auth || auth.dashboardRole !== "admin") {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: event, error: eventError } = await serviceSupabase
+    .from("events")
+    .select("id,status,registration_opens_at,registration_closes_at")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (eventError || !event) {
+    redirect("/dashboard/admin?openingError=not-found");
+  }
+
+  const now = new Date().toISOString();
+  const updates = getEventOpeningUpdate(intent, event, now);
+
+  if (!updates) {
+    redirect("/dashboard/admin?openingError=invalid");
+  }
+
+  const { error: updateError } = await serviceSupabase
+    .from("events")
+    .update(updates)
+    .eq("id", eventId);
+
+  if (updateError) {
+    redirect(
+      `/dashboard/admin?openingError=${encodeURIComponent(updateError.message)}`
+    );
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: `event.opening_${intent}`,
+    entity_table: "events",
+    entity_id: eventId,
+    metadata: {
+      previous_status: event.status,
+      previous_registration_opens_at: event.registration_opens_at,
+      previous_registration_closes_at: event.registration_closes_at,
+      updates,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  redirect("/dashboard/admin?openingSaved=1");
+}
+
 function getAppUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -395,4 +464,78 @@ function getPublicEmailErrorMessage(error: unknown): string {
   }
 
   return "Non è stato possibile inviare l'email di accesso. Riprova tra poco.";
+}
+
+function optionalText(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function getEventOpeningUpdate(
+  intent: string,
+  event: {
+    status: string | null;
+    registration_opens_at: string | null;
+    registration_closes_at: string | null;
+  },
+  now: string
+): Record<string, string | null> | null {
+  switch (intent) {
+    case "open":
+      return {
+        status: "published",
+        registration_opens_at: now,
+        registration_closes_at:
+          event.registration_closes_at &&
+          new Date(event.registration_closes_at).getTime() > new Date(now).getTime()
+            ? event.registration_closes_at
+            : null,
+      };
+    case "pause":
+      return {
+        status: "published",
+        registration_closes_at: now,
+      };
+    case "draft":
+      return {
+        status: "draft",
+        registration_closes_at: now,
+      };
+    default:
+      return null;
+  }
+}
+
+async function logEmailFailure(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    eventId: string;
+    action: string;
+    email: string;
+    error: unknown;
+  }
+) {
+  const message =
+    input.error instanceof Error
+      ? input.error.message.slice(0, 300)
+      : "Errore email sconosciuto";
+
+  await supabase.from("audit_logs").insert({
+    event_id: input.eventId,
+    action: input.action,
+    entity_table: "participant_contacts",
+    metadata: {
+      email_domain: getEmailDomain(input.email),
+      message,
+    },
+  });
+}
+
+function getEmailDomain(email: string): string | null {
+  return email.split("@")[1]?.toLowerCase() ?? null;
 }
