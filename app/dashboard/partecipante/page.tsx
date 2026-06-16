@@ -321,6 +321,12 @@ export default async function PartecipanteDashboardPage({
               Questa sessione non risulta collegata a un partecipante. Usa il
               magic link ricevuto via email o avvia di nuovo l&apos;accesso dalla home.
             </p>
+            <Link
+              href={`/${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
+              className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[#b8c5ad] px-4 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+            >
+              Avvia la mia iscrizione
+            </Link>
           </section>
         ) : (
           <>

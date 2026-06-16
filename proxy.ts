@@ -13,6 +13,10 @@ type RoleRow = {
   role: string | null;
 };
 
+type GroupMembershipRoleRow = {
+  role: string | null;
+};
+
 function clearSupabaseCookies(request: NextRequest, response: NextResponse) {
   for (const cookie of request.cookies.getAll()) {
     if (cookie.name.startsWith("sb-")) {
@@ -60,12 +64,21 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const { data } = await supabase.from("event_user_roles").select("role");
+  const [{ data: eventRoles }, { data: groupMemberships }] = await Promise.all([
+    supabase.from("event_user_roles").select("role"),
+    supabase.from("group_memberships").select("role"),
+  ]);
   const availableRoles = new Set<DashboardRole>(["partecipante"]);
 
-  for (const row of (data ?? []) as RoleRow[]) {
+  for (const row of (eventRoles ?? []) as RoleRow[]) {
     if (isDashboardRole(row.role)) {
       availableRoles.add(row.role);
+    }
+  }
+
+  for (const row of (groupMemberships ?? []) as GroupMembershipRoleRow[]) {
+    if (row.role === "capogruppo") {
+      availableRoles.add("capogruppo");
     }
   }
 

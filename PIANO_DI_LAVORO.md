@@ -9,13 +9,13 @@ Stato locale rilevato in questo task:
 - Cartella corrente: `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
 - La cartella e' ora una working copy Git su branch `main`.
 - Remote GitHub configurato: `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Milestone 1-6 sono state implementate e il codice e' stato pushato su
-  `main` fino al commit `Implement participant dashboard milestone`.
-- Milestone 6.1 e' stata implementata localmente il 2026-06-15 e resta da
-  committare/pushare su richiesta.
-- Una parte della Milestone 12 e' stata anticipata localmente il 2026-06-15:
-  generazione QR reale, invio nella email di conferma e visualizzazione in
-  dashboard. Resta da completare scanner/verifica accoglienza.
+- Milestone 1-6.3 sono state implementate e il codice ordinario lavora su
+  `main`.
+- Una parte della Milestone 12 e' stata anticipata il 2026-06-15: generazione
+  QR reale, invio nella email di conferma e visualizzazione in dashboard. Resta
+  da completare scanner/verifica accoglienza.
+- Milestone 7 e' in corso: preparazione apertura pubblica, guardrail env/Vercel
+  e caso utenti con doppio ruolo operativo + iscrizione personale.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-16: l'obiettivo principale ora e' aprire le
@@ -50,11 +50,29 @@ L'app gestira' iscrizioni a eventi internazionali annuali della Comunità di San
 Utenti e ruoli principali:
 
 - Partecipante: si iscrive, modifica i propri dati quando consentito, consulta dashboard, QR code, programma e scelte di partecipazione.
-- Capogruppo: vede e gestisce i partecipanti del proprio gruppo, conferma appartenenza o esternalita', inserisce persone senza email o fragili, riceve notifiche.
+- Capogruppo: vede e gestisce i partecipanti del proprio gruppo o nodo territoriale, conferma appartenenza o esternalita', inserisce persone senza email o fragili, riceve notifiche.
 - Amministratore: gestisce eventi, configurazioni, utenti, ruoli e dati globali.
 - Manager evento: vede e gestisce dati operativi dell'evento specifico, dashboard, tabelle, filtri, export e statistiche.
 - Manager visualizzatore: vede le stesse informazioni del manager ma senza modificare iscrizioni.
 - Accoglienza/check-in: scansiona QR code, verifica iscrizione generale o a sotto-eventi e vede solo dati operativi minimi.
+
+Regola trasversale sui ruoli operativi:
+
+- I ruoli operativi non sostituiscono mai l'identità da partecipante. Manager,
+  manager visualizzatori, capigruppo paese, capigruppo città, capigruppo area
+  e capigruppo del singolo gruppo devono poter avere una propria registrazione
+  personale allo stesso evento tramite `participants`/`registrations`, collegata
+  allo stesso utente Supabase con `participants.auth_user_id`.
+- La gerarchia dei capigruppo va rappresentata come permessi su nodi dell'albero
+  gruppi, non come nuove identità separate: un referente nazionale ha membership
+  sul nodo paese, un referente cittadino sul nodo città, un referente locale sul
+  nodo gruppo/area. Lo stesso utente può avere più membership.
+- Giorni di presenza, QR personale, dati anagrafici, accessibilità e futura
+  iscrizione ai panel vivono sempre sulla registrazione personale, anche quando
+  l'utente ha ruoli manageriali o di referente.
+- Le dashboard operative devono offrire un passaggio chiaro verso "La mia
+  iscrizione" e segnalare se un utente con ruolo operativo non ha ancora
+  completato la propria registrazione personale per l'evento.
 
 Workflow principale:
 
@@ -222,13 +240,19 @@ Autenticazione:
 - Se email già associata a iscrizione attiva, invio magic link.
 - Se nuova, form pubblico con rate limit e validazione.
 - Profili applicativi collegati a Supabase Auth per ruoli non partecipante e per capigruppo.
+- Gli utenti con ruoli operativi event-scoped, inclusi manager e referenti di
+  ogni livello dell'albero gruppi, possono e di norma devono avere anche una
+  registrazione personale come partecipanti allo stesso evento. Il ruolo
+  applicativo abilita funzioni di gestione; la registrazione personale abilita
+  presenza, QR, dati propri e scelta panel.
 - Per partecipanti senza email, accesso mediato dal capogruppo/referente; valutare account delegato solo se necessario.
 
 Ruoli e autorizzazioni:
 
 - Ruoli in tabella profili/app memberships, non solo in metadata auth.
 - Scope per evento: manager e visualizzatori collegati a uno o più eventi.
-- Scope per gruppo: capogruppo collegato a gruppi tramite membership.
+- Scope per gruppo: capogruppo collegato a nodi dell'albero gruppi tramite
+  membership, inclusi paese, città, area/sottogruppo e gruppo finale.
 - Accoglienza con permessi minimi su QR/check-in e dati essenziali.
 - RLS come protezione primaria, controlli server come seconda linea.
 
@@ -271,6 +295,10 @@ Gruppi, referenti e persone non ancora membri Sant'Egidio:
 - Il referente riceve notifiche o una coda interna per le nuove assegnazioni
   probabili; può confermare che la persona e' del gruppo, rifiutare perché non
   la conosce o chiedere riassegnazione.
+- I referenti di qualunque livello dell'albero sono utenti reali dell'app e, se
+  partecipano all'evento, devono completare anche la propria iscrizione
+  personale: i loro giorni di presenza e le future scelte panel non vanno
+  dedotti dal ruolo o dal gruppo che gestiscono.
 - Dopo un rifiuto del referente si risale automaticamente al padre dell'albero
   finché esiste un nodo con referente responsabile. Se anche il livello padre
   non riconosce la persona o non c'e' un responsabile chiaro, l'assegnazione va
@@ -689,16 +717,26 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 ### Milestone 7: preparazione apertura pubblica iscrizioni
 
 - Scopo: trasformare l'app gia' funzionante in un servizio pronto per ricevere
-  iscrizioni reali dal pubblico.
+  iscrizioni reali dal pubblico, includendo anche utenti con ruoli operativi
+  che devono compilare la propria iscrizione personale.
 - Deliverable:
   - evento reale configurato o evento pilota ripulito dai dati di test;
   - testi definitivi per privacy, consenso, email di conferma e magic link;
   - dati iniziali reali o semi-reali per paesi, città, gruppi, referenti e
     nodo territoriale dei nuovi partecipanti;
+  - regola operativa documentata e verificata per cui manager, manager viewer e
+    referenti/capigruppo di paese, città, area o gruppo possono accedere alla
+    propria dashboard partecipante e completare i propri dati personali;
+  - seed o procedura operativa per collegare ogni utente con ruolo operativo
+    alla propria registrazione personale quando partecipa all'evento;
   - flusso pubblico verificato in produzione: email nuova, email esistente,
     conferma iscrizione, QR in email, accesso dashboard partecipante;
+  - verifica del caso "utente con doppio cappello": accesso alla dashboard
+    operativa e accesso alla dashboard partecipante con la stessa email;
   - verifica env Vercel production/development/preview, inclusi
     `QR_TOKEN_ENCRYPTION_SECRET`, SMTP e URL pubblici;
+  - comando operativo `npm run opening:verify` per controllare env production
+    senza stampare segreti;
   - `.vercelignore` presente con esclusione di `.env` e `.env.*` se mancante;
   - checklist operativa di apertura in `docs/` o `AGENTS.md`.
 - File/cartelle: `app/page.tsx`, `app/registrazione/*`, `lib/email/*`,
@@ -709,6 +747,8 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Verifiche:
   - `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`;
   - test browser desktop/mobile del flusso iscrizione e dashboard;
+  - test manuale con almeno un manager/referente già autenticato che completa o
+    consulta la propria iscrizione partecipante;
   - smoke test production su `https://iscrizioni-pace.vercel.app`;
   - verifica che nessun dato test appaia nel flusso pubblico reale;
   - verifica manuale di email consegnata e link funzionante.
@@ -718,8 +758,10 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - email SMTP non stabile o rate limit Gmail;
   - link magic/callback incoerenti tra Supabase e Vercel.
 - Accettazione: una persona reale puo' iscriversi da produzione, ricevere la
-  conferma, accedere alla dashboard e trovare i propri dati corretti; lo staff
-  ha una checklist chiara per aprire o richiudere le iscrizioni.
+  conferma, accedere alla dashboard e trovare i propri dati corretti; un utente
+  con ruolo operativo puo' gestire il proprio scope e anche la propria
+  iscrizione personale; lo staff ha una checklist chiara per aprire o
+  richiudere le iscrizioni.
 - Non fare: dashboard manager completa, gestione programma, campagne email,
   scanner accoglienza, settori/sedute.
 
@@ -759,6 +801,8 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Deliverable:
   - elenco partecipanti dei gruppi assegnati al capogruppo, con filtro per
     confermati, probabili e nuovi da verificare;
+  - accesso evidente a "La mia iscrizione" per il referente stesso, con avviso
+    se non ha ancora completato la propria registrazione personale all'evento;
   - azioni minime per confermare appartenenza, rifiutare perché non
     riconosciuto e aggiungere nota operativa interna;
   - risalita automatica al nodo padre dopo rifiuto: area -> città -> paese ->
@@ -804,11 +848,21 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 ### Milestone 11: dashboard manager/admin essenziale
 
 - Scopo: fornire una console operativa sufficiente per seguire iscrizioni reali
-  prima delle funzioni evento avanzate.
+  prima delle funzioni evento avanzate, includendo la gestione amministrativa
+  di ruoli, utenti e struttura gruppi.
 - Deliverable:
   - tabella partecipanti per evento con ricerca e filtri essenziali;
   - dettagli iscrizione con modifica controllata dei campi operativi;
   - coda manager per assegnazioni non riconosciute dopo risalita;
+  - area admin per creare/modificare eventi, gruppi e nodi dell'albero gruppi:
+    paese, città, area/sottogruppo e gruppo finale;
+  - area admin per invitare o promuovere utenti operativi e assegnare ruoli:
+    `manager`, `manager_viewer`, `accoglienza` e referenti/capigruppo su
+    qualunque nodo dell'albero;
+  - assegnazione capogruppo tramite `group_memberships`, non creando ruoli
+    database separati per capogruppo paese/città/area/gruppo;
+  - vista admin per vedere utenti con doppio cappello e stato della loro
+    iscrizione personale all'evento;
   - export CSV base con colonne minimizzate e controllate;
   - statistiche iniziali per totale iscrizioni, paese/città, gruppo, giorni di
     presenza, membri Sant'Egidio e nuovi partecipanti;
@@ -818,14 +872,18 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Migration: audit export/modifiche; eventuali viste SQL solo se semplificano
   permessi e performance.
 - Verifiche:
+  - admin può creare evento, gruppo/nodo e assegnare un referente al nodo;
+  - admin può creare o promuovere manager, viewer, accoglienza e capigruppo;
+  - capogruppo paese/città/area/gruppo vede solo lo scope assegnato;
   - filtri per evento, gruppo, paese, città, stato, classificazione
     membro/nuovo partecipante, accessibilità aggregata e presenza;
   - viewer non modifica;
   - export non include dati sensibili non necessari;
   - test standard e verifica browser.
 - Rischi: dati sensibili visibili in export o in tabelle troppo larghe.
-- Accettazione: manager gestisce l'evento assegnato e può risolvere i casi che
-  bloccano il normale andamento delle iscrizioni.
+- Accettazione: admin configura evento, utenti, ruoli e albero gruppi; manager
+  gestisce l'evento assegnato e può risolvere i casi che bloccano il normale
+  andamento delle iscrizioni.
 - Non fare: gestione programma completa, campagne email, check-in.
 
 ### Milestone 12: multilingua minima e testi localizzati

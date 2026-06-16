@@ -29,6 +29,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   pubblica "Non trovo il mio referente"; durante il test locale sono stati
   aggiunti anche conservazione dati form dopo errore e CTA di primo accesso
   dalla conferma iscrizione.
+- Milestone 7 ha iniziato la preparazione all'apertura pubblica: checklist
+  operativa, guardrail Vercel/env, comando `opening:verify`, riconoscimento del
+  ruolo capogruppo da `group_memberships` e accesso "La mia iscrizione" dalle
+  dashboard operative minime.
 - Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
@@ -80,6 +84,8 @@ Comandi disponibili:
 - `npm run typecheck`.
 - `npm test`.
 - `npm run build`.
+- `npm run opening:verify`.
+- `npm run opening:verify:production`.
 
 File di setup rilevanti:
 
@@ -121,6 +127,10 @@ Comandi standard da usare prima di chiudere milestone future:
 Note:
 
 - `npm test` esegue `node --test tests/*.test.mts`.
+- `npm run opening:verify` controlla la presenza delle env richieste per
+  l'apertura pubblica usando `.env.local`, senza stampare valori segreti.
+- `npm run opening:verify:production` usa `.env.production.local` e verifica
+  anche che gli URL app puntino a `https://iscrizioni-pace.vercel.app`.
 - Il runner e' volutamente leggero: per ora serve per test di funzioni pure e smoke test.
 - Non sono state introdotte dipendenze test esterne.
 - Non sono state create migration e non e' stato collegato alcun database reale.
@@ -219,6 +229,10 @@ Decisioni:
 - Al callback viene fatto `upsert` del profilo applicativo in `profiles` usando la sessione utente e RLS ordinaria, non service role.
 - Il cookie `iscrizioni_requested_role` può ricordare una dashboard richiesta per utenti con più ruoli.
 - La protezione dashboard legge `event_user_roles` via client server con anon key e RLS; non usa service role nei flussi utente ordinari.
+- Dal lavoro di Milestone 7, il ruolo applicativo `capogruppo` viene scoperto
+  anche da `group_memberships` collegate ai nodi dell'albero gruppi, non solo da
+  `event_user_roles`. Questo permette referenti paese/città/area/gruppo senza
+  creare ruoli separati per ogni livello.
 
 Note operative:
 
@@ -408,6 +422,28 @@ Supabase Auth e redirect:
 - L'invio reale delle email dipende da una password app Gmail valida nelle
   variabili SMTP; il dominio del link e' stato verificato separatamente
   dall'arrivo effettivo in inbox.
+
+## Milestone 7 - preparazione apertura pubblica
+
+Checklist operativa:
+
+- `docs/opening-checklist.md`.
+
+Guardrail aggiunti:
+
+- `.vercelignore` esclude `.env`, `.env.*`, `.next`, `node_modules`, log e
+  artefatti locali, lasciando tracciabile `.env.example`.
+- `.env.example` usa URL locali per sviluppo e documenta il dominio production
+  stabile `https://iscrizioni-pace.vercel.app`.
+- Script `npm run opening:verify` e `npm run opening:verify:production`
+  controllano env richieste: Supabase public/private, SMTP,
+  `QR_TOKEN_ENCRYPTION_SECRET` e, in modalità production, URL app stabili. Non
+  stampano valori segreti.
+- Le dashboard operative minime mostrano il riquadro "La mia iscrizione":
+  se una registrazione personale e' collegata apre `/dashboard/partecipante`,
+  altrimenti rimanda alla home per completarla con la stessa email.
+- `app/dashboard/capogruppo/page.tsx` ora valida la sessione lato server e usa
+  `group_memberships` come fonte reale dei nodi/gruppi assegnati.
 
 ## Milestone 6 - dashboard partecipante
 
@@ -670,13 +706,38 @@ Questa app non deve partire dall'assunto che l'evento sia residenziale.
 Ruoli minimi da supportare:
 
 - `partecipante`: accede alla propria dashboard, modifica la propria iscrizione quando consentito, consulta QR code, programma e scelte.
-- `capogruppo`: utente reale dell'app; vede solo i partecipanti dei propri gruppi; conferma appartenenza/esternalita'; inserisce persone senza email; riceve notifiche.
+- `capogruppo`: utente reale dell'app; vede solo i partecipanti dei propri gruppi o nodi territoriali; conferma appartenenza/esternalita'; inserisce persone senza email; riceve notifiche.
 - `admin`: gestisce eventi, configurazioni, utenti, ruoli e impostazioni globali.
 - `manager`: collegato a uno specifico evento; vede tutti i partecipanti e gruppi dell'evento; può modificare dati operativi secondo permessi.
 - `manager_viewer`: vede ciò che vede il manager ma non modifica iscrizioni.
 - `accoglienza`: scansiona QR code e verifica iscrizioni/check-in vedendo solo dati minimi necessari.
 
 I ruoli devono vivere in profili o membership applicative, non solo nei metadata Supabase Auth. Dove serve, il ruolo deve essere scoperto da uno scope: evento, gruppo, funzione di accoglienza.
+
+La dashboard admin deve diventare la console da cui configurare eventi, utenti,
+ruoli e albero gruppi. L'admin deve poter creare/modificare gruppi e nodi
+paese/città/area/gruppo finale, invitare o promuovere manager, manager_viewer,
+accoglienza e referenti, e collegare i capigruppo ai nodi tramite
+`group_memberships`.
+
+Decisione stabile su ruoli operativi e partecipazione personale:
+
+- I ruoli operativi non sostituiscono l'identità da partecipante. Manager,
+  manager_viewer, capogruppo paese, capogruppo città, capogruppo area e
+  capogruppo del singolo gruppo devono poter avere una propria registrazione
+  personale allo stesso evento.
+- La registrazione personale resta modellata in `participants` e
+  `registrations`, collegata allo stesso utente Supabase tramite
+  `participants.auth_user_id`. Giorni di presenza, QR personale, dati propri,
+  accessibilità e futura scelta dei panel devono vivere su questa registrazione,
+  non sul ruolo operativo.
+- La gerarchia dei referenti/capigruppo va modellata con membership su nodi
+  dell'albero `groups`: paese, città, eventuale area/sottogruppo, gruppo finale.
+  Non creare identità separate o ruoli database distinti solo per
+  `capogruppo_paese` o `capogruppo_citta` se basta lo scope del nodo.
+- Le dashboard operative devono offrire un accesso chiaro a "La mia iscrizione"
+  e segnalare se l'utente con ruolo operativo non ha ancora completato la
+  propria registrazione personale per l'evento.
 
 ## Workflow pubblico
 
@@ -743,6 +804,10 @@ Decisione aggiornata il 2026-06-15:
   l'assegnazione finisce in coda manager.
 - Il partecipante non riceve notifiche di rifiuto, risalita o
   riclassificazione interna.
+- I referenti di qualunque livello dell'albero e i manager possono essere anche
+  partecipanti dell'evento con la stessa email/account. Le funzioni operative
+  servono a gestire altri partecipanti; la loro presenza personale, il QR e i
+  panel passano sempre dalla dashboard partecipante.
 
 ## Dati sensibili e privacy
 

@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+coverage
+*.log
+
+docs/model-app-discovery.md

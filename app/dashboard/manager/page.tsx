@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
+import { PersonalRegistrationCard } from "@/app/dashboard/personal-registration-card";
 import { getCurrentAuthContext } from "@/lib/auth/session";
+import { getPersonalRegistrationSummary } from "@/lib/registrations/personal-registration";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type EventRow = {
@@ -24,7 +26,11 @@ export default async function ManagerDashboardPage() {
     .map((role) => role.eventId)
     .filter((eventId): eventId is string => Boolean(eventId));
 
-  const [{ data: events }, { count: registrationsCount }] = await Promise.all([
+  const [
+    { data: events },
+    { count: registrationsCount },
+    personalRegistration,
+  ] = await Promise.all([
     eventIds.length > 0
       ? supabase
           .from("events")
@@ -38,6 +44,7 @@ export default async function ManagerDashboardPage() {
           .select("id", { count: "exact", head: true })
           .in("event_id", eventIds)
       : Promise.resolve({ count: 0 }),
+    getPersonalRegistrationSummary(supabase, auth.user.id, eventIds),
   ]);
 
   return (
@@ -59,6 +66,8 @@ export default async function ManagerDashboardPage() {
           <Metric label="Eventi assegnati" value={String(eventIds.length)} />
           <Metric label="Iscrizioni visibili" value={String(registrationsCount ?? 0)} />
         </section>
+
+        <PersonalRegistrationCard summary={personalRegistration} />
 
         <section className="rounded-lg border border-[#d8dece] bg-white p-5">
           <h2 className="text-lg font-semibold">Eventi assegnati</h2>

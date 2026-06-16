@@ -79,3 +79,19 @@ git diff
 ```
 
 La risposta finale deve indicare file modificati, verifiche eseguite, eventuali verifiche non eseguite e rischi residui.
+
+## Apertura iscrizioni pubbliche
+
+Prima di aprire iscrizioni reali, seguire `docs/opening-checklist.md`.
+
+Eseguire almeno:
+
+```bash
+npm run opening:verify
+npm run opening:verify:production
+npm run email:verify
+```
+
+Questi comandi verificano configurazione production e SMTP senza stampare
+segreti. L'apertura richiede comunque controllo manuale di evento, testi
+privacy, dati gruppi/referenti e smoke test production.

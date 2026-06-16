@@ -19,6 +19,14 @@ type EventUserRoleRow = {
   event_id: string | null;
 };
 
+type GroupMembershipRoleRow = {
+  role: string | null;
+  groups:
+    | { event_id: string | null }
+    | Array<{ event_id: string | null }>
+    | null;
+};
+
 export async function getCurrentAuthContext(
   supabase: SupabaseClient,
   requestedRole?: string | null
@@ -72,22 +80,38 @@ export async function ensureCurrentUserProfile(
 async function getEventRolesForCurrentUser(
   supabase: SupabaseClient
 ): Promise<EventUserRole[]> {
-  const { data, error } = await supabase
-    .from("event_user_roles")
-    .select("role,event_id");
+  const [eventRolesResult, groupMembershipsResult] = await Promise.all([
+    supabase.from("event_user_roles").select("role,event_id"),
+    supabase.from("group_memberships").select("role,groups(event_id)"),
+  ]);
 
-  if (error || !data) {
-    return [];
+  const roles: EventUserRole[] = [];
+
+  if (!eventRolesResult.error && eventRolesResult.data) {
+    roles.push(
+      ...(eventRolesResult.data as EventUserRoleRow[])
+        .filter((row): row is EventUserRoleRow & { role: EventRole } =>
+          isKnownEventRole(row.role)
+        )
+        .map((row) => ({
+          role: row.role,
+          eventId: row.event_id,
+        }))
+    );
   }
 
-  return (data as EventUserRoleRow[])
-    .filter((row): row is EventUserRoleRow & { role: EventRole } =>
-      isKnownEventRole(row.role)
+  if (!groupMembershipsResult.error && groupMembershipsResult.data) {
+    roles.push(
+      ...(groupMembershipsResult.data as GroupMembershipRoleRow[])
+        .filter((row) => row.role === "capogruppo")
+        .map((row) => ({
+          role: "capogruppo" as const,
+          eventId: relatedOne(row.groups)?.event_id ?? null,
+        }))
     )
-    .map((row) => ({
-      role: row.role,
-      eventId: row.event_id,
-    }));
+  }
+
+  return dedupeEventRoles(roles);
 }
 
 function isKnownEventRole(value: string | null): value is EventRole {
@@ -114,4 +138,24 @@ function dashboardPathForRole(role: DashboardRole): string {
     case "partecipante":
       return "/dashboard/partecipante";
   }
+}
+
+function relatedOne<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
+function dedupeEventRoles(roles: EventUserRole[]): EventUserRole[] {
+  const seen = new Set<string>();
+  const deduped: EventUserRole[] = [];
+
+  for (const role of roles) {
+    const key = `${role.role}:${role.eventId ?? "global"}`;
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(role);
+    }
+  }
+
+  return deduped;
 }

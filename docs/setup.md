@@ -39,6 +39,8 @@ npm run typecheck
 npm test
 npm run build
 npm run email:verify
+npm run opening:verify
+npm run opening:verify:production
 ```
 
 ## Note
@@ -50,3 +52,8 @@ npm run email:verify
   `.env.local` senza inviare email e senza stampare credenziali. Con Gmail
   serve una app password valida dell'account mittente; gli spazi visuali della
   app password vengono rimossi automaticamente dal codice.
+- `npm run opening:verify` controlla la presenza delle variabili necessarie
+  all'apertura pubblica nella `.env.local`. Non stampa valori segreti.
+- `npm run opening:verify:production` esegue lo stesso controllo in modalità
+  production usando `.env.production.local` e verifica che gli URL applicativi
+  puntino al dominio stabile.

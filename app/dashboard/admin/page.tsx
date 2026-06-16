@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
+import { PersonalRegistrationCard } from "@/app/dashboard/personal-registration-card";
 import { getCurrentAuthContext } from "@/lib/auth/session";
+import { getPersonalRegistrationSummary } from "@/lib/registrations/personal-registration";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type EventRow = {
@@ -18,7 +20,7 @@ export default async function AdminDashboardPage() {
     redirect("/login");
   }
 
-  const [{ data: events }, { data: roles }] = await Promise.all([
+  const [{ data: events }, { data: roles }, personalRegistration] = await Promise.all([
     supabase
       .from("events")
       .select("id,slug,title,status")
@@ -27,6 +29,7 @@ export default async function AdminDashboardPage() {
       .from("event_user_roles")
       .select("role,event_id")
       .order("created_at", { ascending: false }),
+    getPersonalRegistrationSummary(supabase, auth.user.id),
   ]);
 
   return (
@@ -48,6 +51,8 @@ export default async function AdminDashboardPage() {
           <Metric label="Eventi visibili" value={String(events?.length ?? 0)} />
           <Metric label="Ruoli assegnati" value={String(roles?.length ?? 0)} />
         </section>
+
+        <PersonalRegistrationCard summary={personalRegistration} />
 
         <section className="rounded-lg border border-[#d8dece] bg-white p-5">
           <h2 className="text-lg font-semibold">Eventi</h2>
