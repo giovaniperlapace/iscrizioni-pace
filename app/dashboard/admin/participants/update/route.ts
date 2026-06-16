@@ -5,12 +5,20 @@ import { normalizeEmail } from "@/lib/registrations/validation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
+type AdminAssignableRole =
+  | "admin"
+  | "manager"
+  | "manager_viewer"
+  | "accoglienza"
+  | "capogruppo";
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const registrationId = optionalText(formData.get("registrationId"));
   const participantId = optionalText(formData.get("participantId"));
   const groupId = optionalText(formData.get("groupId"));
   const role = optionalText(formData.get("role"));
+  const roleWasSubmitted = formData.has("role");
   const email = normalizeEmail(formData.get("email"));
   const fullName = optionalText(formData.get("fullName"));
 
@@ -18,7 +26,7 @@ export async function POST(request: NextRequest) {
     return adminRedirect(request, "adminError=invalid-participant");
   }
 
-  if (!groupId && !role) {
+  if (!groupId && !roleWasSubmitted) {
     return adminRedirect(request, "adminSaved=1");
   }
 
@@ -72,12 +80,13 @@ export async function POST(request: NextRequest) {
     changed.push("group");
   }
 
-  if (assignableRole) {
+  if (roleWasSubmitted) {
     const roleResult = await updateOperationalRole({
       supabase: serviceSupabase,
       participantId,
       eventId: registrationRow.event_id,
       role: assignableRole,
+      groupId,
       email,
       fullName,
       actorUserId: auth.user.id,
@@ -171,6 +180,7 @@ async function updateOperationalRole({
   participantId,
   eventId,
   role,
+  groupId,
   email,
   fullName,
   actorUserId,
@@ -178,7 +188,8 @@ async function updateOperationalRole({
   supabase: ReturnType<typeof createSupabaseServiceClient>;
   participantId: string;
   eventId: string;
-  role: "manager" | "manager_viewer" | "accoglienza";
+  role: AdminAssignableRole | null;
+  groupId: string | null;
   email: string | null;
   fullName: string | null;
   actorUserId: string;
@@ -215,15 +226,83 @@ async function updateOperationalRole({
     }
   }
 
-  const { error: deleteRoleError } = await supabase
+  const { error: deleteEventRoleError } = await supabase
     .from("event_user_roles")
     .delete()
     .eq("event_id", eventId)
     .eq("user_id", targetUserId)
     .in("role", ["manager", "manager_viewer", "accoglienza"]);
 
-  if (deleteRoleError) {
-    return deleteRoleError.message;
+  if (deleteEventRoleError) {
+    return deleteEventRoleError.message;
+  }
+
+  const { error: deleteAdminRoleError } = await supabase
+    .from("event_user_roles")
+    .delete()
+    .is("event_id", null)
+    .eq("user_id", targetUserId)
+    .eq("role", "admin");
+
+  if (deleteAdminRoleError) {
+    return deleteAdminRoleError.message;
+  }
+
+  const { data: eventGroups, error: groupsError } = await supabase
+    .from("groups")
+    .select("id")
+    .eq("event_id", eventId);
+
+  if (groupsError) {
+    return groupsError.message;
+  }
+
+  const eventGroupIds = ((eventGroups ?? []) as Array<{ id: string | null }>)
+    .map((group) => group.id)
+    .filter((id): id is string => Boolean(id));
+
+  if (eventGroupIds.length > 0) {
+    const { error: deleteMembershipError } = await supabase
+      .from("group_memberships")
+      .delete()
+      .eq("user_id", targetUserId)
+      .in("group_id", eventGroupIds);
+
+    if (deleteMembershipError) {
+      return deleteMembershipError.message;
+    }
+  }
+
+  if (!role) {
+    return null;
+  }
+
+  if (role === "capogruppo") {
+    if (!groupId || !eventGroupIds.includes(groupId)) {
+      return "invalid-group";
+    }
+
+    const { error: membershipError } = await supabase
+      .from("group_memberships")
+      .insert({
+        group_id: groupId,
+        user_id: targetUserId,
+        role,
+        created_by: actorUserId,
+      });
+
+    return membershipError?.message ?? null;
+  }
+
+  if (role === "admin") {
+    const { error: roleError } = await supabase.from("event_user_roles").insert({
+      event_id: null,
+      user_id: targetUserId,
+      role,
+      created_by: actorUserId,
+    });
+
+    return roleError?.message ?? null;
   }
 
   const { error: roleError } = await supabase.from("event_user_roles").insert({
@@ -319,10 +398,12 @@ function optionalText(value: FormDataEntryValue | null): string | null {
 
 function isAssignableAdminRole(
   value: string | null
-): value is "manager" | "manager_viewer" | "accoglienza" {
+): value is AdminAssignableRole {
   return (
+    value === "admin" ||
     value === "manager" ||
     value === "manager_viewer" ||
-    value === "accoglienza"
+    value === "accoglienza" ||
+    value === "capogruppo"
   );
 }

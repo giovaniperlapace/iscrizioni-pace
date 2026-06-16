@@ -22,6 +22,10 @@ Stato locale rilevato in questo task:
   verificare assegnazioni probabili, confermare/rifiutare appartenenze,
   aggiungere note interne e far risalire i rifiuti al nodo padre o alla coda
   manager.
+- Il 2026-06-16 e' stata anticipata una parte della Milestone 11: navigazione
+  dashboard a tab fra ruoli, logout globale, modale admin per assegnare anche
+  admin/capogruppo e rimozione della card personale ridondante dalle dashboard
+  operative.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-16: l'obiettivo principale ora e' aprire le
@@ -76,14 +80,14 @@ Regola trasversale sui ruoli operativi:
 - Giorni di presenza, QR personale, dati anagrafici, accessibilità e futura
   iscrizione ai panel vivono sempre sulla registrazione personale, anche quando
   l'utente ha ruoli manageriali o di referente.
-- Le dashboard operative devono offrire un passaggio chiaro verso "La mia
-  iscrizione" e segnalare se un utente con ruolo operativo non ha ancora
-  completato la propria registrazione personale per l'evento.
+- Le dashboard operative devono offrire un passaggio chiaro verso la propria
+  area personale tramite la tab `Iscrizione e QR personale`. La vecchia card
+  `La mia iscrizione` non va duplicata nelle dashboard operative se la tab e'
+  presente.
 - La dashboard partecipante deve offrire il passaggio inverso quando lo stesso
   utente ha ruoli operativi: admin, manager, manager_viewer, accoglienza e
-  capogruppo non devono restare bloccati nell'area partecipante dopo aver
-  aperto "La mia iscrizione". Il primo caso implementato mostra il rientro
-  all'area admin e la logica e' gia' predisposta per gli altri ruoli.
+  capogruppo non devono restare bloccati nell'area partecipante. La navigazione
+  condivisa a tab e' ora il meccanismo previsto.
 
 Workflow principale:
 
@@ -870,6 +874,27 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Scopo: fornire una console operativa sufficiente per seguire iscrizioni reali
   prima delle funzioni evento avanzate, includendo la gestione amministrativa
   di ruoli, utenti e struttura gruppi.
+- Stato: parzialmente anticipata localmente il 2026-06-16.
+- Deliverable anticipati:
+  - navigazione condivisa a tab fra `Dashboard admin`, `Dashboard manager`,
+    `Dashboard accoglienza`, `Dashboard capogruppo` e
+    `Iscrizione e QR personale`;
+  - admin abilitato a vedere tutte le dashboard operative tramite tab;
+  - rimozione della card `Iscrizione personale collegata` dalle dashboard
+    operative, perché sostituita dalla tab personale;
+  - header globale con logout `Esci` e icona;
+  - descrizioni dashboard in formato "In questa area puoi...", senza ripetere
+    l'email dell'utente;
+  - modale admin per modificare gruppo e ruolo operativo di un iscritto,
+    includendo `Admin`, `Capogruppo` e `Nessun ruolo operativo`;
+  - `Admin` scritto come ruolo globale in `event_user_roles`;
+  - `Capogruppo` scritto in `group_memberships` sul gruppo selezionato.
+- Ancora da completare:
+  - tabella manager/admin completa con ricerca e filtri avanzati;
+  - creazione/modifica strutturata di eventi, gruppi e nodi dell'albero;
+  - export CSV controllato;
+  - gestione duplicati e casi bloccanti più completa;
+  - distinzione completa dei permessi read-only per `manager_viewer`.
 - Deliverable:
   - tabella partecipanti per evento con ricerca e filtri essenziali;
   - dettagli iscrizione con modifica controllata dei campi operativi;
@@ -1101,8 +1126,9 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Procedi con la Milestone 7: preparazione apertura pubblica iscrizioni.
-> Verifica produzione Vercel, env, SMTP, allowlist Supabase Auth, testi
-> privacy/email, dati evento/gruppi e flusso end-to-end su produzione. Produci
-> una checklist operativa per aprire le iscrizioni e segnala solo i blocchi che
-> impediscono il go-live pubblico.
+> Riprendi dalle modifiche locali del 2026-06-16 su navigazione dashboard,
+> logout e gestione ruoli admin. Verifica diff, mobile viewport e flussi
+> principali; poi esegui lint, typecheck, test e build. Se tutto e' coerente,
+> prepara un commit tematico su `main` per chiudere la rifinitura delle
+> dashboard operative prima di proseguire con la parte restante della
+> Milestone 11.

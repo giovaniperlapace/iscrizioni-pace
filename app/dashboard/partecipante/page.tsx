@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { updateParticipantDashboard } from "@/app/actions";
-import { ROLE_ROUTES, type DashboardRole } from "@/lib/auth/roles";
+import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
 import { renderQrDataUrl } from "@/lib/qrcode/render";
@@ -263,7 +263,6 @@ export default async function PartecipanteDashboardPage({
     ? "Supporto richiesto"
     : "Nessun supporto richiesto";
   const groupSummary = getGroupSummary(groupAssignments);
-  const operationalDashboards = getOperationalDashboards(auth.eventRoles);
 
   return (
     <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
@@ -306,22 +305,12 @@ export default async function PartecipanteDashboardPage({
               ) : null}
             </div>
 
-            {operationalDashboards.length > 0 ? (
-              <nav
-                aria-label="Aree operative"
-                className="flex flex-wrap gap-2 lg:justify-end"
-              >
-                {operationalDashboards.map((dashboard) => (
-                  <Link
-                    key={dashboard.role}
-                    href={dashboard.href}
-                    className="inline-flex min-h-11 items-center justify-center rounded-md border border-[#b8c5ad] bg-white px-4 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
-                  >
-                    Vai all&apos;{dashboard.label}
-                  </Link>
-                ))}
-              </nav>
-            ) : null}
+            <div className="lg:flex lg:justify-end">
+              <DashboardRoleTabs
+                activeRole="partecipante"
+                eventRoles={auth.eventRoles}
+              />
+            </div>
           </div>
           {params.saved ? (
             <p className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
@@ -1062,43 +1051,6 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function relatedOne<T>(value: Related<T>): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
-}
-
-function getOperationalDashboards(
-  eventRoles: Array<{ role: string; eventId: string | null }>
-): Array<{ role: DashboardRole; label: string; href: string }> {
-  const roleOrder: DashboardRole[] = [
-    "admin",
-    "manager",
-    "accoglienza",
-    "manager_viewer",
-    "capogruppo",
-  ];
-  const availableRoles = new Set(eventRoles.map((role) => role.role));
-
-  return roleOrder
-    .filter((role) => availableRoles.has(role))
-    .map((role) => ({
-      role,
-      label: operationalDashboardLabel(role),
-      href: ROLE_ROUTES[role],
-    }));
-}
-
-function operationalDashboardLabel(role: DashboardRole): string {
-  switch (role) {
-    case "admin":
-      return "area admin";
-    case "manager":
-    case "manager_viewer":
-      return "area manager";
-    case "accoglienza":
-      return "area accoglienza";
-    case "capogruppo":
-      return "area capogruppo";
-    case "partecipante":
-      return "area partecipante";
-  }
 }
 
 function buildEventDays(startsOn: string | null, endsOn: string | null): string[] {

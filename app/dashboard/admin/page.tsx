@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { updateEventOpeningState } from "@/app/actions";
-import { PersonalRegistrationCard } from "@/app/dashboard/personal-registration-card";
+import {
+  DashboardAreaDescription,
+  DashboardRoleTabs,
+} from "@/app/dashboard/role-tabs";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import {
   getOpeningState,
@@ -11,7 +14,6 @@ import {
   type RegistrationMonitoringInput,
   type RegistrationMonitoringSummary,
 } from "@/lib/registrations/opening-monitoring";
-import { getPersonalRegistrationSummary } from "@/lib/registrations/personal-registration";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -116,6 +118,15 @@ type AdminRoleRow = {
   role: string | null;
 };
 
+type AdminGroupMembershipRoleRow = {
+  user_id: string;
+  role: string | null;
+  groups:
+    | { event_id: string | null }
+    | Array<{ event_id: string | null }>
+    | null;
+};
+
 type AdminGroupOption = {
   id: string;
   eventId: string;
@@ -165,8 +176,7 @@ export default async function AdminDashboardPage({
   }
 
   const serviceSupabase = createSupabaseServiceClient();
-  const [personalRegistration, snapshots, adminOperations] = await Promise.all([
-    getPersonalRegistrationSummary(supabase, auth.user.id),
+  const [snapshots, adminOperations] = await Promise.all([
     getOpeningSnapshots(),
     getAdminOperationsSnapshot(),
   ]);
@@ -193,15 +203,13 @@ export default async function AdminDashboardPage({
   return (
     <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
-        <header>
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
-            Area protetta
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold">Dashboard admin</h1>
-          <p className="mt-3 max-w-3xl text-[#4b5a50]">
-            Accesso verificato per {auth.user.email}. Controlla apertura,
-            iscrizioni e segnali iniziali senza esporre dati personali.
-          </p>
+        <header className="grid gap-3">
+          <h1 className="sr-only">Dashboard admin</h1>
+          <DashboardRoleTabs activeRole="admin" eventRoles={auth.eventRoles} />
+          <DashboardAreaDescription>
+            In questa area puoi aprire o sospendere le iscrizioni, controllare
+            i numeri principali e gestire gruppi e ruoli operativi.
+          </DashboardAreaDescription>
         </header>
 
         <StatusMessage
@@ -216,8 +224,6 @@ export default async function AdminDashboardPage({
           <Metric label="Iscrizioni totali" value={String(totalRegistrations)} />
           <Metric label="Da controllare" value={String(watchItems)} />
         </section>
-
-        <PersonalRegistrationCard summary={personalRegistration} />
 
         <section className="grid gap-4">
           <div>
@@ -277,7 +283,12 @@ export default async function AdminDashboardPage({
       ),
     ];
     const emptyResult = { data: [] };
-    const [{ data: contacts }, { data: assignments }, { data: roles }] =
+    const [
+      { data: contacts },
+      { data: assignments },
+      { data: roles },
+      { data: groupMembershipRoles },
+    ] =
       await Promise.all([
         participantIds.length > 0
           ? serviceSupabase
@@ -299,6 +310,12 @@ export default async function AdminDashboardPage({
           ? serviceSupabase
               .from("event_user_roles")
               .select("event_id,user_id,role")
+              .in("user_id", authUserIds)
+          : Promise.resolve(emptyResult),
+        authUserIds.length > 0
+          ? serviceSupabase
+              .from("group_memberships")
+              .select("user_id,role,groups(event_id)")
               .in("user_id", authUserIds)
           : Promise.resolve(emptyResult),
       ]);
@@ -331,6 +348,27 @@ export default async function AdminDashboardPage({
           rolesByUserEvent.set(key, values);
         }
       }
+    }
+    for (const membership of
+      (groupMembershipRoles ?? []) as AdminGroupMembershipRoleRow[]) {
+      if (membership.role !== "capogruppo") {
+        continue;
+      }
+
+      const eventId = relatedOne(membership.groups)?.event_id;
+
+      if (!eventId) {
+        continue;
+      }
+
+      const key = `${membership.user_id}:${eventId}`;
+      const values = rolesByUserEvent.get(key) ?? [];
+
+      if (!values.includes("capogruppo")) {
+        values.push("capogruppo");
+      }
+
+      rolesByUserEvent.set(key, values);
     }
 
     return {
@@ -686,21 +724,12 @@ function AdminParticipantEditOverlay({
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="border-b border-[#dfe5d8] px-5 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-semibold">Modifica iscritto</h3>
-              <p className="mt-1 text-sm text-[#5e6d63]">
-                {participant.name}
-                {participant.publicCode ? ` - ${participant.publicCode}` : ""}
-              </p>
-            </div>
-            <Link
-              href="/dashboard/admin"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c8d5be] text-lg leading-none text-[#38563d] transition hover:bg-[#eef2e7]"
-              aria-label="Chiudi"
-            >
-              ×
-            </Link>
+          <div>
+            <h3 className="text-xl font-semibold">Modifica iscritto</h3>
+            <p className="mt-1 text-sm text-[#5e6d63]">
+              {participant.name}
+              {participant.publicCode ? ` - ${participant.publicCode}` : ""}
+            </p>
           </div>
         </div>
 
@@ -748,12 +777,12 @@ function AdminParticipantEditOverlay({
                 defaultValue={currentOperationalRole || ""}
                 className="min-h-11 rounded-md border border-[#c8d5be] bg-white px-3 font-normal text-[#1c241f]"
               >
-                {!currentOperationalRole ? (
-                  <option value="">Nessun ruolo operativo</option>
-                ) : null}
+                <option value="">Nessun ruolo operativo</option>
+                <option value="admin">Admin</option>
                 <option value="manager">Manager</option>
                 <option value="manager_viewer">Manager viewer</option>
                 <option value="accoglienza">Accoglienza</option>
+                <option value="capogruppo">Capogruppo</option>
               </select>
             </label>
           </div>
@@ -984,7 +1013,7 @@ function roleLabel(role: string): string {
 
 function getCurrentOperationalRole(
   roles: string[]
-): "manager" | "manager_viewer" | "accoglienza" | null {
+): "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo" | null {
   const role = roles.find(isAssignableOperationalRole);
 
   return role ?? null;
@@ -992,10 +1021,12 @@ function getCurrentOperationalRole(
 
 function isAssignableOperationalRole(
   role: string
-): role is "manager" | "manager_viewer" | "accoglienza" {
+): role is "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo" {
   return (
+    role === "admin" ||
     role === "manager" ||
     role === "manager_viewer" ||
-    role === "accoglienza"
+    role === "accoglienza" ||
+    role === "capogruppo"
   );
 }

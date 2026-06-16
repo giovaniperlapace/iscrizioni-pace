@@ -41,6 +41,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   scope albero gruppi, filtri operativi, conferma/rifiuto con risalita al padre,
   note interne, lettura notifica e audit delle decisioni senza email al
   partecipante.
+- Il 2026-06-16 e' stata rifinita la navigazione delle dashboard operative:
+  tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
+  personale, logout globale, rimozione della card "La mia iscrizione" dalle
+  dashboard operative e gestione admin/capogruppo dal modale admin.
 - Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
@@ -51,7 +55,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Ultimo commit/push noto su `main`: milestone 6.3, `Complete group matching and registration UX refinements`.
+- Ultimo commit/push noto su `main`: `f7244fe Add group leader operations dashboards`.
 
 Prima di ogni feature verificare:
 
@@ -736,6 +740,71 @@ Verifiche eseguite:
 - `npm run build`.
 - Migration remota applicata con
   `./scripts/apply-remote-migration.sh supabase/migrations/20260616143000_group_leader_dashboard_metadata.sql`.
+
+## Rifinitura dashboard operative - 2026-06-16
+
+Rifinitura locale realizzata dopo review nel browser integrato. Le modifiche
+sono successive al commit `f7244fe` e, al momento dell'aggiornamento di questo
+file, restano locali finche' non viene richiesto commit/push.
+
+Deliverable:
+
+- Nuovo componente condiviso `app/dashboard/role-tabs.tsx`.
+- Logica testabile per le tab in `lib/auth/dashboard-tabs.ts`.
+- Navigazione a tab fra aree:
+  `Dashboard admin`, `Dashboard manager`, `Dashboard accoglienza`,
+  `Dashboard capogruppo`, `Iscrizione e QR personale`.
+- Logout globale nell'header tramite server action `logout()` in
+  `app/actions.ts` e bottone `Esci` con icona in `components/app-headbar.tsx`.
+- Rimozione della card `Iscrizione personale collegata` dalle dashboard
+  operative: l'area personale si raggiunge dalla tab
+  `Iscrizione e QR personale`.
+- Rimozione del vecchio placeholder dashboard accoglienza e riallineamento al
+  layout delle altre dashboard operative.
+- Modale admin `Modifica iscritto` aggiornato:
+  - rimossa la X di chiusura;
+  - `Annulla` e' l'unica uscita senza salvare;
+  - `Conferma modifiche` e' l'unico salvataggio;
+  - il select ruolo permette `Admin`, `Manager`, `Manager viewer`,
+    `Accoglienza`, `Capogruppo` e `Nessun ruolo operativo`.
+
+Decisioni:
+
+- La tab attiva e' l'indicatore principale dell'area corrente; i titoli visibili
+  ridondanti `Area protetta` / `Pannello operativo` sono stati rimossi dalle
+  dashboard operative.
+- Restano titoli `sr-only` per accessibilita' e struttura semantica.
+- L'informazione `Area protetta` resta come badge grafico nella descrizione
+  sotto le tab, non come titolo principale.
+- Le descrizioni sotto le tab devono iniziare con tono operativo tipo
+  "In questa area puoi..." e non devono ripetere l'email dell'utente, gia'
+  mostrata nell'header globale.
+- `manager` e `manager_viewer` condividono la tab `Dashboard manager`.
+- Gli admin vedono tutte le dashboard operative, anche senza ruoli evento
+  separati.
+- Il ruolo `Admin` assegnato dal modale admin viene scritto in
+  `event_user_roles` come ruolo globale con `event_id = null`.
+- Il ruolo `Capogruppo` assegnato dal modale admin viene scritto in
+  `group_memberships` sul gruppo selezionato.
+- Cambiare ruolo dal select admin rimuove gli altri ruoli operativi assegnabili
+  nello stesso contesto; `Nessun ruolo operativo` li rimuove.
+
+Note operative:
+
+- Durante il test l'utente `nicolamastrorilli33@gmail.com` ha perso
+  temporaneamente il ruolo admin; e' stato ripristinato manualmente via
+  Supabase service role. Dopo il ripristino risultavano `admin` globale e
+  `manager` sull'evento test.
+- Il diario locale della giornata e' fuori repository:
+  `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/Sviluppo-app/Diario di Lavoro/2026-06-16 - iscrizioni pace.md`.
+
+Verifiche eseguite durante la sessione:
+
+- `npm run lint`.
+- `npm run typecheck`.
+- `npm test`.
+- `npm run build`.
+- Verifiche browser su admin, manager, capogruppo, accoglienza e partecipante.
 
 ## Anticipo QR code reale
 

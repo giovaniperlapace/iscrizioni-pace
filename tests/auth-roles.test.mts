@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { getDashboardRoleTabs } from "../lib/auth/dashboard-tabs.ts";
 import {
   dashboardRoleFromPath,
   isRoleAllowedForDashboard,
@@ -45,6 +46,37 @@ test("manager and manager viewer share the manager dashboard", () => {
       new Set<DashboardRole>(["manager_viewer", "partecipante"])
     ),
     false
+  );
+});
+
+test("dashboard tabs dedupe manager and manager viewer", () => {
+  const tabs = getDashboardRoleTabs([
+    { role: "manager", eventId: "event-1" },
+    { role: "manager_viewer", eventId: "event-1" },
+  ]);
+
+  assert.deepEqual(
+    tabs.map((tab) => tab.key),
+    ["manager", "partecipante"]
+  );
+});
+
+test("dashboard tabs expose delegated admin areas", () => {
+  const tabs = getDashboardRoleTabs([{ role: "admin", eventId: null }]);
+
+  assert.deepEqual(
+    tabs.map((tab) => tab.key),
+    ["admin", "manager", "accoglienza", "capogruppo", "partecipante"]
+  );
+  assert.deepEqual(
+    tabs.map((tab) => tab.label),
+    [
+      "Dashboard admin",
+      "Dashboard manager",
+      "Dashboard accoglienza",
+      "Dashboard capogruppo",
+      "Iscrizione e QR personale",
+    ]
   );
 });
 

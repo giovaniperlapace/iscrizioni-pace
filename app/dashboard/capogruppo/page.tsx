@@ -2,7 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { updateGroupLeaderAssignment } from "@/app/actions";
-import { PersonalRegistrationCard } from "@/app/dashboard/personal-registration-card";
+import {
+  DashboardAreaDescription,
+  DashboardRoleTabs,
+} from "@/app/dashboard/role-tabs";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import {
   collectDescendantGroupIds,
@@ -12,7 +15,6 @@ import {
   type GroupLeaderReviewFilter,
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
-import { getPersonalRegistrationSummary } from "@/lib/registrations/personal-registration";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -187,13 +189,8 @@ export default async function CapogruppoDashboardPage({
     parentGroupId: group.parent_group_id,
   }));
   const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
-  const scopedGroups = groupRows.filter((group) => scopedGroupIds.has(group.id));
-  const scopedEventIds = [...new Set(scopedGroups.map((group) => group.event_id))];
 
-  const [personalRegistration, assignments] = await Promise.all([
-    getPersonalRegistrationSummary(supabase, auth.user.id, scopedEventIds),
-    getAssignments([...scopedGroupIds]),
-  ]);
+  const assignments = await getAssignments([...scopedGroupIds]);
   const summary = summarizeGroupLeaderAssignments(assignments);
   const filteredAssignments = assignments.filter((assignment) =>
     matchesGroupLeaderFilter(assignment, filter)
@@ -202,15 +199,16 @@ export default async function CapogruppoDashboardPage({
   return (
     <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
-        <header>
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
-            Area protetta
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold">Dashboard capogruppo</h1>
-          <p className="mt-3 max-w-3xl text-[#4b5a50]">
-            Accesso verificato per {auth.user.email}. Controlla le assegnazioni
-            dei tuoi gruppi e dei nodi territoriali collegati.
-          </p>
+        <header className="grid gap-3">
+          <h1 className="sr-only">Dashboard capogruppo</h1>
+          <DashboardRoleTabs
+            activeRole="capogruppo"
+            eventRoles={auth.eventRoles}
+          />
+          <DashboardAreaDescription>
+            In questa area puoi verificare le assegnazioni dei tuoi gruppi,
+            confermare i partecipanti o rimandarli al livello superiore.
+          </DashboardAreaDescription>
         </header>
 
         <StatusMessage error={params.error} saved={params.saved} />
@@ -221,8 +219,6 @@ export default async function CapogruppoDashboardPage({
           <Metric label="Da verificare" value={String(summary.toReview)} />
           <Metric label="Confermati" value={String(summary.confirmed)} />
         </section>
-
-        <PersonalRegistrationCard summary={personalRegistration} />
 
         <section className="rounded-lg border border-[#d8dece] bg-white p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -254,7 +250,7 @@ export default async function CapogruppoDashboardPage({
           <div className="mt-5 grid gap-3 sm:grid-cols-4">
             <SmallMetric label="Probabili" value={summary.probable} />
             <SmallMetric label="Rifiutati" value={summary.rejected} />
-            <SmallMetric label="Nodi in scope" value={scopedGroups.length} />
+            <SmallMetric label="Nodi in scope" value={scopedGroupIds.size} />
             <SmallMetric label="Vista" value={filteredAssignments.length} />
           </div>
         </section>

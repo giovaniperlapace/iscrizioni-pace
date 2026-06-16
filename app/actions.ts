@@ -33,6 +33,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const EMAIL_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 
+export async function logout() {
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+
+  redirect("/");
+}
+
 export async function startPublicEmailFlow(formData: FormData) {
   const email = normalizeEmail(formData.get("email"));
   const appUrl = getAppUrl();

@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { DashboardPlaceholder } from "@/app/dashboard/placeholder";
+import {
+  DashboardAreaDescription,
+  DashboardRoleTabs,
+} from "@/app/dashboard/role-tabs";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -13,9 +16,20 @@ export default async function AccoglienzaDashboardPage() {
   }
 
   return (
-    <DashboardPlaceholder
-      title="Dashboard accoglienza"
-      description={`Accesso verificato per ${auth.user.email}. Scansione QR e verifica operativa con dati minimi necessari arriveranno nella milestone accoglienza.`}
-    />
+    <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
+      <section className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8 sm:px-8">
+        <header className="grid gap-3">
+          <h1 className="sr-only">Dashboard accoglienza</h1>
+          <DashboardRoleTabs
+            activeRole="accoglienza"
+            eventRoles={auth.eventRoles}
+          />
+          <DashboardAreaDescription>
+            In questa area potrai scansionare i QR code e verificare
+            l&apos;accesso con i soli dati operativi necessari.
+          </DashboardAreaDescription>
+        </header>
+      </section>
+    </main>
   );
 }
