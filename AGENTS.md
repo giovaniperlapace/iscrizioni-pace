@@ -24,6 +24,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Milestone 6.1 ha affinato la dashboard partecipante: gruppo come informazione
   secondaria sotto il nome, schermata rapida focalizzata sui panel e due
   pulsanti con icone per aprire QR code o iscrizione modificabile in overlay.
+- Milestone 6.3 ha aggiunto albero gruppi, nodi territoriali per nuovi
+  partecipanti, matching referente/gruppo per paese, città ed età, e opzione
+  pubblica "Non trovo il mio referente"; durante il test locale sono stati
+  aggiunti anche conservazione dati form dopo errore e CTA di primo accesso
+  dalla conferma iscrizione.
 - Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
@@ -34,7 +39,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Ultimo commit/push noto su `main`: milestone 6, `Implement participant dashboard milestone`.
+- Ultimo commit/push noto su `main`: milestone 6.3, `Complete group matching and registration UX refinements`.
 
 Prima di ogni feature verificare:
 
@@ -517,6 +522,77 @@ Verifiche eseguite:
 - Verificato che gli overlay siano centrati su desktop e mobile.
 - Verificate righe evento e gruppo su desktop/mobile senza overflow
   orizzontale.
+
+## Milestone 6.3 - albero gruppi, matching referente e nuovi partecipanti
+
+Albero gruppi e matching iniziale completati localmente il 2026-06-16.
+
+Deliverable:
+
+- Migration `supabase/migrations/20260616103000_group_tree_matching.sql`.
+- Migration `supabase/migrations/20260616110000_backfill_group_tree_test_seed.sql`
+  aggiunta dopo applicazione remota per riallineare il seed dei nodi test già
+  registrato.
+- `groups` estesa con `parent_group_id`, `node_type`, `community_kind`,
+  `age_bracket`, `is_assignable`, `is_public_catalog`, `public_order` e
+  `matching_notes`.
+- Nuova tabella `group_assignment_rules` per regole di evento su paese, città,
+  fascia età e priorità.
+- `participant_group_assignments` estesa con `is_current`,
+  `assignment_reason`, `escalated_from_group_id`, `escalation_depth` e
+  `matcher_version`, più indice unico parziale per l'assegnazione corrente.
+- Helper testabili in `lib/groups/matching.ts` per calcolare età alla data
+  evento, fasce giovani/adulti con sovrapposizione 23-30 anni, candidati
+  territoriali e fallback.
+- Form pubblico aggiornato con campo unico autocomplete per gruppi/referenti,
+  filtrato sui candidati affini e ricercabile sia per nome gruppo sia per nome
+  referente. Le label usano `nome gruppo - referente ...`.
+- Opzione "Non trovo il mio referente" mantenuta: azzera l'eventuale scelta e
+  consente l'assegnazione probabile da regola.
+- Dopo un errore di validazione nel form pubblico, i dati già inseriti vengono
+  conservati in `sessionStorage` per la sessione browser e la UI porta il focus
+  sul campo più probabile da correggere.
+- La pagina di conferma iscrizione contiene una CTA per tornare alla home e
+  fare il primo accesso; se presente, l'email viene passata alla home e
+  precompilata nel form email-prima.
+- Le nuove iscrizioni vengono agganciate a un gruppo scelto, a un gruppo
+  probabile calcolato o a un nodo territoriale dei nuovi partecipanti quando
+  esiste un candidato coerente.
+
+Decisioni:
+
+- `community_kind = 'newcomers'` e i nodi territoriali dei nuovi partecipanti
+  sono classificazioni interne: non vanno esposte nella UI partecipante o nelle
+  email ordinarie.
+- I gruppi visibili nel form pubblico devono avere `is_public_catalog = true`,
+  essere attivi e assegnabili. I nodi interni possono essere usati dal server
+  per il matching ma non mostrati come scelta pubblica.
+- Il matching usa `participants.country_id` e `participants.city_id` quando il
+  paese/città digitato coincide con i cataloghi. I campi testuali restano
+  comunque conservati come fallback e nello snapshot questionario.
+- Se la persona dichiara di non avere partecipazione precedente Sant'Egidio,
+  il sistema assegna il nodo `newcomers` più vicino per città o paese.
+- Se la persona ha partecipazione Sant'Egidio ma non trova il referente o non
+  partecipa con gruppo, il sistema assegna un gruppo/referente probabile con
+  `source = 'rule'` e `status = 'probable'`.
+- Se il partecipante seleziona un gruppo, l'assegnazione resta `probable` con
+  `source = 'participant_selected'`; la conferma esplicita del referente resta
+  demandata alla dashboard capogruppo futura.
+
+Verifiche previste:
+
+- Test unitari in `tests/group-matching.test.mts` coprono Austria senza città,
+  Italia/Roma, aree, sovrapposizione 23-30 anni, nuovi partecipanti e "Non
+  trovo il mio referente".
+- Migration 6.3 e backfill applicati al Supabase remoto il 2026-06-16. Dopo il
+  backfill remoto verificati: 10 nodi seed 6.3, 5 nodi pubblici assegnabili, 3
+  nodi `newcomers`, 6 regole di matching.
+- Browser locale verificato per autocomplete gruppo/referente e CTA conferma
+  iscrizione. Il browser integrato non ha permesso test automatico completo di
+  digitazione per un problema del clipboard virtuale, ma lint/typecheck/test e
+  build sono passati.
+- Prima di chiudere una modifica collegata alla 6.3 usare ancora
+  `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 
 ## Anticipo QR code reale
 

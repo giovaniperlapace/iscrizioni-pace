@@ -21,7 +21,12 @@ export async function createSupabaseServerClient() {
       },
       setAll(cookiesToSet) {
         for (const { name, value, options } of cookiesToSet) {
-          cookieStore.set(name, value, options);
+          try {
+            cookieStore.set(name, value, options);
+          } catch {
+            // Server Components can read auth cookies but cannot refresh them.
+            // Route Handlers and Server Actions still persist refreshed cookies.
+          }
         }
       },
     },

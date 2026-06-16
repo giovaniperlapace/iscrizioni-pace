@@ -597,6 +597,7 @@ Dati sensibili e minimizzazione:
 
 ### Milestone 6.3: albero gruppi, matching referente e nuovi partecipanti
 
+- Stato: completata localmente e applicata al Supabase remoto il 2026-06-16.
 - Scopo: progettare e implementare la logica che collega ogni iscrizione a un
   referente, a un gruppo probabile o a un nodo territoriale dei nuovi
   partecipanti, prima di costruire la dashboard capogruppo completa.
@@ -653,6 +654,28 @@ Dati sensibili e minimizzazione:
   comunicare classificazioni interne al partecipante.
 - Non fare: dashboard capogruppo completa, notifiche email definitive,
   riassegnazione manuale manager avanzata.
+
+Esito:
+
+- Migration `20260616103000_group_tree_matching.sql` applicata al Supabase
+  remoto e registrata.
+- Migration `20260616110000_backfill_group_tree_test_seed.sql` applicata per
+  riallineare il seed dei nodi test dopo la correzione del backfill.
+- Verificati sul DB remoto: 10 nodi seed 6.3, 5 nodi pubblici assegnabili, 3
+  nodi `newcomers`, 6 regole di matching.
+- Implementato `lib/groups/matching.ts` con calcolo età alla data evento,
+  sovrapposizione 23-30, matching territoriale e fallback.
+- Il form pubblico ora mostra un campo unico autocomplete "Gruppo o referente",
+  ricercabile sia per nome gruppo sia per referente, e mantiene l'opzione "Non
+  trovo il mio referente".
+- Durante i test locali sono stati aggiunti due affinamenti UX:
+  - dopo errore di validazione il form conserva i dati già inseriti nella
+    sessione browser e porta il focus sul campo da correggere;
+  - la pagina di conferma iscrizione ha un pulsante per tornare alla home e
+    fare il primo accesso, con email precompilata.
+- Verifiche eseguite: `npm run lint`, `npm run typecheck`, `npm test`,
+  `npm run build`, più verifica browser locale del campo gruppo/referente e
+  della CTA in conferma.
 
 ### Roadmap aggiornata dopo Milestone 6.3
 
@@ -999,19 +1022,6 @@ Review per ogni blocco:
 ## 10. Prossimo prompt consigliato
 
 Prompt consigliato per la prossima milestone:
-
-> Procedi con la Milestone 6.3: albero gruppi, matching referente e nuovi
-> partecipanti. Prima verifica branch, stato Git, schema attuale e RLS.
-> Progetta una migration revisionabile per l'albero gruppi e implementa le
-> funzioni testabili di matching paese/città/età, inclusa la sovrapposizione
-> 23-30 anni e l'assegnazione territoriale dei nuovi partecipanti. Aggiorna il
-> form iscrizione per mostrare solo i gruppi affini e l'opzione "Non trovo il
-> mio referente", senza esporre stati interni al partecipante. Tieni lo scope
-> orientato al go-live pubblico: niente dashboard avanzate, niente scanner
-> accoglienza e niente programma/panel oltre a quanto serve per non bloccare
-> l'apertura delle iscrizioni.
-
-Prompt immediatamente successivo, se la 6.3 e' chiusa:
 
 > Procedi con la Milestone 7: preparazione apertura pubblica iscrizioni.
 > Verifica produzione Vercel, env, SMTP, allowlist Supabase Auth, testi

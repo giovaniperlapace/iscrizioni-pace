@@ -8,6 +8,9 @@ export default async function ConfirmationPage({
   searchParams,
 }: ConfirmationProps) {
   const params = await searchParams;
+  const homeHref = params.email
+    ? `/?email=${encodeURIComponent(params.email)}`
+    : "/";
 
   return (
     <main className="min-h-screen bg-[#f7f8f3] px-5 py-10 text-[#1c241f]">
@@ -21,6 +24,12 @@ export default async function ConfirmationPage({
           <strong>{params.email ?? "la tua email"}</strong>. Per rientrare
           nella dashboard usa la stessa email dalla home.
         </p>
+        <a
+          href={homeHref}
+          className="mt-6 inline-flex min-h-12 items-center justify-center rounded-md bg-[#2f5e46] px-5 font-semibold text-white transition hover:bg-[#254b38]"
+        >
+          Torna alla home e fai il primo accesso
+        </a>
       </section>
     </main>
   );

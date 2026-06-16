@@ -6,6 +6,14 @@ import {
   renderRegistrationConfirmationEmail,
 } from "@/lib/email/templates";
 import {
+  normalizeMatchText,
+  resolveGroupAssignmentForRegistration,
+  type GroupAgeBracket,
+  type GroupCommunityKind,
+  type GroupMatchCandidate,
+  type GroupNodeType,
+} from "@/lib/groups/matching";
+import {
   buildRegistrationQuestionnaireAnswers,
   getQuestionnaireVisibilitySummary,
   REGISTRATION_QUESTIONNAIRE_VERSION,
@@ -36,6 +44,33 @@ type CreatedParticipant = {
   public_code: string;
 };
 
+type PublicCountryRow = {
+  id: string;
+  name_it: string;
+  name_en: string;
+};
+
+type PublicCityRow = {
+  id: string;
+  country_id: string;
+  name: string;
+};
+
+type PublicGroupRow = {
+  id: string;
+  name: string;
+  primary_leader_name: string | null;
+  country_id: string | null;
+  city_id: string | null;
+  parent_group_id: string | null;
+  node_type: string | null;
+  community_kind: string | null;
+  age_bracket: string | null;
+  is_assignable: boolean | null;
+  is_public_catalog: boolean | null;
+  public_order: number | null;
+};
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export type PublicRegistrationOptions = {
@@ -45,7 +80,16 @@ export type PublicRegistrationOptions = {
   groups: Array<{
     id: string;
     name: string;
-    primary_leader_name: string | null;
+    primaryLeaderName: string | null;
+    countryId: string | null;
+    cityId: string | null;
+    parentGroupId: string | null;
+    nodeType: GroupNodeType;
+    communityKind: GroupCommunityKind;
+    ageBracket: GroupAgeBracket;
+    isAssignable: boolean;
+    isPublicCatalog: boolean;
+    publicOrder: number;
   }>;
   moments: Array<{ id: string; title: string; starts_at: string | null }>;
 };
@@ -69,9 +113,13 @@ export async function getPublicRegistrationOptions(
     event
       ? supabase
           .from("groups")
-          .select("id,name,primary_leader_name")
+          .select(
+            "id,name,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
+          )
           .eq("event_id", event.id)
           .eq("is_active", true)
+          .eq("is_public_catalog", true)
+          .eq("is_assignable", true)
           .order("name")
       : Promise.resolve({ data: [], error: null }),
     event
@@ -88,7 +136,7 @@ export async function getPublicRegistrationOptions(
     event,
     countries: countries.data ?? [],
     cities: cities.data ?? [],
-    groups: groups.data ?? [],
+    groups: ((groups.data ?? []) as PublicGroupRow[]).map(mapGroupRow),
     moments: moments.data ?? [],
   };
 }
@@ -168,6 +216,8 @@ export async function createPublicRegistration(
     throw new Error("Questa email risulta già iscritta all'evento.");
   }
 
+  const geography = await resolveParticipantGeography(supabase, input);
+
   const { data: participant, error: participantError } = await supabase
     .from("participants")
     .insert({
@@ -175,8 +225,8 @@ export async function createPublicRegistration(
       last_name: input.lastName,
       birth_date: input.birthDate,
       preferred_locale: input.preferredLocale,
-      country_id: input.countryId,
-      city_id: input.cityId,
+      country_id: geography.countryId,
+      city_id: geography.cityId,
       country_other: input.countryOther,
       city_other: input.cityOther,
       has_previous_santegidio_participation:
@@ -222,6 +272,20 @@ export async function createPublicRegistration(
   const registrationId = registration.id;
   const qrToken = createOpaqueQrToken();
   const allowedEventDays = getEventDayValues(event.starts_on, event.ends_on);
+  const groups = await getEventGroupCandidates(supabase, event.id);
+  const groupAssignment = resolveGroupAssignmentForRegistration({
+    groups,
+    criteria: {
+      countryId: geography.countryId,
+      cityId: geography.cityId,
+      birthDate: input.birthDate,
+      eventStartsOn: event.starts_on,
+    },
+    selectedGroupId: input.groupId,
+    hasPreviousSantegidioParticipation: input.hasPreviousSantegidioParticipation,
+    participatesWithGroup: input.participatesWithGroup,
+    cannotFindLeader: input.cannotFindLeader,
+  });
 
   if (
     !input.availabilityUnknown &&
@@ -270,14 +334,16 @@ export async function createPublicRegistration(
     }),
   ];
 
-  if (input.groupId) {
+  if (groupAssignment) {
     writes.push(
       supabase.from("participant_group_assignments").insert({
         registration_id: registrationId,
-        group_id: input.groupId,
+        group_id: groupAssignment.groupId,
         status: "probable",
-        source: "participant_selected",
-        confidence: 0.8,
+        source: groupAssignment.source,
+        confidence: groupAssignment.confidence,
+        assignment_reason: groupAssignment.reason,
+        matcher_version: groupAssignment.matcherVersion,
       })
     );
   }
@@ -443,4 +509,117 @@ function buildAppMagicLink(
   callbackUrl.searchParams.set("type", "magiclink");
 
   return callbackUrl.toString();
+}
+
+async function resolveParticipantGeography(
+  supabase: SupabaseClient,
+  input: RegistrationInput
+): Promise<{ countryId: string | null; cityId: string | null }> {
+  const countryId =
+    input.countryId ??
+    (input.countryOther
+      ? await findCountryIdByName(supabase, input.countryOther)
+      : null);
+  const cityId =
+    input.cityId ??
+    (countryId && input.cityOther
+      ? await findCityIdByName(supabase, countryId, input.cityOther)
+      : null);
+
+  return { countryId, cityId };
+}
+
+async function findCountryIdByName(
+  supabase: SupabaseClient,
+  countryName: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("countries")
+    .select("id,name_it,name_en")
+    .eq("is_active", true);
+
+  const normalizedCountry = normalizeMatchText(countryName);
+  const match = ((data ?? []) as PublicCountryRow[]).find(
+    (country) =>
+      normalizeMatchText(country.name_it) === normalizedCountry ||
+      normalizeMatchText(country.name_en) === normalizedCountry
+  );
+
+  return match?.id ?? null;
+}
+
+async function findCityIdByName(
+  supabase: SupabaseClient,
+  countryId: string,
+  cityName: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("cities")
+    .select("id,country_id,name")
+    .eq("country_id", countryId)
+    .eq("is_active", true);
+
+  const normalizedCity = normalizeMatchText(cityName);
+  const match = ((data ?? []) as PublicCityRow[]).find(
+    (city) => normalizeMatchText(city.name) === normalizedCity
+  );
+
+  return match?.id ?? null;
+}
+
+async function getEventGroupCandidates(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<GroupMatchCandidate[]> {
+  const { data, error } = await supabase
+    .from("groups")
+    .select(
+      "id,name,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
+    )
+    .eq("event_id", eventId)
+    .eq("is_active", true);
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data ?? []) as PublicGroupRow[]).map(mapGroupRow);
+}
+
+function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
+  return {
+    id: row.id,
+    name: row.name,
+    primaryLeaderName: row.primary_leader_name,
+    countryId: row.country_id,
+    cityId: row.city_id,
+    parentGroupId: row.parent_group_id,
+    nodeType: parseNodeType(row.node_type),
+    communityKind: parseCommunityKind(row.community_kind),
+    ageBracket: parseAgeBracket(row.age_bracket),
+    isAssignable: row.is_assignable ?? true,
+    isPublicCatalog: row.is_public_catalog ?? true,
+    publicOrder: row.public_order ?? 100,
+  };
+}
+
+function parseNodeType(value: string | null): GroupNodeType {
+  return value === "country" ||
+    value === "city" ||
+    value === "area" ||
+    value === "newcomers"
+    ? value
+    : "group";
+}
+
+function parseCommunityKind(value: string | null): GroupCommunityKind {
+  return value === "newcomers" || value === "territorial"
+    ? value
+    : "santegidio";
+}
+
+function parseAgeBracket(value: string | null): GroupAgeBracket {
+  return value === "giovani" || value === "adulti" || value === "both"
+    ? value
+    : "none";
 }

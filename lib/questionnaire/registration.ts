@@ -632,6 +632,7 @@ export function buildRegistrationQuestionnaireAnswers(input: RegistrationInput) 
       participatesWithGroup: input.participatesWithGroup,
       selectedGroupId: input.groupId,
       selectedGroupName: input.groupName,
+      cannotFindLeader: input.cannotFindLeader,
     },
     attendance: {
       overallChoice: input.attendanceChoice,

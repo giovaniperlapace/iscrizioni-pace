@@ -5,6 +5,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 type HomeProps = {
   searchParams: Promise<{
     error?: string;
+    email?: string;
     sent?: string;
   }>;
 };
@@ -47,6 +48,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 type="email"
                 required
                 autoComplete="email"
+                defaultValue={params.email ?? ""}
                 className="min-h-12 flex-1 rounded-md border border-[#cbd3c0] bg-white px-3 text-base outline-none ring-[#6d8b70] transition focus:ring-2"
                 placeholder="nome@example.org"
               />

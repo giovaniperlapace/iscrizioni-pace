@@ -17,6 +17,7 @@ export type RegistrationInput = {
   participatesWithGroup: boolean | null;
   groupId: string | null;
   groupName: string | null;
+  cannotFindLeader: boolean;
   attendanceChoice: "yes" | "no" | "unknown";
   availabilityDays: string[];
   availabilityUnknown: boolean;
@@ -65,6 +66,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   const participatesWithGroup = parseBooleanChoice(
     formData.get("participatesWithGroup")
   );
+  const cannotFindLeader = formData.get("cannotFindLeader") === "on";
   const groupId = optionalUuid(formData.get("groupId"));
   const hasAccessibilityNeeds = parseBooleanChoice(
     formData.get("hasAccessibilityNeeds")
@@ -94,9 +96,12 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
       formData.get("hasPreviousSantegidioParticipation")
     ),
     participatesWithGroup,
-    groupId: participatesWithGroup === true ? groupId : null,
+    groupId: participatesWithGroup === true && !cannotFindLeader ? groupId : null,
     groupName:
-      participatesWithGroup === true ? optionalText(formData.get("groupName")) : null,
+      participatesWithGroup === true && !cannotFindLeader
+        ? optionalText(formData.get("groupName"))
+        : null,
+    cannotFindLeader: participatesWithGroup === true ? cannotFindLeader : false,
     attendanceChoice: parseAttendanceChoice(formData.get("attendanceChoice")),
     availabilityDays: availabilityUnknown ? [] : parseAvailabilityDays(formData),
     availabilityUnknown,
@@ -182,6 +187,7 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
   if (
     input.hasPreviousSantegidioParticipation === true &&
     input.participatesWithGroup === true &&
+    !input.cannotFindLeader &&
     !input.groupId &&
     !input.groupName
   ) {

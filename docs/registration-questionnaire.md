@@ -17,11 +17,11 @@ manutenzione futura, non per sostituire lo schema relazionale principale.
 | Nome, cognome, data di nascita | Sì | personale | `participants` | partecipante, capogruppo, manager, manager_viewer, admin, accoglienza | Sì |
 | Luogo di nascita, paese e città | Sì | personale | snapshot `registration_questionnaire_answers.answers.birthPlace` | partecipante, manager, manager_viewer, admin | Sì |
 | Nazionalità | Sì | personale | snapshot `registration_questionnaire_answers.answers.nationality` | partecipante, manager, manager_viewer, admin | Sì |
-| Paese europeo geografico e città | Sì | personale | `participants.country_other`, `city_other` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
+| Paese europeo geografico e città | Sì | personale | `participants.country_id`, `city_id`, `country_other`, `city_other` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
 | Disabilità o bisogni di accessibilità | Sì | sensibile | `accessibility_needs.washington_group_answers` | partecipante, manager, admin | Sì |
 | Dettagli accessibilità | Solo se accessibilità = Sì | sensibile | `accessibility_needs` | partecipante, manager, admin | Sì |
 | Partecipazione precedente Sant'Egidio nella propria città | Sì | operativo | `participants.has_previous_santegidio_participation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
-| Partecipazione con gruppo | Solo se partecipazione precedente = Sì | operativo | `participants.participates_with_group`, `participant_group_assignments` o snapshot `groupName` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
+| Partecipazione con gruppo/referente | Solo se partecipazione precedente = Sì | operativo | `participants.participates_with_group`, `participant_group_assignments`, snapshot `groupParticipation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
 | Giorni di presenza previsti | Sì | operativo | `event_attendance_choices` e snapshot questionario | partecipante, capogruppo, manager, manager_viewer, admin, accoglienza | Sì |
 | Privacy e consenso trattamento dati | Sì | legale | `participant_consents` | partecipante, manager, admin | No |
 
@@ -40,11 +40,21 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
   alle aree funzionali del Washington Group: vista, udito, cammino/gradini,
   cura di sé, memoria/concentrazione, comunicazione, sedia a rotelle o ausilio
   mobilità, assistenza durante l'evento.
-- Se partecipazione precedente Sant'Egidio = No, il form passa alla privacy.
+- Se partecipazione precedente Sant'Egidio = No, il form non mostra categorie
+  interne e l'app assegna l'iscrizione al nodo territoriale dei nuovi
+  partecipanti più vicino.
 - Se partecipazione precedente Sant'Egidio = Sì, viene chiesto se la persona
   parteciperà con un gruppo.
-- Se parteciperà con un gruppo = Sì, viene mostrata una lista di gruppi reali
-  dell'evento o, in assenza di dati, una lista segnaposto.
+- Se parteciperà con un gruppo = Sì, viene mostrata una lista filtrata e
+  ricercabile di gruppi/referenti affini per paese, città ed età alla data
+  dell'evento. L'età 23-30 rientra sia nel matching giovani sia nel matching
+  adulti.
+- Se la persona seleziona `Non trovo il mio referente`, l'iscrizione resta
+  completabile e viene assegnata con stato operativo `probable` al referente o
+  gruppo più vicino. Lo stato interno non viene mostrato al partecipante.
+- Se partecipazione precedente Sant'Egidio = Sì ma parteciperà senza gruppo,
+  l'app crea comunque un'assegnazione probabile a un nodo/referente coerente
+  con territorio ed età.
 - Prima della privacy viene chiesto in quali giorni dell'evento la persona sarà
   presente. I giorni sono generati da `events.starts_on` e `events.ends_on`, così
   cambiano automaticamente per eventi futuri di 2, 3, 4 o più giorni. In
@@ -62,6 +72,31 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 - Anche la città ha `Altro / non in lista`, con campo libero.
 - La scelta e' ispirata a dataset come GeoNames e Natural Earth Populated
   Places, senza importare dataset completi nella prima versione del form.
+- Quando il paese o la città inseriti corrispondono ai cataloghi `countries` e
+  `cities`, l'app salva anche gli ID strutturati in `participants.country_id` e
+  `participants.city_id`. I campi testuali restano nello snapshot e come
+  fallback per valori non ancora presenti a catalogo.
+
+## Matching gruppi e nuovi partecipanti
+
+- La migration `20260616103000_group_tree_matching.sql` estende `groups` con
+  `parent_group_id`, `node_type`, `community_kind`, `age_bracket`,
+  `is_assignable`, `is_public_catalog` e `public_order`.
+- La migration `20260616110000_backfill_group_tree_test_seed.sql` riallinea i
+  dati test sui database dove la migration 6.3 era già stata registrata prima
+  della correzione del seed.
+- I nodi pubblici selezionabili nel form hanno `is_public_catalog = true`; i
+  nodi territoriali interni dei nuovi partecipanti restano fuori dalla lista
+  pubblica.
+- `group_assignment_rules` modella regole di evento per paese, città, fascia
+  età e priorità. La prima logica applicativa usa anche i metadati di `groups`
+  per garantire fallback immediato.
+- `participant_group_assignments` conserva `is_current`,
+  `assignment_reason`, `escalated_from_group_id`, `escalation_depth` e
+  `matcher_version`. Le nuove iscrizioni ricevono un aggancio operativo quando
+  esiste almeno un nodo coerente.
+- La classificazione `newcomers` e formule come "esterni" sono interne: non
+  devono comparire nella UI partecipante o nelle email ordinarie.
 
 ## Nazionalità
 
@@ -74,13 +109,13 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 
 ## Test data
 
-La migration `20260614100000_registration_questionnaire_and_test_seed.sql`
-crea dati distinguibili dai reali:
+Le migration di test creano dati distinguibili dai reali:
 
 - evento pubblicato `assisi-2026-test`;
-- paesi `IT`, `GB`, `US`;
-- città `Roma`, `Assisi`, `London`, `New York`;
-- gruppo `Roma - Giovani per la Pace`;
+- paesi `IT`, `GB`, `US`, più `AT` nella migration 6.3;
+- città `Roma`, `Assisi`, `London`, `New York`, più `Torino` e `Vienna` nella
+  migration 6.3;
+- gruppi e nodi territoriali per Roma, Torino, Austria e nuovi partecipanti;
 - tre momenti pubblici di programma.
 
 Per creare utenti test dopo aver applicato la migration:
