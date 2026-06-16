@@ -9,6 +9,13 @@ import {
   resolveGroupAssignmentForRegistration,
   type GroupMatchCandidate,
 } from "../lib/groups/matching.ts";
+import {
+  collectDescendantGroupIds,
+  getEscalationTargetGroupId,
+  matchesGroupLeaderFilter,
+  normalizeLeaderInternalNote,
+  summarizeGroupLeaderAssignments,
+} from "../lib/groups/capogruppo-dashboard.ts";
 
 const ITALY = "11111111-1111-4111-8111-111111111111";
 const AUSTRIA = "22222222-2222-4222-8222-222222222222";
@@ -169,6 +176,60 @@ test("territorial fallback can climb from city to country", () => {
   );
 
   assert.equal(fallback?.id, "austria");
+});
+
+test("group leader scope includes descendant groups", () => {
+  const scoped = collectDescendantGroupIds(
+    [
+      { id: "italy", parentGroupId: null },
+      { id: "rome", parentGroupId: "italy" },
+      { id: "rome-area", parentGroupId: "rome" },
+      { id: "vienna", parentGroupId: null },
+    ],
+    ["italy"]
+  );
+
+  assert.deepEqual([...scoped], ["italy", "rome", "rome-area"]);
+});
+
+test("group leader rejection escalates to the direct parent", () => {
+  const groupsById = new Map([
+    ["italy", { id: "italy", parentGroupId: null }],
+    ["rome", { id: "rome", parentGroupId: "italy" }],
+  ]);
+
+  assert.equal(getEscalationTargetGroupId(groupsById, "rome"), "italy");
+  assert.equal(getEscalationTargetGroupId(groupsById, "italy"), null);
+});
+
+test("group leader summary tracks assignments that need review", () => {
+  const summary = summarizeGroupLeaderAssignments([
+    { status: "probable", isCurrent: true, leaderNotificationReadAt: null },
+    { status: "probable", isCurrent: true, leaderNotificationReadAt: "2026-06-16T10:00:00Z" },
+    { status: "confirmed", isCurrent: true, leaderNotificationReadAt: null },
+    { status: "rejected", isCurrent: false, leaderNotificationReadAt: null },
+  ]);
+
+  assert.deepEqual(summary, {
+    total: 4,
+    toReview: 1,
+    probable: 2,
+    confirmed: 1,
+    rejected: 1,
+  });
+  assert.equal(
+    matchesGroupLeaderFilter(
+      { status: "probable", isCurrent: true, leaderNotificationReadAt: null },
+      "to-review"
+    ),
+    true
+  );
+});
+
+test("group leader internal notes are compacted and bounded", () => {
+  assert.equal(normalizeLeaderInternalNote("  una   nota\ninterna  "), "una nota interna");
+  assert.equal(normalizeLeaderInternalNote("   "), null);
+  assert.equal(normalizeLeaderInternalNote("a".repeat(900))?.length, 800);
 });
 
 function group(

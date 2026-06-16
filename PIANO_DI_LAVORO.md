@@ -18,6 +18,10 @@ Stato locale rilevato in questo task:
   env/Vercel e caso utenti con doppio ruolo operativo + iscrizione personale.
 - Milestone 8 e' completata localmente: apertura controllata e monitoraggio
   iniziale dalla dashboard admin, con log operativo e audit degli errori email.
+- Milestone 9 e' completata localmente: dashboard capogruppo minima per
+  verificare assegnazioni probabili, confermare/rifiutare appartenenze,
+  aggiungere note interne e far risalire i rifiuti al nodo padre o alla coda
+  manager.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-16: l'obiettivo principale ora e' aprire le

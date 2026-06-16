@@ -317,7 +317,7 @@ export default async function PartecipanteDashboardPage({
                     href={dashboard.href}
                     className="inline-flex min-h-11 items-center justify-center rounded-md border border-[#b8c5ad] bg-white px-4 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
                   >
-                    Torna all&apos;{dashboard.label}
+                    Vai all&apos;{dashboard.label}
                   </Link>
                 ))}
               </nav>

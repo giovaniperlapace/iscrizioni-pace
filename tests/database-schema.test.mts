@@ -15,10 +15,18 @@ const groupMatchingMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260616103000_group_tree_matching.sql"
 );
+const groupLeaderDashboardMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260616143000_group_leader_dashboard_metadata.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
 const groupMatchingMigration = readFileSync(groupMatchingMigrationPath, "utf8");
+const groupLeaderDashboardMigration = readFileSync(
+  groupLeaderDashboardMigrationPath,
+  "utf8"
+);
 
 const createdTables = Array.from(
   migration.matchAll(/create table public\.([a-z_]+) \(/g),
@@ -89,4 +97,12 @@ test("group matching migration adds tree metadata and assignment rules", () => {
   assert.match(groupMatchingMigration, /alter table public\.group_assignment_rules enable row level security/);
   assert.match(groupMatchingMigration, /groups public read catalog/);
   assert.match(groupMatchingMigration, /participant_group_assignments_current_unique/);
+});
+
+test("group leader dashboard migration stores internal decision metadata", () => {
+  assert.match(groupLeaderDashboardMigration, /leader_internal_note text/);
+  assert.match(groupLeaderDashboardMigration, /leader_decision_by uuid references auth\.users/);
+  assert.match(groupLeaderDashboardMigration, /leader_decision_at timestamptz/);
+  assert.match(groupLeaderDashboardMigration, /leader_notification_read_at timestamptz/);
+  assert.match(groupLeaderDashboardMigration, /participant_group_assignments_leader_review_idx/);
 });

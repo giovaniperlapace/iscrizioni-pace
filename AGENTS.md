@@ -37,6 +37,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   dashboard admin: comandi auditati per aprire/pausare/nascondere evento,
   conteggi minimi iscrizioni/anomalie, logging audit degli errori email e log
   operativo in `docs/opening-monitoring-log.md`.
+- Milestone 9 ha aggiunto dashboard capogruppo minima: elenco assegnazioni in
+  scope albero gruppi, filtri operativi, conferma/rifiuto con risalita al padre,
+  note interne, lettura notifica e audit delle decisioni senza email al
+  partecipante.
 - Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
@@ -591,7 +595,7 @@ Decisioni:
   disponibili per lo stesso utente quando esistono ruoli aggiuntivi oltre a
   partecipante. Questo evita che admin, manager, capogruppo o accoglienza che
   aprono "La mia iscrizione" restino senza navigazione per tornare al proprio
-  profilo operativo. La prima implementazione mostra "Torna all'area admin" e
+  profilo operativo. La prima implementazione mostra "Vai all'area admin" e
   usa la stessa logica role-aware per futuri ruoli.
 
 Verifiche eseguite:
@@ -681,6 +685,57 @@ Verifiche previste:
   build sono passati.
 - Prima di chiudere una modifica collegata alla 6.3 usare ancora
   `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+
+## Milestone 9 - dashboard capogruppo minima
+
+Dashboard capogruppo minima completata localmente il 2026-06-16.
+
+Deliverable:
+
+- Migration
+  `supabase/migrations/20260616143000_group_leader_dashboard_metadata.sql`.
+- `participant_group_assignments` estesa con metadati di gestione referente:
+  `leader_internal_note`, `leader_note_updated_by`,
+  `leader_note_updated_at`, `leader_decision_by`, `leader_decision_at` e
+  `leader_notification_read_at`.
+- Helper testabili in `lib/groups/capogruppo-dashboard.ts` per scope
+  discendenti dell'albero gruppi, filtri, conteggi, normalizzazione note e
+  target di escalation al padre.
+- Pagina `app/dashboard/capogruppo/page.tsx` sostituita con vista operativa:
+  metriche, accesso "La mia iscrizione", filtri `Da verificare`, `Probabili`,
+  `Confermati`, `Rifiutati` e schede assegnazione.
+- Server action `updateGroupLeaderAssignment` in `app/actions.ts` con intent
+  `note`, `read`, `confirm`, `reject`.
+
+Decisioni:
+
+- La dashboard capogruppo usa il service role lato server solo dopo aver
+  verificato sessione e membership del referente, così include anche i
+  discendenti dei nodi assegnati. Il service role non arriva mai al browser.
+- La UI mostra dati personali minimi: nome, codice operativo, provenienza,
+  gruppo, stato e metadati di assegnazione. Non mostra email, telefono,
+  accessibilità o altri dati sensibili.
+- `confirm` imposta l'assegnazione corrente a `confirmed`, registra
+  `confirmed_by/confirmed_at`, decisione referente e lettura.
+- `reject` porta l'assegnazione rifiutata a `status = 'rejected'` e
+  `is_current = false`; se il gruppo ha un padre crea o riattiva una nuova
+  assegnazione corrente `probable` sul padre con `source = 'capogruppo'`.
+  Se non c'e' padre, la registrazione resta senza assegnazione corrente e
+  finisce nella coda manager già monitorata come "senza gruppo corrente".
+- Rifiuto, conferma, nota e lettura sono decisioni interne: non inviano email
+  o notifiche al partecipante.
+- L'audit log salva action e metadati tecnici (`group_id`, stato precedente,
+  eventuale gruppo di escalation, flag nota cambiata), non il testo della nota
+  interna.
+
+Verifiche eseguite:
+
+- `npm run lint`.
+- `npm run typecheck`.
+- `npm test`.
+- `npm run build`.
+- Migration remota applicata con
+  `./scripts/apply-remote-migration.sh supabase/migrations/20260616143000_group_leader_dashboard_metadata.sql`.
 
 ## Anticipo QR code reale
 

@@ -6,6 +6,12 @@ import { redirect } from "next/navigation";
 
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import {
+  collectDescendantGroupIds,
+  getEscalationTargetGroupId,
+  normalizeLeaderInternalNote,
+  type GroupTreeNode,
+} from "@/lib/groups/capogruppo-dashboard";
+import {
   canParticipantEditRegistration,
   diffParticipantDashboardUpdate,
   parseParticipantDashboardUpdate,
@@ -412,6 +418,217 @@ export async function updateEventOpeningState(formData: FormData) {
   redirect("/dashboard/admin?openingSaved=1");
 }
 
+export async function updateGroupLeaderAssignment(formData: FormData) {
+  const assignmentId = optionalText(formData.get("assignmentId"));
+  const intent = optionalText(formData.get("intent"));
+  const note = normalizeLeaderInternalNote(formData.get("leaderInternalNote"));
+
+  if (!assignmentId || !intent) {
+    redirect("/dashboard/capogruppo?error=invalid");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "capogruppo");
+
+  if (!auth || auth.dashboardRole !== "capogruppo") {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: memberships, error: membershipError } = await serviceSupabase
+    .from("group_memberships")
+    .select("group_id")
+    .eq("user_id", auth.user.id);
+
+  if (membershipError || !memberships?.length) {
+    redirect("/dashboard/capogruppo?error=scope");
+  }
+
+  const rootGroupIds = (memberships as Array<{ group_id: string | null }>)
+    .map((membership) => membership.group_id)
+    .filter((groupId): groupId is string => Boolean(groupId));
+  const { data: groups, error: groupsError } = await serviceSupabase
+    .from("groups")
+    .select("id,parent_group_id,event_id")
+    .eq("is_active", true);
+
+  if (groupsError) {
+    redirect("/dashboard/capogruppo?error=groups");
+  }
+
+  const groupNodes = ((groups ?? []) as Array<{
+    id: string;
+    parent_group_id: string | null;
+  }>).map<GroupTreeNode>((group) => ({
+    id: group.id,
+    parentGroupId: group.parent_group_id,
+  }));
+  const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
+  const groupsById = new Map(groupNodes.map((group) => [group.id, group]));
+
+  const { data: assignment, error: assignmentError } = await serviceSupabase
+    .from("participant_group_assignments")
+    .select("id,registration_id,group_id,status,is_current,escalation_depth")
+    .eq("id", assignmentId)
+    .maybeSingle();
+
+  const assignmentRow = assignment as
+    | {
+        id: string;
+        registration_id: string;
+        group_id: string;
+        status: string | null;
+        is_current: boolean | null;
+        escalation_depth: number | null;
+      }
+    | null;
+
+  if (
+    assignmentError ||
+    !assignmentRow ||
+    !scopedGroupIds.has(assignmentRow.group_id)
+  ) {
+    redirect("/dashboard/capogruppo?error=not-found");
+  }
+
+  const now = new Date().toISOString();
+
+  if (intent === "note" || intent === "read") {
+    const updates: Record<string, string | null> = {
+      leader_notification_read_at: now,
+    };
+
+    if (intent === "note") {
+      updates.leader_internal_note = note;
+      updates.leader_note_updated_by = auth.user.id;
+      updates.leader_note_updated_at = now;
+    }
+
+    const { error } = await serviceSupabase
+      .from("participant_group_assignments")
+      .update(updates)
+      .eq("id", assignmentRow.id);
+
+    if (error) {
+      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
+    }
+
+    await auditGroupLeaderDecision(serviceSupabase, {
+      actorUserId: auth.user.id,
+      assignment: assignmentRow,
+      action: `group_leader.assignment_${intent}`,
+      metadata: {
+        note_changed: intent === "note",
+      },
+    });
+
+    revalidatePath("/dashboard/capogruppo");
+    redirect("/dashboard/capogruppo?saved=1");
+  }
+
+  if (intent === "confirm") {
+    const { error } = await serviceSupabase
+      .from("participant_group_assignments")
+      .update({
+        status: "confirmed",
+        is_current: true,
+        confirmed_by: auth.user.id,
+        confirmed_at: now,
+        leader_decision_by: auth.user.id,
+        leader_decision_at: now,
+        leader_notification_read_at: now,
+        leader_internal_note: note,
+        leader_note_updated_by: note ? auth.user.id : null,
+        leader_note_updated_at: note ? now : null,
+      })
+      .eq("id", assignmentRow.id);
+
+    if (error) {
+      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
+    }
+
+    await auditGroupLeaderDecision(serviceSupabase, {
+      actorUserId: auth.user.id,
+      assignment: assignmentRow,
+      action: "group_leader.assignment_confirmed",
+      metadata: { note_changed: Boolean(note) },
+    });
+
+    revalidatePath("/dashboard/capogruppo");
+    redirect("/dashboard/capogruppo?saved=1");
+  }
+
+  if (intent === "reject") {
+    const parentGroupId = getEscalationTargetGroupId(
+      groupsById,
+      assignmentRow.group_id
+    );
+    const { error: rejectError } = await serviceSupabase
+      .from("participant_group_assignments")
+      .update({
+        status: "rejected",
+        is_current: false,
+        leader_decision_by: auth.user.id,
+        leader_decision_at: now,
+        leader_notification_read_at: now,
+        leader_internal_note: note,
+        leader_note_updated_by: note ? auth.user.id : null,
+        leader_note_updated_at: note ? now : null,
+      })
+      .eq("id", assignmentRow.id);
+
+    if (rejectError) {
+      redirect(
+        `/dashboard/capogruppo?error=${encodeURIComponent(rejectError.message)}`
+      );
+    }
+
+    if (parentGroupId) {
+      const { error: escalationError } = await serviceSupabase
+        .from("participant_group_assignments")
+        .upsert(
+          {
+            registration_id: assignmentRow.registration_id,
+            group_id: parentGroupId,
+            status: "probable",
+            source: "capogruppo",
+            confidence: 0.4,
+            is_current: true,
+            assignment_reason: "group_leader_rejected_escalated_to_parent",
+            escalated_from_group_id: assignmentRow.group_id,
+            escalation_depth: (assignmentRow.escalation_depth ?? 0) + 1,
+            matcher_version: "group-leader-dashboard-v1",
+            leader_notification_read_at: null,
+          },
+          { onConflict: "registration_id,group_id" }
+        );
+
+      if (escalationError) {
+        redirect(
+          `/dashboard/capogruppo?error=${encodeURIComponent(
+            escalationError.message
+          )}`
+        );
+      }
+    }
+
+    await auditGroupLeaderDecision(serviceSupabase, {
+      actorUserId: auth.user.id,
+      assignment: assignmentRow,
+      action: "group_leader.assignment_rejected",
+      metadata: {
+        note_changed: Boolean(note),
+        escalated_to_group_id: parentGroupId,
+      },
+    });
+
+    revalidatePath("/dashboard/capogruppo");
+    redirect("/dashboard/capogruppo?saved=1");
+  }
+
+  redirect("/dashboard/capogruppo?error=invalid");
+}
+
 function getAppUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -509,6 +726,41 @@ function getEventOpeningUpdate(
     default:
       return null;
   }
+}
+
+async function auditGroupLeaderDecision(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    actorUserId: string;
+    action: string;
+    assignment: {
+      id: string;
+      registration_id: string;
+      group_id: string;
+      status: string | null;
+    };
+    metadata: Record<string, unknown>;
+  }
+) {
+  const { data: registration } = await supabase
+    .from("registrations")
+    .select("event_id")
+    .eq("id", input.assignment.registration_id)
+    .maybeSingle();
+
+  await supabase.from("audit_logs").insert({
+    event_id:
+      (registration as { event_id: string | null } | null)?.event_id ?? null,
+    actor_user_id: input.actorUserId,
+    action: input.action,
+    entity_table: "participant_group_assignments",
+    entity_id: input.assignment.id,
+    metadata: {
+      group_id: input.assignment.group_id,
+      previous_status: input.assignment.status,
+      ...input.metadata,
+    },
+  });
 }
 
 async function logEmailFailure(

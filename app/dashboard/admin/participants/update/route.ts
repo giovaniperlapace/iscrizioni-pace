@@ -1,0 +1,328 @@
+import { NextResponse, type NextRequest } from "next/server";
+
+import { getCurrentAuthContext } from "@/lib/auth/session";
+import { normalizeEmail } from "@/lib/registrations/validation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+
+export async function POST(request: NextRequest) {
+  const formData = await request.formData();
+  const registrationId = optionalText(formData.get("registrationId"));
+  const participantId = optionalText(formData.get("participantId"));
+  const groupId = optionalText(formData.get("groupId"));
+  const role = optionalText(formData.get("role"));
+  const email = normalizeEmail(formData.get("email"));
+  const fullName = optionalText(formData.get("fullName"));
+
+  if (!registrationId || !participantId) {
+    return adminRedirect(request, "adminError=invalid-participant");
+  }
+
+  if (!groupId && !role) {
+    return adminRedirect(request, "adminSaved=1");
+  }
+
+  if (role && !isAssignableAdminRole(role)) {
+    return adminRedirect(request, "adminError=invalid-role");
+  }
+  const assignableRole = isAssignableAdminRole(role) ? role : null;
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "admin");
+
+  if (!auth || auth.dashboardRole !== "admin") {
+    return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: registration, error: registrationError } = await serviceSupabase
+    .from("registrations")
+    .select("id,event_id,participant_id")
+    .eq("id", registrationId)
+    .maybeSingle();
+  const registrationRow = registration as
+    | { id: string; event_id: string; participant_id: string }
+    | null;
+
+  if (
+    registrationError ||
+    !registrationRow ||
+    registrationRow.participant_id !== participantId
+  ) {
+    return adminRedirect(request, "adminError=invalid-participant");
+  }
+
+  const now = new Date().toISOString();
+  const changed: string[] = [];
+
+  if (groupId) {
+    const groupResult = await updateCurrentGroup({
+      supabase: serviceSupabase,
+      registrationId,
+      groupId,
+      eventId: registrationRow.event_id,
+      actorUserId: auth.user.id,
+      now,
+    });
+
+    if (groupResult) {
+      return adminRedirect(request, `adminError=${encodeURIComponent(groupResult)}`);
+    }
+
+    changed.push("group");
+  }
+
+  if (assignableRole) {
+    const roleResult = await updateOperationalRole({
+      supabase: serviceSupabase,
+      participantId,
+      eventId: registrationRow.event_id,
+      role: assignableRole,
+      email,
+      fullName,
+      actorUserId: auth.user.id,
+    });
+
+    if (roleResult) {
+      return adminRedirect(request, `adminError=${encodeURIComponent(roleResult)}`);
+    }
+
+    changed.push("role");
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: registrationRow.event_id,
+    actor_user_id: auth.user.id,
+    action: "admin.participant_operations_updated",
+    entity_table: "registrations",
+    entity_id: registrationId,
+    metadata: {
+      changed,
+      group_id: groupId,
+      role: assignableRole,
+    },
+  });
+
+  return adminRedirect(request, "adminSaved=1");
+}
+
+async function updateCurrentGroup({
+  supabase,
+  registrationId,
+  groupId,
+  eventId,
+  actorUserId,
+  now,
+}: {
+  supabase: ReturnType<typeof createSupabaseServiceClient>;
+  registrationId: string;
+  groupId: string;
+  eventId: string;
+  actorUserId: string;
+  now: string;
+}): Promise<string | null> {
+  const { data: group, error: groupError } = await supabase
+    .from("groups")
+    .select("id,event_id")
+    .eq("id", groupId)
+    .maybeSingle();
+  const groupRow = group as { id: string; event_id: string } | null;
+
+  if (groupError || !groupRow || groupRow.event_id !== eventId) {
+    return "invalid-group";
+  }
+
+  await supabase
+    .from("participant_group_assignments")
+    .update({ is_current: false })
+    .eq("registration_id", registrationId)
+    .eq("is_current", true);
+
+  const { data: existingAssignment } = await supabase
+    .from("participant_group_assignments")
+    .select("id")
+    .eq("registration_id", registrationId)
+    .eq("group_id", groupId)
+    .maybeSingle();
+  const assignmentValues = {
+    registration_id: registrationId,
+    group_id: groupId,
+    status: "confirmed",
+    source: "admin",
+    confidence: 1,
+    confirmed_by: actorUserId,
+    confirmed_at: now,
+    is_current: true,
+    assignment_reason: "admin_updated_group",
+    matcher_version: "admin-dashboard-v1",
+  };
+  const result = existingAssignment
+    ? await supabase
+        .from("participant_group_assignments")
+        .update(assignmentValues)
+        .eq("id", (existingAssignment as { id: string }).id)
+    : await supabase.from("participant_group_assignments").insert(assignmentValues);
+
+  return result.error?.message ?? null;
+}
+
+async function updateOperationalRole({
+  supabase,
+  participantId,
+  eventId,
+  role,
+  email,
+  fullName,
+  actorUserId,
+}: {
+  supabase: ReturnType<typeof createSupabaseServiceClient>;
+  participantId: string;
+  eventId: string;
+  role: "manager" | "manager_viewer" | "accoglienza";
+  email: string | null;
+  fullName: string | null;
+  actorUserId: string;
+}): Promise<string | null> {
+  const { data: participant, error: participantError } = await supabase
+    .from("participants")
+    .select("id,auth_user_id")
+    .eq("id", participantId)
+    .maybeSingle();
+  const participantRow = participant as
+    | { id: string; auth_user_id: string | null }
+    | null;
+
+  if (participantError || !participantRow) {
+    return "invalid-participant";
+  }
+
+  const targetUserId =
+    participantRow.auth_user_id ??
+    (await ensureAuthUserForAdminRole(supabase, { email, fullName }));
+
+  if (!targetUserId) {
+    return "missing-email";
+  }
+
+  if (!participantRow.auth_user_id) {
+    const { error: linkError } = await supabase
+      .from("participants")
+      .update({ auth_user_id: targetUserId })
+      .eq("id", participantId);
+
+    if (linkError) {
+      return linkError.message;
+    }
+  }
+
+  const { error: deleteRoleError } = await supabase
+    .from("event_user_roles")
+    .delete()
+    .eq("event_id", eventId)
+    .eq("user_id", targetUserId)
+    .in("role", ["manager", "manager_viewer", "accoglienza"]);
+
+  if (deleteRoleError) {
+    return deleteRoleError.message;
+  }
+
+  const { error: roleError } = await supabase.from("event_user_roles").insert({
+    event_id: eventId,
+    user_id: targetUserId,
+    role,
+    created_by: actorUserId,
+  });
+
+  return roleError?.message ?? null;
+}
+
+async function ensureAuthUserForAdminRole(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    email: string | null;
+    fullName: string | null;
+  }
+): Promise<string | null> {
+  if (!input.email) {
+    return null;
+  }
+
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    email: input.email,
+    email_confirm: true,
+    user_metadata: input.fullName ? { full_name: input.fullName } : undefined,
+  });
+
+  if (created.user?.id) {
+    await supabase.from("profiles").upsert(
+      {
+        id: created.user.id,
+        email: input.email,
+        full_name: input.fullName,
+      },
+      { onConflict: "id" }
+    );
+
+    return created.user.id;
+  }
+
+  const message = createError?.message ?? "";
+
+  if (!/already|registered|exists/i.test(message)) {
+    return message || "auth-user";
+  }
+
+  const { data: users, error: listError } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (listError) {
+    return listError.message;
+  }
+
+  const existing = users.users.find(
+    (user) => user.email?.toLowerCase() === input.email
+  );
+
+  if (!existing) {
+    return "auth-user";
+  }
+
+  await supabase.from("profiles").upsert(
+    {
+      id: existing.id,
+      email: input.email,
+      full_name: input.fullName,
+    },
+    { onConflict: "id" }
+  );
+
+  return existing.id;
+}
+
+function adminRedirect(request: NextRequest, query: string): NextResponse {
+  return NextResponse.redirect(new URL(`/dashboard/admin?${query}`, request.url), {
+    status: 303,
+  });
+}
+
+function optionalText(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function isAssignableAdminRole(
+  value: string | null
+): value is "manager" | "manager_viewer" | "accoglienza" {
+  return (
+    value === "manager" ||
+    value === "manager_viewer" ||
+    value === "accoglienza"
+  );
+}
