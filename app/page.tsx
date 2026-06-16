@@ -1,4 +1,5 @@
 import { startPublicEmailFlow } from "@/app/actions";
+import { EmailAccessForm } from "@/app/email-access-form";
 import { getPublicRegistrationOptions } from "@/lib/registrations/public-flow";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -31,36 +32,12 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <form
+          <EmailAccessForm
             action={startPublicEmailFlow}
-            className="rounded-lg border border-[#d8dece] bg-white p-5 shadow-sm sm:p-6"
-          >
-            <label
-              htmlFor="email"
-              className="text-sm font-medium text-[#38453c]"
-            >
-              Email
-            </label>
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                defaultValue={params.email ?? ""}
-                className="min-h-12 flex-1 rounded-md border border-[#cbd3c0] bg-white px-3 text-base outline-none ring-[#6d8b70] transition focus:ring-2"
-                placeholder="nome@example.org"
-              />
-              <button
-                type="submit"
-                className="min-h-12 rounded-md bg-[#2f5e46] px-5 font-semibold text-white transition hover:bg-[#254b38]"
-              >
-                Continua
-              </button>
-            </div>
-            <StatusMessage error={params.error} sent={params.sent} />
-          </form>
+            defaultEmail={params.email ?? ""}
+            error={params.error}
+            sent={params.sent}
+          />
 
           <aside className="rounded-lg border border-[#d8dece] bg-[#eef2e7] p-5">
             <h2 className="text-base font-semibold">Evento</h2>
@@ -88,38 +65,6 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
     </main>
-  );
-}
-
-function StatusMessage({
-  error,
-  sent,
-}: {
-  error?: string;
-  sent?: string;
-}) {
-  if (sent === "magic-link") {
-    return (
-      <p className="mt-4 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
-        Ti abbiamo inviato un link di accesso. Controlla la tua email.
-      </p>
-    );
-  }
-
-  if (!error) {
-    return null;
-  }
-
-  const messages: Record<string, string> = {
-    email: "Inserisci un indirizzo email valido.",
-    "rate-limit": "Troppi tentativi ravvicinati. Riprova tra qualche minuto.",
-    "no-event": "Non ci sono iscrizioni aperte in questo momento.",
-  };
-
-  return (
-    <p className="mt-4 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
-      {messages[error] ?? "Non e' stato possibile completare la richiesta."}
-    </p>
   );
 }
 

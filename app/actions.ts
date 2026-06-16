@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -32,6 +33,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const EMAIL_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
+const MAGIC_LINK_SEND_COOLDOWN_MS = 60 * 1000;
 
 export async function logout() {
   const supabase = await createSupabaseServerClient();
@@ -66,12 +68,19 @@ export async function startPublicEmailFlow(formData: FormData) {
     redirect(`/registrazione?email=${encodeURIComponent(email)}`);
   }
 
+  const emailHash = hashEmailForAudit(email);
+
+  if (await hasRecentMagicLinkSend(supabase, event.id, emailHash)) {
+    redirect("/?sent=magic-link");
+  }
+
   try {
     await sendMagicLinkEmail(
       supabase,
       email,
       `${appUrl}/auth/callback?redirect_to=/dashboard/partecipante`
     );
+    await logMagicLinkSent(supabase, event.id, emailHash);
   } catch (error) {
     await logEmailFailure(supabase, {
       eventId: event.id,
@@ -688,6 +697,61 @@ function getPublicEmailErrorMessage(error: unknown): string {
   }
 
   return "Non è stato possibile inviare l'email di accesso. Riprova tra poco.";
+}
+
+async function hasRecentMagicLinkSend(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  eventId: string,
+  emailHash: string
+): Promise<boolean> {
+  const since = new Date(Date.now() - MAGIC_LINK_SEND_COOLDOWN_MS).toISOString();
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("action", "email.magic_link_sent")
+    .gte("created_at", since)
+    .contains("metadata", { email_hash: emailHash })
+    .limit(1);
+
+  if (error) {
+    console.warn(
+      "email.magic_link_recent_check_failed",
+      JSON.stringify({ eventId, message: error.message })
+    );
+    return false;
+  }
+
+  return Boolean(data?.length);
+}
+
+async function logMagicLinkSent(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  eventId: string,
+  emailHash: string
+): Promise<void> {
+  const { error } = await supabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: null,
+    action: "email.magic_link_sent",
+    entity_table: "auth.users",
+    entity_id: null,
+    metadata: {
+      email_hash: emailHash,
+      cooldown_seconds: MAGIC_LINK_SEND_COOLDOWN_MS / 1000,
+    },
+  });
+
+  if (error) {
+    console.warn(
+      "email.magic_link_sent_log_failed",
+      JSON.stringify({ eventId, message: error.message })
+    );
+  }
+}
+
+function hashEmailForAudit(email: string): string {
+  return createHash("sha256").update(email).digest("hex");
 }
 
 function optionalText(value: FormDataEntryValue | null): string | null {

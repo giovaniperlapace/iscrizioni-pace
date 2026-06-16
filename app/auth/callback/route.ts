@@ -33,11 +33,12 @@ export async function GET(request: NextRequest) {
   const redirectTo = requestUrl.searchParams.get("redirect_to");
 
   const supabase = await createSupabaseServerClient();
+  let verificationError: unknown = null;
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      return redirectWithError(requestUrl, "code");
+      verificationError = error;
     }
   } else if (tokenHash && isOtpType(otpType)) {
     const { error } = await supabase.auth.verifyOtp({
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       type: otpType,
     });
     if (error) {
-      return redirectWithError(requestUrl, "otp");
+      verificationError = error;
     }
   }
 
@@ -54,7 +55,33 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    logAuthCallbackIssue(requestUrl, verificationError ? "verification" : "session", {
+      code: Boolean(code),
+      tokenHash: Boolean(tokenHash),
+      otpType,
+      requestedRole,
+      message: errorMessage(verificationError),
+    });
+
+    if (verificationError && code) {
+      return redirectWithError(requestUrl, "code");
+    }
+
+    if (verificationError) {
+      return redirectWithError(requestUrl, "otp");
+    }
+
     return redirectWithError(requestUrl, "session");
+  }
+
+  if (verificationError) {
+    logAuthCallbackIssue(requestUrl, "verification_ignored_with_session", {
+      code: Boolean(code),
+      tokenHash: Boolean(tokenHash),
+      otpType,
+      requestedRole,
+      message: errorMessage(verificationError),
+    });
   }
 
   try {
@@ -66,7 +93,11 @@ export async function GET(request: NextRequest) {
         user.email
       );
     }
-  } catch {
+  } catch (error) {
+    logAuthCallbackIssue(requestUrl, "profile", {
+      requestedRole,
+      message: errorMessage(error),
+    });
     return redirectWithError(requestUrl, "profile");
   }
 
@@ -76,6 +107,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (!authContext) {
+    logAuthCallbackIssue(requestUrl, "auth_context", { requestedRole });
     return redirectWithError(requestUrl, "session");
   }
 
@@ -112,4 +144,23 @@ function sanitizeRedirectPath(path: string | null): string | null {
   }
 
   return path;
+}
+
+function logAuthCallbackIssue(
+  requestUrl: URL,
+  reason: string,
+  metadata: Record<string, unknown>
+) {
+  console.warn(
+    "auth.callback.issue",
+    JSON.stringify({
+      reason,
+      path: requestUrl.pathname,
+      ...metadata,
+    })
+  );
+}
+
+function errorMessage(error: unknown): string | null {
+  return error instanceof Error ? error.message : null;
 }
