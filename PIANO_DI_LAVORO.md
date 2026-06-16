@@ -18,6 +18,11 @@ Stato locale rilevato in questo task:
   dashboard. Resta da completare scanner/verifica accoglienza.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
+- Priorita' aggiornata il 2026-06-16: l'obiettivo principale ora e' aprire le
+  iscrizioni pubbliche il prima possibile con un flusso affidabile, verificabile
+  e gestibile operativamente. Le funzioni avanzate di gestione manager,
+  programma evento, scanner check-in e settori/sedute vengono dopo il go-live
+  delle iscrizioni.
 
 Metodo da seguire per ogni milestone:
 
@@ -649,137 +654,287 @@ Dati sensibili e minimizzazione:
 - Non fare: dashboard capogruppo completa, notifiche email definitive,
   riassegnazione manuale manager avanzata.
 
-### Milestone 7: gruppi e dashboard capogruppo
+### Roadmap aggiornata dopo Milestone 6.3
 
-- Scopo: dare strumenti ai capigruppo per gestire la coda delle assegnazioni
-  certe/probabili prodotte dalla Milestone 6.3.
+La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
+
+- prima rendere affidabile il flusso pubblico di iscrizione;
+- poi aprire le iscrizioni con strumenti minimi di controllo e supporto;
+- solo dopo sviluppare dashboard manager/evento avanzate, programma, campagne,
+  scanner accoglienza e settori.
+
+### Milestone 7: preparazione apertura pubblica iscrizioni
+
+- Scopo: trasformare l'app gia' funzionante in un servizio pronto per ricevere
+  iscrizioni reali dal pubblico.
 - Deliverable:
-  - elenco partecipanti dei gruppi assegnati al capogruppo, con filtri per
-    confermati, probabili, rifiutati e nuovi da verificare;
-  - vista separata per nuovi partecipanti del territorio quando il capogruppo
-    deve solo conoscere il dato operativo/statistico, non confermare
-    appartenenza Sant'Egidio;
-  - azioni per confermare appartenenza al gruppo, rifiutare perché non
-    riconosciuto, aggiungere nota operativa interna e segnalare riassegnazione;
+  - evento reale configurato o evento pilota ripulito dai dati di test;
+  - testi definitivi per privacy, consenso, email di conferma e magic link;
+  - dati iniziali reali o semi-reali per paesi, città, gruppi, referenti e
+    nodo territoriale dei nuovi partecipanti;
+  - flusso pubblico verificato in produzione: email nuova, email esistente,
+    conferma iscrizione, QR in email, accesso dashboard partecipante;
+  - verifica env Vercel production/development/preview, inclusi
+    `QR_TOKEN_ENCRYPTION_SECRET`, SMTP e URL pubblici;
+  - `.vercelignore` presente con esclusione di `.env` e `.env.*` se mancante;
+  - checklist operativa di apertura in `docs/` o `AGENTS.md`.
+- File/cartelle: `app/page.tsx`, `app/registrazione/*`, `lib/email/*`,
+  `lib/registrations/*`, `.env.example`, `.vercelignore`, `docs/*`,
+  eventuali seed/migration Supabase.
+- Migration: solo se necessaria per dati/configurazioni indispensabili
+  all'apertura; evitare schema avanzato non richiesto dal go-live.
+- Verifiche:
+  - `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`;
+  - test browser desktop/mobile del flusso iscrizione e dashboard;
+  - smoke test production su `https://iscrizioni-pace.vercel.app`;
+  - verifica che nessun dato test appaia nel flusso pubblico reale;
+  - verifica manuale di email consegnata e link funzionante.
+- Rischi:
+  - aprire con testi privacy non definitivi;
+  - lasciare dati seed visibili;
+  - email SMTP non stabile o rate limit Gmail;
+  - link magic/callback incoerenti tra Supabase e Vercel.
+- Accettazione: una persona reale puo' iscriversi da produzione, ricevere la
+  conferma, accedere alla dashboard e trovare i propri dati corretti; lo staff
+  ha una checklist chiara per aprire o richiudere le iscrizioni.
+- Non fare: dashboard manager completa, gestione programma, campagne email,
+  scanner accoglienza, settori/sedute.
+
+### Milestone 8: apertura controllata e monitoraggio iniziale
+
+- Scopo: aprire le iscrizioni a un gruppo ristretto o al pubblico con strumenti
+  minimi per osservare e correggere rapidamente problemi reali.
+- Deliverable:
+  - procedura per apertura/chiusura iscrizioni tramite stato evento e date;
+  - pagina/viste minime admin o comando operativo per contare iscrizioni,
+    errori email e casi senza gruppo certo;
+  - gestione manuale minima di duplicati o iscrizioni errate, se gia' necessaria
+    per non bloccare il lancio;
+  - log o documento di monitoraggio dei problemi emersi nelle prime iscrizioni;
+  - messaggi utente chiari per errori di email, link scaduti e iscrizioni
+    chiuse.
+- File/cartelle: `app/dashboard/admin/*`, `lib/registrations/*`,
+  `lib/email/*`, `docs/*`, eventuali script operativi.
+- Migration: solo per campi strettamente necessari a monitoraggio/supporto.
+- Verifiche:
+  - iscrizioni aperte/chiuse rispettano configurazione evento;
+  - staff vede conteggi minimi senza esporre dati sensibili in eccesso;
+  - casi errore principali hanno UI comprensibile;
+  - test standard e smoke production.
+- Rischi:
+  - correggere dati reali senza audit;
+  - affidarsi troppo a query manuali;
+  - perdere visibilità su errori email.
+- Accettazione: l'organizzazione può aprire le iscrizioni e seguire i primi
+  casi reali senza dover avere ancora tutta la suite manager.
+- Non fare: export avanzati, statistiche complete, campagne massive.
+
+### Milestone 9: dashboard capogruppo minima
+
+- Scopo: dare ai referenti gli strumenti essenziali per controllare le
+  assegnazioni prodotte dalla Milestone 6.3 dopo l'apertura pubblica.
+- Deliverable:
+  - elenco partecipanti dei gruppi assegnati al capogruppo, con filtro per
+    confermati, probabili e nuovi da verificare;
+  - azioni minime per confermare appartenenza, rifiutare perché non
+    riconosciuto e aggiungere nota operativa interna;
   - risalita automatica al nodo padre dopo rifiuto: area -> città -> paese ->
     coda manager, senza notifica al partecipante;
-  - notifiche base o badge interni per nuove assegnazioni probabili;
+  - badge o conteggio interno per assegnazioni da verificare;
   - audit log delle decisioni del referente senza duplicare contenuti
     sensibili.
-- File/cartelle: `app/[locale]/dashboard/capogruppo/*`, `lib/groups/*`, `lib/email/*`.
+- File/cartelle: `app/dashboard/capogruppo/*`, `lib/groups/*`, `lib/email/*`.
 - Migration: eventuali stati/colonne per escalation, decisione referente,
-  note interne e notifica letta/non letta, se non già coperti da Milestone 6.3.
-- Verifiche: capogruppo vede solo gruppi assegnati; manager/admin vedono tutto;
-  rifiuto risale al padre corretto; nessuna email o notifica va al
-  partecipante per rifiuti/riclassificazioni interne.
-- Rischi: scope gruppo sbagliato.
-- Accettazione: casi gruppo singolo/multiplo coperti; le assegnazioni
-  probabili diventano confermate, rifiutate o passano al livello superiore in
-  modo tracciabile.
-- Non fare: inserimento manuale avanzato se non incluso.
+  note interne e notifica letta/non letta, se non gia' coperti da Milestone 6.3.
+- Verifiche:
+  - capogruppo vede solo gruppi assegnati;
+  - manager/admin vedono tutto solo dove previsto;
+  - rifiuto risale al padre corretto;
+  - nessuna email o notifica va al partecipante per rifiuti o
+    riclassificazioni interne.
+- Rischi: scope gruppo sbagliato, esposizione di dati sensibili non necessari.
+- Accettazione: le assegnazioni probabili possono essere confermate, rifiutate
+  o passare al livello superiore in modo tracciabile.
+- Non fare: inserimento manuale avanzato se non indispensabile.
 
-### Milestone 8: inserimento manuale partecipanti da capogruppo
+### Milestone 10: inserimento manuale partecipanti da capogruppo
 
-- Scopo: gestire persone senza email o fragili tramite referente.
-- Deliverable: form manuale capogruppo, contatto referente, comunicazioni aggregate al capogruppo.
-- File/cartelle: `dashboard/capogruppo`, `lib/registrations`, `lib/email`.
-- Migration: campi/tabelle contatti delegati e origine registrazione.
-- Verifiche: record senza email, niente magic link diretto, audit creazione.
+- Scopo: gestire persone senza email o fragili tramite referente dopo che il
+  flusso pubblico principale e' aperto.
+- Deliverable:
+  - form manuale capogruppo per partecipanti senza email;
+  - contatto referente/delegato;
+  - origine registrazione tracciata;
+  - comunicazioni aggregate al capogruppo;
+  - consenso gestito con testo/processo approvato.
+- File/cartelle: `app/dashboard/capogruppo/*`, `lib/registrations/*`,
+  `lib/email/*`.
+- Migration: campi/tabelle contatti delegati, origine registrazione e audit se
+  non gia' presenti.
+- Verifiche: record senza email, niente magic link diretto, audit creazione,
+  RLS capogruppo.
 - Rischi: duplicati e responsabilità consenso.
-- Accettazione: capogruppo può inserire persone senza rompere flusso partecipante.
-- Non fare: assumere consenso senza testo/processo approvato.
+- Accettazione: capogruppo può inserire persone senza rompere flusso
+  partecipante e senza assumere consenso in modo implicito.
+- Non fare: campagne massive o gestione manager completa.
 
-### Milestone 9: dashboard manager/admin con tabelle e filtri
+### Milestone 11: dashboard manager/admin essenziale
 
-- Scopo: gestione operativa completa.
-- Deliverable: tabelle partecipanti, ricerca, filtri, sort, edit modal, export
-  base, statistiche iniziali, coda manager per assegnazioni non riconosciute
-  dopo risalita, statistiche per membri Sant'Egidio e nuovi partecipanti per
-  paese/città/gruppo.
-- File/cartelle: `dashboard/manager`, `dashboard/admin`, `components/tables`, `lib/reports`.
-- Migration: audit export/modifiche; eventuali viste SQL.
-- Verifiche: filtri per evento, gruppo, paese, città, stato, classificazione
-  membro/nuovo partecipante, accessibilità aggregata, presenza.
-- Rischi: dati sensibili visibili in export.
-- Accettazione: manager gestisce evento assegnato; visualizzatore non modifica.
-- Non fare: funzioni admin globali fuori scope.
+- Scopo: fornire una console operativa sufficiente per seguire iscrizioni reali
+  prima delle funzioni evento avanzate.
+- Deliverable:
+  - tabella partecipanti per evento con ricerca e filtri essenziali;
+  - dettagli iscrizione con modifica controllata dei campi operativi;
+  - coda manager per assegnazioni non riconosciute dopo risalita;
+  - export CSV base con colonne minimizzate e controllate;
+  - statistiche iniziali per totale iscrizioni, paese/città, gruppo, giorni di
+    presenza, membri Sant'Egidio e nuovi partecipanti;
+  - permessi distinti per `manager` e `manager_viewer`.
+- File/cartelle: `app/dashboard/manager/*`, `app/dashboard/admin/*`,
+  `components/tables/*`, `lib/reports/*`, `lib/groups/*`.
+- Migration: audit export/modifiche; eventuali viste SQL solo se semplificano
+  permessi e performance.
+- Verifiche:
+  - filtri per evento, gruppo, paese, città, stato, classificazione
+    membro/nuovo partecipante, accessibilità aggregata e presenza;
+  - viewer non modifica;
+  - export non include dati sensibili non necessari;
+  - test standard e verifica browser.
+- Rischi: dati sensibili visibili in export o in tabelle troppo larghe.
+- Accettazione: manager gestisce l'evento assegnato e può risolvere i casi che
+  bloccano il normale andamento delle iscrizioni.
+- Non fare: gestione programma completa, campagne email, check-in.
 
-### Milestone 10: gestione programma e scelta momenti
+### Milestone 12: multilingua minima e testi localizzati
 
-- Scopo: modellare programma evento e scelte partecipanti.
-- Deliverable: admin/manager gestione momenti, partecipante sceglie giorni/momenti, vincoli base.
-- File/cartelle: `lib/events`, `dashboard/admin/events`, `dashboard/partecipante/program`.
-- Migration: `event_moments`, attendance choices, capienze se necessarie.
-- Verifiche: scelta evento generale e sotto-eventi; edit controllato.
-- Rischi: cambio programma dopo iscrizioni.
-- Accettazione: programma multi-giorno gestito senza hardcode.
-- Non fare: check-in completo.
+- Scopo: portare i flussi pubblici e le email almeno a italiano/inglese, senza
+  bloccare l'apertura se il primo go-live e' deliberatamente solo italiano.
+- Deliverable:
+  - strategia i18n leggera coerente con l'app esistente;
+  - traduzioni IT/EN per home, registrazione, conferma, login, dashboard
+    partecipante ed email transazionali;
+  - fallback controllato per testi mancanti;
+  - preferenza lingua salvata o rispettata dove gia' presente.
+- File/cartelle: `lib/i18n/*`, `app/*`, `lib/email/*`, template email.
+- Migration: solo se serve salvare o normalizzare la preferenza lingua.
+- Verifiche: flusso pubblico e dashboard partecipante in IT/EN, email
+  localizzate, nessun testo legale tradotto automaticamente senza revisione.
+- Rischi: testi hardcoded e traduzioni legali non approvate.
+- Accettazione: i flussi core funzionano in italiano e inglese con testi
+  revisionabili.
+- Non fare: localizzare dashboard manager avanzate se non ancora stabili.
 
-### Milestone 11: email personalizzate e template
+### Milestone 13: email personalizzate e template operativi
 
-- Scopo: comunicazioni transazionali e campagne.
-- Deliverable: template, invio filtrato, preview, log invii, destinatari diretti/delegati.
-- File/cartelle: `lib/email`, `dashboard/manager/email`, `dashboard/admin/settings/email`.
-- Migration: templates, logs, recipients, settings.
+- Scopo: passare dalle sole email transazionali a comunicazioni controllate per
+  gruppi o segmenti, dopo l'apertura pubblica.
+- Deliverable:
+  - template versionati;
+  - invio filtrato con preview;
+  - log invii e destinatari diretti/delegati;
+  - invio test;
+  - limiti anti-invio accidentale.
+- File/cartelle: `lib/email/*`, `app/dashboard/manager/email/*`,
+  `app/dashboard/admin/settings/email/*`.
+- Migration: templates, logs, recipients, settings se non gia' coperti.
 - Verifiche: invio test, filtri destinatari, logging, gestione errori.
 - Rischi: invii massivi accidentali; dati personali nel log.
 - Accettazione: campagne inviate solo da ruoli autorizzati e tracciate.
-- Non fare: invii reali massivi senza ambiente/staging confermato.
+- Non fare: invii reali massivi senza conferma esplicita e ambiente verificato.
 
-### Milestone 12: QR code e check-in accoglienza
+### Milestone 14: gestione programma e scelta momenti
 
-- Scopo: supportare ingresso ai luoghi evento.
-- Deliverable: QR in dashboard, scanner accoglienza, verifica token, check-in generale/momento, vista dati minimi.
-- File/cartelle: `lib/qrcode`, `dashboard/accoglienza`, `api/check-in`.
-- Migration: QR tokens, check-ins, eventuali dispositivi/luoghi.
-- Verifiche: token valido/revocato/scaduto, idempotenza, permessi accoglienza.
-- Rischi: QR con dati personali; overexposure in accoglienza.
-- Accettazione: scansione registra check-in e mostra solo informazioni necessarie.
+- Scopo: sviluppare le funzioni evento avanzate dopo che le iscrizioni sono
+  aperte e stabili.
+- Deliverable:
+  - admin/manager gestione momenti;
+  - partecipante sceglie giorni/momenti o panel;
+  - vincoli base e capienze se necessarie;
+  - integrazione con dashboard partecipante nell'area panel gia' prevista.
+- File/cartelle: `lib/events/*`, `app/dashboard/admin/events/*`,
+  `app/dashboard/manager/events/*`, `app/dashboard/partecipante/*`.
+- Migration: `event_moments`, attendance choices, capienze se necessarie.
+- Verifiche: scelta evento generale e sotto-eventi; edit controllato; cambio
+  programma dopo iscrizioni.
+- Rischi: cambiare programma dopo che molte persone hanno gia' scelto.
+- Accettazione: programma multi-giorno gestito senza hardcode.
+- Non fare: check-in completo.
+
+### Milestone 15: QR code, verifica e check-in accoglienza
+
+- Scopo: completare la parte rimandata della vecchia Milestone 12, usando il QR
+  reale gia' anticipato in Milestone 6.2.
+- Deliverable:
+  - scanner accoglienza;
+  - endpoint/verifica token opaco;
+  - check-in generale e, se disponibile, check-in momento;
+  - vista accoglienza con dati minimi;
+  - idempotenza e audit log.
+- File/cartelle: `lib/qrcode/*`, `app/dashboard/accoglienza/*`,
+  `app/api/check-in/*` o server actions equivalenti.
+- Migration: eventuali dispositivi, luoghi o dettagli check-in non gia' coperti.
+- Verifiche: token valido/revocato/scaduto, idempotenza, permessi accoglienza,
+  nessun dato personale nel QR.
+- Rischi: overexposure in accoglienza; uso del QR come identificativo troppo
+  ricco; check-in duplicati.
+- Accettazione: scansione registra check-in e mostra solo informazioni
+  necessarie.
 - Non fare: accesso manager completo nella UI accoglienza.
 
-### Milestone 13: settori/sedute e indicazioni operative
+### Milestone 16: settori/sedute e indicazioni operative
 
-- Scopo: guidare accoglienza e flussi nei luoghi.
-- Deliverable: gestione settori, assegnazioni, indicazioni percorso, visibilità in check-in.
-- File/cartelle: `lib/seating`, `dashboard/manager/seating`, `dashboard/accoglienza`.
+- Scopo: completare la vecchia Milestone 13 solo quando luoghi e flussi fisici
+  dell'evento sono abbastanza chiari.
+- Deliverable:
+  - gestione settori;
+  - assegnazioni manuali o import;
+  - indicazioni percorso;
+  - visibilità in check-in e, se utile, dashboard partecipante.
+- File/cartelle: `lib/seating/*`, `app/dashboard/manager/seating/*`,
+  `app/dashboard/accoglienza/*`.
 - Migration: sectors, assignments, route notes.
-- Verifiche: assegnazione manuale/import, vista check-in.
-- Rischi: regole fisiche dei luoghi non ancora note.
+- Verifiche: assegnazione manuale/import, vista check-in, nessuna indicazione
+  incoerente se settore mancante.
+- Rischi: modellare troppo presto regole fisiche ancora non note.
 - Accettazione: partecipante scansionato riceve settore/percorso se assegnato.
 - Non fare: algoritmo complesso se non richiesto.
 
-### Milestone 14: multilingua
+### Milestone 17: privacy, retention e audit avanzato
 
-- Scopo: rendere UI e email almeno IT/EN.
-- Deliverable: locale routing o provider, traduzioni IT/EN, email localizzate, fallback.
-- File/cartelle: `lib/i18n`, `app/[locale]`, template email.
-- Migration: preferenza lingua partecipante/profilo.
-- Verifiche: navigazione IT/EN, form, dashboard, email.
-- Rischi: testi hardcoded.
-- Accettazione: flussi core funzionano in italiano e inglese.
-- Non fare: traduzioni automatiche non revisionate per testi legali.
-
-### Milestone 15: privacy, retention e audit
-
-- Scopo: chiudere aspetti legali e sicurezza dati.
-- Deliverable: audit log completo, retention policy, export/cancellazione/anonimizzazione post-evento, minimizzazione viste.
-- File/cartelle: `lib/audit`, `docs/privacy-retention.md`, admin tools.
+- Scopo: completare gli aspetti legali e di sicurezza dati oltre il minimo gia'
+  necessario per l'apertura pubblica.
+- Deliverable:
+  - audit log completo per azioni sensibili;
+  - retention policy post-evento;
+  - export/cancellazione/anonimizzazione controllati;
+  - revisione minimizzazione viste per ogni ruolo;
+  - documento `docs/privacy-retention.md`.
+- File/cartelle: `lib/audit/*`, `docs/privacy-retention.md`, admin tools.
 - Migration: audit, retention markers, eventuali funzioni SQL.
-- Verifiche: azioni sensibili tracciate, dati sensibili esclusi da ruoli non autorizzati.
+- Verifiche: azioni sensibili tracciate, dati sensibili esclusi da ruoli non
+  autorizzati.
 - Rischi: cancellazioni irreversibili premature.
 - Accettazione: policy documentata e strumenti controllati.
 - Non fare: cancellare dati reali senza approvazione esplicita.
 
-### Milestone 16: hardening, QA, deploy e documentazione
+### Milestone 18: hardening finale, QA e runbook
 
-- Scopo: preparare rilascio affidabile.
-- Deliverable: test E2E essenziali, QA responsive/accessibilità, security review, deploy staging/produzione, runbook.
+- Scopo: consolidare l'app prima dell'uso intensivo vicino all'evento, dopo che
+  i flussi principali e avanzati sono stati costruiti.
+- Deliverable:
+  - test E2E essenziali;
+  - QA responsive/accessibilità;
+  - security review;
+  - deploy production verificato;
+  - runbook operativo e rollback;
+  - verifica RLS con utenti reali per partecipante, capogruppo, manager,
+    manager_viewer, admin e accoglienza.
 - File/cartelle: test, docs, config deploy, env docs.
 - Migration: solo fix finali concordati.
 - Verifiche: lint, typecheck, test, build, test auth/RLS, smoke test deploy.
 - Rischi: differenze tra locale/staging/produzione.
 - Accettazione: rilascio con checklist, rollback e monitoraggio base.
-- Non fare: nuove feature non necessarie al go-live.
+- Non fare: nuove feature non necessarie al go-live o all'evento imminente.
 
 ## 8. Strategia Supabase/Coolify
 
@@ -851,4 +1006,15 @@ Prompt consigliato per la prossima milestone:
 > funzioni testabili di matching paese/città/età, inclusa la sovrapposizione
 > 23-30 anni e l'assegnazione territoriale dei nuovi partecipanti. Aggiorna il
 > form iscrizione per mostrare solo i gruppi affini e l'opzione "Non trovo il
-> mio referente", senza esporre stati interni al partecipante.
+> mio referente", senza esporre stati interni al partecipante. Tieni lo scope
+> orientato al go-live pubblico: niente dashboard avanzate, niente scanner
+> accoglienza e niente programma/panel oltre a quanto serve per non bloccare
+> l'apertura delle iscrizioni.
+
+Prompt immediatamente successivo, se la 6.3 e' chiusa:
+
+> Procedi con la Milestone 7: preparazione apertura pubblica iscrizioni.
+> Verifica produzione Vercel, env, SMTP, allowlist Supabase Auth, testi
+> privacy/email, dati evento/gruppi e flusso end-to-end su produzione. Produci
+> una checklist operativa per aprire le iscrizioni e segnala solo i blocchi che
+> impediscono il go-live pubblico.
