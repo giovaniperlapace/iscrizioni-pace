@@ -1,4 +1,4 @@
-export const DEFAULT_EMAIL_FROM = "registrationspeace@gmail.com";
+export const DEFAULT_EMAIL_FROM = "registrationspeace@santegidio.org";
 
 export type EmailConfig = {
   host: string;

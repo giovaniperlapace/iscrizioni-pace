@@ -5,7 +5,7 @@ const user =
   process.env.SMTP_USER ||
   process.env.GMAIL_USER ||
   process.env.EMAIL_FROM ||
-  "registrationspeace@gmail.com";
+  "registrationspeace@santegidio.org";
 const password =
   process.env.EMAIL_PASSWORD ||
   process.env.SMTP_PASSWORD ||

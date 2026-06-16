@@ -244,7 +244,7 @@ Decisioni:
 
 - I magic link sono generati con `supabase.auth.admin.generateLink` e inviati
   dall'app via SMTP Gmail, non dal mailer interno Supabase.
-- L'account mittente configurato e' `registrationspeace@gmail.com`.
+- L'account mittente configurato e' `registrationspeace@santegidio.org`.
 - La password app resta solo in `.env.local` o nelle env del runtime; non
   deve essere stampata o committata.
 - Variabili email supportate:
