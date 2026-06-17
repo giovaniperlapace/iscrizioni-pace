@@ -340,15 +340,36 @@ export default async function PartecipanteDashboardPage({
           </section>
         ) : (
           <>
+            <section className="relative rounded-lg border border-[#d8dece] bg-white p-5 pt-10 sm:p-6">
+              <QrStatusIndicator active={qrStatus?.status === "active"} />
+              <div className="grid gap-5 md:grid-cols-[minmax(24rem,auto)_1fr] md:items-center">
+                <div className="mx-auto grid w-full max-w-2xl gap-3 sm:grid-cols-[12rem_minmax(0,16rem)] sm:items-center md:mx-0">
+                  <QrPreview
+                    participantCode={participant.public_code ?? ""}
+                    qrDataUrl={qrDataUrl}
+                  />
+                  <QrActionButtons
+                    participantCode={participant.public_code}
+                    qrDataUrl={qrDataUrl}
+                  />
+                </div>
+                <div className="grid gap-3">
+                  <div>
+                    <h2 className="text-2xl font-semibold">
+                      Il tuo QR code personale
+                    </h2>
+                  </div>
+                  <p className="max-w-2xl text-sm leading-6 text-[#5e6d63]">
+                    Tienilo a portata di mano per l&apos;accesso all&apos;evento e
+                    ai panel. Se il QR non fosse disponibile, comunica il tuo
+                    codice partecipante all&apos;accoglienza.
+                  </p>
+                </div>
+              </div>
+            </section>
+
             <section className="rounded-lg border border-[#d8dece] bg-white p-5">
-              <div className="mx-auto grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-                <DashboardButton
-                  href="/dashboard/partecipante?overlay=qr"
-                  active={activeOverlay === "qr"}
-                  icon="qr"
-                >
-                  Il tuo QR code
-                </DashboardButton>
+              <div className="mx-auto w-full max-w-xl">
                 <DashboardButton
                   href="/dashboard/partecipante?overlay=iscrizione"
                   active={activeOverlay === "iscrizione"}
@@ -755,8 +776,11 @@ function QrPreview({
           ))}
         </div>
       )}
-      <p className="text-center font-mono text-sm font-semibold text-[#38453c]">
-        {participantCode || "QR"}
+      <p className="text-center text-sm font-semibold text-[#38453c]">
+        <span className="text-xs uppercase tracking-wide text-[#66745f]">
+          Il tuo codice:
+        </span>{" "}
+        <span className="font-mono">{participantCode || "QR"}</span>
       </p>
     </div>
   );
@@ -902,6 +926,112 @@ function SaveInlineButton({ editable }: { editable: boolean }) {
     >
       Salva
     </button>
+  );
+}
+
+function QrStatusIndicator({ active }: { active: boolean }) {
+  const label = active
+    ? "Il tuo QR code è attivo"
+    : "Il tuo QR code non è attivo";
+
+  return (
+    <span
+      aria-label={label}
+      title={label}
+      tabIndex={0}
+      className="group absolute right-4 top-4 inline-flex size-4 rounded-full focus:outline-none"
+    >
+      <span
+        aria-hidden="true"
+        className={
+          active
+            ? "size-4 rounded-full bg-[#2f8f4e] ring-4 ring-[#e4f3e7]"
+            : "size-4 rounded-full bg-[#c94b3b] ring-4 ring-[#f7dfdc]"
+        }
+      />
+      <span className="pointer-events-none absolute right-0 top-7 z-10 w-max max-w-52 rounded-md bg-[#1c241f] px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus:opacity-100">
+        {label}
+      </span>
+    </span>
+  );
+}
+
+function QrActionButtons({
+  participantCode,
+  qrDataUrl,
+}: {
+  participantCode: string | null;
+  qrDataUrl: string | null;
+}) {
+  return (
+    <div className="grid gap-2">
+      {qrDataUrl ? (
+        <a
+          href={qrDataUrl}
+          download={`qr-${participantCode ?? "personale"}.png`}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#2f5e46] px-4 text-sm font-semibold text-white transition hover:bg-[#244938]"
+        >
+          <DownloadIcon />
+          Scarica immagine
+        </a>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md bg-[#9aa79b] px-4 text-sm font-semibold text-white"
+        >
+          <DownloadIcon />
+          Scarica immagine
+        </button>
+      )}
+      <button
+        type="button"
+        disabled
+        title="Disponibile più avanti"
+        className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[#cbd7c1] px-4 text-sm font-semibold text-[#66745f]"
+      >
+        <WalletIcon />
+        Aggiungi al tuo wallet
+      </button>
+    </div>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    >
+      <path d="M12 3v11" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+function WalletIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    >
+      <path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a3 3 0 0 1 3-3h12" />
+      <path d="M16 13h6v4h-6a2 2 0 0 1 0-4Z" />
+      <path d="M6 5h11a2 2 0 0 1 2 2" />
+    </svg>
   );
 }
 

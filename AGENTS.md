@@ -49,6 +49,26 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   tabella operativa dei partecipanti del gruppo, inserimento manuale in overlay,
   link riservati in overlay, source `capogruppo`, QR reale, consenso dichiarato
   dal referente, assegnazione gruppo confermata e audit dedicato.
+- Milestone 11 ha consolidato le dashboard manager/admin essenziali: tabella
+  iscritti filtrabile per ricerca, evento, stato gruppo, ruolo operativo e
+  stato iscrizione, conteggi sul risultato filtrato, modifica gruppo/ruolo gia'
+  presente in overlay e consultazione read-only coerente per `manager_viewer`.
+  Le tabelle operative caricano fino a 200 iscrizioni recenti e includono anche
+  le iscrizioni annullate quando filtrate.
+- Dopo revisione della Milestone 11, la gestione gruppi admin/manager e' stata
+  spostata su una tabella gruppi filtrabile con azioni per riga. La creazione e
+  modifica gruppi si apre in overlay; la generazione/revoca dei link riservati
+  si apre dall'azione `Gestisci link` del singolo gruppo. Non mostrare in
+  dashboard un form di generazione link per ogni gruppo contemporaneamente.
+- Le statistiche generiche sopra la tabella iscritti admin/manager sono state
+  rimosse per ridurre rumore visivo. Inventario delle statistiche disponibili:
+  `docs/statistiche-disponibili.md`.
+- Il 2026-06-17 la dashboard partecipante e' stata rifinita dopo revisione UX:
+  il QR personale deve essere visibile subito nella prima schermata, non dietro
+  un pulsante; sotto al QR compare `Il tuo codice: <codice>`; le azioni QR
+  (`Scarica immagine`, futuro `Aggiungi al tuo wallet`) restano accanto al QR
+  quando lo spazio lo consente; lo stato QR e' un indicatore verde/rosso in alto
+  a destra con tooltip descrittivo, non una riga informativa nella card.
 - Il 2026-06-16 e' stata rifinita la navigazione delle dashboard operative:
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle
@@ -986,6 +1006,15 @@ Deliverable:
 - La dashboard partecipante mostra il QR reale quando `token_encrypted` e'
   disponibile; per iscrizioni precedenti senza token cifrato mostra ancora il
   placeholder.
+- Nella dashboard partecipante il QR reale deve restare immediatamente visibile
+  all'apertura dell'area personale. Evitare overlay o pulsanti primari per
+  "vedere il QR"; l'overlay resta solo come compatibilita' URL/possibile vista
+  estesa futura.
+- Il codice partecipante va mostrato una sola volta sotto il QR con label breve
+  `Il tuo codice:`, non duplicato in una card informativa separata.
+- Le azioni QR attuali sono download PNG/data URL e placeholder disabilitato per
+  wallet. La futura integrazione wallet richiedera' una vera funzione pass, non
+  un link fittizio.
 
 Decisioni:
 

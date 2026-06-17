@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import {
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
+  saveOperationsGroup,
   updateEventOpeningState,
 } from "@/app/actions";
 import {
@@ -22,6 +23,14 @@ import {
   type RegistrationMonitoringInput,
   type RegistrationMonitoringSummary,
 } from "@/lib/registrations/opening-monitoring";
+import {
+  applyOperationsDashboardFilters,
+  hasActiveOperationsDashboardFilters,
+  parseOperationsDashboardFilters,
+  summarizeOperationsDashboardParticipants,
+  type OperationsDashboardFilters,
+  type OperationsDashboardSummary,
+} from "@/lib/registrations/operations-dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -35,7 +44,20 @@ type ManagerPageProps = {
     groupLinkSaved?: string;
     groupLinkToken?: string;
     groupLinkGroupId?: string;
+    groupError?: string;
+    groupEvent?: string;
+    groupId?: string;
+    groupQ?: string;
+    groupSaved?: string;
+    groupTool?: string;
+    groupType?: string;
+    groupVisibility?: string;
     edit?: string;
+    event?: string;
+    group?: string;
+    q?: string;
+    role?: string;
+    status?: string;
   }>;
 };
 
@@ -153,11 +175,21 @@ type ManagerGroupTreeRow = {
   parentGroupId: string | null;
   parentName: string | null;
   nodeType: string | null;
+  communityKind: string | null;
   ageBracket: string | null;
+  isActive: boolean | null;
   isAssignable: boolean | null;
   isPublicCatalog: boolean | null;
+  publicOrder: number | null;
   primaryLeaderName: string | null;
   publicLabel: string | null;
+};
+
+type GroupTableFilters = {
+  q: string;
+  eventId: string;
+  nodeType: string;
+  visibility: string;
 };
 
 type ManagerGroupRegistrationLinkRow = {
@@ -207,9 +239,12 @@ type ManagerParticipantRow = {
 
 type ManagerOperationsSnapshot = {
   participants: ManagerParticipantRow[];
+  allParticipants: ManagerParticipantRow[];
   groupOptions: ManagerGroupOption[];
   groupTree: ManagerGroupTreeRow[];
   groupLinks: ManagerGroupRegistrationLink[];
+  filters: OperationsDashboardFilters;
+  summary: OperationsDashboardSummary;
 };
 
 type EventSnapshot = {
@@ -238,30 +273,21 @@ export default async function ManagerDashboardPage({
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  const filters = parseOperationsDashboardFilters(params);
   const [snapshots, managerOperations] = await Promise.all([
     getOpeningSnapshots(serviceSupabase, scope),
-    getManagerOperationsSnapshot(serviceSupabase, scope),
+    getManagerOperationsSnapshot(serviceSupabase, scope, filters),
   ]);
-  const totalRegistrations = snapshots.reduce(
-    (sum, snapshot) => sum + snapshot.summary.total,
-    0
-  );
-  const managedEvents = snapshots.filter((snapshot) => snapshot.canManage).length;
-  const watchItems = snapshots.reduce(
-    (sum, snapshot) =>
-      sum +
-      snapshot.summary.withoutCurrentGroup +
-      snapshot.summary.missingQrToken +
-      snapshot.emailErrorsLast24Hours,
-    0
-  );
   const selectedParticipant =
-    managerOperations.participants.find(
+    managerOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
     ) ?? null;
   const selectedCanManage = selectedParticipant
     ? scope.canManageEvent(selectedParticipant.eventId)
     : false;
+  const selectedGroup =
+    managerOperations.groupTree.find((group) => group.id === params.groupId) ??
+    null;
 
   return (
     <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
@@ -282,13 +308,9 @@ export default async function ManagerDashboardPage({
           managerSaved={params.managerSaved}
           groupLinkError={params.groupLinkError}
           groupLinkSaved={params.groupLinkSaved}
+          groupError={params.groupError}
+          groupSaved={params.groupSaved}
         />
-
-        <section className="grid gap-4 sm:grid-cols-3">
-          <Metric label="Eventi gestibili" value={String(managedEvents)} />
-          <Metric label="Iscrizioni visibili" value={String(totalRegistrations)} />
-          <Metric label="Da controllare" value={String(watchItems)} />
-        </section>
 
         <section className="grid gap-4">
           <div>
@@ -316,10 +338,13 @@ export default async function ManagerDashboardPage({
           canManageEvent={scope.canManageEvent}
         />
 
-        <ManagerGroupLinksSection
+        <ManagerGroupTreeSection
           groups={managerOperations.groupTree}
           links={managerOperations.groupLinks}
           canManageEvent={scope.canManageEvent}
+          filters={parseGroupTableFilters(params)}
+          selectedGroup={selectedGroup}
+          selectedTool={params.groupTool === "links" ? "links" : params.groupTool === "edit" ? "edit" : null}
           createdGroupId={params.groupLinkGroupId ?? null}
           createdUrl={
             params.groupLinkToken
@@ -330,8 +355,6 @@ export default async function ManagerDashboardPage({
               : null
           }
         />
-
-        <ManagerGroupTreeSection groups={managerOperations.groupTree} />
       </section>
     </main>
   );
@@ -361,7 +384,8 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 
 async function getManagerOperationsSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
-  scope: ReturnType<typeof getManagerEventScope>
+  scope: ReturnType<typeof getManagerEventScope>,
+  filters: OperationsDashboardFilters
 ): Promise<ManagerOperationsSnapshot> {
   const registrationsQuery = supabase
     .from("registrations")
@@ -369,7 +393,7 @@ async function getManagerOperationsSnapshot(
       "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
     )
     .order("submitted_at", { ascending: false })
-    .limit(30);
+    .limit(200);
   const groupsQuery = supabase
     .from("groups")
     .select("id,event_id,name,is_assignable,is_active")
@@ -386,7 +410,7 @@ async function getManagerOperationsSnapshot(
   const groupTreeQuery = supabase
     .from("groups")
     .select(
-      "id,event_id,name,public_label,parent_group_id,node_type,age_bracket,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
+      "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_bracket,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
     )
     .eq("is_active", true)
     .order("public_order", { ascending: true })
@@ -419,9 +443,7 @@ async function getManagerOperationsSnapshot(
     scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupTreeQuery,
     scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupLinksQuery,
   ]);
-  const registrationRows = ((registrations ?? []) as ManagerRegistrationRow[]).filter(
-    (registration) => registration.status !== "cancelled"
-  );
+  const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
   const registrationIds = registrationRows.map((row) => row.id);
   const participantIds = registrationRows.map((row) => row.participant_id);
   const eventIds = [...new Set(registrationRows.map((row) => row.event_id))];
@@ -521,9 +543,12 @@ async function getManagerOperationsSnapshot(
     name: string | null;
     parent_group_id: string | null;
     node_type: string | null;
+    community_kind: string | null;
     age_bracket: string | null;
+    is_active: boolean | null;
     is_assignable: boolean | null;
     is_public_catalog: boolean | null;
+    public_order: number | null;
     primary_leader_name: string | null;
     public_label: string | null;
     events:
@@ -535,8 +560,7 @@ async function getManagerOperationsSnapshot(
     groupTreeRows.map((group) => [group.id, group.name ?? "Gruppo senza nome"])
   );
 
-  return {
-    participants: registrationRows.map((registration) => {
+  const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
       const event = relatedOne(registration.events);
       const contact = contactByParticipantId.get(registration.participant_id);
@@ -567,7 +591,15 @@ async function getManagerOperationsSnapshot(
           ? rolesByUserEvent.get(`${authUserId}:${registration.event_id}`) ?? []
           : [],
       };
-    }),
+    });
+  const filteredParticipants = applyOperationsDashboardFilters(
+    participantRows,
+    filters
+  );
+
+  return {
+    participants: filteredParticipants,
+    allParticipants: participantRows,
     groupOptions: ((groups ?? []) as Array<{
       id: string;
       event_id: string;
@@ -587,9 +619,12 @@ async function getManagerOperationsSnapshot(
         ? groupNameById.get(group.parent_group_id) ?? null
         : null,
       nodeType: group.node_type,
+      communityKind: group.community_kind,
       ageBracket: group.age_bracket,
+      isActive: group.is_active,
       isAssignable: group.is_assignable,
       isPublicCatalog: group.is_public_catalog,
+      publicOrder: group.public_order,
       primaryLeaderName: group.primary_leader_name,
       publicLabel: group.public_label,
     })),
@@ -606,6 +641,11 @@ async function getManagerOperationsSnapshot(
         expiresAt: link.expires_at,
         revokedAt: link.revoked_at,
       })
+    ),
+    filters,
+    summary: summarizeOperationsDashboardParticipants(
+      participantRows,
+      filteredParticipants
     ),
   };
 }
@@ -812,223 +852,458 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
   );
 }
 
-function ManagerGroupLinksSection({
+function ManagerGroupTreeSection({
   groups,
   links,
   canManageEvent,
+  filters,
+  selectedGroup,
+  selectedTool,
   createdGroupId,
   createdUrl,
 }: {
   groups: ManagerGroupTreeRow[];
   links: ManagerGroupRegistrationLink[];
   canManageEvent: (eventId: string) => boolean;
+  filters: GroupTableFilters;
+  selectedGroup: ManagerGroupTreeRow | null;
+  selectedTool: "edit" | "links" | null;
   createdGroupId: string | null;
   createdUrl: string | null;
 }) {
-  const assignableGroups = groups.filter((group) => group.isAssignable);
-  const linksByGroupId = new Map<string, ManagerGroupRegistrationLink[]>();
-
-  for (const link of links) {
-    const groupLinks = linksByGroupId.get(link.groupId) ?? [];
-    groupLinks.push(link);
-    linksByGroupId.set(link.groupId, groupLinks);
-  }
+  const filteredGroups = filterGroupRows(groups, filters);
+  const linksByGroupId = groupLinksByGroupId(links);
+  const eventOptions = getGroupEventOptions(groups);
 
   return (
     <section className="rounded-lg border border-[#d8dece] bg-white p-5">
-      <div>
-        <h2 className="text-lg font-semibold">Link riservati di iscrizione</h2>
-        <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
-          Genera link per gruppi iscrivibili, inclusi quelli nascosti nel menu
-          pubblico. Il link completo viene mostrato solo subito dopo la creazione.
-        </p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Gruppi</h2>
+          <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
+            Paesi, città, aree e gruppi disponibili per matching, form pubblico
+            e link riservati.
+          </p>
+        </div>
+        {eventOptions.some((event) => canManageEvent(event.id)) ? (
+          <Link
+            href="/dashboard/manager?groupTool=edit"
+            className="inline-flex min-h-11 w-fit items-center rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]"
+          >
+            Nuovo gruppo
+          </Link>
+        ) : null}
       </div>
 
-      <div className="mt-5 grid gap-4">
-        {assignableGroups.map((group) => {
-          const groupLinks = linksByGroupId.get(group.id) ?? [];
-          const canManage = canManageEvent(group.eventId);
+      <GroupTableFiltersForm
+        filters={filters}
+        eventOptions={eventOptions}
+        action="/dashboard/manager"
+      />
 
-          return (
-            <article
-              key={group.id}
-              className="rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4"
-            >
-              <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-[#1c241f]">{group.name}</h3>
-                    <span className="rounded-full border border-[#c8d5be] px-2 py-1 text-xs font-semibold text-[#38563d]">
-                      {group.isPublicCatalog ? "Visibile nel form" : "Nascosto"}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-[#5e6d63]">
-                    {group.eventTitle} - referente{" "}
-                    {group.primaryLeaderName ?? "da assegnare"}
-                  </p>
-                  <p className="mt-2 text-sm text-[#39483f]">
-                    Label pubblica gruppo:{" "}
-                    <span className="font-medium">
-                      {group.publicLabel ?? "non impostata"}
-                    </span>
-                  </p>
-
-                  {createdUrl && createdGroupId === group.id ? (
-                    <label className="mt-4 grid gap-2 text-sm font-semibold text-[#3c4b40]">
-                      Link appena generato
-                      <input
-                        readOnly
-                        className="field bg-white font-mono text-xs"
-                        value={createdUrl}
-                      />
-                    </label>
-                  ) : null}
-
-                  <div className="mt-4 grid gap-2">
-                    {groupLinks.map((link) => (
-                      <div
-                        key={link.id}
-                        className="flex flex-col gap-2 rounded-md border border-[#e1e6da] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div>
-                          <p className="font-medium text-[#1c241f]">
-                            {link.internalLabel ?? link.publicLabel ?? "Link senza etichetta"}
-                          </p>
-                          <p className="mt-1 text-xs text-[#5e6d63]">
-                            {groupLinkStatusLabel(link)} - usi {link.useCount}
-                            {link.maxUses ? `/${link.maxUses}` : ""}
-                          </p>
-                        </div>
-                        {canManage ? (
-                          <form action={revokeGroupRegistrationLink}>
-                            <input type="hidden" name="sourceDashboard" value="manager" />
-                            <input type="hidden" name="linkId" value={link.id} />
-                            <button className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
-                              Revoca
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    ))}
-                    {groupLinks.length === 0 ? (
-                      <p className="text-sm text-[#5e6d63]">Nessun link attivo.</p>
-                    ) : null}
-                  </div>
-                </div>
-
-                {canManage ? (
-                  <form action={createGroupRegistrationLink} className="grid gap-3">
-                    <input type="hidden" name="sourceDashboard" value="manager" />
-                    <input type="hidden" name="groupId" value={group.id} />
-                    <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
-                      Label pubblica
-                      <input
-                        name="publicLabel"
-                        className="field"
-                        defaultValue={group.publicLabel ?? ""}
-                        placeholder="Per esempio: Gruppo indicato dal referente"
-                      />
-                    </label>
-                    <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
-                      Etichetta interna
-                      <input
-                        name="internalLabel"
-                        className="field"
-                        placeholder="Per esempio: invito assemblea giugno"
-                      />
-                    </label>
-                    <button className="min-h-10 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]">
-                      Genera link
-                    </button>
-                  </form>
-                ) : (
-                  <p className="rounded-md border border-[#d8dece] bg-white p-3 text-sm text-[#5e6d63]">
-                    Consultazione senza permessi di modifica.
-                  </p>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-
-      {assignableGroups.length === 0 ? (
-        <p className="mt-4 text-sm text-[#5e6d63]">
-          Nessun gruppo iscrivibile visibile per questo utente.
-        </p>
-      ) : null}
-    </section>
-  );
-}
-
-function ManagerGroupTreeSection({ groups }: { groups: ManagerGroupTreeRow[] }) {
-  return (
-    <section className="rounded-lg border border-[#d8dece] bg-white p-5">
-      <div>
-        <h2 className="text-lg font-semibold">Albero gruppi</h2>
-        <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
-          Paesi, città e aree disponibili per il matching e per il form pubblico.
-        </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <EventValue label="Gruppi visibili" value={filteredGroups.length} />
+        <EventValue label="Iscrivibili" value={filteredGroups.filter((group) => group.isAssignable).length} />
+        <EventValue label="Nel form pubblico" value={filteredGroups.filter((group) => group.isPublicCatalog).length} />
+        <EventValue label="Link attivi" value={links.length} />
       </div>
 
       <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-[#dfe5d8] text-xs uppercase tracking-wide text-[#66745f]">
               <th className="py-3 pr-4 font-semibold">Nodo</th>
-              <th className="py-3 pr-4 font-semibold">Parent</th>
-              <th className="py-3 pr-4 font-semibold">Tipo</th>
               <th className="py-3 pr-4 font-semibold">Età</th>
               <th className="py-3 pr-4 font-semibold">Referente principale</th>
-              <th className="py-3 text-right font-semibold">Form</th>
+              <th className="py-3 pr-4 font-semibold">Accesso iscrizione</th>
+              <th className="py-3 text-right font-semibold">Azioni</th>
             </tr>
           </thead>
           <tbody>
-            {groups.map((group) => (
-              <tr
-                key={group.id}
-                className="border-b border-[#edf1e8] align-top last:border-b-0"
-              >
-                <td className="py-4 pr-4">
-                  <p className="font-semibold text-[#1c241f]">{group.name}</p>
-                  <p className="mt-1 text-xs text-[#5e6d63]">{group.eventTitle}</p>
-                </td>
-                <td className="py-4 pr-4 text-[#39483f]">
-                  {group.parentName ?? "Radice"}
-                </td>
-                <td className="py-4 pr-4">
-                  <span className="rounded-full border border-[#c8d5be] bg-[#f8faf5] px-2 py-1 text-xs font-semibold text-[#38563d]">
-                    {groupNodeTypeLabel(group.nodeType)}
-                  </span>
-                </td>
-                <td className="py-4 pr-4 text-[#39483f]">
-                  {ageBracketLabel(group.ageBracket)}
-                </td>
-                <td className="py-4 pr-4 text-[#39483f]">
-                  {group.primaryLeaderName ?? "Da assegnare"}
-                </td>
-                <td className="py-4 text-right">
-                  {group.isAssignable && group.isPublicCatalog ? (
-                    <span className="font-semibold text-[#2f5e46]">Visibile</span>
-                  ) : (
-                    <span className="text-[#5e6d63]">Interno</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {filteredGroups.map((group) => {
+              const canManage = canManageEvent(group.eventId);
+
+              return (
+                <tr
+                  key={group.id}
+                  className="border-b border-[#edf1e8] align-top last:border-b-0"
+                >
+                  <td className="py-4 pr-4">
+                    <p className="font-semibold text-[#1c241f]">{group.name}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#5e6d63]">
+                      {group.eventTitle} - {groupNodeTypeLabel(group.nodeType)}
+                      {group.parentName ? ` sotto ${group.parentName}` : ""}
+                    </p>
+                  </td>
+                  <td className="py-4 pr-4 text-[#39483f]">
+                    {ageBracketLabel(group.ageBracket)}
+                  </td>
+                  <td className="py-4 pr-4 text-[#39483f]">
+                    {group.primaryLeaderName ?? "Da assegnare"}
+                  </td>
+                  <td className="py-4 pr-4">
+                    {group.isAssignable && group.isPublicCatalog ? (
+                      <span className="font-semibold text-[#2f5e46]">Nel form pubblico</span>
+                    ) : group.isAssignable ? (
+                      <span className="text-[#5e6d63]">Solo con link</span>
+                    ) : (
+                      <span className="text-[#5e6d63]">Non iscrivibile</span>
+                    )}
+                  </td>
+                  <td className="py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      {canManage ? (
+                        <Link
+                          href={`/dashboard/manager?groupTool=edit&groupId=${group.id}`}
+                          className="inline-flex min-h-9 items-center rounded-md border border-[#b8c5ad] px-3 text-xs font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                        >
+                          Modifica
+                        </Link>
+                      ) : null}
+                      <Link
+                        href={`/dashboard/manager?groupTool=links&groupId=${group.id}`}
+                        className="inline-flex min-h-9 items-center rounded-md border border-[#b8c5ad] px-3 text-xs font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                      >
+                        Gestisci link
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {groups.length === 0 ? (
+      {filteredGroups.length === 0 ? (
         <p className="mt-4 text-sm text-[#5e6d63]">
-          Nessun gruppo visibile per questo utente.
+          Nessun gruppo corrisponde ai filtri correnti.
         </p>
+      ) : null}
+
+      {selectedTool === "edit" ? (
+        <ManagerGroupEditOverlay
+          group={selectedGroup}
+          groups={groups}
+          eventOptions={eventOptions.filter((event) => canManageEvent(event.id))}
+        />
+      ) : null}
+
+      {selectedTool === "links" && selectedGroup ? (
+        <ManagerGroupLinksOverlay
+          group={selectedGroup}
+          links={linksByGroupId.get(selectedGroup.id) ?? []}
+          canManage={canManageEvent(selectedGroup.eventId)}
+          createdUrl={createdGroupId === selectedGroup.id ? createdUrl : null}
+        />
       ) : null}
     </section>
   );
 }
 
+function GroupTableFiltersForm({
+  filters,
+  eventOptions,
+  action,
+}: {
+  filters: GroupTableFilters;
+  eventOptions: Array<{ id: string; title: string }>;
+  action: string;
+}) {
+  const hasActiveFilters =
+    filters.q ||
+    filters.eventId !== "all" ||
+    filters.nodeType !== "all" ||
+    filters.visibility !== "all";
+
+  return (
+    <form
+      action={action}
+      className="mt-5 grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
+    >
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Cerca gruppo
+        <input
+          name="groupQ"
+          defaultValue={filters.q}
+          className="field bg-white font-normal"
+          placeholder="Nome, referente, label"
+        />
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Evento
+        <select
+          name="groupEvent"
+          defaultValue={filters.eventId}
+          className="field bg-white font-normal"
+        >
+          <option value="all">Tutti</option>
+          {eventOptions.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Tipo
+        <select
+          name="groupType"
+          defaultValue={filters.nodeType}
+          className="field bg-white font-normal"
+        >
+          <option value="all">Tutti</option>
+          <option value="country">Paese</option>
+          <option value="city">Città</option>
+          <option value="area">Area</option>
+          <option value="group">Gruppo</option>
+          <option value="newcomers">Nuovi partecipanti</option>
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Visibilità
+        <select
+          name="groupVisibility"
+          defaultValue={filters.visibility}
+          className="field bg-white font-normal"
+        >
+          <option value="all">Tutti</option>
+          <option value="public">Nel form pubblico</option>
+          <option value="reserved">Solo con link</option>
+          <option value="internal">Non iscrivibile</option>
+        </select>
+      </label>
+      <div className="flex items-end gap-2">
+        <button className="min-h-11 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+          Filtra
+        </button>
+        {hasActiveFilters ? (
+          <Link
+            href={action}
+            className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]"
+          >
+            Reset
+          </Link>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+function ManagerGroupEditOverlay({
+  group,
+  groups,
+  eventOptions,
+}: {
+  group: ManagerGroupTreeRow | null;
+  groups: ManagerGroupTreeRow[];
+  eventOptions: Array<{ id: string; title: string }>;
+}) {
+  const selectedEventId = group?.eventId ?? eventOptions[0]?.id ?? "";
+  const parentOptions = groups.filter(
+    (option) => option.eventId === selectedEventId && option.id !== group?.id
+  );
+
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+      <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="border-b border-[#dfe5d8] px-5 py-4">
+          <h3 className="text-xl font-semibold">
+            {group ? "Modifica gruppo" : "Nuovo gruppo"}
+          </h3>
+        </div>
+        <form action={saveOperationsGroup} className="grid overflow-y-auto">
+          <input type="hidden" name="sourceDashboard" value="manager" />
+          {group ? <input type="hidden" name="groupId" value={group.id} /> : null}
+          <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Evento
+              <select name="eventId" defaultValue={selectedEventId} className="field">
+                {eventOptions.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Nome operativo
+              <input name="name" defaultValue={group?.name ?? ""} className="field" required />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Parent
+              <select name="parentGroupId" defaultValue={group?.parentGroupId ?? ""} className="field">
+                <option value="">Radice</option>
+                {parentOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Tipo
+              <select name="nodeType" defaultValue={group?.nodeType ?? "group"} className="field">
+                <option value="country">Paese</option>
+                <option value="city">Città</option>
+                <option value="area">Area</option>
+                <option value="group">Gruppo</option>
+                <option value="newcomers">Nuovi partecipanti</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Comunità
+              <select name="communityKind" defaultValue={group?.communityKind ?? "santegidio"} className="field">
+                <option value="santegidio">Sant&apos;Egidio</option>
+                <option value="newcomers">Nuovi partecipanti</option>
+                <option value="territorial">Territoriale</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Età
+              <select name="ageBracket" defaultValue={group?.ageBracket ?? "none"} className="field">
+                <option value="none">Non applicabile</option>
+                <option value="giovani">Giovani</option>
+                <option value="adulti">Adulti</option>
+                <option value="both">Giovani e adulti</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Referente principale
+              <input name="primaryLeaderName" defaultValue={group?.primaryLeaderName ?? ""} className="field" />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Label pubblica
+              <input name="publicLabel" defaultValue={group?.publicLabel ?? ""} className="field" />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+              Ordine pubblico
+              <input name="publicOrder" type="number" defaultValue={group?.publicOrder ?? 100} className="field" />
+            </label>
+            <div className="grid content-end gap-2 text-sm font-semibold text-[#38453c]">
+              <label className="flex items-center gap-2">
+                <input name="isActive" type="checkbox" defaultChecked={group?.isActive ?? true} />
+                Attivo
+              </label>
+              <label className="flex items-center gap-2">
+                <input name="isAssignable" type="checkbox" defaultChecked={group?.isAssignable ?? true} />
+                Iscrivibile
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  name="isPublicCatalog"
+                  type="checkbox"
+                  defaultChecked={group?.isPublicCatalog ?? true}
+                  disabled={group ? !group.isAssignable : false}
+                />
+                Mostra nel form pubblico
+              </label>
+              {group && !group.isAssignable ? (
+                <p className="text-xs font-normal leading-5 text-[#6b7a70]">
+                  Disponibile solo per gruppi iscrivibili.
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-[#dfe5d8] px-5 py-4">
+            <Link href="/dashboard/manager" className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-4 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]">
+              Annulla
+            </Link>
+            <button className="min-h-11 rounded-md bg-[#2f5e46] px-4 text-sm font-semibold text-white transition hover:bg-[#254b38]">
+              Salva gruppo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ManagerGroupLinksOverlay({
+  group,
+  links,
+  canManage,
+  createdUrl,
+}: {
+  group: ManagerGroupTreeRow;
+  links: ManagerGroupRegistrationLink[];
+  canManage: boolean;
+  createdUrl: string | null;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+      <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="border-b border-[#dfe5d8] px-5 py-4">
+          <h3 className="text-xl font-semibold">Link gruppo</h3>
+          <p className="mt-1 text-sm text-[#5e6d63]">{group.name}</p>
+        </div>
+        <div className="grid gap-5 overflow-y-auto px-5 py-5">
+          {createdUrl ? (
+            <label className="grid gap-2 text-sm font-semibold text-[#3c4b40]">
+              Link appena generato
+              <input readOnly className="field bg-white font-mono text-xs" value={createdUrl} />
+            </label>
+          ) : null}
+
+          {canManage ? (
+            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4">
+              <input type="hidden" name="sourceDashboard" value="manager" />
+              <input type="hidden" name="groupId" value={group.id} />
+              <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+                Label pubblica
+                <input name="publicLabel" className="field" defaultValue={group.publicLabel ?? ""} />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+                Etichetta interna
+                <input name="internalLabel" className="field" placeholder="Per esempio: invito assemblea giugno" />
+              </label>
+              <button className="min-h-10 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+                Genera link
+              </button>
+            </form>
+          ) : (
+            <p className="rounded-md border border-[#d8dece] bg-[#f8faf5] p-3 text-sm text-[#5e6d63]">
+              Consultazione senza permessi di modifica.
+            </p>
+          )}
+
+          <div className="grid gap-2">
+            {links.map((link) => (
+              <div key={link.id} className="flex flex-col gap-2 rounded-md border border-[#e1e6da] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium text-[#1c241f]">
+                    {link.internalLabel ?? link.publicLabel ?? "Link senza etichetta"}
+                  </p>
+                  <p className="mt-1 text-xs text-[#5e6d63]">
+                    {groupLinkStatusLabel(link)} - usi {link.useCount}
+                    {link.maxUses ? `/${link.maxUses}` : ""}
+                  </p>
+                </div>
+                {canManage ? (
+                  <form action={revokeGroupRegistrationLink}>
+                    <input type="hidden" name="sourceDashboard" value="manager" />
+                    <input type="hidden" name="linkId" value={link.id} />
+                    <button className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
+                      Revoca
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            ))}
+            {links.length === 0 ? (
+              <p className="text-sm text-[#5e6d63]">Nessun link attivo per questo gruppo.</p>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex justify-end border-t border-[#dfe5d8] px-5 py-4">
+          <Link href="/dashboard/manager" className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-4 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]">
+            Chiudi
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 function ManagerParticipantsSection({
   snapshot,
   selectedParticipant,
@@ -1038,12 +1313,22 @@ function ManagerParticipantsSection({
   selectedParticipant: ManagerParticipantRow | null;
   canManageEvent: (eventId: string) => boolean;
 }) {
+  const eventOptions = getOperationsEventOptions(snapshot.allParticipants);
+
   return (
     <section className="rounded-lg border border-[#d8dece] bg-white p-5">
       <div>
         <h2 className="text-lg font-semibold">Gestione iscritti</h2>
-        <p className="mt-2 text-sm leading-6 text-[#5e6d63]">Ultime iscrizioni</p>
+        <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
+          Ultime iscrizioni nello scope manager, fino a 200 risultati recenti.
+        </p>
       </div>
+
+      <OperationsFiltersForm
+        filters={snapshot.filters}
+        eventOptions={eventOptions}
+        action="/dashboard/manager"
+      />
 
       <div className="mt-5 overflow-x-auto">
         <table className="w-full min-w-[860px] border-collapse text-left text-sm">
@@ -1122,7 +1407,9 @@ function ManagerParticipantsSection({
       </div>
 
       {snapshot.participants.length === 0 ? (
-        <p className="mt-4 text-sm text-[#5e6d63]">Nessuna iscrizione presente.</p>
+        <p className="mt-4 text-sm text-[#5e6d63]">
+          Nessuna iscrizione corrisponde ai filtri correnti.
+        </p>
       ) : null}
 
       {selectedParticipant ? (
@@ -1134,6 +1421,101 @@ function ManagerParticipantsSection({
         />
       ) : null}
     </section>
+  );
+}
+
+function OperationsFiltersForm({
+  filters,
+  eventOptions,
+  action,
+}: {
+  filters: OperationsDashboardFilters;
+  eventOptions: Array<{ id: string; title: string }>;
+  action: string;
+}) {
+  const hasActiveFilters = hasActiveOperationsDashboardFilters(filters);
+
+  return (
+    <form
+      action={action}
+      className="mt-5 grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))_auto]"
+    >
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Cerca
+        <input
+          name="q"
+          defaultValue={filters.q}
+          className="field bg-white font-normal"
+          placeholder="Nome, codice, email, gruppo"
+        />
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Evento
+        <select
+          name="event"
+          defaultValue={filters.eventId}
+          className="field bg-white font-normal"
+        >
+          <option value="all">Tutti</option>
+          {eventOptions.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Gruppo
+        <select
+          name="group"
+          defaultValue={filters.group}
+          className="field bg-white font-normal"
+        >
+          <option value="all">Tutti</option>
+          <option value="none">Senza gruppo</option>
+          <option value="probable">Da verificare</option>
+          <option value="confirmed">Confermato</option>
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Ruolo
+        <select
+          name="role"
+          defaultValue={filters.role}
+          className="field bg-white font-normal"
+        >
+          <option value="all">Tutti</option>
+          <option value="operational">Con ruolo</option>
+          <option value="none">Senza ruolo</option>
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Stato
+        <select
+          name="status"
+          defaultValue={filters.status}
+          className="field bg-white font-normal"
+        >
+          <option value="all">Tutti</option>
+          <option value="submitted">Inviata</option>
+          <option value="confirmed">Confermata</option>
+          <option value="cancelled">Annullata</option>
+        </select>
+      </label>
+      <div className="flex items-end gap-2">
+        <button className="min-h-11 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+          Filtra
+        </button>
+        {hasActiveFilters ? (
+          <Link
+            href={action}
+            className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]"
+          >
+            Reset
+          </Link>
+        ) : null}
+      </div>
+    </form>
   );
 }
 
@@ -1286,6 +1668,8 @@ function StatusMessage({
   managerSaved,
   groupLinkError,
   groupLinkSaved,
+  groupError,
+  groupSaved,
 }: {
   error?: string;
   saved?: string;
@@ -1293,11 +1677,15 @@ function StatusMessage({
   managerSaved?: string;
   groupLinkError?: string;
   groupLinkSaved?: string;
+  groupError?: string;
+  groupSaved?: string;
 }) {
-  if (saved || managerSaved || groupLinkSaved) {
+  if (saved || managerSaved || groupLinkSaved || groupSaved) {
     return (
       <p className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
-        {groupLinkSaved
+        {groupSaved
+          ? "Gruppo aggiornato."
+          : groupLinkSaved
           ? "Link gruppo aggiornato."
           : managerSaved
             ? "Gestione iscritti aggiornata."
@@ -1306,7 +1694,7 @@ function StatusMessage({
     );
   }
 
-  if (!error && !managerError && !groupLinkError) {
+  if (!error && !managerError && !groupLinkError && !groupError) {
     return null;
   }
 
@@ -1315,10 +1703,11 @@ function StatusMessage({
     "not-found": "Evento non trovato.",
     forbidden: "Non hai permessi di modifica su questo evento.",
     "invalid-group": "Gruppo non valido per questa iscrizione.",
+    "invalid-parent": "Il gruppo parent non è valido per questo evento.",
     "invalid-role": "Ruolo non valido per questa iscrizione.",
     "protected-role": "Solo l'admin può assegnare admin o manager.",
   };
-  const messageKey = groupLinkError ?? managerError ?? error;
+  const messageKey = groupError ?? groupLinkError ?? managerError ?? error;
 
   return (
     <p className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
@@ -1326,15 +1715,6 @@ function StatusMessage({
         ? messages[messageKey] ?? "Non è stato possibile completare l'operazione."
         : "Non è stato possibile completare l'operazione."}
     </p>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-[#d8dece] bg-white p-5">
-      <p className="text-sm text-[#5e6d63]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-    </div>
   );
 }
 
@@ -1424,6 +1804,133 @@ function formatPlace(city: string | null, country: string | null): string {
   const parts = [city, country].filter(Boolean);
 
   return parts.length > 0 ? parts.join(", ") : "Provenienza non indicata";
+}
+
+function getOperationsEventOptions(
+  participants: ManagerParticipantRow[]
+): Array<{ id: string; title: string }> {
+  const eventsById = new Map<string, string>();
+
+  for (const participant of participants) {
+    eventsById.set(participant.eventId, participant.eventTitle);
+  }
+
+  return [...eventsById].map(([id, title]) => ({ id, title }));
+}
+
+function parseGroupTableFilters(input: {
+  groupQ?: string;
+  groupEvent?: string;
+  groupType?: string;
+  groupVisibility?: string;
+}): GroupTableFilters {
+  return {
+    q: (input.groupQ ?? "").replace(/\s+/g, " ").trim().slice(0, 80),
+    eventId: input.groupEvent?.trim() || "all",
+    nodeType: isGroupNodeTypeFilter(input.groupType) ? input.groupType ?? "all" : "all",
+    visibility: isGroupVisibilityFilter(input.groupVisibility)
+      ? input.groupVisibility ?? "all"
+      : "all",
+  };
+}
+
+function filterGroupRows(
+  groups: ManagerGroupTreeRow[],
+  filters: GroupTableFilters
+): ManagerGroupTreeRow[] {
+  return groups.filter((group) => {
+    if (filters.eventId !== "all" && group.eventId !== filters.eventId) {
+      return false;
+    }
+
+    if (filters.nodeType !== "all" && group.nodeType !== filters.nodeType) {
+      return false;
+    }
+
+    if (!matchesGroupVisibility(group, filters.visibility)) {
+      return false;
+    }
+
+    if (!filters.q) {
+      return true;
+    }
+
+    const haystack = [
+      group.name,
+      group.parentName,
+      group.primaryLeaderName,
+      group.publicLabel,
+      group.eventTitle,
+      groupNodeTypeLabel(group.nodeType),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(filters.q.toLowerCase());
+  });
+}
+
+function matchesGroupVisibility(
+  group: ManagerGroupTreeRow,
+  visibility: string
+): boolean {
+  switch (visibility) {
+    case "public":
+      return Boolean(group.isAssignable && group.isPublicCatalog);
+    case "reserved":
+      return Boolean(group.isAssignable && !group.isPublicCatalog);
+    case "internal":
+      return !group.isAssignable;
+    default:
+      return true;
+  }
+}
+
+function groupLinksByGroupId(
+  links: ManagerGroupRegistrationLink[]
+): Map<string, ManagerGroupRegistrationLink[]> {
+  const linksByGroupId = new Map<string, ManagerGroupRegistrationLink[]>();
+
+  for (const link of links) {
+    const groupLinks = linksByGroupId.get(link.groupId) ?? [];
+    groupLinks.push(link);
+    linksByGroupId.set(link.groupId, groupLinks);
+  }
+
+  return linksByGroupId;
+}
+
+function getGroupEventOptions(
+  groups: ManagerGroupTreeRow[]
+): Array<{ id: string; title: string }> {
+  const eventsById = new Map<string, string>();
+
+  for (const group of groups) {
+    eventsById.set(group.eventId, group.eventTitle);
+  }
+
+  return [...eventsById].map(([id, title]) => ({ id, title }));
+}
+
+function isGroupNodeTypeFilter(value: string | undefined): boolean {
+  return (
+    value === "all" ||
+    value === "country" ||
+    value === "city" ||
+    value === "area" ||
+    value === "group" ||
+    value === "newcomers"
+  );
+}
+
+function isGroupVisibilityFilter(value: string | undefined): boolean {
+  return (
+    value === "all" ||
+    value === "public" ||
+    value === "reserved" ||
+    value === "internal"
+  );
 }
 
 function statusLabel(status: string | null): string {

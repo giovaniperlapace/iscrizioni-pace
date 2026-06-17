@@ -899,8 +899,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
 export async function createGroupRegistrationLink(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
-  const dashboardPath =
-    sourceDashboard === "capogruppo" ? "/dashboard/capogruppo" : "/dashboard/manager";
+  const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
   const publicLabel = normalizeGroupRegistrationPublicLabel(
     formData.get("publicLabel")
   );
@@ -915,7 +914,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(
     supabase,
-    sourceDashboard === "capogruppo" ? "capogruppo" : "manager"
+    getGroupManagementRequestedRole(sourceDashboard)
   );
 
   if (!auth) {
@@ -985,9 +984,10 @@ export async function createGroupRegistrationLink(formData: FormData) {
   });
 
   revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/capogruppo");
   redirect(
-    `${dashboardPath}?groupLinkSaved=1&groupLinkToken=${encodeURIComponent(
+    `${dashboardPath}?groupTool=links&groupLinkSaved=1&groupLinkToken=${encodeURIComponent(
       token
     )}&groupLinkGroupId=${encodeURIComponent(groupRow.id)}`
   );
@@ -996,8 +996,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
 export async function revokeGroupRegistrationLink(formData: FormData) {
   const linkId = optionalText(formData.get("linkId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
-  const dashboardPath =
-    sourceDashboard === "capogruppo" ? "/dashboard/capogruppo" : "/dashboard/manager";
+  const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
 
   if (!linkId) {
     redirect(`${dashboardPath}?groupLinkError=invalid`);
@@ -1006,7 +1005,7 @@ export async function revokeGroupRegistrationLink(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(
     supabase,
-    sourceDashboard === "capogruppo" ? "capogruppo" : "manager"
+    getGroupManagementRequestedRole(sourceDashboard)
   );
 
   if (!auth) {
@@ -1061,8 +1060,149 @@ export async function revokeGroupRegistrationLink(formData: FormData) {
   });
 
   revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/capogruppo");
-  redirect(`${dashboardPath}?groupLinkSaved=1`);
+  redirect(
+    `${dashboardPath}?groupTool=links&groupLinkSaved=1&groupLinkGroupId=${encodeURIComponent(
+      linkRow.group_id
+    )}`
+  );
+}
+
+export async function saveOperationsGroup(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
+  const groupId = optionalText(formData.get("groupId"));
+  const eventId = optionalText(formData.get("eventId"));
+  const name = optionalText(formData.get("name"));
+  const parentGroupId = optionalText(formData.get("parentGroupId"));
+  const nodeType = optionalText(formData.get("nodeType")) ?? "group";
+  const communityKind = optionalText(formData.get("communityKind")) ?? "santegidio";
+  const ageBracket = optionalText(formData.get("ageBracket")) ?? "none";
+  const primaryLeaderName = optionalText(formData.get("primaryLeaderName"));
+  const publicLabel = normalizeGroupRegistrationPublicLabel(
+    formData.get("publicLabel")
+  );
+  const publicOrder = optionalInteger(formData.get("publicOrder"));
+  const isAssignable = formData.get("isAssignable") === "on";
+  const isPublicCatalog =
+    isAssignable && formData.get("isPublicCatalog") === "on";
+  const isActive = formData.get("isActive") === "on";
+
+  if (
+    !eventId ||
+    !name ||
+    !isValidGroupNodeType(nodeType) ||
+    !isValidGroupCommunityKind(communityKind) ||
+    !isValidGroupAgeBracket(ageBracket)
+  ) {
+    redirect(`${dashboardPath}?groupError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    getGroupManagementRequestedRole(sourceDashboard)
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const isAdmin = auth.eventRoles.some((role) => role.role === "admin");
+  const canManageEvent =
+    isAdmin ||
+    auth.eventRoles.some(
+      (role) => role.role === "manager" && role.eventId === eventId
+    );
+
+  if (!canManageEvent || sourceDashboard === "capogruppo") {
+    redirect(`${dashboardPath}?groupError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+
+  if (groupId) {
+    const { data: currentGroup, error: currentGroupError } = await serviceSupabase
+      .from("groups")
+      .select("id,event_id")
+      .eq("id", groupId)
+      .maybeSingle();
+    const currentGroupRow = currentGroup as
+      | { id: string; event_id: string }
+      | null;
+
+    if (
+      currentGroupError ||
+      !currentGroupRow ||
+      currentGroupRow.event_id !== eventId
+    ) {
+      redirect(`${dashboardPath}?groupError=not-found`);
+    }
+  }
+
+  if (parentGroupId) {
+    const { data: parentGroup, error: parentGroupError } = await serviceSupabase
+      .from("groups")
+      .select("id,event_id")
+      .eq("id", parentGroupId)
+      .maybeSingle();
+    const parentGroupRow = parentGroup as
+      | { id: string; event_id: string }
+      | null;
+
+    if (
+      parentGroupError ||
+      !parentGroupRow ||
+      parentGroupRow.event_id !== eventId ||
+      parentGroupRow.id === groupId
+    ) {
+      redirect(`${dashboardPath}?groupError=invalid-parent`);
+    }
+  }
+
+  const values = {
+    event_id: eventId,
+    name,
+    parent_group_id: parentGroupId,
+    node_type: nodeType,
+    community_kind: communityKind,
+    age_bracket: ageBracket,
+    is_assignable: isAssignable,
+    is_public_catalog: isPublicCatalog,
+    is_active: isActive,
+    public_label: publicLabel,
+    primary_leader_name: primaryLeaderName,
+    public_order: publicOrder ?? 100,
+  };
+  const result = groupId
+    ? await serviceSupabase.from("groups").update(values).eq("id", groupId)
+    : await serviceSupabase.from("groups").insert(values).select("id").single();
+
+  if (result.error) {
+    redirect(`${dashboardPath}?groupError=${encodeURIComponent(result.error.message)}`);
+  }
+
+  const savedGroupId =
+    groupId || ((result.data as { id?: string } | null)?.id ?? null);
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: groupId ? "group.updated" : "group.created",
+    entity_table: "groups",
+    entity_id: savedGroupId,
+    metadata: {
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+      is_assignable: isAssignable,
+      is_public_catalog: isPublicCatalog,
+      is_active: isActive,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/manager");
+  redirect(`${dashboardPath}?groupSaved=1`);
 }
 
 function getAppUrl(): string {
@@ -1182,6 +1322,63 @@ function optionalText(value: FormDataEntryValue | null): string | null {
   const trimmed = value.trim();
 
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function optionalInteger(value: FormDataEntryValue | null): number | null {
+  const text = optionalText(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(text, 10);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getGroupManagementDashboardPath(sourceDashboard: string | null): string {
+  if (sourceDashboard === "capogruppo") {
+    return "/dashboard/capogruppo";
+  }
+
+  return sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+}
+
+function getGroupManagementRequestedRole(
+  sourceDashboard: string | null
+): "admin" | "manager" | "capogruppo" {
+  if (sourceDashboard === "admin") {
+    return "admin";
+  }
+
+  return sourceDashboard === "capogruppo" ? "capogruppo" : "manager";
+}
+
+function isValidGroupNodeType(value: string): boolean {
+  return (
+    value === "country" ||
+    value === "city" ||
+    value === "area" ||
+    value === "group" ||
+    value === "newcomers"
+  );
+}
+
+function isValidGroupCommunityKind(value: string): boolean {
+  return (
+    value === "santegidio" ||
+    value === "newcomers" ||
+    value === "territorial"
+  );
+}
+
+function isValidGroupAgeBracket(value: string): boolean {
+  return (
+    value === "giovani" ||
+    value === "adulti" ||
+    value === "both" ||
+    value === "none"
+  );
 }
 
 function getEventOpeningUpdate(

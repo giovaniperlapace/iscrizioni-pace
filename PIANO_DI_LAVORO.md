@@ -28,10 +28,14 @@ Stato locale rilevato in questo task:
 - Milestone 10 e' completata localmente: dashboard capogruppo con tabella
   partecipanti del gruppo, inserimento manuale in overlay, link riservati in
   overlay e form pubblico da link gruppo con valori gruppo impliciti.
-- Il 2026-06-16 e' stata anticipata una parte della Milestone 11: navigazione
-  dashboard a tab fra ruoli, logout globale, modale admin per assegnare anche
-  admin/capogruppo e rimozione della card personale ridondante dalle dashboard
-  operative.
+- Milestone 11 e' completata localmente il 2026-06-17: dashboard
+  manager/admin essenziali, gestione gruppi in overlay, link riservati per
+  gruppo da azione di riga, statistiche ridondanti rimosse e inventario
+  statistiche disponibile in `docs/statistiche-disponibili.md`.
+- Il 2026-06-17 la dashboard partecipante e' stata rifinita per mostrare il QR
+  personale direttamente nella prima schermata, con download immagine, spazio
+  futuro per wallet, indicatore stato compatto e collegamento ai ruoli
+  operativi tramite tab.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-16: l'obiettivo principale ora e' aprire le
@@ -943,8 +947,8 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Scopo: fornire una console operativa sufficiente per seguire iscrizioni reali
   prima delle funzioni evento avanzate, includendo la gestione amministrativa
   di ruoli, utenti e struttura gruppi.
-- Stato: parzialmente anticipata localmente il 2026-06-16.
-- Deliverable anticipati:
+- Stato: completata localmente il 2026-06-17.
+- Deliverable completati:
   - navigazione condivisa a tab fra `Dashboard admin`, `Dashboard manager`,
     `Dashboard accoglienza`, `Dashboard capogruppo` e
     `Iscrizione e QR personale`;
@@ -957,48 +961,41 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - modale admin per modificare gruppo e ruolo operativo di un iscritto,
     includendo `Admin`, `Capogruppo` e `Nessun ruolo operativo`;
   - `Admin` scritto come ruolo globale in `event_user_roles`;
-  - `Capogruppo` scritto in `group_memberships` sul gruppo selezionato.
-- Ancora da completare:
-  - tabella manager/admin completa con ricerca e filtri avanzati;
-  - creazione/modifica strutturata di eventi, gruppi e nodi dell'albero;
-  - export CSV controllato;
-  - gestione duplicati e casi bloccanti più completa;
-  - distinzione completa dei permessi read-only per `manager_viewer`.
-- Deliverable:
-  - tabella partecipanti per evento con ricerca e filtri essenziali;
-  - dettagli iscrizione con modifica controllata dei campi operativi;
-  - coda manager per assegnazioni non riconosciute dopo risalita;
-  - area admin per creare/modificare eventi, gruppi e nodi dell'albero gruppi:
-    paese, città, area/sottogruppo e gruppo finale;
-  - area admin per invitare o promuovere utenti operativi e assegnare ruoli:
-    `manager`, `manager_viewer`, `accoglienza` e referenti/capigruppo su
-    qualunque nodo dell'albero;
+  - `Capogruppo` scritto in `group_memberships` sul gruppo selezionato;
+  - tabelle iscritti admin/manager con ricerca e filtri essenziali per evento,
+    gruppo, ruolo operativo e stato iscrizione;
+  - helper `lib/registrations/operations-dashboard.ts` per normalizzare righe,
+    filtri e riepiloghi testabili;
+  - tabella gruppi admin/manager filtrabile, con azioni per riga `Modifica` e
+    `Gestisci link`;
+  - overlay admin/manager per creare e modificare gruppi e nodi dell'albero;
+  - overlay per generare, copiare e revocare link riservati solo del gruppo
+    selezionato, evitando la lista completa di form link in dashboard;
+  - admin abilitato a generare e revocare link riservati come manager;
   - assegnazione capogruppo tramite `group_memberships`, non creando ruoli
     database separati per capogruppo paese/città/area/gruppo;
-  - vista admin per vedere utenti con doppio cappello e stato della loro
-    iscrizione personale all'evento;
-  - export CSV base con colonne minimizzate e controllate;
-  - statistiche iniziali per totale iscrizioni, paese/città, gruppo, giorni di
-    presenza, membri Sant'Egidio e nuovi partecipanti;
-  - permessi distinti per `manager` e `manager_viewer`.
-- File/cartelle: `app/dashboard/manager/*`, `app/dashboard/admin/*`,
-  `components/tables/*`, `lib/reports/*`, `lib/groups/*`.
-- Migration: audit export/modifiche; eventuali viste SQL solo se semplificano
-  permessi e performance.
-- Verifiche:
-  - admin può creare evento, gruppo/nodo e assegnare un referente al nodo;
-  - admin può creare o promuovere manager, viewer, accoglienza e capigruppo;
-  - capogruppo paese/città/area/gruppo vede solo lo scope assegnato;
-  - filtri per evento, gruppo, paese, città, stato, classificazione
-    membro/nuovo partecipante, accessibilità aggregata e presenza;
-  - viewer non modifica;
-  - export non include dati sensibili non necessari;
-  - test standard e verifica browser.
-- Rischi: dati sensibili visibili in export o in tabelle troppo larghe.
-- Accettazione: admin configura evento, utenti, ruoli e albero gruppi; manager
-  gestisce l'evento assegnato e può risolvere i casi che bloccano il normale
-  andamento delle iscrizioni.
-- Non fare: gestione programma completa, campagne email, check-in.
+  - metriche generiche ridondanti rimosse dalle dashboard, con inventario
+    statistiche disponibile in `docs/statistiche-disponibili.md`;
+  - dashboard partecipante aggiornata con QR immediatamente visibile, download
+    immagine e spazio futuro per wallet.
+- File/cartelle: `app/dashboard/manager/page.tsx`,
+  `app/dashboard/admin/page.tsx`, `app/dashboard/partecipante/page.tsx`,
+  `app/actions.ts`, `lib/registrations/operations-dashboard.ts`,
+  `docs/statistiche-disponibili.md`.
+- Verifiche eseguite:
+  - `npm run lint`;
+  - `npm run typecheck`;
+  - `npm test`;
+  - `npm run build`;
+  - verifiche browser locali su admin, manager e partecipante.
+- Rischi residui: export CSV, gestione duplicati avanzata, campagne email e
+  check-in restano fuori scope; la generazione wallet richiede una funzione
+  pass dedicata futura.
+- Accettazione: admin e manager possono seguire iscrizioni, filtrare gruppi,
+  creare/modificare nodi e gestire link riservati per singolo gruppo senza
+  sovraccaricare la dashboard; il partecipante vede subito il QR personale.
+- Non fare: gestione programma completa, campagne email, check-in, export CSV
+  definitivo.
 
 ### Milestone 12: multilingua minima e testi localizzati
 
