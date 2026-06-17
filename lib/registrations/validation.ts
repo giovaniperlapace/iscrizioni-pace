@@ -80,7 +80,9 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     hasAccessibilityNeeds
   );
   const privacyAccepted = formData.get("privacyAccepted") === "on";
-  const dataProcessingAccepted = formData.get("dataProcessingAccepted") === "on";
+  const dataProcessingAccepted =
+    hasAccessibilityNeeds === true &&
+    formData.get("dataProcessingAccepted") === "on";
   const availabilityUnknown = formData.get("availabilityUnknown") === "on";
 
   const value: RegistrationInput = {
@@ -116,8 +118,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     accessibilityNotes: optionalText(formData.get("accessibilityNotes")),
     needsOperationalSupport:
       hasAccessibilityNeeds === true &&
-      (formData.get("needsOperationalSupport") === "on" ||
-        Boolean(accessibilityAnswers.eventAssistance)),
+      formData.get("needsOperationalSupport") === "on",
     privacyAccepted,
     dataProcessingAccepted,
   };
@@ -205,8 +206,14 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
     );
   }
 
-  if (!input.privacyAccepted || !input.dataProcessingAccepted) {
+  if (!input.privacyAccepted) {
     errors.push("Accetta privacy e trattamento dati per completare l'iscrizione.");
+  }
+
+  if (input.hasAccessibilityNeeds === true && !input.dataProcessingAccepted) {
+    errors.push(
+      "Accetta il trattamento dei dati di accessibilità per completare l'iscrizione."
+    );
   }
 
   return errors;
@@ -288,14 +295,9 @@ function parseAccessibilityAnswers(
   }
 
   const keys = [
-    "seeing",
     "hearing",
     "walkingOrSteps",
-    "selfCare",
-    "rememberingOrConcentrating",
-    "communicating",
     "wheelchairOrMobilityAid",
-    "eventAssistance",
   ];
 
   return Object.fromEntries(

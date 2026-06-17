@@ -438,13 +438,6 @@ export const EUROPEAN_CITY_OPTIONS: Record<string, readonly string[]> = {
 
 export const ACCESSIBILITY_DIFFICULTIES = [
   {
-    key: "seeing",
-    label: {
-      it: "Vedere, anche usando occhiali",
-      en: "Seeing, even when wearing glasses",
-    },
-  },
-  {
     key: "hearing",
     label: {
       it: "Sentire, anche usando apparecchi acustici",
@@ -459,38 +452,10 @@ export const ACCESSIBILITY_DIFFICULTIES = [
     },
   },
   {
-    key: "selfCare",
-    label: {
-      it: "Prendersi cura di sé, per esempio lavarsi o vestirsi",
-      en: "Self-care, such as washing or dressing",
-    },
-  },
-  {
-    key: "rememberingOrConcentrating",
-    label: {
-      it: "Ricordare o concentrarsi",
-      en: "Remembering or concentrating",
-    },
-  },
-  {
-    key: "communicating",
-    label: {
-      it: "Comunicare, capire o farsi capire dalle altre persone",
-      en: "Communicating in your usual language",
-    },
-  },
-  {
     key: "wheelchairOrMobilityAid",
     label: {
       it: "Uso di sedia a rotelle o altro ausilio per la mobilita'",
       en: "Use of a wheelchair or another mobility aid",
-    },
-  },
-  {
-    key: "eventAssistance",
-    label: {
-      it: "Bisogno di assistenza durante l'evento",
-      en: "Need for assistance during the event",
     },
   },
 ] as const;

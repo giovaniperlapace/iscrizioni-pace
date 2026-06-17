@@ -61,7 +61,6 @@ export function ManualAccessibilityFields() {
               name="accessibilityNotes"
               rows={3}
               className="min-h-20 rounded-md border border-[#cfd8c4] bg-white px-3 py-2 text-sm font-normal text-[#1c241f] outline-none transition focus:border-[#56745d]"
-              placeholder="Per esempio accompagnatore, mobilità, orari di contatto, esigenze operative."
             />
           </label>
         </>

@@ -92,7 +92,7 @@ test("questionnaire answers snapshot keeps configurable answers together", () =>
   formData.set("countryOther", "Italia");
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "yes");
-  formData.set("accessibility_seeing", "on");
+  formData.set("accessibility_hearing", "on");
   formData.set("accessibilityNotes", "Preferisce essere contattata al mattino.");
   formData.set("hasPreviousSantegidioParticipation", "yes");
   formData.set("participatesWithGroup", "no");
@@ -115,7 +115,7 @@ test("questionnaire answers snapshot keeps configurable answers together", () =>
     assert.equal(answers.groupParticipation.participatesWithGroup, false);
     assert.equal(answers.accessibility.hasAccessibilityNeeds, true);
     assert.deepEqual(answers.accessibility.washingtonGroupAnswers, {
-      seeing: true,
+      hearing: true,
     });
     assert.equal(answers.consents.privacyAccepted, true);
   }
@@ -132,7 +132,7 @@ test("parseRegistrationForm keeps accessibility notes optional", () => {
   formData.set("countryOther", "Italia");
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "yes");
-  formData.set("accessibility_seeing", "on");
+  formData.set("accessibility_hearing", "on");
   formData.set("hasPreviousSantegidioParticipation", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
@@ -144,6 +144,40 @@ test("parseRegistrationForm keeps accessibility notes optional", () => {
   if (parsed.ok) {
     assert.equal(parsed.value.accessibilityNotes, null);
   }
+});
+
+test("parseRegistrationForm requires sensitive consent only for accessibility needs", () => {
+  const formData = new FormData();
+  formData.set("email", "maria@example.org");
+  formData.set("firstName", "Maria");
+  formData.set("lastName", "Rossi");
+  formData.set("birthDate", "2000-01-02");
+  formData.set("birthPlace", "Italia, Roma");
+  formData.set("nationality", "Italian (Italy)");
+  formData.set("countryOther", "Italia");
+  formData.set("cityOther", "Roma");
+  formData.set("hasAccessibilityNeeds", "no");
+  formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.append("availabilityDays", "2026-10-25");
+  formData.set("privacyAccepted", "on");
+
+  const withoutAccessibilityNeeds = parseRegistrationForm(formData);
+
+  assert.equal(withoutAccessibilityNeeds.ok, true);
+  if (withoutAccessibilityNeeds.ok) {
+    assert.equal(withoutAccessibilityNeeds.value.dataProcessingAccepted, false);
+  }
+
+  formData.set("hasAccessibilityNeeds", "yes");
+  formData.set("accessibility_hearing", "on");
+  const missingSensitiveConsent = parseRegistrationForm(formData);
+
+  assert.equal(missingSensitiveConsent.ok, false);
+
+  formData.set("dataProcessingAccepted", "on");
+  const withSensitiveConsent = parseRegistrationForm(formData);
+
+  assert.equal(withSensitiveConsent.ok, true);
 });
 
 test("parseRegistrationForm keeps phone optional but validates it when present", () => {
@@ -261,7 +295,7 @@ test("manual registration questionnaire snapshot marks group leader source", () 
   formData.set("email", "paolo@example.org");
   formData.set("availabilityUnknown", "on");
   formData.set("hasAccessibilityNeeds", "yes");
-  formData.set("accessibility_eventAssistance", "on");
+  formData.set("accessibility_walkingOrSteps", "on");
   formData.set("accessibilityNotes", "Da richiamare prima della partenza.");
   formData.set("consentConfirmed", "on");
 
@@ -279,7 +313,7 @@ test("manual registration questionnaire snapshot marks group leader source", () 
     assert.equal(answers.groupParticipation.enteredByGroupLeader, true);
     assert.equal(answers.accessibility.hasAccessibilityNeeds, true);
     assert.deepEqual(answers.accessibility.washingtonGroupAnswers, {
-      eventAssistance: true,
+      walkingOrSteps: true,
     });
     assert.equal(
       answers.accessibility.operationalNotes,

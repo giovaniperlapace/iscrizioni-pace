@@ -38,8 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         {params.redirectedFrom ? (
           <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-            Per aprire <span className="font-mono">{params.redirectedFrom}</span>{" "}
-            serve prima una sessione valida.
+            Per aprire la tua area personale accedi dal link ricevuto via email.
           </p>
         ) : null}
 

@@ -176,14 +176,9 @@ function parseBooleanChoice(value: FormDataEntryValue | null): boolean | null {
 
 function parseAccessibilityAnswers(formData: FormData): Record<string, boolean> {
   const keys = [
-    "seeing",
     "hearing",
     "walkingOrSteps",
-    "selfCare",
-    "rememberingOrConcentrating",
-    "communicating",
     "wheelchairOrMobilityAid",
-    "eventAssistance",
   ];
 
   return Object.fromEntries(

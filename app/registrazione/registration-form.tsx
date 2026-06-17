@@ -73,6 +73,12 @@ const PHONE_PREFIX_OPTIONS = [
   { value: "+20", label: "Egitto +20" },
 ] as const;
 
+type PromptField =
+  | "hasAccessibilityNeeds"
+  | "hasPreviousSantegidioParticipation"
+  | "participatesWithGroup"
+  | "availabilityDays";
+
 type StoredRegistrationForm = {
   email: string;
   savedAt: number;
@@ -142,6 +148,10 @@ export function RegistrationForm({
   const [selectedEventDays, setSelectedEventDays] = useState<string[]>([]);
   const [availabilityUnknown, setAvailabilityUnknown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(Boolean(error));
+  const [touchedPromptFields, setTouchedPromptFields] = useState<
+    Partial<Record<PromptField, boolean>>
+  >({});
 
   const eventDays = buildEventDays(
     options.event?.starts_on ?? null,
@@ -196,6 +206,16 @@ export function RegistrationForm({
   const phoneValue = normalizedPhoneNumber
     ? `${selectedPhonePrefix}${normalizedPhoneNumber}`
     : "";
+  const markPromptFieldTouched = useCallback((field: PromptField) => {
+    setTouchedPromptFields((current) =>
+      current[field] ? current : { ...current, [field]: true }
+    );
+  }, []);
+  const shouldShowPrompt = useCallback(
+    (field: PromptField) =>
+      hasAttemptedSubmit || Boolean(error) || Boolean(touchedPromptFields[field]),
+    [error, hasAttemptedSubmit, touchedPromptFields]
+  );
 
   const saveCurrentForm = useCallback(() => {
     const form = formRef.current;
@@ -350,6 +370,7 @@ export function RegistrationForm({
           (!availabilityUnknown && selectedEventDays.length === 0)
         ) {
           event.preventDefault();
+          setHasAttemptedSubmit(true);
           focusClientSideMissingField(formRef.current, {
             hasAccessibilityNeeds,
             hasPreviousParticipation: effectiveHasPreviousParticipation,
@@ -768,16 +789,22 @@ export function RegistrationForm({
               active={hasAccessibilityNeeds === "yes"}
               label="Sì"
               dataField="hasAccessibilityNeeds"
-              onClick={() => setHasAccessibilityNeeds("yes")}
+              onClick={() => {
+                markPromptFieldTouched("hasAccessibilityNeeds");
+                setHasAccessibilityNeeds("yes");
+              }}
             />
             <ChoiceButton
               active={hasAccessibilityNeeds === "no"}
               label="No"
               dataField="hasAccessibilityNeeds"
-              onClick={() => setHasAccessibilityNeeds("no")}
+              onClick={() => {
+                markPromptFieldTouched("hasAccessibilityNeeds");
+                setHasAccessibilityNeeds("no");
+              }}
             />
           </div>
-          {!hasAccessibilityNeeds ? (
+          {!hasAccessibilityNeeds && shouldShowPrompt("hasAccessibilityNeeds") ? (
             <p className="text-xs text-[#8a3323]">
               Seleziona una risposta per proseguire.
             </p>
@@ -815,7 +842,6 @@ export function RegistrationForm({
               <textarea
                 name="accessibilityNotes"
                 className="field min-h-24"
-                placeholder="Per esempio: orari in cui preferisci essere contattato, accompagnatore, esigenze operative specifiche."
                 data-field="accessibilityNotes"
               />
             </Field>
@@ -840,20 +866,25 @@ export function RegistrationForm({
               active={hasPreviousParticipation === "yes"}
               label="Sì"
               dataField="hasPreviousSantegidioParticipation"
-              onClick={() => setHasPreviousParticipation("yes")}
+              onClick={() => {
+                markPromptFieldTouched("hasPreviousSantegidioParticipation");
+                setHasPreviousParticipation("yes");
+              }}
             />
             <ChoiceButton
               active={hasPreviousParticipation === "no"}
               label="No"
               dataField="hasPreviousSantegidioParticipation"
               onClick={() => {
+                markPromptFieldTouched("hasPreviousSantegidioParticipation");
                 setHasPreviousParticipation("no");
                 setParticipatesWithGroup("");
                 setCannotFindLeader(false);
               }}
             />
           </div>
-          {!hasPreviousParticipation ? (
+          {!hasPreviousParticipation &&
+          shouldShowPrompt("hasPreviousSantegidioParticipation") ? (
             <p className="text-xs text-[#8a3323]">
               Seleziona una risposta per proseguire.
             </p>
@@ -876,6 +907,7 @@ export function RegistrationForm({
                 label="Sì"
                 dataField="participatesWithGroup"
                 onClick={() => {
+                  markPromptFieldTouched("participatesWithGroup");
                   setParticipatesWithGroup("yes");
                   setCannotFindLeader(false);
                 }}
@@ -885,12 +917,14 @@ export function RegistrationForm({
                 label="No"
                 dataField="participatesWithGroup"
                 onClick={() => {
+                  markPromptFieldTouched("participatesWithGroup");
                   setParticipatesWithGroup("no");
                   setCannotFindLeader(false);
                 }}
               />
             </div>
-            {!participatesWithGroup ? (
+            {!participatesWithGroup &&
+            shouldShowPrompt("participatesWithGroup") ? (
               <p className="text-xs text-[#8a3323]">
                 Seleziona una risposta per proseguire.
               </p>
@@ -1038,6 +1072,7 @@ export function RegistrationForm({
                 className="h-4 w-4"
                 data-field="availabilityDays"
                 onChange={(event) => {
+                  markPromptFieldTouched("availabilityDays");
                   setSelectedEventDays((current) =>
                     event.target.checked
                       ? [...current, day.value]
@@ -1057,6 +1092,7 @@ export function RegistrationForm({
             className="h-4 w-4"
             data-field="availabilityDays"
             onChange={(event) => {
+              markPromptFieldTouched("availabilityDays");
               setAvailabilityUnknown(event.target.checked);
               if (event.target.checked) {
                 setSelectedEventDays([]);
@@ -1066,9 +1102,11 @@ export function RegistrationForm({
           <span>Non lo so ancora, lo comunicherò in seguito</span>
         </label>
         {!availabilityUnknown && selectedEventDays.length === 0 ? (
-          <p className="text-xs text-[#8a3323]">
-            Seleziona almeno un giorno o indica che lo comunicherai in seguito.
-          </p>
+          shouldShowPrompt("availabilityDays") ? (
+            <p className="text-xs text-[#8a3323]">
+              Seleziona almeno un giorno o indica che lo comunicherai in seguito.
+            </p>
+          ) : null
         ) : null}
       </section>
 
@@ -1100,20 +1138,22 @@ export function RegistrationForm({
             necessari alla gestione dell&apos;iscrizione e dell&apos;evento.
           </span>
         </label>
-        <label className="mt-3 flex items-start gap-3 text-sm text-[#38453c]">
-          <input
-            name="dataProcessingAccepted"
-            type="checkbox"
-            required
-            className="mt-1 h-4 w-4"
-            data-field="consents"
-          />
-          <span>
-            Acconsento al trattamento delle informazioni su disabilità,
-            salute o bisogni di accessibilità eventualmente indicate, per
-            predisporre misure di accoglienza e supporto durante l&apos;evento.
-          </span>
-        </label>
+        {hasAccessibilityNeeds === "yes" ? (
+          <label className="mt-3 flex items-start gap-3 text-sm text-[#38453c]">
+            <input
+              name="dataProcessingAccepted"
+              type="checkbox"
+              required
+              className="mt-1 h-4 w-4"
+              data-field="consents"
+            />
+            <span>
+              Acconsento al trattamento delle informazioni su disabilità,
+              salute o bisogni di accessibilità indicate, per predisporre misure
+              di accoglienza e supporto durante l&apos;evento.
+            </span>
+          </label>
+        ) : null}
       </section>
 
       <div className="flex justify-end">
