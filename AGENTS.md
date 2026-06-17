@@ -88,7 +88,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Ultimo commit/push noto su `main`: `f7244fe Add group leader operations dashboards`.
+- Per verificare l'ultimo commit/push noto su `main`, usare
+  `git log -1 --oneline origin/main` dopo `git fetch` o dopo un push riuscito.
 
 Prima di ogni feature verificare:
 
