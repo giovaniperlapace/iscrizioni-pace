@@ -77,10 +77,12 @@ Stato locale aggiornato al 2026-06-17:
   DISARMANTE` e' stata implementata sui flussi pubblici e sulle dashboard con
   token CSS centralizzati, titolo evento ufficiale, header valorizzato, motivo
   SVG astratto a linea continua, palette blu/azzurra/bianco/grigi freddi,
-  focus state e superfici coerenti. La dashboard manager e' stata poi
-  separata in tre sottopagine via sidebar (`Evento`, `Gestione iscritti`,
+  focus state e superfici coerenti. Le dashboard manager e admin sono state poi
+  separate in tre sottopagine via sidebar (`Evento`, `Gestione iscritti`,
   `Gruppi`) con modalità compressa `nav=mini` per liberare spazio alle
-  tabelle. Restano da completare i manuali operativi previsti dalla stessa
+  tabelle; in modalità mini usano icone Lucide invece di lettere iniziali. La
+  favicon placeholder e' stata sostituita da una colomba bianca stilizzata su
+  fondo blu. Restano da completare i manuali operativi previsti dalla stessa
   Milestone 14.
 - Il 2026-06-17 e' stata verificata l'app dopo il cambio titolo evento:
   la migration di identità evento modifica solo `title`, `city` e `country`
@@ -1270,10 +1272,13 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - registrazione, conferma e login aggiornate con identità evento evidente;
   - allineamento visivo di form, pulsanti, card, tabelle, modali, tab e
     dashboard alla palette blu/azzurra;
-  - dashboard manager separata in tre sottopagine accessibili da sidebar:
-    `Evento`, `Gestione iscritti`, `Gruppi`;
-  - sidebar manager resa piu' compatta e comprimibile con `nav=mini`, per non
-    sottrarre spazio alle tabelle operative;
+  - dashboard manager e admin separate in tre sottopagine accessibili da
+    sidebar: `Evento`, `Gestione iscritti`, `Gruppi`;
+  - sidebar manager/admin rese piu' compatte e comprimibili con `nav=mini`,
+    per non sottrarre spazio alle tabelle operative; in modalità mini usano
+    icone minimal da `lucide-react`, non lettere iniziali;
+  - favicon app sostituita in `app/favicon.ico` con colomba bianca stilizzata
+    su sfondo blu istituzionale nello stile della locandina;
   - verifica browser su home, registrazione e dashboard operative, inclusi
     controlli responsive e overflow orizzontale.
 - Deliverable manuali ancora da completare:
@@ -1286,12 +1291,14 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - eventuali screenshot o immagini solo se utili e non contenenti dati
     personali reali.
 - File/cartelle: `app/*`, componenti UI condivisi, `app/globals.css`,
-  eventuali `components/*`, `docs/manuale-manager.md`,
+  eventuali `components/*`, `app/favicon.ico`, `docs/manuale-manager.md`,
   `docs/manuale-capogruppo.md` o nomi equivalenti.
 - Dipendenze:
   - richiede la Milestone 12 per avere flussi e permessi approvati;
   - segue la Milestone 13 per evitare di rifinire layout e manuali su testi che
     cambieranno subito dopo;
+  - `lucide-react` e' una dipendenza intenzionale per icone minimali nelle
+    sidebar operative;
   - resta indipendente da programma, campagne, check-in avanzato e settori.
 - Migration: aggiunta
   `supabase/migrations/20260617190000_promote_assisi_2026_event_identity.sql`
@@ -1300,9 +1307,9 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Verifiche eseguite sulla parte estetica: `npm run lint`,
   `npm run typecheck`, `npm test`, `npm run build`, `git diff --check`,
   browser localhost su home/registrazione/dashboard con larghezze 320, 390,
-  768 e desktop dove rilevante. Dopo la separazione della dashboard manager:
-  `npm run lint`, `npm run typecheck` e verifica browser delle sezioni
-  `Evento`, `Gestione iscritti`, `Gruppi`, inclusa modalità `nav=mini`.
+  768 e desktop dove rilevante. Dopo la separazione delle dashboard
+  manager/admin: `npm run lint`, `npm run typecheck` e verifica browser delle
+  sezioni `Evento`, `Gestione iscritti`, `Gruppi`, inclusa modalità `nav=mini`.
 - Verifiche ancora da eseguire sui manuali: review dei documenti con i flussi
   reali e controllo che non contengano dati personali reali o istruzioni in
   contrasto con i permessi effettivi.

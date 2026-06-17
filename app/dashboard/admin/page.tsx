@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { CalendarDays, Network, Users } from "lucide-react";
 
 import {
   assignGroupLeader,
@@ -58,6 +59,8 @@ type AdminPageProps = {
     groupVisibility?: string;
     group?: string;
     q?: string;
+    nav?: string;
+    section?: string;
     status?: string;
   }>;
 };
@@ -239,6 +242,9 @@ type EventSnapshot = {
   emailErrorsLast24Hours: number;
 };
 
+type AdminSection = "evento" | "iscritti" | "gruppi";
+type AdminNavMode = "full" | "mini";
+
 export default async function AdminDashboardPage({
   searchParams,
 }: AdminPageProps) {
@@ -263,10 +269,12 @@ export default async function AdminDashboardPage({
   const selectedGroup =
     adminOperations.groupTree.find((group) => group.id === params.groupId) ??
     null;
+  const activeSection = resolveAdminSection(params);
+  const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
+      <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard admin</h1>
           <DashboardRoleTabs activeRole="admin" eventRoles={auth.eventRoles} />
@@ -276,68 +284,69 @@ export default async function AdminDashboardPage({
           </DashboardAreaDescription>
         </header>
 
-        <StatusMessage
-          error={params.openingError}
-          saved={params.openingSaved}
-          adminError={params.adminError}
-          adminSaved={params.adminSaved}
-          groupError={params.groupError}
-          groupSaved={params.groupSaved}
-          groupLinkError={params.groupLinkError}
-          groupLinkSaved={params.groupLinkSaved}
-        />
+        <div
+          className={[
+            "grid gap-4 lg:items-start",
+            navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
+          ].join(" ")}
+        >
+          <AdminSidebar activeSection={activeSection} navMode={navMode} />
 
-        <section className="grid gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Apertura e monitoraggio</h2>
-            <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-              Usa questi comandi solo durante finestre operative concordate.
-              Ogni modifica viene registrata negli audit.
-            </p>
+          <div className="grid min-w-0 gap-6">
+            <StatusMessage
+              error={params.openingError}
+              saved={params.openingSaved}
+              adminError={params.adminError}
+              adminSaved={params.adminSaved}
+              groupError={params.groupError}
+              groupSaved={params.groupSaved}
+              groupLinkError={params.groupLinkError}
+              groupLinkSaved={params.groupLinkSaved}
+            />
+
+            {activeSection === "evento" ? (
+              <AdminEventSection snapshots={snapshots} />
+            ) : null}
+
+            {activeSection === "iscritti" ? (
+              <AdminParticipantsSection
+                snapshot={adminOperations}
+                selectedParticipant={selectedAdminParticipant}
+                isEditingParticipant={params.editMode === "1"}
+                navMode={navMode}
+              />
+            ) : null}
+
+            {activeSection === "gruppi" ? (
+              <AdminGroupTreeSection
+                groups={adminOperations.groupTree}
+                links={adminOperations.groupLinks}
+                participants={adminOperations.allParticipants}
+                filters={parseGroupTableFilters(params)}
+                selectedGroup={selectedGroup}
+                selectedTool={
+                  params.groupTool === "links"
+                    ? "links"
+                    : params.groupTool === "edit"
+                      ? "edit"
+                      : params.groupTool === "leaders"
+                        ? "leaders"
+                        : null
+                }
+                createdGroupId={params.groupLinkGroupId ?? null}
+                createdUrl={
+                  params.groupLinkToken
+                    ? buildGroupRegistrationUrl({
+                        appUrl: getAppUrl(),
+                        token: params.groupLinkToken,
+                      })
+                    : null
+                }
+                navMode={navMode}
+              />
+            ) : null}
           </div>
-
-          {snapshots.map((snapshot) => (
-            <EventOpeningCard key={snapshot.event.id} snapshot={snapshot} />
-          ))}
-
-          {snapshots.length === 0 ? (
-            <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5 text-sm text-[var(--peace-muted)]">
-              Nessun evento visibile.
-            </div>
-          ) : null}
-        </section>
-
-        <AdminParticipantsSection
-          snapshot={adminOperations}
-          selectedParticipant={selectedAdminParticipant}
-          isEditingParticipant={params.editMode === "1"}
-        />
-
-        <AdminGroupTreeSection
-          groups={adminOperations.groupTree}
-          links={adminOperations.groupLinks}
-          participants={adminOperations.allParticipants}
-          filters={parseGroupTableFilters(params)}
-          selectedGroup={selectedGroup}
-          selectedTool={
-            params.groupTool === "links"
-              ? "links"
-              : params.groupTool === "edit"
-                ? "edit"
-                : params.groupTool === "leaders"
-                  ? "leaders"
-                  : null
-          }
-          createdGroupId={params.groupLinkGroupId ?? null}
-          createdUrl={
-            params.groupLinkToken
-              ? buildGroupRegistrationUrl({
-                  appUrl: getAppUrl(),
-                  token: params.groupLinkToken,
-                })
-              : null
-          }
-        />
+        </div>
       </section>
     </main>
   );
@@ -632,6 +641,145 @@ export default async function AdminDashboardPage({
   }
 }
 
+function AdminSidebar({
+  activeSection,
+  navMode,
+}: {
+  activeSection: AdminSection;
+  navMode: AdminNavMode;
+}) {
+  const isMini = navMode === "mini";
+  const nextMode = isMini ? "full" : "mini";
+  const toggleLabel = isMini ? "Espandi menu" : "Comprimi menu";
+  const items: Array<{
+    key: AdminSection;
+    href: string;
+    Icon: typeof CalendarDays;
+    label: string;
+    help: string;
+  }> = [
+    {
+      key: "evento",
+      href: adminPath("evento", navMode),
+      Icon: CalendarDays,
+      label: "Evento",
+      help: "Apertura e monitoraggio",
+    },
+    {
+      key: "iscritti",
+      href: adminPath("iscritti", navMode),
+      Icon: Users,
+      label: "Gestione iscritti",
+      help: "Partecipanti e ruoli",
+    },
+    {
+      key: "gruppi",
+      href: adminPath("gruppi", navMode),
+      Icon: Network,
+      label: "Gruppi",
+      help: "Albero e link riservati",
+    },
+  ];
+
+  return (
+    <aside className="surface-card lg:sticky lg:top-24">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--peace-border)] p-2">
+        <span className={isMini ? "sr-only" : "px-2 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]"}>
+          Admin
+        </span>
+        <Link
+          href={adminPath(activeSection, nextMode)}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          className="btn-secondary grid min-h-9 min-w-9 place-items-center px-2 text-sm"
+        >
+          <span aria-hidden="true">{isMini ? "›" : "‹"}</span>
+        </Link>
+      </div>
+      <nav aria-label="Sezioni dashboard admin" className="grid gap-1.5 p-2">
+        {items.map((item) => {
+          const isActive = item.key === activeSection;
+          const Icon = item.Icon;
+
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              title={isMini ? item.label : undefined}
+              className={[
+                isMini
+                  ? "grid min-h-12 place-items-center rounded-[var(--radius-md)] px-2 py-2 text-center transition"
+                  : "grid rounded-[var(--radius-md)] px-3 py-2.5 text-left transition",
+                "focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
+                isActive
+                  ? "bg-[var(--peace-blue-800)] text-white shadow-sm"
+                  : "text-[var(--peace-ink)] hover:bg-[var(--peace-sky-100)]",
+              ].join(" ")}
+            >
+              {isMini ? (
+                <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
+              ) : (
+                <>
+                  <span className="text-sm font-bold">{item.label}</span>
+                  <span
+                    className={[
+                      "mt-0.5 text-[0.7rem] leading-4",
+                      isActive ? "text-white/78" : "text-[var(--peace-muted)]",
+                    ].join(" ")}
+                  >
+                    {item.help}
+                  </span>
+                </>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+function AdminEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
+  return (
+    <section className="grid min-w-0 gap-4">
+      <div className="surface-panel p-5">
+        <h2 className="text-lg font-semibold">Apertura e monitoraggio</h2>
+        <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+          Usa questi comandi solo durante finestre operative concordate.
+          Ogni modifica viene registrata negli audit.
+        </p>
+      </div>
+
+      {snapshots.map((snapshot) => (
+        <EventOpeningCard key={snapshot.event.id} snapshot={snapshot} />
+      ))}
+
+      {snapshots.length === 0 ? (
+        <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5 text-sm text-[var(--peace-muted)]">
+          Nessun evento visibile.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function adminPath(
+  section: AdminSection,
+  navMode: AdminNavMode,
+  extraParams?: string
+): string {
+  const params = new URLSearchParams({ section, nav: navMode });
+
+  if (extraParams) {
+    new URLSearchParams(extraParams).forEach((value, key) => {
+      params.set(key, value);
+    });
+  }
+
+  return `/dashboard/admin?${params.toString()}`;
+}
+
 function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
   const { event, summary } = snapshot;
 
@@ -704,10 +852,12 @@ function AdminParticipantsSection({
   snapshot,
   selectedParticipant,
   isEditingParticipant,
+  navMode,
 }: {
   snapshot: AdminOperationsSnapshot;
   selectedParticipant: AdminParticipantRow | null;
   isEditingParticipant: boolean;
+  navMode: AdminNavMode;
 }) {
   const eventOptions = getOperationsEventOptions(snapshot.allParticipants);
 
@@ -724,6 +874,7 @@ function AdminParticipantsSection({
         filters={snapshot.filters}
         eventOptions={eventOptions}
         action="/dashboard/admin"
+        navMode={navMode}
       />
 
       <div className="mt-5 overflow-x-auto">
@@ -765,7 +916,11 @@ function AdminParticipantsSection({
                 </td>
                 <td className="py-4 text-right">
                   <Link
-                    href={`/dashboard/admin?edit=${participant.registrationId}`}
+                    href={adminPath(
+                      "iscritti",
+                      navMode,
+                      `edit=${encodeURIComponent(participant.registrationId)}`
+                    )}
                     className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                   >
                     Dettagli
@@ -790,6 +945,7 @@ function AdminParticipantsSection({
             (group) => group.eventId === selectedParticipant.eventId
           )}
           isEditing={isEditingParticipant}
+          navMode={navMode}
         />
       ) : null}
     </section>
@@ -805,6 +961,7 @@ function AdminGroupTreeSection({
   selectedTool,
   createdGroupId,
   createdUrl,
+  navMode,
 }: {
   groups: AdminGroupTreeRow[];
   links: AdminGroupRegistrationLink[];
@@ -814,6 +971,7 @@ function AdminGroupTreeSection({
   selectedTool: "edit" | "links" | "leaders" | null;
   createdGroupId: string | null;
   createdUrl: string | null;
+  navMode: AdminNavMode;
 }) {
   const filteredGroups = filterGroupRows(groups, filters);
   const linksByGroupId = groupLinksByGroupId(links);
@@ -829,7 +987,7 @@ function AdminGroupTreeSection({
           </p>
         </div>
         <Link
-          href="/dashboard/admin?groupTool=edit"
+          href={adminPath("gruppi", navMode, "groupTool=edit")}
           className="inline-flex min-h-11 w-fit items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
           Nuovo gruppo
@@ -840,6 +998,7 @@ function AdminGroupTreeSection({
         filters={filters}
         eventOptions={eventOptions}
         action="/dashboard/admin"
+        navMode={navMode}
       />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
@@ -892,19 +1051,31 @@ function AdminGroupTreeSection({
                   <td className="py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <Link
-                        href={`/dashboard/admin?groupTool=edit&groupId=${group.id}`}
+                        href={adminPath(
+                          "gruppi",
+                          navMode,
+                          `groupTool=edit&groupId=${encodeURIComponent(group.id)}`
+                        )}
                         className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                       >
                         Modifica
                       </Link>
                       <Link
-                        href={`/dashboard/admin?groupTool=links&groupId=${group.id}`}
+                        href={adminPath(
+                          "gruppi",
+                          navMode,
+                          `groupTool=links&groupId=${encodeURIComponent(group.id)}`
+                        )}
                         className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                       >
                         Gestisci link
                       </Link>
                       <Link
-                        href={`/dashboard/admin?groupTool=leaders&groupId=${group.id}`}
+                        href={adminPath(
+                          "gruppi",
+                          navMode,
+                          `groupTool=leaders&groupId=${encodeURIComponent(group.id)}`
+                        )}
                         className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                       >
                         Capogruppo
@@ -929,6 +1100,7 @@ function AdminGroupTreeSection({
           group={selectedGroup}
           groups={groups}
           eventOptions={eventOptions}
+          navMode={navMode}
         />
       ) : null}
 
@@ -937,6 +1109,7 @@ function AdminGroupTreeSection({
           group={selectedGroup}
           links={linksByGroupId.get(selectedGroup.id) ?? []}
           createdUrl={createdGroupId === selectedGroup.id ? createdUrl : null}
+          navMode={navMode}
         />
       ) : null}
 
@@ -946,6 +1119,7 @@ function AdminGroupTreeSection({
           participants={participants.filter(
             (participant) => participant.eventId === selectedGroup.eventId
           )}
+          navMode={navMode}
         />
       ) : null}
     </section>
@@ -956,10 +1130,12 @@ function GroupTableFiltersForm({
   filters,
   eventOptions,
   action,
+  navMode,
 }: {
   filters: GroupTableFilters;
   eventOptions: Array<{ id: string; title: string }>;
   action: string;
+  navMode: AdminNavMode;
 }) {
   const hasActiveFilters =
     filters.q ||
@@ -972,6 +1148,8 @@ function GroupTableFiltersForm({
       action={action}
       className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
     >
+      <input type="hidden" name="section" value="gruppi" />
+      <input type="hidden" name="nav" value={navMode} />
       <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Cerca gruppo
         <input
@@ -1030,7 +1208,7 @@ function GroupTableFiltersForm({
         </button>
         {hasActiveFilters ? (
           <Link
-            href={action}
+            href={adminPath("gruppi", navMode)}
             className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             Reset
@@ -1045,10 +1223,12 @@ function AdminGroupEditOverlay({
   group,
   groups,
   eventOptions,
+  navMode,
 }: {
   group: AdminGroupTreeRow | null;
   groups: AdminGroupTreeRow[];
   eventOptions: Array<{ id: string; title: string }>;
+  navMode: AdminNavMode;
 }) {
   const selectedEventId = group?.eventId ?? eventOptions[0]?.id ?? "";
   const parentOptions = groups.filter(
@@ -1157,7 +1337,7 @@ function AdminGroupEditOverlay({
             </div>
           </div>
           <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
-            <Link href="/dashboard/admin" className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+            <Link href={adminPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
               Annulla
             </Link>
             <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
@@ -1174,10 +1354,12 @@ function AdminGroupLinksOverlay({
   group,
   links,
   createdUrl,
+  navMode,
 }: {
   group: AdminGroupTreeRow;
   links: AdminGroupRegistrationLink[];
   createdUrl: string | null;
+  navMode: AdminNavMode;
 }) {
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
@@ -1237,7 +1419,7 @@ function AdminGroupLinksOverlay({
           </div>
         </div>
         <div className="flex justify-end border-t border-[var(--peace-border)] px-5 py-4">
-          <Link href="/dashboard/admin" className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+          <Link href={adminPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
             Chiudi
           </Link>
         </div>
@@ -1249,9 +1431,11 @@ function AdminGroupLinksOverlay({
 function AdminGroupLeaderOverlay({
   group,
   participants,
+  navMode,
 }: {
   group: AdminGroupTreeRow;
   participants: AdminParticipantRow[];
+  navMode: AdminNavMode;
 }) {
   const participantOptions = participants.filter((participant) => participant.email);
 
@@ -1307,7 +1491,7 @@ function AdminGroupLeaderOverlay({
           </form>
         </div>
         <div className="flex justify-end border-t border-[var(--peace-border)] px-5 py-4">
-          <Link href="/dashboard/admin" className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+          <Link href={adminPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
             Chiudi
           </Link>
         </div>
@@ -1320,10 +1504,12 @@ function OperationsFiltersForm({
   filters,
   eventOptions,
   action,
+  navMode,
 }: {
   filters: OperationsDashboardFilters;
   eventOptions: Array<{ id: string; title: string }>;
   action: string;
+  navMode: AdminNavMode;
 }) {
   const hasActiveFilters = hasActiveOperationsDashboardFilters(filters);
 
@@ -1332,6 +1518,8 @@ function OperationsFiltersForm({
       action={action}
       className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
     >
+      <input type="hidden" name="section" value="iscritti" />
+      <input type="hidden" name="nav" value={navMode} />
       <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Cerca
         <input
@@ -1388,7 +1576,7 @@ function OperationsFiltersForm({
         </button>
         {hasActiveFilters ? (
           <Link
-            href={action}
+            href={adminPath("iscritti", navMode)}
             className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             Reset
@@ -1403,10 +1591,12 @@ function AdminParticipantEditOverlay({
   participant,
   groupOptions,
   isEditing,
+  navMode,
 }: {
   participant: AdminParticipantRow;
   groupOptions: AdminGroupOption[];
   isEditing: boolean;
+  navMode: AdminNavMode;
 }) {
   const includesCurrentGroup =
     !participant.currentGroupId ||
@@ -1492,14 +1682,18 @@ function AdminParticipantEditOverlay({
 
         <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
           <Link
-            href="/dashboard/admin"
+            href={adminPath("iscritti", navMode)}
             className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             Chiudi
           </Link>
           {!isEditing ? (
             <Link
-              href={`/dashboard/admin?edit=${participant.registrationId}&editMode=1`}
+              href={adminPath(
+                "iscritti",
+                navMode,
+                `edit=${encodeURIComponent(participant.registrationId)}&editMode=1`
+              )}
               className="inline-flex min-h-11 items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
             >
               Modifica gruppo
@@ -1707,6 +1901,18 @@ function parseGroupTableFilters(input: {
       ? input.groupVisibility ?? "all"
       : "all",
   };
+}
+
+function resolveAdminSection(input: { section?: string }): AdminSection {
+  if (
+    input.section === "evento" ||
+    input.section === "iscritti" ||
+    input.section === "gruppi"
+  ) {
+    return input.section;
+  }
+
+  return "evento";
 }
 
 function filterGroupRows(

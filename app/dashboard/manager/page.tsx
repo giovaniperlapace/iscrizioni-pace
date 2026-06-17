@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarDays, Network, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import {
@@ -376,28 +377,28 @@ function ManagerSidebar({
   const items: Array<{
     key: ManagerSection;
     href: string;
-    icon: string;
+    Icon: typeof CalendarDays;
     label: string;
     help: string;
   }> = [
     {
       key: "evento",
       href: `/dashboard/manager?section=evento&nav=${navMode}`,
-      icon: "E",
+      Icon: CalendarDays,
       label: "Evento",
       help: "Apertura e monitoraggio",
     },
     {
       key: "iscritti",
       href: `/dashboard/manager?section=iscritti&nav=${navMode}`,
-      icon: "I",
+      Icon: Users,
       label: "Gestione iscritti",
       help: "Partecipanti e ruoli",
     },
     {
       key: "gruppi",
       href: `/dashboard/manager?section=gruppi&nav=${navMode}`,
-      icon: "G",
+      Icon: Network,
       label: "Gruppi",
       help: "Albero e link riservati",
     },
@@ -421,6 +422,7 @@ function ManagerSidebar({
       <nav aria-label="Sezioni dashboard manager" className="grid gap-1.5 p-2">
         {items.map((item) => {
           const isActive = item.key === activeSection;
+          const Icon = item.Icon;
 
           return (
             <Link
@@ -439,9 +441,7 @@ function ManagerSidebar({
                 ].join(" ")}
             >
               {isMini ? (
-                <span className="text-sm font-extrabold" aria-hidden="true">
-                  {item.icon}
-                </span>
+                <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
               ) : (
                 <>
                   <span className="text-sm font-bold">{item.label}</span>

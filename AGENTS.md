@@ -118,12 +118,17 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   con logo Sant'Egidio originale valorizzato; motivo SVG astratto a linea
   continua ispirato alla colomba senza copiare la locandina. Non sono state
   modificate logica applicativa, route, validazioni, API, schema dati o policy.
-- Sempre nella Milestone 14, la dashboard manager e' stata divisa in tre
-  sezioni accessibili da sidebar: `Evento`, `Gestione iscritti`, `Gruppi`.
-  La route resta `/dashboard/manager` con query `section=evento|iscritti|gruppi`
-  per evitare duplicazione di query/action; la sidebar supporta `nav=mini` per
-  comprimersi e lasciare più spazio alle tabelle. I filtri e i link interni
-  devono preservare la sezione e, dove possibile, la modalità `nav`.
+- Sempre nella Milestone 14, le dashboard manager e admin sono state divise in
+  tre sezioni accessibili da sidebar: `Evento`, `Gestione iscritti`, `Gruppi`.
+  Le route restano `/dashboard/manager` e `/dashboard/admin` con query
+  `section=evento|iscritti|gruppi` per evitare duplicazione di query/action; le
+  sidebar supportano `nav=mini` per comprimersi e lasciare più spazio alle
+  tabelle. I filtri e i link interni devono preservare la sezione e, dove
+  possibile, la modalità `nav`. In modalità mini non usare lettere iniziali:
+  usare icone minimal da `lucide-react`.
+- La Milestone 14 ha sostituito la favicon placeholder con `app/favicon.ico`:
+  colomba bianca stilizzata su sfondo blu istituzionale, coerente con la
+  locandina e leggibile nelle tab browser.
 - Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
   non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
   gestione manager. La migration di identità evento mantiene lo slug tecnico
