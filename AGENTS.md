@@ -63,6 +63,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Le statistiche generiche sopra la tabella iscritti admin/manager sono state
   rimosse per ridurre rumore visivo. Inventario delle statistiche disponibili:
   `docs/statistiche-disponibili.md`.
+- Il 2026-06-17 la roadmap e' stata riordinata: la revisione guidata UX,
+  navigazione e dati dashboard, prima prevista come Milestone 13.4, e' stata
+  anticipata a Milestone 11.4; la rifinitura estetica e i manuali operativi,
+  prima previsti come Milestone 13.5, sono stati anticipati a Milestone 11.5.
+  Motivo: le funzioni essenziali sono sufficienti per preparare l'apertura
+  pubblica, quindi prima di aggiungere moduli avanzati bisogna verificare se UX,
+  UI, grafica, navigazione e flussi operativi sono chiari e non frustranti.
 - Il 2026-06-17 la dashboard partecipante e' stata rifinita dopo revisione UX:
   il QR personale deve essere visibile subito nella prima schermata, non dietro
   un pulsante; sotto al QR compare `Il tuo codice: <codice>`; le azioni QR
@@ -313,6 +320,11 @@ Decisioni:
 
 - I magic link sono generati con `supabase.auth.admin.generateLink` e inviati
   dall'app via SMTP Gmail, non dal mailer interno Supabase.
+- Dal 2026-06-17 i magic link applicativi costruiti con
+  `data.properties.hashed_token` devono puntare a
+  `/auth/callback?...&token_hash=<hash>&type=email`. Usare `type=magiclink`
+  con `verifyOtp` faceva fallire il login con errore link scaduto; il callback
+  mantiene un fallback da `magiclink` a `email` per eventuali link già inviati.
 - L'account mittente configurato e' `registrationspeace@santegidio.org`.
 - La password app resta solo in `.env.local` o nelle env del runtime; non
   deve essere stampata o committata.

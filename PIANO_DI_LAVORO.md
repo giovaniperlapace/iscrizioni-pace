@@ -32,6 +32,12 @@ Stato locale rilevato in questo task:
   manager/admin essenziali, gestione gruppi in overlay, link riservati per
   gruppo da azione di riga, statistiche ridondanti rimosse e inventario
   statistiche disponibile in `docs/statistiche-disponibili.md`.
+- Il 2026-06-17 le milestone di revisione UX/UI e rifinitura estetica sono
+  state anticipate: la vecchia Milestone 13.4 diventa Milestone 11.4 e la
+  vecchia Milestone 13.5 diventa Milestone 11.5. La scelta nasce dal fatto che
+  l'app ha gia' funzioni sufficienti per andare verso l'apertura pubblica; ora
+  serve verificare esperienza, navigazione, chiarezza grafica e flussi
+  operativi prima di aggiungere moduli avanzati.
 - Il 2026-06-17 la dashboard partecipante e' stata rifinita per mostrare il QR
   personale direttamente nella prima schermata, con download immagine, spazio
   futuro per wallet, indicatore stato compatto e collegamento ai ruoli
@@ -43,6 +49,9 @@ Stato locale rilevato in questo task:
   e gestibile operativamente. Le funzioni avanzate di gestione manager,
   programma evento, scanner check-in e settori/sedute vengono dopo il go-live
   delle iscrizioni.
+- Priorita' aggiornata il 2026-06-17: prima di proseguire con multilingua,
+  campagne email, programma, check-in e settori, fare revisione guidata UX/UI
+  e rifinitura estetica/manuali sulle funzioni gia' presenti.
 
 Metodo da seguire per ogni milestone:
 
@@ -736,8 +745,10 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 - prima rendere affidabile il flusso pubblico di iscrizione;
 - poi aprire le iscrizioni con strumenti minimi di controllo e supporto;
-- solo dopo sviluppare dashboard manager/evento avanzate, programma, campagne,
-  scanner accoglienza e settori.
+- appena le dashboard operative minime sono sufficienti, fermarsi a verificare
+  UX, navigazione, UI e grafica prima dell'apertura pubblica larga;
+- solo dopo sviluppare multilingua, programma, campagne, scanner accoglienza e
+  settori.
 
 ### Milestone 7: preparazione apertura pubblica iscrizioni
 
@@ -997,51 +1008,14 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Non fare: gestione programma completa, campagne email, check-in, export CSV
   definitivo.
 
-### Milestone 12: multilingua minima e testi localizzati
+### Milestone 11.4: revisione guidata UX, navigazione e dati dashboard
 
-- Scopo: portare i flussi pubblici e le email almeno a italiano/inglese, senza
-  bloccare l'apertura se il primo go-live e' deliberatamente solo italiano.
-- Deliverable:
-  - strategia i18n leggera coerente con l'app esistente;
-  - traduzioni IT/EN per home, registrazione, conferma, login, dashboard
-    partecipante ed email transazionali;
-  - fallback controllato per testi mancanti;
-  - preferenza lingua salvata o rispettata dove gia' presente.
-- File/cartelle: `lib/i18n/*`, `app/*`, `lib/email/*`, template email.
-- Migration: solo se serve salvare o normalizzare la preferenza lingua.
-- Verifiche: flusso pubblico e dashboard partecipante in IT/EN, email
-  localizzate, nessun testo legale tradotto automaticamente senza revisione.
-- Rischi: testi hardcoded e traduzioni legali non approvate.
-- Accettazione: i flussi core funzionano in italiano e inglese con testi
-  revisionabili.
-- Non fare: localizzare dashboard manager avanzate se non ancora stabili.
-
-### Milestone 13: email personalizzate e template operativi
-
-- Scopo: passare dalle sole email transazionali a comunicazioni controllate per
-  gruppi o segmenti, dopo l'apertura pubblica.
-- Deliverable:
-  - template versionati;
-  - invio filtrato con preview;
-  - log invii e destinatari diretti/delegati;
-  - invio test;
-  - limiti anti-invio accidentale.
-- File/cartelle: `lib/email/*`, `app/dashboard/manager/email/*`,
-  `app/dashboard/admin/settings/email/*`.
-- Migration: templates, logs, recipients, settings se non gia' coperti.
-- Verifiche: invio test, filtri destinatari, logging, gestione errori.
-- Rischi: invii massivi accidentali; dati personali nel log.
-- Accettazione: campagne inviate solo da ruoli autorizzati e tracciate.
-- Non fare: invii reali massivi senza conferma esplicita e ambiente verificato.
-
-### Milestone 13.4: revisione guidata UX, navigazione e dati dashboard
-
-- Scopo: prima della rifinitura estetica finale, rivedere insieme tutta
+- Scopo: prima di aggiungere funzioni avanzate, rivedere insieme tutta
   l'esperienza dell'app in localhost, in prima persona, usando dati e permessi
-  ormai coerenti con l'architettura database definitiva. L'obiettivo e'
+  ormai coerenti con le funzioni operative essenziali. L'obiettivo e'
   trasformare le funzioni implementate in percorsi chiari, ordinati e
-  comprensibili per l'utente finale, così che i manuali possano essere scritti
-  su una struttura front end già stabile e non caotica.
+  comprensibili per l'utente finale, così che l'apertura pubblica non dipenda
+  da schermate tecnicamente complete ma frustranti o poco intuitive.
 - Metodo:
   - avviare `npm run dev` e lavorare su `localhost`;
   - usare utenti test/seed realistici per admin, manager, manager_viewer,
@@ -1064,9 +1038,9 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     successivi all'invio e aspettative del partecipante;
   - login/callback/errori: stati di sessione, link scaduti, redirect al ruolo
     corretto e messaggi non tecnici;
-  - dashboard partecipante: header, evento, gruppo, panel, overlay QR,
-    modifica iscrizione, ritorno alle aree operative per utenti con doppio
-    ruolo;
+  - dashboard partecipante: header, evento, gruppo, panel, QR immediato,
+    download QR, modifica iscrizione, ritorno alle aree operative per utenti
+    con doppio ruolo;
   - dashboard capogruppo: assegnazioni da verificare, filtri, note interne,
     conferma/rifiuto, risalita al padre, link riservati gruppo e assenza di
     dati sensibili inutili;
@@ -1121,11 +1095,11 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   animazioni, campagne email reali o funzioni nuove non necessarie alla
   coerenza dei flussi.
 
-### Milestone 13.5: rifinitura estetica e manuali operativi
+### Milestone 11.5: rifinitura estetica e manuali operativi
 
 - Scopo: dedicare una milestone separata solo alla cura finale dell'esperienza
   visiva e alla documentazione d'uso, partendo dai flussi approvati nella
-  Milestone 13.4 e senza introdurre nuove funzioni di prodotto.
+  Milestone 11.4 e senza introdurre nuove funzioni di prodotto.
 - Deliverable estetica:
   - applicazione delle guideline estetiche che verranno fornite;
   - revisione coerente di layout, spaziature, tipografia, colori, stati
@@ -1158,6 +1132,43 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   per usare l'app senza assistenza tecnica.
 - Non fare: nuove funzioni prodotto, cambi schema dati, campagne reali,
   revisione legale dei testi privacy.
+
+### Milestone 12: multilingua minima e testi localizzati
+
+- Scopo: portare i flussi pubblici e le email almeno a italiano/inglese, senza
+  bloccare l'apertura se il primo go-live e' deliberatamente solo italiano.
+- Deliverable:
+  - strategia i18n leggera coerente con l'app esistente;
+  - traduzioni IT/EN per home, registrazione, conferma, login, dashboard
+    partecipante ed email transazionali;
+  - fallback controllato per testi mancanti;
+  - preferenza lingua salvata o rispettata dove gia' presente.
+- File/cartelle: `lib/i18n/*`, `app/*`, `lib/email/*`, template email.
+- Migration: solo se serve salvare o normalizzare la preferenza lingua.
+- Verifiche: flusso pubblico e dashboard partecipante in IT/EN, email
+  localizzate, nessun testo legale tradotto automaticamente senza revisione.
+- Rischi: testi hardcoded e traduzioni legali non approvate.
+- Accettazione: i flussi core funzionano in italiano e inglese con testi
+  revisionabili.
+- Non fare: localizzare dashboard manager avanzate se non ancora stabili.
+
+### Milestone 13: email personalizzate e template operativi
+
+- Scopo: passare dalle sole email transazionali a comunicazioni controllate per
+  gruppi o segmenti, dopo l'apertura pubblica.
+- Deliverable:
+  - template versionati;
+  - invio filtrato con preview;
+  - log invii e destinatari diretti/delegati;
+  - invio test;
+  - limiti anti-invio accidentale.
+- File/cartelle: `lib/email/*`, `app/dashboard/manager/email/*`,
+  `app/dashboard/admin/settings/email/*`.
+- Migration: templates, logs, recipients, settings se non gia' coperti.
+- Verifiche: invio test, filtri destinatari, logging, gestione errori.
+- Rischi: invii massivi accidentali; dati personali nel log.
+- Accettazione: campagne inviate solo da ruoli autorizzati e tracciate.
+- Non fare: invii reali massivi senza conferma esplicita e ambiente verificato.
 
 ### Milestone 14: gestione programma e scelta momenti
 
