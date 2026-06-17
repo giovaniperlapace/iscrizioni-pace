@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import {
+  assignGroupLeader,
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
   saveOperationsGroup,
@@ -40,6 +41,7 @@ type AdminPageProps = {
     openingSaved?: string;
     adminError?: string;
     adminSaved?: string;
+    editMode?: string;
     edit?: string;
     event?: string;
     groupError?: string;
@@ -56,7 +58,6 @@ type AdminPageProps = {
     groupVisibility?: string;
     group?: string;
     q?: string;
-    role?: string;
     status?: string;
   }>;
 };
@@ -146,21 +147,6 @@ type AdminCurrentAssignmentRow = {
     | null;
 };
 
-type AdminRoleRow = {
-  event_id: string | null;
-  user_id: string;
-  role: string | null;
-};
-
-type AdminGroupMembershipRoleRow = {
-  user_id: string;
-  role: string | null;
-  groups:
-    | { event_id: string | null }
-    | Array<{ event_id: string | null }>
-    | null;
-};
-
 type AdminGroupOption = {
   id: string;
   eventId: string;
@@ -234,7 +220,6 @@ type AdminParticipantRow = {
   currentGroupId: string | null;
   currentGroupName: string | null;
   currentGroupStatus: string | null;
-  roles: string[];
 };
 
 type AdminOperationsSnapshot = {
@@ -325,14 +310,24 @@ export default async function AdminDashboardPage({
         <AdminParticipantsSection
           snapshot={adminOperations}
           selectedParticipant={selectedAdminParticipant}
+          isEditingParticipant={params.editMode === "1"}
         />
 
         <AdminGroupTreeSection
           groups={adminOperations.groupTree}
           links={adminOperations.groupLinks}
+          participants={adminOperations.allParticipants}
           filters={parseGroupTableFilters(params)}
           selectedGroup={selectedGroup}
-          selectedTool={params.groupTool === "links" ? "links" : params.groupTool === "edit" ? "edit" : null}
+          selectedTool={
+            params.groupTool === "links"
+              ? "links"
+              : params.groupTool === "edit"
+                ? "edit"
+                : params.groupTool === "leaders"
+                  ? "leaders"
+                  : null
+          }
           createdGroupId={params.groupLinkGroupId ?? null}
           createdUrl={
             params.groupLinkToken
@@ -387,22 +382,8 @@ export default async function AdminDashboardPage({
     const registrationRows = (registrations ?? []) as AdminRegistrationRow[];
     const registrationIds = registrationRows.map((row) => row.id);
     const participantIds = registrationRows.map((row) => row.participant_id);
-    const eventIds = [...new Set(registrationRows.map((row) => row.event_id))];
-    const authUserIds = [
-      ...new Set(
-        registrationRows
-          .map((row) => relatedOne(row.participants)?.auth_user_id)
-          .filter((userId): userId is string => Boolean(userId))
-      ),
-    ];
     const emptyResult = { data: [] };
-    const [
-      { data: contacts },
-      { data: assignments },
-      { data: roles },
-      { data: groupMembershipRoles },
-    ] =
-      await Promise.all([
+    const [{ data: contacts }, { data: assignments }] = await Promise.all([
         participantIds.length > 0
           ? serviceSupabase
               .from("participant_contacts")
@@ -419,18 +400,6 @@ export default async function AdminDashboardPage({
               .in("registration_id", registrationIds)
               .eq("is_current", true)
           : Promise.resolve(emptyResult),
-        authUserIds.length > 0
-          ? serviceSupabase
-              .from("event_user_roles")
-              .select("event_id,user_id,role")
-              .in("user_id", authUserIds)
-          : Promise.resolve(emptyResult),
-        authUserIds.length > 0
-          ? serviceSupabase
-              .from("group_memberships")
-              .select("user_id,role,groups(event_id)")
-              .in("user_id", authUserIds)
-          : Promise.resolve(emptyResult),
       ]);
     const contactByParticipantId = new Map(
       ((contacts ?? []) as ContactRow[]).map((row) => [row.participant_id, row])
@@ -441,49 +410,6 @@ export default async function AdminDashboardPage({
         row,
       ])
     );
-    const rolesByUserEvent = new Map<string, string[]>();
-
-    for (const role of (roles ?? []) as AdminRoleRow[]) {
-      if (!role.role) {
-        continue;
-      }
-
-      if (role.event_id) {
-        const key = `${role.user_id}:${role.event_id}`;
-        const values = rolesByUserEvent.get(key) ?? [];
-        values.push(role.role);
-        rolesByUserEvent.set(key, values);
-      } else if (role.role === "admin") {
-        for (const eventId of eventIds) {
-          const key = `${role.user_id}:${eventId}`;
-          const values = rolesByUserEvent.get(key) ?? [];
-          values.push(role.role);
-          rolesByUserEvent.set(key, values);
-        }
-      }
-    }
-    for (const membership of
-      (groupMembershipRoles ?? []) as AdminGroupMembershipRoleRow[]) {
-      if (membership.role !== "capogruppo") {
-        continue;
-      }
-
-      const eventId = relatedOne(membership.groups)?.event_id;
-
-      if (!eventId) {
-        continue;
-      }
-
-      const key = `${membership.user_id}:${eventId}`;
-      const values = rolesByUserEvent.get(key) ?? [];
-
-      if (!values.includes("capogruppo")) {
-        values.push("capogruppo");
-      }
-
-      rolesByUserEvent.set(key, values);
-    }
-
     const participantRows = registrationRows.map((registration) => {
         const participant = relatedOne(registration.participants);
         const event = relatedOne(registration.events);
@@ -511,9 +437,6 @@ export default async function AdminDashboardPage({
           currentGroupId: assignment?.group_id ?? null,
           currentGroupName: group?.name ?? null,
           currentGroupStatus: assignment?.status ?? null,
-          roles: authUserId
-            ? rolesByUserEvent.get(`${authUserId}:${registration.event_id}`) ?? []
-            : [],
         };
       });
     const filteredParticipants = applyOperationsDashboardFilters(
@@ -780,9 +703,11 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
 function AdminParticipantsSection({
   snapshot,
   selectedParticipant,
+  isEditingParticipant,
 }: {
   snapshot: AdminOperationsSnapshot;
   selectedParticipant: AdminParticipantRow | null;
+  isEditingParticipant: boolean;
 }) {
   const eventOptions = getOperationsEventOptions(snapshot.allParticipants);
 
@@ -802,13 +727,12 @@ function AdminParticipantsSection({
       />
 
       <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
               <th className="py-3 pr-4 font-semibold">Iscrizione</th>
               <th className="py-3 pr-4 font-semibold">Contatti</th>
               <th className="py-3 pr-4 font-semibold">Gruppo</th>
-              <th className="py-3 pr-4 font-semibold">Ruoli</th>
               <th className="py-3 text-right font-semibold">Azioni</th>
             </tr>
           </thead>
@@ -839,28 +763,12 @@ function AdminParticipantsSection({
                     {groupStatusLabel(participant.currentGroupStatus)}
                   </p>
                 </td>
-                <td className="py-4 pr-4">
-                  {participant.roles.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {participant.roles.map((role) => (
-                        <span
-                          key={role}
-                          className="rounded-full border border-[var(--peace-border-strong)] bg-[#f7fbfe] px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)]"
-                        >
-                          {roleLabel(role)}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[var(--peace-muted)]">Nessun ruolo operativo</p>
-                  )}
-                </td>
                 <td className="py-4 text-right">
                   <Link
                     href={`/dashboard/admin?edit=${participant.registrationId}`}
                     className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                   >
-                    Modifica
+                    Dettagli
                   </Link>
                 </td>
               </tr>
@@ -881,6 +789,7 @@ function AdminParticipantsSection({
           groupOptions={snapshot.groupOptions.filter(
             (group) => group.eventId === selectedParticipant.eventId
           )}
+          isEditing={isEditingParticipant}
         />
       ) : null}
     </section>
@@ -890,6 +799,7 @@ function AdminParticipantsSection({
 function AdminGroupTreeSection({
   groups,
   links,
+  participants,
   filters,
   selectedGroup,
   selectedTool,
@@ -898,9 +808,10 @@ function AdminGroupTreeSection({
 }: {
   groups: AdminGroupTreeRow[];
   links: AdminGroupRegistrationLink[];
+  participants: AdminParticipantRow[];
   filters: GroupTableFilters;
   selectedGroup: AdminGroupTreeRow | null;
-  selectedTool: "edit" | "links" | null;
+  selectedTool: "edit" | "links" | "leaders" | null;
   createdGroupId: string | null;
   createdUrl: string | null;
 }) {
@@ -992,6 +903,12 @@ function AdminGroupTreeSection({
                       >
                         Gestisci link
                       </Link>
+                      <Link
+                        href={`/dashboard/admin?groupTool=leaders&groupId=${group.id}`}
+                        className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+                      >
+                        Capogruppo
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -1020,6 +937,15 @@ function AdminGroupTreeSection({
           group={selectedGroup}
           links={linksByGroupId.get(selectedGroup.id) ?? []}
           createdUrl={createdGroupId === selectedGroup.id ? createdUrl : null}
+        />
+      ) : null}
+
+      {selectedTool === "leaders" && selectedGroup ? (
+        <AdminGroupLeaderOverlay
+          group={selectedGroup}
+          participants={participants.filter(
+            (participant) => participant.eventId === selectedGroup.eventId
+          )}
         />
       ) : null}
     </section>
@@ -1320,6 +1246,76 @@ function AdminGroupLinksOverlay({
   );
 }
 
+function AdminGroupLeaderOverlay({
+  group,
+  participants,
+}: {
+  group: AdminGroupTreeRow;
+  participants: AdminParticipantRow[];
+}) {
+  const participantOptions = participants.filter((participant) => participant.email);
+
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+      <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="border-b border-[var(--peace-border)] px-5 py-4">
+          <h3 className="text-xl font-semibold">Capogruppo</h3>
+          <p className="mt-1 text-sm text-[var(--peace-muted)]">{group.name}</p>
+        </div>
+        <div className="grid gap-5 overflow-y-auto px-5 py-5">
+          <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+            <input type="hidden" name="sourceDashboard" value="admin" />
+            <input type="hidden" name="groupId" value={group.id} />
+            <input type="hidden" name="mode" value="existing" />
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Partecipante già iscritto
+              <select name="participantId" className="field bg-white font-normal" required>
+                <option value="">Seleziona una persona</option>
+                {participantOptions.map((participant) => (
+                  <option key={participant.participantId} value={participant.participantId}>
+                    {participant.name} - {participant.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Rendi capogruppo
+            </button>
+          </form>
+
+          <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4">
+            <input type="hidden" name="sourceDashboard" value="admin" />
+            <input type="hidden" name="groupId" value={group.id} />
+            <input type="hidden" name="mode" value="new" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Nome
+                <input name="firstName" className="field" required />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Cognome
+                <input name="lastName" className="field" required />
+              </label>
+            </div>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Email
+              <input name="email" type="email" className="field" required />
+            </label>
+            <button className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+              Crea scheda minima e assegna
+            </button>
+          </form>
+        </div>
+        <div className="flex justify-end border-t border-[var(--peace-border)] px-5 py-4">
+          <Link href="/dashboard/admin" className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+            Chiudi
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OperationsFiltersForm({
   filters,
   eventOptions,
@@ -1334,7 +1330,7 @@ function OperationsFiltersForm({
   return (
     <form
       action={action}
-      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))_auto]"
+      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
     >
       <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Cerca
@@ -1374,18 +1370,6 @@ function OperationsFiltersForm({
         </select>
       </label>
       <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Ruolo
-        <select
-          name="role"
-          defaultValue={filters.role}
-          className="field bg-white font-normal"
-        >
-          <option value="all">Tutti</option>
-          <option value="operational">Con ruolo</option>
-          <option value="none">Senza ruolo</option>
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Stato
         <select
           name="status"
@@ -1418,11 +1402,12 @@ function OperationsFiltersForm({
 function AdminParticipantEditOverlay({
   participant,
   groupOptions,
+  isEditing,
 }: {
   participant: AdminParticipantRow;
   groupOptions: AdminGroupOption[];
+  isEditing: boolean;
 }) {
-  const currentOperationalRole = getCurrentOperationalRole(participant.roles);
   const includesCurrentGroup =
     !participant.currentGroupId ||
     groupOptions.some((group) => group.id === participant.currentGroupId);
@@ -1453,72 +1438,74 @@ function AdminParticipantEditOverlay({
           </div>
         </div>
 
-        <form
-          action="/dashboard/admin/participants/update"
-          method="post"
-          className="grid overflow-y-auto"
-        >
-          <input type="hidden" name="registrationId" value={participant.registrationId} />
-          <input type="hidden" name="participantId" value={participant.participantId} />
-          <input type="hidden" name="email" value={participant.email ?? ""} />
-          <input type="hidden" name="fullName" value={participant.name} />
-
-          <div className="grid gap-5 px-5 py-5">
-            <div className="grid gap-1 text-sm">
-              <span className="font-semibold text-[var(--peace-ink)]">Contatti</span>
-              <span className="text-[var(--peace-muted)]">{participant.email ?? "Email non indicata"}</span>
-              <span className="text-[var(--peace-muted)]">
-                {participant.phone ?? "Telefono non indicato"}
-              </span>
-            </div>
-
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Gruppo
-              <select
-                name="groupId"
-                defaultValue={participant.currentGroupId ?? ""}
-                className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
-              >
-                {!participant.currentGroupId ? (
-                  <option value="">Nessun gruppo corrente</option>
-                ) : null}
-                {visibleGroupOptions.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Ruolo operativo
-              <select
-                name="role"
-                defaultValue={currentOperationalRole || ""}
-                className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
-              >
-                <option value="">Nessun ruolo operativo</option>
-                <option value="admin">Admin</option>
-                <option value="manager">Manager</option>
-                <option value="manager_viewer">Manager viewer</option>
-                <option value="accoglienza">Accoglienza</option>
-                <option value="capogruppo">Capogruppo</option>
-              </select>
-            </label>
+        <div className="grid gap-5 overflow-y-auto px-5 py-5">
+          <div className="grid gap-1 text-sm">
+            <span className="font-semibold text-[var(--peace-ink)]">Contatti</span>
+            <span className="text-[var(--peace-muted)]">{participant.email ?? "Email non indicata"}</span>
+            <span className="text-[var(--peace-muted)]">
+              {participant.phone ?? "Telefono non indicato"}
+            </span>
+          </div>
+          <div className="grid gap-1 text-sm">
+            <span className="font-semibold text-[var(--peace-ink)]">Evento</span>
+            <span className="text-[var(--peace-muted)]">{participant.eventTitle}</span>
+          </div>
+          <div className="grid gap-1 text-sm">
+            <span className="font-semibold text-[var(--peace-ink)]">Gruppo corrente</span>
+            <span className="text-[var(--peace-muted)]">
+              {participant.currentGroupName ?? "Nessun gruppo corrente"} -{" "}
+              {groupStatusLabel(participant.currentGroupStatus)}
+            </span>
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
-            <Link
-              href="/dashboard/admin"
-              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+          {isEditing ? (
+            <form
+              action="/dashboard/admin/participants/update"
+              method="post"
+              className="grid gap-5"
             >
-              Annulla
+              <input type="hidden" name="registrationId" value={participant.registrationId} />
+              <input type="hidden" name="participantId" value={participant.participantId} />
+              <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+                Gruppo
+                <select
+                  name="groupId"
+                  defaultValue={participant.currentGroupId ?? ""}
+                  className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
+                >
+                  {!participant.currentGroupId ? (
+                    <option value="">Nessun gruppo corrente</option>
+                  ) : null}
+                  {visibleGroupOptions.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                Salva gruppo
+              </button>
+            </form>
+          ) : null}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
+          <Link
+            href="/dashboard/admin"
+            className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+          >
+            Chiudi
+          </Link>
+          {!isEditing ? (
+            <Link
+              href={`/dashboard/admin?edit=${participant.registrationId}&editMode=1`}
+              className="inline-flex min-h-11 items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+            >
+              Modifica gruppo
             </Link>
-            <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-              Conferma modifiche
-            </button>
-          </div>
-        </form>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -1593,7 +1580,6 @@ function StatusMessage({
     "not-found": "Evento non trovato.",
     "invalid-group": "Gruppo non valido per questa iscrizione.",
     "invalid-parent": "Il gruppo parent non è valido per questo evento.",
-    "invalid-role": "Ruolo non valido per questa iscrizione.",
     forbidden: "Non hai permessi di modifica su questo evento.",
   };
   const messageKey = groupError ?? groupLinkError ?? adminError ?? error;
@@ -1906,41 +1892,4 @@ function groupStatusLabel(status: string | null): string {
     default:
       return "stato gruppo non indicato";
   }
-}
-
-function roleLabel(role: string): string {
-  switch (role) {
-    case "manager":
-      return "Manager";
-    case "manager_viewer":
-      return "Manager viewer";
-    case "accoglienza":
-      return "Accoglienza";
-    case "admin":
-      return "Admin";
-    case "capogruppo":
-      return "Capogruppo";
-    default:
-      return role;
-  }
-}
-
-function getCurrentOperationalRole(
-  roles: string[]
-): "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo" | null {
-  const role = roles.find(isAssignableOperationalRole);
-
-  return role ?? null;
-}
-
-function isAssignableOperationalRole(
-  role: string
-): role is "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo" {
-  return (
-    role === "admin" ||
-    role === "manager" ||
-    role === "manager_viewer" ||
-    role === "accoglienza" ||
-    role === "capogruppo"
-  );
 }

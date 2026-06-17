@@ -10,14 +10,12 @@ export type OperationsParticipantForFilter = {
   currentGroupId: string | null;
   currentGroupName: string | null;
   currentGroupStatus: string | null;
-  roles: string[];
 };
 
 export type OperationsDashboardFilters = {
   q: string;
   eventId: string;
   group: "all" | "none" | "probable" | "confirmed";
-  role: "all" | "none" | "operational";
   status: "all" | "submitted" | "confirmed" | "cancelled";
 };
 
@@ -27,7 +25,6 @@ export type OperationsDashboardSummary = {
   withoutGroup: number;
   probableGroup: number;
   confirmedGroup: number;
-  operationalRoles: number;
   withoutEmail: number;
 };
 
@@ -35,7 +32,6 @@ const DEFAULT_FILTERS: OperationsDashboardFilters = {
   q: "",
   eventId: "all",
   group: "all",
-  role: "all",
   status: "all",
 };
 
@@ -43,14 +39,12 @@ export function parseOperationsDashboardFilters(input: {
   q?: string;
   event?: string;
   group?: string;
-  role?: string;
   status?: string;
 }): OperationsDashboardFilters {
   return {
     q: normalizeQuery(input.q),
     eventId: normalizeEventFilter(input.event),
     group: isGroupFilter(input.group) ? input.group : DEFAULT_FILTERS.group,
-    role: isRoleFilter(input.role) ? input.role : DEFAULT_FILTERS.role,
     status: isStatusFilter(input.status)
       ? input.status
       : DEFAULT_FILTERS.status,
@@ -81,9 +75,6 @@ export function summarizeOperationsDashboardParticipants(
     confirmedGroup: filteredParticipants.filter(
       (participant) => participant.currentGroupStatus === "confirmed"
     ).length,
-    operationalRoles: filteredParticipants.filter(
-      (participant) => participant.roles.length > 0
-    ).length,
     withoutEmail: filteredParticipants.filter((participant) => !participant.email)
       .length,
   };
@@ -96,7 +87,6 @@ export function hasActiveOperationsDashboardFilters(
     filters.q !== DEFAULT_FILTERS.q ||
     filters.eventId !== DEFAULT_FILTERS.eventId ||
     filters.group !== DEFAULT_FILTERS.group ||
-    filters.role !== DEFAULT_FILTERS.role ||
     filters.status !== DEFAULT_FILTERS.status
   );
 }
@@ -120,10 +110,6 @@ function matchesOperationsDashboardFilters(
     return false;
   }
 
-  if (!matchesRoleFilter(participant, filters.role)) {
-    return false;
-  }
-
   if (!filters.q) {
     return true;
   }
@@ -136,7 +122,6 @@ function matchesOperationsDashboardFilters(
     participant.place,
     participant.currentGroupName,
     participant.eventTitle,
-    ...participant.roles,
   ]
     .filter(Boolean)
     .join(" ")
@@ -161,20 +146,6 @@ function matchesGroupFilter(
   }
 }
 
-function matchesRoleFilter(
-  participant: OperationsParticipantForFilter,
-  filter: OperationsDashboardFilters["role"]
-): boolean {
-  switch (filter) {
-    case "none":
-      return participant.roles.length === 0;
-    case "operational":
-      return participant.roles.length > 0;
-    case "all":
-      return true;
-  }
-}
-
 function normalizeQuery(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
 }
@@ -194,12 +165,6 @@ function isGroupFilter(
     value === "probable" ||
     value === "confirmed"
   );
-}
-
-function isRoleFilter(
-  value: string | undefined
-): value is OperationsDashboardFilters["role"] {
-  return value === "all" || value === "none" || value === "operational";
 }
 
 function isStatusFilter(

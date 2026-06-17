@@ -1247,6 +1247,360 @@ export async function saveOperationsGroup(formData: FormData) {
   redirect(`${dashboardPath}?groupSaved=1`);
 }
 
+export async function assignGroupLeader(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
+  const groupId = optionalText(formData.get("groupId"));
+  const mode = optionalText(formData.get("mode")) ?? "existing";
+
+  if (!groupId || (mode !== "existing" && mode !== "new")) {
+    redirect(`${dashboardPath}?groupError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    getGroupManagementRequestedRole(sourceDashboard)
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: group, error: groupError } = await serviceSupabase
+    .from("groups")
+    .select("id,event_id")
+    .eq("id", groupId)
+    .maybeSingle();
+  const groupRow = group as { id: string; event_id: string } | null;
+
+  if (groupError || !groupRow) {
+    redirect(`${dashboardPath}?groupError=not-found`);
+  }
+
+  const isAdmin = auth.eventRoles.some((role) => role.role === "admin");
+  const canManageEvent =
+    isAdmin ||
+    auth.eventRoles.some(
+      (role) => role.role === "manager" && role.eventId === groupRow.event_id
+    );
+
+  if (!canManageEvent || sourceDashboard === "capogruppo") {
+    redirect(`${dashboardPath}?groupError=forbidden`);
+  }
+
+  const leader =
+    mode === "existing"
+      ? await getExistingGroupLeaderTarget(
+          serviceSupabase,
+          optionalText(formData.get("participantId"))
+        )
+      : await getNewGroupLeaderTarget(serviceSupabase, {
+          firstName: optionalText(formData.get("firstName")),
+          lastName: optionalText(formData.get("lastName")),
+          email: normalizeEmail(formData.get("email")),
+        });
+
+  if (!leader.ok) {
+    redirect(`${dashboardPath}?groupError=${leader.error}`);
+  }
+
+  const membership = await serviceSupabase.from("group_memberships").upsert(
+    {
+      group_id: groupRow.id,
+      user_id: leader.userId,
+      role: "capogruppo",
+      created_by: auth.user.id,
+    },
+    { onConflict: "group_id,user_id" }
+  );
+
+  if (membership.error) {
+    redirect(
+      `${dashboardPath}?groupError=${encodeURIComponent(membership.error.message)}`
+    );
+  }
+
+  await serviceSupabase
+    .from("groups")
+    .update({ primary_leader_name: leader.fullName })
+    .eq("id", groupRow.id);
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: groupRow.event_id,
+    actor_user_id: auth.user.id,
+    action: "group.leader_assigned",
+    entity_table: "group_memberships",
+    entity_id: groupRow.id,
+    metadata: {
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+      participant_id: leader.participantId,
+      created_minimal_participant: leader.createdParticipant,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+  redirect(getGroupLeaderSuccessPath(sourceDashboard, groupRow.id));
+}
+
+async function getExistingGroupLeaderTarget(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  participantId: string | null
+): Promise<GroupLeaderTargetResult> {
+  if (!participantId) {
+    return { ok: false, error: "invalid" };
+  }
+
+  const { data: participant, error: participantError } = await supabase
+    .from("participants")
+    .select("id,auth_user_id,first_name,last_name")
+    .eq("id", participantId)
+    .maybeSingle();
+  const participantRow = participant as
+    | {
+        id: string;
+        auth_user_id: string | null;
+        first_name: string | null;
+        last_name: string | null;
+      }
+    | null;
+
+  if (participantError || !participantRow) {
+    return { ok: false, error: "invalid" };
+  }
+
+  const { data: contact } = await supabase
+    .from("participant_contacts")
+    .select("email")
+    .eq("participant_id", participantId)
+    .eq("is_primary", true)
+    .maybeSingle();
+  const email = normalizeEmail(
+    (contact as { email: string | null } | null)?.email ?? null
+  );
+  const fullName = [participantRow.first_name, participantRow.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const userId =
+    participantRow.auth_user_id ||
+    (await ensureAuthUserForGroupLeader(supabase, {
+      email,
+      fullName,
+    }));
+
+  if (!userId) {
+    return { ok: false, error: "missing-email" };
+  }
+
+  if (!participantRow.auth_user_id) {
+    const { error: updateError } = await supabase
+      .from("participants")
+      .update({ auth_user_id: userId })
+      .eq("id", participantId);
+
+    if (updateError) {
+      return { ok: false, error: encodeURIComponent(updateError.message) };
+    }
+  }
+
+  return {
+    ok: true,
+    participantId,
+    userId,
+    fullName: fullName || email || "Capogruppo",
+    createdParticipant: false,
+  };
+}
+
+async function getNewGroupLeaderTarget(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  }
+): Promise<GroupLeaderTargetResult> {
+  if (!input.firstName || !input.lastName || !input.email) {
+    return { ok: false, error: "invalid" };
+  }
+
+  const fullName = `${input.firstName} ${input.lastName}`.trim();
+  const userId = await ensureAuthUserForGroupLeader(supabase, {
+    email: input.email,
+    fullName,
+  });
+
+  if (!userId) {
+    return { ok: false, error: "auth-user" };
+  }
+
+  const { data: existingContacts } = await supabase
+    .from("participant_contacts")
+    .select("participant_id")
+    .eq("email", input.email)
+    .limit(1);
+  const existingParticipantId = (
+    existingContacts as Array<{ participant_id: string }> | null
+  )?.[0]?.participant_id;
+
+  if (existingParticipantId) {
+    const { error: updateError } = await supabase
+      .from("participants")
+      .update({
+        auth_user_id: userId,
+        first_name: input.firstName,
+        last_name: input.lastName,
+      })
+      .eq("id", existingParticipantId);
+
+    if (updateError) {
+      return { ok: false, error: encodeURIComponent(updateError.message) };
+    }
+
+    return {
+      ok: true,
+      participantId: existingParticipantId,
+      userId,
+      fullName,
+      createdParticipant: false,
+    };
+  }
+
+  const { data: participant, error: participantError } = await supabase
+    .from("participants")
+    .insert({
+      auth_user_id: userId,
+      first_name: input.firstName,
+      last_name: input.lastName,
+      preferred_locale: "it",
+    })
+    .select("id")
+    .single();
+  const participantId = (participant as { id?: string } | null)?.id ?? null;
+
+  if (participantError || !participantId) {
+    return {
+      ok: false,
+      error: encodeURIComponent(participantError?.message ?? "participant"),
+    };
+  }
+
+  const { error: contactError } = await supabase.from("participant_contacts").insert({
+    participant_id: participantId,
+    email: input.email,
+    is_primary: true,
+  });
+
+  if (contactError) {
+    return { ok: false, error: encodeURIComponent(contactError.message) };
+  }
+
+  return {
+    ok: true,
+    participantId,
+    userId,
+    fullName,
+    createdParticipant: true,
+  };
+}
+
+async function ensureAuthUserForGroupLeader(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    email: string;
+    fullName: string | null;
+  }
+): Promise<string | null> {
+  if (!input.email) {
+    return null;
+  }
+
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    email: input.email,
+    email_confirm: true,
+    user_metadata: input.fullName ? { full_name: input.fullName } : undefined,
+  });
+
+  if (created.user?.id) {
+    await upsertGroupLeaderProfile(supabase, created.user.id, input);
+
+    return created.user.id;
+  }
+
+  const message = createError?.message ?? "";
+
+  if (!/already|registered|exists/i.test(message)) {
+    return null;
+  }
+
+  const { data: users, error: listError } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (listError) {
+    return null;
+  }
+
+  const existing = users.users.find(
+    (user) => user.email?.toLowerCase() === input.email
+  );
+
+  if (!existing) {
+    return null;
+  }
+
+  await upsertGroupLeaderProfile(supabase, existing.id, input);
+
+  return existing.id;
+}
+
+async function upsertGroupLeaderProfile(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  userId: string,
+  input: {
+    email: string;
+    fullName: string | null;
+  }
+) {
+  await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      email: input.email,
+      full_name: input.fullName,
+    },
+    { onConflict: "id" }
+  );
+}
+
+function getGroupLeaderSuccessPath(
+  sourceDashboard: string | null,
+  groupId: string
+): string {
+  if (sourceDashboard === "admin") {
+    return `/dashboard/admin?groupSaved=1&groupTool=leaders&groupId=${groupId}`;
+  }
+
+  return `/dashboard/manager?section=gruppi&groupSaved=1&groupTool=leaders&groupId=${groupId}`;
+}
+
+type GroupLeaderTargetResult =
+  | {
+      ok: true;
+      participantId: string;
+      userId: string;
+      fullName: string;
+      createdParticipant: boolean;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
 function getAppUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||

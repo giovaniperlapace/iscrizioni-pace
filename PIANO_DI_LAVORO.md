@@ -32,6 +32,14 @@ Stato locale aggiornato al 2026-06-17:
   manager/admin essenziali, gestione gruppi in overlay, link riservati per
   gruppo da azione di riga, statistiche ridondanti rimosse e inventario
   statistiche disponibile in `docs/statistiche-disponibili.md`.
+- Dopo revisione prodotto della Milestone 11, la tabella iscritti admin/manager
+  e' stata riallineata alla sua funzione corretta: vedere, cercare e filtrare
+  le persone iscritte, aprire i dettagli al primo click e modificare il gruppo
+  corrente solo con un secondo click esplicito. La gestione dei ruoli e' stata
+  separata dalla tabella iscritti: per i capigruppo vive nella sezione
+  `Gruppi`, azione `Capogruppo`, dove si puo' promuovere un partecipante
+  esistente oppure creare una scheda minima nome/cognome/email per una persona
+  non ancora iscritta, collegandola a `profiles`/auth e a `group_memberships`.
 - Il 2026-06-17 e' stato corretto e deployato il bug dei magic link custom:
   i link costruiti con `token_hash` usano `type=email`, con fallback
   `type=magiclink` nel callback per link già inviati e non consumati.
@@ -74,6 +82,14 @@ Stato locale aggiornato al 2026-06-17:
   `Gruppi`) con modalità compressa `nav=mini` per liberare spazio alle
   tabelle. Restano da completare i manuali operativi previsti dalla stessa
   Milestone 14.
+- Il 2026-06-17 e' stata verificata l'app dopo il cambio titolo evento:
+  la migration di identità evento modifica solo `title`, `city` e `country`
+  mantenendo invariato lo slug tecnico `assisi-2026-test`; home e
+  registrazione rispondono `200`, la dashboard manager non autenticata
+  reindirizza correttamente a login, `lint`, `typecheck`, `test` e `build`
+  passano. Avviso residuo non collegato al titolo: in `.env.local` manca
+  `QR_TOKEN_ENCRYPTION_SECRET`, quindi `npm run opening:verify` fallisce finché
+  il segreto non viene configurato localmente.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-17: prima di proseguire con campagne email,
@@ -1011,12 +1027,13 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - header globale con logout `Esci` e icona;
   - descrizioni dashboard in formato "In questa area puoi...", senza ripetere
     l'email dell'utente;
-  - modale admin per modificare gruppo e ruolo operativo di un iscritto,
-    includendo `Admin`, `Capogruppo` e `Nessun ruolo operativo`;
-  - `Admin` scritto come ruolo globale in `event_user_roles`;
-  - `Capogruppo` scritto in `group_memberships` sul gruppo selezionato;
+  - tabella iscritti admin/manager dedicata a ricerca, filtri, dettagli
+    iscrizione e modifica controllata del gruppo corrente, senza filtro o
+    colonna ruolo operativo;
+  - consultazione dettagli iscrizione al primo click e modifica gruppo solo con
+    secondo click esplicito;
   - tabelle iscritti admin/manager con ricerca e filtri essenziali per evento,
-    gruppo, ruolo operativo e stato iscrizione;
+    stato gruppo e stato iscrizione;
   - helper `lib/registrations/operations-dashboard.ts` per normalizzare righe,
     filtri e riepiloghi testabili;
   - tabella gruppi admin/manager filtrabile, con azioni per riga `Modifica` e
@@ -1027,6 +1044,9 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - admin abilitato a generare e revocare link riservati come manager;
   - assegnazione capogruppo tramite `group_memberships`, non creando ruoli
     database separati per capogruppo paese/città/area/gruppo;
+  - azione `Capogruppo` nella tabella gruppi admin/manager per promuovere un
+    partecipante esistente o creare una scheda minima nome/cognome/email per
+    una persona non ancora iscritta;
   - metriche generiche ridondanti rimosse dalle dashboard, con inventario
     statistiche disponibile in `docs/statistiche-disponibili.md`;
   - dashboard partecipante aggiornata con QR immediatamente visibile, download
@@ -1040,13 +1060,18 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - `npm run typecheck`;
   - `npm test`;
   - `npm run build`;
-  - verifiche browser locali su admin, manager e partecipante.
+  - smoke HTTP locale su home, registrazione e redirect dashboard manager;
+  - verifica dati Supabase non mutativa su evento, gruppi, assegnazioni e
+    membership capogruppo.
 - Rischi residui: export CSV, gestione duplicati avanzata, campagne email e
   check-in restano fuori scope; la generazione wallet richiede una funzione
-  pass dedicata futura.
+  pass dedicata futura; `QR_TOKEN_ENCRYPTION_SECRET` va configurato
+  nell'ambiente locale per far passare `opening:verify`.
 - Accettazione: admin e manager possono seguire iscrizioni, filtrare gruppi,
-  creare/modificare nodi e gestire link riservati per singolo gruppo senza
-  sovraccaricare la dashboard; il partecipante vede subito il QR personale.
+  aprire i dettagli iscrizione, modificare il gruppo corrente, creare/modificare
+  nodi, gestire link riservati e nominare capigruppo dalla sezione gruppi senza
+  sovraccaricare la dashboard iscritti; il partecipante vede subito il QR
+  personale.
 - Non fare: gestione programma completa, campagne email, check-in, export CSV
   definitivo.
 
@@ -1089,7 +1114,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     conferma/rifiuto, risalita al padre, link riservati gruppo e assenza di
     dati sensibili inutili;
   - dashboard manager: apertura evento, monitoraggio, tabella iscritti,
-    gestione gruppi/ruoli, link riservati, filtri, coda dei casi bloccanti e
+    gestione gruppi/capigruppo, link riservati, filtri, coda dei casi bloccanti e
     differenza manager/manager_viewer;
   - dashboard admin: configurazione evento, ruoli, gruppi, albero, utenti con
     doppio ruolo, comandi delicati e audit;

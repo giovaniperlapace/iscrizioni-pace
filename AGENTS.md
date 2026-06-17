@@ -56,9 +56,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   link riservati in overlay, source `capogruppo`, QR reale, consenso dichiarato
   dal referente, assegnazione gruppo confermata e audit dedicato.
 - Milestone 11 ha consolidato le dashboard manager/admin essenziali: tabella
-  iscritti filtrabile per ricerca, evento, stato gruppo, ruolo operativo e
-  stato iscrizione, conteggi sul risultato filtrato, modifica gruppo/ruolo gia'
-  presente in overlay e consultazione read-only coerente per `manager_viewer`.
+  iscritti filtrabile per ricerca, evento, stato gruppo e stato iscrizione,
+  conteggi sul risultato filtrato, consultazione dettagli e modifica controllata
+  del gruppo corrente in overlay, con consultazione read-only coerente per
+  `manager_viewer`. La gestione dei ruoli non appartiene alla tabella iscritti:
+  per i capigruppo vive nella tabella gruppi tramite azione `Capogruppo`, dove
+  si può promuovere un partecipante esistente o creare una scheda minima
+  nome/cognome/email collegata a un utente auth e a `group_memberships`.
   Le tabelle operative caricano fino a 200 iscrizioni recenti e includono anche
   le iscrizioni annullate quando filtrate.
 - Dopo revisione della Milestone 11, la gestione gruppi admin/manager e' stata
@@ -120,6 +124,15 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   per evitare duplicazione di query/action; la sidebar supporta `nav=mini` per
   comprimersi e lasciare più spazio alle tabelle. I filtri e i link interni
   devono preservare la sezione e, dove possibile, la modalità `nav`.
+- Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
+  non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
+  gestione manager. La migration di identità evento mantiene lo slug tecnico
+  `assisi-2026-test` e aggiorna solo titolo/città/paese visibili. La tabella
+  iscritti admin/manager e' stata ulteriormente ripulita: niente filtro ruolo,
+  niente colonna ruolo, niente calcolo ruoli non usato; i dettagli iscrizione si
+  aprono al primo click e la modifica resta limitata al gruppo corrente con
+  secondo click esplicito. La gestione capigruppo resta nella sezione `Gruppi`,
+  azione `Capogruppo`, tramite `group_memberships`.
 - Il 2026-06-16 e' stata rifinita la navigazione delle dashboard operative:
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle
@@ -1173,12 +1186,18 @@ Ruoli minimi da supportare:
 I ruoli devono vivere in profili o membership applicative, non solo nei metadata Supabase Auth. Dove serve, il ruolo deve essere scoperto da uno scope: evento, gruppo, funzione di accoglienza.
 
 Le dashboard admin e manager devono convergere: entrambe sono console operative
-per configurare l'evento corrente, utenti operativi, ruoli non-manager e albero
-gruppi. Admin e manager devono poter creare/modificare gruppi e nodi
-paese/città/area/gruppo finale, invitare o promuovere manager_viewer,
-accoglienza e referenti, e collegare i capigruppo ai nodi tramite
-`group_memberships`. Solo l'admin puo' creare/avviare nuovi eventi e assegnare
-o promuovere il ruolo `manager` a persone gia' iscritte.
+per configurare l'evento corrente, iscritti, gruppi, link riservati e
+capigruppo. La tabella iscritti serve a vedere e filtrare persone iscritte,
+aprire i dettagli della loro iscrizione e, con un secondo click esplicito,
+modificare il gruppo corrente; non va usata come tabella di assegnazione ruoli.
+La gestione dei capigruppo vive nella sezione gruppi tramite azione
+`Capogruppo`: si puo' promuovere un partecipante esistente oppure creare una
+scheda minima nome/cognome/email per una persona non ancora iscritta,
+collegandola a `profiles`/auth e a `group_memberships`. Admin e manager devono
+poter creare/modificare gruppi e nodi paese/città/area/gruppo finale e
+collegare capigruppo ai nodi tramite `group_memberships`. Solo l'admin puo'
+creare/avviare nuovi eventi e assegnare o promuovere il ruolo `manager` a
+persone gia' iscritte.
 
 Decisione stabile su ruoli operativi e partecipazione personale:
 
@@ -1198,6 +1217,10 @@ Decisione stabile su ruoli operativi e partecipazione personale:
 - Le dashboard operative devono offrire un accesso chiaro a "La mia iscrizione"
   e segnalare se l'utente con ruolo operativo non ha ancora completato la
   propria registrazione personale per l'evento.
+- Un capogruppo creato prima della propria iscrizione avrà inizialmente solo
+  nome, cognome ed email nella scheda minima. Quando farà login potrà gestire il
+  gruppo assegnato e completare/modificare la propria scheda personale dai
+  flussi partecipante, senza duplicare l'identità.
 
 ## Workflow pubblico
 

@@ -20,7 +20,6 @@ const participants: OperationsParticipantForFilter[] = [
     currentGroupId: "roma",
     currentGroupName: "Roma centro",
     currentGroupStatus: "confirmed",
-    roles: ["capogruppo"],
   }),
   participant({
     eventId: "assisi",
@@ -50,14 +49,12 @@ test("parseOperationsDashboardFilters normalizes invalid and long inputs", () =>
     q: `  ${"a".repeat(100)}  `,
     event: "",
     group: "unknown",
-    role: "operational",
     status: "submitted",
   });
 
   assert.equal(filters.q, "a".repeat(80));
   assert.equal(filters.eventId, "all");
   assert.equal(filters.group, "all");
-  assert.equal(filters.role, "operational");
   assert.equal(filters.status, "submitted");
   assert.equal(hasActiveOperationsDashboardFilters(filters), true);
 });
@@ -88,14 +85,13 @@ test("applyOperationsDashboardFilters searches identity, contacts, groups and ev
   );
 });
 
-test("applyOperationsDashboardFilters combines event, group, role and status", () => {
+test("applyOperationsDashboardFilters combines event, group and status", () => {
   assert.deepEqual(
     applyOperationsDashboardFilters(
       participants,
       parseOperationsDashboardFilters({
         event: "assisi",
         group: "probable",
-        role: "none",
         status: "submitted",
       })
     ).map((participant) => participant.name),
@@ -126,7 +122,6 @@ test("summarizeOperationsDashboardParticipants reports loaded and filtered rows"
     withoutGroup: 0,
     probableGroup: 1,
     confirmedGroup: 1,
-    operationalRoles: 1,
     withoutEmail: 1,
   });
 });
@@ -146,7 +141,6 @@ function participant(
     currentGroupId: null,
     currentGroupName: null,
     currentGroupStatus: null,
-    roles: [],
     ...overrides,
   };
 }
