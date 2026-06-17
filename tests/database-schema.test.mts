@@ -23,6 +23,10 @@ const groupTreeSeedMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260617100000_seed_group_tree_from_model_app.sql"
 );
+const groupRegistrationLinksMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260617130000_group_registration_links.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -32,6 +36,10 @@ const groupLeaderDashboardMigration = readFileSync(
   "utf8"
 );
 const groupTreeSeedMigration = readFileSync(groupTreeSeedMigrationPath, "utf8");
+const groupRegistrationLinksMigration = readFileSync(
+  groupRegistrationLinksMigrationPath,
+  "utf8"
+);
 
 const createdTables = Array.from(
   migration.matchAll(/create table public\.([a-z_]+) \(/g),
@@ -129,4 +137,20 @@ test("model app group tree seed includes Roma areas and primary leaders", () => 
   );
   assert.match(groupTreeSeedMigration, /'Seminario', 'both'/);
   assert.match(groupTreeSeedMigration, /'Regola seed catalogo gruppi modello app.'/);
+});
+
+test("group registration links migration separates hidden groups from reserved access", () => {
+  assert.match(groupRegistrationLinksMigration, /add column if not exists public_label text/);
+  assert.match(
+    groupRegistrationLinksMigration,
+    /create table if not exists public\.group_registration_links/
+  );
+  assert.match(groupRegistrationLinksMigration, /token_hash text not null unique/);
+  assert.match(groupRegistrationLinksMigration, /revoked_at timestamptz/);
+  assert.match(
+    groupRegistrationLinksMigration,
+    /alter table public\.group_registration_links enable row level security/
+  );
+  assert.match(groupRegistrationLinksMigration, /group registration links read operational/);
+  assert.match(groupRegistrationLinksMigration, /group registration links manage direct leaders/);
 });

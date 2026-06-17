@@ -1,11 +1,16 @@
 import { RegistrationForm } from "@/app/registrazione/registration-form";
-import { getPublicRegistrationOptions } from "@/lib/registrations/public-flow";
+import { GROUP_REGISTRATION_LINK_QUERY_PARAM } from "@/lib/groups/registration-links";
+import {
+  getPublicRegistrationOptions,
+  type PublicRegistrationOptions,
+} from "@/lib/registrations/public-flow";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type RegistrationPageProps = {
   searchParams: Promise<{
     email?: string;
     error?: string;
+    groupLink?: string;
   }>;
 };
 
@@ -13,7 +18,22 @@ export default async function RegistrationPage({
   searchParams,
 }: RegistrationPageProps) {
   const params = await searchParams;
-  const options = await getPublicRegistrationOptions(createSupabaseServiceClient());
+  const supabase = createSupabaseServiceClient();
+  let groupLinkError: string | null = null;
+  let options: PublicRegistrationOptions;
+
+  try {
+    options = await getPublicRegistrationOptions(
+      supabase,
+      params[GROUP_REGISTRATION_LINK_QUERY_PARAM]
+    );
+  } catch (error) {
+    groupLinkError =
+      error instanceof Error
+        ? error.message
+        : "Link gruppo non valido o non più attivo.";
+    options = await getPublicRegistrationOptions(supabase);
+  }
 
   if (!options.event) {
     return (
@@ -32,7 +52,10 @@ export default async function RegistrationPage({
     <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
       <RegistrationForm
         email={params.email ?? ""}
-        error={params.error}
+        error={params.error ?? groupLinkError ?? undefined}
+        groupRegistrationLinkToken={
+          groupLinkError ? null : params[GROUP_REGISTRATION_LINK_QUERY_PARAM] ?? null
+        }
         options={options}
       />
     </main>

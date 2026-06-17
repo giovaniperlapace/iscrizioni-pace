@@ -20,6 +20,7 @@ import type { PublicRegistrationOptions } from "@/lib/registrations/public-flow"
 type RegistrationFormProps = {
   email: string;
   error?: string;
+  groupRegistrationLinkToken: string | null;
   options: PublicRegistrationOptions;
 };
 
@@ -103,6 +104,7 @@ type StoredRegistrationForm = {
 export function RegistrationForm({
   email,
   error,
+  groupRegistrationLinkToken,
   options,
 }: RegistrationFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -121,10 +123,14 @@ export function RegistrationForm({
   const [nationalitySearch, setNationalitySearch] = useState("");
   const [selectedNationality, setSelectedNationality] = useState("");
   const [showNationalityOptions, setShowNationalityOptions] = useState(false);
-  const [groupSearch, setGroupSearch] = useState("");
+  const [groupSearch, setGroupSearch] = useState(
+    options.groupLink?.displayLabel ?? ""
+  );
   const [showGroupOptions, setShowGroupOptions] = useState(false);
   const [cannotFindLeader, setCannotFindLeader] = useState(false);
-  const [selectedGroupValue, setSelectedGroupValue] = useState("");
+  const [selectedGroupValue, setSelectedGroupValue] = useState(
+    options.groupLink?.groupId ?? ""
+  );
   const [phonePrefix, setPhonePrefix] = useState("+39");
   const [customPhonePrefix, setCustomPhonePrefix] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -167,7 +173,8 @@ export function RegistrationForm({
       normalizeMatchText(groupSearch)
     )
   );
-  const hasRealGroups = options.groups.length > 0;
+  const hasGroupLink = Boolean(options.groupLink);
+  const hasRealGroups = options.groups.length > 0 || hasGroupLink;
   const groupOptions = hasRealGroups
     ? searchedGroups.map((group) => ({
         value: group.id,
@@ -268,9 +275,11 @@ export function RegistrationForm({
       setCustomCity(stored.state.customCity);
       setNationalitySearch(stored.state.nationalitySearch);
       setSelectedNationality(stored.state.selectedNationality);
-      setGroupSearch(stored.state.groupSearch);
-      setCannotFindLeader(stored.state.cannotFindLeader);
-      setSelectedGroupValue(stored.state.selectedGroupValue);
+      setGroupSearch(options.groupLink?.displayLabel ?? stored.state.groupSearch);
+      setCannotFindLeader(options.groupLink ? false : stored.state.cannotFindLeader);
+      setSelectedGroupValue(
+        options.groupLink?.groupId ?? stored.state.selectedGroupValue
+      );
       setPhonePrefix(stored.state.phonePrefix);
       setCustomPhonePrefix(stored.state.customPhonePrefix);
       setPhoneNumber(stored.state.phoneNumber);
@@ -284,16 +293,18 @@ export function RegistrationForm({
     }, 0);
 
     return () => window.clearTimeout(restoreTimer);
-  }, [email, error]);
+  }, [email, error, options.groupLink]);
 
   function clearCitySelection() {
     setCitySearch("");
     setSelectedCity("");
     setCustomCity("");
     setShowCityOptions(false);
-    setGroupSearch("");
-    setCannotFindLeader(false);
-    setSelectedGroupValue("");
+    if (!hasGroupLink) {
+      setGroupSearch("");
+      setCannotFindLeader(false);
+      setSelectedGroupValue("");
+    }
   }
 
   return (
@@ -332,6 +343,13 @@ export function RegistrationForm({
         }
       }}
     >
+      {groupRegistrationLinkToken ? (
+        <input
+          name="groupRegistrationLinkToken"
+          type="hidden"
+          value={groupRegistrationLinkToken}
+        />
+      ) : null}
       <header className="max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
           Nuova iscrizione
@@ -349,6 +367,12 @@ export function RegistrationForm({
           <p className="mt-4 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
             {error}
           </p>
+        ) : null}
+        {options.groupLink ? (
+          <div className="mt-4 rounded-lg border border-[#d8dece] bg-white px-4 py-3 text-sm text-[#38453c]">
+            <p className="font-semibold">Gruppo indicato dal referente</p>
+            <p className="mt-1 text-[#5e6d63]">{options.groupLink.displayLabel}</p>
+          </div>
         ) : null}
       </header>
 
@@ -827,91 +851,102 @@ export function RegistrationForm({
               readOnly
               type="hidden"
             />
-            <div className="relative">
+            {options.groupLink ? (
               <input
-                className="field"
-                placeholder={
-                  selectedCountryId && birthDate
-                    ? "Cerca per gruppo o referente"
-                    : "Indica prima paese, città e data di nascita"
-                }
-                required={!cannotFindLeader}
-                disabled={cannotFindLeader || !selectedCountryId || !birthDate}
-                value={groupSearch}
+                className="field bg-[#f7f8f3]"
+                readOnly
+                value={options.groupLink.displayLabel}
                 data-field="group"
-                onBlur={() => {
-                  window.setTimeout(() => setShowGroupOptions(false), 120);
-                }}
-                onChange={(event) => {
-                  setGroupSearch(event.target.value);
-                  setSelectedGroupValue("");
-                  setShowGroupOptions(true);
-                }}
-                onFocus={() => {
-                  if (!cannotFindLeader && selectedCountryId && birthDate) {
-                    setShowGroupOptions(true);
-                  }
-                }}
               />
-              {showGroupOptions && !cannotFindLeader ? (
-                <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[#cbd3c0] bg-white shadow-lg">
-                  {(groupOptions.length > 0
-                    ? groupOptions
-                    : [
-                        {
-                          value: "",
-                          label: selectedCountryId
-                            ? "Nessun referente affine trovato"
-                            : "Indica prima paese, città e data di nascita",
-                        },
-                      ]
-                  ).map((group) => (
-                    <button
-                      key={`${group.value}-${group.label}`}
-                      type="button"
-                      disabled={!group.value}
-                      className="block w-full px-3 py-2 text-left text-sm hover:bg-[#eef3e8] disabled:cursor-default disabled:text-[#7a867b] disabled:hover:bg-white"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => {
-                        if (!group.value) {
-                          return;
-                        }
+            ) : (
+              <>
+                <div className="relative">
+                  <input
+                    className="field"
+                    placeholder={
+                      selectedCountryId && birthDate
+                        ? "Cerca per gruppo o referente"
+                        : "Indica prima paese, città e data di nascita"
+                    }
+                    required={!cannotFindLeader}
+                    disabled={cannotFindLeader || !selectedCountryId || !birthDate}
+                    value={groupSearch}
+                    data-field="group"
+                    onBlur={() => {
+                      window.setTimeout(() => setShowGroupOptions(false), 120);
+                    }}
+                    onChange={(event) => {
+                      setGroupSearch(event.target.value);
+                      setSelectedGroupValue("");
+                      setShowGroupOptions(true);
+                    }}
+                    onFocus={() => {
+                      if (!cannotFindLeader && selectedCountryId && birthDate) {
+                        setShowGroupOptions(true);
+                      }
+                    }}
+                  />
+                  {showGroupOptions && !cannotFindLeader ? (
+                    <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[#cbd3c0] bg-white shadow-lg">
+                      {(groupOptions.length > 0
+                        ? groupOptions
+                        : [
+                            {
+                              value: "",
+                              label: selectedCountryId
+                                ? "Nessun referente affine trovato"
+                                : "Indica prima paese, città e data di nascita",
+                            },
+                          ]
+                      ).map((group) => (
+                        <button
+                          key={`${group.value}-${group.label}`}
+                          type="button"
+                          disabled={!group.value}
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-[#eef3e8] disabled:cursor-default disabled:text-[#7a867b] disabled:hover:bg-white"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            if (!group.value) {
+                              return;
+                            }
 
-                        setSelectedGroupValue(group.value);
-                        setGroupSearch(group.label);
-                        setShowGroupOptions(false);
-                      }}
-                    >
-                      {group.label}
-                    </button>
-                  ))}
+                            setSelectedGroupValue(group.value);
+                            setGroupSearch(group.label);
+                            setShowGroupOptions(false);
+                          }}
+                        >
+                          {group.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
-            {hasRealGroups && groupOptions.length === 0 ? (
-              <span className="text-xs font-normal text-[#6a766b]">
-                Nessun referente affine trovato con i dati indicati.
-              </span>
-            ) : null}
-            <label className="flex items-start gap-3 text-sm font-normal text-[#38453c]">
-              <input
-                name="cannotFindLeader"
-                type="checkbox"
-                checked={cannotFindLeader}
-                className="mt-1 h-4 w-4"
-                data-field="group"
-                onChange={(event) => {
-                  const checked = event.target.checked;
-                  setCannotFindLeader(checked);
-                  if (checked) {
-                    setSelectedGroupValue("");
-                    setGroupSearch("");
-                    setShowGroupOptions(false);
-                  }
-                }}
-              />
-              <span>Non trovo il mio referente</span>
-            </label>
+                {hasRealGroups && groupOptions.length === 0 ? (
+                  <span className="text-xs font-normal text-[#6a766b]">
+                    Nessun referente affine trovato con i dati indicati.
+                  </span>
+                ) : null}
+                <label className="flex items-start gap-3 text-sm font-normal text-[#38453c]">
+                  <input
+                    name="cannotFindLeader"
+                    type="checkbox"
+                    checked={cannotFindLeader}
+                    className="mt-1 h-4 w-4"
+                    data-field="group"
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setCannotFindLeader(checked);
+                      if (checked) {
+                        setSelectedGroupValue("");
+                        setGroupSearch("");
+                        setShowGroupOptions(false);
+                      }
+                    }}
+                  />
+                  <span>Non trovo il mio referente</span>
+                </label>
+              </>
+            )}
           </Field>
         ) : null}
       </section>

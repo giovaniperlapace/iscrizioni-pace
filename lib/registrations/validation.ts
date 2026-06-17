@@ -17,6 +17,7 @@ export type RegistrationInput = {
   participatesWithGroup: boolean | null;
   groupId: string | null;
   groupName: string | null;
+  groupRegistrationLinkToken: string | null;
   cannotFindLeader: boolean;
   attendanceChoice: "yes" | "no" | "unknown";
   availabilityDays: string[];
@@ -68,6 +69,9 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   );
   const cannotFindLeader = formData.get("cannotFindLeader") === "on";
   const groupId = optionalUuid(formData.get("groupId"));
+  const groupRegistrationLinkToken = optionalText(
+    formData.get("groupRegistrationLinkToken")
+  );
   const hasAccessibilityNeeds = parseBooleanChoice(
     formData.get("hasAccessibilityNeeds")
   );
@@ -101,6 +105,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
       participatesWithGroup === true && !cannotFindLeader
         ? optionalText(formData.get("groupName"))
         : null,
+    groupRegistrationLinkToken,
     cannotFindLeader: participatesWithGroup === true ? cannotFindLeader : false,
     attendanceChoice: parseAttendanceChoice(formData.get("attendanceChoice")),
     availabilityDays: availabilityUnknown ? [] : parseAvailabilityDays(formData),

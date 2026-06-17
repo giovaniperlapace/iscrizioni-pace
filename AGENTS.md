@@ -41,6 +41,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   scope albero gruppi, filtri operativi, conferma/rifiuto con risalita al padre,
   note interne, lettura notifica e audit delle decisioni senza email al
   partecipante.
+- Milestone 9.1 ha aggiunto link riservati per gruppi nascosti ma iscrivibili:
+  `groups.public_label`, tabella `group_registration_links`, generazione/revoca
+  da dashboard manager e capogruppo in scope, token opachi e form pubblico
+  precompilato tramite `?groupLink=...`.
 - Il 2026-06-16 e' stata rifinita la navigazione delle dashboard operative:
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle
@@ -751,6 +755,69 @@ Decisioni:
 - L'audit log salva action e metadati tecnici (`group_id`, stato precedente,
   eventuale gruppo di escalation, flag nota cambiata), non il testo della nota
   interna.
+
+Verifiche eseguite:
+
+- `npm run lint`.
+- `npm run typecheck`.
+- `npm test`.
+- `npm run build`.
+
+## Milestone 9.1 - link riservati per gruppi nascosti
+
+Link riservati per gruppi iscrivibili ma non visibili nel catalogo pubblico
+completati localmente il 2026-06-17.
+
+Deliverable:
+
+- Migration `supabase/migrations/20260617130000_group_registration_links.sql`.
+- `groups` estesa con `public_label`, label opzionale mostrabile al
+  partecipante quando il nome operativo interno e' troppo delicato o ambiguo.
+- Nuova tabella `group_registration_links` con `token_hash`, `public_label`,
+  `internal_label`, `use_count`, `max_uses`, `expires_at`, `revoked_at`,
+  `created_by` e `revoked_by`.
+- Helper server-side in `lib/groups/registration-links.ts` per generare token
+  opachi, hash SHA-256, URL pubblici, label partecipante e stato link.
+- Form pubblico `/registrazione?groupLink=<token>`: il token valido aggiunge un
+  contesto "Gruppo indicato dal referente", usa la label pubblica e assegna il
+  gruppo anche se `is_public_catalog = false`.
+- `createPublicRegistration` valida server-side il gruppo selezionato: senza
+  token link valido accetta solo gruppi attivi, assegnabili e pubblici nel
+  catalogo. Questo chiude la possibilità di forzare manualmente UUID di gruppi
+  nascosti nel submit.
+- Dashboard manager: sezione "Link riservati di iscrizione" per generare e
+  revocare link su tutti i gruppi iscrivibili degli eventi gestibili.
+- Dashboard capogruppo: sezione "Link iscrizione gruppo" per generare e
+  revocare link solo sui gruppi nel proprio scope discendente.
+- Audit log per `group_registration_link.created`,
+  `group_registration_link.revoked` e `registration.group_link_used`, senza
+  salvare token in chiaro.
+- Test aggiornati in `tests/group-matching.test.mts` e
+  `tests/database-schema.test.mts`.
+
+Decisioni:
+
+- `is_assignable = true` indica che un gruppo può ricevere iscrizioni;
+  `is_public_catalog = true` indica che compare nel suggerimento pubblico;
+  `is_assignable = true` e `is_public_catalog = false` indica gruppo nascosto
+  ma iscrivibile solo tramite link riservato o gestione operativa.
+- Il token del link e' opaco e non contiene ID gruppo, nomi o dati personali.
+  In database si conserva solo `token_hash`; il link completo viene mostrato
+  solo subito dopo la creazione.
+- La label pubblica del link prevale su `groups.public_label`; se entrambe sono
+  assenti, il form mostra "Gruppo indicato dal tuo referente".
+- Il link riservato non forza le risposte personali del questionario: la persona
+  può rispondere sinceramente su partecipazione precedente e gruppo; il token
+  determina comunque l'assegnazione operativa al gruppo invitante.
+- Le iscrizioni arrivate da link riservato usano
+  `assignment_reason = 'group_registration_link'`, `status = 'probable'` e
+  `source = 'participant_selected'` per restare compatibili con il vincolo
+  attuale della tabella.
+- Manager/admin possono generare link per tutti i gruppi iscrivibili in scope
+  evento; capogruppo solo per il proprio gruppo/nodo e discendenti.
+- I link esistenti non sono ricostruibili dalla dashboard perché il token in
+  chiaro non viene conservato. Se serve reinviare un link, se ne genera uno
+  nuovo e si può revocare quello vecchio.
 
 Verifiche eseguite:
 

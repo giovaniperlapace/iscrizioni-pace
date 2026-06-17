@@ -22,6 +22,9 @@ Stato locale rilevato in questo task:
   verificare assegnazioni probabili, confermare/rifiutare appartenenze,
   aggiungere note interne e far risalire i rifiuti al nodo padre o alla coda
   manager.
+- Milestone 9.1 e' completata localmente: link riservati per gruppi nascosti ma
+  iscrivibili, con label pubblica separata dal nome operativo, generazione e
+  revoca da dashboard manager/capogruppo, token opachi e audit.
 - Il 2026-06-16 e' stata anticipata una parte della Milestone 11: navigazione
   dashboard a tab fra ruoli, logout globale, modale admin per assegnare anche
   admin/capogruppo e rimozione della card personale ridondante dalle dashboard
@@ -848,6 +851,52 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   o passare al livello superiore in modo tracciabile.
 - Non fare: inserimento manuale avanzato se non indispensabile.
 
+### Milestone 9.1: link riservati per gruppi nascosti
+
+- Scopo: consentire iscrizioni a gruppi delicati o ambigui senza mostrarli nel
+  menu pubblico dei gruppi, tramite link generati da manager o dal capogruppo
+  del relativo scope.
+- Deliverable:
+  - `groups.public_label` per separare label partecipante e nome operativo
+    interno;
+  - tabella `group_registration_links` con token hash, label pubblica,
+    etichetta interna, revoca, scadenza/limite usi opzionali e conteggio usi;
+  - helper server-side per token opachi, URL e stato link;
+  - form pubblico con supporto a `/registrazione?groupLink=<token>`, label
+    discreta "Gruppo indicato dal referente" e assegnazione al gruppo anche se
+    nascosto nel catalogo;
+  - validazione server-side che impedisce di usare UUID di gruppi nascosti
+    senza token link valido;
+  - dashboard manager con generazione/revoca link per gruppi iscrivibili degli
+    eventi gestibili;
+  - dashboard capogruppo con generazione/revoca link solo per gruppi nel
+    proprio scope discendente;
+  - audit per creazione, revoca e uso del link, senza token in chiaro.
+- File/cartelle:
+  `supabase/migrations/20260617130000_group_registration_links.sql`,
+  `lib/groups/registration-links.ts`, `lib/registrations/public-flow.ts`,
+  `app/registrazione/*`, `app/dashboard/manager/page.tsx`,
+  `app/dashboard/capogruppo/page.tsx`.
+- Verifiche:
+  - `npm run lint`;
+  - `npm run typecheck`;
+  - `npm test`;
+  - `npm run build`.
+- Decisioni:
+  - `is_assignable = true` e `is_public_catalog = false` significa gruppo
+    nascosto ma iscrivibile solo da link riservato o gestione operativa;
+  - il token non contiene dati personali o ID gruppo e in database resta solo
+    l'hash;
+  - il link completo e' mostrato solo subito dopo la generazione;
+  - il link riservato non forza le risposte personali del questionario, ma
+    assegna operativamente il gruppo invitante;
+  - le iscrizioni da link usano `assignment_reason = 'group_registration_link'`
+    e restano `probable` finché il referente/manager non le conferma.
+- Accettazione: un manager può creare un link per un gruppo nascosto, un
+  capogruppo può farlo solo per il proprio scope, e un partecipante con quel
+  link viene assegnato al gruppo senza vedere il gruppo nel menu pubblico
+  ordinario.
+
 ### Milestone 10: inserimento manuale partecipanti da capogruppo
 
 - Scopo: gestire persone senza email o fragili tramite referente dopo che il
@@ -968,11 +1017,98 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Accettazione: campagne inviate solo da ruoli autorizzati e tracciate.
 - Non fare: invii reali massivi senza conferma esplicita e ambiente verificato.
 
+### Milestone 13.4: revisione guidata UX, navigazione e dati dashboard
+
+- Scopo: prima della rifinitura estetica finale, rivedere insieme tutta
+  l'esperienza dell'app in localhost, in prima persona, usando dati e permessi
+  ormai coerenti con l'architettura database definitiva. L'obiettivo e'
+  trasformare le funzioni implementate in percorsi chiari, ordinati e
+  comprensibili per l'utente finale, così che i manuali possano essere scritti
+  su una struttura front end già stabile e non caotica.
+- Metodo:
+  - avviare `npm run dev` e lavorare su `localhost`;
+  - usare utenti test/seed realistici per admin, manager, manager_viewer,
+    capogruppo, accoglienza e partecipante;
+  - rivedere una sezione alla volta, senza passare alla successiva finché la
+    sezione corrente non e' chiara e approvata;
+  - usare commenti puntuali, screenshot o riferimenti precisi a schermate,
+    componenti e flussi per capirsi rapidamente su cosa cambiare;
+  - trasformare i commenti approvati in piccole patch mirate, verificabili e
+    non in refactor generici;
+  - aggiornare progressivamente una checklist di revisione, così da sapere
+    quali aree sono state viste, approvate o rimandate.
+- Sottosezioni da affrontare una per una:
+  - home pubblica email-prima: chiarezza del primo accesso, errori, stato
+    iscrizioni aperte/chiuse, CTA e testi;
+  - form pubblico di registrazione: ordine delle domande, comprensione di
+    paese/città, gruppo/referente, link riservati gruppo, accessibilità,
+    presenze e privacy;
+  - conferma iscrizione e primo accesso: email, CTA verso magic link, messaggi
+    successivi all'invio e aspettative del partecipante;
+  - login/callback/errori: stati di sessione, link scaduti, redirect al ruolo
+    corretto e messaggi non tecnici;
+  - dashboard partecipante: header, evento, gruppo, panel, overlay QR,
+    modifica iscrizione, ritorno alle aree operative per utenti con doppio
+    ruolo;
+  - dashboard capogruppo: assegnazioni da verificare, filtri, note interne,
+    conferma/rifiuto, risalita al padre, link riservati gruppo e assenza di
+    dati sensibili inutili;
+  - dashboard manager: apertura evento, monitoraggio, tabella iscritti,
+    gestione gruppi/ruoli, link riservati, filtri, coda dei casi bloccanti e
+    differenza manager/manager_viewer;
+  - dashboard admin: configurazione evento, ruoli, gruppi, albero, utenti con
+    doppio ruolo, comandi delicati e audit;
+  - dashboard accoglienza: dati minimi, QR/check-in quando completato,
+    messaggi di esito e limiti di visibilità;
+  - navigazione globale: tab fra ruoli, logout, ritorno all'area personale,
+    coerenza mobile/desktop e assenza di vicoli ciechi;
+  - visualizzazione dati sensibili: accessibilità, contatti, appartenenza a
+    gruppi delicati, export, audit e minimizzazione;
+  - stati vuoti/errori/loading: cosa vede ogni ruolo quando non ci sono dati,
+    quando un link e' scaduto, quando una action fallisce o quando manca un
+    permesso;
+  - testi operativi e microcopy: nomi delle sezioni, verbi dei pulsanti,
+    messaggi di conferma, tono verso partecipanti fragili e gruppi delicati;
+  - preparazione manuali: estrarre dai flussi approvati la struttura dei manuali
+    manager, capogruppo, accoglienza e admin.
+- Deliverable:
+  - checklist di revisione UX/funzionale con stato per ogni sezione;
+  - patch mirate su navigazione, layout informativo, testi, ordinamento dati,
+    stati vuoti e permessi visibili;
+  - decisioni documentate su cosa ogni ruolo deve vedere, modificare o non
+    vedere;
+  - elenco stabile dei flussi da trasformare nei manuali operativi;
+  - eventuali issue/annotazioni residue separate dalla rifinitura estetica
+    finale.
+- File/cartelle: `app/*`, `components/*`, `lib/auth/*`, `lib/groups/*`,
+  `lib/registrations/*`, eventuali documenti in `docs/*`.
+- Migration: solo se durante la revisione emerge che una funzione promessa non
+  può essere rappresentata correttamente con lo schema già esistente. In quel
+  caso la migration va trattata come correzione funzionale, non come styling.
+- Verifiche:
+  - sessioni localhost per ogni ruolo reale o test;
+  - controlli mobile e desktop delle pagine approvate;
+  - lint, typecheck, test e build dopo ogni blocco significativo;
+  - nessuna schermata approvata deve dipendere da dati manuali non seedati o da
+    query fuori applicazione.
+- Rischi:
+  - confondere revisione funzionale con rifinitura estetica;
+  - riscrivere layout senza aver deciso prima cosa serve all'utente;
+  - lasciare dashboard tecnicamente complete ma poco comprensibili;
+  - scrivere manuali su flussi ancora instabili.
+- Accettazione: tutte le sezioni principali sono state viste in localhost,
+  commentate, corrette e approvate una per una; la navigazione fra ruoli e la
+  visualizzazione dei dati sono coerenti con permessi, obiettivi e sensibilità
+  del progetto; i manuali possono essere scritti partendo da flussi stabili.
+- Non fare: rifinitura visuale finale, cambio palette/guideline estetiche,
+  animazioni, campagne email reali o funzioni nuove non necessarie alla
+  coerenza dei flussi.
+
 ### Milestone 13.5: rifinitura estetica e manuali operativi
 
 - Scopo: dedicare una milestone separata solo alla cura finale dell'esperienza
-  visiva e alla documentazione d'uso, senza introdurre nuove funzioni di
-  prodotto.
+  visiva e alla documentazione d'uso, partendo dai flussi approvati nella
+  Milestone 13.4 e senza introdurre nuove funzioni di prodotto.
 - Deliverable estetica:
   - applicazione delle guideline estetiche che verranno fornite;
   - revisione coerente di layout, spaziature, tipografia, colori, stati
@@ -1164,9 +1300,8 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Riprendi dalle modifiche locali del 2026-06-16 su navigazione dashboard,
-> logout e gestione ruoli admin. Verifica diff, mobile viewport e flussi
-> principali; poi esegui lint, typecheck, test e build. Se tutto e' coerente,
-> prepara un commit tematico su `main` per chiudere la rifinitura delle
-> dashboard operative prima di proseguire con la parte restante della
-> Milestone 11.
+> Applica e verifica la migration dei link riservati gruppi sul Supabase remoto,
+> poi implementa la Milestone 10: inserimento manuale/delegato di partecipanti
+> da parte del capogruppo per persone senza email o fragili, riusando lo scope
+> dell'albero gruppi, auditando l'origine e senza inviare magic link diretto al
+> partecipante. Prima di chiudere esegui lint, typecheck, test e build.

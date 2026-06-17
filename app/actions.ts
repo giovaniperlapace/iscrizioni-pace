@@ -5,13 +5,18 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getCurrentAuthContext } from "@/lib/auth/session";
+import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import {
   collectDescendantGroupIds,
   getEscalationTargetGroupId,
   normalizeLeaderInternalNote,
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
+import {
+  createGroupRegistrationLinkToken,
+  hashGroupRegistrationLinkToken,
+  normalizeGroupRegistrationPublicLabel,
+} from "@/lib/groups/registration-links";
 import {
   canParticipantEditRegistration,
   diffParticipantDashboardUpdate,
@@ -659,6 +664,175 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   redirect("/dashboard/capogruppo?error=invalid");
 }
 
+export async function createGroupRegistrationLink(formData: FormData) {
+  const groupId = optionalText(formData.get("groupId"));
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const dashboardPath =
+    sourceDashboard === "capogruppo" ? "/dashboard/capogruppo" : "/dashboard/manager";
+  const publicLabel = normalizeGroupRegistrationPublicLabel(
+    formData.get("publicLabel")
+  );
+  const internalLabel = normalizeGroupRegistrationPublicLabel(
+    formData.get("internalLabel")
+  );
+
+  if (!groupId) {
+    redirect(`${dashboardPath}?groupLinkError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "capogruppo" ? "capogruppo" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: group, error: groupError } = await serviceSupabase
+    .from("groups")
+    .select("id,event_id,name,is_active,is_assignable")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  const groupRow = group as
+    | {
+        id: string;
+        event_id: string;
+        name: string | null;
+        is_active: boolean | null;
+        is_assignable: boolean | null;
+      }
+    | null;
+
+  if (
+    groupError ||
+    !groupRow ||
+    !groupRow.is_active ||
+    !groupRow.is_assignable ||
+    !(await canManageGroupRegistrationLink(serviceSupabase, auth.user.id, auth.eventRoles, groupRow.id, groupRow.event_id, sourceDashboard))
+  ) {
+    redirect(`${dashboardPath}?groupLinkError=forbidden`);
+  }
+
+  const token = createGroupRegistrationLinkToken();
+  const { data: link, error: linkError } = await serviceSupabase
+    .from("group_registration_links")
+    .insert({
+      event_id: groupRow.event_id,
+      group_id: groupRow.id,
+      token_hash: hashGroupRegistrationLinkToken(token),
+      public_label: publicLabel,
+      internal_label: internalLabel,
+      created_by: auth.user.id,
+    })
+    .select("id")
+    .single();
+
+  if (linkError || !link) {
+    redirect(
+      `${dashboardPath}?groupLinkError=${encodeURIComponent(
+        linkError?.message ?? "create"
+      )}`
+    );
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: groupRow.event_id,
+    actor_user_id: auth.user.id,
+    action: "group_registration_link.created",
+    entity_table: "group_registration_links",
+    entity_id: (link as { id: string }).id,
+    metadata: {
+      group_id: groupRow.id,
+      has_public_label: Boolean(publicLabel),
+      has_internal_label: Boolean(internalLabel),
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+  redirect(
+    `${dashboardPath}?groupLinkSaved=1&groupLinkToken=${encodeURIComponent(
+      token
+    )}&groupLinkGroupId=${encodeURIComponent(groupRow.id)}`
+  );
+}
+
+export async function revokeGroupRegistrationLink(formData: FormData) {
+  const linkId = optionalText(formData.get("linkId"));
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const dashboardPath =
+    sourceDashboard === "capogruppo" ? "/dashboard/capogruppo" : "/dashboard/manager";
+
+  if (!linkId) {
+    redirect(`${dashboardPath}?groupLinkError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "capogruppo" ? "capogruppo" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: link, error: linkError } = await serviceSupabase
+    .from("group_registration_links")
+    .select("id,event_id,group_id,revoked_at")
+    .eq("id", linkId)
+    .maybeSingle();
+  const linkRow = link as
+    | {
+        id: string;
+        event_id: string;
+        group_id: string;
+        revoked_at: string | null;
+      }
+    | null;
+
+  if (
+    linkError ||
+    !linkRow ||
+    !(await canManageGroupRegistrationLink(serviceSupabase, auth.user.id, auth.eventRoles, linkRow.group_id, linkRow.event_id, sourceDashboard))
+  ) {
+    redirect(`${dashboardPath}?groupLinkError=forbidden`);
+  }
+
+  const now = new Date().toISOString();
+  const { error: updateError } = await serviceSupabase
+    .from("group_registration_links")
+    .update({ revoked_at: linkRow.revoked_at ?? now, revoked_by: auth.user.id })
+    .eq("id", linkRow.id);
+
+  if (updateError) {
+    redirect(
+      `${dashboardPath}?groupLinkError=${encodeURIComponent(updateError.message)}`
+    );
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: linkRow.event_id,
+    actor_user_id: auth.user.id,
+    action: "group_registration_link.revoked",
+    entity_table: "group_registration_links",
+    entity_id: linkRow.id,
+    metadata: {
+      group_id: linkRow.group_id,
+      already_revoked: Boolean(linkRow.revoked_at),
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+  redirect(`${dashboardPath}?groupLinkSaved=1`);
+}
+
 function getAppUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -846,6 +1020,47 @@ async function auditGroupLeaderDecision(
       ...input.metadata,
     },
   });
+}
+
+async function canManageGroupRegistrationLink(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  userId: string,
+  eventRoles: EventUserRole[],
+  groupId: string,
+  eventId: string,
+  sourceDashboard: string | null
+): Promise<boolean> {
+  const isAdmin = eventRoles.some((role) => role.role === "admin");
+  const isEventManager = eventRoles.some(
+    (role) => role.role === "manager" && role.eventId === eventId
+  );
+
+  if (isAdmin || isEventManager) {
+    return true;
+  }
+
+  if (sourceDashboard !== "capogruppo") {
+    return false;
+  }
+
+  const [{ data: memberships }, { data: groups }] = await Promise.all([
+    supabase.from("group_memberships").select("group_id").eq("user_id", userId),
+    supabase.from("groups").select("id,parent_group_id").eq("is_active", true),
+  ]);
+  const rootGroupIds = ((memberships ?? []) as Array<{ group_id: string | null }>)
+    .map((membership) => membership.group_id)
+    .filter((membershipGroupId): membershipGroupId is string =>
+      Boolean(membershipGroupId)
+    );
+  const groupNodes = ((groups ?? []) as Array<{
+    id: string;
+    parent_group_id: string | null;
+  }>).map<GroupTreeNode>((group) => ({
+    id: group.id,
+    parentGroupId: group.parent_group_id,
+  }));
+
+  return collectDescendantGroupIds(groupNodes, rootGroupIds).has(groupId);
 }
 
 async function logEmailFailure(

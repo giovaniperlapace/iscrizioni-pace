@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { updateGroupLeaderAssignment } from "@/app/actions";
+import {
+  createGroupRegistrationLink,
+  revokeGroupRegistrationLink,
+  updateGroupLeaderAssignment,
+} from "@/app/actions";
 import {
   DashboardAreaDescription,
   DashboardRoleTabs,
@@ -15,6 +19,10 @@ import {
   type GroupLeaderReviewFilter,
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
+import {
+  buildGroupRegistrationUrl,
+  getGroupRegistrationLinkStatus,
+} from "@/lib/groups/registration-links";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -23,6 +31,10 @@ type CapogruppoPageProps = {
     filter?: string;
     error?: string;
     saved?: string;
+    groupLinkError?: string;
+    groupLinkSaved?: string;
+    groupLinkToken?: string;
+    groupLinkGroupId?: string;
   }>;
 };
 
@@ -36,6 +48,51 @@ type GroupRow = {
   name: string;
   parent_group_id: string | null;
   node_type: string | null;
+  is_assignable: boolean | null;
+  is_public_catalog: boolean | null;
+  public_label: string | null;
+  primary_leader_name: string | null;
+  events:
+    | { title: string | null }
+    | Array<{ title: string | null }>
+    | null;
+};
+
+type GroupLinkRow = {
+  id: string;
+  event_id: string;
+  group_id: string;
+  public_label: string | null;
+  internal_label: string | null;
+  use_count: number | null;
+  max_uses: number | null;
+  created_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+};
+
+type GroupLinkView = {
+  id: string;
+  eventId: string;
+  groupId: string;
+  publicLabel: string | null;
+  internalLabel: string | null;
+  useCount: number;
+  maxUses: number | null;
+  createdAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+};
+
+type ScopedGroupView = {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  name: string;
+  isAssignable: boolean;
+  isPublicCatalog: boolean;
+  publicLabel: string | null;
+  primaryLeaderName: string | null;
 };
 
 type AssignmentRow = {
@@ -181,7 +238,9 @@ export default async function CapogruppoDashboardPage({
     .filter((groupId): groupId is string => Boolean(groupId));
   const { data: groups } = await serviceSupabase
     .from("groups")
-    .select("id,event_id,name,parent_group_id,node_type")
+    .select(
+      "id,event_id,name,parent_group_id,node_type,is_assignable,is_public_catalog,public_label,primary_leader_name,events(title)"
+    )
     .eq("is_active", true);
   const groupRows = (groups ?? []) as GroupRow[];
   const groupNodes = groupRows.map<GroupTreeNode>((group) => ({
@@ -191,6 +250,19 @@ export default async function CapogruppoDashboardPage({
   const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
 
   const assignments = await getAssignments([...scopedGroupIds]);
+  const scopedGroups = groupRows
+    .filter((group) => scopedGroupIds.has(group.id))
+    .map<ScopedGroupView>((group) => ({
+      id: group.id,
+      eventId: group.event_id,
+      eventTitle: relatedOne(group.events)?.title ?? "Evento",
+      name: group.name ?? "Gruppo senza nome",
+      isAssignable: group.is_assignable ?? true,
+      isPublicCatalog: group.is_public_catalog ?? true,
+      publicLabel: group.public_label,
+      primaryLeaderName: group.primary_leader_name,
+    }));
+  const groupLinks = await getGroupLinks([...scopedGroupIds]);
   const summary = summarizeGroupLeaderAssignments(assignments);
   const filteredAssignments = assignments.filter((assignment) =>
     matchesGroupLeaderFilter(assignment, filter)
@@ -211,7 +283,10 @@ export default async function CapogruppoDashboardPage({
           </DashboardAreaDescription>
         </header>
 
-        <StatusMessage error={params.error} saved={params.saved} />
+        <StatusMessage
+          error={params.error ?? params.groupLinkError}
+          saved={params.saved ?? params.groupLinkSaved}
+        />
 
         <section className="grid gap-4 sm:grid-cols-4">
           <Metric label="Nodi assegnati" value={String(rootGroupIds.length)} />
@@ -255,6 +330,20 @@ export default async function CapogruppoDashboardPage({
           </div>
         </section>
 
+        <GroupLeaderLinksSection
+          groups={scopedGroups}
+          links={groupLinks}
+          createdGroupId={params.groupLinkGroupId ?? null}
+          createdUrl={
+            params.groupLinkToken
+              ? buildGroupRegistrationUrl({
+                  appUrl: getAppUrl(),
+                  token: params.groupLinkToken,
+                })
+              : null
+          }
+        />
+
         <section className="grid gap-4">
           {filteredAssignments.map((assignment) => (
             <AssignmentCard key={assignment.id} assignment={assignment} />
@@ -288,6 +377,172 @@ export default async function CapogruppoDashboardPage({
       .map(toAssignmentView)
       .filter((assignment): assignment is AssignmentView => Boolean(assignment));
   }
+
+  async function getGroupLinks(groupIds: string[]): Promise<GroupLinkView[]> {
+    if (groupIds.length === 0) {
+      return [];
+    }
+
+    const { data } = await serviceSupabase
+      .from("group_registration_links")
+      .select(
+        "id,event_id,group_id,public_label,internal_label,use_count,max_uses,created_at,expires_at,revoked_at"
+      )
+      .in("group_id", groupIds)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false });
+
+    return ((data ?? []) as GroupLinkRow[]).map((link) => ({
+      id: link.id,
+      eventId: link.event_id,
+      groupId: link.group_id,
+      publicLabel: link.public_label,
+      internalLabel: link.internal_label,
+      useCount: link.use_count ?? 0,
+      maxUses: link.max_uses,
+      createdAt: link.created_at,
+      expiresAt: link.expires_at,
+      revokedAt: link.revoked_at,
+    }));
+  }
+}
+
+function GroupLeaderLinksSection({
+  groups,
+  links,
+  createdGroupId,
+  createdUrl,
+}: {
+  groups: ScopedGroupView[];
+  links: GroupLinkView[];
+  createdGroupId: string | null;
+  createdUrl: string | null;
+}) {
+  const assignableGroups = groups.filter((group) => group.isAssignable);
+  const linksByGroupId = new Map<string, GroupLinkView[]>();
+
+  for (const link of links) {
+    const groupLinks = linksByGroupId.get(link.groupId) ?? [];
+    groupLinks.push(link);
+    linksByGroupId.set(link.groupId, groupLinks);
+  }
+
+  return (
+    <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+      <div>
+        <h2 className="text-lg font-semibold">Link iscrizione gruppo</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+          Puoi generare link riservati solo per i gruppi nel tuo scope. I link
+          non rendono il gruppo visibile nel menu pubblico.
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-4">
+        {assignableGroups.map((group) => {
+          const groupLinks = linksByGroupId.get(group.id) ?? [];
+
+          return (
+            <article
+              key={group.id}
+              className="rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4"
+            >
+              <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-[#1c241f]">{group.name}</h3>
+                    <span className="rounded-full border border-[#c8d5be] px-2 py-1 text-xs font-semibold text-[#38563d]">
+                      {group.isPublicCatalog ? "Visibile nel form" : "Nascosto"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-[#5e6d63]">
+                    {group.eventTitle} - referente{" "}
+                    {group.primaryLeaderName ?? "da assegnare"}
+                  </p>
+                  <p className="mt-2 text-sm text-[#39483f]">
+                    Label pubblica:{" "}
+                    <span className="font-medium">
+                      {group.publicLabel ?? "non impostata"}
+                    </span>
+                  </p>
+
+                  {createdUrl && createdGroupId === group.id ? (
+                    <label className="mt-4 grid gap-2 text-sm font-semibold text-[#3c4b40]">
+                      Link appena generato
+                      <input
+                        readOnly
+                        className="field bg-white font-mono text-xs"
+                        value={createdUrl}
+                      />
+                    </label>
+                  ) : null}
+
+                  <div className="mt-4 grid gap-2">
+                    {groupLinks.map((link) => (
+                      <div
+                        key={link.id}
+                        className="flex flex-col gap-2 rounded-md border border-[#e1e6da] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="font-medium text-[#1c241f]">
+                            {link.internalLabel ?? link.publicLabel ?? "Link senza etichetta"}
+                          </p>
+                          <p className="mt-1 text-xs text-[#5e6d63]">
+                            {groupLinkStatusLabel(link)} - usi {link.useCount}
+                            {link.maxUses ? `/${link.maxUses}` : ""}
+                          </p>
+                        </div>
+                        <form action={revokeGroupRegistrationLink}>
+                          <input type="hidden" name="sourceDashboard" value="capogruppo" />
+                          <input type="hidden" name="linkId" value={link.id} />
+                          <button className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
+                            Revoca
+                          </button>
+                        </form>
+                      </div>
+                    ))}
+                    {groupLinks.length === 0 ? (
+                      <p className="text-sm text-[#5e6d63]">Nessun link attivo.</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <form action={createGroupRegistrationLink} className="grid gap-3">
+                  <input type="hidden" name="sourceDashboard" value="capogruppo" />
+                  <input type="hidden" name="groupId" value={group.id} />
+                  <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+                    Label pubblica
+                    <input
+                      name="publicLabel"
+                      className="field"
+                      defaultValue={group.publicLabel ?? ""}
+                      placeholder="Gruppo indicato dal referente"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+                    Etichetta interna
+                    <input
+                      name="internalLabel"
+                      className="field"
+                      placeholder="Per riconoscere questo invito"
+                    />
+                  </label>
+                  <button className="min-h-10 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+                    Genera link
+                  </button>
+                </form>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {assignableGroups.length === 0 ? (
+        <p className="mt-4 text-sm text-[#5e6d63]">
+          Nessun gruppo iscrivibile nel tuo scope.
+        </p>
+      ) : null}
+    </section>
+  );
 }
 
 function AssignmentCard({ assignment }: { assignment: AssignmentView }) {
@@ -546,6 +801,8 @@ function assignmentReasonLabel(reason: string): string {
   switch (reason) {
     case "participant_selected_group":
       return "gruppo indicato nel form";
+    case "group_registration_link":
+      return "link riservato di iscrizione";
     case "newcomer_territorial_fallback":
       return "nuovo partecipante assegnato per territorio";
     case "participant_cannot_find_leader":
@@ -556,6 +813,26 @@ function assignmentReasonLabel(reason: string): string {
       return "rifiuto risalito al nodo superiore";
     default:
       return reason;
+  }
+}
+
+function groupLinkStatusLabel(link: GroupLinkView): string {
+  switch (
+    getGroupRegistrationLinkStatus({
+      expiresAt: link.expiresAt,
+      revokedAt: link.revokedAt,
+      maxUses: link.maxUses,
+      useCount: link.useCount,
+    })
+  ) {
+    case "active":
+      return `Attivo dal ${formatDateTime(link.createdAt)}`;
+    case "expired":
+      return "Scaduto";
+    case "revoked":
+      return "Revocato";
+    case "exhausted":
+      return "Usi esauriti";
   }
 }
 
@@ -580,4 +857,12 @@ function formatDateTime(value: string | null): string {
 
 function relatedOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
+}
+
+function getAppUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
 }

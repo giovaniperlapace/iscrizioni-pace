@@ -8,6 +8,7 @@ export type AssignmentSource = "participant_selected" | "rule";
 export type GroupMatchCandidate = {
   id: string;
   name: string;
+  publicLabel: string | null;
   primaryLeaderName: string | null;
   countryId: string | null;
   cityId: string | null;

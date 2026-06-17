@@ -16,6 +16,15 @@ import {
   normalizeLeaderInternalNote,
   summarizeGroupLeaderAssignments,
 } from "../lib/groups/capogruppo-dashboard.ts";
+import {
+  buildGroupRegistrationUrl,
+  createGroupRegistrationLinkToken,
+  getGroupRegistrationDisplayLabel,
+  getGroupRegistrationLinkStatus,
+  hashGroupRegistrationLinkToken,
+  isValidGroupRegistrationLinkToken,
+  normalizeGroupRegistrationPublicLabel,
+} from "../lib/groups/registration-links.ts";
 
 const ITALY = "11111111-1111-4111-8111-111111111111";
 const AUSTRIA = "22222222-2222-4222-8222-222222222222";
@@ -232,11 +241,87 @@ test("group leader internal notes are compacted and bounded", () => {
   assert.equal(normalizeLeaderInternalNote("a".repeat(900))?.length, 800);
 });
 
+test("reserved group registration links use opaque valid tokens", () => {
+  const token = createGroupRegistrationLinkToken();
+
+  assert.equal(isValidGroupRegistrationLinkToken(token), true);
+  assert.match(hashGroupRegistrationLinkToken(token), /^[a-f0-9]{64}$/);
+  assert.equal(isValidGroupRegistrationLinkToken("gruppo-sensibile"), false);
+});
+
+test("reserved group registration labels prefer link label over group label", () => {
+  assert.equal(
+    normalizeGroupRegistrationPublicLabel("  Gruppo   indicato\n "),
+    "Gruppo indicato"
+  );
+  assert.equal(
+    getGroupRegistrationDisplayLabel({
+      linkPublicLabel: "Invito referente",
+      groupPublicLabel: "Label gruppo",
+    }),
+    "Invito referente"
+  );
+  assert.equal(
+    getGroupRegistrationDisplayLabel({
+      linkPublicLabel: null,
+      groupPublicLabel: null,
+    }),
+    "Gruppo indicato dal tuo referente"
+  );
+});
+
+test("reserved group registration link status handles revocation and use limits", () => {
+  assert.equal(
+    getGroupRegistrationLinkStatus({
+      expiresAt: null,
+      revokedAt: null,
+      maxUses: null,
+      useCount: 0,
+      now: new Date("2026-06-17T12:00:00Z"),
+    }),
+    "active"
+  );
+  assert.equal(
+    getGroupRegistrationLinkStatus({
+      expiresAt: null,
+      revokedAt: "2026-06-17T11:00:00Z",
+      maxUses: null,
+      useCount: 0,
+      now: new Date("2026-06-17T12:00:00Z"),
+    }),
+    "revoked"
+  );
+  assert.equal(
+    getGroupRegistrationLinkStatus({
+      expiresAt: null,
+      revokedAt: null,
+      maxUses: 2,
+      useCount: 2,
+      now: new Date("2026-06-17T12:00:00Z"),
+    }),
+    "exhausted"
+  );
+});
+
+test("reserved group registration URL keeps the token in a query parameter", () => {
+  const url = buildGroupRegistrationUrl({
+    appUrl: "https://iscrizioni-pace.vercel.app/",
+    token: "abc_DEF-123",
+    email: "persona@example.org",
+  });
+
+  assert.equal(
+    url,
+    "https://iscrizioni-pace.vercel.app/registrazione?groupLink=abc_DEF-123&email=persona%40example.org"
+  );
+});
+
 function group(
   overrides: Partial<GroupMatchCandidate> & Pick<GroupMatchCandidate, "id" | "name">
 ): GroupMatchCandidate {
   return {
     primaryLeaderName: "Referente",
+    publicLabel: null,
     countryId: null,
     cityId: null,
     parentGroupId: null,

@@ -14,6 +14,12 @@ import {
   type GroupNodeType,
 } from "@/lib/groups/matching";
 import {
+  getGroupRegistrationDisplayLabel,
+  getGroupRegistrationLinkStatus,
+  hashGroupRegistrationLinkToken,
+  isValidGroupRegistrationLinkToken,
+} from "@/lib/groups/registration-links";
+import {
   buildRegistrationQuestionnaireAnswers,
   getQuestionnaireVisibilitySummary,
   REGISTRATION_QUESTIONNAIRE_VERSION,
@@ -59,6 +65,7 @@ type PublicCityRow = {
 type PublicGroupRow = {
   id: string;
   name: string;
+  public_label: string | null;
   primary_leader_name: string | null;
   country_id: string | null;
   city_id: string | null;
@@ -71,6 +78,18 @@ type PublicGroupRow = {
   public_order: number | null;
 };
 
+type PublicGroupRegistrationLinkRow = {
+  id: string;
+  event_id: string;
+  group_id: string;
+  public_label: string | null;
+  max_uses: number | null;
+  use_count: number | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+  groups: PublicGroupRow | PublicGroupRow[] | null;
+};
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export type PublicRegistrationOptions = {
@@ -80,6 +99,7 @@ export type PublicRegistrationOptions = {
   groups: Array<{
     id: string;
     name: string;
+    publicLabel: string | null;
     primaryLeaderName: string | null;
     countryId: string | null;
     cityId: string | null;
@@ -91,13 +111,27 @@ export type PublicRegistrationOptions = {
     isPublicCatalog: boolean;
     publicOrder: number;
   }>;
+  groupLink: {
+    id: string;
+    groupId: string;
+    groupName: string;
+    displayLabel: string;
+  } | null;
   moments: Array<{ id: string; title: string; starts_at: string | null }>;
 };
 
 export async function getPublicRegistrationOptions(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  groupRegistrationLinkToken?: string | null
 ): Promise<PublicRegistrationOptions> {
   const event = await getCurrentPublicEvent(supabase);
+  const groupLink = event
+    ? await resolveActiveGroupRegistrationLink(
+        supabase,
+        event.id,
+        groupRegistrationLinkToken ?? null
+      )
+    : null;
 
   const [countries, cities, groups, moments] = await Promise.all([
     supabase
@@ -114,7 +148,7 @@ export async function getPublicRegistrationOptions(
       ? supabase
           .from("groups")
           .select(
-            "id,name,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
+            "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
           )
           .eq("event_id", event.id)
           .eq("is_active", true)
@@ -137,6 +171,14 @@ export async function getPublicRegistrationOptions(
     countries: countries.data ?? [],
     cities: cities.data ?? [],
     groups: ((groups.data ?? []) as PublicGroupRow[]).map(mapGroupRow),
+    groupLink: groupLink
+      ? {
+          id: groupLink.id,
+          groupId: groupLink.group.id,
+          groupName: groupLink.group.name,
+          displayLabel: groupLink.displayLabel,
+        }
+      : null,
     moments: moments.data ?? [],
   };
 }
@@ -273,6 +315,16 @@ export async function createPublicRegistration(
   const qrToken = createOpaqueQrToken();
   const allowedEventDays = getEventDayValues(event.starts_on, event.ends_on);
   const groups = await getEventGroupCandidates(supabase, event.id);
+  const groupLink = await resolveActiveGroupRegistrationLink(
+    supabase,
+    event.id,
+    input.groupRegistrationLinkToken
+  );
+  const selectedGroupId = resolveAllowedSelectedGroupId({
+    groups,
+    requestedGroupId: input.groupId,
+    groupLink,
+  });
   const groupAssignment = resolveGroupAssignmentForRegistration({
     groups,
     criteria: {
@@ -281,11 +333,20 @@ export async function createPublicRegistration(
       birthDate: input.birthDate,
       eventStartsOn: event.starts_on,
     },
-    selectedGroupId: input.groupId,
+    selectedGroupId,
     hasPreviousSantegidioParticipation: input.hasPreviousSantegidioParticipation,
     participatesWithGroup: input.participatesWithGroup,
     cannotFindLeader: input.cannotFindLeader,
   });
+  const resolvedGroupAssignment = groupLink
+    ? {
+        groupId: groupLink.group.id,
+        source: "participant_selected" as const,
+        confidence: 0.95,
+        reason: "group_registration_link",
+        matcherVersion: GROUP_REGISTRATION_LINK_MATCHER_VERSION,
+      }
+    : groupAssignment;
 
   if (
     !input.availabilityUnknown &&
@@ -330,20 +391,21 @@ export async function createPublicRegistration(
       metadata: {
         source: "public_form",
         privacy_version: PRIVACY_VERSION,
+        group_registration_link_id: groupLink?.id ?? null,
       },
     }),
   ];
 
-  if (groupAssignment) {
+  if (resolvedGroupAssignment) {
     writes.push(
       supabase.from("participant_group_assignments").insert({
         registration_id: registrationId,
-        group_id: groupAssignment.groupId,
+        group_id: resolvedGroupAssignment.groupId,
         status: "probable",
-        source: groupAssignment.source,
-        confidence: groupAssignment.confidence,
-        assignment_reason: groupAssignment.reason,
-        matcher_version: groupAssignment.matcherVersion,
+        source: resolvedGroupAssignment.source,
+        confidence: resolvedGroupAssignment.confidence,
+        assignment_reason: resolvedGroupAssignment.reason,
+        matcher_version: resolvedGroupAssignment.matcherVersion,
       })
     );
   }
@@ -381,6 +443,25 @@ export async function createPublicRegistration(
 
   if (failedWrite?.error) {
     throw failedWrite.error;
+  }
+
+  if (groupLink) {
+    await Promise.all([
+      supabase
+        .from("group_registration_links")
+        .update({ use_count: groupLink.useCount + 1 })
+        .eq("id", groupLink.id),
+      supabase.from("audit_logs").insert({
+        event_id: event.id,
+        action: "registration.group_link_used",
+        entity_table: "group_registration_links",
+        entity_id: groupLink.id,
+        metadata: {
+          registration_id: registrationId,
+          group_id: groupLink.group.id,
+        },
+      }),
+    ]);
   }
 
   try {
@@ -587,7 +668,7 @@ async function getEventGroupCandidates(
   const { data, error } = await supabase
     .from("groups")
     .select(
-      "id,name,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
+      "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
     )
     .eq("event_id", eventId)
     .eq("is_active", true);
@@ -603,6 +684,7 @@ function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
   return {
     id: row.id,
     name: row.name,
+    publicLabel: row.public_label,
     primaryLeaderName: row.primary_leader_name,
     countryId: row.country_id,
     cityId: row.city_id,
@@ -614,6 +696,101 @@ function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
     isPublicCatalog: row.is_public_catalog ?? true,
     publicOrder: row.public_order ?? 100,
   };
+}
+
+const GROUP_REGISTRATION_LINK_MATCHER_VERSION = "2026-06-17-group-link-v1";
+
+type ResolvedGroupRegistrationLink = {
+  id: string;
+  group: ReturnType<typeof mapGroupRow>;
+  displayLabel: string;
+  useCount: number;
+};
+
+async function resolveActiveGroupRegistrationLink(
+  supabase: SupabaseClient,
+  eventId: string,
+  token: string | null
+): Promise<ResolvedGroupRegistrationLink | null> {
+  if (!token) {
+    return null;
+  }
+
+  if (!isValidGroupRegistrationLinkToken(token)) {
+    throw new Error("Link gruppo non valido o non più attivo.");
+  }
+
+  const { data, error } = await supabase
+    .from("group_registration_links")
+    .select(
+      "id,event_id,group_id,public_label,max_uses,use_count,expires_at,revoked_at,groups!inner(id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order)"
+    )
+    .eq("event_id", eventId)
+    .eq("token_hash", hashGroupRegistrationLinkToken(token))
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error("Link gruppo non valido o non più attivo.");
+  }
+
+  const link = data as PublicGroupRegistrationLinkRow;
+  const groupRow = relatedOne(link.groups);
+
+  if (!groupRow) {
+    throw new Error("Link gruppo non valido o non più attivo.");
+  }
+
+  const group = mapGroupRow(groupRow);
+  const status = getGroupRegistrationLinkStatus({
+    expiresAt: link.expires_at,
+    revokedAt: link.revoked_at,
+    maxUses: link.max_uses,
+    useCount: link.use_count,
+  });
+
+  if (status !== "active" || !group.isAssignable) {
+    throw new Error("Link gruppo non valido o non più attivo.");
+  }
+
+  return {
+    id: link.id,
+    group,
+    displayLabel: getGroupRegistrationDisplayLabel({
+      linkPublicLabel: link.public_label,
+      groupPublicLabel: group.publicLabel,
+    }),
+    useCount: link.use_count ?? 0,
+  };
+}
+
+function resolveAllowedSelectedGroupId({
+  groups,
+  requestedGroupId,
+  groupLink,
+}: {
+  groups: GroupMatchCandidate[];
+  requestedGroupId: string | null;
+  groupLink: ResolvedGroupRegistrationLink | null;
+}): string | null {
+  if (groupLink) {
+    return groupLink.group.id;
+  }
+
+  if (!requestedGroupId) {
+    return null;
+  }
+
+  const group = groups.find((candidate) => candidate.id === requestedGroupId);
+
+  if (!group || !group.isAssignable || !group.isPublicCatalog) {
+    throw new Error("Il gruppo selezionato non è disponibile nel form pubblico.");
+  }
+
+  return requestedGroupId;
+}
+
+function relatedOne<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value;
 }
 
 function parseNodeType(value: string | null): GroupNodeType {
