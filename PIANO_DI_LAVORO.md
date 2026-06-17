@@ -1236,6 +1236,10 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - componente condiviso `components/event-identity.tsx` per titolo ufficiale,
     sottotitolo italiano, dicitura `International Meeting for Peace` e data
     `Assisi, 25–26–27 ottobre 2026`;
+  - record evento Assisi 2026 riallineato al titolo ufficiale della locandina:
+    `UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`; lo slug
+    tecnico storico `assisi-2026-test` resta solo per compatibilita' interna e
+    non deve comparire come testo operativo;
   - home pubblica ridisegnata con hero blu, logo Sant'Egidio originale, form
     email-prima e richiamo SVG astratto alla linea della colomba;
   - registrazione, conferma e login aggiornate con identità evento evidente;
@@ -1264,8 +1268,10 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - segue la Milestone 13 per evitare di rifinire layout e manuali su testi che
     cambieranno subito dopo;
   - resta indipendente da programma, campagne, check-in avanzato e settori.
-- Migration: nessuna, salvo piccoli supporti solo se le guideline richiedono
-  preferenze persistenti gia' previste.
+- Migration: aggiunta
+  `supabase/migrations/20260617190000_promote_assisi_2026_event_identity.sql`
+  per aggiornare il titolo visibile dell'evento Assisi 2026 gia' presente in
+  database.
 - Verifiche eseguite sulla parte estetica: `npm run lint`,
   `npm run typecheck`, `npm test`, `npm run build`, `git diff --check`,
   browser localhost su home/registrazione/dashboard con larghezze 320, 390,

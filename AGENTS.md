@@ -124,7 +124,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle
   dashboard operative e gestione admin/capogruppo dal modale admin.
-- Il 2026-06-17 e' stato popolato l'albero gruppi operativo per l'evento test
+- Il 2026-06-17 e' stato popolato l'albero gruppi operativo per l'evento
+  Assisi 2026
   a partire dai paesi/città dell'app modello: nodi paese/città, 26 aree Roma,
   città italiane aggiunte Monterotondo/Tivoli/Sezze, regole matching e
   referenti principali iniziali per Universitari, Giovani per la pace scuole
@@ -451,8 +452,12 @@ Decisioni:
   temporaneamente le opzioni vedere, cura di sé, ricordare/concentrarsi,
   comunicare e bisogno di assistenza durante l'evento. Il campo note pratiche
   non deve avere placeholder/suggerimenti nel box.
-- L'evento test versionato e' `assisi-2026-test`; i dati creati dalla migration
-  sono distinguibili dai dati reali.
+- Assisi 2026 e' l'evento operativo prossimo in preparazione. Il titolo
+  visibile deve essere quello della locandina:
+  `UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`.
+  Lo slug tecnico storico `assisi-2026-test` resta per compatibilita' con
+  migration, seed e script gia' applicati; non deve comparire nella UI o nei
+  testi rivolti agli operatori come se l'evento fosse di prova.
 - `participants.public_code` e' un identificativo secondario semplice per email
   e funzioni operative. Non sostituisce `participants.id` UUID come chiave
   tecnica e non deve essere usato come segreto, token di accesso o prova di
@@ -1057,8 +1062,9 @@ Note operative:
 - Durante il test un utente operativo reale ha perso temporaneamente il ruolo
   admin per effetto della nuova gestione ruolo; e' stato ripristinato
   manualmente via Supabase service role. Dopo il ripristino risultavano
-  `admin` globale e `manager` sull'evento test. Per modifiche future al select
-  ruolo, verificare sempre anche l'utente admin che sta eseguendo la modifica.
+  `admin` globale e `manager` sull'evento Assisi 2026. Per modifiche future al
+  select ruolo, verificare sempre anche l'utente admin che sta eseguendo la
+  modifica.
 
 Verifiche eseguite durante la sessione:
 

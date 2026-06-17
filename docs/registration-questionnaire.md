@@ -2,7 +2,7 @@
 
 Versione applicativa corrente: `2026-06-14-first-event`.
 
-Questa versione copre il primo evento di test e mantiene la prima iscrizione
+Questa versione copre l'evento Assisi 2026 e mantiene la prima iscrizione
 essenziale e condizionale: i dati stabili restano in colonne o tabelle strutturate, mentre
 `registration_questionnaire_answers` conserva uno snapshot versionato delle
 risposte e della classificazione di visibilità. Lo snapshot serve per audit e
@@ -107,11 +107,13 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 - Il valore e' salvato nello snapshot questionario, non normalizzato in una
   tabella dedicata.
 
-## Test data
+## Dati bootstrap
 
-Le migration di test creano dati distinguibili dai reali:
+Le migration iniziali creano dati bootstrap per Assisi 2026:
 
-- evento pubblicato `assisi-2026-test`;
+- evento pubblicato con titolo visibile
+  `UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`;
+- slug tecnico storico `assisi-2026-test`, da non mostrare nella UI;
 - paesi `IT`, `GB`, `US`, più `AT` nella migration 6.3;
 - città `Roma`, `Assisi`, `London`, `New York`, più `Torino` e `Vienna` nella
   migration 6.3;

@@ -118,9 +118,9 @@ Nota importante:
 - Durante il test l'utente `nicolamastrorilli33@gmail.com` ha perso
   temporaneamente il ruolo admin per effetto della nuova gestione ruolo. Il
   ruolo admin globale e' stato ripristinato manualmente via Supabase service
-  role. Dopo il ripristino risultavano presenti:
+role. Dopo il ripristino risultavano presenti:
   - `admin` globale;
-  - `manager` sull'evento test.
+  - `manager` sull'evento Assisi 2026.
 
 ## Magic link usati durante la sessione
 
