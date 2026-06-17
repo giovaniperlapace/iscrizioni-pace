@@ -1,4 +1,10 @@
 import {
+  DEFAULT_LOCALE,
+  type SupportedLocale,
+  normalizeLocale,
+} from "../i18n/config.ts";
+
+import {
   normalizeEmail,
   optionalText,
   optionalUuid,
@@ -12,7 +18,7 @@ export type ManualRegistrationInput = {
   email: string | null;
   phone: string | null;
   birthDate: string | null;
-  preferredLocale: "it" | "en";
+  preferredLocale: SupportedLocale;
   availabilityDays: string[];
   availabilityUnknown: boolean;
   hasAccessibilityNeeds: boolean | null;
@@ -36,7 +42,8 @@ export function parseManualRegistrationForm(
     email: email.length > 0 ? email : null,
     phone: normalizePhone(formData.get("phone")),
     birthDate: optionalDate(formData.get("birthDate")),
-    preferredLocale: formData.get("preferredLocale") === "en" ? "en" : "it",
+    preferredLocale:
+      normalizeLocale(String(formData.get("preferredLocale") ?? "")) ?? DEFAULT_LOCALE,
     availabilityUnknown: formData.get("availabilityUnknown") === "on",
     availabilityDays: parseAvailabilityDays(formData),
     hasAccessibilityNeeds: parseBooleanChoice(formData.get("hasAccessibilityNeeds")),

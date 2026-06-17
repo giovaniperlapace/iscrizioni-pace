@@ -1,5 +1,7 @@
 import { startPublicEmailFlow } from "@/app/actions";
 import { EmailAccessForm } from "@/app/email-access-form";
+import { getMessages } from "@/lib/i18n/messages";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { getPublicRegistrationOptions } from "@/lib/registrations/public-flow";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -13,6 +15,8 @@ type HomeProps = {
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
+  const locale = await getRequestLocale();
+  const copy = getMessages(locale);
   const options = await getOptionsSafely();
 
   return (
@@ -20,14 +24,13 @@ export default async function Home({ searchParams }: HomeProps) {
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-8 px-5 py-10 sm:px-8 lg:px-10">
         <div className="max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
-            Iscrizioni e accesso
+            {copy.home.eyebrow}
           </p>
           <h1 className="mt-4 text-4xl font-semibold text-balance sm:text-5xl">
-            Iscrizioni Pace
+            {copy.home.title}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[#4b5a50]">
-            Inserisci la tua email: se hai già un&apos;iscrizione riceverai un
-            magic link, altrimenti apriremo il form per una nuova iscrizione.
+            {copy.home.intro}
           </p>
         </div>
 
@@ -37,10 +40,11 @@ export default async function Home({ searchParams }: HomeProps) {
             defaultEmail={params.email ?? ""}
             error={params.error}
             sent={params.sent}
+            copy={copy.emailAccess}
           />
 
           <aside className="rounded-lg border border-[#d8dece] bg-[#eef2e7] p-5">
-            <h2 className="text-base font-semibold">Evento</h2>
+            <h2 className="text-base font-semibold">{copy.home.eventTitle}</h2>
             {options.event ? (
               <div className="mt-3 space-y-2 text-sm text-[#4b5a50]">
                 <p className="text-lg font-semibold text-[#1c241f]">
@@ -50,15 +54,15 @@ export default async function Home({ searchParams }: HomeProps) {
                   {options.event.city}, {options.event.country}
                 </p>
                 <p>
-                  {formatDate(options.event.starts_on)}
+                  {formatDate(options.event.starts_on, locale, copy.common.dateToBeDefined)}
                   {options.event.ends_on
-                    ? ` - ${formatDate(options.event.ends_on)}`
+                    ? ` - ${formatDate(options.event.ends_on, locale, copy.common.dateToBeDefined)}`
                     : ""}
                 </p>
               </div>
             ) : (
               <p className="mt-3 text-sm leading-6 text-[#4b5a50]">
-                Nessun evento pubblicato accetta iscrizioni in questo momento.
+                {copy.home.noEvent}
               </p>
             )}
           </aside>
@@ -82,12 +86,16 @@ async function getOptionsSafely() {
   }
 }
 
-function formatDate(value: string | null): string {
+function formatDate(
+  value: string | null,
+  locale: string,
+  fallback: string
+): string {
   if (!value) {
-    return "Date da definire";
+    return fallback;
   }
 
-  return new Intl.DateTimeFormat("it", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",

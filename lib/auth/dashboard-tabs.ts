@@ -3,6 +3,8 @@ import {
   type DashboardRole,
   type EventRole,
 } from "./roles.ts";
+import type { SupportedLocale } from "../i18n/config.ts";
+import { getMessages } from "../i18n/messages.ts";
 
 export type DashboardTabRole = Exclude<DashboardRole, "manager_viewer">;
 
@@ -29,7 +31,8 @@ const ROLE_TAB_LABELS: Record<DashboardTabRole, string> = {
 };
 
 export function getDashboardRoleTabs(
-  eventRoles: Array<{ role: EventRole; eventId: string | null }>
+  eventRoles: Array<{ role: EventRole; eventId: string | null }>,
+  locale: SupportedLocale = "it"
 ): DashboardRoleTab[] {
   const available = new Set<DashboardTabRole>(["partecipante"]);
   const hasAdmin = eventRoles.some((role) => role.role === "admin");
@@ -46,7 +49,7 @@ export function getDashboardRoleTabs(
 
   return ROLE_TAB_ORDER.filter((role) => available.has(role)).map((role) => ({
     key: role,
-    label: ROLE_TAB_LABELS[role],
+    label: getMessages(locale).common.dashboardTabs[role] ?? ROLE_TAB_LABELS[role],
     href: ROLE_ROUTES[role],
   }));
 }

@@ -442,6 +442,11 @@ export const ACCESSIBILITY_DIFFICULTIES = [
     label: {
       it: "Sentire, anche usando apparecchi acustici",
       en: "Hearing, even when using a hearing aid",
+      fr: "Entendre, même avec un appareil auditif",
+      de: "Hören, auch mit Hörgerät",
+      es: "Oír, incluso usando audífono",
+      nl: "Horen, ook met een hoorapparaat",
+      uk: "Слух, навіть із використанням слухового апарата",
     },
   },
   {
@@ -449,6 +454,11 @@ export const ACCESSIBILITY_DIFFICULTIES = [
     label: {
       it: "Camminare o salire gradini",
       en: "Walking or climbing steps",
+      fr: "Marcher ou monter des marches",
+      de: "Gehen oder Treppensteigen",
+      es: "Caminar o subir escaleras",
+      nl: "Lopen of trappen oplopen",
+      uk: "Ходьба або підйом сходами",
     },
   },
   {
@@ -456,6 +466,11 @@ export const ACCESSIBILITY_DIFFICULTIES = [
     label: {
       it: "Uso di sedia a rotelle o altro ausilio per la mobilita'",
       en: "Use of a wheelchair or another mobility aid",
+      fr: "Utilisation d'un fauteuil roulant ou d'une autre aide à la mobilité",
+      de: "Nutzung eines Rollstuhls oder einer anderen Mobilitätshilfe",
+      es: "Uso de silla de ruedas u otra ayuda para la movilidad",
+      nl: "Gebruik van een rolstoel of ander mobiliteitshulpmiddel",
+      uk: "Використання крісла колісного або іншого засобу мобільності",
     },
   },
 ] as const;

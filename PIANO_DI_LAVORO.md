@@ -58,6 +58,12 @@ Stato locale aggiornato al 2026-06-17:
   accessibilità nella dashboard partecipante, etichette accessibili contestuali
   sui controlli `Gestisci` capogruppo e redirect role-aware quando un utente
   tenta una dashboard non consentita.
+- Milestone 13 e' completata il 2026-06-17: multilingua minima con selettore
+  globale a bandierine, cookie `iscrizioni_locale`, detection da
+  `Accept-Language`, fallback inglese, lingue italiano/inglese/francese/
+  tedesco/spagnolo/neerlandese/ucraino e localizzazione dei flussi pubblici,
+  della dashboard partecipante e della dashboard capogruppo. Manager/admin
+  restano prioritariamente italiani, con parti comuni e fallback inglese.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-17: prima di proseguire con campagne email,
@@ -1156,19 +1162,29 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 ### Milestone 13: multilingua minima e testi localizzati
 
-- Scopo: portare i flussi pubblici e i testi transazionali almeno a
-  italiano/inglese dopo che UX, navigazione e microcopy core sono stati
-  stabilizzati nella Milestone 12, senza bloccare l'apertura se il primo
-  go-live e' deliberatamente solo italiano.
-- Deliverable:
-  - strategia i18n leggera coerente con l'app esistente;
-  - traduzioni IT/EN per home, registrazione, conferma, login, dashboard
-    partecipante ed email transazionali;
-  - fallback controllato per testi mancanti;
-  - preferenza lingua salvata o rispettata dove gia' presente;
-  - inventario dei testi che restano solo italiani per scelta deliberata,
-    soprattutto privacy, consenso e note operative da revisionare.
-- File/cartelle: `lib/i18n/*`, `app/*`, `lib/email/*`, template email.
+- Stato: completata il 2026-06-17.
+- Scopo: portare i flussi pubblici e le aree rivolte a partecipante e
+  capogruppo a una localizzazione minima ma utilizzabile, con fallback
+  inglese quando una lingua non e' riconosciuta.
+- Deliverable completati:
+  - strategia i18n leggera coerente con l'app esistente in `lib/i18n/*`;
+  - lingue supportate: italiano, inglese, francese, tedesco, spagnolo,
+    neerlandese e ucraino;
+  - selettore lingua globale nell'header con bandierine, cookie
+    `iscrizioni_locale`, detection iniziale da `Accept-Language` e fallback
+    inglese;
+  - localizzazione di home, accesso email-prima, login/errore sessione,
+    pagina registrazione, form pubblico, conferma iscrizione, tab dashboard
+    condivise e testi comuni header;
+  - localizzazione approfondita della dashboard partecipante e della dashboard
+    capogruppo, inclusi pulsanti, stati, filtri, ordinamenti, overlay, fallback
+    di dati mancanti, inserimento manuale, presenza e accessibilità;
+  - preferenza lingua allineata alle lingue supportate nei flussi pubblico,
+    dashboard partecipante e inserimento manuale capogruppo;
+  - test i18n per normalizzazione lingua e fallback.
+- File/cartelle: `lib/i18n/*`, `components/language-selector.tsx`,
+  `components/app-headbar.tsx`, `app/*`, `lib/questionnaire/*`,
+  `lib/registrations/*`, test i18n e test registration aggiornati.
 - Dipendenze:
   - richiede il completamento della Milestone 12, perché non conviene
     tradurre testi e percorsi ancora instabili;
@@ -1180,17 +1196,17 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Migration: solo se serve salvare o normalizzare la preferenza lingua; in
   assenza di necessità chiara, usare cookie/profilo esistente o fallback
   applicativo per evitare una dipendenza schema non indispensabile.
-- Verifiche: flusso pubblico e dashboard partecipante in IT/EN, email
-  localizzate, controllo mobile/desktop sulle stringhe piu' lunghe, nessun
-  testo legale tradotto automaticamente senza revisione.
-- Rischi: testi hardcoded, traduzioni legali non approvate, refactor di routing
-  troppo invasivo prima dell'apertura, regressioni sui magic link/callback.
-- Accettazione: i flussi core funzionano in italiano e inglese con testi
-  revisionabili, fallback chiari e nessuna nuova dipendenza bloccante verso le
-  milestone successive.
-- Non fare: localizzare dashboard manager avanzate se non ancora stabili,
-  tradurre testi privacy/consenso senza revisione esplicita, introdurre un
-  framework i18n pesante se l'app non lo richiede.
+- Verifiche eseguite: `npm run typecheck`, `npm run lint`, `npm test`,
+  `npm run build`.
+- Decisione operativa: da ora in poi ogni nuova pagina o funzione che interessa
+  partecipante o capogruppo deve essere implementata nelle lingue supportate
+  fin dall'inizio. Manager/admin possono restare prioritariamente italiani,
+  con inglese/fallback sulle parti condivise quando utile.
+- Rischi residui: testi legali e template email definitivi richiedono ancora
+  revisione umana prima di eventuale invio massivo o apertura larga.
+- Non fare: introdurre routing localizzato pesante, tradurre testi
+  privacy/consenso definitivi senza revisione esplicita, localizzare in modo
+  completo dashboard manager/admin avanzate finché restano strumenti interni.
 
 ### Milestone 14: rifinitura estetica e manuali operativi
 

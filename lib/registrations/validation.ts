@@ -1,3 +1,9 @@
+import {
+  DEFAULT_LOCALE,
+  type SupportedLocale,
+  normalizeLocale,
+} from "../i18n/config.ts";
+
 export const PRIVACY_VERSION = "2026-06-14-gdpr-accessibility";
 
 export type RegistrationInput = {
@@ -8,7 +14,7 @@ export type RegistrationInput = {
   birthDate: string | null;
   birthPlace: string | null;
   nationality: string | null;
-  preferredLocale: "it" | "en";
+  preferredLocale: SupportedLocale;
   countryId: string | null;
   countryOther: string | null;
   cityId: string | null;
@@ -63,7 +69,8 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   const birthDate = optionalDate(formData.get("birthDate"));
   const birthPlace = optionalText(formData.get("birthPlace"));
   const nationality = optionalText(formData.get("nationality"));
-  const preferredLocale = formData.get("preferredLocale") === "en" ? "en" : "it";
+  const preferredLocale =
+    normalizeLocale(String(formData.get("preferredLocale") ?? "")) ?? DEFAULT_LOCALE;
   const participatesWithGroup = parseBooleanChoice(
     formData.get("participatesWithGroup")
   );

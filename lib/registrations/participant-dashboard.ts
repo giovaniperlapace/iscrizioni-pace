@@ -1,9 +1,15 @@
+import {
+  DEFAULT_LOCALE,
+  type SupportedLocale,
+  normalizeLocale,
+} from "../i18n/config.ts";
+
 import { optionalText } from "./validation.ts";
 
 export type ParticipantDashboardUpdate = {
   registrationId: string;
   phone: string | null;
-  preferredLocale: "it" | "en";
+  preferredLocale: SupportedLocale;
   availabilityUnknown: boolean;
   availabilityDays: string[];
   momentAttendanceChoices: Record<string, "yes" | "no" | "unknown">;
@@ -25,7 +31,8 @@ export function parseParticipantDashboardUpdate(
 ): ParticipantDashboardValidation {
   const registrationId = optionalText(formData.get("registrationId")) ?? "";
   const phone = normalizePhone(formData.get("phone"));
-  const preferredLocale = formData.get("preferredLocale") === "en" ? "en" : "it";
+  const preferredLocale =
+    normalizeLocale(String(formData.get("preferredLocale") ?? "")) ?? DEFAULT_LOCALE;
   const availabilityUnknown = formData.get("availabilityUnknown") === "on";
   const hasAccessibilityNeeds = formData.get("hasAccessibilityNeeds") === "on";
 

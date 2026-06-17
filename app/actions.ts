@@ -1,7 +1,7 @@
 "use server";
 
 import { createHash } from "node:crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -45,17 +45,48 @@ import { REGISTRATION_QUESTIONNAIRE_VERSION } from "@/lib/questionnaire/registra
 import { getQuestionnaireVisibilitySummary } from "@/lib/questionnaire/registration";
 import { encryptQrToken } from "@/lib/qrcode/secure-token";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
+import {
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE_NAME,
+  normalizeLocale,
+} from "@/lib/i18n/config";
 
 const EMAIL_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 const MAGIC_LINK_SEND_COOLDOWN_MS = 60 * 1000;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
+export async function setAppLocale(formData: FormData) {
+  const locale = normalizeLocale(String(formData.get("locale") ?? "")) ?? DEFAULT_LOCALE;
+  const cookieStore = await cookies();
+  cookieStore.set(LOCALE_COOKIE_NAME, locale, {
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 365,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  const returnTo = normalizeInternalReturnTo(formData.get("returnTo"));
+  revalidatePath(returnTo.split("?")[0] || "/");
+  redirect(returnTo);
+}
+
 export async function logout() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
 
   redirect("/");
+}
+
+function normalizeInternalReturnTo(value: FormDataEntryValue | null): string {
+  const text = String(value ?? "").trim();
+
+  if (!text.startsWith("/") || text.startsWith("//")) {
+    return "/";
+  }
+
+  return text;
 }
 
 export async function startPublicEmailFlow(formData: FormData) {

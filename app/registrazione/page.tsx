@@ -1,5 +1,7 @@
 import { RegistrationForm } from "@/app/registrazione/registration-form";
 import { GROUP_REGISTRATION_LINK_QUERY_PARAM } from "@/lib/groups/registration-links";
+import { getMessages } from "@/lib/i18n/messages";
+import { getRequestLocale } from "@/lib/i18n/server";
 import {
   getPublicRegistrationOptions,
   type PublicRegistrationOptions,
@@ -18,6 +20,8 @@ export default async function RegistrationPage({
   searchParams,
 }: RegistrationPageProps) {
   const params = await searchParams;
+  const locale = await getRequestLocale();
+  const copy = getMessages(locale);
   const supabase = createSupabaseServiceClient();
   let groupLinkError: string | null = null;
   let options: PublicRegistrationOptions;
@@ -31,7 +35,7 @@ export default async function RegistrationPage({
     groupLinkError =
       error instanceof Error
         ? error.message
-        : "Link gruppo non valido o non più attivo.";
+        : copy.registrationClosed.groupLinkError;
     options = await getPublicRegistrationOptions(supabase);
   }
 
@@ -39,9 +43,9 @@ export default async function RegistrationPage({
     return (
       <main className="min-h-screen bg-[#f7f8f3] px-5 py-10 text-[#1c241f]">
         <div className="mx-auto max-w-3xl rounded-lg border border-[#d8dece] bg-white p-6">
-          <h1 className="text-2xl font-semibold">Iscrizioni non aperte</h1>
+          <h1 className="text-2xl font-semibold">{copy.registrationClosed.title}</h1>
           <p className="mt-3 text-[#4b5a50]">
-            Nessun evento pubblicato accetta iscrizioni in questo momento.
+            {copy.registrationClosed.body}
           </p>
         </div>
       </main>
@@ -57,6 +61,7 @@ export default async function RegistrationPage({
           groupLinkError ? null : params[GROUP_REGISTRATION_LINK_QUERY_PARAM] ?? null
         }
         options={options}
+        locale={locale}
       />
     </main>
   );

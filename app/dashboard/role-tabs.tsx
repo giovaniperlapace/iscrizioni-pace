@@ -5,6 +5,8 @@ import {
   normalizeDashboardTabRole,
 } from "@/lib/auth/dashboard-tabs";
 import type { DashboardRole, EventRole } from "@/lib/auth/roles";
+import { getMessages } from "@/lib/i18n/messages";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 type DashboardRoleTabsProps = {
   activeRole: DashboardRole;
@@ -15,11 +17,13 @@ type DashboardAreaDescriptionProps = {
   children: React.ReactNode;
 };
 
-export function DashboardRoleTabs({
+export async function DashboardRoleTabs({
   activeRole,
   eventRoles,
 }: DashboardRoleTabsProps) {
-  const tabs = getDashboardRoleTabs(eventRoles);
+  const locale = await getRequestLocale();
+  const copy = getMessages(locale);
+  const tabs = getDashboardRoleTabs(eventRoles, locale);
 
   if (tabs.length <= 1) {
     return null;
@@ -28,10 +32,10 @@ export function DashboardRoleTabs({
   const activeKey = normalizeDashboardTabRole(activeRole);
 
   return (
-    <nav aria-label="Aree dashboard" className="w-full">
+    <nav aria-label={copy.common.protectedArea} className="w-full">
       <div
         role="tablist"
-        aria-label="Aree disponibili"
+        aria-label={copy.common.protectedArea}
         className="inline-flex max-w-full flex-wrap rounded-lg border border-[#c7d3bd] bg-[#e9eee2] p-1.5 shadow-sm"
       >
         {tabs.map((tab) => {
@@ -60,9 +64,12 @@ export function DashboardRoleTabs({
   );
 }
 
-export function DashboardAreaDescription({
+export async function DashboardAreaDescription({
   children,
 }: DashboardAreaDescriptionProps) {
+  const locale = await getRequestLocale();
+  const copy = getMessages(locale);
+
   return (
     <div className="flex flex-col gap-2 text-[#4b5a50] sm:flex-row sm:items-center">
       <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#bfd0b5] bg-[#eef4ea] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#426044]">
@@ -70,7 +77,7 @@ export function DashboardAreaDescription({
           aria-hidden="true"
           className="h-2 w-2 rounded-full bg-[#2f5e46]"
         />
-        Area protetta
+        {copy.common.protectedArea}
       </span>
       <p className="max-w-4xl text-base leading-7">{children}</p>
     </div>

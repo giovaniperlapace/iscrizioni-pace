@@ -1,16 +1,21 @@
 import Image from "next/image";
 
-import { logout } from "@/app/actions";
-import { ROLE_LABELS } from "@/lib/auth/roles";
+import { logout, setAppLocale } from "@/app/actions";
+import { LanguageSelector } from "@/components/language-selector";
 import { getCurrentAuthContext } from "@/lib/auth/session";
+import type { DashboardRole } from "@/lib/auth/roles";
+import { getMessages } from "@/lib/i18n/messages";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type HeadbarUser = {
   email: string;
-  roleLabel: string;
+  roleLabel: DashboardRole;
 };
 
 export async function AppHeadbar() {
+  const locale = await getRequestLocale();
+  const copy = getMessages(locale);
   const user = await getHeadbarUser();
 
   return (
@@ -27,24 +32,32 @@ export async function AppHeadbar() {
           />
         </div>
 
-        {user ? (
-          <div className="flex min-w-0 items-center justify-end gap-3">
-            <div className="min-w-0 text-right">
-              <p className="truncate text-sm font-medium leading-5 text-[#1c241f]">
-                {user.email}
-              </p>
-              <p className="text-xs font-semibold uppercase leading-5 tracking-wide text-[#5d765f]">
-                {user.roleLabel}
-              </p>
-            </div>
-            <form action={logout}>
-              <button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5e46]">
-                <ExitIcon />
-                Esci
-              </button>
-            </form>
-          </div>
-        ) : null}
+        <div className="flex min-w-0 items-center justify-end gap-3">
+          <LanguageSelector
+            action={setAppLocale}
+            currentLocale={locale}
+            label={copy.common.language}
+          />
+
+          {user ? (
+            <>
+              <div className="hidden min-w-0 text-right sm:block">
+                <p className="truncate text-sm font-medium leading-5 text-[#1c241f]">
+                  {user.email}
+                </p>
+                <p className="text-xs font-semibold uppercase leading-5 tracking-wide text-[#5d765f]">
+                  {copy.common.roles[user.roleLabel]}
+                </p>
+              </div>
+              <form action={logout}>
+                <button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5e46]">
+                  <ExitIcon />
+                  <span className="hidden sm:inline">{copy.common.logout}</span>
+                </button>
+              </form>
+            </>
+          ) : null}
+        </div>
       </div>
     </header>
   );
@@ -61,7 +74,7 @@ async function getHeadbarUser(): Promise<HeadbarUser | null> {
 
     return {
       email: auth.user.email,
-      roleLabel: ROLE_LABELS[auth.dashboardRole],
+      roleLabel: auth.dashboardRole,
     };
   } catch {
     return null;

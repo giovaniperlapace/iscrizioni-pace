@@ -4,20 +4,28 @@ import { useState } from "react";
 
 type ManualAttendanceFieldsProps = {
   eventDays: Array<{ value: string; label: string }>;
+  copy: {
+    title: string;
+    help: string;
+    noDates: string;
+    unknown: string;
+  };
 };
 
-export function ManualAttendanceFields({ eventDays }: ManualAttendanceFieldsProps) {
+export function ManualAttendanceFields({
+  eventDays,
+  copy,
+}: ManualAttendanceFieldsProps) {
   const [availabilityUnknown, setAvailabilityUnknown] = useState(true);
   const [selectedEventDays, setSelectedEventDays] = useState<string[]>([]);
 
   return (
     <fieldset className="grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:col-span-2">
       <legend className="px-1 text-sm font-semibold text-[#3c4b40]">
-        Presenza
+        {copy.title}
       </legend>
       <p className="text-sm leading-6 text-[#5e6d63]">
-        Se conosci già i giorni di presenza, selezionali. Altrimenti lascia
-        indicato che saranno confermati più avanti.
+        {copy.help}
       </p>
 
       {eventDays.length > 0 ? (
@@ -52,7 +60,7 @@ export function ManualAttendanceFields({ eventDays }: ManualAttendanceFieldsProp
         </div>
       ) : (
         <p className="rounded-md border border-[#e1e6da] bg-white p-3 text-sm text-[#5e6d63]">
-          Date dell&apos;evento non disponibili.
+          {copy.noDates}
         </p>
       )}
 
@@ -69,7 +77,7 @@ export function ManualAttendanceFields({ eventDays }: ManualAttendanceFieldsProp
             }
           }}
         />
-        <span>Non lo so ancora, sarà confermato più avanti</span>
+        <span>{copy.unknown}</span>
       </label>
     </fieldset>
   );

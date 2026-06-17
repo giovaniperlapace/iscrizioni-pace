@@ -8,6 +8,13 @@ type EmailAccessFormProps = {
   defaultEmail: string;
   error?: string;
   sent?: string;
+  copy: {
+    submit: string;
+    pending: string;
+    magicLinkSent: string;
+    errors: Record<string, string>;
+    fallbackError: string;
+  };
 };
 
 export function EmailAccessForm({
@@ -15,6 +22,7 @@ export function EmailAccessForm({
   defaultEmail,
   error,
   sent,
+  copy,
 }: EmailAccessFormProps) {
   const submittedRef = useRef(false);
 
@@ -45,14 +53,20 @@ export function EmailAccessForm({
           className="min-h-12 flex-1 rounded-md border border-[#cbd3c0] bg-white px-3 text-base outline-none ring-[#6d8b70] transition focus:ring-2"
           placeholder="nome@example.org"
         />
-        <SubmitButton />
+        <SubmitButton submitLabel={copy.submit} pendingLabel={copy.pending} />
       </div>
-      <StatusMessage error={error} sent={sent} />
+      <StatusMessage copy={copy} error={error} sent={sent} />
     </form>
   );
 }
 
-function SubmitButton() {
+function SubmitButton({
+  submitLabel,
+  pendingLabel,
+}: {
+  submitLabel: string;
+  pendingLabel: string;
+}) {
   const { pending } = useFormStatus();
 
   return (
@@ -61,22 +75,24 @@ function SubmitButton() {
       disabled={pending}
       className="min-h-12 rounded-md bg-[#2f5e46] px-5 font-semibold text-white transition hover:bg-[#254b38] disabled:cursor-wait disabled:bg-[#6f887a]"
     >
-      {pending ? "Invio..." : "Continua"}
+      {pending ? pendingLabel : submitLabel}
     </button>
   );
 }
 
 function StatusMessage({
+  copy,
   error,
   sent,
 }: {
+  copy: EmailAccessFormProps["copy"];
   error?: string;
   sent?: string;
 }) {
   if (sent === "magic-link") {
     return (
       <p className="mt-4 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
-        Ti abbiamo inviato un link di accesso. Controlla la tua email.
+        {copy.magicLinkSent}
       </p>
     );
   }
@@ -85,15 +101,9 @@ function StatusMessage({
     return null;
   }
 
-  const messages: Record<string, string> = {
-    email: "Inserisci un indirizzo email valido.",
-    "rate-limit": "Troppi tentativi ravvicinati. Riprova tra qualche minuto.",
-    "no-event": "Non ci sono iscrizioni aperte in questo momento.",
-  };
-
   return (
     <p className="mt-4 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
-      {messages[error] ?? "Non e' stato possibile completare la richiesta."}
+      {copy.errors[error] ?? error ?? copy.fallbackError}
     </p>
   );
 }

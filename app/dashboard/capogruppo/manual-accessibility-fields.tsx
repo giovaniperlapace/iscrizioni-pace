@@ -3,30 +3,47 @@
 import { useState } from "react";
 
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
+import type { SupportedLocale } from "@/lib/i18n/config";
 
-export function ManualAccessibilityFields() {
+type ManualAccessibilityFieldsProps = {
+  locale: SupportedLocale;
+  copy: {
+    title: string;
+    help: string;
+    question: string;
+    unknown: string;
+    no: string;
+    yes: string;
+    needsSupport: string;
+    notes: string;
+  };
+};
+
+export function ManualAccessibilityFields({
+  locale,
+  copy,
+}: ManualAccessibilityFieldsProps) {
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("unknown");
 
   return (
     <fieldset className="grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:col-span-2">
       <legend className="px-1 text-sm font-semibold text-[#3c4b40]">
-        Accessibilità e supporto
+        {copy.title}
       </legend>
       <p className="text-sm leading-6 text-[#5e6d63]">
-        Compila solo le informazioni che conosci. Potranno essere completate
-        più avanti.
+        {copy.help}
       </p>
       <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
-        La persona ha bisogni di accessibilità?
+        {copy.question}
         <select
           name="hasAccessibilityNeeds"
           className="field"
           value={hasAccessibilityNeeds}
           onChange={(event) => setHasAccessibilityNeeds(event.target.value)}
         >
-          <option value="unknown">Non so / da verificare</option>
-          <option value="no">No</option>
-          <option value="yes">Sì</option>
+          <option value="unknown">{copy.unknown}</option>
+          <option value="no">{copy.no}</option>
+          <option value="yes">{copy.yes}</option>
         </select>
       </label>
 
@@ -43,7 +60,7 @@ export function ManualAccessibilityFields() {
                   type="checkbox"
                   className="mt-1 h-4 w-4 accent-[#315c44]"
                 />
-                <span>{difficulty.label.it}</span>
+                <span>{difficulty.label[locale] ?? difficulty.label.en}</span>
               </label>
             ))}
           </div>
@@ -53,10 +70,10 @@ export function ManualAccessibilityFields() {
               type="checkbox"
               className="mt-1 h-4 w-4 accent-[#315c44]"
             />
-            Serve ricontattare la persona o organizzare un supporto pratico.
+            {copy.needsSupport}
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
-            Indicazioni pratiche
+            {copy.notes}
             <textarea
               name="accessibilityNotes"
               rows={3}

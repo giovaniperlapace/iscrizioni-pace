@@ -58,7 +58,7 @@ test("parseRegistrationForm validates required public registration fields", () =
   if (parsed.ok) {
     assert.equal(parsed.value.email, "maria@example.org");
     assert.equal(parsed.value.phone, "+3906000000");
-    assert.equal(parsed.value.preferredLocale, "it");
+    assert.equal(parsed.value.preferredLocale, "en");
     assert.equal(parsed.value.attendanceChoice, "unknown");
     assert.deepEqual(parsed.value.availabilityDays, [
       "2026-10-25",
@@ -237,7 +237,7 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   formData.set("firstName", "Paolo");
   formData.set("lastName", "Bianchi");
   formData.set("phone", "+39 333 123 4567");
-  formData.set("preferredLocale", "en");
+  formData.set("preferredLocale", "fr");
   formData.append("availabilityDays", "2026-10-25");
   formData.append("availabilityDays", "2026-10-26");
   formData.set("hasAccessibilityNeeds", "yes");
@@ -253,7 +253,7 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   if (parsed.ok) {
     assert.equal(parsed.value.email, null);
     assert.equal(parsed.value.phone, "+393331234567");
-    assert.equal(parsed.value.preferredLocale, "en");
+    assert.equal(parsed.value.preferredLocale, "fr");
     assert.equal(parsed.value.availabilityUnknown, false);
     assert.deepEqual(parsed.value.availabilityDays, [
       "2026-10-25",
@@ -397,7 +397,7 @@ test("parseParticipantDashboardUpdate validates editable participant fields", ()
   const formData = new FormData();
   formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
   formData.set("phone", "+39 06 000000");
-  formData.set("preferredLocale", "en");
+  formData.set("preferredLocale", "uk-UA");
   formData.append("availabilityDays", "2026-09-04");
   formData.set("moment_22222222-2222-4222-8222-222222222222", "yes");
   formData.set("hasAccessibilityNeeds", "on");
@@ -409,7 +409,7 @@ test("parseParticipantDashboardUpdate validates editable participant fields", ()
   assert.equal(parsed.ok, true);
   if (parsed.ok) {
     assert.equal(parsed.value.phone, "+3906000000");
-    assert.equal(parsed.value.preferredLocale, "en");
+    assert.equal(parsed.value.preferredLocale, "uk");
     assert.deepEqual(parsed.value.availabilityDays, ["2026-09-04"]);
     assert.deepEqual(parsed.value.momentAttendanceChoices, {
       "22222222-2222-4222-8222-222222222222": "yes",

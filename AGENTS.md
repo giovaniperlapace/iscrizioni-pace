@@ -93,6 +93,15 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   (`Scarica immagine`, futuro `Aggiungi al tuo wallet`) restano accanto al QR
   quando lo spazio lo consente; lo stato QR e' un indicatore verde/rosso in alto
   a destra con tooltip descrittivo, non una riga informativa nella card.
+- Milestone 13 e' stata completata il 2026-06-17 con multilingua minima:
+  selettore lingua globale nell'header con bandierine, cookie
+  `iscrizioni_locale`, detection iniziale da `Accept-Language`, fallback
+  inglese quando la lingua non e' supportata, e localizzazione di home, login,
+  conferma iscrizione, form pubblico, tab dashboard condivise, testi comuni
+  header, dashboard partecipante e dashboard capogruppo. Lingue supportate:
+  italiano, inglese, francese, tedesco, spagnolo, neerlandese e ucraino.
+  La lingua preferita del partecipante ora accetta le stesse lingue nei flussi
+  pubblico, dashboard partecipante e inserimento manuale capogruppo.
 - Il 2026-06-16 e' stata rifinita la navigazione delle dashboard operative:
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle
@@ -1438,11 +1447,31 @@ Lingue minime:
 
 - Italiano.
 - Inglese.
+- Francese.
+- Tedesco.
+- Spagnolo.
+- Neerlandese.
+- Ucraino.
 
 Regole:
 
+- La lista canonica lingue sta in `lib/i18n/config.ts`.
+- La localizzazione server usa `getRequestLocale()` in `lib/i18n/server.ts`:
+  prima cookie `iscrizioni_locale`, poi `Accept-Language`, infine fallback
+  inglese.
+- Il selettore lingua globale vive in `components/language-selector.tsx` ed e'
+  mostrato da `components/app-headbar.tsx`; nell'header mostra solo le
+  bandierine, mentre i nomi lingua restano disponibili nei dati per form e
+  accessibilità.
 - Evitare testi UI hardcoded quando la struttura i18n esiste.
-- Aggiornare almeno IT/EN per ogni nuova UI o email.
+- Aggiornare tutte le lingue supportate per ogni nuova UI pubblica; se una
+  traduzione non e' ancora affidabile, usare inglese come fallback esplicito.
+- D'ora in poi ogni nuova pagina o funzione che interessa partecipante o
+  capogruppo deve essere implementata nelle lingue supportate fin dall'inizio:
+  italiano, inglese, francese, tedesco, spagnolo, neerlandese e ucraino.
+  Questo vale per testi visibili, etichette, pulsanti, stati, errori, overlay,
+  fallback di dati mancanti e campi form. Manager/admin possono restare
+  prioritariamente italiani, con inglese o fallback sulle parti condivise.
 - Non tradurre automaticamente testi legali definitivi senza revisione umana.
 - Salvare preferenza lingua dove serve, per profilo o iscrizione.
 

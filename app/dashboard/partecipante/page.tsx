@@ -4,6 +4,12 @@ import Link from "next/link";
 import { updateParticipantDashboard } from "@/app/actions";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { getCurrentAuthContext } from "@/lib/auth/session";
+import {
+  LANGUAGE_OPTIONS,
+  type SupportedLocale,
+  normalizeLocale,
+} from "@/lib/i18n/config";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
 import { renderQrDataUrl } from "@/lib/qrcode/render";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
@@ -109,22 +115,574 @@ type QrStatusRow = {
   token_encrypted: string | null;
 };
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("it-IT", {
-  day: "2-digit",
-  month: "long",
-  year: "numeric",
-});
-const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("it-IT", {
-  day: "2-digit",
-  month: "long",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+type ParticipantDashboardCopy = {
+  area: string;
+  fallbackTitle: string;
+  verifiedAccess: (email: string) => string;
+  group: string;
+  leader: string;
+  noGroup: string;
+  saved: string;
+  noRegistrationTitle: string;
+  noRegistrationBody: string;
+  startRegistration: string;
+  qrTitle: string;
+  qrBody: string;
+  openRegistration: string;
+  panelsTitle: string;
+  panelsEmpty: string;
+  qrEyebrow: string;
+  qrOverlayBody: string;
+  qrStatus: string;
+  yourCode: string;
+  registrationSummary: string;
+  registrationSummaryBody: (eventTitle: string, dateRange: string) => string;
+  submittedAt: string;
+  phone: string;
+  preferredLanguage: string;
+  birthDate: string;
+  birthPlace: string;
+  nationality: string;
+  expectedPresence: string;
+  accessibilitySupport: string;
+  attendanceUnknown: string;
+  attendanceUnknownSummary: string;
+  accessibilityRequest: string;
+  accessibilityTitle: string;
+  accessibilityHelp: string;
+  accessibilityNotes: string;
+  editClosed: string;
+  notProvided: string;
+  notAssigned: string;
+  datesToConfirm: string;
+  fromTo: (from: string, to: string) => string;
+  supportRequested: string;
+  supportNotRequested: string;
+  save: string;
+  edit: string;
+  editUnavailable: string;
+  qrActive: string;
+  qrInactive: string;
+  active: string;
+  activeUntil: (date: string) => string;
+  revoked: string;
+  expired: string;
+  preparing: string;
+  downloadImage: string;
+  addToWallet: string;
+  availableLater: string;
+  close: string;
+  personalQrAlt: string;
+  personalQrFile: string;
+  errors: Record<string, string>;
+  fallbackError: string;
+};
+
+const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCopy> = {
+  it: {
+    area: "Area partecipante",
+    fallbackTitle: "Dashboard partecipante",
+    verifiedAccess: (email) => `Accesso verificato per ${email}.`,
+    group: "Gruppo",
+    leader: "Referente",
+    noGroup: "Nessun gruppo collegato a questa iscrizione.",
+    saved: "Modifiche salvate.",
+    noRegistrationTitle: "Nessuna iscrizione collegata",
+    noRegistrationBody:
+      "Questa sessione non risulta collegata a un partecipante. Usa il magic link ricevuto via email o avvia di nuovo l'accesso dalla home.",
+    startRegistration: "Avvia la mia iscrizione",
+    qrTitle: "Il tuo QR code personale",
+    qrBody:
+      "Tienilo a portata di mano per l'accesso all'evento e ai panel. Se il QR non fosse disponibile, comunica il tuo codice partecipante all'accoglienza.",
+    openRegistration: "Visualizza e modifica la tua iscrizione",
+    panelsTitle: "Panel a cui sei iscritto",
+    panelsEmpty:
+      "I panel non sono ancora disponibili per l'iscrizione dalla dashboard. Quando ti iscriverai a un panel, qui compariranno titolo, data, ora e informazioni operative.",
+    qrEyebrow: "QR code evento",
+    qrOverlayBody:
+      "Usa questo QR code per l'accesso all'evento quando l'accoglienza abiliterà la scansione. Il codice partecipante resta il riferimento operativo da comunicare se il QR non fosse disponibile.",
+    qrStatus: "Stato QR",
+    yourCode: "Il tuo codice",
+    registrationSummary: "Riepilogo iscrizione",
+    registrationSummaryBody: (eventTitle, dateRange) =>
+      `Questo è il riepilogo della tua iscrizione per ${eventTitle}, che si terrà nei giorni ${dateRange}.`,
+    submittedAt: "Iscrizione effettuata il",
+    phone: "Telefono",
+    preferredLanguage: "Lingua preferita",
+    birthDate: "Data di nascita",
+    birthPlace: "Luogo di nascita",
+    nationality: "Nazionalità",
+    expectedPresence: "Presenza prevista",
+    accessibilitySupport: "Accessibilità e supporto",
+    attendanceUnknown: "Comunicherò più avanti i giorni di presenza.",
+    attendanceUnknownSummary: "Da comunicare",
+    accessibilityRequest: "Desidero richiedere supporto per l'accessibilità all'evento.",
+    accessibilityTitle: "Quali aspetti dobbiamo considerare?",
+    accessibilityHelp:
+      "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
+    accessibilityNotes: "Indicazioni pratiche per l'organizzazione",
+    editClosed: "La finestra di modifica non è attiva per questa iscrizione.",
+    notProvided: "Non indicata",
+    notAssigned: "Non assegnato",
+    datesToConfirm: "Date da confermare",
+    fromTo: (from, to) => `dal ${from} al ${to}`,
+    supportRequested: "Supporto richiesto",
+    supportNotRequested: "Nessun supporto richiesto",
+    save: "Salva",
+    edit: "Modifica",
+    editUnavailable: "Modifica non disponibile",
+    qrActive: "Il tuo QR code è attivo",
+    qrInactive: "Il tuo QR code non è attivo",
+    active: "Attivo",
+    activeUntil: (date) => `Attivo fino al ${date}`,
+    revoked: "Revocato",
+    expired: "Scaduto",
+    preparing: "In preparazione",
+    downloadImage: "Scarica immagine",
+    addToWallet: "Aggiungi al tuo wallet",
+    availableLater: "Disponibile più avanti",
+    close: "Chiudi",
+    personalQrAlt: "QR code personale",
+    personalQrFile: "personale",
+    errors: {
+      closed: "La finestra di modifica dell'iscrizione non è attiva.",
+      "not-found": "Iscrizione non trovata per questa sessione.",
+    },
+    fallbackError: "Non è stato possibile salvare le modifiche.",
+  },
+  en: {
+    area: "Participant area",
+    fallbackTitle: "Participant dashboard",
+    verifiedAccess: (email) => `Access verified for ${email}.`,
+    group: "Group",
+    leader: "Contact person",
+    noGroup: "No group is linked to this registration.",
+    saved: "Changes saved.",
+    noRegistrationTitle: "No linked registration",
+    noRegistrationBody:
+      "This session is not linked to a participant. Use the magic link received by email or start access again from the home page.",
+    startRegistration: "Start my registration",
+    qrTitle: "Your personal QR code",
+    qrBody:
+      "Keep it handy for access to the event and panels. If the QR code is not available, give your participant code to the welcome desk.",
+    openRegistration: "View and edit your registration",
+    panelsTitle: "Panels you are registered for",
+    panelsEmpty:
+      "Panels are not yet available for registration from the dashboard. When you register for a panel, its title, date, time and operational information will appear here.",
+    qrEyebrow: "Event QR code",
+    qrOverlayBody:
+      "Use this QR code to access the event when scanning is enabled at the welcome desk. Your participant code remains the operational reference to share if the QR code is not available.",
+    qrStatus: "QR status",
+    yourCode: "Your code",
+    registrationSummary: "Registration summary",
+    registrationSummaryBody: (eventTitle, dateRange) =>
+      `This is the summary of your registration for ${eventTitle}, taking place on ${dateRange}.`,
+    submittedAt: "Registration submitted on",
+    phone: "Phone",
+    preferredLanguage: "Preferred language",
+    birthDate: "Date of birth",
+    birthPlace: "Place of birth",
+    nationality: "Nationality",
+    expectedPresence: "Expected attendance",
+    accessibilitySupport: "Accessibility and support",
+    attendanceUnknown: "I will communicate my attendance days later.",
+    attendanceUnknownSummary: "To be communicated",
+    accessibilityRequest: "I would like to request accessibility support for the event.",
+    accessibilityTitle: "Which aspects should we consider?",
+    accessibilityHelp:
+      "You can select one or more options that are useful for organising the welcome better.",
+    accessibilityNotes: "Practical notes for the organisation",
+    editClosed: "The edit window is not active for this registration.",
+    notProvided: "Not provided",
+    notAssigned: "Not assigned",
+    datesToConfirm: "Dates to be confirmed",
+    fromTo: (from, to) => `from ${from} to ${to}`,
+    supportRequested: "Support requested",
+    supportNotRequested: "No support requested",
+    save: "Save",
+    edit: "Edit",
+    editUnavailable: "Editing not available",
+    qrActive: "Your QR code is active",
+    qrInactive: "Your QR code is not active",
+    active: "Active",
+    activeUntil: (date) => `Active until ${date}`,
+    revoked: "Revoked",
+    expired: "Expired",
+    preparing: "In preparation",
+    downloadImage: "Download image",
+    addToWallet: "Add to your wallet",
+    availableLater: "Available later",
+    close: "Close",
+    personalQrAlt: "Personal QR code",
+    personalQrFile: "personal",
+    errors: {
+      closed: "The registration edit window is not active.",
+      "not-found": "Registration not found for this session.",
+    },
+    fallbackError: "The changes could not be saved.",
+  },
+  fr: {
+    area: "Espace participant",
+    fallbackTitle: "Dashboard participant",
+    verifiedAccess: (email) => `Accès vérifié pour ${email}.`,
+    group: "Groupe",
+    leader: "Référent",
+    noGroup: "Aucun groupe n'est lié à cette inscription.",
+    saved: "Modifications enregistrées.",
+    noRegistrationTitle: "Aucune inscription liée",
+    noRegistrationBody:
+      "Cette session n'est pas liée à un participant. Utilise le magic link reçu par email ou recommence l'accès depuis l'accueil.",
+    startRegistration: "Commencer mon inscription",
+    qrTitle: "Ton QR code personnel",
+    qrBody:
+      "Garde-le à portée de main pour l'accès à l'événement et aux panels. Si le QR n'est pas disponible, communique ton code participant à l'accueil.",
+    openRegistration: "Voir et modifier ton inscription",
+    panelsTitle: "Panels auxquels tu es inscrit",
+    panelsEmpty:
+      "Les panels ne sont pas encore disponibles pour l'inscription depuis le dashboard. Quand tu t'inscriras à un panel, le titre, la date, l'heure et les informations pratiques apparaîtront ici.",
+    qrEyebrow: "QR code événement",
+    qrOverlayBody:
+      "Utilise ce QR code pour accéder à l'événement lorsque l'accueil activera le scan. Ton code participant reste la référence à communiquer si le QR n'est pas disponible.",
+    qrStatus: "État du QR",
+    yourCode: "Ton code",
+    registrationSummary: "Résumé de l'inscription",
+    registrationSummaryBody: (eventTitle, dateRange) =>
+      `Voici le résumé de ton inscription à ${eventTitle}, qui aura lieu ${dateRange}.`,
+    submittedAt: "Inscription effectuée le",
+    phone: "Téléphone",
+    preferredLanguage: "Langue préférée",
+    birthDate: "Date de naissance",
+    birthPlace: "Lieu de naissance",
+    nationality: "Nationalité",
+    expectedPresence: "Présence prévue",
+    accessibilitySupport: "Accessibilité et support",
+    attendanceUnknown: "Je communiquerai plus tard mes jours de présence.",
+    attendanceUnknownSummary: "À communiquer",
+    accessibilityRequest: "Je souhaite demander un support d'accessibilité pour l'événement.",
+    accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
+    accessibilityHelp:
+      "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
+    accessibilityNotes: "Indications pratiques pour l'organisation",
+    editClosed: "La fenêtre de modification n'est pas active pour cette inscription.",
+    notProvided: "Non indiqué",
+    notAssigned: "Non attribué",
+    datesToConfirm: "Dates à confirmer",
+    fromTo: (from, to) => `du ${from} au ${to}`,
+    supportRequested: "Support demandé",
+    supportNotRequested: "Aucun support demandé",
+    save: "Enregistrer",
+    edit: "Modifier",
+    editUnavailable: "Modification non disponible",
+    qrActive: "Ton QR code est actif",
+    qrInactive: "Ton QR code n'est pas actif",
+    active: "Actif",
+    activeUntil: (date) => `Actif jusqu'au ${date}`,
+    revoked: "Révoqué",
+    expired: "Expiré",
+    preparing: "En préparation",
+    downloadImage: "Télécharger l'image",
+    addToWallet: "Ajouter à ton wallet",
+    availableLater: "Disponible plus tard",
+    close: "Fermer",
+    personalQrAlt: "QR code personnel",
+    personalQrFile: "personnel",
+    errors: {
+      closed: "La fenêtre de modification de l'inscription n'est pas active.",
+      "not-found": "Inscription introuvable pour cette session.",
+    },
+    fallbackError: "Impossible d'enregistrer les modifications.",
+  },
+  de: {
+    area: "Teilnehmendenbereich",
+    fallbackTitle: "Teilnehmenden-Dashboard",
+    verifiedAccess: (email) => `Zugang bestätigt für ${email}.`,
+    group: "Gruppe",
+    leader: "Kontaktperson",
+    noGroup: "Mit dieser Anmeldung ist keine Gruppe verbunden.",
+    saved: "Änderungen gespeichert.",
+    noRegistrationTitle: "Keine verknüpfte Anmeldung",
+    noRegistrationBody:
+      "Diese Sitzung ist nicht mit einer teilnehmenden Person verknüpft. Nutze den Magic Link aus der E-Mail oder starte den Zugang erneut über die Startseite.",
+    startRegistration: "Meine Anmeldung starten",
+    qrTitle: "Dein persönlicher QR-Code",
+    qrBody:
+      "Halte ihn für den Zugang zur Veranstaltung und zu den Panels bereit. Wenn der QR-Code nicht verfügbar ist, teile dem Empfang deinen Teilnehmendencode mit.",
+    openRegistration: "Deine Anmeldung anzeigen und bearbeiten",
+    panelsTitle: "Panels, für die du angemeldet bist",
+    panelsEmpty:
+      "Panels sind im Dashboard noch nicht zur Anmeldung verfügbar. Wenn du dich für ein Panel anmeldest, erscheinen hier Titel, Datum, Uhrzeit und praktische Informationen.",
+    qrEyebrow: "Veranstaltungs-QR-Code",
+    qrOverlayBody:
+      "Nutze diesen QR-Code für den Zugang zur Veranstaltung, sobald der Empfang das Scannen aktiviert. Dein Teilnehmendencode bleibt die Referenz, falls der QR-Code nicht verfügbar ist.",
+    qrStatus: "QR-Status",
+    yourCode: "Dein Code",
+    registrationSummary: "Anmeldungsübersicht",
+    registrationSummaryBody: (eventTitle, dateRange) =>
+      `Dies ist die Übersicht deiner Anmeldung für ${eventTitle}, die ${dateRange} stattfindet.`,
+    submittedAt: "Anmeldung eingereicht am",
+    phone: "Telefon",
+    preferredLanguage: "Bevorzugte Sprache",
+    birthDate: "Geburtsdatum",
+    birthPlace: "Geburtsort",
+    nationality: "Staatsangehörigkeit",
+    expectedPresence: "Geplante Anwesenheit",
+    accessibilitySupport: "Barrierefreiheit und Unterstützung",
+    attendanceUnknown: "Ich teile meine Anwesenheitstage später mit.",
+    attendanceUnknownSummary: "Noch mitzuteilen",
+    accessibilityRequest: "Ich möchte Unterstützung für Barrierefreiheit bei der Veranstaltung anfragen.",
+    accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
+    accessibilityHelp:
+      "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
+    accessibilityNotes: "Praktische Hinweise für die Organisation",
+    editClosed: "Das Bearbeitungsfenster ist für diese Anmeldung nicht aktiv.",
+    notProvided: "Nicht angegeben",
+    notAssigned: "Nicht zugewiesen",
+    datesToConfirm: "Termine werden noch bestätigt",
+    fromTo: (from, to) => `vom ${from} bis ${to}`,
+    supportRequested: "Unterstützung angefragt",
+    supportNotRequested: "Keine Unterstützung angefragt",
+    save: "Speichern",
+    edit: "Bearbeiten",
+    editUnavailable: "Bearbeitung nicht verfügbar",
+    qrActive: "Dein QR-Code ist aktiv",
+    qrInactive: "Dein QR-Code ist nicht aktiv",
+    active: "Aktiv",
+    activeUntil: (date) => `Aktiv bis ${date}`,
+    revoked: "Widerrufen",
+    expired: "Abgelaufen",
+    preparing: "In Vorbereitung",
+    downloadImage: "Bild herunterladen",
+    addToWallet: "Zum Wallet hinzufügen",
+    availableLater: "Später verfügbar",
+    close: "Schließen",
+    personalQrAlt: "Persönlicher QR-Code",
+    personalQrFile: "persoenlich",
+    errors: {
+      closed: "Das Bearbeitungsfenster der Anmeldung ist nicht aktiv.",
+      "not-found": "Für diese Sitzung wurde keine Anmeldung gefunden.",
+    },
+    fallbackError: "Die Änderungen konnten nicht gespeichert werden.",
+  },
+  es: {
+    area: "Área participante",
+    fallbackTitle: "Panel participante",
+    verifiedAccess: (email) => `Acceso verificado para ${email}.`,
+    group: "Grupo",
+    leader: "Referente",
+    noGroup: "No hay ningún grupo vinculado a esta inscripción.",
+    saved: "Cambios guardados.",
+    noRegistrationTitle: "No hay inscripción vinculada",
+    noRegistrationBody:
+      "Esta sesión no está vinculada a un participante. Usa el magic link recibido por email o inicia de nuevo el acceso desde el inicio.",
+    startRegistration: "Iniciar mi inscripción",
+    qrTitle: "Tu código QR personal",
+    qrBody:
+      "Tenlo a mano para el acceso al evento y a los paneles. Si el QR no estuviera disponible, comunica tu código de participante en la acogida.",
+    openRegistration: "Ver y modificar tu inscripción",
+    panelsTitle: "Paneles a los que estás inscrito",
+    panelsEmpty:
+      "Los paneles todavía no están disponibles para inscripción desde el panel. Cuando te inscribas a un panel, aquí aparecerán título, fecha, hora e información operativa.",
+    qrEyebrow: "Código QR del evento",
+    qrOverlayBody:
+      "Usa este código QR para acceder al evento cuando la acogida active el escaneo. Tu código de participante sigue siendo la referencia operativa si el QR no está disponible.",
+    qrStatus: "Estado QR",
+    yourCode: "Tu código",
+    registrationSummary: "Resumen de inscripción",
+    registrationSummaryBody: (eventTitle, dateRange) =>
+      `Este es el resumen de tu inscripción para ${eventTitle}, que tendrá lugar ${dateRange}.`,
+    submittedAt: "Inscripción realizada el",
+    phone: "Teléfono",
+    preferredLanguage: "Idioma preferido",
+    birthDate: "Fecha de nacimiento",
+    birthPlace: "Lugar de nacimiento",
+    nationality: "Nacionalidad",
+    expectedPresence: "Presencia prevista",
+    accessibilitySupport: "Accesibilidad y apoyo",
+    attendanceUnknown: "Comunicaré más adelante los días de presencia.",
+    attendanceUnknownSummary: "Por comunicar",
+    accessibilityRequest: "Quiero solicitar apoyo de accesibilidad para el evento.",
+    accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
+    accessibilityHelp:
+      "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
+    accessibilityNotes: "Indicaciones prácticas para la organización",
+    editClosed: "La ventana de modificación no está activa para esta inscripción.",
+    notProvided: "No indicado",
+    notAssigned: "No asignado",
+    datesToConfirm: "Fechas por confirmar",
+    fromTo: (from, to) => `del ${from} al ${to}`,
+    supportRequested: "Apoyo solicitado",
+    supportNotRequested: "No se solicitó apoyo",
+    save: "Guardar",
+    edit: "Modificar",
+    editUnavailable: "Modificación no disponible",
+    qrActive: "Tu código QR está activo",
+    qrInactive: "Tu código QR no está activo",
+    active: "Activo",
+    activeUntil: (date) => `Activo hasta el ${date}`,
+    revoked: "Revocado",
+    expired: "Caducado",
+    preparing: "En preparación",
+    downloadImage: "Descargar imagen",
+    addToWallet: "Añadir a tu wallet",
+    availableLater: "Disponible más adelante",
+    close: "Cerrar",
+    personalQrAlt: "Código QR personal",
+    personalQrFile: "personal",
+    errors: {
+      closed: "La ventana de modificación de la inscripción no está activa.",
+      "not-found": "No se encontró una inscripción para esta sesión.",
+    },
+    fallbackError: "No se pudieron guardar los cambios.",
+  },
+  nl: {
+    area: "Deelnemersomgeving",
+    fallbackTitle: "Deelnemersdashboard",
+    verifiedAccess: (email) => `Toegang bevestigd voor ${email}.`,
+    group: "Groep",
+    leader: "Contactpersoon",
+    noGroup: "Er is geen groep aan deze inschrijving gekoppeld.",
+    saved: "Wijzigingen opgeslagen.",
+    noRegistrationTitle: "Geen gekoppelde inschrijving",
+    noRegistrationBody:
+      "Deze sessie is niet gekoppeld aan een deelnemer. Gebruik de magic link uit de e-mail of start de toegang opnieuw vanaf home.",
+    startRegistration: "Mijn inschrijving starten",
+    qrTitle: "Je persoonlijke QR-code",
+    qrBody:
+      "Houd deze bij de hand voor toegang tot het evenement en de panels. Als de QR-code niet beschikbaar is, geef je deelnemerscode door aan de ontvangst.",
+    openRegistration: "Je inschrijving bekijken en wijzigen",
+    panelsTitle: "Panels waarvoor je bent ingeschreven",
+    panelsEmpty:
+      "Panels zijn nog niet beschikbaar voor inschrijving vanuit het dashboard. Wanneer je je inschrijft voor een panel, verschijnen hier titel, datum, tijd en praktische informatie.",
+    qrEyebrow: "QR-code evenement",
+    qrOverlayBody:
+      "Gebruik deze QR-code voor toegang tot het evenement wanneer de ontvangst het scannen inschakelt. Je deelnemerscode blijft de operationele referentie als de QR-code niet beschikbaar is.",
+    qrStatus: "QR-status",
+    yourCode: "Je code",
+    registrationSummary: "Inschrijvingsoverzicht",
+    registrationSummaryBody: (eventTitle, dateRange) =>
+      `Dit is het overzicht van je inschrijving voor ${eventTitle}, dat plaatsvindt ${dateRange}.`,
+    submittedAt: "Inschrijving ingediend op",
+    phone: "Telefoon",
+    preferredLanguage: "Voorkeurstaal",
+    birthDate: "Geboortedatum",
+    birthPlace: "Geboorteplaats",
+    nationality: "Nationaliteit",
+    expectedPresence: "Verwachte aanwezigheid",
+    accessibilitySupport: "Toegankelijkheid en ondersteuning",
+    attendanceUnknown: "Ik geef mijn aanwezigheidsdagen later door.",
+    attendanceUnknownSummary: "Nog door te geven",
+    accessibilityRequest: "Ik wil toegankelijkheidsondersteuning voor het evenement aanvragen.",
+    accessibilityTitle: "Waar moeten we rekening mee houden?",
+    accessibilityHelp:
+      "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
+    accessibilityNotes: "Praktische aanwijzingen voor de organisatie",
+    editClosed: "Het wijzigingsvenster is niet actief voor deze inschrijving.",
+    notProvided: "Niet aangegeven",
+    notAssigned: "Niet toegewezen",
+    datesToConfirm: "Data nog te bevestigen",
+    fromTo: (from, to) => `van ${from} tot ${to}`,
+    supportRequested: "Ondersteuning aangevraagd",
+    supportNotRequested: "Geen ondersteuning aangevraagd",
+    save: "Opslaan",
+    edit: "Wijzigen",
+    editUnavailable: "Wijzigen niet beschikbaar",
+    qrActive: "Je QR-code is actief",
+    qrInactive: "Je QR-code is niet actief",
+    active: "Actief",
+    activeUntil: (date) => `Actief tot ${date}`,
+    revoked: "Ingetrokken",
+    expired: "Verlopen",
+    preparing: "In voorbereiding",
+    downloadImage: "Afbeelding downloaden",
+    addToWallet: "Aan je wallet toevoegen",
+    availableLater: "Later beschikbaar",
+    close: "Sluiten",
+    personalQrAlt: "Persoonlijke QR-code",
+    personalQrFile: "persoonlijk",
+    errors: {
+      closed: "Het wijzigingsvenster van de inschrijving is niet actief.",
+      "not-found": "Geen inschrijving gevonden voor deze sessie.",
+    },
+    fallbackError: "De wijzigingen konden niet worden opgeslagen.",
+  },
+  uk: {
+    area: "Зона учасника",
+    fallbackTitle: "Панель учасника",
+    verifiedAccess: (email) => `Доступ підтверджено для ${email}.`,
+    group: "Група",
+    leader: "Контактна особа",
+    noGroup: "До цієї реєстрації не прив'язано жодної групи.",
+    saved: "Зміни збережено.",
+    noRegistrationTitle: "Немає пов'язаної реєстрації",
+    noRegistrationBody:
+      "Ця сесія не пов'язана з учасником. Скористайтеся magic link з електронного листа або почніть доступ знову з головної сторінки.",
+    startRegistration: "Почати мою реєстрацію",
+    qrTitle: "Ваш персональний QR-код",
+    qrBody:
+      "Тримайте його під рукою для доступу до події та панелей. Якщо QR-код недоступний, повідомте свій код учасника на прийомі.",
+    openRegistration: "Переглянути і змінити вашу реєстрацію",
+    panelsTitle: "Панелі, на які ви зареєстровані",
+    panelsEmpty:
+      "Панелі ще недоступні для реєстрації з панелі учасника. Коли ви зареєструєтеся на панель, тут з'являться назва, дата, час і практична інформація.",
+    qrEyebrow: "QR-код події",
+    qrOverlayBody:
+      "Використовуйте цей QR-код для доступу до події, коли на прийомі буде увімкнено сканування. Ваш код учасника залишається робочим посиланням, якщо QR-код недоступний.",
+    qrStatus: "Стан QR",
+    yourCode: "Ваш код",
+    registrationSummary: "Підсумок реєстрації",
+    registrationSummaryBody: (eventTitle, dateRange) =>
+      `Це підсумок вашої реєстрації на ${eventTitle}, що відбудеться ${dateRange}.`,
+    submittedAt: "Реєстрацію подано",
+    phone: "Телефон",
+    preferredLanguage: "Бажана мова",
+    birthDate: "Дата народження",
+    birthPlace: "Місце народження",
+    nationality: "Громадянство",
+    expectedPresence: "Очікувана присутність",
+    accessibilitySupport: "Доступність і підтримка",
+    attendanceUnknown: "Я повідомлю дні присутності пізніше.",
+    attendanceUnknownSummary: "Буде повідомлено",
+    accessibilityRequest: "Я хочу попросити підтримку доступності для події.",
+    accessibilityTitle: "Що нам потрібно врахувати?",
+    accessibilityHelp:
+      "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
+    accessibilityNotes: "Практичні вказівки для організації",
+    editClosed: "Вікно редагування для цієї реєстрації не активне.",
+    notProvided: "Не вказано",
+    notAssigned: "Не призначено",
+    datesToConfirm: "Дати буде уточнено",
+    fromTo: (from, to) => `з ${from} до ${to}`,
+    supportRequested: "Підтримку запитано",
+    supportNotRequested: "Підтримку не запитано",
+    save: "Зберегти",
+    edit: "Змінити",
+    editUnavailable: "Редагування недоступне",
+    qrActive: "Ваш QR-код активний",
+    qrInactive: "Ваш QR-код не активний",
+    active: "Активний",
+    activeUntil: (date) => `Активний до ${date}`,
+    revoked: "Відкликано",
+    expired: "Термін дії минув",
+    preparing: "Готується",
+    downloadImage: "Завантажити зображення",
+    addToWallet: "Додати до wallet",
+    availableLater: "Буде доступно пізніше",
+    close: "Закрити",
+    personalQrAlt: "Персональний QR-код",
+    personalQrFile: "personal",
+    errors: {
+      closed: "Вікно редагування реєстрації не активне.",
+      "not-found": "Реєстрацію для цієї сесії не знайдено.",
+    },
+    fallbackError: "Не вдалося зберегти зміни.",
+  },
+};
 
 export default async function PartecipanteDashboardPage({
   searchParams,
 }: PageProps) {
+  const locale = await getRequestLocale();
+  const copy = PARTICIPANT_DASHBOARD_COPY[locale] ?? PARTICIPANT_DASHBOARD_COPY.en;
   const params = searchParams ? await searchParams : {};
   const activeOverlay = parseDashboardOverlay(firstParam(params.overlay));
   const supabase = await createSupabaseServerClient();
@@ -251,17 +809,17 @@ export default async function PartecipanteDashboardPage({
     Boolean(accessibility?.operational_notes) ||
     sensitiveNeedCount > 0;
   const attendanceSummary = availabilityUnknown
-    ? "Da comunicare"
+    ? copy.attendanceUnknownSummary
     : eventDays
         .filter((day) => selectedDays.has(day))
-        .map(formatDate)
-        .join(", ") || "Non indicata";
+        .map((day) => formatDate(day, locale, copy))
+        .join(", ") || copy.notProvided;
   const selectedPanels = moments.filter(
     (moment) => momentChoiceById.get(moment.id) === "yes"
   );
   const supportSummary = hasAccessibilityRequest
-    ? "Supporto richiesto"
-    : "Nessun supporto richiesto";
+    ? copy.supportRequested
+    : copy.supportNotRequested;
   const groupSummary = getGroupSummary(groupAssignments);
 
   return (
@@ -269,38 +827,40 @@ export default async function PartecipanteDashboardPage({
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-4">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
-            Area partecipante
+            {copy.area}
           </p>
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">
                 {participant
                   ? `${participant.first_name} ${participant.last_name}`
-                  : "Dashboard partecipante"}
+                  : copy.fallbackTitle}
               </h1>
               <p className="mt-3 max-w-3xl text-[#4b5a50]">
                 {event
                   ? `${event.title} - ${event.city}, ${event.country} - ${formatDateRange(
                       event.starts_on,
-                      event.ends_on
+                      event.ends_on,
+                      locale,
+                      copy
                     )}`
-                  : `Accesso verificato per ${auth.user.email}.`}
+                  : copy.verifiedAccess(auth.user.email ?? "")}
               </p>
               {participant && event && groupSummary ? (
                 <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#66745f]">
                   <span>
-                    Gruppo: <span>{groupSummary.name}</span>
+                    {copy.group}: <span>{groupSummary.name}</span>
                   </span>
                   {" "}
                   {groupSummary.leaderName ? (
                     <span>
-                      Referente: <span>{groupSummary.leaderName}</span>
+                      {copy.leader}: <span>{groupSummary.leaderName}</span>
                     </span>
                   ) : null}
                 </p>
               ) : participant && event ? (
                 <p className="mt-2 text-sm leading-6 text-[#66745f]">
-                  Nessun gruppo collegato a questa iscrizione.
+                  {copy.noGroup}
                 </p>
               ) : null}
             </div>
@@ -314,55 +874,54 @@ export default async function PartecipanteDashboardPage({
           </div>
           {params.saved ? (
             <p className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
-              Modifiche salvate.
+              {copy.saved}
             </p>
           ) : null}
           {params.error ? (
             <p className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
-              {dashboardErrorMessage(firstParam(params.error))}
+              {dashboardErrorMessage(firstParam(params.error), copy)}
             </p>
           ) : null}
         </header>
 
         {!selectedRegistration || !participant || !event ? (
           <section className="rounded-lg border border-[#d8dece] bg-white p-5">
-            <h2 className="text-lg font-semibold">Nessuna iscrizione collegata</h2>
+            <h2 className="text-lg font-semibold">{copy.noRegistrationTitle}</h2>
             <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
-              Questa sessione non risulta collegata a un partecipante. Usa il
-              magic link ricevuto via email o avvia di nuovo l&apos;accesso dalla home.
+              {copy.noRegistrationBody}
             </p>
             <Link
               href={`/${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
               className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[#b8c5ad] px-4 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
             >
-              Avvia la mia iscrizione
+              {copy.startRegistration}
             </Link>
           </section>
         ) : (
           <>
             <section className="relative rounded-lg border border-[#d8dece] bg-white p-5 pt-10 sm:p-6">
-              <QrStatusIndicator active={qrStatus?.status === "active"} />
+              <QrStatusIndicator active={qrStatus?.status === "active"} copy={copy} />
               <div className="grid gap-5 md:grid-cols-[minmax(24rem,auto)_1fr] md:items-center">
                 <div className="mx-auto grid w-full max-w-2xl gap-3 sm:grid-cols-[12rem_minmax(0,16rem)] sm:items-center md:mx-0">
                   <QrPreview
                     participantCode={participant.public_code ?? ""}
                     qrDataUrl={qrDataUrl}
+                    copy={copy}
                   />
                   <QrActionButtons
                     participantCode={participant.public_code}
                     qrDataUrl={qrDataUrl}
+                    copy={copy}
                   />
                 </div>
                 <div className="grid gap-3">
                   <div>
                     <h2 className="text-2xl font-semibold">
-                      Il tuo QR code personale
+                      {copy.qrTitle}
                     </h2>
                   </div>
                   <p className="max-w-2xl text-sm leading-6 text-[#5e6d63]">
-                    Tienilo a portata di mano per l&apos;accesso all&apos;evento e
-                    ai panel. Se il QR non fosse disponibile, comunica il tuo
-                    codice partecipante all&apos;accoglienza.
+                    {copy.qrBody}
                   </p>
                 </div>
               </div>
@@ -375,13 +934,13 @@ export default async function PartecipanteDashboardPage({
                   active={activeOverlay === "iscrizione"}
                   icon="form"
                 >
-                  Visualizza e modifica la tua iscrizione
+                  {copy.openRegistration}
                 </DashboardButton>
               </div>
             </section>
 
             <section className="grid gap-4">
-              <Panel title="Panel a cui sei iscritto">
+              <Panel title={copy.panelsTitle}>
                 {selectedPanels.length > 0 ? (
                   selectedPanels.map((panel) => (
                     <div
@@ -390,53 +949,49 @@ export default async function PartecipanteDashboardPage({
                     >
                       <p className="font-medium">{panel.title}</p>
                       <p className="text-sm text-[#66745f]">
-                        {formatDateTime(panel.starts_at)}
+                        {formatDateTime(panel.starts_at, locale, copy)}
                       </p>
                     </div>
                   ))
                 ) : (
                   <p className="text-sm leading-6 text-[#66745f]">
-                    I panel non sono ancora disponibili per l&apos;iscrizione
-                    dalla dashboard. Quando ti iscriverai a un panel, qui
-                    compariranno titolo, data, ora e informazioni operative.
+                    {copy.panelsEmpty}
                   </p>
                 )}
               </Panel>
             </section>
 
             {activeOverlay ? (
-              <DashboardOverlay closeHref="/dashboard/partecipante">
+              <DashboardOverlay closeHref="/dashboard/partecipante" copy={copy}>
                 {activeOverlay === "qr" ? (
                   <section className="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center">
                     <QrPreview
                       participantCode={participant.public_code ?? ""}
                       qrDataUrl={qrDataUrl}
+                      copy={copy}
                     />
                     <div className="grid gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#66745f]">
-                          QR code evento
+                          {copy.qrEyebrow}
                         </p>
                         <h2 className="mt-1 text-xl font-semibold">
-                          Il tuo QR code personale
+                          {copy.qrTitle}
                         </h2>
                       </div>
                       <p className="text-sm leading-6 text-[#5e6d63]">
-                        Usa questo QR code per l&apos;accesso all&apos;evento quando
-                        l&apos;accoglienza abiliterà la scansione. Il codice
-                        partecipante resta il riferimento operativo da comunicare
-                        se il QR non fosse disponibile.
+                        {copy.qrOverlayBody}
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <Info
-                          label="Stato QR"
+                          label={copy.qrStatus}
                           value={
-                            qrStatus ? qrStatusLabel(qrStatus) : "In preparazione"
+                            qrStatus ? qrStatusLabel(qrStatus, locale, copy) : copy.preparing
                           }
                         />
                         <Info
-                          label="Il tuo codice"
-                          value={participant.public_code ?? "Non assegnato"}
+                          label={copy.yourCode}
+                          value={participant.public_code ?? copy.notAssigned}
                         />
                       </div>
                     </div>
@@ -448,32 +1003,34 @@ export default async function PartecipanteDashboardPage({
                     <section className="flex flex-col gap-4">
                       <div className="border-b border-[#e6eadf] pb-2">
                         <h2 className="text-xl font-semibold">
-                          Riepilogo iscrizione
+                          {copy.registrationSummary}
                         </h2>
                         <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
-                          Questo è il riepilogo della tua iscrizione per{" "}
-                          {event.title}, che si terrà nei giorni{" "}
-                          {formatDate(event.starts_on)} - {formatDate(event.ends_on)}.
+                          {copy.registrationSummaryBody(
+                            event.title,
+                            formatDateRange(event.starts_on, event.ends_on, locale, copy)
+                          )}
                         </p>
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Info
-                          label="Iscrizione effettuata il"
-                          value={formatDateTime(selectedRegistration.submitted_at)}
+                          label={copy.submittedAt}
+                          value={formatDateTime(selectedRegistration.submitted_at, locale, copy)}
                         />
                         <Info
                           label="Email"
                           value={
                             primaryContact?.email ??
                             auth.user.email ??
-                            "Non indicata"
+                            copy.notProvided
                           }
                         />
                         <EditableInfo
-                          label="Telefono"
-                          value={primaryContact?.phone ?? "Non indicato"}
+                          label={copy.phone}
+                          value={primaryContact?.phone ?? copy.notProvided}
                           editable={Boolean(editable)}
+                          copy={copy}
                         >
                           <form
                             action={updateParticipantDashboard}
@@ -490,7 +1047,7 @@ export default async function PartecipanteDashboardPage({
                               selectedDays={[...selectedDays]}
                             />
                             <PreserveMoments momentChoices={momentChoices} />
-                            <Field label="Telefono">
+                            <Field label={copy.phone}>
                               <input
                                 name="phone"
                                 className="field"
@@ -499,17 +1056,14 @@ export default async function PartecipanteDashboardPage({
                                 autoComplete="tel"
                               />
                             </Field>
-                            <SaveInlineButton editable={Boolean(editable)} />
+                            <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                           </form>
                         </EditableInfo>
                         <EditableInfo
-                          label="Lingua preferita"
-                          value={
-                            (participant.preferred_locale ?? "it") === "en"
-                              ? "English"
-                              : "Italiano"
-                          }
+                          label={copy.preferredLanguage}
+                          value={formatLanguageName(participant.preferred_locale)}
                           editable={Boolean(editable)}
+                          copy={copy}
                         >
                           <form
                             action={updateParticipantDashboard}
@@ -524,37 +1078,41 @@ export default async function PartecipanteDashboardPage({
                               selectedDays={[...selectedDays]}
                             />
                             <PreserveMoments momentChoices={momentChoices} />
-                            <Field label="Lingua preferita">
+                            <Field label={copy.preferredLanguage}>
                               <select
                                 name="preferredLocale"
                                 className="field"
                                 defaultValue={participant.preferred_locale ?? "it"}
                               >
-                                <option value="it">Italiano</option>
-                                <option value="en">English</option>
+                                {LANGUAGE_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.nativeLabel}
+                                  </option>
+                                ))}
                               </select>
                             </Field>
-                            <SaveInlineButton editable={Boolean(editable)} />
+                            <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                           </form>
                         </EditableInfo>
                         <Info
-                          label="Data di nascita"
-                          value={formatDate(participant.birth_date)}
+                          label={copy.birthDate}
+                          value={formatDate(participant.birth_date, locale, copy)}
                         />
                         <Info
-                          label="Luogo di nascita"
-                          value={questionnaire?.answers?.birthPlace ?? "Non indicato"}
+                          label={copy.birthPlace}
+                          value={questionnaire?.answers?.birthPlace ?? copy.notProvided}
                         />
                         <Info
-                          label="Nazionalità"
-                          value={questionnaire?.answers?.nationality ?? "Non indicata"}
+                          label={copy.nationality}
+                          value={questionnaire?.answers?.nationality ?? copy.notProvided}
                         />
                       </div>
 
                       <EditableInfo
-                        label="Presenza prevista"
+                        label={copy.expectedPresence}
                         value={attendanceSummary}
                         editable={Boolean(editable)}
+                        copy={copy}
                       >
                         <form
                           action={updateParticipantDashboard}
@@ -580,7 +1138,7 @@ export default async function PartecipanteDashboardPage({
                                 className="mt-1"
                               />
                               <span>
-                                Comunicherò più avanti i giorni di presenza.
+                                {copy.attendanceUnknown}
                               </span>
                             </label>
                             <div className="grid gap-2 sm:grid-cols-2">
@@ -596,23 +1154,24 @@ export default async function PartecipanteDashboardPage({
                                     defaultChecked={selectedDays.has(day)}
                                     className="mt-1"
                                   />
-                                  <span>{formatDate(day)}</span>
+                                  <span>{formatDate(day, locale, copy)}</span>
                                 </label>
                               ))}
                             </div>
                           </fieldset>
-                          <SaveInlineButton editable={Boolean(editable)} />
+                          <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                         </form>
                       </EditableInfo>
 
                       <EditableInfo
-                        label="Accessibilità e supporto"
+                        label={copy.accessibilitySupport}
                         value={
                           accessibility?.operational_notes
                             ? `${supportSummary}: ${accessibility.operational_notes}`
                             : supportSummary
                         }
                         editable={Boolean(editable)}
+                        copy={copy}
                       >
                         <form
                           action={updateParticipantDashboard}
@@ -650,17 +1209,15 @@ export default async function PartecipanteDashboardPage({
                               htmlFor="hasAccessibilityNeeds"
                               className="block rounded-md border border-[#d8dece] py-3 pl-10 pr-3 text-sm"
                             >
-                              Desidero richiedere supporto per l&apos;accessibilità
-                              all&apos;evento.
+                              {copy.accessibilityRequest}
                             </label>
                             <div className="hidden gap-3 peer-checked:grid">
                               <div>
                                 <h3 className="font-semibold">
-                                  Quali aspetti dobbiamo considerare?
+                                  {copy.accessibilityTitle}
                                 </h3>
                                 <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
-                                  Puoi selezionare una o più opzioni utili per
-                                  organizzare meglio l&apos;accoglienza.
+                                  {copy.accessibilityHelp}
                                 </p>
                               </div>
                               <div className="grid gap-3 sm:grid-cols-2">
@@ -679,11 +1236,11 @@ export default async function PartecipanteDashboardPage({
                                       )}
                                       className="mt-1 h-4 w-4"
                                     />
-                                    <span>{difficulty.label.it}</span>
+                                    <span>{difficulty.label[locale] ?? difficulty.label.en}</span>
                                   </label>
                                 ))}
                               </div>
-                              <Field label="Indicazioni pratiche per l'organizzazione">
+                              <Field label={copy.accessibilityNotes}>
                                 <textarea
                                   name="accessibilityNotes"
                                   className="field min-h-28"
@@ -694,14 +1251,13 @@ export default async function PartecipanteDashboardPage({
                               </Field>
                             </div>
                           </fieldset>
-                          <SaveInlineButton editable={Boolean(editable)} />
+                          <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                         </form>
                       </EditableInfo>
 
                       {!editable ? (
                         <p className="text-sm text-[#66745f]">
-                          La finestra di modifica non è attiva per questa
-                          iscrizione.
+                          {copy.editClosed}
                         </p>
                       ) : null}
                     </section>
@@ -750,9 +1306,11 @@ async function getQrDataUrl(qrStatus: QrStatusRow | null): Promise<string | null
 function QrPreview({
   participantCode,
   qrDataUrl,
+  copy,
 }: {
   participantCode: string;
   qrDataUrl: string | null;
+  copy: ParticipantDashboardCopy;
 }) {
   const cells = buildQrPreviewCells(participantCode || "PACE");
 
@@ -762,7 +1320,7 @@ function QrPreview({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={qrDataUrl}
-          alt="QR code personale"
+          alt={copy.personalQrAlt}
           className="aspect-square rounded-md border border-[#cbd7c1] bg-white p-3"
         />
       ) : (
@@ -780,7 +1338,7 @@ function QrPreview({
       )}
       <p className="text-center text-sm font-semibold text-[#38453c]">
         <span className="text-xs uppercase tracking-wide text-[#66745f]">
-          Il tuo codice:
+          {copy.yourCode}:
         </span>{" "}
         <span className="font-mono">{participantCode || "QR"}</span>
       </p>
@@ -792,11 +1350,13 @@ function EditableInfo({
   label,
   value,
   editable,
+  copy,
   children,
 }: {
   label: string;
   value: string;
   editable: boolean;
+  copy: ParticipantDashboardCopy;
   children: React.ReactNode;
 }) {
   return (
@@ -811,7 +1371,7 @@ function EditableInfo({
         <span
           className="grid size-8 place-items-center rounded-full border border-[#cbd7c1] text-lg text-[#2f5e46] group-open:bg-[#eef3e8]"
           aria-hidden="true"
-          title={editable ? "Modifica" : "Modifica non disponibile"}
+          title={editable ? copy.edit : copy.editUnavailable}
         >
           &#9998;
         </span>
@@ -825,16 +1385,26 @@ function BaseDashboardFields({ registrationId }: { registrationId: string }) {
   return <input type="hidden" name="registrationId" value={registrationId} />;
 }
 
+function formatLanguageName(value: string | null): string {
+  const locale = normalizeLocale(value) ?? "en";
+  return (
+    LANGUAGE_OPTIONS.find((option) => option.value === locale)?.nativeLabel ??
+    "English"
+  );
+}
+
 function PreservePhone({ value }: { value: string | null }) {
   return value ? <input type="hidden" name="phone" value={value} /> : null;
 }
 
 function PreserveLocale({ value }: { value: string | null }) {
+  const locale = normalizeLocale(value) ?? "en";
+
   return (
     <input
       type="hidden"
       name="preferredLocale"
-      value={value === "en" ? "en" : "it"}
+      value={locale}
     />
   );
 }
@@ -879,22 +1449,32 @@ function PreserveMoments({
   );
 }
 
-function SaveInlineButton({ editable }: { editable: boolean }) {
+function SaveInlineButton({
+  editable,
+  copy,
+}: {
+  editable: boolean;
+  copy: ParticipantDashboardCopy;
+}) {
   return (
     <button
       type="submit"
       disabled={!editable}
       className="w-fit rounded-md bg-[#2f5e46] px-4 py-2 text-sm font-semibold text-white hover:bg-[#244938] disabled:cursor-not-allowed disabled:bg-[#9aa79b]"
     >
-      Salva
+      {copy.save}
     </button>
   );
 }
 
-function QrStatusIndicator({ active }: { active: boolean }) {
-  const label = active
-    ? "Il tuo QR code è attivo"
-    : "Il tuo QR code non è attivo";
+function QrStatusIndicator({
+  active,
+  copy,
+}: {
+  active: boolean;
+  copy: ParticipantDashboardCopy;
+}) {
+  const label = active ? copy.qrActive : copy.qrInactive;
 
   return (
     <span
@@ -921,20 +1501,22 @@ function QrStatusIndicator({ active }: { active: boolean }) {
 function QrActionButtons({
   participantCode,
   qrDataUrl,
+  copy,
 }: {
   participantCode: string | null;
   qrDataUrl: string | null;
+  copy: ParticipantDashboardCopy;
 }) {
   return (
     <div className="grid gap-2">
       {qrDataUrl ? (
         <a
           href={qrDataUrl}
-          download={`qr-${participantCode ?? "personale"}.png`}
+          download={`qr-${participantCode ?? copy.personalQrFile}.png`}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#2f5e46] px-4 text-sm font-semibold text-white transition hover:bg-[#244938]"
         >
           <DownloadIcon />
-          Scarica immagine
+          {copy.downloadImage}
         </a>
       ) : (
         <button
@@ -943,17 +1525,17 @@ function QrActionButtons({
           className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md bg-[#9aa79b] px-4 text-sm font-semibold text-white"
         >
           <DownloadIcon />
-          Scarica immagine
+          {copy.downloadImage}
         </button>
       )}
       <button
         type="button"
         disabled
-        title="Disponibile più avanti"
+        title={copy.availableLater}
         className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[#cbd7c1] px-4 text-sm font-semibold text-[#66745f]"
       >
         <WalletIcon />
-        Aggiungi al tuo wallet
+        {copy.addToWallet}
       </button>
     </div>
   );
@@ -1074,9 +1656,11 @@ function ActionIcon({
 
 function DashboardOverlay({
   closeHref,
+  copy,
   children,
 }: {
   closeHref: string;
+  copy: ParticipantDashboardCopy;
   children: React.ReactNode;
 }) {
   return (
@@ -1088,8 +1672,8 @@ function DashboardOverlay({
       >
         <Link
           href={closeHref}
-          aria-label="Chiudi"
-          title="Chiudi"
+          aria-label={copy.close}
+          title={copy.close}
           className="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-[#cbd7c1] text-xl font-semibold text-[#38453c] hover:bg-[#eef3e8]"
         >
           ×
@@ -1182,9 +1766,13 @@ function parseDateOnly(value: string): Date | null {
   );
 }
 
-function formatDate(value: string | null | undefined): string {
+function formatDate(
+  value: string | null | undefined,
+  locale: SupportedLocale,
+  copy: ParticipantDashboardCopy
+): string {
   if (!value) {
-    return "Non indicata";
+    return copy.notProvided;
   }
 
   const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -1192,55 +1780,77 @@ function formatDate(value: string | null | undefined): string {
     : new Date(value);
 
   return date && !Number.isNaN(date.getTime())
-    ? DATE_FORMATTER.format(date)
-    : "Non indicata";
+    ? new Intl.DateTimeFormat(locale, {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }).format(date)
+    : copy.notProvided;
 }
 
 function formatDateRange(
   startsOn: string | null | undefined,
-  endsOn: string | null | undefined
+  endsOn: string | null | undefined,
+  locale: SupportedLocale,
+  copy: ParticipantDashboardCopy
 ): string {
   if (!startsOn && !endsOn) {
-    return "Date da confermare";
+    return copy.datesToConfirm;
   }
 
   if (!endsOn || startsOn === endsOn) {
-    return formatDate(startsOn);
+    return formatDate(startsOn, locale, copy);
   }
 
   if (!startsOn) {
-    return formatDate(endsOn);
+    return formatDate(endsOn, locale, copy);
   }
 
-  // TODO i18n: localize "dal/al" for English and future dashboard locales.
-  return `dal ${formatDate(startsOn)} al ${formatDate(endsOn)}`;
+  return copy.fromTo(
+    formatDate(startsOn, locale, copy),
+    formatDate(endsOn, locale, copy)
+  );
 }
 
-function formatDateTime(value: string | null | undefined): string {
+function formatDateTime(
+  value: string | null | undefined,
+  locale: SupportedLocale,
+  copy: ParticipantDashboardCopy
+): string {
   if (!value) {
-    return "Non indicata";
+    return copy.notProvided;
   }
 
   const date = new Date(value);
 
   return Number.isNaN(date.getTime())
-    ? "Non indicata"
-    : DATE_TIME_FORMATTER.format(date);
+    ? copy.notProvided
+    : new Intl.DateTimeFormat(locale, {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
 }
 
-function qrStatusLabel(qrStatus: QrStatusRow): string {
+function qrStatusLabel(
+  qrStatus: QrStatusRow,
+  locale: SupportedLocale,
+  copy: ParticipantDashboardCopy
+): string {
   if (qrStatus.status === "active") {
     return qrStatus.expires_at
-      ? `Attivo fino al ${formatDate(qrStatus.expires_at)}`
-      : "Attivo";
+      ? copy.activeUntil(formatDate(qrStatus.expires_at, locale, copy))
+      : copy.active;
   }
 
   if (qrStatus.status === "revoked") {
-    return "Revocato";
+    return copy.revoked;
   }
 
   if (qrStatus.status === "expired") {
-    return "Scaduto";
+    return copy.expired;
   }
 
   return qrStatus.status;
@@ -1262,16 +1872,11 @@ function getGroupSummary(
   };
 }
 
-function dashboardErrorMessage(value: string | undefined): string {
-  if (value === "closed") {
-    return "La finestra di modifica dell'iscrizione non è attiva.";
-  }
-
-  if (value === "not-found") {
-    return "Iscrizione non trovata per questa sessione.";
-  }
-
-  return value || "Non è stato possibile salvare le modifiche.";
+function dashboardErrorMessage(
+  value: string | undefined,
+  copy: ParticipantDashboardCopy
+): string {
+  return value ? copy.errors[value] ?? value : copy.fallbackError;
 }
 
 function firstParam(value: string | string[] | undefined): string | undefined {
