@@ -108,6 +108,7 @@ export function RegistrationForm({
   options,
 }: RegistrationFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  const submittedRef = useRef(false);
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("");
   const [hasPreviousParticipation, setHasPreviousParticipation] = useState(
     options.groupLink ? "yes" : ""
@@ -140,6 +141,7 @@ export function RegistrationForm({
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedEventDays, setSelectedEventDays] = useState<string[]>([]);
   const [availabilityUnknown, setAvailabilityUnknown] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const eventDays = buildEventDays(
     options.event?.starts_on ?? null,
@@ -323,6 +325,11 @@ export function RegistrationForm({
       onChange={saveCurrentForm}
       onInput={saveCurrentForm}
       onSubmit={(event) => {
+        if (submittedRef.current) {
+          event.preventDefault();
+          return;
+        }
+
         saveCurrentForm();
         const effectiveHasPreviousParticipation = hasGroupLink
           ? "yes"
@@ -355,7 +362,11 @@ export function RegistrationForm({
               !cannotFindLeader &&
               !selectedGroupValue,
           });
+          return;
         }
+
+        submittedRef.current = true;
+        setIsSubmitting(true);
       }}
     >
       {groupRegistrationLinkToken ? (
@@ -851,7 +862,9 @@ export function RegistrationForm({
 
         {hasPreviousParticipation === "yes" && !hasGroupLink ? (
           <div className="grid gap-3 text-sm font-medium text-[#38453c]">
-            <span>Parteciperai con un gruppo?</span>
+            <span>
+              Fai parte di un gruppo o una assemblea della Comunità di Sant&apos;Egidio?
+            </span>
             <input
               name="participatesWithGroup"
               type="hidden"
@@ -1106,9 +1119,11 @@ export function RegistrationForm({
       <div className="flex justify-end">
         <button
           type="submit"
-          className="min-h-12 rounded-md bg-[#2f5e46] px-6 font-semibold text-white transition hover:bg-[#254b38]"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+          className="min-h-12 rounded-md bg-[#2f5e46] px-6 font-semibold text-white transition hover:bg-[#254b38] disabled:cursor-not-allowed disabled:bg-[#7f9688]"
         >
-          Invia iscrizione
+          {isSubmitting ? "Invio iscrizione..." : "Invia iscrizione"}
         </button>
       </div>
     </form>

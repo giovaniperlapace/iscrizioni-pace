@@ -556,7 +556,7 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   {
     id: "group_participation",
     label: {
-      it: "Partecipi con un gruppo Sant'Egidio?",
+      it: "Fai parte di un gruppo o una assemblea della Comunità di Sant'Egidio?",
       en: "Are you joining with a Sant'Egidio group?",
     },
     required: false,
