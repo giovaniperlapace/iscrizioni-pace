@@ -26,14 +26,14 @@ export function ManualAccessibilityFields({
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("unknown");
 
   return (
-    <fieldset className="grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:col-span-2">
-      <legend className="px-1 text-sm font-semibold text-[#3c4b40]">
+    <fieldset className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
+      <legend className="px-1 text-sm font-semibold text-[var(--peace-ink)]">
         {copy.title}
       </legend>
-      <p className="text-sm leading-6 text-[#5e6d63]">
+      <p className="text-sm leading-6 text-[var(--peace-muted)]">
         {copy.help}
       </p>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         {copy.question}
         <select
           name="hasAccessibilityNeeds"
@@ -53,31 +53,31 @@ export function ManualAccessibilityFields({
             {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (
               <label
                 key={difficulty.key}
-                className="flex min-h-14 items-start gap-3 rounded-md border border-[#d8dece] bg-white p-3 text-sm text-[#38453c]"
+                className="flex min-h-14 items-start gap-3 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm text-[var(--peace-ink)]"
               >
                 <input
                   name={`accessibility_${difficulty.key}`}
                   type="checkbox"
-                  className="mt-1 h-4 w-4 accent-[#315c44]"
+                  className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
                 />
                 <span>{difficulty.label[locale] ?? difficulty.label.en}</span>
               </label>
             ))}
           </div>
-          <label className="flex gap-3 rounded-md border border-[#d8dece] bg-white p-3 text-sm font-medium text-[#39483f]">
+          <label className="flex gap-3 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm font-medium text-[var(--peace-ink)]">
             <input
               name="needsOperationalSupport"
               type="checkbox"
-              className="mt-1 h-4 w-4 accent-[#315c44]"
+              className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
             />
             {copy.needsSupport}
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.notes}
             <textarea
               name="accessibilityNotes"
               rows={3}
-              className="min-h-20 rounded-md border border-[#cfd8c4] bg-white px-3 py-2 text-sm font-normal text-[#1c241f] outline-none transition focus:border-[#56745d]"
+              className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
             />
           </label>
         </>

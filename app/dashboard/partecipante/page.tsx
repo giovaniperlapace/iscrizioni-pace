@@ -823,10 +823,10 @@ export default async function PartecipanteDashboardPage({
   const groupSummary = getGroupSummary(groupAssignments);
 
   return (
-    <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
+    <main className="app-page text-[var(--peace-ink)]">
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
+          <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
             {copy.area}
           </p>
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
@@ -836,7 +836,7 @@ export default async function PartecipanteDashboardPage({
                   ? `${participant.first_name} ${participant.last_name}`
                   : copy.fallbackTitle}
               </h1>
-              <p className="mt-3 max-w-3xl text-[#4b5a50]">
+              <p className="mt-3 max-w-3xl text-[var(--peace-muted)]">
                 {event
                   ? `${event.title} - ${event.city}, ${event.country} - ${formatDateRange(
                       event.starts_on,
@@ -847,7 +847,7 @@ export default async function PartecipanteDashboardPage({
                   : copy.verifiedAccess(auth.user.email ?? "")}
               </p>
               {participant && event && groupSummary ? (
-                <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#66745f]">
+                <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#6f7f91]">
                   <span>
                     {copy.group}: <span>{groupSummary.name}</span>
                   </span>
@@ -859,7 +859,7 @@ export default async function PartecipanteDashboardPage({
                   ) : null}
                 </p>
               ) : participant && event ? (
-                <p className="mt-2 text-sm leading-6 text-[#66745f]">
+                <p className="mt-2 text-sm leading-6 text-[#6f7f91]">
                   {copy.noGroup}
                 </p>
               ) : null}
@@ -885,21 +885,21 @@ export default async function PartecipanteDashboardPage({
         </header>
 
         {!selectedRegistration || !participant || !event ? (
-          <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+          <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
             <h2 className="text-lg font-semibold">{copy.noRegistrationTitle}</h2>
-            <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
+            <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
               {copy.noRegistrationBody}
             </p>
             <Link
               href={`/${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
-              className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[#b8c5ad] px-4 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+              className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
               {copy.startRegistration}
             </Link>
           </section>
         ) : (
           <>
-            <section className="relative rounded-lg border border-[#d8dece] bg-white p-5 pt-10 sm:p-6">
+            <section className="relative rounded-lg border border-[var(--peace-border)] bg-white p-5 pt-10 sm:p-6">
               <QrStatusIndicator active={qrStatus?.status === "active"} copy={copy} />
               <div className="grid gap-5 md:grid-cols-[minmax(24rem,auto)_1fr] md:items-center">
                 <div className="mx-auto grid w-full max-w-2xl gap-3 sm:grid-cols-[12rem_minmax(0,16rem)] sm:items-center md:mx-0">
@@ -920,14 +920,14 @@ export default async function PartecipanteDashboardPage({
                       {copy.qrTitle}
                     </h2>
                   </div>
-                  <p className="max-w-2xl text-sm leading-6 text-[#5e6d63]">
+                  <p className="max-w-2xl text-sm leading-6 text-[var(--peace-muted)]">
                     {copy.qrBody}
                   </p>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+            <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
               <div className="mx-auto w-full max-w-xl">
                 <DashboardButton
                   href="/dashboard/partecipante?overlay=iscrizione"
@@ -945,16 +945,16 @@ export default async function PartecipanteDashboardPage({
                   selectedPanels.map((panel) => (
                     <div
                       key={panel.id}
-                      className="grid gap-1 border-b border-[#e6eadf] pb-3 last:border-b-0 last:pb-0"
+                      className="grid gap-1 border-b border-[var(--peace-border)] pb-3 last:border-b-0 last:pb-0"
                     >
                       <p className="font-medium">{panel.title}</p>
-                      <p className="text-sm text-[#66745f]">
+                      <p className="text-sm text-[#6f7f91]">
                         {formatDateTime(panel.starts_at, locale, copy)}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm leading-6 text-[#66745f]">
+                  <p className="text-sm leading-6 text-[#6f7f91]">
                     {copy.panelsEmpty}
                   </p>
                 )}
@@ -972,14 +972,14 @@ export default async function PartecipanteDashboardPage({
                     />
                     <div className="grid gap-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[#66745f]">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
                           {copy.qrEyebrow}
                         </p>
                         <h2 className="mt-1 text-xl font-semibold">
                           {copy.qrTitle}
                         </h2>
                       </div>
-                      <p className="text-sm leading-6 text-[#5e6d63]">
+                      <p className="text-sm leading-6 text-[var(--peace-muted)]">
                         {copy.qrOverlayBody}
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2">
@@ -1001,11 +1001,11 @@ export default async function PartecipanteDashboardPage({
                 {activeOverlay === "iscrizione" ? (
                   <section className="grid gap-6">
                     <section className="flex flex-col gap-4">
-                      <div className="border-b border-[#e6eadf] pb-2">
+                      <div className="border-b border-[var(--peace-border)] pb-2">
                         <h2 className="text-xl font-semibold">
                           {copy.registrationSummary}
                         </h2>
-                        <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
+                        <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
                           {copy.registrationSummaryBody(
                             event.title,
                             formatDateRange(event.starts_on, event.ends_on, locale, copy)
@@ -1130,7 +1130,7 @@ export default async function PartecipanteDashboardPage({
                             disabled={!editable}
                             className="grid gap-3 disabled:opacity-70"
                           >
-                            <label className="flex gap-3 rounded-md border border-[#d8dece] p-3 text-sm">
+                            <label className="flex gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm">
                               <input
                                 type="checkbox"
                                 name="availabilityUnknown"
@@ -1145,7 +1145,7 @@ export default async function PartecipanteDashboardPage({
                               {eventDays.map((day) => (
                                 <label
                                   key={day}
-                                  className="flex gap-3 rounded-md border border-[#d8dece] p-3 text-sm"
+                                  className="flex gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm"
                                 >
                                   <input
                                     type="checkbox"
@@ -1207,7 +1207,7 @@ export default async function PartecipanteDashboardPage({
                             />
                             <label
                               htmlFor="hasAccessibilityNeeds"
-                              className="block rounded-md border border-[#d8dece] py-3 pl-10 pr-3 text-sm"
+                              className="block rounded-md border border-[var(--peace-border)] py-3 pl-10 pr-3 text-sm"
                             >
                               {copy.accessibilityRequest}
                             </label>
@@ -1216,7 +1216,7 @@ export default async function PartecipanteDashboardPage({
                                 <h3 className="font-semibold">
                                   {copy.accessibilityTitle}
                                 </h3>
-                                <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+                                <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
                                   {copy.accessibilityHelp}
                                 </p>
                               </div>
@@ -1224,7 +1224,7 @@ export default async function PartecipanteDashboardPage({
                                 {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (
                                   <label
                                     key={difficulty.key}
-                                    className="flex min-h-14 items-start gap-3 rounded-md border border-[#d8dece] p-3 text-sm text-[#38453c]"
+                                    className="flex min-h-14 items-start gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm text-[var(--peace-ink)]"
                                   >
                                     <input
                                       name={`accessibility_${difficulty.key}`}
@@ -1256,7 +1256,7 @@ export default async function PartecipanteDashboardPage({
                       </EditableInfo>
 
                       {!editable ? (
-                        <p className="text-sm text-[#66745f]">
+                        <p className="text-sm text-[#6f7f91]">
                           {copy.editClosed}
                         </p>
                       ) : null}
@@ -1321,23 +1321,23 @@ function QrPreview({
         <img
           src={qrDataUrl}
           alt={copy.personalQrAlt}
-          className="aspect-square rounded-md border border-[#cbd7c1] bg-white p-3"
+          className="aspect-square rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
         />
       ) : (
         <div
-          className="grid aspect-square grid-cols-9 rounded-md border border-[#cbd7c1] bg-[#f7f8f3] p-3"
+          className="grid aspect-square grid-cols-9 rounded-md border border-[var(--peace-border-strong)] bg-[var(--peace-soft)] p-3"
           aria-hidden="true"
         >
           {cells.map((active, index) => (
             <span
               key={index}
-              className={active ? "bg-[#1c241f]" : "bg-transparent"}
+              className={active ? "bg-[var(--peace-ink)]" : "bg-transparent"}
             />
           ))}
         </div>
       )}
-      <p className="text-center text-sm font-semibold text-[#38453c]">
-        <span className="text-xs uppercase tracking-wide text-[#66745f]">
+      <p className="text-center text-sm font-semibold text-[var(--peace-ink)]">
+        <span className="text-xs uppercase tracking-wide text-[#6f7f91]">
           {copy.yourCode}:
         </span>{" "}
         <span className="font-mono">{participantCode || "QR"}</span>
@@ -1360,23 +1360,23 @@ function EditableInfo({
   children: React.ReactNode;
 }) {
   return (
-    <details className="group rounded-md border border-[#d8dece] p-4 sm:col-span-2">
+    <details className="group rounded-md border border-[var(--peace-border)] p-4 sm:col-span-2">
       <summary className="grid cursor-pointer list-none gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#66745f]">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
             {label}
           </p>
           <p className="mt-1 text-sm leading-6">{value}</p>
         </div>
         <span
-          className="grid size-8 place-items-center rounded-full border border-[#cbd7c1] text-lg text-[#2f5e46] group-open:bg-[#eef3e8]"
+          className="grid size-8 place-items-center rounded-full border border-[var(--peace-border-strong)] text-lg text-[var(--peace-blue-800)] group-open:bg-[var(--peace-sky-100)]"
           aria-hidden="true"
           title={editable ? copy.edit : copy.editUnavailable}
         >
           &#9998;
         </span>
       </summary>
-      <div className="mt-4 border-t border-[#e6eadf] pt-4">{children}</div>
+      <div className="mt-4 border-t border-[var(--peace-border)] pt-4">{children}</div>
     </details>
   );
 }
@@ -1460,7 +1460,7 @@ function SaveInlineButton({
     <button
       type="submit"
       disabled={!editable}
-      className="w-fit rounded-md bg-[#2f5e46] px-4 py-2 text-sm font-semibold text-white hover:bg-[#244938] disabled:cursor-not-allowed disabled:bg-[#9aa79b]"
+      className="w-fit rounded-md bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#244938] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
     >
       {copy.save}
     </button>
@@ -1491,7 +1491,7 @@ function QrStatusIndicator({
             : "size-4 rounded-full bg-[#c94b3b] ring-4 ring-[#f7dfdc]"
         }
       />
-      <span className="pointer-events-none absolute right-0 top-7 z-10 w-max max-w-52 rounded-md bg-[#1c241f] px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus:opacity-100">
+      <span className="pointer-events-none absolute right-0 top-7 z-10 w-max max-w-52 rounded-md bg-[var(--peace-ink)] px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus:opacity-100">
         {label}
       </span>
     </span>
@@ -1513,7 +1513,7 @@ function QrActionButtons({
         <a
           href={qrDataUrl}
           download={`qr-${participantCode ?? copy.personalQrFile}.png`}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#2f5e46] px-4 text-sm font-semibold text-white transition hover:bg-[#244938]"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[#244938]"
         >
           <DownloadIcon />
           {copy.downloadImage}
@@ -1522,7 +1522,7 @@ function QrActionButtons({
         <button
           type="button"
           disabled
-          className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md bg-[#9aa79b] px-4 text-sm font-semibold text-white"
+          className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md bg-[#8aa6bd] px-4 text-sm font-semibold text-white"
         >
           <DownloadIcon />
           {copy.downloadImage}
@@ -1532,7 +1532,7 @@ function QrActionButtons({
         type="button"
         disabled
         title={copy.availableLater}
-        className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[#cbd7c1] px-4 text-sm font-semibold text-[#66745f]"
+        className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[#6f7f91]"
       >
         <WalletIcon />
         {copy.addToWallet}
@@ -1595,8 +1595,8 @@ function DashboardButton({
       href={href}
       className={
         active
-          ? "flex h-16 items-center justify-center gap-3 rounded-md bg-[#2f5e46] px-4 text-center text-sm font-semibold leading-5 text-white"
-          : "flex h-16 items-center justify-center gap-3 rounded-md border border-[#cbd7c1] px-4 text-center text-sm font-semibold leading-5 text-[#2f5e46] hover:bg-[#eef3e8]"
+          ? "flex h-16 items-center justify-center gap-3 rounded-md bg-[var(--peace-blue-800)] px-4 text-center text-sm font-semibold leading-5 text-white"
+          : "flex h-16 items-center justify-center gap-3 rounded-md border border-[var(--peace-border-strong)] px-4 text-center text-sm font-semibold leading-5 text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)]"
       }
     >
       <ActionIcon icon={icon} active={active} />
@@ -1627,7 +1627,7 @@ function ActionIcon({
               activeCells.has(cell)
                 ? active
                   ? "rounded-[1px] bg-white"
-                  : "rounded-[1px] bg-[#2f5e46]"
+                  : "rounded-[1px] bg-[var(--peace-blue-800)]"
                 : "rounded-[1px] bg-transparent"
             }
           />
@@ -1642,13 +1642,13 @@ function ActionIcon({
       className={
         active
           ? "grid size-6 shrink-0 gap-1 rounded-sm border border-white p-1"
-          : "grid size-6 shrink-0 gap-1 rounded-sm border border-[#2f5e46] p-1"
+          : "grid size-6 shrink-0 gap-1 rounded-sm border border-[var(--peace-blue-800)] p-1"
       }
     >
-      <span className={active ? "h-0.5 w-3 bg-white" : "h-0.5 w-3 bg-[#2f5e46]"} />
-      <span className={active ? "h-0.5 w-4 bg-white" : "h-0.5 w-4 bg-[#2f5e46]"} />
+      <span className={active ? "h-0.5 w-3 bg-white" : "h-0.5 w-3 bg-[var(--peace-blue-800)]"} />
+      <span className={active ? "h-0.5 w-4 bg-white" : "h-0.5 w-4 bg-[var(--peace-blue-800)]"} />
       <span
-        className={active ? "h-0.5 w-3.5 bg-white" : "h-0.5 w-3.5 bg-[#2f5e46]"}
+        className={active ? "h-0.5 w-3.5 bg-white" : "h-0.5 w-3.5 bg-[var(--peace-blue-800)]"}
       />
     </span>
   );
@@ -1664,17 +1664,17 @@ function DashboardOverlay({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[#1c241f]/45 px-4 py-5 backdrop-blur-sm sm:px-6">
+    <div className="fixed inset-0 z-50 grid place-items-center modal-backdrop px-4 py-5 backdrop-blur-sm sm:px-6">
       <section
         role="dialog"
         aria-modal="true"
-        className="relative mx-auto grid max-h-[calc(100vh-2.5rem)] w-full max-w-4xl gap-5 overflow-y-auto rounded-lg border border-[#d8dece] bg-white p-5 shadow-2xl sm:p-6"
+        className="relative mx-auto grid max-h-[calc(100vh-2.5rem)] w-full max-w-4xl gap-5 overflow-y-auto rounded-lg border border-[var(--peace-border)] bg-white p-5 shadow-2xl sm:p-6"
       >
         <Link
           href={closeHref}
           aria-label={copy.close}
           title={copy.close}
-          className="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-[#cbd7c1] text-xl font-semibold text-[#38453c] hover:bg-[#eef3e8]"
+          className="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-[var(--peace-border-strong)] text-xl font-semibold text-[var(--peace-ink)] hover:bg-[var(--peace-sky-100)]"
         >
           ×
         </Link>
@@ -1692,7 +1692,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-3 rounded-lg border border-[#d8dece] bg-white p-5">
+    <section className="grid gap-3 rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <h2 className="text-lg font-semibold">{title}</h2>
       <div className="grid gap-3">{children}</div>
     </section>
@@ -1707,7 +1707,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#38453c]">
+    <label className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
       <span>{label}</span>
       {children}
     </label>
@@ -1717,7 +1717,7 @@ function Field({
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#66745f]">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
         {label}
       </p>
       <p className="mt-1 text-sm leading-6">{value}</p>

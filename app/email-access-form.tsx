@@ -29,7 +29,7 @@ export function EmailAccessForm({
   return (
     <form
       action={action}
-      className="rounded-lg border border-[#d8dece] bg-white p-5 shadow-sm sm:p-6"
+      className="surface-card p-5 sm:p-6"
       onSubmit={(event) => {
         if (submittedRef.current) {
           event.preventDefault();
@@ -39,7 +39,7 @@ export function EmailAccessForm({
         submittedRef.current = true;
       }}
     >
-      <label htmlFor="email" className="text-sm font-medium text-[#38453c]">
+      <label htmlFor="email" className="text-sm font-bold text-[var(--peace-ink)]">
         Email
       </label>
       <div className="mt-2 flex flex-col gap-3 sm:flex-row">
@@ -50,7 +50,7 @@ export function EmailAccessForm({
           required
           autoComplete="email"
           defaultValue={defaultEmail}
-          className="min-h-12 flex-1 rounded-md border border-[#cbd3c0] bg-white px-3 text-base outline-none ring-[#6d8b70] transition focus:ring-2"
+          className="field flex-1"
           placeholder="nome@example.org"
         />
         <SubmitButton submitLabel={copy.submit} pendingLabel={copy.pending} />
@@ -73,7 +73,7 @@ function SubmitButton({
     <button
       type="submit"
       disabled={pending}
-      className="min-h-12 rounded-md bg-[#2f5e46] px-5 font-semibold text-white transition hover:bg-[#254b38] disabled:cursor-wait disabled:bg-[#6f887a]"
+      className="btn-primary px-5 disabled:cursor-wait"
     >
       {pending ? pendingLabel : submitLabel}
     </button>
@@ -91,7 +91,7 @@ function StatusMessage({
 }) {
   if (sent === "magic-link") {
     return (
-      <p className="mt-4 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
+      <p className="status-success mt-4 rounded-[var(--radius-sm)] border px-3 py-2 text-sm">
         {copy.magicLinkSent}
       </p>
     );
@@ -102,7 +102,7 @@ function StatusMessage({
   }
 
   return (
-    <p className="mt-4 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
+    <p className="status-error mt-4 rounded-[var(--radius-sm)] border px-3 py-2 text-sm">
       {copy.errors[error] ?? error ?? copy.fallbackError}
     </p>
   );

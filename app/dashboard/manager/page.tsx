@@ -57,6 +57,8 @@ type ManagerPageProps = {
     group?: string;
     q?: string;
     role?: string;
+    nav?: string;
+    section?: string;
     status?: string;
   }>;
 };
@@ -255,6 +257,9 @@ type EventSnapshot = {
   canManage: boolean;
 };
 
+type ManagerSection = "evento" | "iscritti" | "gruppi";
+type ManagerNavMode = "full" | "mini";
+
 export default async function ManagerDashboardPage({
   searchParams,
 }: ManagerPageProps) {
@@ -288,10 +293,12 @@ export default async function ManagerDashboardPage({
   const selectedGroup =
     managerOperations.groupTree.find((group) => group.id === params.groupId) ??
     null;
+  const activeSection = resolveManagerSection(params);
+  const navMode: ManagerNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
-    <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
+    <main className="app-page text-[var(--peace-ink)]">
+      <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard manager</h1>
           <DashboardRoleTabs activeRole="manager" eventRoles={auth.eventRoles} />
@@ -301,62 +308,191 @@ export default async function ManagerDashboardPage({
           </DashboardAreaDescription>
         </header>
 
-        <StatusMessage
-          error={params.openingError}
-          saved={params.openingSaved}
-          managerError={params.managerError}
-          managerSaved={params.managerSaved}
-          groupLinkError={params.groupLinkError}
-          groupLinkSaved={params.groupLinkSaved}
-          groupError={params.groupError}
-          groupSaved={params.groupSaved}
-        />
+        <div
+          className={[
+            "grid gap-4 lg:items-start",
+            navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
+          ].join(" ")}
+        >
+          <ManagerSidebar activeSection={activeSection} navMode={navMode} />
 
-        <section className="grid gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Apertura e monitoraggio</h2>
-            <p className="mt-1 text-sm leading-6 text-[#5e6d63]">
-              I manager possono aprire o sospendere le iscrizioni degli eventi
-              assegnati. I manager viewer consultano soltanto i dati.
-            </p>
+          <div className="grid min-w-0 gap-6">
+            <StatusMessage
+              error={params.openingError}
+              saved={params.openingSaved}
+              managerError={params.managerError}
+              managerSaved={params.managerSaved}
+              groupLinkError={params.groupLinkError}
+              groupLinkSaved={params.groupLinkSaved}
+              groupError={params.groupError}
+              groupSaved={params.groupSaved}
+            />
+
+            {activeSection === "evento" ? (
+              <ManagerEventSection snapshots={snapshots} />
+            ) : null}
+
+            {activeSection === "iscritti" ? (
+              <ManagerParticipantsSection
+                snapshot={managerOperations}
+                selectedParticipant={selectedCanManage ? selectedParticipant : null}
+                canManageEvent={scope.canManageEvent}
+                navMode={navMode}
+              />
+            ) : null}
+
+            {activeSection === "gruppi" ? (
+              <ManagerGroupTreeSection
+                groups={managerOperations.groupTree}
+                links={managerOperations.groupLinks}
+                canManageEvent={scope.canManageEvent}
+                filters={parseGroupTableFilters(params)}
+                selectedGroup={selectedGroup}
+                selectedTool={params.groupTool === "links" ? "links" : params.groupTool === "edit" ? "edit" : null}
+                createdGroupId={params.groupLinkGroupId ?? null}
+                createdUrl={
+                  params.groupLinkToken
+                    ? buildGroupRegistrationUrl({
+                        appUrl: getAppUrl(),
+                        token: params.groupLinkToken,
+                      })
+                    : null
+                }
+                navMode={navMode}
+              />
+            ) : null}
           </div>
-
-          {snapshots.map((snapshot) => (
-            <EventOpeningCard key={snapshot.event.id} snapshot={snapshot} />
-          ))}
-
-          {snapshots.length === 0 ? (
-            <div className="rounded-lg border border-[#d8dece] bg-white p-5 text-sm text-[#5e6d63]">
-              Nessun evento manager assegnato a questo utente.
-            </div>
-          ) : null}
-        </section>
-
-        <ManagerParticipantsSection
-          snapshot={managerOperations}
-          selectedParticipant={selectedCanManage ? selectedParticipant : null}
-          canManageEvent={scope.canManageEvent}
-        />
-
-        <ManagerGroupTreeSection
-          groups={managerOperations.groupTree}
-          links={managerOperations.groupLinks}
-          canManageEvent={scope.canManageEvent}
-          filters={parseGroupTableFilters(params)}
-          selectedGroup={selectedGroup}
-          selectedTool={params.groupTool === "links" ? "links" : params.groupTool === "edit" ? "edit" : null}
-          createdGroupId={params.groupLinkGroupId ?? null}
-          createdUrl={
-            params.groupLinkToken
-              ? buildGroupRegistrationUrl({
-                  appUrl: getAppUrl(),
-                  token: params.groupLinkToken,
-                })
-              : null
-          }
-        />
+        </div>
       </section>
     </main>
+  );
+}
+
+function ManagerSidebar({
+  activeSection,
+  navMode,
+}: {
+  activeSection: ManagerSection;
+  navMode: ManagerNavMode;
+}) {
+  const isMini = navMode === "mini";
+  const nextMode = isMini ? "full" : "mini";
+  const toggleLabel = isMini ? "Espandi menu" : "Comprimi menu";
+  const items: Array<{
+    key: ManagerSection;
+    href: string;
+    icon: string;
+    label: string;
+    help: string;
+  }> = [
+    {
+      key: "evento",
+      href: `/dashboard/manager?section=evento&nav=${navMode}`,
+      icon: "E",
+      label: "Evento",
+      help: "Apertura e monitoraggio",
+    },
+    {
+      key: "iscritti",
+      href: `/dashboard/manager?section=iscritti&nav=${navMode}`,
+      icon: "I",
+      label: "Gestione iscritti",
+      help: "Partecipanti e ruoli",
+    },
+    {
+      key: "gruppi",
+      href: `/dashboard/manager?section=gruppi&nav=${navMode}`,
+      icon: "G",
+      label: "Gruppi",
+      help: "Albero e link riservati",
+    },
+  ];
+
+  return (
+    <aside className="surface-card lg:sticky lg:top-24">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--peace-border)] p-2">
+        <span className={isMini ? "sr-only" : "px-2 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]"}>
+          Manager
+        </span>
+        <Link
+          href={`/dashboard/manager?section=${activeSection}&nav=${nextMode}`}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          className="btn-secondary grid min-h-9 min-w-9 place-items-center px-2 text-sm"
+        >
+          <span aria-hidden="true">{isMini ? "›" : "‹"}</span>
+        </Link>
+      </div>
+      <nav aria-label="Sezioni dashboard manager" className="grid gap-1.5 p-2">
+        {items.map((item) => {
+          const isActive = item.key === activeSection;
+
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              title={isMini ? item.label : undefined}
+              className={[
+                isMini
+                  ? "grid min-h-12 place-items-center rounded-[var(--radius-md)] px-2 py-2 text-center transition"
+                  : "grid rounded-[var(--radius-md)] px-3 py-2.5 text-left transition",
+                "focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
+                isActive
+                  ? "bg-[var(--peace-blue-800)] text-white shadow-sm"
+                  : "text-[var(--peace-ink)] hover:bg-[var(--peace-sky-100)]",
+                ].join(" ")}
+            >
+              {isMini ? (
+                <span className="text-sm font-extrabold" aria-hidden="true">
+                  {item.icon}
+                </span>
+              ) : (
+                <>
+                  <span className="text-sm font-bold">{item.label}</span>
+                  <span
+                    className={[
+                      "mt-0.5 text-[0.7rem] leading-4",
+                      isActive ? "text-white/78" : "text-[var(--peace-muted)]",
+                    ].join(" ")}
+                  >
+                    {item.help}
+                  </span>
+                </>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+function managerPath(section: ManagerSection, navMode: ManagerNavMode): string {
+  return `/dashboard/manager?section=${section}&nav=${navMode}`;
+}
+
+function ManagerEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
+  return (
+    <section className="grid min-w-0 gap-4">
+      <div className="surface-panel p-5">
+        <h2 className="text-lg font-semibold">Evento</h2>
+        <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+          I manager possono aprire o sospendere le iscrizioni degli eventi
+          assegnati. I manager viewer consultano soltanto i dati.
+        </p>
+      </div>
+
+      {snapshots.map((snapshot) => (
+        <EventOpeningCard key={snapshot.event.id} snapshot={snapshot} />
+      ))}
+
+      {snapshots.length === 0 ? (
+        <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5 text-sm text-[var(--peace-muted)]">
+          Nessun evento manager assegnato a questo utente.
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -380,6 +516,44 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
     eventIds: isAdmin ? null : visibleEventIds,
     canManageEvent: (eventId: string) => isAdmin || managerEventIds.has(eventId),
   };
+}
+
+function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
+  if (params.section === "evento" || params.section === "iscritti" || params.section === "gruppi") {
+    return params.section;
+  }
+
+  if (
+    params.groupTool ||
+    params.groupId ||
+    params.groupQ ||
+    params.groupEvent ||
+    params.groupType ||
+    params.groupVisibility ||
+    params.groupError ||
+    params.groupSaved ||
+    params.groupLinkError ||
+    params.groupLinkSaved ||
+    params.groupLinkGroupId ||
+    params.groupLinkToken
+  ) {
+    return "gruppi";
+  }
+
+  if (
+    params.edit ||
+    params.q ||
+    params.event ||
+    params.group ||
+    params.role ||
+    params.status ||
+    params.managerError ||
+    params.managerSaved
+  ) {
+    return "iscritti";
+  }
+
+  return "evento";
 }
 
 async function getManagerOperationsSnapshot(
@@ -782,16 +956,16 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
   const { event, summary } = snapshot;
 
   return (
-    <article className="rounded-lg border border-[#d8dece] bg-white p-5">
+    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-xl font-semibold">{event.title}</h3>
-            <span className="rounded-full border border-[#c8d5be] bg-[#eef2e7] px-3 py-1 text-xs font-semibold text-[#38563d]">
+            <span className="rounded-full border border-[var(--peace-border-strong)] bg-[var(--peace-sky-100)] px-3 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
               {openingStateLabel(snapshot.openingState)}
             </span>
           </div>
-          <p className="mt-2 text-sm text-[#5e6d63]">
+          <p className="mt-2 text-sm text-[var(--peace-muted)]">
             {event.city}, {event.country} - {event.slug}
           </p>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
@@ -823,7 +997,7 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
             />
           </div>
         ) : (
-          <p className="rounded-md border border-[#d8dece] bg-[#f8faf5] px-4 py-3 text-sm text-[#5e6d63]">
+          <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-4 py-3 text-sm text-[var(--peace-muted)]">
             Consultazione senza permessi di modifica.
           </p>
         )}
@@ -843,7 +1017,7 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
         <WatchItem label="Email duplicate" value={summary.duplicateContactEmails} />
       </div>
 
-      <p className="mt-4 text-sm text-[#5e6d63]">
+      <p className="mt-4 text-sm text-[var(--peace-muted)]">
         Scelte gruppo: {summary.participantSelectedGroup} dichiarate,
         {` ${summary.ruleMatchedGroup}`} da regola, {summary.newcomerGroup} nuovi
         partecipanti.
@@ -861,6 +1035,7 @@ function ManagerGroupTreeSection({
   selectedTool,
   createdGroupId,
   createdUrl,
+  navMode,
 }: {
   groups: ManagerGroupTreeRow[];
   links: ManagerGroupRegistrationLink[];
@@ -870,25 +1045,26 @@ function ManagerGroupTreeSection({
   selectedTool: "edit" | "links" | null;
   createdGroupId: string | null;
   createdUrl: string | null;
+  navMode: ManagerNavMode;
 }) {
   const filteredGroups = filterGroupRows(groups, filters);
   const linksByGroupId = groupLinksByGroupId(links);
   const eventOptions = getGroupEventOptions(groups);
 
   return (
-    <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+    <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Gruppi</h2>
-          <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
+          <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
             Paesi, città, aree e gruppi disponibili per matching, form pubblico
             e link riservati.
           </p>
         </div>
         {eventOptions.some((event) => canManageEvent(event.id)) ? (
           <Link
-            href="/dashboard/manager?groupTool=edit"
-            className="inline-flex min-h-11 w-fit items-center rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]"
+            href={`${managerPath("gruppi", navMode)}&groupTool=edit`}
+            className="inline-flex min-h-11 w-fit items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
           >
             Nuovo gruppo
           </Link>
@@ -899,6 +1075,7 @@ function ManagerGroupTreeSection({
         filters={filters}
         eventOptions={eventOptions}
         action="/dashboard/manager"
+        navMode={navMode}
       />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
@@ -911,7 +1088,7 @@ function ManagerGroupTreeSection({
       <div className="mt-5 overflow-x-auto">
         <table className="w-full min-w-[980px] border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-[#dfe5d8] text-xs uppercase tracking-wide text-[#66745f]">
+            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
               <th className="py-3 pr-4 font-semibold">Nodo</th>
               <th className="py-3 pr-4 font-semibold">Età</th>
               <th className="py-3 pr-4 font-semibold">Referente principale</th>
@@ -926,43 +1103,43 @@ function ManagerGroupTreeSection({
               return (
                 <tr
                   key={group.id}
-                  className="border-b border-[#edf1e8] align-top last:border-b-0"
+                  className="border-b border-[var(--peace-border)] align-top last:border-b-0"
                 >
                   <td className="py-4 pr-4">
-                    <p className="font-semibold text-[#1c241f]">{group.name}</p>
-                    <p className="mt-1 text-xs leading-5 text-[#5e6d63]">
+                    <p className="font-semibold text-[var(--peace-ink)]">{group.name}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--peace-muted)]">
                       {group.eventTitle} - {groupNodeTypeLabel(group.nodeType)}
                       {group.parentName ? ` sotto ${group.parentName}` : ""}
                     </p>
                   </td>
-                  <td className="py-4 pr-4 text-[#39483f]">
+                  <td className="py-4 pr-4 text-[var(--peace-ink)]">
                     {ageBracketLabel(group.ageBracket)}
                   </td>
-                  <td className="py-4 pr-4 text-[#39483f]">
+                  <td className="py-4 pr-4 text-[var(--peace-ink)]">
                     {group.primaryLeaderName ?? "Da assegnare"}
                   </td>
                   <td className="py-4 pr-4">
                     {group.isAssignable && group.isPublicCatalog ? (
-                      <span className="font-semibold text-[#2f5e46]">Nel form pubblico</span>
+                      <span className="font-semibold text-[var(--peace-blue-800)]">Nel form pubblico</span>
                     ) : group.isAssignable ? (
-                      <span className="text-[#5e6d63]">Solo con link</span>
+                      <span className="text-[var(--peace-muted)]">Solo con link</span>
                     ) : (
-                      <span className="text-[#5e6d63]">Non iscrivibile</span>
+                      <span className="text-[var(--peace-muted)]">Non iscrivibile</span>
                     )}
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {canManage ? (
                         <Link
-                          href={`/dashboard/manager?groupTool=edit&groupId=${group.id}`}
-                          className="inline-flex min-h-9 items-center rounded-md border border-[#b8c5ad] px-3 text-xs font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                          href={`${managerPath("gruppi", navMode)}&groupTool=edit&groupId=${group.id}`}
+                          className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                         >
                           Modifica
                         </Link>
                       ) : null}
                       <Link
-                        href={`/dashboard/manager?groupTool=links&groupId=${group.id}`}
-                        className="inline-flex min-h-9 items-center rounded-md border border-[#b8c5ad] px-3 text-xs font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                        href={`${managerPath("gruppi", navMode)}&groupTool=links&groupId=${group.id}`}
+                        className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                       >
                         Gestisci link
                       </Link>
@@ -976,7 +1153,7 @@ function ManagerGroupTreeSection({
       </div>
 
       {filteredGroups.length === 0 ? (
-        <p className="mt-4 text-sm text-[#5e6d63]">
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
           Nessun gruppo corrisponde ai filtri correnti.
         </p>
       ) : null}
@@ -995,6 +1172,7 @@ function ManagerGroupTreeSection({
           links={linksByGroupId.get(selectedGroup.id) ?? []}
           canManage={canManageEvent(selectedGroup.eventId)}
           createdUrl={createdGroupId === selectedGroup.id ? createdUrl : null}
+          navMode={navMode}
         />
       ) : null}
     </section>
@@ -1005,10 +1183,12 @@ function GroupTableFiltersForm({
   filters,
   eventOptions,
   action,
+  navMode,
 }: {
   filters: GroupTableFilters;
   eventOptions: Array<{ id: string; title: string }>;
   action: string;
+  navMode: ManagerNavMode;
 }) {
   const hasActiveFilters =
     filters.q ||
@@ -1019,9 +1199,11 @@ function GroupTableFiltersForm({
   return (
     <form
       action={action}
-      className="mt-5 grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
+      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
     >
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <input type="hidden" name="section" value="gruppi" />
+      <input type="hidden" name="nav" value={navMode} />
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Cerca gruppo
         <input
           name="groupQ"
@@ -1030,7 +1212,7 @@ function GroupTableFiltersForm({
           placeholder="Nome, referente, label"
         />
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Evento
         <select
           name="groupEvent"
@@ -1045,7 +1227,7 @@ function GroupTableFiltersForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Tipo
         <select
           name="groupType"
@@ -1060,7 +1242,7 @@ function GroupTableFiltersForm({
           <option value="newcomers">Nuovi partecipanti</option>
         </select>
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Visibilità
         <select
           name="groupVisibility"
@@ -1074,13 +1256,13 @@ function GroupTableFiltersForm({
         </select>
       </label>
       <div className="flex items-end gap-2">
-        <button className="min-h-11 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+        <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
           Filtra
         </button>
         {hasActiveFilters ? (
           <Link
-            href={action}
-            className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]"
+            href={managerPath("gruppi", navMode)}
+            className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             Reset
           </Link>
@@ -1107,7 +1289,7 @@ function ManagerGroupEditOverlay({
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
-        <div className="border-b border-[#dfe5d8] px-5 py-4">
+        <div className="border-b border-[var(--peace-border)] px-5 py-4">
           <h3 className="text-xl font-semibold">
             {group ? "Modifica gruppo" : "Nuovo gruppo"}
           </h3>
@@ -1116,7 +1298,7 @@ function ManagerGroupEditOverlay({
           <input type="hidden" name="sourceDashboard" value="manager" />
           {group ? <input type="hidden" name="groupId" value={group.id} /> : null}
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Evento
               <select name="eventId" defaultValue={selectedEventId} className="field">
                 {eventOptions.map((event) => (
@@ -1126,11 +1308,11 @@ function ManagerGroupEditOverlay({
                 ))}
               </select>
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Nome operativo
               <input name="name" defaultValue={group?.name ?? ""} className="field" required />
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Parent
               <select name="parentGroupId" defaultValue={group?.parentGroupId ?? ""} className="field">
                 <option value="">Radice</option>
@@ -1141,7 +1323,7 @@ function ManagerGroupEditOverlay({
                 ))}
               </select>
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Tipo
               <select name="nodeType" defaultValue={group?.nodeType ?? "group"} className="field">
                 <option value="country">Paese</option>
@@ -1151,7 +1333,7 @@ function ManagerGroupEditOverlay({
                 <option value="newcomers">Nuovi partecipanti</option>
               </select>
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Comunità
               <select name="communityKind" defaultValue={group?.communityKind ?? "santegidio"} className="field">
                 <option value="santegidio">Sant&apos;Egidio</option>
@@ -1159,7 +1341,7 @@ function ManagerGroupEditOverlay({
                 <option value="territorial">Territoriale</option>
               </select>
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Età
               <select name="ageBracket" defaultValue={group?.ageBracket ?? "none"} className="field">
                 <option value="none">Non applicabile</option>
@@ -1168,19 +1350,19 @@ function ManagerGroupEditOverlay({
                 <option value="both">Giovani e adulti</option>
               </select>
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Referente principale
               <input name="primaryLeaderName" defaultValue={group?.primaryLeaderName ?? ""} className="field" />
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Label pubblica
               <input name="publicLabel" defaultValue={group?.publicLabel ?? ""} className="field" />
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Ordine pubblico
               <input name="publicOrder" type="number" defaultValue={group?.publicOrder ?? 100} className="field" />
             </label>
-            <div className="grid content-end gap-2 text-sm font-semibold text-[#38453c]">
+            <div className="grid content-end gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               <label className="flex items-center gap-2">
                 <input name="isActive" type="checkbox" defaultChecked={group?.isActive ?? true} />
                 Attivo
@@ -1199,17 +1381,17 @@ function ManagerGroupEditOverlay({
                 Mostra nel form pubblico
               </label>
               {group && !group.isAssignable ? (
-                <p className="text-xs font-normal leading-5 text-[#6b7a70]">
+                <p className="text-xs font-normal leading-5 text-[var(--peace-muted)]">
                   Disponibile solo per gruppi iscrivibili.
                 </p>
               ) : null}
             </div>
           </div>
-          <div className="flex justify-end gap-2 border-t border-[#dfe5d8] px-5 py-4">
-            <Link href="/dashboard/manager" className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-4 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]">
+          <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
+            <Link href="/dashboard/manager?section=gruppi" className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
               Annulla
             </Link>
-            <button className="min-h-11 rounded-md bg-[#2f5e46] px-4 text-sm font-semibold text-white transition hover:bg-[#254b38]">
+            <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva gruppo
             </button>
           </div>
@@ -1224,57 +1406,59 @@ function ManagerGroupLinksOverlay({
   links,
   canManage,
   createdUrl,
+  navMode,
 }: {
   group: ManagerGroupTreeRow;
   links: ManagerGroupRegistrationLink[];
   canManage: boolean;
   createdUrl: string | null;
+  navMode: ManagerNavMode;
 }) {
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
-        <div className="border-b border-[#dfe5d8] px-5 py-4">
+        <div className="border-b border-[var(--peace-border)] px-5 py-4">
           <h3 className="text-xl font-semibold">Link gruppo</h3>
-          <p className="mt-1 text-sm text-[#5e6d63]">{group.name}</p>
+          <p className="mt-1 text-sm text-[var(--peace-muted)]">{group.name}</p>
         </div>
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
           {createdUrl ? (
-            <label className="grid gap-2 text-sm font-semibold text-[#3c4b40]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Link appena generato
               <input readOnly className="field bg-white font-mono text-xs" value={createdUrl} />
             </label>
           ) : null}
 
           {canManage ? (
-            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4">
+            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
               <input type="hidden" name="sourceDashboard" value="manager" />
               <input type="hidden" name="groupId" value={group.id} />
-              <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
                 Label pubblica
                 <input name="publicLabel" className="field" defaultValue={group.publicLabel ?? ""} />
               </label>
-              <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
                 Etichetta interna
                 <input name="internalLabel" className="field" placeholder="Per esempio: invito assemblea giugno" />
               </label>
-              <button className="min-h-10 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+              <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                 Genera link
               </button>
             </form>
           ) : (
-            <p className="rounded-md border border-[#d8dece] bg-[#f8faf5] p-3 text-sm text-[#5e6d63]">
+            <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
               Consultazione senza permessi di modifica.
             </p>
           )}
 
           <div className="grid gap-2">
             {links.map((link) => (
-              <div key={link.id} className="flex flex-col gap-2 rounded-md border border-[#e1e6da] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <div key={link.id} className="flex flex-col gap-2 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-medium text-[#1c241f]">
+                  <p className="font-medium text-[var(--peace-ink)]">
                     {link.internalLabel ?? link.publicLabel ?? "Link senza etichetta"}
                   </p>
-                  <p className="mt-1 text-xs text-[#5e6d63]">
+                  <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {groupLinkStatusLabel(link)} - usi {link.useCount}
                     {link.maxUses ? `/${link.maxUses}` : ""}
                   </p>
@@ -1291,12 +1475,12 @@ function ManagerGroupLinksOverlay({
               </div>
             ))}
             {links.length === 0 ? (
-              <p className="text-sm text-[#5e6d63]">Nessun link attivo per questo gruppo.</p>
+              <p className="text-sm text-[var(--peace-muted)]">Nessun link attivo per questo gruppo.</p>
             ) : null}
           </div>
         </div>
-        <div className="flex justify-end border-t border-[#dfe5d8] px-5 py-4">
-          <Link href="/dashboard/manager" className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-4 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]">
+        <div className="flex justify-end border-t border-[var(--peace-border)] px-5 py-4">
+          <Link href={managerPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
             Chiudi
           </Link>
         </div>
@@ -1308,18 +1492,20 @@ function ManagerParticipantsSection({
   snapshot,
   selectedParticipant,
   canManageEvent,
+  navMode,
 }: {
   snapshot: ManagerOperationsSnapshot;
   selectedParticipant: ManagerParticipantRow | null;
   canManageEvent: (eventId: string) => boolean;
+  navMode: ManagerNavMode;
 }) {
   const eventOptions = getOperationsEventOptions(snapshot.allParticipants);
 
   return (
-    <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+    <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
         <h2 className="text-lg font-semibold">Gestione iscritti</h2>
-        <p className="mt-2 text-sm leading-6 text-[#5e6d63]">
+        <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
           Ultime iscrizioni nello scope manager, fino a 200 risultati recenti.
         </p>
       </div>
@@ -1328,12 +1514,13 @@ function ManagerParticipantsSection({
         filters={snapshot.filters}
         eventOptions={eventOptions}
         action="/dashboard/manager"
+        navMode={navMode}
       />
 
       <div className="mt-5 overflow-x-auto">
         <table className="w-full min-w-[860px] border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-[#dfe5d8] text-xs uppercase tracking-wide text-[#66745f]">
+            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
               <th className="py-3 pr-4 font-semibold">Iscrizione</th>
               <th className="py-3 pr-4 font-semibold">Contatti</th>
               <th className="py-3 pr-4 font-semibold">Gruppo</th>
@@ -1348,18 +1535,18 @@ function ManagerParticipantsSection({
               return (
                 <tr
                   key={participant.registrationId}
-                  className="border-b border-[#edf1e8] align-top last:border-b-0"
+                  className="border-b border-[var(--peace-border)] align-top last:border-b-0"
                 >
                   <td className="py-4 pr-4">
-                    <p className="font-semibold text-[#1c241f]">{participant.name}</p>
-                    <p className="mt-1 text-xs text-[#5e6d63]">
+                    <p className="font-semibold text-[var(--peace-ink)]">{participant.name}</p>
+                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
                       {participant.publicCode ?? "Senza codice"} -{" "}
                       {statusLabel(participant.registrationStatus)}
                     </p>
                   </td>
-                  <td className="py-4 pr-4 text-[#39483f]">
+                  <td className="py-4 pr-4 text-[var(--peace-ink)]">
                     <p>{participant.email ?? "Email non indicata"}</p>
-                    <p className="mt-1 text-xs text-[#5e6d63]">
+                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
                       {participant.phone ?? "Telefono non indicato"}
                     </p>
                   </td>
@@ -1367,7 +1554,7 @@ function ManagerParticipantsSection({
                     <p className="font-medium">
                       {participant.currentGroupName ?? "Nessun gruppo corrente"}
                     </p>
-                    <p className="mt-1 text-xs text-[#5e6d63]">
+                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
                       {groupStatusLabel(participant.currentGroupStatus)}
                     </p>
                   </td>
@@ -1377,26 +1564,26 @@ function ManagerParticipantsSection({
                         {participant.roles.map((role) => (
                           <span
                             key={role}
-                            className="rounded-full border border-[#c8d5be] bg-[#f8faf5] px-2 py-1 text-xs font-semibold text-[#38563d]"
+                            className="rounded-full border border-[var(--peace-border-strong)] bg-[#f7fbfe] px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)]"
                           >
                             {roleLabel(role)}
                           </span>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-[#5e6d63]">Nessun ruolo operativo</p>
+                      <p className="text-sm text-[var(--peace-muted)]">Nessun ruolo operativo</p>
                     )}
                   </td>
                   <td className="py-4 text-right">
                     {canManage ? (
                       <Link
-                        href={`/dashboard/manager?edit=${participant.registrationId}`}
-                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                        href={`${managerPath("iscritti", navMode)}&edit=${participant.registrationId}`}
+                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                       >
                         Modifica
                       </Link>
                     ) : (
-                      <span className="text-sm text-[#5e6d63]">Solo lettura</span>
+                      <span className="text-sm text-[var(--peace-muted)]">Solo lettura</span>
                     )}
                   </td>
                 </tr>
@@ -1407,7 +1594,7 @@ function ManagerParticipantsSection({
       </div>
 
       {snapshot.participants.length === 0 ? (
-        <p className="mt-4 text-sm text-[#5e6d63]">
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
           Nessuna iscrizione corrisponde ai filtri correnti.
         </p>
       ) : null}
@@ -1418,6 +1605,7 @@ function ManagerParticipantsSection({
           groupOptions={snapshot.groupOptions.filter(
             (group) => group.eventId === selectedParticipant.eventId
           )}
+          navMode={navMode}
         />
       ) : null}
     </section>
@@ -1428,19 +1616,23 @@ function OperationsFiltersForm({
   filters,
   eventOptions,
   action,
+  navMode,
 }: {
   filters: OperationsDashboardFilters;
   eventOptions: Array<{ id: string; title: string }>;
   action: string;
+  navMode: ManagerNavMode;
 }) {
   const hasActiveFilters = hasActiveOperationsDashboardFilters(filters);
 
   return (
     <form
       action={action}
-      className="mt-5 grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))_auto]"
+      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))_auto]"
     >
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <input type="hidden" name="section" value="iscritti" />
+      <input type="hidden" name="nav" value={navMode} />
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Cerca
         <input
           name="q"
@@ -1449,7 +1641,7 @@ function OperationsFiltersForm({
           placeholder="Nome, codice, email, gruppo"
         />
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Evento
         <select
           name="event"
@@ -1464,7 +1656,7 @@ function OperationsFiltersForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Gruppo
         <select
           name="group"
@@ -1477,7 +1669,7 @@ function OperationsFiltersForm({
           <option value="confirmed">Confermato</option>
         </select>
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Ruolo
         <select
           name="role"
@@ -1489,7 +1681,7 @@ function OperationsFiltersForm({
           <option value="none">Senza ruolo</option>
         </select>
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         Stato
         <select
           name="status"
@@ -1503,13 +1695,13 @@ function OperationsFiltersForm({
         </select>
       </label>
       <div className="flex items-end gap-2">
-        <button className="min-h-11 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+        <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
           Filtra
         </button>
         {hasActiveFilters ? (
           <Link
-            href={action}
-            className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]"
+            href={managerPath("iscritti", navMode)}
+            className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             Reset
           </Link>
@@ -1522,9 +1714,11 @@ function OperationsFiltersForm({
 function ManagerParticipantEditOverlay({
   participant,
   groupOptions,
+  navMode,
 }: {
   participant: ManagerParticipantRow;
   groupOptions: ManagerGroupOption[];
+  navMode: ManagerNavMode;
 }) {
   const currentOperationalRole = getCurrentManagerAssignableRole(participant.roles);
   const includesCurrentGroup =
@@ -1547,10 +1741,10 @@ function ManagerParticipantEditOverlay({
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
-        <div className="border-b border-[#dfe5d8] px-5 py-4">
+        <div className="border-b border-[var(--peace-border)] px-5 py-4">
           <div>
             <h3 className="text-xl font-semibold">Modifica iscritto</h3>
-            <p className="mt-1 text-sm text-[#5e6d63]">
+            <p className="mt-1 text-sm text-[var(--peace-muted)]">
               {participant.name}
               {participant.publicCode ? ` - ${participant.publicCode}` : ""}
             </p>
@@ -1570,19 +1764,19 @@ function ManagerParticipantEditOverlay({
 
           <div className="grid gap-5 px-5 py-5">
             <div className="grid gap-1 text-sm">
-              <span className="font-semibold text-[#1c241f]">Contatti</span>
-              <span className="text-[#5e6d63]">{participant.email ?? "Email non indicata"}</span>
-              <span className="text-[#5e6d63]">
+              <span className="font-semibold text-[var(--peace-ink)]">Contatti</span>
+              <span className="text-[var(--peace-muted)]">{participant.email ?? "Email non indicata"}</span>
+              <span className="text-[var(--peace-muted)]">
                 {participant.phone ?? "Telefono non indicato"}
               </span>
             </div>
 
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Gruppo
               <select
                 name="groupId"
                 defaultValue={participant.currentGroupId ?? ""}
-                className="min-h-11 rounded-md border border-[#c8d5be] bg-white px-3 font-normal text-[#1c241f]"
+                className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
               >
                 {!participant.currentGroupId ? (
                   <option value="">Nessun gruppo corrente</option>
@@ -1595,12 +1789,12 @@ function ManagerParticipantEditOverlay({
               </select>
             </label>
 
-            <label className="grid gap-2 text-sm font-semibold text-[#38453c]">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Ruolo operativo
               <select
                 name="role"
                 defaultValue={currentOperationalRole || ""}
-                className="min-h-11 rounded-md border border-[#c8d5be] bg-white px-3 font-normal text-[#1c241f]"
+                className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
               >
                 <option value="">Nessun ruolo operativo</option>
                 <option value="manager_viewer">Manager viewer</option>
@@ -1610,20 +1804,20 @@ function ManagerParticipantEditOverlay({
             </label>
 
             {hasProtectedOperationalRole(participant.roles) ? (
-              <p className="rounded-md border border-[#d8dece] bg-[#f8faf5] px-3 py-2 text-sm text-[#5e6d63]">
+              <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-3 py-2 text-sm text-[var(--peace-muted)]">
                 Admin e manager esistenti restano invariati da questa schermata.
               </p>
             ) : null}
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-[#dfe5d8] px-5 py-4">
+          <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
             <Link
-              href="/dashboard/manager"
-              className="inline-flex min-h-11 items-center rounded-md border border-[#c8d5be] px-4 text-sm font-semibold text-[#38563d] transition hover:bg-[#eef2e7]"
+              href={managerPath("iscritti", navMode)}
+              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
               Annulla
             </Link>
-            <button className="min-h-11 rounded-md bg-[#2f5e46] px-4 text-sm font-semibold text-white transition hover:bg-[#254b38]">
+            <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Conferma modifiche
             </button>
           </div>
@@ -1646,8 +1840,8 @@ function OpeningForm({
 }) {
   const className =
     tone === "primary"
-      ? "min-h-11 rounded-md bg-[#2f5e46] px-4 text-sm font-semibold text-white transition hover:bg-[#254b38]"
-      : "min-h-11 rounded-md border border-[#c8d5be] bg-white px-4 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]";
+      ? "min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+      : "min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]";
 
   return (
     <form action={updateEventOpeningState}>
@@ -1726,10 +1920,10 @@ function WatchItem({ label, value }: { label: string; value: number }) {
       className={
         hasIssue
           ? "border-l-4 border-[#b85f47] bg-[#fff8f5] px-4 py-3"
-          : "border-l-4 border-[#c8d5be] bg-[#f8faf5] px-4 py-3"
+          : "border-l-4 border-[var(--peace-border-strong)] bg-[#f7fbfe] px-4 py-3"
       }
     >
-      <p className="text-sm text-[#5e6d63]">{label}</p>
+      <p className="text-sm text-[var(--peace-muted)]">{label}</p>
       <p className="mt-2 text-xl font-semibold">{value}</p>
     </div>
   );
@@ -1737,8 +1931,8 @@ function WatchItem({ label, value }: { label: string; value: number }) {
 
 function EventValue({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border-t border-[#e6eadf] pt-3">
-      <p className="text-sm text-[#5e6d63]">{label}</p>
+    <div className="border-t border-[var(--peace-border)] pt-3">
+      <p className="text-sm text-[var(--peace-muted)]">{label}</p>
       <p className="mt-2 text-xl font-semibold">{value}</p>
     </div>
   );
@@ -1747,8 +1941,8 @@ function EventValue({ label, value }: { label: string; value: number }) {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[#6b7a70]">{label}</dt>
-      <dd className="mt-1 font-medium text-[#1c241f]">{value}</dd>
+      <dt className="text-[var(--peace-muted)]">{label}</dt>
+      <dd className="mt-1 font-medium text-[var(--peace-ink)]">{value}</dd>
     </div>
   );
 }

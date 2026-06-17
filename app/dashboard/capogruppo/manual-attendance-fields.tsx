@@ -20,11 +20,11 @@ export function ManualAttendanceFields({
   const [selectedEventDays, setSelectedEventDays] = useState<string[]>([]);
 
   return (
-    <fieldset className="grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:col-span-2">
-      <legend className="px-1 text-sm font-semibold text-[#3c4b40]">
+    <fieldset className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
+      <legend className="px-1 text-sm font-semibold text-[var(--peace-ink)]">
         {copy.title}
       </legend>
-      <p className="text-sm leading-6 text-[#5e6d63]">
+      <p className="text-sm leading-6 text-[var(--peace-muted)]">
         {copy.help}
       </p>
 
@@ -35,8 +35,8 @@ export function ManualAttendanceFields({
               key={day.value}
               className={`flex min-h-14 items-center gap-3 rounded-md border p-3 text-sm transition ${
                 availabilityUnknown
-                  ? "border-[#e1e5da] bg-[#f5f6f1] text-[#7a867b]"
-                  : "border-[#d8dece] bg-white text-[#38453c]"
+                  ? "border-[var(--peace-border)] bg-[#eef5fa] text-[#718196]"
+                  : "border-[var(--peace-border)] bg-white text-[var(--peace-ink)]"
               }`}
             >
               <input
@@ -45,7 +45,7 @@ export function ManualAttendanceFields({
                 value={day.value}
                 checked={selectedEventDays.includes(day.value)}
                 disabled={availabilityUnknown}
-                className="h-4 w-4 accent-[#315c44]"
+                className="h-4 w-4 accent-[var(--peace-blue-800)]"
                 onChange={(event) => {
                   setSelectedEventDays((current) =>
                     event.target.checked
@@ -59,17 +59,17 @@ export function ManualAttendanceFields({
           ))}
         </div>
       ) : (
-        <p className="rounded-md border border-[#e1e6da] bg-white p-3 text-sm text-[#5e6d63]">
+        <p className="rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm text-[var(--peace-muted)]">
           {copy.noDates}
         </p>
       )}
 
-      <label className="flex min-h-14 items-center gap-3 rounded-md border border-[#d8dece] bg-white p-3 text-sm text-[#38453c]">
+      <label className="flex min-h-14 items-center gap-3 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm text-[var(--peace-ink)]">
         <input
           name="availabilityUnknown"
           type="checkbox"
           checked={availabilityUnknown}
-          className="h-4 w-4 accent-[#315c44]"
+          className="h-4 w-4 accent-[var(--peace-blue-800)]"
           onChange={(event) => {
             setAvailabilityUnknown(event.target.checked);
             if (event.target.checked) {

@@ -30,7 +30,7 @@ export function LanguageSelector({
         name="locale"
         aria-label={label}
         defaultValue={currentLocale}
-        className="min-h-9 rounded-md border border-[#c8d5be] bg-white px-2 text-lg font-semibold text-[#2f5e46] outline-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5e46]"
+        className="min-h-9 rounded-[var(--radius-sm)] border border-[var(--peace-border-strong)] bg-white px-2 text-lg font-semibold text-[var(--peace-blue-800)] outline-none transition focus-visible:shadow-[var(--focus-ring)]"
         onChange={() => {
           if (returnToRef.current) {
             returnToRef.current.value = `${window.location.pathname}${window.location.search}`;

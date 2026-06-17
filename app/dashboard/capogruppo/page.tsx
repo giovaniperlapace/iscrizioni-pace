@@ -1548,7 +1548,7 @@ export default async function CapogruppoDashboardPage({
   );
 
   return (
-    <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
+    <main className="app-page text-[var(--peace-ink)]">
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">{copy.srTitle}</h1>
@@ -1579,12 +1579,12 @@ export default async function CapogruppoDashboardPage({
 
         <section
           id="assegnazioni-gruppo"
-          className="rounded-lg border border-[#d8dece] bg-white p-5"
+          className="rounded-lg border border-[var(--peace-border)] bg-white p-5"
         >
           <div>
             <div>
               <h2 className="text-lg font-semibold">{copy.participantsTitle}</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
                 {copy.participantsHelp}
               </p>
             </div>
@@ -1723,15 +1723,15 @@ function AssignedScopeSection({
   copy: GroupLeaderCopy;
 }) {
   return (
-    <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+    <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">{copy.yourGroups}</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
             {copy.yourGroupsHelp}
           </p>
         </div>
-        <span className="rounded-full border border-[#c8d5be] px-3 py-1 text-sm font-semibold text-[#38563d]">
+        <span className="rounded-full border border-[var(--peace-border-strong)] px-3 py-1 text-sm font-semibold text-[var(--peace-blue-800)]">
           {copy.registrableCount(assignableGroups.length)}
         </span>
       </div>
@@ -1741,12 +1741,12 @@ function AssignedScopeSection({
           {assignedGroups.map((group) => (
             <div
               key={group.id}
-              className="rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4"
+              className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
             >
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-[#1c241f]">{group.name}</h3>
+                    <h3 className="font-semibold text-[var(--peace-ink)]">{group.name}</h3>
                     <ScopeBadge
                       label={
                         group.isActive && group.isAssignable
@@ -1763,7 +1763,7 @@ function AssignedScopeSection({
                       }
                     />
                   </div>
-                  <p className="mt-2 text-sm text-[#5e6d63]">
+                  <p className="mt-2 text-sm text-[var(--peace-muted)]">
                     {group.eventTitle}
                     {group.primaryLeaderName
                       ? ` - ${copy.leader} ${group.primaryLeaderName}`
@@ -1774,13 +1774,13 @@ function AssignedScopeSection({
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={`/dashboard/capogruppo?tool=link&groupId=${encodeURIComponent(group.id)}`}
-                    className="min-h-9 rounded-md border border-[#b8c5ad] px-3 py-2 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                    className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 py-2 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                   >
                     {copy.generateLink}
                   </Link>
                   <Link
                     href={`/dashboard/capogruppo?tool=manual&groupId=${encodeURIComponent(group.id)}`}
-                    className="min-h-9 rounded-md bg-[#315c44] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#264a36]"
+                    className="min-h-9 rounded-md bg-[var(--peace-blue-800)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
                   >
                     {copy.addParticipant}
                   </Link>
@@ -1795,7 +1795,7 @@ function AssignedScopeSection({
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm text-[#5e6d63]">
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
           {copy.noGroups}
         </p>
       )}
@@ -1813,13 +1813,13 @@ function DashboardToolOverlay({
   children: ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-[#1c241f]/45 px-4 py-6">
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-[#d8dece] bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-40 grid place-items-center modal-backdrop px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-[var(--peace-border)] bg-white p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className="text-xl font-semibold text-[#1c241f]">{title}</h2>
+          <h2 className="text-xl font-semibold text-[var(--peace-ink)]">{title}</h2>
           <Link
             href="/dashboard/capogruppo"
-            className="inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+            className="inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label={copy.close}
           >
             {copy.close}
@@ -1865,7 +1865,7 @@ function GroupLeaderLinksSection({
     <section>
       <div>
         <h2 className="text-lg font-semibold">{copy.linkTitle}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
           {copy.linkHelp}
         </p>
       </div>
@@ -1877,21 +1877,21 @@ function GroupLeaderLinksSection({
           return (
             <article
               key={group.id}
-              className="rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4"
+              className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
             >
               <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-[#1c241f]">{group.name}</h3>
-                    <span className="rounded-full border border-[#c8d5be] px-2 py-1 text-xs font-semibold text-[#38563d]">
+                    <h3 className="font-semibold text-[var(--peace-ink)]">{group.name}</h3>
+                    <span className="rounded-full border border-[var(--peace-border-strong)] px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
                       {group.isPublicCatalog ? copy.visibleInForm : copy.hidden}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-[#5e6d63]">
+                  <p className="mt-1 text-sm text-[var(--peace-muted)]">
                     {group.eventTitle} - {copy.leader}{" "}
                     {group.primaryLeaderName ?? copy.leaderMissing}
                   </p>
-                  <p className="mt-2 text-sm text-[#39483f]">
+                  <p className="mt-2 text-sm text-[var(--peace-ink)]">
                     {copy.formPublicName}:{" "}
                     <span className="font-medium">
                       {group.publicLabel ?? copy.notSet}
@@ -1899,7 +1899,7 @@ function GroupLeaderLinksSection({
                   </p>
 
                   {createdUrl && createdGroupId === group.id ? (
-                    <label className="mt-4 grid gap-2 text-sm font-semibold text-[#3c4b40]">
+                    <label className="mt-4 grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
                       {copy.justCreatedLink}
                       <input
                         readOnly
@@ -1913,13 +1913,13 @@ function GroupLeaderLinksSection({
                     {groupLinks.map((link) => (
                       <div
                         key={link.id}
-                        className="flex flex-col gap-2 rounded-md border border-[#e1e6da] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-2 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div>
-                          <p className="font-medium text-[#1c241f]">
+                          <p className="font-medium text-[var(--peace-ink)]">
                             {link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink}
                           </p>
-                          <p className="mt-1 text-xs text-[#5e6d63]">
+                          <p className="mt-1 text-xs text-[var(--peace-muted)]">
                             {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
                             {link.maxUses ? `/${link.maxUses}` : ""}
                           </p>
@@ -1934,7 +1934,7 @@ function GroupLeaderLinksSection({
                       </div>
                     ))}
                     {groupLinks.length === 0 ? (
-                      <p className="text-sm text-[#5e6d63]">{copy.noActiveLinks}</p>
+                      <p className="text-sm text-[var(--peace-muted)]">{copy.noActiveLinks}</p>
                     ) : null}
                   </div>
                 </div>
@@ -1942,7 +1942,7 @@ function GroupLeaderLinksSection({
                 <form action={createGroupRegistrationLink} className="grid gap-3">
                   <input type="hidden" name="sourceDashboard" value="capogruppo" />
                   <input type="hidden" name="groupId" value={group.id} />
-                  <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+                  <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
                     {copy.publicLabel}
                     <input
                       name="publicLabel"
@@ -1950,22 +1950,22 @@ function GroupLeaderLinksSection({
                       defaultValue={group.publicLabel ?? ""}
                       placeholder={group.name}
                     />
-                    <span className="text-xs font-normal leading-5 text-[#5e6d63]">
+                    <span className="text-xs font-normal leading-5 text-[var(--peace-muted)]">
                       {copy.publicLabelHelp}
                     </span>
                   </label>
-                  <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+                  <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
                     {copy.internalLabel}
                     <input
                       name="internalLabel"
                       className="field"
                       placeholder={copy.internalLabelPlaceholder}
                     />
-                    <span className="text-xs font-normal leading-5 text-[#5e6d63]">
+                    <span className="text-xs font-normal leading-5 text-[var(--peace-muted)]">
                       {copy.internalLabelHelp}
                     </span>
                   </label>
-                  <button className="min-h-10 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+                  <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                     {copy.generateLink}
                   </button>
                 </form>
@@ -1976,7 +1976,7 @@ function GroupLeaderLinksSection({
       </div>
 
       {assignableGroups.length === 0 ? (
-        <p className="mt-4 text-sm text-[#5e6d63]">
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
           {copy.noRegistrableGroups}
         </p>
       ) : null}
@@ -2007,7 +2007,7 @@ function ManualRegistrationSection({
     <section>
       <div>
         <h2 className="text-lg font-semibold">{copy.manualTitle}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
           {copy.manualHelp}
         </p>
       </div>
@@ -2017,7 +2017,7 @@ function ManualRegistrationSection({
           action={createGroupLeaderManualRegistration}
           className="mt-5 grid gap-4 lg:grid-cols-2"
         >
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40] lg:col-span-2">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
             {copy.group}
             <select name="groupId" required className="field" defaultValue={defaultGroupId}>
               <option value="">{copy.selectGroup}</option>
@@ -2029,27 +2029,27 @@ function ManualRegistrationSection({
             </select>
           </label>
 
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.firstName}
             <input name="firstName" required minLength={2} className="field" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.lastName}
             <input name="lastName" required minLength={2} className="field" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.email}
             <input name="email" type="email" className="field" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.phone}
             <input name="phone" className="field" placeholder="+393331234567" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.birthDate}
             <input name="birthDate" type="date" className="field" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.language}
             <select name="preferredLocale" className="field" defaultValue="it">
               {LANGUAGE_OPTIONS.map((option) => (
@@ -2064,31 +2064,31 @@ function ManualRegistrationSection({
             locale={locale}
             copy={copy.accessibility}
           />
-          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40] lg:col-span-2">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
             {copy.internalNote}
             <textarea
               name="leaderNote"
               rows={3}
-              className="min-h-20 rounded-md border border-[#cfd8c4] bg-white px-3 py-2 text-sm font-normal text-[#1c241f] outline-none transition focus:border-[#56745d]"
+              className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
             />
           </label>
-          <label className="flex gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-3 text-sm font-medium text-[#39483f] lg:col-span-2">
+          <label className="flex gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm font-medium text-[var(--peace-ink)] lg:col-span-2">
             <input
               name="consentConfirmed"
               type="checkbox"
               required
-              className="mt-1 h-4 w-4 accent-[#315c44]"
+              className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
             />
             {copy.consent}
           </label>
           <div className="lg:col-span-2">
-            <button className="min-h-10 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+            <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               {copy.addParticipant}
             </button>
           </div>
         </form>
       ) : (
-        <p className="mt-4 text-sm text-[#5e6d63]">
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
           {copy.noRegistrableGroups}
         </p>
       )}
@@ -2111,9 +2111,9 @@ function AssignmentFilters({
     <form
       method="get"
       action="/dashboard/capogruppo"
-      className="mt-5 grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:grid-cols-[1fr_190px_210px_auto]"
+      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1fr_190px_210px_auto]"
     >
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         {copy.filters.search}
         <input
           name="q"
@@ -2122,7 +2122,7 @@ function AssignmentFilters({
           placeholder={copy.filters.searchPlaceholder}
         />
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         {copy.filters.status}
         <select name="filter" defaultValue={filter} className="field bg-white">
           {Object.entries(copy.filterLabels).map(([value, label]) => (
@@ -2132,7 +2132,7 @@ function AssignmentFilters({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
         {copy.filters.sort}
         <select name="sort" defaultValue={sort} className="field bg-white">
           {ASSIGNMENT_SORT_VALUES.map((value) => (
@@ -2143,12 +2143,12 @@ function AssignmentFilters({
         </select>
       </label>
       <div className="flex items-end gap-2">
-        <button className="min-h-11 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+        <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
           {copy.filters.apply}
         </button>
         <Link
           href="/dashboard/capogruppo#assegnazioni-gruppo"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+          className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
         >
           {copy.filters.reset}
         </Link>
@@ -2168,17 +2168,17 @@ function AssignmentsTable({
 }) {
   if (assignments.length === 0) {
     return (
-      <div className="mt-5 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 text-sm text-[#5e6d63]">
+      <div className="mt-5 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
         {copy.filters.empty}
       </div>
     );
   }
 
   return (
-    <div className="mt-5 overflow-x-auto rounded-md border border-[#e1e6da]">
+    <div className="mt-5 overflow-x-auto rounded-md border border-[var(--peace-border)]">
       <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
         <thead>
-          <tr className="border-b border-[#dfe5d8] bg-[#fbfcf8] text-xs uppercase tracking-wide text-[#66745f]">
+          <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
             <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
             <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
             <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
@@ -2219,34 +2219,34 @@ function AssignmentRowView({
   );
 
   return (
-    <tr className="border-b border-[#edf1e8] align-top last:border-b-0">
+    <tr className="border-b border-[var(--peace-border)] align-top last:border-b-0">
       <td className="py-4 pl-4 pr-4">
-        <p className="font-semibold text-[#1c241f]">{assignment.participantName}</p>
-        <p className="mt-1 text-xs text-[#5e6d63]">
+        <p className="font-semibold text-[var(--peace-ink)]">{assignment.participantName}</p>
+        <p className="mt-1 text-xs text-[var(--peace-muted)]">
           {assignment.participantCode ?? copy.table.withoutCode}
           {assignment.birthDate
             ? ` - ${copy.table.bornOn(formatDate(assignment.birthDate, locale))}`
             : ""}
         </p>
       </td>
-      <td className="py-4 pr-4 text-[#39483f]">
+      <td className="py-4 pr-4 text-[var(--peace-ink)]">
         <p>{assignment.participantEmail ?? copy.table.emailMissing}</p>
-        <p className="mt-1 text-xs text-[#5e6d63]">
+        <p className="mt-1 text-xs text-[var(--peace-muted)]">
           {assignment.participantPhone ?? copy.table.phoneMissing}
         </p>
       </td>
       <td className="py-4 pr-4">
-        <p className="font-medium text-[#1c241f]">{assignment.groupName}</p>
-        <p className="mt-1 text-xs text-[#5e6d63]">
+        <p className="font-medium text-[var(--peace-ink)]">{assignment.groupName}</p>
+        <p className="mt-1 text-xs text-[var(--peace-muted)]">
           {assignment.assignmentReason
             ? assignmentReasonLabel(assignment.assignmentReason, copy)
             : sourceLabel(assignment.source, copy)}
         </p>
       </td>
-      <td className="py-4 pr-4 text-[#39483f]">{assignment.participantPlace}</td>
-      <td className="py-4 pr-4 text-[#39483f]">
+      <td className="py-4 pr-4 text-[var(--peace-ink)]">{assignment.participantPlace}</td>
+      <td className="py-4 pr-4 text-[var(--peace-ink)]">
         <p>{formatDateTime(assignment.submittedAt, locale, copy.notProvided)}</p>
-        <p className="mt-1 text-xs text-[#5e6d63]">
+        <p className="mt-1 text-xs text-[var(--peace-muted)]">
           {copy.table.updated(formatDateTime(assignment.updatedAt, locale, copy.notProvided))}
         </p>
       </td>
@@ -2268,28 +2268,28 @@ function AssignmentRowView({
         <details className="group">
           <summary
             aria-label={manageLabel}
-            className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+            className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             {copy.table.manage}
           </summary>
           <form
             action={updateGroupLeaderAssignment}
-            className="mt-3 grid min-w-[260px] gap-2 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-3"
+            className="mt-3 grid min-w-[260px] gap-2 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3"
           >
             <input type="hidden" name="assignmentId" value={assignment.id} />
-            <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#66745f]">
+            <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
               {copy.internalNote}
               <textarea
                 name="leaderInternalNote"
                 defaultValue={assignment.leaderInternalNote ?? ""}
                 rows={3}
-                className="min-h-20 rounded-md border border-[#cfd8c4] bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-[#1c241f] outline-none transition focus:border-[#56745d]"
+                className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
               />
             </label>
             <button
               name="intent"
               value="note"
-              className="min-h-9 rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+              className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
               {copy.table.saveNote}
             </button>
@@ -2298,7 +2298,7 @@ function AssignmentRowView({
                 <button
                   name="intent"
                   value="confirm"
-                  className="min-h-9 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]"
+                  className="min-h-9 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
                 >
                   {copy.table.confirm}
                 </button>
@@ -2312,7 +2312,7 @@ function AssignmentRowView({
                 <button
                   name="intent"
                   value="read"
-                  className="min-h-9 rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#516356] transition hover:bg-[#eef2e7]"
+                  className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
                 >
                   {copy.table.markRead}
                 </button>
@@ -2337,7 +2337,7 @@ function ScopeBadge({
       ? "border-[#bad2b8] bg-[#edf7ea] text-[#2f6541]"
       : tone === "red"
         ? "border-[#e0b6af] bg-[#fff0ee] text-[#8a3f35]"
-        : "border-[#c8d5be] bg-white text-[#516356]";
+        : "border-[var(--peace-border-strong)] bg-white text-[var(--peace-muted)]";
 
   return (
     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>

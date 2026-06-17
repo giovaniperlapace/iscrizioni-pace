@@ -16,7 +16,7 @@ export default async function AccoglienzaDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
+    <main className="app-page text-[var(--peace-ink)]">
       <section className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard accoglienza</h1>

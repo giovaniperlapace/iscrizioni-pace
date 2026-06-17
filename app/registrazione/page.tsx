@@ -1,4 +1,5 @@
 import { RegistrationForm } from "@/app/registrazione/registration-form";
+import { EventIdentity } from "@/components/event-identity";
 import { GROUP_REGISTRATION_LINK_QUERY_PARAM } from "@/lib/groups/registration-links";
 import { getMessages } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -41,19 +42,24 @@ export default async function RegistrationPage({
 
   if (!options.event) {
     return (
-      <main className="min-h-screen bg-[#f7f8f3] px-5 py-10 text-[#1c241f]">
-        <div className="mx-auto max-w-3xl rounded-lg border border-[#d8dece] bg-white p-6">
-          <h1 className="text-2xl font-semibold">{copy.registrationClosed.title}</h1>
-          <p className="mt-3 text-[#4b5a50]">
+      <main className="app-page px-5 py-10 text-[var(--peace-ink)]">
+        <div className="surface-card mx-auto max-w-3xl overflow-hidden">
+          <div className="event-gradient px-6 py-7">
+            <EventIdentity compact inverted />
+          </div>
+          <div className="p-6">
+          <h2 className="text-2xl font-semibold">{copy.registrationClosed.title}</h2>
+          <p className="mt-3 text-[var(--peace-muted)]">
             {copy.registrationClosed.body}
           </p>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8f3] text-[#1c241f]">
+    <main className="app-page text-[var(--peace-ink)]">
       <RegistrationForm
         email={params.email ?? ""}
         error={params.error ?? groupLinkError ?? undefined}

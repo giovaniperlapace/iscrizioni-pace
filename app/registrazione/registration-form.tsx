@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { submitPublicRegistration } from "@/app/actions";
+import { EventIdentity } from "@/components/event-identity";
 import {
   findMatchingGroupCandidates,
   formatGroupOptionLabel,
@@ -868,7 +869,7 @@ export function RegistrationForm({
     <form
       ref={formRef}
       action={submitPublicRegistration}
-      className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8 sm:px-8"
+      className="app-container grid gap-6 py-8 sm:py-10"
       onChange={saveCurrentForm}
       onInput={saveCurrentForm}
       onSubmit={(event) => {
@@ -935,44 +936,49 @@ export function RegistrationForm({
           <input name="groupId" type="hidden" value={options.groupLink.groupId} />
         </>
       ) : null}
-      <header className="max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
-          {copy.newRegistration}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">
-          {options.event?.title}
-        </h1>
-        <p className="mt-3 text-[#4b5a50]">
-          {copy.intro}
-        </p>
-        {error ? (
-          <p className="mt-4 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
-            {error}
+      <header className="surface-card overflow-hidden">
+        <div className="relative isolate event-gradient px-5 py-7 text-white sm:px-7">
+          <EventIdentity compact inverted />
+        </div>
+        <div className="px-5 py-5 sm:px-7">
+          <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
+            {copy.newRegistration}
           </p>
-        ) : null}
-        {options.groupLink ? (
-          <div className="mt-4 rounded-lg border border-[#c8d5be] bg-[#f8fbf5] px-4 py-3 text-sm text-[#38453c]">
-            <p className="font-semibold">
-              {copy.groupLinkPrefix}{" "}
-              <span className="text-[#1f4d38]">
-                {options.groupLink.displayLabel}
-              </span>
-              {copy.groupLinkSuffix}
+          <h2 className="mt-3 text-3xl font-semibold sm:text-4xl">
+            {options.event?.title}
+          </h2>
+          <p className="mt-3 text-[var(--peace-muted)]">
+            {copy.intro}
+          </p>
+          {error ? (
+            <p className="status-error mt-4 rounded-[var(--radius-sm)] border px-3 py-2 text-sm">
+              {error}
             </p>
-            <p className="mt-2 leading-6 text-[#5e6d63]">
-              {copy.groupLinkHelp}
-            </p>
-            <a
-              href="/registrazione"
-              className="mt-3 inline-flex min-h-9 items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
-            >
-              {copy.genericRegistration}
-            </a>
-          </div>
-        ) : null}
+          ) : null}
+          {options.groupLink ? (
+            <div className="mt-4 rounded-[var(--radius-md)] border border-[var(--peace-border-strong)] bg-[#f4fafe] px-4 py-3 text-sm text-[var(--peace-ink)]">
+              <p className="font-semibold">
+                {copy.groupLinkPrefix}{" "}
+                <span className="text-[var(--peace-blue-900)]">
+                  {options.groupLink.displayLabel}
+                </span>
+                {copy.groupLinkSuffix}
+              </p>
+              <p className="mt-2 leading-6 text-[var(--peace-muted)]">
+                {copy.groupLinkHelp}
+              </p>
+              <a
+                href="/registrazione"
+                className="btn-secondary mt-3 inline-flex min-h-9 items-center px-3 text-sm"
+              >
+                {copy.genericRegistration}
+              </a>
+            </div>
+          ) : null}
+        </div>
       </header>
 
-      <section className="grid gap-4 rounded-lg border border-[#d8dece] bg-white p-5 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5 sm:grid-cols-2">
         <Field label="Email" className="sm:col-span-2">
           <input
             name="email"
@@ -1002,7 +1008,7 @@ export function RegistrationForm({
             data-field="lastName"
           />
         </Field>
-        <div className="grid gap-2 text-sm font-medium text-[#38453c]">
+        <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.country}</span>
           <input type="hidden" name="countryOther" value={countryValue} />
           <div className="relative">
@@ -1023,7 +1029,7 @@ export function RegistrationForm({
               onFocus={() => setShowCountryOptions(true)}
             />
             {showCountryOptions ? (
-              <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[#cbd3c0] bg-white shadow-lg">
+              <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[var(--peace-border-strong)] bg-white shadow-lg">
                 {(filteredCountries.length > 0
                   ? filteredCountries
                     : [copy.noCountry]
@@ -1032,7 +1038,7 @@ export function RegistrationForm({
                     key={country}
                     type="button"
                     disabled={country === copy.noCountry}
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-[#eef3e8] disabled:cursor-default disabled:text-[#7a867b] disabled:hover:bg-white"
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--peace-sky-100)] disabled:cursor-default disabled:text-[#718196] disabled:hover:bg-white"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => {
                       if (country === copy.noCountry) {
@@ -1051,7 +1057,7 @@ export function RegistrationForm({
                 ))}
                 <button
                   type="button"
-                  className="block w-full border-t border-[#e6eadf] px-3 py-2 text-left text-sm font-medium text-[#2f5e46] hover:bg-[#eef3e8]"
+                  className="block w-full border-t border-[var(--peace-border)] px-3 py-2 text-left text-sm font-medium text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)]"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
                     setSelectedCountry(OTHER_COUNTRY);
@@ -1079,7 +1085,7 @@ export function RegistrationForm({
             />
           ) : null}
         </div>
-        <div className="grid gap-2 text-sm font-medium text-[#38453c]">
+        <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.city}</span>
           <input type="hidden" name="cityOther" value={cityValue} />
           {selectedCountry === OTHER_COUNTRY ? (
@@ -1122,7 +1128,7 @@ export function RegistrationForm({
                 }}
               />
               {showCityOptions && selectedCountry ? (
-                <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[#cbd3c0] bg-white shadow-lg">
+                <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[var(--peace-border-strong)] bg-white shadow-lg">
                   {(filteredCities.length > 0
                     ? filteredCities
                     : [copy.noCity]
@@ -1131,7 +1137,7 @@ export function RegistrationForm({
                       key={city}
                       type="button"
                       disabled={city === copy.noCity}
-                      className="block w-full px-3 py-2 text-left text-sm hover:bg-[#eef3e8] disabled:cursor-default disabled:text-[#7a867b] disabled:hover:bg-white"
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--peace-sky-100)] disabled:cursor-default disabled:text-[#718196] disabled:hover:bg-white"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         if (city === copy.noCity) {
@@ -1149,7 +1155,7 @@ export function RegistrationForm({
                   ))}
                   <button
                     type="button"
-                    className="block w-full border-t border-[#e6eadf] px-3 py-2 text-left text-sm font-medium text-[#2f5e46] hover:bg-[#eef3e8]"
+                    className="block w-full border-t border-[var(--peace-border)] px-3 py-2 text-left text-sm font-medium text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)]"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => {
                       setSelectedCity(OTHER_CITY);
@@ -1195,7 +1201,7 @@ export function RegistrationForm({
             data-field="birthPlace"
           />
         </Field>
-        <div className="grid gap-2 text-sm font-medium text-[#38453c]">
+        <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.nationality}</span>
           <input type="hidden" name="nationality" value={selectedNationality} />
           <div className="relative">
@@ -1216,7 +1222,7 @@ export function RegistrationForm({
               onFocus={() => setShowNationalityOptions(true)}
             />
             {showNationalityOptions ? (
-              <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[#cbd3c0] bg-white shadow-lg">
+              <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[var(--peace-border-strong)] bg-white shadow-lg">
                 {(filteredNationalities.length > 0
                   ? filteredNationalities
                   : [copy.noNationality]
@@ -1225,7 +1231,7 @@ export function RegistrationForm({
                     key={nationality}
                     type="button"
                     disabled={nationality === copy.noNationality}
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-[#eef3e8] disabled:cursor-default disabled:text-[#7a867b] disabled:hover:bg-white"
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--peace-sky-100)] disabled:cursor-default disabled:text-[#718196] disabled:hover:bg-white"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => {
                       if (nationality === copy.noNationality) {
@@ -1244,7 +1250,7 @@ export function RegistrationForm({
             ) : null}
           </div>
         </div>
-        <div className="grid gap-2 text-sm font-medium text-[#38453c]">
+        <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.phone}</span>
           <input type="hidden" name="phone" value={phoneValue} />
           <div className="grid gap-2 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
@@ -1309,8 +1315,8 @@ export function RegistrationForm({
         </Field>
       </section>
 
-      <section className="grid gap-4 rounded-lg border border-[#d8dece] bg-white p-5">
-        <div className="grid gap-3 text-sm font-medium text-[#38453c]">
+      <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.accessibilityQuestion}</span>
           <input
             name="hasAccessibilityNeeds"
@@ -1350,7 +1356,7 @@ export function RegistrationForm({
               <h2 className="text-lg font-semibold">
                 {copy.accessibilityTitle}
               </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
                 {copy.accessibilityHelp}
               </p>
             </div>
@@ -1358,7 +1364,7 @@ export function RegistrationForm({
               {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (
                 <label
                   key={difficulty.key}
-                  className="flex min-h-14 items-start gap-3 rounded-md border border-[#d8dece] p-3 text-sm text-[#38453c]"
+                  className="flex min-h-14 items-start gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm text-[var(--peace-ink)]"
                 >
                   <input
                     name={`accessibility_${difficulty.key}`}
@@ -1382,8 +1388,8 @@ export function RegistrationForm({
       </section>
 
       {!hasGroupLink ? (
-      <section className="grid gap-4 rounded-lg border border-[#d8dece] bg-white p-5">
-        <div className="grid gap-3 text-sm font-medium text-[#38453c]">
+      <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.previousQuestion}</span>
           <input
             name="hasPreviousSantegidioParticipation"
@@ -1421,7 +1427,7 @@ export function RegistrationForm({
         </div>
 
         {hasPreviousParticipation === "yes" && !hasGroupLink ? (
-          <div className="grid gap-3 text-sm font-medium text-[#38453c]">
+          <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
             <span>{copy.groupQuestion}</span>
             <input
               name="participatesWithGroup"
@@ -1471,7 +1477,7 @@ export function RegistrationForm({
             />
             {options.groupLink ? (
               <input
-                className="field bg-[#f7f8f3]"
+                className="field bg-[var(--peace-soft)]"
                 readOnly
                 value={options.groupLink.displayLabel}
                 data-field="group"
@@ -1505,7 +1511,7 @@ export function RegistrationForm({
                     }}
                   />
                   {showGroupOptions && !cannotFindLeader ? (
-                    <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[#cbd3c0] bg-white shadow-lg">
+                    <div className="absolute z-10 mt-2 max-h-64 w-full overflow-auto rounded-md border border-[var(--peace-border-strong)] bg-white shadow-lg">
                       {(groupOptions.length > 0
                         ? groupOptions
                         : [
@@ -1521,7 +1527,7 @@ export function RegistrationForm({
                           key={`${group.value}-${group.label}`}
                           type="button"
                           disabled={!group.value}
-                          className="block w-full px-3 py-2 text-left text-sm hover:bg-[#eef3e8] disabled:cursor-default disabled:text-[#7a867b] disabled:hover:bg-white"
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--peace-sky-100)] disabled:cursor-default disabled:text-[#718196] disabled:hover:bg-white"
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => {
                             if (!group.value) {
@@ -1540,11 +1546,11 @@ export function RegistrationForm({
                   ) : null}
                 </div>
                 {hasRealGroups && groupOptions.length === 0 ? (
-                  <span className="text-xs font-normal text-[#6a766b]">
+                  <span className="text-xs font-normal text-[var(--peace-muted)]">
                     {copy.noMatchingLeader}
                   </span>
                 ) : null}
-                <label className="flex items-start gap-3 text-sm font-normal text-[#38453c]">
+                <label className="flex items-start gap-3 text-sm font-normal text-[var(--peace-ink)]">
                   <input
                     name="cannotFindLeader"
                     type="checkbox"
@@ -1570,12 +1576,12 @@ export function RegistrationForm({
       </section>
       ) : null}
 
-      <section className="grid gap-4 rounded-lg border border-[#d8dece] bg-white p-5">
+      <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div>
           <h2 className="text-lg font-semibold">
             {copy.daysTitle}
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
             {copy.daysHelp}
           </p>
         </div>
@@ -1585,8 +1591,8 @@ export function RegistrationForm({
               key={day.value}
               className={`flex min-h-14 items-center gap-3 rounded-md border p-3 text-sm transition ${
                 availabilityUnknown
-                  ? "border-[#e1e5da] bg-[#f5f6f1] text-[#7a867b]"
-                  : "border-[#d8dece] text-[#38453c]"
+                  ? "border-[var(--peace-border)] bg-[#eef5fa] text-[#718196]"
+                  : "border-[var(--peace-border)] text-[var(--peace-ink)]"
               }`}
             >
               <input
@@ -1610,7 +1616,7 @@ export function RegistrationForm({
             </label>
           ))}
         </div>
-        <label className="flex min-h-14 items-center gap-3 rounded-md border border-[#d8dece] p-3 text-sm text-[#38453c]">
+        <label className="flex min-h-14 items-center gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm text-[var(--peace-ink)]">
           <input
             name="availabilityUnknown"
             type="checkbox"
@@ -1636,12 +1642,12 @@ export function RegistrationForm({
         ) : null}
       </section>
 
-      <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+      <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <h2 className="text-lg font-semibold">{copy.privacyTitle}</h2>
-        <p className="mt-3 max-w-4xl text-sm leading-6 text-[#4b5a50]">
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-[var(--peace-muted)]">
           {copy.privacyBody}
         </p>
-        <label className="mt-4 flex items-start gap-3 text-sm text-[#38453c]">
+        <label className="mt-4 flex items-start gap-3 text-sm text-[var(--peace-ink)]">
           <input
             name="privacyAccepted"
             type="checkbox"
@@ -1654,7 +1660,7 @@ export function RegistrationForm({
           </span>
         </label>
         {hasAccessibilityNeeds === "yes" ? (
-          <label className="mt-3 flex items-start gap-3 text-sm text-[#38453c]">
+          <label className="mt-3 flex items-start gap-3 text-sm text-[var(--peace-ink)]">
             <input
               name="dataProcessingAccepted"
               type="checkbox"
@@ -1674,7 +1680,7 @@ export function RegistrationForm({
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting}
-          className="min-h-12 rounded-md bg-[#2f5e46] px-6 font-semibold text-white transition hover:bg-[#254b38] disabled:cursor-not-allowed disabled:bg-[#7f9688]"
+          className="min-h-12 rounded-md bg-[var(--peace-blue-800)] px-6 font-semibold text-white transition hover:bg-[var(--peace-blue-900)] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
         >
           {isSubmitting ? copy.submitting : copy.submit}
         </button>
@@ -1693,7 +1699,7 @@ function Field({
   className?: string;
 }) {
   return (
-    <label className={`grid gap-2 text-sm font-medium text-[#38453c] ${className}`}>
+    <label className={`grid gap-2 text-sm font-medium text-[var(--peace-ink)] ${className}`}>
       <span>{label}</span>
       {children}
     </label>
@@ -1718,8 +1724,8 @@ function ChoiceButton({
       data-field={dataField}
       className={`min-h-12 rounded-md border px-4 text-sm font-semibold transition ${
         active
-          ? "border-[#2f5e46] bg-[#2f5e46] text-white"
-          : "border-[#cbd3c0] bg-white text-[#1c241f] hover:bg-[#eef3e8]"
+          ? "border-[var(--peace-blue-800)] bg-[var(--peace-blue-800)] text-white"
+          : "border-[var(--peace-border-strong)] bg-white text-[var(--peace-ink)] hover:bg-[var(--peace-sky-100)]"
       }`}
       onClick={onClick}
     >

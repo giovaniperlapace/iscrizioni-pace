@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EventIdentity } from "@/components/event-identity";
 import { getMessages } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
 
@@ -17,34 +18,41 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const errorMessage = params.error ? copy.errors[params.error] : null;
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <section className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-6 py-12">
-        <p className="text-sm font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+    <main className="app-page text-[var(--peace-ink)]">
+      <section className="app-container flex min-h-[calc(100vh-4.75rem)] flex-col justify-center py-10">
+        <div className="surface-card mx-auto w-full max-w-3xl overflow-hidden">
+          <div className="event-gradient px-6 py-7">
+            <EventIdentity compact inverted />
+          </div>
+          <div className="p-6 sm:p-8">
+        <p className="text-sm font-bold uppercase tracking-wide text-[var(--peace-blue-800)]">
           {copy.eyebrow}
         </p>
-        <h1 className="mt-4 text-3xl font-semibold">{copy.title}</h1>
-        <p className="mt-4 text-base leading-7 text-zinc-700 dark:text-zinc-300">
+        <h2 className="mt-4 text-3xl font-semibold">{copy.title}</h2>
+        <p className="mt-4 text-base leading-7 text-[var(--peace-muted)]">
           {copy.intro}
         </p>
 
         {errorMessage ? (
-          <div className="mt-6 border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          <div className="status-error mt-6 rounded-[var(--radius-sm)] border p-4 text-sm">
             {errorMessage}
           </div>
         ) : null}
 
         {params.redirectedFrom ? (
-          <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-6 text-sm text-[var(--peace-muted)]">
             {copy.redirected}
           </p>
         ) : null}
 
         <Link
           href="/"
-          className="mt-8 inline-flex w-fit items-center border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          className="btn-secondary mt-8 inline-flex w-fit items-center px-4 py-2 text-sm"
         >
           {copy.backHome}
         </Link>
+          </div>
+        </div>
       </section>
     </main>
   );

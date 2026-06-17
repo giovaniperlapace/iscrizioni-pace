@@ -36,7 +36,7 @@ export async function DashboardRoleTabs({
       <div
         role="tablist"
         aria-label={copy.common.protectedArea}
-        className="inline-flex max-w-full flex-wrap rounded-lg border border-[#c7d3bd] bg-[#e9eee2] p-1.5 shadow-sm"
+        className="inline-flex max-w-full flex-wrap rounded-[var(--radius-md)] border border-[var(--peace-border)] bg-white/80 p-1.5 shadow-[var(--shadow-card)]"
       >
         {tabs.map((tab) => {
           const isActive = tab.key === activeKey;
@@ -48,11 +48,11 @@ export async function DashboardRoleTabs({
               role="tab"
               aria-selected={isActive}
               className={[
-                "inline-flex min-h-12 items-center justify-center rounded-md px-5 text-base font-semibold transition",
-                "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5e46]",
+                "inline-flex min-h-12 items-center justify-center rounded-[var(--radius-sm)] px-5 text-base font-semibold transition",
+                "focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
                 isActive
-                  ? "bg-white text-[#1f4d38] shadow-sm"
-                  : "text-[#496350] hover:bg-[#f5f7f1] hover:text-[#244f3a]",
+                  ? "bg-[var(--peace-blue-800)] text-white shadow-sm"
+                  : "text-[var(--peace-muted)] hover:bg-[var(--peace-sky-100)] hover:text-[var(--peace-blue-900)]",
               ].join(" ")}
             >
               {tab.label}
@@ -71,11 +71,11 @@ export async function DashboardAreaDescription({
   const copy = getMessages(locale);
 
   return (
-    <div className="flex flex-col gap-2 text-[#4b5a50] sm:flex-row sm:items-center">
-      <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#bfd0b5] bg-[#eef4ea] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#426044]">
+    <div className="surface-panel flex flex-col gap-2 p-4 text-[var(--peace-muted)] sm:flex-row sm:items-center">
+      <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--peace-border-strong)] bg-[var(--peace-sky-100)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
         <span
           aria-hidden="true"
-          className="h-2 w-2 rounded-full bg-[#2f5e46]"
+          className="h-2 w-2 rounded-full bg-[var(--peace-sky-400)]"
         />
         {copy.common.protectedArea}
       </span>

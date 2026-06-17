@@ -106,6 +106,20 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   italiano, inglese, francese, tedesco, spagnolo, neerlandese e ucraino.
   La lingua preferita del partecipante ora accetta le stesse lingue nei flussi
   pubblico, dashboard partecipante e inserimento manuale capogruppo.
+- Milestone 14 e' stata avviata il 2026-06-17 con un restyling esclusivamente
+  grafico ispirato alla locandina ufficiale
+  `UNHARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`: token CSS
+  centralizzati in blu istituzionale, azzurro luminoso, bianco e grigi freddi;
+  titolo ufficiale evidente in home, registrazione, conferma e login; header
+  con logo Sant'Egidio originale valorizzato; motivo SVG astratto a linea
+  continua ispirato alla colomba senza copiare la locandina. Non sono state
+  modificate logica applicativa, route, validazioni, API, schema dati o policy.
+- Sempre nella Milestone 14, la dashboard manager e' stata divisa in tre
+  sezioni accessibili da sidebar: `Evento`, `Gestione iscritti`, `Gruppi`.
+  La route resta `/dashboard/manager` con query `section=evento|iscritti|gruppi`
+  per evitare duplicazione di query/action; la sidebar supporta `nav=mini` per
+  comprimersi e lasciare più spazio alle tabelle. I filtri e i link interni
+  devono preservare la sezione e, dove possibile, la modalità `nav`.
 - Il 2026-06-16 e' stata rifinita la navigazione delle dashboard operative:
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle

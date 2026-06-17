@@ -6,7 +6,7 @@ Questo documento e' il piano operativo iniziale per costruire una web app multi-
 
 Stato locale aggiornato al 2026-06-17:
 
-- Cartella corrente: `/Users/stefanolaptop/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
+- Cartella corrente nota su questa postazione: `/Users/stefanolaptop/Documents/codex_new/iscrizioni-pace`.
 - La cartella e' una working copy Git su branch `main`.
 - Remote GitHub configurato: `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Milestone 1-6.3 sono state implementate e il codice ordinario lavora su
@@ -64,12 +64,22 @@ Stato locale aggiornato al 2026-06-17:
   tedesco/spagnolo/neerlandese/ucraino e localizzazione dei flussi pubblici,
   della dashboard partecipante e della dashboard capogruppo. Manager/admin
   restano prioritariamente italiani, con parti comuni e fallback inglese.
+- Milestone 14 e' avviata il 2026-06-17: la rifinitura estetica ispirata alla
+  locandina ufficiale `UNHARMED AND DISARMING PEACE / PACE DISARMATA E
+  DISARMANTE` e' stata implementata sui flussi pubblici e sulle dashboard con
+  token CSS centralizzati, titolo evento ufficiale, header valorizzato, motivo
+  SVG astratto a linea continua, palette blu/azzurra/bianco/grigi freddi,
+  focus state e superfici coerenti. La dashboard manager e' stata poi
+  separata in tre sottopagine via sidebar (`Evento`, `Gestione iscritti`,
+  `Gruppi`) con modalità compressa `nav=mini` per liberare spazio alle
+  tabelle. Restano da completare i manuali operativi previsti dalla stessa
+  Milestone 14.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-17: prima di proseguire con campagne email,
-  programma, check-in e settori, fare revisione guidata UX/UI sulle funzioni
-  gia' presenti, poi multilingua minima e testi localizzati, poi rifinitura
-  estetica/manuali su flussi e testi ormai stabili.
+  programma, check-in e settori, chiudere la Milestone 14 completando i manuali
+  operativi manager/capogruppo e, se utile, una breve nota d'uso per
+  accoglienza/admin sulle funzioni gia' stabili.
 
 Metodo da seguire per ogni milestone:
 
@@ -1210,20 +1220,34 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 ### Milestone 14: rifinitura estetica e manuali operativi
 
+- Stato: avviata il 2026-06-17. La parte di rifinitura estetica e' stata
+  implementata e verificata in localhost; la parte manuali operativi resta il
+  prossimo blocco da completare.
 - Scopo: dedicare una milestone separata solo alla cura finale dell'esperienza
   visiva e alla documentazione d'uso, partendo dai flussi approvati nella
   Milestone 12 e dai testi localizzati minimi della Milestone 13, senza
   introdurre nuove funzioni di prodotto.
-- Deliverable estetica:
-  - applicazione delle guideline estetiche che verranno fornite;
-  - revisione coerente di layout, spaziature, tipografia, colori, stati
-    interattivi, overlay, tabelle, form e dashboard;
-  - pulizia dei testi visibili dove serve per chiarezza, tono e coerenza,
-    mantenendo allineate le versioni italiano/inglese gia' introdotte;
-  - controllo responsive su mobile e desktop per home, registrazione,
-    dashboard partecipante, manager, capogruppo, admin e accoglienza, con
-    attenzione alle stringhe piu' lunghe della lingua inglese.
-- Deliverable manuali:
+- Deliverable estetica completati:
+  - applicazione delle guideline visive ricavate dalla locandina ufficiale
+    `UNHARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`;
+  - design system leggero in `app/globals.css` con token centralizzati per
+    blu istituzionale, blu medio, azzurro luminoso, sfondi, testo, bordi,
+    raggi, ombre leggere, focus state e stati success/error;
+  - componente condiviso `components/event-identity.tsx` per titolo ufficiale,
+    sottotitolo italiano, dicitura `International Meeting for Peace` e data
+    `Assisi, 25–26–27 ottobre 2026`;
+  - home pubblica ridisegnata con hero blu, logo Sant'Egidio originale, form
+    email-prima e richiamo SVG astratto alla linea della colomba;
+  - registrazione, conferma e login aggiornate con identità evento evidente;
+  - allineamento visivo di form, pulsanti, card, tabelle, modali, tab e
+    dashboard alla palette blu/azzurra;
+  - dashboard manager separata in tre sottopagine accessibili da sidebar:
+    `Evento`, `Gestione iscritti`, `Gruppi`;
+  - sidebar manager resa piu' compatta e comprimibile con `nav=mini`, per non
+    sottrarre spazio alle tabelle operative;
+  - verifica browser su home, registrazione e dashboard operative, inclusi
+    controlli responsive e overflow orizzontale.
+- Deliverable manuali ancora da completare:
   - manuale utilizzo manager con flussi principali: monitoraggio iscrizioni,
     gestione gruppi, modifica iscritti, ruoli consentiti, comunicazioni e casi
     da controllare;
@@ -1242,9 +1266,15 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - resta indipendente da programma, campagne, check-in avanzato e settori.
 - Migration: nessuna, salvo piccoli supporti solo se le guideline richiedono
   preferenze persistenti gia' previste.
-- Verifiche: lint/typecheck/test/build, verifica browser delle viste principali
-  su desktop e mobile in italiano e inglese dove disponibili, controllo che
-  non siano stati introdotti testi o layout incoerenti con i ruoli.
+- Verifiche eseguite sulla parte estetica: `npm run lint`,
+  `npm run typecheck`, `npm test`, `npm run build`, `git diff --check`,
+  browser localhost su home/registrazione/dashboard con larghezze 320, 390,
+  768 e desktop dove rilevante. Dopo la separazione della dashboard manager:
+  `npm run lint`, `npm run typecheck` e verifica browser delle sezioni
+  `Evento`, `Gestione iscritti`, `Gruppi`, inclusa modalità `nav=mini`.
+- Verifiche ancora da eseguire sui manuali: review dei documenti con i flussi
+  reali e controllo che non contengano dati personali reali o istruzioni in
+  contrasto con i permessi effettivi.
 - Rischi: fare refactor funzionali mascherati da estetica; introdurre testi
   manuali non allineati ai permessi reali; usare dati personali reali negli
   screenshot; modificare traduzioni gia' revisionate senza tracciarlo.
@@ -1436,9 +1466,18 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Continua la Milestone 12 dalla prossima sezione non ancora approvata:
-> dashboard partecipante con utente test non personale, poi dashboard
-> capogruppo, manager, admin e accoglienza. Prima controlla `git status` e
-> avvia `npm run dev`; per ogni area annota problemi concreti di chiarezza,
-> navigazione, permessi, stati vuoti/errori e dati sensibili; applica solo
-> patch mirate approvate, poi verifica con lint, typecheck, test e build.
+> Completa la Milestone 14 scrivendo i manuali operativi mancanti. Prima
+> controlla `git status` e leggi `AGENTS.md` e `PIANO_DI_LAVORO.md`; poi
+> ispeziona in localhost i flussi reali già implementati per manager e
+> capogruppo. Crea almeno `docs/manuale-manager.md` e
+> `docs/manuale-capogruppo.md`, con istruzioni pratiche su navigazione,
+> monitoraggio evento, gestione iscritti, gruppi/link riservati, decisioni
+> capogruppo, inserimento manuale, limiti di visibilità, errori frequenti e
+> cosa rimandare ad admin/accoglienza. Non usare dati personali reali negli
+> esempi e non introdurre nuove funzioni. Alla fine esegui almeno lint,
+> typecheck e una review dei documenti.
+
+Dopo i manuali, se sono approvati, il passo successivo naturale e' scegliere
+se procedere con Milestone 15 (email personalizzate e template operativi) o
+anticipare Milestone 17 (scanner QR/check-in accoglienza) in base alle
+priorità dell'apertura pubblica.

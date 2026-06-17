@@ -19,9 +19,9 @@ export async function AppHeadbar() {
   const user = await getHeadbarUser();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#e4e8dc] bg-white/95 text-[#1c241f] backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[var(--peace-border)] bg-white/92 text-[var(--peace-ink)] backdrop-blur-xl">
       <div className="mx-auto flex min-h-[4.75rem] w-full max-w-6xl items-center justify-between gap-4 px-5 py-2 sm:px-8">
-        <div className="flex min-w-0 items-center">
+        <div className="flex min-w-0 items-center gap-4">
           <Image
             src="/logos/logo_santegidio.png"
             alt="Comunità di Sant'Egidio"
@@ -30,6 +30,14 @@ export async function AppHeadbar() {
             priority
             className="h-14 w-auto object-contain"
           />
+          <div className="hidden min-w-0 border-l border-[var(--peace-border)] pl-4 md:block">
+            <p className="truncate text-xs font-extrabold leading-4 text-[var(--peace-blue-900)]">
+              UNHARMED AND DISARMING PEACE
+            </p>
+            <p className="truncate text-xs font-medium leading-4 text-[var(--peace-muted)]">
+              Assisi, 25–26–27 ottobre 2026
+            </p>
+          </div>
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-3">
@@ -42,15 +50,15 @@ export async function AppHeadbar() {
           {user ? (
             <>
               <div className="hidden min-w-0 text-right sm:block">
-                <p className="truncate text-sm font-medium leading-5 text-[#1c241f]">
+                <p className="truncate text-sm font-medium leading-5 text-[var(--peace-ink)]">
                   {user.email}
                 </p>
-                <p className="text-xs font-semibold uppercase leading-5 tracking-wide text-[#5d765f]">
+                <p className="text-xs font-semibold uppercase leading-5 tracking-wide text-[var(--peace-blue-800)]">
                   {copy.common.roles[user.roleLabel]}
                 </p>
               </div>
               <form action={logout}>
-                <button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5e46]">
+                <button className="btn-secondary inline-flex min-h-9 items-center justify-center gap-2 px-3 text-sm">
                   <ExitIcon />
                   <span className="hidden sm:inline">{copy.common.logout}</span>
                 </button>
