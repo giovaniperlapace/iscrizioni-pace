@@ -27,6 +27,7 @@ import {
 import { renderQrPngBuffer } from "@/lib/qrcode/render";
 import { encryptQrToken } from "@/lib/qrcode/secure-token";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
+import { buildAppMagicLink } from "@/lib/registrations/magic-link";
 import {
   PRIVACY_VERSION,
   type RegistrationInput,
@@ -588,21 +589,6 @@ function parseDateOnly(value: string): Date | null {
   return new Date(
     Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
   );
-}
-
-function buildAppMagicLink(
-  redirectTo: string,
-  hashedToken: string | null
-): string | null {
-  if (!hashedToken) {
-    return null;
-  }
-
-  const callbackUrl = new URL(redirectTo);
-  callbackUrl.searchParams.set("token_hash", hashedToken);
-  callbackUrl.searchParams.set("type", "magiclink");
-
-  return callbackUrl.toString();
 }
 
 async function resolveParticipantGeography(

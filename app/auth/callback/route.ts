@@ -23,6 +23,14 @@ function isOtpType(value: string | null): value is EmailOtpType {
   return Boolean(value && OTP_TYPES.includes(value as (typeof OTP_TYPES)[number]));
 }
 
+function getOtpTypesToTry(otpType: EmailOtpType): EmailOtpType[] {
+  if (otpType === "magiclink") {
+    return ["magiclink", "email"];
+  }
+
+  return [otpType];
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -41,11 +49,17 @@ export async function GET(request: NextRequest) {
       verificationError = error;
     }
   } else if (tokenHash && isOtpType(otpType)) {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: otpType,
-    });
-    if (error) {
+    for (const verificationType of getOtpTypesToTry(otpType)) {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: verificationType,
+      });
+
+      if (!error) {
+        verificationError = null;
+        break;
+      }
+
       verificationError = error;
     }
   }

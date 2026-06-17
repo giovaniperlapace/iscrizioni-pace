@@ -21,6 +21,7 @@ import {
   diffParticipantDashboardUpdate,
   parseParticipantDashboardUpdate,
 } from "../lib/registrations/participant-dashboard.ts";
+import { buildAppMagicLink } from "../lib/registrations/magic-link.ts";
 import {
   normalizeEmail,
   parseRegistrationForm,
@@ -318,6 +319,20 @@ test("magic link template escapes action URLs", () => {
   });
 
   assert.match(rendered.html, /&quot;&lt;tag&gt;/);
+});
+
+test("app magic links verify token hashes as email OTPs", () => {
+  const link = buildAppMagicLink(
+    "https://iscrizioni-pace.vercel.app/auth/callback?redirect_to=/dashboard/partecipante",
+    "hashed-token"
+  );
+
+  assert.ok(link);
+  const url = new URL(link);
+
+  assert.equal(url.searchParams.get("token_hash"), "hashed-token");
+  assert.equal(url.searchParams.get("type"), "email");
+  assert.equal(url.searchParams.get("redirect_to"), "/dashboard/partecipante");
 });
 
 test("registration confirmation includes the short participant code", () => {
