@@ -45,6 +45,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `groups.public_label`, tabella `group_registration_links`, generazione/revoca
   da dashboard manager e capogruppo in scope, token opachi e form pubblico
   precompilato tramite `?groupLink=...`.
+- Milestone 10 ha aggiunto gestione partecipanti da dashboard capogruppo:
+  tabella operativa dei partecipanti del gruppo, inserimento manuale in overlay,
+  link riservati in overlay, source `capogruppo`, QR reale, consenso dichiarato
+  dal referente, assegnazione gruppo confermata e audit dedicato.
 - Il 2026-06-16 e' stata rifinita la navigazione delle dashboard operative:
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle
@@ -827,6 +831,79 @@ Verifiche eseguite:
 - `npm run build`.
 - Migration remota applicata con
   `./scripts/apply-remote-migration.sh supabase/migrations/20260616143000_group_leader_dashboard_metadata.sql`.
+
+## Milestone 10 - inserimento manuale partecipanti da capogruppo
+
+Inserimento manuale completato localmente il 2026-06-17.
+
+Deliverable:
+
+- Helper testabile `lib/registrations/manual-registration.ts` per parsing,
+  normalizzazione e snapshot questionario minimale.
+- Server action `createGroupLeaderManualRegistration` in `app/actions.ts`.
+- Dashboard capogruppo aggiornata in `app/dashboard/capogruppo/page.tsx`:
+  tabella partecipanti del gruppo, filtri/ordinamento, azioni per rivedere
+  assegnazioni, overlay per inserimento manuale e overlay per link iscrizione.
+- Componenti client `manual-attendance-fields.tsx` e
+  `manual-accessibility-fields.tsx`.
+- Test in `tests/registration-flow.test.mts`.
+
+Funzioni disponibili:
+
+- Il capogruppo può inserire nome, cognome, email o telefono, eventuale data di
+  nascita, lingua, presenza prevista e nota interna.
+- La presenza manuale usa le date reali dell'evento, non etichette riassuntive;
+  può restare "da confermare".
+- Le domande accessibilità nell'inserimento manuale mostrano i follow-up solo
+  se viene selezionato "Sì".
+- Il gruppo selezionabile è limitato ai gruppi iscrivibili nello scope
+  discendente del capogruppo.
+- L'iscrizione viene creata con `registrations.source = 'capogruppo'` e
+  `registrations.created_by` valorizzato.
+- L'assegnazione gruppo viene creata subito `confirmed`, con source
+  `capogruppo`, confidence `1`, reason `group_leader_manual_entry`,
+  `matcher_version = 'group-leader-manual-v1'` e metadati decisione referente.
+- Vengono creati contatto primario, consenso privacy/trattamento dichiarato dal
+  capogruppo, snapshot questionario minimale, record accessibilità vuoto,
+  QR token opaco cifrato e audit `registration.created_by_group_leader`.
+
+Decisioni:
+
+- La vista predefinita della dashboard capogruppo è la tabella
+  "Partecipanti del gruppo"; i riepiloghi tecnici e i conteggi ridondanti non
+  vanno mostrati al capogruppo.
+- "Genera link" e "Inserisci partecipante" sono strumenti contestuali aperti in
+  overlay dal gruppo selezionato, non sezioni permanenti della pagina.
+- I link riservati generati dal capogruppo mantengono il gruppo nascosto dal
+  catalogo pubblico ma precompilano il form pubblico tramite `?groupLink=...`.
+- Nel form pubblico aperto da link riservato, la UI non chiede più se la persona
+  ha già partecipato o se parteciperà con un gruppo: i valori sono impliciti e
+  inviati come hidden (`hasPreviousSantegidioParticipation=yes`,
+  `participatesWithGroup=yes`, `groupId=<gruppo>`).
+- Il riquadro del form pubblico da link riservato deve spiegare che il link
+  iscrive a quello specifico gruppo e offrire l'uscita verso `/registrazione`
+  per l'iscrizione generica se il gruppo non è corretto.
+- Email e telefono sono alternativi: serve almeno un recapito.
+- Se l'email è presente, l'action blocca doppie iscrizioni allo stesso evento.
+- L'inserimento manuale non invia email automatiche al partecipante.
+- I dati di paese/città del partecipante sono ereditati dal gruppo scelto
+  quando presenti; eventuali dettagli più completi restano modificabili in
+  passaggi successivi.
+- La checkbox consenso registra che il capogruppo dichiara di avere il consenso
+  della persona iscritta; non sostituisce eventuali verifiche organizzative
+  successive.
+- La modifica completa dell'iscrizione, l'assegnazione a servizi e l'eventuale
+  assegnazione a sottogruppi restano da progettare in milestone successive
+  insieme alla rifinitura coerente di tutta l'app.
+
+Verifiche eseguite:
+
+- `npm run lint`.
+- `npm run typecheck`.
+- `npm test`.
+- Browser integrato su localhost: login capogruppo reale, link riservato
+  generato e aperto, form pubblico con `groupLink`, inserimento manuale
+  placeholder, tabella partecipanti e overlay link/manuale verificati.
 
 ## Rifinitura dashboard operative - 2026-06-16
 

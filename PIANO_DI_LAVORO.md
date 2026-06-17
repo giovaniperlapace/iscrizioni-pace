@@ -25,6 +25,9 @@ Stato locale rilevato in questo task:
 - Milestone 9.1 e' completata localmente: link riservati per gruppi nascosti ma
   iscrivibili, con label pubblica separata dal nome operativo, generazione e
   revoca da dashboard manager/capogruppo, token opachi e audit.
+- Milestone 10 e' completata localmente: dashboard capogruppo con tabella
+  partecipanti del gruppo, inserimento manuale in overlay, link riservati in
+  overlay e form pubblico da link gruppo con valori gruppo impliciti.
 - Il 2026-06-16 e' stata anticipata una parte della Milestone 11: navigazione
   dashboard a tab fra ruoli, logout globale, modale admin per assegnare anche
   admin/capogruppo e rimozione della card personale ridondante dalle dashboard
@@ -899,24 +902,41 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 ### Milestone 10: inserimento manuale partecipanti da capogruppo
 
+**Stato:** completata localmente il 2026-06-17.
+
 - Scopo: gestire persone senza email o fragili tramite referente dopo che il
   flusso pubblico principale e' aperto.
-- Deliverable:
-  - form manuale capogruppo per partecipanti senza email;
-  - contatto referente/delegato;
-  - origine registrazione tracciata;
-  - comunicazioni aggregate al capogruppo;
-  - consenso gestito con testo/processo approvato.
+- Deliverable realizzati:
+  - tabella "Partecipanti del gruppo" nella dashboard capogruppo, con ricerca,
+    filtro stato, ordinamento e azioni operative per note/conferma/rifiuto;
+  - inserimento manuale capogruppo in overlay contestuale al gruppo;
+  - link iscrizione gruppo in overlay contestuale, con microcopy pubblico/interno
+    chiarito;
+  - origine registrazione tracciata con `registrations.source = 'capogruppo'`
+    per inserimento manuale e `group_registration_link` per link riservati;
+  - consenso dichiarato dal capogruppo nel form manuale;
+  - QR reale, audit e snapshot questionario minimale per inserimento manuale;
+  - form pubblico da `?groupLink=...` semplificato: gruppo implicito, niente
+    domande ridondanti su partecipazione precedente/gruppo, fallback a
+    `/registrazione` se il link non è del gruppo corretto.
 - File/cartelle: `app/dashboard/capogruppo/*`, `lib/registrations/*`,
-  `lib/email/*`.
-- Migration: campi/tabelle contatti delegati, origine registrazione e audit se
-  non gia' presenti.
-- Verifiche: record senza email, niente magic link diretto, audit creazione,
-  RLS capogruppo.
-- Rischi: duplicati e responsabilità consenso.
-- Accettazione: capogruppo può inserire persone senza rompere flusso
-  partecipante e senza assumere consenso in modo implicito.
-- Non fare: campagne massive o gestione manager completa.
+  `app/registrazione/registration-form.tsx`, `app/actions.ts`.
+- Migration: non necessaria per questa milestone; sono stati riusati schema
+  esistente, campi `source`, `created_by`, audit, QR e link riservati della
+  Milestone 9.1.
+- Verifiche eseguite: record senza email, record da link riservato, niente magic
+  link diretto per inserimento manuale, audit creazione, scope capogruppo,
+  `npm run lint`, `npm run typecheck`, `npm test`, browser integrato su
+  localhost.
+- Rischi residui: duplicati senza email da gestire operativamente, pulizia
+  placeholder di test, responsabilità consenso da formalizzare nei testi
+  definitivi.
+- Accettazione: capogruppo può inserire persone e generare link di gruppo senza
+  rompere il flusso partecipante e senza esporre sezioni operative permanenti
+  nella dashboard.
+- Non fatto / rimandato: campagne massive, gestione manager completa, modifica
+  completa iscrizione da dashboard capogruppo, assegnazione a servizi o
+  sottogruppi.
 
 ### Milestone 11: dashboard manager/admin essenziale
 

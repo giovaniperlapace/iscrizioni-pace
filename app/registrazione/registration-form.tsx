@@ -109,8 +109,12 @@ export function RegistrationForm({
 }: RegistrationFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("");
-  const [hasPreviousParticipation, setHasPreviousParticipation] = useState("");
-  const [participatesWithGroup, setParticipatesWithGroup] = useState("");
+  const [hasPreviousParticipation, setHasPreviousParticipation] = useState(
+    options.groupLink ? "yes" : ""
+  );
+  const [participatesWithGroup, setParticipatesWithGroup] = useState(
+    options.groupLink ? "yes" : ""
+  );
   const [birthDate, setBirthDate] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -264,8 +268,12 @@ export function RegistrationForm({
 
     const restoreTimer = window.setTimeout(() => {
       setHasAccessibilityNeeds(stored.state.hasAccessibilityNeeds);
-      setHasPreviousParticipation(stored.state.hasPreviousParticipation);
-      setParticipatesWithGroup(stored.state.participatesWithGroup);
+      setHasPreviousParticipation(
+        options.groupLink ? "yes" : stored.state.hasPreviousParticipation
+      );
+      setParticipatesWithGroup(
+        options.groupLink ? "yes" : stored.state.participatesWithGroup
+      );
       setBirthDate(stored.state.birthDate);
       setCountrySearch(stored.state.countrySearch);
       setSelectedCountry(stored.state.selectedCountry);
@@ -316,13 +324,20 @@ export function RegistrationForm({
       onInput={saveCurrentForm}
       onSubmit={(event) => {
         saveCurrentForm();
+        const effectiveHasPreviousParticipation = hasGroupLink
+          ? "yes"
+          : hasPreviousParticipation;
+        const effectiveParticipatesWithGroup = hasGroupLink
+          ? "yes"
+          : participatesWithGroup;
 
         if (
           !hasAccessibilityNeeds ||
-          !hasPreviousParticipation ||
-          (hasPreviousParticipation === "yes" && !participatesWithGroup) ||
-          (hasPreviousParticipation === "yes" &&
-            participatesWithGroup === "yes" &&
+          !effectiveHasPreviousParticipation ||
+          (effectiveHasPreviousParticipation === "yes" &&
+            !effectiveParticipatesWithGroup) ||
+          (effectiveHasPreviousParticipation === "yes" &&
+            effectiveParticipatesWithGroup === "yes" &&
             !cannotFindLeader &&
             !selectedGroupValue) ||
           (!availabilityUnknown && selectedEventDays.length === 0)
@@ -330,13 +345,13 @@ export function RegistrationForm({
           event.preventDefault();
           focusClientSideMissingField(formRef.current, {
             hasAccessibilityNeeds,
-            hasPreviousParticipation,
-            participatesWithGroup,
+            hasPreviousParticipation: effectiveHasPreviousParticipation,
+            participatesWithGroup: effectiveParticipatesWithGroup,
             availabilityUnknown,
             selectedEventDays,
             needsGroupChoice:
-              hasPreviousParticipation === "yes" &&
-              participatesWithGroup === "yes" &&
+              effectiveHasPreviousParticipation === "yes" &&
+              effectiveParticipatesWithGroup === "yes" &&
               !cannotFindLeader &&
               !selectedGroupValue,
           });
@@ -349,6 +364,17 @@ export function RegistrationForm({
           type="hidden"
           value={groupRegistrationLinkToken}
         />
+      ) : null}
+      {options.groupLink ? (
+        <>
+          <input
+            name="hasPreviousSantegidioParticipation"
+            type="hidden"
+            value="yes"
+          />
+          <input name="participatesWithGroup" type="hidden" value="yes" />
+          <input name="groupId" type="hidden" value={options.groupLink.groupId} />
+        </>
       ) : null}
       <header className="max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-wide text-[#5d765f]">
@@ -369,9 +395,24 @@ export function RegistrationForm({
           </p>
         ) : null}
         {options.groupLink ? (
-          <div className="mt-4 rounded-lg border border-[#d8dece] bg-white px-4 py-3 text-sm text-[#38453c]">
-            <p className="font-semibold">Gruppo indicato dal referente</p>
-            <p className="mt-1 text-[#5e6d63]">{options.groupLink.displayLabel}</p>
+          <div className="mt-4 rounded-lg border border-[#c8d5be] bg-[#f8fbf5] px-4 py-3 text-sm text-[#38453c]">
+            <p className="font-semibold">
+              Questo link iscrive al gruppo{" "}
+              <span className="text-[#1f4d38]">
+                {options.groupLink.displayLabel}
+              </span>
+              .
+            </p>
+            <p className="mt-2 leading-6 text-[#5e6d63]">
+              Se non pensi che questo sia il tuo gruppo, usa l&apos;iscrizione
+              generica per scegliere il gruppo o il referente corretto.
+            </p>
+            <a
+              href="/registrazione"
+              className="mt-3 inline-flex min-h-9 items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+            >
+              Vai all&apos;iscrizione generica
+            </a>
           </div>
         ) : null}
       </header>
@@ -771,6 +812,7 @@ export function RegistrationForm({
         ) : null}
       </section>
 
+      {!hasGroupLink ? (
       <section className="grid gap-4 rounded-lg border border-[#d8dece] bg-white p-5">
         <div className="grid gap-3 text-sm font-medium text-[#38453c]">
           <span>
@@ -807,7 +849,7 @@ export function RegistrationForm({
           ) : null}
         </div>
 
-        {hasPreviousParticipation === "yes" ? (
+        {hasPreviousParticipation === "yes" && !hasGroupLink ? (
           <div className="grid gap-3 text-sm font-medium text-[#38453c]">
             <span>Parteciperai con un gruppo?</span>
             <input
@@ -843,7 +885,9 @@ export function RegistrationForm({
           </div>
         ) : null}
 
-        {hasPreviousParticipation === "yes" && participatesWithGroup === "yes" ? (
+        {hasPreviousParticipation === "yes" &&
+        participatesWithGroup === "yes" &&
+        !hasGroupLink ? (
           <Field label="Gruppo o referente">
             <input
               name={hasRealGroups ? "groupId" : "groupName"}
@@ -950,6 +994,7 @@ export function RegistrationForm({
           </Field>
         ) : null}
       </section>
+      ) : null}
 
       <section className="grid gap-4 rounded-lg border border-[#d8dece] bg-white p-5">
         <div>

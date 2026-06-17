@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 
 import {
+  createGroupLeaderManualRegistration,
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
   updateGroupLeaderAssignment,
@@ -10,12 +12,13 @@ import {
   DashboardAreaDescription,
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
+import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
+import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import {
   collectDescendantGroupIds,
   matchesGroupLeaderFilter,
   parseGroupLeaderReviewFilter,
-  summarizeGroupLeaderAssignments,
   type GroupLeaderReviewFilter,
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
@@ -35,6 +38,12 @@ type CapogruppoPageProps = {
     groupLinkSaved?: string;
     groupLinkToken?: string;
     groupLinkGroupId?: string;
+    manualError?: string;
+    manualSaved?: string;
+    q?: string;
+    sort?: string;
+    tool?: string;
+    groupId?: string;
   }>;
 };
 
@@ -50,11 +59,12 @@ type GroupRow = {
   node_type: string | null;
   is_assignable: boolean | null;
   is_public_catalog: boolean | null;
+  is_active: boolean | null;
   public_label: string | null;
   primary_leader_name: string | null;
   events:
-    | { title: string | null }
-    | Array<{ title: string | null }>
+    | { title: string | null; starts_on: string | null; ends_on: string | null }
+    | Array<{ title: string | null; starts_on: string | null; ends_on: string | null }>
     | null;
 };
 
@@ -89,10 +99,14 @@ type ScopedGroupView = {
   eventId: string;
   eventTitle: string;
   name: string;
+  nodeType: string | null;
+  isActive: boolean;
   isAssignable: boolean;
   isPublicCatalog: boolean;
   publicLabel: string | null;
   primaryLeaderName: string | null;
+  eventStartsOn: string | null;
+  eventEndsOn: string | null;
 };
 
 type AssignmentRow = {
@@ -137,8 +151,23 @@ type AssignmentRow = {
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
-              country_name: string | null;
-              city_name: string | null;
+              country_other: string | null;
+              city_other: string | null;
+              participant_contacts:
+                | Array<{
+                    email: string | null;
+                    phone: string | null;
+                    is_primary: boolean | null;
+                  }>
+                | null;
+              countries:
+                | { name_it: string | null }
+                | Array<{ name_it: string | null }>
+                | null;
+              cities:
+                | { name: string | null }
+                | Array<{ name: string | null }>
+                | null;
               participates_with_group: boolean | null;
             }
           | Array<{
@@ -147,8 +176,23 @@ type AssignmentRow = {
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
-              country_name: string | null;
-              city_name: string | null;
+              country_other: string | null;
+              city_other: string | null;
+              participant_contacts:
+                | Array<{
+                    email: string | null;
+                    phone: string | null;
+                    is_primary: boolean | null;
+                  }>
+                | null;
+              countries:
+                | { name_it: string | null }
+                | Array<{ name_it: string | null }>
+                | null;
+              cities:
+                | { name: string | null }
+                | Array<{ name: string | null }>
+                | null;
               participates_with_group: boolean | null;
             }>
           | null;
@@ -165,8 +209,23 @@ type AssignmentRow = {
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
-              country_name: string | null;
-              city_name: string | null;
+              country_other: string | null;
+              city_other: string | null;
+              participant_contacts:
+                | Array<{
+                    email: string | null;
+                    phone: string | null;
+                    is_primary: boolean | null;
+                  }>
+                | null;
+              countries:
+                | { name_it: string | null }
+                | Array<{ name_it: string | null }>
+                | null;
+              cities:
+                | { name: string | null }
+                | Array<{ name: string | null }>
+                | null;
               participates_with_group: boolean | null;
             }
           | Array<{
@@ -175,8 +234,23 @@ type AssignmentRow = {
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
-              country_name: string | null;
-              city_name: string | null;
+              country_other: string | null;
+              city_other: string | null;
+              participant_contacts:
+                | Array<{
+                    email: string | null;
+                    phone: string | null;
+                    is_primary: boolean | null;
+                  }>
+                | null;
+              countries:
+                | { name_it: string | null }
+                | Array<{ name_it: string | null }>
+                | null;
+              cities:
+                | { name: string | null }
+                | Array<{ name: string | null }>
+                | null;
               participates_with_group: boolean | null;
             }>
           | null;
@@ -192,6 +266,8 @@ type AssignmentView = {
   groupNodeType: string | null;
   participantName: string;
   participantCode: string | null;
+  participantEmail: string | null;
+  participantPhone: string | null;
   participantPlace: string;
   birthDate: string | null;
   registrationStatus: string | null;
@@ -207,6 +283,7 @@ type AssignmentView = {
   leaderDecisionAt: string | null;
   updatedAt: string | null;
 };
+type DashboardTool = "link" | "manual";
 
 const FILTER_LABELS: Record<GroupLeaderReviewFilter, string> = {
   all: "Tutti",
@@ -215,12 +292,34 @@ const FILTER_LABELS: Record<GroupLeaderReviewFilter, string> = {
   confirmed: "Confermati",
   rejected: "Rifiutati",
 };
+const SORT_OPTIONS = [
+  { value: "name", label: "Nome" },
+  { value: "updated", label: "Aggiornamento recente" },
+  { value: "submitted", label: "Iscrizione recente" },
+  { value: "status", label: "Stato" },
+] as const;
+type AssignmentSort = (typeof SORT_OPTIONS)[number]["value"];
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const EVENT_DAY_FORMATTER = new Intl.DateTimeFormat("it-IT", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
 
 export default async function CapogruppoDashboardPage({
   searchParams,
 }: CapogruppoPageProps) {
   const params = await searchParams;
-  const filter = parseGroupLeaderReviewFilter(params.filter);
+  const filter = params.filter
+    ? parseGroupLeaderReviewFilter(params.filter)
+    : "all";
+  const query = normalizeSearchQuery(params.q);
+  const sort = parseAssignmentSort(params.sort);
+  const activeTool =
+    params.groupLinkToken || params.groupLinkGroupId
+      ? "link"
+      : parseDashboardTool(params.tool);
+  const activeGroupId = params.groupLinkGroupId ?? params.groupId ?? null;
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "capogruppo");
 
@@ -239,33 +338,31 @@ export default async function CapogruppoDashboardPage({
   const { data: groups } = await serviceSupabase
     .from("groups")
     .select(
-      "id,event_id,name,parent_group_id,node_type,is_assignable,is_public_catalog,public_label,primary_leader_name,events(title)"
-    )
-    .eq("is_active", true);
+      "id,event_id,name,parent_group_id,node_type,is_assignable,is_public_catalog,is_active,public_label,primary_leader_name,events(title,starts_on,ends_on)"
+    );
   const groupRows = (groups ?? []) as GroupRow[];
-  const groupNodes = groupRows.map<GroupTreeNode>((group) => ({
+  const activeGroupRows = groupRows.filter((group) => group.is_active ?? true);
+  const groupNodes = activeGroupRows.map<GroupTreeNode>((group) => ({
     id: group.id,
     parentGroupId: group.parent_group_id,
   }));
   const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
 
   const assignments = await getAssignments([...scopedGroupIds]);
-  const scopedGroups = groupRows
+  const assignedGroups = groupRows
+    .filter((group) => rootGroupIds.includes(group.id))
+    .map(toScopedGroupView);
+  const scopedGroups = activeGroupRows
     .filter((group) => scopedGroupIds.has(group.id))
-    .map<ScopedGroupView>((group) => ({
-      id: group.id,
-      eventId: group.event_id,
-      eventTitle: relatedOne(group.events)?.title ?? "Evento",
-      name: group.name ?? "Gruppo senza nome",
-      isAssignable: group.is_assignable ?? true,
-      isPublicCatalog: group.is_public_catalog ?? true,
-      publicLabel: group.public_label,
-      primaryLeaderName: group.primary_leader_name,
-    }));
+    .map(toScopedGroupView);
   const groupLinks = await getGroupLinks([...scopedGroupIds]);
-  const summary = summarizeGroupLeaderAssignments(assignments);
-  const filteredAssignments = assignments.filter((assignment) =>
-    matchesGroupLeaderFilter(assignment, filter)
+  const filteredAssignments = sortAssignments(
+    assignments.filter(
+      (assignment) =>
+        matchesGroupLeaderFilter(assignment, filter) &&
+        matchesAssignmentQuery(assignment, query)
+    ),
+    sort
   );
 
   return (
@@ -285,76 +382,65 @@ export default async function CapogruppoDashboardPage({
 
         <StatusMessage
           error={params.error ?? params.groupLinkError}
-          saved={params.saved ?? params.groupLinkSaved}
+          saved={params.saved ?? params.groupLinkSaved ?? params.manualSaved}
         />
 
-        <section className="grid gap-4 sm:grid-cols-4">
-          <Metric label="Nodi assegnati" value={String(rootGroupIds.length)} />
-          <Metric label="Partecipanti visibili" value={String(summary.total)} />
-          <Metric label="Da verificare" value={String(summary.toReview)} />
-          <Metric label="Confermati" value={String(summary.confirmed)} />
-        </section>
+        <StatusMessage error={params.manualError} saved={undefined} />
 
-        <section className="rounded-lg border border-[#d8dece] bg-white p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <AssignedScopeSection
+          assignedGroups={assignedGroups}
+          assignableGroups={scopedGroups.filter(
+            (group) => group.isActive && group.isAssignable
+          )}
+        />
+
+        <section
+          id="assegnazioni-gruppo"
+          className="rounded-lg border border-[#d8dece] bg-white p-5"
+        >
+          <div>
             <div>
-              <h2 className="text-lg font-semibold">Assegnazioni gruppo</h2>
+              <h2 className="text-lg font-semibold">Partecipanti del gruppo</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
-                Le decisioni sono interne e non inviano comunicazioni al
-                partecipante. Il rifiuto passa al nodo superiore, oppure alla
-                coda manager se non esiste un padre.
+                Qui trovi le persone collegate ai gruppi che gestisci. Le
+                decisioni sul gruppo sono interne e non inviano comunicazioni
+                automatiche al partecipante.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(FILTER_LABELS).map(([key, label]) => (
-                <Link
-                  key={key}
-                  href={`/dashboard/capogruppo?filter=${key}`}
-                  className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
-                    filter === key
-                      ? "border-[#315c44] bg-[#315c44] text-white"
-                      : "border-[#c8d5be] text-[#38563d] hover:bg-[#eef2e7]"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-4">
-            <SmallMetric label="Probabili" value={summary.probable} />
-            <SmallMetric label="Rifiutati" value={summary.rejected} />
-            <SmallMetric label="Nodi in scope" value={scopedGroupIds.size} />
-            <SmallMetric label="Vista" value={filteredAssignments.length} />
-          </div>
+          <AssignmentFilters filter={filter} query={query} sort={sort} />
+
+          <AssignmentsTable assignments={filteredAssignments} />
         </section>
 
-        <GroupLeaderLinksSection
-          groups={scopedGroups}
-          links={groupLinks}
-          createdGroupId={params.groupLinkGroupId ?? null}
-          createdUrl={
-            params.groupLinkToken
-              ? buildGroupRegistrationUrl({
-                  appUrl: getAppUrl(),
-                  token: params.groupLinkToken,
-                })
-              : null
-          }
-        />
+        {activeTool ? (
+          <DashboardToolOverlay title={dashboardToolTitle(activeTool)}>
+            {activeTool === "link" ? (
+              <GroupLeaderLinksSection
+                groups={scopedGroups}
+                links={groupLinks}
+                selectedGroupId={activeGroupId}
+                createdGroupId={params.groupLinkGroupId ?? null}
+                createdUrl={
+                  params.groupLinkToken
+                    ? buildGroupRegistrationUrl({
+                        appUrl: getAppUrl(),
+                        token: params.groupLinkToken,
+                      })
+                    : null
+                }
+              />
+            ) : (
+              <ManualRegistrationSection
+                groups={scopedGroups}
+                selectedGroupId={activeGroupId}
+                eventDays={getManualRegistrationEventDays(scopedGroups)}
+              />
+            )}
+          </DashboardToolOverlay>
+        ) : null}
 
-        <section className="grid gap-4">
-          {filteredAssignments.map((assignment) => (
-            <AssignmentCard key={assignment.id} assignment={assignment} />
-          ))}
-
-          {filteredAssignments.length === 0 ? (
-            <div className="rounded-lg border border-[#d8dece] bg-white p-5 text-sm text-[#5e6d63]">
-              Nessuna assegnazione in questa vista.
-            </div>
-          ) : null}
-        </section>
       </section>
     </main>
   );
@@ -364,14 +450,20 @@ export default async function CapogruppoDashboardPage({
       return [];
     }
 
-    const { data } = await serviceSupabase
+    const { data, error } = await serviceSupabase
       .from("participant_group_assignments")
       .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups(id,name,node_type,parent_group_id),registrations(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_name,city_name,participates_with_group))"
+        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group))"
       )
       .in("group_id", groupIds)
+      .eq("is_current", true)
       .order("updated_at", { ascending: false })
       .limit(100);
+
+    if (error) {
+      console.error("[capogruppo:assignments]", error.message);
+      return [];
+    }
 
     return ((data ?? []) as AssignmentRow[])
       .map(toAssignmentView)
@@ -407,18 +499,158 @@ export default async function CapogruppoDashboardPage({
   }
 }
 
+function toScopedGroupView(group: GroupRow): ScopedGroupView {
+  return {
+    id: group.id,
+    eventId: group.event_id,
+    eventTitle: relatedOne(group.events)?.title ?? "Evento",
+    name: group.name ?? "Gruppo senza nome",
+    nodeType: group.node_type,
+    isActive: group.is_active ?? true,
+    isAssignable: group.is_assignable ?? true,
+    isPublicCatalog: group.is_public_catalog ?? true,
+    publicLabel: group.public_label,
+    primaryLeaderName: group.primary_leader_name,
+    eventStartsOn: relatedOne(group.events)?.starts_on ?? null,
+    eventEndsOn: relatedOne(group.events)?.ends_on ?? null,
+  };
+}
+
+function AssignedScopeSection({
+  assignedGroups,
+  assignableGroups,
+}: {
+  assignedGroups: ScopedGroupView[];
+  assignableGroups: ScopedGroupView[];
+}) {
+  return (
+    <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">I tuoi gruppi</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+            Questi sono i gruppi collegati al tuo account capogruppo.
+          </p>
+        </div>
+        <span className="rounded-full border border-[#c8d5be] px-3 py-1 text-sm font-semibold text-[#38563d]">
+          {assignableGroups.length} iscrivibili
+        </span>
+      </div>
+
+      {assignedGroups.length > 0 ? (
+        <div className="mt-4 grid gap-3">
+          {assignedGroups.map((group) => (
+            <div
+              key={group.id}
+              className="rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-[#1c241f]">{group.name}</h3>
+                    <ScopeBadge
+                      label={
+                        group.isActive && group.isAssignable
+                          ? "Può ricevere iscrizioni"
+                          : "Non disponibile per iscrizioni"
+                      }
+                      tone={group.isActive ? "green" : "red"}
+                    />
+                    <ScopeBadge
+                      label={
+                        group.isPublicCatalog
+                          ? "Visibile nel form pubblico"
+                          : "Non visibile nel form pubblico"
+                      }
+                    />
+                  </div>
+                  <p className="mt-2 text-sm text-[#5e6d63]">
+                    {group.eventTitle}
+                    {group.primaryLeaderName
+                      ? ` - referente ${group.primaryLeaderName}`
+                      : ""}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/dashboard/capogruppo?tool=link&groupId=${encodeURIComponent(group.id)}`}
+                    className="min-h-9 rounded-md border border-[#b8c5ad] px-3 py-2 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+                  >
+                    Genera link
+                  </Link>
+                  <Link
+                    href={`/dashboard/capogruppo?tool=manual&groupId=${encodeURIComponent(group.id)}`}
+                    className="min-h-9 rounded-md bg-[#315c44] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#264a36]"
+                  >
+                    Inserisci partecipante
+                  </Link>
+                </div>
+              </div>
+              {!group.isActive ? (
+                <p className="mt-3 rounded-md border border-[#e8c2bd] bg-[#fff6f4] p-3 text-sm leading-6 text-[#8a3f35]">
+                  Questo gruppo è collegato al tuo account, ma non è attivo nel
+                  catalogo operativo. Prima di usare link o inserimenti manuali
+                  serve un intervento di un manager/admin per riattivarlo o
+                  collegarti al gruppo corretto.
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-[#5e6d63]">
+          Nessun gruppo collegato al tuo account.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function DashboardToolOverlay({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-[#1c241f]/45 px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-[#d8dece] bg-white p-5 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <h2 className="text-xl font-semibold text-[#1c241f]">{title}</h2>
+          <Link
+            href="/dashboard/capogruppo"
+            className="inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+            aria-label="Chiudi"
+          >
+            Chiudi
+          </Link>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function GroupLeaderLinksSection({
   groups,
   links,
+  selectedGroupId,
   createdGroupId,
   createdUrl,
 }: {
   groups: ScopedGroupView[];
   links: GroupLinkView[];
+  selectedGroupId: string | null;
   createdGroupId: string | null;
   createdUrl: string | null;
 }) {
   const assignableGroups = groups.filter((group) => group.isAssignable);
+  const visibleGroups =
+    selectedGroupId && assignableGroups.some((group) => group.id === selectedGroupId)
+      ? assignableGroups.filter((group) => group.id === selectedGroupId)
+      : assignableGroups;
   const linksByGroupId = new Map<string, GroupLinkView[]>();
 
   for (const link of links) {
@@ -428,17 +660,17 @@ function GroupLeaderLinksSection({
   }
 
   return (
-    <section className="rounded-lg border border-[#d8dece] bg-white p-5">
+    <section>
       <div>
         <h2 className="text-lg font-semibold">Link iscrizione gruppo</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
-          Puoi generare link riservati solo per i gruppi nel tuo scope. I link
+          Puoi generare link riservati solo per i gruppi che gestisci. I link
           non rendono il gruppo visibile nel menu pubblico.
         </p>
       </div>
 
       <div className="mt-5 grid gap-4">
-        {assignableGroups.map((group) => {
+        {visibleGroups.map((group) => {
           const groupLinks = linksByGroupId.get(group.id) ?? [];
 
           return (
@@ -459,7 +691,7 @@ function GroupLeaderLinksSection({
                     {group.primaryLeaderName ?? "da assegnare"}
                   </p>
                   <p className="mt-2 text-sm text-[#39483f]">
-                    Label pubblica:{" "}
+                    Nome mostrato nel form:{" "}
                     <span className="font-medium">
                       {group.publicLabel ?? "non impostata"}
                     </span>
@@ -510,21 +742,29 @@ function GroupLeaderLinksSection({
                   <input type="hidden" name="sourceDashboard" value="capogruppo" />
                   <input type="hidden" name="groupId" value={group.id} />
                   <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
-                    Label pubblica
+                    Nome mostrato a chi si iscrive
                     <input
                       name="publicLabel"
                       className="field"
                       defaultValue={group.publicLabel ?? ""}
-                      placeholder="Gruppo indicato dal referente"
+                      placeholder={group.name}
                     />
+                    <span className="text-xs font-normal leading-5 text-[#5e6d63]">
+                      Opzionale. Se compilato, chi apre questo link vedrà questo
+                      nome invece del nome interno del gruppo.
+                    </span>
                   </label>
                   <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
-                    Etichetta interna
+                    Promemoria per te
                     <input
                       name="internalLabel"
                       className="field"
-                      placeholder="Per riconoscere questo invito"
+                      placeholder="Per esempio: link mandato su WhatsApp"
                     />
+                    <span className="text-xs font-normal leading-5 text-[#5e6d63]">
+                      Non viene mostrato ai partecipanti. Serve solo a
+                      riconoscere questo link in dashboard.
+                    </span>
                   </label>
                   <button className="min-h-10 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]">
                     Genera link
@@ -538,72 +778,275 @@ function GroupLeaderLinksSection({
 
       {assignableGroups.length === 0 ? (
         <p className="mt-4 text-sm text-[#5e6d63]">
-          Nessun gruppo iscrivibile nel tuo scope.
+          Nessun gruppo gestito può ricevere iscrizioni in questo momento.
         </p>
       ) : null}
     </section>
   );
 }
 
-function AssignmentCard({ assignment }: { assignment: AssignmentView }) {
+function ManualRegistrationSection({
+  groups,
+  selectedGroupId,
+  eventDays,
+}: {
+  groups: ScopedGroupView[];
+  selectedGroupId: string | null;
+  eventDays: Array<{ value: string; label: string }>;
+}) {
+  const assignableGroups = groups.filter((group) => group.isAssignable);
+  const defaultGroupId =
+    selectedGroupId && assignableGroups.some((group) => group.id === selectedGroupId)
+      ? selectedGroupId
+      : "";
+
+  return (
+    <section>
+      <div>
+        <h2 className="text-lg font-semibold">Inserimento manuale</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5e6d63]">
+          Aggiungi una persona direttamente a uno dei gruppi che gestisci. La
+          persona risulta subito confermata nel gruppo scelto.
+        </p>
+      </div>
+
+      {assignableGroups.length > 0 ? (
+        <form
+          action={createGroupLeaderManualRegistration}
+          className="mt-5 grid gap-4 lg:grid-cols-2"
+        >
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40] lg:col-span-2">
+            Gruppo
+            <select name="groupId" required className="field" defaultValue={defaultGroupId}>
+              <option value="">Seleziona gruppo</option>
+              {assignableGroups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+            Nome
+            <input name="firstName" required minLength={2} className="field" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+            Cognome
+            <input name="lastName" required minLength={2} className="field" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+            Email
+            <input name="email" type="email" className="field" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+            Telefono
+            <input name="phone" className="field" placeholder="+393331234567" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+            Data di nascita
+            <input name="birthDate" type="date" className="field" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+            Lingua
+            <select name="preferredLocale" className="field" defaultValue="it">
+              <option value="it">Italiano</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <ManualAttendanceFields eventDays={eventDays} />
+          <ManualAccessibilityFields />
+          <label className="grid gap-1 text-sm font-semibold text-[#3c4b40] lg:col-span-2">
+            Nota interna
+            <textarea
+              name="leaderNote"
+              rows={3}
+              className="min-h-20 rounded-md border border-[#cfd8c4] bg-white px-3 py-2 text-sm font-normal text-[#1c241f] outline-none transition focus:border-[#56745d]"
+            />
+          </label>
+          <label className="flex gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-3 text-sm font-medium text-[#39483f] lg:col-span-2">
+            <input
+              name="consentConfirmed"
+              type="checkbox"
+              required
+              className="mt-1 h-4 w-4 accent-[#315c44]"
+            />
+            Ho il consenso della persona iscritta al trattamento dei dati per
+            questa iscrizione.
+          </label>
+          <div className="lg:col-span-2">
+            <button className="min-h-10 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+              Inserisci partecipante
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="mt-4 text-sm text-[#5e6d63]">
+          Nessun gruppo gestito può ricevere iscrizioni in questo momento.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function AssignmentFilters({
+  filter,
+  query,
+  sort,
+}: {
+  filter: GroupLeaderReviewFilter;
+  query: string;
+  sort: AssignmentSort;
+}) {
+  return (
+    <form
+      method="get"
+      action="/dashboard/capogruppo"
+      className="mt-5 grid gap-3 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 lg:grid-cols-[1fr_190px_210px_auto]"
+    >
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Cerca partecipante
+        <input
+          name="q"
+          defaultValue={query}
+          className="field bg-white"
+          placeholder="Nome, email, telefono, codice"
+        />
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Stato
+        <select name="filter" defaultValue={filter} className="field bg-white">
+          {Object.entries(FILTER_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-[#3c4b40]">
+        Ordina per
+        <select name="sort" defaultValue={sort} className="field bg-white">
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex items-end gap-2">
+        <button className="min-h-11 rounded-md bg-[#315c44] px-4 text-sm font-semibold text-white transition hover:bg-[#264a36]">
+          Applica
+        </button>
+        <Link
+          href="/dashboard/capogruppo#assegnazioni-gruppo"
+          className="inline-flex min-h-11 items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+        >
+          Azzera
+        </Link>
+      </div>
+    </form>
+  );
+}
+
+function AssignmentsTable({ assignments }: { assignments: AssignmentView[] }) {
+  if (assignments.length === 0) {
+    return (
+      <div className="mt-5 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-4 text-sm text-[#5e6d63]">
+        Nessun partecipante con questi filtri.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 overflow-x-auto rounded-md border border-[#e1e6da]">
+      <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-[#dfe5d8] bg-[#fbfcf8] text-xs uppercase tracking-wide text-[#66745f]">
+            <th className="py-3 pl-4 pr-4 font-semibold">Partecipante</th>
+            <th className="py-3 pr-4 font-semibold">Contatti</th>
+            <th className="py-3 pr-4 font-semibold">Gruppo</th>
+            <th className="py-3 pr-4 font-semibold">Provenienza</th>
+            <th className="py-3 pr-4 font-semibold">Iscrizione</th>
+            <th className="py-3 pr-4 font-semibold">Stato</th>
+            <th className="py-3 pr-4 font-semibold">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {assignments.map((assignment) => (
+            <AssignmentRowView key={assignment.id} assignment={assignment} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AssignmentRowView({ assignment }: { assignment: AssignmentView }) {
   const canDecide = assignment.isCurrent && assignment.status === "probable";
 
   return (
-    <article className="rounded-lg border border-[#d8dece] bg-white p-5">
-      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-semibold">{assignment.participantName}</h3>
-            {assignment.participantCode ? (
-              <span className="rounded-full border border-[#d7dece] px-2.5 py-1 text-xs font-semibold text-[#516356]">
-                {assignment.participantCode}
-              </span>
-            ) : null}
-            <StatusBadge status={assignment.status} isCurrent={assignment.isCurrent} />
-            {!assignment.leaderNotificationReadAt && canDecide ? (
-              <span className="rounded-full bg-[#fff1c2] px-2.5 py-1 text-xs font-semibold text-[#6b5214]">
-                Da verificare
-              </span>
-            ) : null}
-          </div>
-
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-            <Info label="Gruppo" value={assignment.groupName} />
-            <Info label="Provenienza" value={assignment.participantPlace} />
-            <Info label="Iscrizione" value={formatDateTime(assignment.submittedAt)} />
-            <Info label="Origine" value={sourceLabel(assignment.source)} />
-            <Info label="Confidenza" value={formatConfidence(assignment.confidence)} />
-            <Info label="Aggiornata" value={formatDateTime(assignment.updatedAt)} />
-          </dl>
-
-          {assignment.assignmentReason ? (
-            <p className="mt-4 text-sm text-[#5e6d63]">
-              Motivo interno: {assignmentReasonLabel(assignment.assignmentReason)}
-            </p>
-          ) : null}
-          {assignment.leaderInternalNote ? (
-            <p className="mt-3 rounded-md bg-[#f4f6ef] p-3 text-sm leading-6 text-[#4b5a50]">
-              Nota interna: {assignment.leaderInternalNote}
-            </p>
+    <tr className="border-b border-[#edf1e8] align-top last:border-b-0">
+      <td className="py-4 pl-4 pr-4">
+        <p className="font-semibold text-[#1c241f]">{assignment.participantName}</p>
+        <p className="mt-1 text-xs text-[#5e6d63]">
+          {assignment.participantCode ?? "Senza codice"}
+          {assignment.birthDate ? ` - nato/a il ${formatDate(assignment.birthDate)}` : ""}
+        </p>
+      </td>
+      <td className="py-4 pr-4 text-[#39483f]">
+        <p>{assignment.participantEmail ?? "Email non indicata"}</p>
+        <p className="mt-1 text-xs text-[#5e6d63]">
+          {assignment.participantPhone ?? "Telefono non indicato"}
+        </p>
+      </td>
+      <td className="py-4 pr-4">
+        <p className="font-medium text-[#1c241f]">{assignment.groupName}</p>
+        <p className="mt-1 text-xs text-[#5e6d63]">
+          {assignment.assignmentReason
+            ? assignmentReasonLabel(assignment.assignmentReason)
+            : sourceLabel(assignment.source)}
+        </p>
+      </td>
+      <td className="py-4 pr-4 text-[#39483f]">{assignment.participantPlace}</td>
+      <td className="py-4 pr-4 text-[#39483f]">
+        <p>{formatDateTime(assignment.submittedAt)}</p>
+        <p className="mt-1 text-xs text-[#5e6d63]">
+          aggiornata {formatDateTime(assignment.updatedAt)}
+        </p>
+      </td>
+      <td className="py-4 pr-4">
+        <div className="flex flex-wrap gap-1.5">
+          <StatusBadge status={assignment.status} isCurrent={assignment.isCurrent} />
+          {!assignment.leaderNotificationReadAt && canDecide ? (
+            <span className="rounded-full bg-[#fff1c2] px-2.5 py-1 text-xs font-semibold text-[#6b5214]">
+              Da leggere
+            </span>
           ) : null}
         </div>
-
-        <form action={updateGroupLeaderAssignment} className="grid gap-3">
-          <input type="hidden" name="assignmentId" value={assignment.id} />
-          <label className="grid gap-2 text-sm font-semibold text-[#3c4b40]">
-            Nota interna
-            <textarea
-              name="leaderInternalNote"
-              defaultValue={assignment.leaderInternalNote ?? ""}
-              rows={4}
-              className="min-h-24 rounded-md border border-[#cfd8c4] bg-white px-3 py-2 text-sm font-normal text-[#1c241f] outline-none transition focus:border-[#56745d]"
-            />
-          </label>
-          <div className="grid gap-2">
+      </td>
+      <td className="py-4 pr-4">
+        <details className="group">
+          <summary className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]">
+            Gestisci
+          </summary>
+          <form
+            action={updateGroupLeaderAssignment}
+            className="mt-3 grid min-w-[260px] gap-2 rounded-md border border-[#e1e6da] bg-[#fbfcf8] p-3"
+          >
+            <input type="hidden" name="assignmentId" value={assignment.id} />
+            <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#66745f]">
+              Nota interna
+              <textarea
+                name="leaderInternalNote"
+                defaultValue={assignment.leaderInternalNote ?? ""}
+                rows={3}
+                className="min-h-20 rounded-md border border-[#cfd8c4] bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-[#1c241f] outline-none transition focus:border-[#56745d]"
+              />
+            </label>
             <button
               name="intent"
               value="note"
-              className="min-h-10 rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+              className="min-h-9 rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
             >
               Salva nota
             </button>
@@ -612,61 +1055,51 @@ function AssignmentCard({ assignment }: { assignment: AssignmentView }) {
                 <button
                   name="intent"
                   value="confirm"
-                  className="min-h-10 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]"
+                  className="min-h-9 rounded-md bg-[#315c44] px-3 text-sm font-semibold text-white transition hover:bg-[#264a36]"
                 >
-                  Conferma appartenenza
+                  Conferma
                 </button>
                 <button
                   name="intent"
                   value="reject"
-                  className="min-h-10 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
+                  className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
                 >
                   Non riconosciuto
                 </button>
                 <button
                   name="intent"
                   value="read"
-                  className="min-h-10 rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#516356] transition hover:bg-[#eef2e7]"
+                  className="min-h-9 rounded-md border border-[#c8d5be] px-3 text-sm font-semibold text-[#516356] transition hover:bg-[#eef2e7]"
                 >
                   Segna letta
                 </button>
               </>
             ) : null}
-          </div>
-        </form>
-      </div>
-    </article>
+          </form>
+        </details>
+      </td>
+    </tr>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-[#d8dece] bg-white p-5">
-      <p className="text-sm text-[#5e6d63]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-    </div>
-  );
-}
+function ScopeBadge({
+  label,
+  tone = "neutral",
+}: {
+  label: string;
+  tone?: "green" | "neutral" | "red";
+}) {
+  const className =
+    tone === "green"
+      ? "border-[#bad2b8] bg-[#edf7ea] text-[#2f6541]"
+      : tone === "red"
+        ? "border-[#e0b6af] bg-[#fff0ee] text-[#8a3f35]"
+        : "border-[#c8d5be] bg-white text-[#516356]";
 
-function SmallMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border border-[#e0e5d8] bg-[#fafbf7] p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#6a766d]">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs font-semibold uppercase tracking-wide text-[#718075]">
-        {label}
-      </dt>
-      <dd className="mt-1 break-words text-[#27332b]">{value}</dd>
-    </div>
+    <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>
+      {label}
+    </span>
   );
 }
 
@@ -735,7 +1168,12 @@ function toAssignmentView(row: AssignmentRow): AssignmentView | null {
     groupNodeType: group.node_type,
     participantName: formatParticipantName(participant.first_name, participant.last_name),
     participantCode: participant.public_code,
-    participantPlace: formatPlace(participant.city_name, participant.country_name),
+    participantEmail: getPrimaryContact(participant.participant_contacts)?.email ?? null,
+    participantPhone: getPrimaryContact(participant.participant_contacts)?.phone ?? null,
+    participantPlace: formatPlace(
+      relatedOne(participant.cities)?.name ?? participant.city_other,
+      relatedOne(participant.countries)?.name_it ?? participant.country_other
+    ),
     birthDate: participant.birth_date,
     registrationStatus: registration.status,
     submittedAt: registration.submitted_at,
@@ -756,6 +1194,22 @@ function formatParticipantName(firstName: string | null, lastName: string | null
   const name = [firstName, lastName].filter(Boolean).join(" ").trim();
 
   return name || "Partecipante senza nome";
+}
+
+function getPrimaryContact(
+  contacts:
+    | Array<{
+        email: string | null;
+        phone: string | null;
+        is_primary: boolean | null;
+      }>
+    | null
+): { email: string | null; phone: string | null } | null {
+  if (!contacts || contacts.length === 0) {
+    return null;
+  }
+
+  return contacts.find((contact) => contact.is_primary) ?? contacts[0] ?? null;
 }
 
 function formatPlace(city: string | null, country: string | null): string {
@@ -811,6 +1265,14 @@ function assignmentReasonLabel(reason: string): string {
       return "assegnazione territoriale probabile";
     case "group_leader_rejected_escalated_to_parent":
       return "rifiuto risalito al nodo superiore";
+    case "group_leader_manual_entry":
+      return "inserimento manuale del referente";
+    case "admin_updated_group":
+      return "assegnato da admin";
+    case "manager_updated_group":
+      return "assegnato da manager";
+    case "capogruppo_updated_group":
+      return "assegnato dal referente";
     default:
       return reason;
   }
@@ -836,14 +1298,6 @@ function groupLinkStatusLabel(link: GroupLinkView): string {
   }
 }
 
-function formatConfidence(confidence: number | null): string {
-  if (confidence === null) {
-    return "Non indicata";
-  }
-
-  return `${Math.round(confidence * 100)}%`;
-}
-
 function formatDateTime(value: string | null): string {
   if (!value) {
     return "Non indicata";
@@ -853,6 +1307,143 @@ function formatDateTime(value: string | null): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "medium",
+  }).format(new Date(value));
+}
+
+function normalizeSearchQuery(value: string | null | undefined): string {
+  return typeof value === "string" ? value.trim().slice(0, 80) : "";
+}
+
+function parseAssignmentSort(value: string | null | undefined): AssignmentSort {
+  return SORT_OPTIONS.some((option) => option.value === value)
+    ? (value as AssignmentSort)
+    : "name";
+}
+
+function parseDashboardTool(value: string | null | undefined): DashboardTool | null {
+  return value === "link" || value === "manual" ? value : null;
+}
+
+function dashboardToolTitle(tool: DashboardTool): string {
+  return tool === "link" ? "Genera link iscrizione" : "Inserisci partecipante";
+}
+
+function matchesAssignmentQuery(
+  assignment: AssignmentView,
+  query: string
+): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const normalizedQuery = query.toLowerCase();
+  const haystack = [
+    assignment.participantName,
+    assignment.participantCode,
+    assignment.participantEmail,
+    assignment.participantPhone,
+    assignment.groupName,
+    assignment.participantPlace,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(normalizedQuery);
+}
+
+function sortAssignments(
+  assignments: AssignmentView[],
+  sort: AssignmentSort
+): AssignmentView[] {
+  return [...assignments].sort((left, right) => {
+    switch (sort) {
+      case "updated":
+        return compareDateDesc(left.updatedAt, right.updatedAt);
+      case "submitted":
+        return compareDateDesc(left.submittedAt, right.submittedAt);
+      case "status":
+        return (
+          statusSortValue(left) - statusSortValue(right) ||
+          left.participantName.localeCompare(right.participantName, "it")
+        );
+      case "name":
+        return left.participantName.localeCompare(right.participantName, "it");
+    }
+  });
+}
+
+function compareDateDesc(left: string | null, right: string | null): number {
+  return dateTimeValue(right) - dateTimeValue(left);
+}
+
+function dateTimeValue(value: string | null): number {
+  return value ? new Date(value).getTime() : 0;
+}
+
+function statusSortValue(assignment: AssignmentView): number {
+  if (assignment.status === "probable" && assignment.isCurrent) {
+    return assignment.leaderNotificationReadAt ? 1 : 0;
+  }
+
+  if (assignment.status === "confirmed" && assignment.isCurrent) {
+    return 2;
+  }
+
+  if (assignment.status === "rejected") {
+    return 3;
+  }
+
+  return 4;
+}
+
+function getManualRegistrationEventDays(
+  groups: ScopedGroupView[]
+): Array<{ value: string; label: string }> {
+  const event = groups.find((group) => group.eventStartsOn);
+
+  if (!event?.eventStartsOn) {
+    return [];
+  }
+
+  const start = parseDateOnly(event.eventStartsOn);
+  const end = parseDateOnly(event.eventEndsOn ?? event.eventStartsOn);
+
+  if (!start || !end || end.getTime() < start.getTime()) {
+    return [];
+  }
+
+  const days: Array<{ value: string; label: string }> = [];
+
+  for (
+    let cursor = start;
+    cursor.getTime() <= end.getTime();
+    cursor = new Date(cursor.getTime() + DAY_IN_MS)
+  ) {
+    days.push({
+      value: cursor.toISOString().slice(0, 10),
+      label: EVENT_DAY_FORMATTER.format(cursor),
+    });
+  }
+
+  return days;
+}
+
+function parseDateOnly(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return null;
+  }
+
+  return new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  );
 }
 
 function relatedOne<T>(value: T | T[] | null): T | null {

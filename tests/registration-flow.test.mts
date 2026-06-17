@@ -13,6 +13,10 @@ import { renderQrDataUrl } from "../lib/qrcode/render.ts";
 import { decryptQrToken, encryptQrToken } from "../lib/qrcode/secure-token.ts";
 import { createOpaqueQrToken, hashQrToken } from "../lib/qrcode/token.ts";
 import {
+  buildManualRegistrationQuestionnaireAnswers,
+  parseManualRegistrationForm,
+} from "../lib/registrations/manual-registration.ts";
+import {
   canParticipantEditRegistration,
   diffParticipantDashboardUpdate,
   parseParticipantDashboardUpdate,
@@ -189,6 +193,99 @@ test("parseRegistrationForm rejects missing consents", () => {
   const parsed = parseRegistrationForm(formData);
 
   assert.equal(parsed.ok, false);
+});
+
+test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
+  const formData = new FormData();
+  formData.set("groupId", "11111111-1111-4111-8111-111111111111");
+  formData.set("firstName", "Paolo");
+  formData.set("lastName", "Bianchi");
+  formData.set("phone", "+39 333 123 4567");
+  formData.set("preferredLocale", "en");
+  formData.append("availabilityDays", "2026-10-25");
+  formData.append("availabilityDays", "2026-10-26");
+  formData.set("hasAccessibilityNeeds", "yes");
+  formData.set("accessibility_walkingOrSteps", "on");
+  formData.set("needsOperationalSupport", "on");
+  formData.set("accessibilityNotes", "Serve posto vicino all'ingresso.");
+  formData.set("leaderNote", "  Arriva con il gruppo di Roma.  ");
+  formData.set("consentConfirmed", "on");
+
+  const parsed = parseManualRegistrationForm(formData);
+
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.value.email, null);
+    assert.equal(parsed.value.phone, "+393331234567");
+    assert.equal(parsed.value.preferredLocale, "en");
+    assert.equal(parsed.value.availabilityUnknown, false);
+    assert.deepEqual(parsed.value.availabilityDays, [
+      "2026-10-25",
+      "2026-10-26",
+    ]);
+    assert.equal(parsed.value.hasAccessibilityNeeds, true);
+    assert.deepEqual(parsed.value.accessibilityAnswers, {
+      walkingOrSteps: true,
+    });
+    assert.equal(parsed.value.needsOperationalSupport, true);
+    assert.equal(parsed.value.accessibilityNotes, "Serve posto vicino all'ingresso.");
+    assert.equal(parsed.value.leaderNote, "Arriva con il gruppo di Roma.");
+  }
+});
+
+test("parseManualRegistrationForm requires contact and consent", () => {
+  const formData = new FormData();
+  formData.set("groupId", "11111111-1111-4111-8111-111111111111");
+  formData.set("firstName", "Paolo");
+  formData.set("lastName", "Bianchi");
+
+  const parsed = parseManualRegistrationForm(formData);
+
+  assert.equal(parsed.ok, false);
+  if (!parsed.ok) {
+    assert.ok(parsed.errors.includes("Inserisci almeno email o telefono."));
+    assert.ok(
+      parsed.errors.includes(
+        "Conferma di avere il consenso della persona iscritta."
+      )
+    );
+  }
+});
+
+test("manual registration questionnaire snapshot marks group leader source", () => {
+  const formData = new FormData();
+  formData.set("groupId", "11111111-1111-4111-8111-111111111111");
+  formData.set("firstName", "Paolo");
+  formData.set("lastName", "Bianchi");
+  formData.set("email", "paolo@example.org");
+  formData.set("availabilityUnknown", "on");
+  formData.set("hasAccessibilityNeeds", "yes");
+  formData.set("accessibility_eventAssistance", "on");
+  formData.set("accessibilityNotes", "Da richiamare prima della partenza.");
+  formData.set("consentConfirmed", "on");
+
+  const parsed = parseManualRegistrationForm(formData);
+
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    const answers = buildManualRegistrationQuestionnaireAnswers(parsed.value, {
+      id: parsed.value.groupId,
+      name: "Roma - Giovani per la Pace",
+    });
+
+    assert.equal(answers.source, "capogruppo_manual");
+    assert.equal(answers.contact.hasEmail, true);
+    assert.equal(answers.groupParticipation.enteredByGroupLeader, true);
+    assert.equal(answers.accessibility.hasAccessibilityNeeds, true);
+    assert.deepEqual(answers.accessibility.washingtonGroupAnswers, {
+      eventAssistance: true,
+    });
+    assert.equal(
+      answers.accessibility.operationalNotes,
+      "Da richiamare prima della partenza."
+    );
+    assert.equal(answers.consents.acceptedByGroupLeader, true);
+  }
 });
 
 test("QR tokens are opaque and only hashes are stable", () => {

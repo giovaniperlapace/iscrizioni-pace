@@ -23,6 +23,10 @@ import {
   parseParticipantDashboardUpdate,
 } from "@/lib/registrations/participant-dashboard";
 import {
+  buildManualRegistrationQuestionnaireAnswers,
+  parseManualRegistrationForm,
+} from "@/lib/registrations/manual-registration";
+import {
   createPublicRegistration,
   getPublicRegistrationOptions,
   hasExistingRegistrationForEmail,
@@ -31,14 +35,20 @@ import {
 import {
   normalizeEmail,
   parseRegistrationForm,
+  PRIVACY_VERSION,
 } from "@/lib/registrations/validation";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { REGISTRATION_QUESTIONNAIRE_VERSION } from "@/lib/questionnaire/registration";
+import { getQuestionnaireVisibilitySummary } from "@/lib/questionnaire/registration";
+import { encryptQrToken } from "@/lib/qrcode/secure-token";
+import { createOpaqueQrToken } from "@/lib/qrcode/token";
 
 const EMAIL_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 const MAGIC_LINK_SEND_COOLDOWN_MS = 60 * 1000;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export async function logout() {
   const supabase = await createSupabaseServerClient();
@@ -664,6 +674,228 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   redirect("/dashboard/capogruppo?error=invalid");
 }
 
+export async function createGroupLeaderManualRegistration(formData: FormData) {
+  const parsed = parseManualRegistrationForm(formData);
+
+  if (!parsed.ok) {
+    redirect(
+      `/dashboard/capogruppo?manualError=${encodeURIComponent(
+        parsed.errors[0] ?? "invalid"
+      )}`
+    );
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "capogruppo");
+
+  if (!auth || auth.dashboardRole !== "capogruppo") {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: group, error: groupError } = await serviceSupabase
+    .from("groups")
+    .select("id,event_id,name,country_id,city_id,is_active,is_assignable,events(starts_on,ends_on)")
+    .eq("id", parsed.value.groupId)
+    .maybeSingle();
+  const groupRow = group as
+    | {
+        id: string;
+        event_id: string;
+        name: string | null;
+        country_id: string | null;
+        city_id: string | null;
+        is_active: boolean | null;
+        is_assignable: boolean | null;
+        events: { starts_on: string | null; ends_on: string | null } | Array<{ starts_on: string | null; ends_on: string | null }> | null;
+      }
+    | null;
+
+  if (
+    groupError ||
+    !groupRow ||
+    !groupRow.is_active ||
+    !groupRow.is_assignable ||
+    !(await canManageGroupRegistrationLink(
+      serviceSupabase,
+      auth.user.id,
+      auth.eventRoles,
+      groupRow.id,
+      groupRow.event_id,
+      "capogruppo"
+    ))
+  ) {
+    redirect("/dashboard/capogruppo?manualError=forbidden");
+  }
+
+  if (
+    parsed.value.email &&
+    (await hasExistingRegistrationForEmail(
+      serviceSupabase,
+      parsed.value.email,
+      groupRow.event_id
+    ))
+  ) {
+    redirect("/dashboard/capogruppo?manualError=duplicate-email");
+  }
+
+  const { data: participant, error: participantError } = await serviceSupabase
+    .from("participants")
+    .insert({
+      first_name: parsed.value.firstName,
+      last_name: parsed.value.lastName,
+      birth_date: parsed.value.birthDate,
+      preferred_locale: parsed.value.preferredLocale,
+      country_id: groupRow.country_id,
+      city_id: groupRow.city_id,
+      has_previous_santegidio_participation: true,
+      participates_with_group: true,
+    })
+    .select("id,public_code")
+    .single();
+
+  if (participantError || !participant) {
+    redirect(
+      `/dashboard/capogruppo?manualError=${encodeURIComponent(
+        participantError?.message ?? "participant"
+      )}`
+    );
+  }
+
+  const participantRow = participant as { id: string; public_code: string };
+  const { data: registration, error: registrationError } = await serviceSupabase
+    .from("registrations")
+    .insert({
+      event_id: groupRow.event_id,
+      participant_id: participantRow.id,
+      source: "capogruppo",
+      created_by: auth.user.id,
+    })
+    .select("id")
+    .single();
+
+  if (registrationError || !registration) {
+    redirect(
+      `/dashboard/capogruppo?manualError=${encodeURIComponent(
+        registrationError?.message ?? "registration"
+      )}`
+    );
+  }
+
+  const registrationId = (registration as { id: string }).id;
+  const qrToken = createOpaqueQrToken();
+  const eventDates = relatedOne(groupRow.events);
+  const allowedEventDays = new Set(
+    getEventDayValues(eventDates?.starts_on ?? null, eventDates?.ends_on ?? null)
+  );
+
+  if (
+    !parsed.value.availabilityUnknown &&
+    parsed.value.availabilityDays.some((day) => !allowedEventDays.has(day))
+  ) {
+    redirect("/dashboard/capogruppo?manualError=invalid-days");
+  }
+
+  const attendanceRows =
+    parsed.value.availabilityUnknown
+      ? [{ registration_id: registrationId, choice: "unknown" }]
+      : parsed.value.availabilityDays.map((day) => ({
+          registration_id: registrationId,
+          day,
+          choice: "yes",
+        }));
+  const writes = [
+    serviceSupabase.from("participant_contacts").insert({
+      participant_id: participantRow.id,
+      email: parsed.value.email,
+      phone: parsed.value.phone,
+      is_primary: true,
+    }),
+    serviceSupabase.from("participant_consents").insert({
+      registration_id: registrationId,
+      privacy_version: PRIVACY_VERSION,
+      privacy_accepted_at: new Date().toISOString(),
+      data_processing_accepted: true,
+      accepted_by_user_id: auth.user.id,
+      accepted_by_name: `${parsed.value.firstName} ${parsed.value.lastName}`.trim(),
+    }),
+    serviceSupabase.from("accessibility_needs").insert({
+      registration_id: registrationId,
+      washington_group_answers: parsed.value.accessibilityAnswers,
+      needs_operational_support: parsed.value.needsOperationalSupport,
+      operational_notes: parsed.value.accessibilityNotes,
+    }),
+    serviceSupabase.from("registration_questionnaire_answers").insert({
+      registration_id: registrationId,
+      event_id: groupRow.event_id,
+      questionnaire_version: REGISTRATION_QUESTIONNAIRE_VERSION,
+      answers: buildManualRegistrationQuestionnaireAnswers(parsed.value, {
+        id: groupRow.id,
+        name: groupRow.name,
+      }),
+      visibility_summary: getQuestionnaireVisibilitySummary(),
+    }),
+    serviceSupabase.from("qr_tokens").insert({
+      registration_id: registrationId,
+      token_hash: qrToken.tokenHash,
+      token_encrypted: encryptQrToken(qrToken.token),
+      created_by: auth.user.id,
+    }),
+    serviceSupabase.from("participant_group_assignments").insert({
+      registration_id: registrationId,
+      group_id: groupRow.id,
+      status: "confirmed",
+      source: "capogruppo",
+      confidence: 1,
+      is_current: true,
+      assignment_reason: "group_leader_manual_entry",
+      matcher_version: "group-leader-manual-v1",
+      confirmed_by: auth.user.id,
+      confirmed_at: new Date().toISOString(),
+      leader_decision_by: auth.user.id,
+      leader_decision_at: new Date().toISOString(),
+      leader_notification_read_at: new Date().toISOString(),
+      leader_internal_note: parsed.value.leaderNote,
+      leader_note_updated_by: parsed.value.leaderNote ? auth.user.id : null,
+      leader_note_updated_at: parsed.value.leaderNote
+        ? new Date().toISOString()
+        : null,
+    }),
+    serviceSupabase.from("audit_logs").insert({
+      event_id: groupRow.event_id,
+      actor_user_id: auth.user.id,
+      action: "registration.created_by_group_leader",
+      entity_table: "registrations",
+      entity_id: registrationId,
+      metadata: {
+        group_id: groupRow.id,
+        source: "capogruppo",
+        has_email: Boolean(parsed.value.email),
+        has_phone: Boolean(parsed.value.phone),
+        participant_public_code: participantRow.public_code,
+      },
+    }),
+  ];
+
+  if (attendanceRows.length > 0) {
+    writes.push(serviceSupabase.from("event_attendance_choices").insert(attendanceRows));
+  }
+
+  const results = await Promise.all(writes);
+  const failedWrite = results.find((result) => result.error);
+
+  if (failedWrite?.error) {
+    redirect(
+      `/dashboard/capogruppo?manualError=${encodeURIComponent(
+        failedWrite.error.message
+      )}`
+    );
+  }
+
+  revalidatePath("/dashboard/capogruppo");
+  redirect("/dashboard/capogruppo?manualSaved=1");
+}
+
 export async function createGroupRegistrationLink(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
@@ -985,6 +1217,47 @@ function getEventOpeningUpdate(
     default:
       return null;
   }
+}
+
+function getEventDayValues(startsOn: string | null, endsOn: string | null): string[] {
+  if (!startsOn) {
+    return [];
+  }
+
+  const start = parseDateOnly(startsOn);
+  const end = parseDateOnly(endsOn ?? startsOn);
+
+  if (!start || !end || end.getTime() < start.getTime()) {
+    return [];
+  }
+
+  const days: string[] = [];
+
+  for (
+    let cursor = start;
+    cursor.getTime() <= end.getTime();
+    cursor = new Date(cursor.getTime() + DAY_IN_MS)
+  ) {
+    days.push(cursor.toISOString().slice(0, 10));
+  }
+
+  return days;
+}
+
+function parseDateOnly(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return null;
+  }
+
+  return new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  );
+}
+
+function relatedOne<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value;
 }
 
 async function auditGroupLeaderDecision(
