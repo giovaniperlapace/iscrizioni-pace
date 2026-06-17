@@ -19,6 +19,10 @@ const groupLeaderDashboardMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260616143000_group_leader_dashboard_metadata.sql"
 );
+const groupTreeSeedMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260617100000_seed_group_tree_from_model_app.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -27,6 +31,7 @@ const groupLeaderDashboardMigration = readFileSync(
   groupLeaderDashboardMigrationPath,
   "utf8"
 );
+const groupTreeSeedMigration = readFileSync(groupTreeSeedMigrationPath, "utf8");
 
 const createdTables = Array.from(
   migration.matchAll(/create table public\.([a-z_]+) \(/g),
@@ -105,4 +110,23 @@ test("group leader dashboard migration stores internal decision metadata", () =>
   assert.match(groupLeaderDashboardMigration, /leader_decision_at timestamptz/);
   assert.match(groupLeaderDashboardMigration, /leader_notification_read_at timestamptz/);
   assert.match(groupLeaderDashboardMigration, /participant_group_assignments_leader_review_idx/);
+});
+
+test("model app group tree seed includes Roma areas and primary leaders", () => {
+  assert.match(groupTreeSeedMigration, /add column if not exists is_primary boolean/);
+  assert.match(groupTreeSeedMigration, /group_memberships_one_primary_per_group_idx/);
+  assert.match(groupTreeSeedMigration, /'Monterotondo', 'monterotondo'/);
+  assert.match(groupTreeSeedMigration, /'Tivoli', 'tivoli'/);
+  assert.match(groupTreeSeedMigration, /'Sezze', 'sezze'/);
+  assert.match(groupTreeSeedMigration, /'Universitari', 'giovani', 90, 'Stefano Orlando'/);
+  assert.match(
+    groupTreeSeedMigration,
+    /'Giovani per la pace scuole superiori', 'giovani', 110, 'Laura Guida'/
+  );
+  assert.match(
+    groupTreeSeedMigration,
+    /'Giovani per la pace scuole medie', 'giovani', 120, 'Alessandro Natali'/
+  );
+  assert.match(groupTreeSeedMigration, /'Seminario', 'both'/);
+  assert.match(groupTreeSeedMigration, /'Regola seed catalogo gruppi modello app.'/);
 });

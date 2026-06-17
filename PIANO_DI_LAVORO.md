@@ -968,6 +968,44 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Accettazione: campagne inviate solo da ruoli autorizzati e tracciate.
 - Non fare: invii reali massivi senza conferma esplicita e ambiente verificato.
 
+### Milestone 13.5: rifinitura estetica e manuali operativi
+
+- Scopo: dedicare una milestone separata solo alla cura finale dell'esperienza
+  visiva e alla documentazione d'uso, senza introdurre nuove funzioni di
+  prodotto.
+- Deliverable estetica:
+  - applicazione delle guideline estetiche che verranno fornite;
+  - revisione coerente di layout, spaziature, tipografia, colori, stati
+    interattivi, overlay, tabelle, form e dashboard;
+  - pulizia dei testi visibili dove serve per chiarezza, tono e coerenza;
+  - controllo responsive su mobile e desktop per home, registrazione,
+    dashboard partecipante, manager, capogruppo, admin e accoglienza.
+- Deliverable manuali:
+  - manuale utilizzo manager con flussi principali: monitoraggio iscrizioni,
+    gestione gruppi, modifica iscritti, ruoli consentiti, comunicazioni e casi
+    da controllare;
+  - manuale utilizzo capogruppi con flussi principali: lettura assegnazioni,
+    conferma/rifiuto partecipanti, note interne, inserimento persone senza
+    email e limiti di visibilità;
+  - eventuali screenshot o immagini solo se utili e non contenenti dati
+    personali reali.
+- File/cartelle: `app/*`, componenti UI condivisi, `app/globals.css`,
+  eventuali `components/*`, `docs/manuale-manager.md`,
+  `docs/manuale-capogruppo.md` o nomi equivalenti.
+- Migration: nessuna, salvo piccoli supporti solo se le guideline richiedono
+  preferenze persistenti gia' previste.
+- Verifiche: lint/typecheck/test/build, verifica browser delle viste principali
+  su desktop e mobile, controllo che non siano stati introdotti testi o layout
+  incoerenti con i ruoli.
+- Rischi: fare refactor funzionali mascherati da estetica; introdurre testi
+  manuali non allineati ai permessi reali; usare dati personali reali negli
+  screenshot.
+- Accettazione: il sito appare coerente con le guideline fornite, le viste core
+  sono verificate su mobile/desktop e manager/capogruppi hanno manuali pratici
+  per usare l'app senza assistenza tecnica.
+- Non fare: nuove funzioni prodotto, cambi schema dati, campagne reali,
+  revisione legale dei testi privacy.
+
 ### Milestone 14: gestione programma e scelta momenti
 
 - Scopo: sviluppare le funzioni evento avanzate dopo che le iscrizioni sono

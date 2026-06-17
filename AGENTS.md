@@ -45,6 +45,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   tab condivise fra dashboard admin/manager/accoglienza/capogruppo e area
   personale, logout globale, rimozione della card "La mia iscrizione" dalle
   dashboard operative e gestione admin/capogruppo dal modale admin.
+- Il 2026-06-17 e' stato popolato l'albero gruppi operativo per l'evento test
+  a partire dai paesi/città dell'app modello: nodi paese/città, 26 aree Roma,
+  città italiane aggiunte Monterotondo/Tivoli/Sezze, regole matching e
+  referenti principali iniziali per Universitari, Giovani per la pace scuole
+  superiori e Giovani per la pace scuole medie.
 - Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
@@ -176,6 +181,10 @@ Decisioni RLS iniziali:
 - Accoglienza può operare su QR/check-in in scope evento, ma non leggere contatti o dati sensibili completi.
 - `manager_viewer` legge dati operativi in scope ma non gestisce registrazioni.
 - `admin` e' ruolo globale con `event_id` nullo in `event_user_roles`; gli altri ruoli hanno sempre scope evento.
+- Intenzione prodotto aggiornata: `admin` e `manager` devono avere permessi
+  operativi sostanzialmente identici sui dati dell'evento. Le differenze
+  riservate all'admin sono creare/avviare nuovi eventi e assegnare/promuovere
+  il ruolo `manager` a persone gia' iscritte.
 - Le funzioni helper RLS vivono nello schema `app` e sono `security definer`.
 
 Applicazione su Hetzner/Coolify:
@@ -629,6 +638,9 @@ Deliverable:
 - Migration `supabase/migrations/20260616110000_backfill_group_tree_test_seed.sql`
   aggiunta dopo applicazione remota per riallineare il seed dei nodi test già
   registrato.
+- Migration `supabase/migrations/20260617100000_seed_group_tree_from_model_app.sql`
+  aggiunta per popolare il catalogo operativo da app modello e per distinguere
+  il referente principale in `group_memberships.is_primary`.
 - `groups` estesa con `parent_group_id`, `node_type`, `community_kind`,
   `age_bracket`, `is_assignable`, `is_public_catalog`, `public_order` e
   `matching_notes`.
@@ -654,9 +666,17 @@ Deliverable:
 - Le nuove iscrizioni vengono agganciate a un gruppo scelto, a un gruppo
   probabile calcolato o a un nodo territoriale dei nuovi partecipanti quando
   esiste un candidato coerente.
+- La dashboard manager mostra l'albero gruppi completo, inclusi nodi interni,
+  gruppi senza referente e referente principale quando presente.
 
 Decisioni:
 
+- Il referente principale di un gruppo e' modellato con
+  `group_memberships.is_primary = true` e duplicato come testo leggibile in
+  `groups.primary_leader_name` per il form pubblico. Un gruppo può avere più
+  membership capogruppo, ma al massimo una primaria.
+- Per ora la distinzione `age_bracket = giovani/adulti` e' significativa solo
+  per le aree Roma; le città/gruppi fuori Roma sono seedati come `both`.
 - `community_kind = 'newcomers'` e i nodi territoriali dei nuovi partecipanti
   sono classificazioni interne: non vanno esposte nella UI partecipante o nelle
   email ordinarie.
@@ -883,18 +903,25 @@ Ruoli minimi da supportare:
 
 - `partecipante`: accede alla propria dashboard, modifica la propria iscrizione quando consentito, consulta QR code, programma e scelte.
 - `capogruppo`: utente reale dell'app; vede solo i partecipanti dei propri gruppi o nodi territoriali; conferma appartenenza/esternalita'; inserisce persone senza email; riceve notifiche.
-- `admin`: gestisce eventi, configurazioni, utenti, ruoli e impostazioni globali.
-- `manager`: collegato a uno specifico evento; vede tutti i partecipanti e gruppi dell'evento; può modificare dati operativi secondo permessi.
+- `admin`: ha gli stessi poteri operativi del manager sugli eventi, piu' la
+  possibilita' riservata di creare/avviare nuovi eventi e assegnare il ruolo
+  `manager` a persone gia' iscritte.
+- `manager`: collegato a uno specifico evento; vede tutti i partecipanti e
+  gruppi dell'evento e puo' modificare dati operativi, configurazione evento,
+  gruppi e funzioni organizzative come l'admin, tranne creare nuovi eventi o
+  nominare altri manager.
 - `manager_viewer`: vede ciò che vede il manager ma non modifica iscrizioni.
 - `accoglienza`: scansiona QR code e verifica iscrizioni/check-in vedendo solo dati minimi necessari.
 
 I ruoli devono vivere in profili o membership applicative, non solo nei metadata Supabase Auth. Dove serve, il ruolo deve essere scoperto da uno scope: evento, gruppo, funzione di accoglienza.
 
-La dashboard admin deve diventare la console da cui configurare eventi, utenti,
-ruoli e albero gruppi. L'admin deve poter creare/modificare gruppi e nodi
-paese/città/area/gruppo finale, invitare o promuovere manager, manager_viewer,
+Le dashboard admin e manager devono convergere: entrambe sono console operative
+per configurare l'evento corrente, utenti operativi, ruoli non-manager e albero
+gruppi. Admin e manager devono poter creare/modificare gruppi e nodi
+paese/città/area/gruppo finale, invitare o promuovere manager_viewer,
 accoglienza e referenti, e collegare i capigruppo ai nodi tramite
-`group_memberships`.
+`group_memberships`. Solo l'admin puo' creare/avviare nuovi eventi e assegnare
+o promuovere il ruolo `manager` a persone gia' iscritte.
 
 Decisione stabile su ruoli operativi e partecipazione personale:
 

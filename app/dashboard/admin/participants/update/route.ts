@@ -21,27 +21,30 @@ export async function POST(request: NextRequest) {
   const roleWasSubmitted = formData.has("role");
   const email = normalizeEmail(formData.get("email"));
   const fullName = optionalText(formData.get("fullName"));
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const redirectDashboard = sourceDashboard === "manager" ? "manager" : "admin";
 
   if (!registrationId || !participantId) {
-    return adminRedirect(request, "adminError=invalid-participant");
+    return dashboardRedirect(request, redirectDashboard, "invalid-participant");
   }
 
   if (!groupId && !roleWasSubmitted) {
-    return adminRedirect(request, "adminSaved=1");
+    return dashboardRedirect(request, redirectDashboard, null, true);
   }
 
   if (role && !isAssignableAdminRole(role)) {
-    return adminRedirect(request, "adminError=invalid-role");
+    return dashboardRedirect(request, redirectDashboard, "invalid-role");
   }
   const assignableRole = isAssignableAdminRole(role) ? role : null;
 
   const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(supabase, "admin");
+  const auth = await getCurrentAuthContext(supabase, redirectDashboard);
 
-  if (!auth || auth.dashboardRole !== "admin") {
+  if (!auth) {
     return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
   }
 
+  const actorIsAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
   const serviceSupabase = createSupabaseServiceClient();
   const { data: registration, error: registrationError } = await serviceSupabase
     .from("registrations")
@@ -57,7 +60,25 @@ export async function POST(request: NextRequest) {
     !registrationRow ||
     registrationRow.participant_id !== participantId
   ) {
-    return adminRedirect(request, "adminError=invalid-participant");
+    return dashboardRedirect(request, redirectDashboard, "invalid-participant");
+  }
+
+  const actorCanManageEvent =
+    actorIsAdmin ||
+    auth.eventRoles.some(
+      (eventRole) =>
+        eventRole.role === "manager" && eventRole.eventId === registrationRow.event_id
+    );
+
+  if (!actorCanManageEvent) {
+    return dashboardRedirect(request, redirectDashboard, "forbidden");
+  }
+
+  if (
+    !actorIsAdmin &&
+    (assignableRole === "admin" || assignableRole === "manager")
+  ) {
+    return dashboardRedirect(request, redirectDashboard, "protected-role");
   }
 
   const now = new Date().toISOString();
@@ -70,11 +91,12 @@ export async function POST(request: NextRequest) {
       groupId,
       eventId: registrationRow.event_id,
       actorUserId: auth.user.id,
+      actorSource: actorIsAdmin ? "admin" : "manager",
       now,
     });
 
     if (groupResult) {
-      return adminRedirect(request, `adminError=${encodeURIComponent(groupResult)}`);
+      return dashboardRedirect(request, redirectDashboard, groupResult);
     }
 
     changed.push("group");
@@ -90,10 +112,11 @@ export async function POST(request: NextRequest) {
       email,
       fullName,
       actorUserId: auth.user.id,
+      actorCanAssignManagers: actorIsAdmin,
     });
 
     if (roleResult) {
-      return adminRedirect(request, `adminError=${encodeURIComponent(roleResult)}`);
+      return dashboardRedirect(request, redirectDashboard, roleResult);
     }
 
     changed.push("role");
@@ -102,7 +125,9 @@ export async function POST(request: NextRequest) {
   await serviceSupabase.from("audit_logs").insert({
     event_id: registrationRow.event_id,
     actor_user_id: auth.user.id,
-    action: "admin.participant_operations_updated",
+    action: actorIsAdmin
+      ? "admin.participant_operations_updated"
+      : "manager.participant_operations_updated",
     entity_table: "registrations",
     entity_id: registrationId,
     metadata: {
@@ -112,7 +137,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return adminRedirect(request, "adminSaved=1");
+  return dashboardRedirect(request, redirectDashboard, null, true);
 }
 
 async function updateCurrentGroup({
@@ -121,6 +146,7 @@ async function updateCurrentGroup({
   groupId,
   eventId,
   actorUserId,
+  actorSource,
   now,
 }: {
   supabase: ReturnType<typeof createSupabaseServiceClient>;
@@ -128,6 +154,7 @@ async function updateCurrentGroup({
   groupId: string;
   eventId: string;
   actorUserId: string;
+  actorSource: "admin" | "manager";
   now: string;
 }): Promise<string | null> {
   const { data: group, error: groupError } = await supabase
@@ -157,13 +184,13 @@ async function updateCurrentGroup({
     registration_id: registrationId,
     group_id: groupId,
     status: "confirmed",
-    source: "admin",
+    source: actorSource,
     confidence: 1,
     confirmed_by: actorUserId,
     confirmed_at: now,
     is_current: true,
-    assignment_reason: "admin_updated_group",
-    matcher_version: "admin-dashboard-v1",
+    assignment_reason: `${actorSource}_updated_group`,
+    matcher_version: `${actorSource}-dashboard-v1`,
   };
   const result = existingAssignment
     ? await supabase
@@ -184,6 +211,7 @@ async function updateOperationalRole({
   email,
   fullName,
   actorUserId,
+  actorCanAssignManagers,
 }: {
   supabase: ReturnType<typeof createSupabaseServiceClient>;
   participantId: string;
@@ -193,6 +221,7 @@ async function updateOperationalRole({
   email: string | null;
   fullName: string | null;
   actorUserId: string;
+  actorCanAssignManagers: boolean;
 }): Promise<string | null> {
   const { data: participant, error: participantError } = await supabase
     .from("participants")
@@ -226,26 +255,32 @@ async function updateOperationalRole({
     }
   }
 
+  const eventRolesToDelete = actorCanAssignManagers
+    ? ["manager", "manager_viewer", "accoglienza"]
+    : ["manager_viewer", "accoglienza"];
+
   const { error: deleteEventRoleError } = await supabase
     .from("event_user_roles")
     .delete()
     .eq("event_id", eventId)
     .eq("user_id", targetUserId)
-    .in("role", ["manager", "manager_viewer", "accoglienza"]);
+    .in("role", eventRolesToDelete);
 
   if (deleteEventRoleError) {
     return deleteEventRoleError.message;
   }
 
-  const { error: deleteAdminRoleError } = await supabase
-    .from("event_user_roles")
-    .delete()
-    .is("event_id", null)
-    .eq("user_id", targetUserId)
-    .eq("role", "admin");
+  if (actorCanAssignManagers) {
+    const { error: deleteAdminRoleError } = await supabase
+      .from("event_user_roles")
+      .delete()
+      .is("event_id", null)
+      .eq("user_id", targetUserId)
+      .eq("role", "admin");
 
-  if (deleteAdminRoleError) {
-    return deleteAdminRoleError.message;
+    if (deleteAdminRoleError) {
+      return deleteAdminRoleError.message;
+    }
   }
 
   const { data: eventGroups, error: groupsError } = await supabase
@@ -292,6 +327,12 @@ async function updateOperationalRole({
       });
 
     return membershipError?.message ?? null;
+  }
+
+  if (role === "admin" || role === "manager") {
+    if (!actorCanAssignManagers) {
+      return "protected-role";
+    }
   }
 
   if (role === "admin") {
@@ -380,10 +421,23 @@ async function ensureAuthUserForAdminRole(
   return existing.id;
 }
 
-function adminRedirect(request: NextRequest, query: string): NextResponse {
-  return NextResponse.redirect(new URL(`/dashboard/admin?${query}`, request.url), {
-    status: 303,
-  });
+function dashboardRedirect(
+  request: NextRequest,
+  dashboard: "admin" | "manager",
+  error: string | null,
+  saved = false
+): NextResponse {
+  const prefix = dashboard === "manager" ? "manager" : "admin";
+  const query = saved
+    ? `${prefix}Saved=1`
+    : `${prefix}Error=${encodeURIComponent(error ?? "invalid")}`;
+
+  return NextResponse.redirect(
+    new URL(`/dashboard/${dashboard}?${query}`, request.url),
+    {
+      status: 303,
+    }
+  );
 }
 
 function optionalText(value: FormDataEntryValue | null): string | null {

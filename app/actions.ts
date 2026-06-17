@@ -375,16 +375,29 @@ export async function updateParticipantDashboard(formData: FormData) {
 export async function updateEventOpeningState(formData: FormData) {
   const eventId = optionalText(formData.get("eventId"));
   const intent = optionalText(formData.get("intent"));
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const dashboardPath =
+    sourceDashboard === "manager" ? "/dashboard/manager" : "/dashboard/admin";
 
   if (!eventId || !intent) {
-    redirect("/dashboard/admin?openingError=invalid");
+    redirect(`${dashboardPath}?openingError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(supabase, "admin");
+  const auth = await getCurrentAuthContext(supabase);
 
-  if (!auth || auth.dashboardRole !== "admin") {
+  if (!auth) {
     redirect("/login");
+  }
+
+  const canManageEventOpening =
+    auth.eventRoles.some((role) => role.role === "admin") ||
+    auth.eventRoles.some(
+      (role) => role.role === "manager" && role.eventId === eventId
+    );
+
+  if (!canManageEventOpening) {
+    redirect(`${dashboardPath}?openingError=forbidden`);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -395,14 +408,14 @@ export async function updateEventOpeningState(formData: FormData) {
     .maybeSingle();
 
   if (eventError || !event) {
-    redirect("/dashboard/admin?openingError=not-found");
+    redirect(`${dashboardPath}?openingError=not-found`);
   }
 
   const now = new Date().toISOString();
   const updates = getEventOpeningUpdate(intent, event, now);
 
   if (!updates) {
-    redirect("/dashboard/admin?openingError=invalid");
+    redirect(`${dashboardPath}?openingError=invalid`);
   }
 
   const { error: updateError } = await serviceSupabase
@@ -412,7 +425,7 @@ export async function updateEventOpeningState(formData: FormData) {
 
   if (updateError) {
     redirect(
-      `/dashboard/admin?openingError=${encodeURIComponent(updateError.message)}`
+      `${dashboardPath}?openingError=${encodeURIComponent(updateError.message)}`
     );
   }
 
@@ -431,7 +444,8 @@ export async function updateEventOpeningState(formData: FormData) {
   });
 
   revalidatePath("/dashboard/admin");
-  redirect("/dashboard/admin?openingSaved=1");
+  revalidatePath("/dashboard/manager");
+  redirect(`${dashboardPath}?openingSaved=1`);
 }
 
 export async function updateGroupLeaderAssignment(formData: FormData) {

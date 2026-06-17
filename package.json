@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate:remote": "scripts/apply-remote-migration.sh",
     "bootstrap:test-users": "node scripts/bootstrap-test-users.mjs",
+    "bootstrap:group-leaders": "node --env-file=.env.local scripts/bootstrap-group-leaders.mjs",
     "email:verify": "node --env-file=.env.local scripts/verify-email-config.mjs",
     "opening:verify": "node --env-file=.env.local scripts/verify-opening-readiness.mjs",
     "opening:verify:production": "node --env-file=.env.production.local scripts/verify-opening-readiness.mjs --production"
