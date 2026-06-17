@@ -8,8 +8,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 
 - Nome progetto/repository: `iscrizioni-pace`.
 - Repository GitHub: `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Cartella locale:
-  `/Users/stefanolaptop/Documents/codex_new/iscrizioni-pace`.
+- Cartelle locali note per le postazioni di sviluppo:
+  - Stefano: `/Users/stefanolaptop/Documents/codex_new/iscrizioni-pace`.
+  - Altre postazioni: verificare sempre con `pwd`; non assumere che il path
+    locale sia uguale.
+- La fonte condivisa da riallineare prima di ogni milestone e' sempre
+  `origin/main` su GitHub.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
