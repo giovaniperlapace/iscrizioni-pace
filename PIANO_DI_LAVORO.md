@@ -4,54 +4,60 @@
 
 Questo documento e' il piano operativo iniziale per costruire una web app multi-evento per iscrizioni, gruppi, comunicazioni, QR code e check-in. Il lavoro successivo andrà svolto a milestone piccole, una per prompt, con diff brevi e verificabili.
 
-Stato locale rilevato in questo task:
+Stato locale aggiornato al 2026-06-17:
 
-- Cartella corrente: `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
-- La cartella e' ora una working copy Git su branch `main`.
+- Cartella corrente: `/Users/stefanolaptop/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
+- La cartella e' una working copy Git su branch `main`.
 - Remote GitHub configurato: `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Milestone 1-6.3 sono state implementate e il codice ordinario lavora su
   `main`.
-- Una parte della Milestone 12 e' stata anticipata il 2026-06-15: generazione
-  QR reale, invio nella email di conferma e visualizzazione in dashboard. Resta
-  da completare scanner/verifica accoglienza.
+- La generazione QR reale e' stata anticipata il 2026-06-15: generazione QR,
+  invio nella email di conferma e visualizzazione in dashboard sono presenti.
+  Resta da completare scanner/verifica accoglienza.
 - Milestone 7 e' completata: preparazione apertura pubblica, guardrail
   env/Vercel e caso utenti con doppio ruolo operativo + iscrizione personale.
-- Milestone 8 e' completata localmente: apertura controllata e monitoraggio
+- Milestone 8 e' completata: apertura controllata e monitoraggio
   iniziale dalla dashboard admin, con log operativo e audit degli errori email.
-- Milestone 9 e' completata localmente: dashboard capogruppo minima per
+- Milestone 9 e' completata: dashboard capogruppo minima per
   verificare assegnazioni probabili, confermare/rifiutare appartenenze,
   aggiungere note interne e far risalire i rifiuti al nodo padre o alla coda
   manager.
-- Milestone 9.1 e' completata localmente: link riservati per gruppi nascosti ma
+- Milestone 9.1 e' completata: link riservati per gruppi nascosti ma
   iscrivibili, con label pubblica separata dal nome operativo, generazione e
   revoca da dashboard manager/capogruppo, token opachi e audit.
-- Milestone 10 e' completata localmente: dashboard capogruppo con tabella
+- Milestone 10 e' completata: dashboard capogruppo con tabella
   partecipanti del gruppo, inserimento manuale in overlay, link riservati in
   overlay e form pubblico da link gruppo con valori gruppo impliciti.
-- Milestone 11 e' completata localmente il 2026-06-17: dashboard
+- Milestone 11 e' completata il 2026-06-17: dashboard
   manager/admin essenziali, gestione gruppi in overlay, link riservati per
   gruppo da azione di riga, statistiche ridondanti rimosse e inventario
   statistiche disponibile in `docs/statistiche-disponibili.md`.
-- Il 2026-06-17 le milestone di revisione UX/UI e rifinitura estetica sono
-  state anticipate: la vecchia Milestone 13.4 diventa Milestone 11.4 e la
-  vecchia Milestone 13.5 diventa Milestone 11.5. La scelta nasce dal fatto che
-  l'app ha gia' funzioni sufficienti per andare verso l'apertura pubblica; ora
-  serve verificare esperienza, navigazione, chiarezza grafica e flussi
-  operativi prima di aggiungere moduli avanzati.
+- Il 2026-06-17 e' stato corretto e deployato il bug dei magic link custom:
+  i link costruiti con `token_hash` usano `type=email`, con fallback
+  `type=magiclink` nel callback per link già inviati e non consumati.
+- Il 2026-06-17 le milestone non ancora eseguite sono state rinumerate dalla
+  prossima in poi: la revisione UX/UI diventa Milestone 12, il multilingua
+  minimo diventa Milestone 13 e la rifinitura estetica/manuali diventa
+  Milestone 14. La scelta nasce dal fatto che l'app ha gia' funzioni
+  sufficienti per andare verso l'apertura pubblica; ora serve verificare
+  esperienza, navigazione, chiarezza grafica e flussi operativi, poi
+  localizzare i testi stabili, poi rifinire UI e manuali prima di aggiungere
+  moduli avanzati.
 - Il 2026-06-17 la dashboard partecipante e' stata rifinita per mostrare il QR
   personale direttamente nella prima schermata, con download immagine, spazio
   futuro per wallet, indicatore stato compatto e collegamento ai ruoli
   operativi tramite tab.
+- Milestone 12 e' avviata: prima tranche UX consolidata nel commit `3d4d00d`
+  con messaggi form meno prematuri, consenso accessibilità condizionale,
+  login non tecnico, domande accessibilità ridotte e note accessibilità senza
+  placeholder. Restano da rivedere le dashboard operative una sezione alla
+  volta.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
-- Priorita' aggiornata il 2026-06-16: l'obiettivo principale ora e' aprire le
-  iscrizioni pubbliche il prima possibile con un flusso affidabile, verificabile
-  e gestibile operativamente. Le funzioni avanzate di gestione manager,
-  programma evento, scanner check-in e settori/sedute vengono dopo il go-live
-  delle iscrizioni.
-- Priorita' aggiornata il 2026-06-17: prima di proseguire con multilingua,
-  campagne email, programma, check-in e settori, fare revisione guidata UX/UI
-  e rifinitura estetica/manuali sulle funzioni gia' presenti.
+- Priorita' aggiornata il 2026-06-17: prima di proseguire con campagne email,
+  programma, check-in e settori, fare revisione guidata UX/UI sulle funzioni
+  gia' presenti, poi multilingua minima e testi localizzati, poi rifinitura
+  estetica/manuali su flussi e testi ormai stabili.
 
 Metodo da seguire per ogni milestone:
 
@@ -149,13 +155,17 @@ Assunzioni ragionevoli:
 - Il check-in deve poter funzionare su evento generale e su momenti/sotto-eventi.
 - La prima implementazione può essere ottimizzata per un evento attivo alla volta nella UI pubblica, mantenendo però il database multi-evento.
 
-Blocchi potenzialmente bloccanti prima dell'implementazione:
+Blocchi potenzialmente bloccanti prima dell'apertura pubblica reale:
 
-- Inizializzare o clonare correttamente la repository Git locale da `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Definire come accedere al Supabase self-hosted: URL, anon key, service role key o token CLI/management, project ref se disponibile.
-- Definire credenziali o provider email da usare in sviluppo/staging, evitando account personali non tracciati.
-- Decidere dominio/callback URL per magic link in locale, staging e produzione.
-- Confermare requisiti legali minimi su privacy, consenso, dati di disabilità e retention.
+- Confermare testi definitivi di privacy, consenso, email di conferma e magic
+  link con chi ha responsabilità organizzativa/legale.
+- Confermare evento pilota reale, date, città, luoghi, gruppi e referenti che
+  devono sostituire o affiancare i dati test.
+- Verificare consegna reale SMTP/Gmail con credenziali production valide.
+- Decidere se il primo go-live pubblico può restare solo italiano oppure se
+  serve completare la Milestone 13 prima dell'apertura larga.
+- Verificare con utenti reali i ruoli admin, manager, manager_viewer,
+  capogruppo, accoglienza e partecipante prima di un'apertura ampia.
 
 Domande che possono restare aperte fino a milestone successive:
 
@@ -183,7 +193,7 @@ Informazioni da chiedere al committente:
 
 La app modello e' accessibile in:
 
-`/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/modello_app`
+`/Users/stefanolaptop/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/modello_app`
 
 Struttura rilevata:
 
@@ -342,7 +352,9 @@ Gruppi, referenti e persone non ancora membri Sant'Egidio:
 
 Multilingua:
 
-- Italiano e inglese obbligatori al primo rilascio.
+- Italiano e inglese restano l'obiettivo minimo; il primo go-live controllato
+  può restare solo italiano se approvato esplicitamente, ma i testi devono
+  essere pronti a una localizzazione pulita.
 - Namespace per area: public, registration, participantDashboard, groupLeader, manager, admin, checkIn, email.
 - Persistenza lingua in cookie o profilo utente.
 - Template email localizzati, con fallback controllato.
@@ -576,7 +588,11 @@ Dati sensibili e minimizzazione:
   - `GOTRUE_URI_ALLOW_LIST` contiene `https://iscrizioni-pace.vercel.app/**`;
   - un magic link generato con Supabase admin usa action host pubblico Supabase
     e redirect a `https://iscrizioni-pace.vercel.app/auth/callback`;
-  - il link applicativo costruito con `token_hash` usa lo stesso dominio.
+  - il link applicativo costruito con `token_hash` usa lo stesso dominio;
+  - il 2026-06-17 e' stato verificato che i link custom devono usare
+    `type=email` con `token_hash`; `type=magiclink` causava errore OTP/link
+    scaduto nel callback. Il callback mantiene fallback verso `email` per link
+    già inviati e non consumati.
 - Note:
   - le variabili secret Vercel restano sensitive/encrypted e possono apparire
     vuote quando lette da CLI/API;
@@ -599,7 +615,7 @@ Dati sensibili e minimizzazione:
 
 ### Milestone 6.1: affinamento dashboard partecipante
 
-- Stato: completata localmente il 2026-06-15, non ancora committata/pushata.
+- Stato: completata e consolidata su `main`.
 - Scopo: rivedere la struttura della dashboard partecipante dopo il primo
   utilizzo, separando meglio consultazione rapida, iscrizione modificabile e QR.
 - Deliverable:
@@ -609,9 +625,12 @@ Dati sensibili e minimizzazione:
     iniziale, perché e' informazione soprattutto interna;
   - schermata rapida ridotta ad azioni principali e area panel;
   - due pulsanti centrati, simmetrici e con icone stilizzate per aprire QR code
-    e iscrizione modificabile;
-  - QR code e iscrizione non sono sezioni sempre visibili: si aprono in overlay
-    URL-based con `?overlay=qr` e `?overlay=iscrizione`;
+    e iscrizione modificabile nella prima iterazione;
+  - dopo la revisione UX del 2026-06-17, il QR personale deve essere visibile
+    subito nella prima schermata; l'overlay resta solo come compatibilita'
+    URL/possibile vista estesa;
+  - l'iscrizione modificabile resta raggiungibile in overlay URL-based con
+    `?overlay=iscrizione`;
   - overlay centrati nel viewport, con chiusura tramite simbolo in alto a
     destra e scroll interno quando necessario;
   - area panel mantenuta come contenuto principale della dashboard rapida, in
@@ -623,17 +642,16 @@ Dati sensibili e minimizzazione:
   overlay centrati, pulsanti simmetrici e righe header senza overflow;
   `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 - Rischi: nascondere dati che il partecipante deve poter verificare facilmente.
-- Accettazione: la prima schermata e' piu' leggibile, QR e dati modificabili
-  sono raggiungibili via overlay, i panel restano visibili, i dati modificabili
-  restano chiari e controllati.
+- Accettazione: la prima schermata e' leggibile, il QR e' immediatamente
+  disponibile, i panel restano visibili, i dati modificabili restano chiari e
+  controllati.
 - Non fare: introdurre una nuova dashboard capogruppo o manager.
 
 ### Milestone 6.2: anticipo QR reale in conferma e dashboard
 
-- Stato: completata localmente il 2026-06-15; migration remota applicata;
-  commit/push ancora da fare su richiesta.
-- Scopo: anticipare la parte di Milestone 12 che genera e consegna il QR code
-  personale al partecipante, senza implementare ancora scanner/check-in.
+- Stato: completata, migration remota applicata e consolidata su `main`.
+- Scopo: anticipare la generazione e consegna del QR code personale al
+  partecipante, senza implementare ancora scanner/check-in.
 - Deliverable:
   - dipendenza `qrcode` per generare QR reali;
   - migration `20260615180000_store_retrievable_qr_tokens.sql` con
@@ -659,7 +677,7 @@ Dati sensibili e minimizzazione:
 
 ### Milestone 6.3: albero gruppi, matching referente e nuovi partecipanti
 
-- Stato: completata localmente e applicata al Supabase remoto il 2026-06-16.
+- Stato: completata, applicata al Supabase remoto e consolidata su `main`.
 - Scopo: progettare e implementare la logica che collega ogni iscrizione a un
   referente, a un gruppo probabile o a un nodo territoriale dei nuovi
   partecipanti, prima di costruire la dashboard capogruppo completa.
@@ -747,8 +765,8 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - poi aprire le iscrizioni con strumenti minimi di controllo e supporto;
 - appena le dashboard operative minime sono sufficienti, fermarsi a verificare
   UX, navigazione, UI e grafica prima dell'apertura pubblica larga;
-- solo dopo sviluppare multilingua, programma, campagne, scanner accoglienza e
-  settori.
+- poi completare il multilingua minimo sui flussi stabili;
+- solo dopo sviluppare programma, campagne, scanner accoglienza e settori.
 
 ### Milestone 7: preparazione apertura pubblica iscrizioni
 
@@ -805,7 +823,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 - Scopo: aprire le iscrizioni a un gruppo ristretto o al pubblico con strumenti
   minimi per osservare e correggere rapidamente problemi reali.
-- Stato: completata localmente il 2026-06-16.
+- Stato: completata e consolidata su `main`.
 - Deliverable completati:
   - procedura per apertura/chiusura iscrizioni tramite stato evento e date in
     `docs/opening-monitoring-log.md`;
@@ -818,9 +836,10 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - helper testabili in `lib/registrations/opening-monitoring.ts`;
   - rientro role-aware dalla dashboard partecipante alle aree operative
     disponibili, a partire dall'area admin.
-- Ancora fuori scope:
+- Fuori scope al momento della Milestone 8:
   - gestione manuale completa di duplicati o iscrizioni errate;
-  - dashboard manager/admin completa con tabelle e modifica dati;
+  - dashboard manager/admin completa con tabelle e modifica dati, poi coperta
+    dalla Milestone 11;
   - smoke production finale con credenziali reali prima dell'apertura.
 - File/cartelle: `app/dashboard/admin/*`, `lib/registrations/*`,
   `lib/email/*`, `docs/*`, `app/dashboard/partecipante/*`, eventuali script
@@ -841,13 +860,14 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 ### Milestone 9: dashboard capogruppo minima
 
+- Stato: completata e consolidata su `main`.
 - Scopo: dare ai referenti gli strumenti essenziali per controllare le
   assegnazioni prodotte dalla Milestone 6.3 dopo l'apertura pubblica.
 - Deliverable:
   - elenco partecipanti dei gruppi assegnati al capogruppo, con filtro per
     confermati, probabili e nuovi da verificare;
-  - accesso evidente a "La mia iscrizione" per il referente stesso, con avviso
-    se non ha ancora completato la propria registrazione personale all'evento;
+  - accesso evidente all'area personale del referente stesso tramite la
+    navigazione a tab `Iscrizione e QR personale`;
   - azioni minime per confermare appartenenza, rifiutare perché non
     riconosciuto e aggiungere nota operativa interna;
   - risalita automatica al nodo padre dopo rifiuto: area -> città -> paese ->
@@ -871,6 +891,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 ### Milestone 9.1: link riservati per gruppi nascosti
 
+- Stato: completata e consolidata su `main`.
 - Scopo: consentire iscrizioni a gruppi delicati o ambigui senza mostrarli nel
   menu pubblico dei gruppi, tramite link generati da manager o dal capogruppo
   del relativo scope.
@@ -917,7 +938,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 ### Milestone 10: inserimento manuale partecipanti da capogruppo
 
-**Stato:** completata localmente il 2026-06-17.
+**Stato:** completata e consolidata su `main`.
 
 - Scopo: gestire persone senza email o fragili tramite referente dopo che il
   flusso pubblico principale e' aperto.
@@ -943,9 +964,8 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   link diretto per inserimento manuale, audit creazione, scope capogruppo,
   `npm run lint`, `npm run typecheck`, `npm test`, browser integrato su
   localhost.
-- Rischi residui: duplicati senza email da gestire operativamente, pulizia
-  placeholder di test, responsabilità consenso da formalizzare nei testi
-  definitivi.
+- Rischi residui: duplicati senza email da gestire operativamente e
+  responsabilità consenso da formalizzare nei testi definitivi.
 - Accettazione: capogruppo può inserire persone e generare link di gruppo senza
   rompere il flusso partecipante e senza esporre sezioni operative permanenti
   nella dashboard.
@@ -958,7 +978,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Scopo: fornire una console operativa sufficiente per seguire iscrizioni reali
   prima delle funzioni evento avanzate, includendo la gestione amministrativa
   di ruoli, utenti e struttura gruppi.
-- Stato: completata localmente il 2026-06-17.
+- Stato: completata e consolidata su `main`.
 - Deliverable completati:
   - navigazione condivisa a tab fra `Dashboard admin`, `Dashboard manager`,
     `Dashboard accoglienza`, `Dashboard capogruppo` e
@@ -1008,8 +1028,10 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Non fare: gestione programma completa, campagne email, check-in, export CSV
   definitivo.
 
-### Milestone 11.4: revisione guidata UX, navigazione e dati dashboard
+### Milestone 12: revisione guidata UX, navigazione e dati dashboard
 
+- Stato: avviata il 2026-06-17. Prima tranche completata e pushata su `main`
+  con commit `3d4d00d`.
 - Scopo: prima di aggiungere funzioni avanzate, rivedere insieme tutta
   l'esperienza dell'app in localhost, in prima persona, usando dati e permessi
   ormai coerenti con le funzioni operative essenziali. L'obiettivo e'
@@ -1062,6 +1084,22 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     messaggi di conferma, tono verso partecipanti fragili e gruppi delicati;
   - preparazione manuali: estrarre dai flussi approvati la struttura dei manuali
     manager, capogruppo, accoglienza e admin.
+- Prima tranche completata:
+  - home pubblica, registrazione, conferma/magic link e dashboard partecipante
+    sono state riviste in localhost;
+  - nel form registrazione i messaggi rossi compaiono solo dopo interazione o
+    submit tentato;
+  - il consenso per dati sensibili di accessibilità compare ed e' richiesto
+    solo se l'utente risponde "Sì" ai bisogni di accessibilità;
+  - le domande accessibilità sono state ridotte temporaneamente a: sentire,
+    camminare/salire gradini, sedia a rotelle o altro ausilio per la mobilità;
+  - il campo note accessibilità non mostra placeholder/suggerimenti;
+  - il login non autenticato non mostra più il path tecnico della dashboard.
+- Prossime sezioni consigliate:
+  - completare review dashboard partecipante con utente test non personale se
+    disponibile o da creare esplicitamente;
+  - proseguire con dashboard capogruppo, manager, admin e accoglienza,
+    mantenendo patch piccole e approvate una sezione alla volta.
 - Deliverable:
   - checklist di revisione UX/funzionale con stato per ogni sezione;
   - patch mirate su navigazione, layout informativo, testi, ordinamento dati,
@@ -1095,18 +1133,59 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   animazioni, campagne email reali o funzioni nuove non necessarie alla
   coerenza dei flussi.
 
-### Milestone 11.5: rifinitura estetica e manuali operativi
+### Milestone 13: multilingua minima e testi localizzati
+
+- Scopo: portare i flussi pubblici e i testi transazionali almeno a
+  italiano/inglese dopo che UX, navigazione e microcopy core sono stati
+  stabilizzati nella Milestone 12, senza bloccare l'apertura se il primo
+  go-live e' deliberatamente solo italiano.
+- Deliverable:
+  - strategia i18n leggera coerente con l'app esistente;
+  - traduzioni IT/EN per home, registrazione, conferma, login, dashboard
+    partecipante ed email transazionali;
+  - fallback controllato per testi mancanti;
+  - preferenza lingua salvata o rispettata dove gia' presente;
+  - inventario dei testi che restano solo italiani per scelta deliberata,
+    soprattutto privacy, consenso e note operative da revisionare.
+- File/cartelle: `lib/i18n/*`, `app/*`, `lib/email/*`, template email.
+- Dipendenze:
+  - richiede il completamento della Milestone 12, perché non conviene
+    tradurre testi e percorsi ancora instabili;
+  - deve precedere la Milestone 14, così la rifinitura estetica lavora gia'
+    su stringhe realistiche in entrambe le lingue e può intercettare problemi
+    di lunghezza, responsive e tono;
+  - non deve dipendere da campagne email, programma, scanner accoglienza o
+    settori, che restano milestone successive.
+- Migration: solo se serve salvare o normalizzare la preferenza lingua; in
+  assenza di necessità chiara, usare cookie/profilo esistente o fallback
+  applicativo per evitare una dipendenza schema non indispensabile.
+- Verifiche: flusso pubblico e dashboard partecipante in IT/EN, email
+  localizzate, controllo mobile/desktop sulle stringhe piu' lunghe, nessun
+  testo legale tradotto automaticamente senza revisione.
+- Rischi: testi hardcoded, traduzioni legali non approvate, refactor di routing
+  troppo invasivo prima dell'apertura, regressioni sui magic link/callback.
+- Accettazione: i flussi core funzionano in italiano e inglese con testi
+  revisionabili, fallback chiari e nessuna nuova dipendenza bloccante verso le
+  milestone successive.
+- Non fare: localizzare dashboard manager avanzate se non ancora stabili,
+  tradurre testi privacy/consenso senza revisione esplicita, introdurre un
+  framework i18n pesante se l'app non lo richiede.
+
+### Milestone 14: rifinitura estetica e manuali operativi
 
 - Scopo: dedicare una milestone separata solo alla cura finale dell'esperienza
   visiva e alla documentazione d'uso, partendo dai flussi approvati nella
-  Milestone 11.4 e senza introdurre nuove funzioni di prodotto.
+  Milestone 12 e dai testi localizzati minimi della Milestone 13, senza
+  introdurre nuove funzioni di prodotto.
 - Deliverable estetica:
   - applicazione delle guideline estetiche che verranno fornite;
   - revisione coerente di layout, spaziature, tipografia, colori, stati
     interattivi, overlay, tabelle, form e dashboard;
-  - pulizia dei testi visibili dove serve per chiarezza, tono e coerenza;
+  - pulizia dei testi visibili dove serve per chiarezza, tono e coerenza,
+    mantenendo allineate le versioni italiano/inglese gia' introdotte;
   - controllo responsive su mobile e desktop per home, registrazione,
-    dashboard partecipante, manager, capogruppo, admin e accoglienza.
+    dashboard partecipante, manager, capogruppo, admin e accoglienza, con
+    attenzione alle stringhe piu' lunghe della lingua inglese.
 - Deliverable manuali:
   - manuale utilizzo manager con flussi principali: monitoraggio iscrizioni,
     gestione gruppi, modifica iscritti, ruoli consentiti, comunicazioni e casi
@@ -1119,40 +1198,27 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - File/cartelle: `app/*`, componenti UI condivisi, `app/globals.css`,
   eventuali `components/*`, `docs/manuale-manager.md`,
   `docs/manuale-capogruppo.md` o nomi equivalenti.
+- Dipendenze:
+  - richiede la Milestone 12 per avere flussi e permessi approvati;
+  - segue la Milestone 13 per evitare di rifinire layout e manuali su testi che
+    cambieranno subito dopo;
+  - resta indipendente da programma, campagne, check-in avanzato e settori.
 - Migration: nessuna, salvo piccoli supporti solo se le guideline richiedono
   preferenze persistenti gia' previste.
 - Verifiche: lint/typecheck/test/build, verifica browser delle viste principali
-  su desktop e mobile, controllo che non siano stati introdotti testi o layout
-  incoerenti con i ruoli.
+  su desktop e mobile in italiano e inglese dove disponibili, controllo che
+  non siano stati introdotti testi o layout incoerenti con i ruoli.
 - Rischi: fare refactor funzionali mascherati da estetica; introdurre testi
   manuali non allineati ai permessi reali; usare dati personali reali negli
-  screenshot.
+  screenshot; modificare traduzioni gia' revisionate senza tracciarlo.
 - Accettazione: il sito appare coerente con le guideline fornite, le viste core
-  sono verificate su mobile/desktop e manager/capogruppi hanno manuali pratici
-  per usare l'app senza assistenza tecnica.
+  sono verificate su mobile/desktop anche con testi localizzati e
+  manager/capogruppi hanno manuali pratici per usare l'app senza assistenza
+  tecnica.
 - Non fare: nuove funzioni prodotto, cambi schema dati, campagne reali,
   revisione legale dei testi privacy.
 
-### Milestone 12: multilingua minima e testi localizzati
-
-- Scopo: portare i flussi pubblici e le email almeno a italiano/inglese, senza
-  bloccare l'apertura se il primo go-live e' deliberatamente solo italiano.
-- Deliverable:
-  - strategia i18n leggera coerente con l'app esistente;
-  - traduzioni IT/EN per home, registrazione, conferma, login, dashboard
-    partecipante ed email transazionali;
-  - fallback controllato per testi mancanti;
-  - preferenza lingua salvata o rispettata dove gia' presente.
-- File/cartelle: `lib/i18n/*`, `app/*`, `lib/email/*`, template email.
-- Migration: solo se serve salvare o normalizzare la preferenza lingua.
-- Verifiche: flusso pubblico e dashboard partecipante in IT/EN, email
-  localizzate, nessun testo legale tradotto automaticamente senza revisione.
-- Rischi: testi hardcoded e traduzioni legali non approvate.
-- Accettazione: i flussi core funzionano in italiano e inglese con testi
-  revisionabili.
-- Non fare: localizzare dashboard manager avanzate se non ancora stabili.
-
-### Milestone 13: email personalizzate e template operativi
+### Milestone 15: email personalizzate e template operativi
 
 - Scopo: passare dalle sole email transazionali a comunicazioni controllate per
   gruppi o segmenti, dopo l'apertura pubblica.
@@ -1170,7 +1236,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Accettazione: campagne inviate solo da ruoli autorizzati e tracciate.
 - Non fare: invii reali massivi senza conferma esplicita e ambiente verificato.
 
-### Milestone 14: gestione programma e scelta momenti
+### Milestone 16: gestione programma e scelta momenti
 
 - Scopo: sviluppare le funzioni evento avanzate dopo che le iscrizioni sono
   aperte e stabili.
@@ -1188,9 +1254,9 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Accettazione: programma multi-giorno gestito senza hardcode.
 - Non fare: check-in completo.
 
-### Milestone 15: QR code, verifica e check-in accoglienza
+### Milestone 17: QR code, verifica e check-in accoglienza
 
-- Scopo: completare la parte rimandata della vecchia Milestone 12, usando il QR
+- Scopo: completare scanner, verifica token e check-in accoglienza usando il QR
   reale gia' anticipato in Milestone 6.2.
 - Deliverable:
   - scanner accoglienza;
@@ -1209,9 +1275,9 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   necessarie.
 - Non fare: accesso manager completo nella UI accoglienza.
 
-### Milestone 16: settori/sedute e indicazioni operative
+### Milestone 18: settori/sedute e indicazioni operative
 
-- Scopo: completare la vecchia Milestone 13 solo quando luoghi e flussi fisici
+- Scopo: aggiungere settori/sedute solo quando luoghi e flussi fisici
   dell'evento sono abbastanza chiari.
 - Deliverable:
   - gestione settori;
@@ -1227,7 +1293,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Accettazione: partecipante scansionato riceve settore/percorso se assegnato.
 - Non fare: algoritmo complesso se non richiesto.
 
-### Milestone 17: privacy, retention e audit avanzato
+### Milestone 19: privacy, retention e audit avanzato
 
 - Scopo: completare gli aspetti legali e di sicurezza dati oltre il minimo gia'
   necessario per l'apertura pubblica.
@@ -1245,7 +1311,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Accettazione: policy documentata e strumenti controllati.
 - Non fare: cancellare dati reali senza approvazione esplicita.
 
-### Milestone 18: hardening finale, QA e runbook
+### Milestone 20: hardening finale, QA e runbook
 
 - Scopo: consolidare l'app prima dell'uso intensivo vicino all'evento, dopo che
   i flussi principali e avanzati sono stati costruiti.
@@ -1266,12 +1332,17 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 
 ## 8. Strategia Supabase/Coolify
 
-Nelle milestone successive, usare Supabase CLI solo quando la milestone lo prevede esplicitamente. Prima di operare sul database reale servono URL, chiavi/tokens e conferma dell'ambiente target.
+Per questo progetto il Supabase reale e' self-hosted su Hetzner/Coolify. Usare
+la Supabase CLI solo quando la milestone lo prevede esplicitamente; per le
+migration remote seguire la procedura stabile documentata in `AGENTS.md` e
+`docs/supabase-workflow.md`, usando `scripts/apply-remote-migration.sh`.
 
 Workflow migration:
 
 - Creare migration versionate nel repository.
-- Applicare prima a locale/staging quando possibile.
+- Applicare prima a locale/staging quando possibile; sul Supabase remoto usare
+  lo script operativo gia' presente, non `supabase db push`, finché resta il
+  problema TLS della CLI verso il Postgres self-hosted.
 - Applicare a produzione solo dopo review del diff SQL.
 - Dopo ogni migration, verificare schema, indici, RLS e tipi generati.
 - Evitare modifiche manuali non replicate in migration.
@@ -1301,10 +1372,10 @@ Se mancano accessi, chiedere esplicitamente:
 
 ## 9. Strategia GitHub e review
 
-Prima milestone tecnica da fare solo dopo aver sistemato Git locale:
+Stato Git attuale:
 
-- Verificare o clonare la repository corretta.
-- Impostare remote `origin` su `https://github.com/giovaniperlapace/iscrizioni-pace`.
+- Repository locale gia' configurata su branch ordinario `main`.
+- Remote `origin` gia' impostato su `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Lavorare su `main`, salvo richiesta esplicita di branch dedicato.
 - Usare commit piccoli e tematici solo su richiesta.
 - Preparare diff locali per review umana; fare push diretto su `main` quando richiesto.
@@ -1328,8 +1399,9 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Applica e verifica la migration dei link riservati gruppi sul Supabase remoto,
-> poi implementa la Milestone 10: inserimento manuale/delegato di partecipanti
-> da parte del capogruppo per persone senza email o fragili, riusando lo scope
-> dell'albero gruppi, auditando l'origine e senza inviare magic link diretto al
-> partecipante. Prima di chiudere esegui lint, typecheck, test e build.
+> Continua la Milestone 12 dalla prossima sezione non ancora approvata:
+> dashboard partecipante con utente test non personale, poi dashboard
+> capogruppo, manager, admin e accoglienza. Prima controlla `git status` e
+> avvia `npm run dev`; per ogni area annota problemi concreti di chiarezza,
+> navigazione, permessi, stati vuoti/errori e dati sensibili; applica solo
+> patch mirate approvate, poi verifica con lint, typecheck, test e build.

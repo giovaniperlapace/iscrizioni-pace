@@ -6,10 +6,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 
 ## Stato del progetto
 
-- Nome progetto/repository prevista: `iscrizioni-pace`.
-- Repository GitHub prevista: `https://github.com/giovaniperlapace/iscrizioni-pace`.
+- Nome progetto/repository: `iscrizioni-pace`.
+- Repository GitHub: `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Cartella locale:
-  `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
+  `/Users/stefanolaptop/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/codex/iscrizioni-pace`.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
@@ -19,8 +19,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Milestone 5.5 ha aggiunto questionario iscrizione versionato, seed evento
   test e bootstrap utenti test per admin/manager/partecipante.
 - Milestone 6 ha completato una prima dashboard partecipante self-service con
-  riepilogo iscrizione, QR placeholder, area panel/gruppo, modifica controllata
-  di contatti, lingua, presenze e supporto, piu' audit delle modifiche.
+  riepilogo iscrizione, area panel/gruppo, modifica controllata di contatti,
+  lingua, presenze e supporto, piu' audit delle modifiche. Il QR era inizialmente
+  placeholder ed e' stato poi sostituito dal QR reale anticipato il 2026-06-15.
 - Milestone 6.1 ha affinato la dashboard partecipante: gruppo come informazione
   secondaria sotto il nome, schermata rapida focalizzata sui panel e due
   pulsanti con icone per aprire QR code o iscrizione modificabile in overlay.
@@ -31,8 +32,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   dalla conferma iscrizione.
 - Milestone 7 ha iniziato la preparazione all'apertura pubblica: checklist
   operativa, guardrail Vercel/env, comando `opening:verify`, riconoscimento del
-  ruolo capogruppo da `group_memberships` e accesso "La mia iscrizione" dalle
-  dashboard operative minime.
+  ruolo capogruppo da `group_memberships` e primo accesso all'area personale
+  dalle dashboard operative. Dal 2026-06-16 questo accesso e' diventato la tab
+  condivisa `Iscrizione e QR personale`.
 - Milestone 8 ha aggiunto apertura controllata e monitoraggio iniziale dalla
   dashboard admin: comandi auditati per aprire/pausare/nascondere evento,
   conteggi minimi iscrizioni/anomalie, logging audit degli errori email e log
@@ -63,13 +65,20 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Le statistiche generiche sopra la tabella iscritti admin/manager sono state
   rimosse per ridurre rumore visivo. Inventario delle statistiche disponibili:
   `docs/statistiche-disponibili.md`.
-- Il 2026-06-17 la roadmap e' stata riordinata: la revisione guidata UX,
-  navigazione e dati dashboard, prima prevista come Milestone 13.4, e' stata
-  anticipata a Milestone 11.4; la rifinitura estetica e i manuali operativi,
-  prima previsti come Milestone 13.5, sono stati anticipati a Milestone 11.5.
-  Motivo: le funzioni essenziali sono sufficienti per preparare l'apertura
-  pubblica, quindi prima di aggiungere moduli avanzati bisogna verificare se UX,
-  UI, grafica, navigazione e flussi operativi sono chiari e non frustranti.
+- Il 2026-06-17 la roadmap futura e' stata rinumerata dalla prossima milestone
+  in poi: Milestone 12 e' revisione guidata UX, navigazione e dati dashboard;
+  Milestone 13 e' multilingua minima e testi localizzati; Milestone 14 e'
+  rifinitura estetica e manuali operativi. Motivo: le funzioni essenziali sono
+  sufficienti per preparare l'apertura pubblica, quindi prima di aggiungere
+  moduli avanzati bisogna verificare UX/flussi, localizzare testi stabili e
+  solo dopo rifinire UI, grafica e manuali.
+- Milestone 12 e' stata avviata il 2026-06-17 con una prima revisione UX su
+  home, registrazione, conferma/magic link e dashboard partecipante. Prime
+  patch consolidate nel commit `3d4d00d`: messaggi rossi del form solo dopo
+  interazione o submit tentato, consenso dati sensibili di accessibilità
+  mostrato/richiesto solo quando l'utente segnala bisogni di accessibilità,
+  login non autenticato senza path tecnico, riduzione temporanea delle domande
+  accessibilità e rimozione dei placeholder dai campi note accessibilità.
 - Il 2026-06-17 la dashboard partecipante e' stata rifinita dopo revisione UX:
   il QR personale deve essere visibile subito nella prima schermata, non dietro
   un pulsante; sotto al QR compare `Il tuo codice: <codice>`; le azioni QR
@@ -85,7 +94,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   città italiane aggiunte Monterotondo/Tivoli/Sezze, regole matching e
   referenti principali iniziali per Universitari, Giovani per la pace scuole
   superiori e Giovani per la pace scuole medie.
-- Il 2026-06-15 e' stata anticipata una parte della Milestone 12: le nuove
+- Il 2026-06-15 e' stata anticipata la generazione QR reale: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
 - Il 2026-06-15 e' stata verificata e corretta la configurazione Vercel
@@ -274,13 +283,16 @@ Deliverable:
 - Helper ruoli e redirect in `lib/auth/roles.ts` e `lib/auth/session.ts`.
 - Protezione dashboard in `proxy.ts`.
 - Pagina `app/login/page.tsx` per errori/redirect di sessione.
-- Dashboard placeholder protette in `app/dashboard/*`.
+- Prime dashboard protette in `app/dashboard/*`; i placeholder iniziali sono
+  stati progressivamente sostituiti dalle dashboard operative e dalla
+  navigazione condivisa a tab.
 - Test di funzioni pure in `tests/auth-roles.test.mts`.
 
 Decisioni:
 
 - In Next.js 16.2.9 usare `proxy.ts` per la protezione route; `middleware.ts` e' deprecato.
-- `manager_viewer` condivide per ora la route `/dashboard/manager`; la UI applichera' permessi read-only nelle milestone dashboard.
+- `manager_viewer` condivide la route `/dashboard/manager`; la UI deve restare
+  read-only per questo ruolo e nascondere/disabilitare le azioni modificative.
 - `partecipante` non e' nell'enum database `app_role`: e' una destinazione applicativa di default per utenti autenticati/proprietari di iscrizioni.
 - Il callback supporta `code`, `token_hash` e `token` con tipi OTP Supabase noti.
 - Al callback viene fatto `upsert` del profilo applicativo in `profiles` usando la sessione utente e RLS ordinaria, non service role.
@@ -294,7 +306,9 @@ Decisioni:
 Note operative:
 
 - I callback URL Supabase devono includere `/auth/callback` sugli ambienti autorizzati, per esempio `http://localhost:3000/auth/callback` in locale.
-- La login page e' provvisoria: Milestone 5 realizzera' home email-prima, preflight email esistente, magic link e form iscrizione.
+- La login page e' ora una pagina di errore/redirect sessione; il flusso
+  email-prima, preflight email esistente, magic link e form iscrizione e'
+  implementato nella home e nelle route di registrazione.
 - `npm test` importa helper TypeScript reali dai test `.mts`; `tsconfig.json` abilita `allowImportingTsExtensions` per questo uso con `noEmit`.
 
 ## Milestone 5 - flusso pubblico email-prima e iscrizione iniziale
@@ -343,8 +357,8 @@ Decisioni:
 Note operative:
 
 - `.env.local` contiene gli alias email necessari per lo sviluppo locale.
-- Il repository non risulta ancora collegato a Vercel tramite `.vercel/project.json`;
-  quando verrà collegato, sincronizzare almeno `EMAIL_FROM`, `EMAIL_USER`,
+- Il repository e' collegato a Vercel tramite `.vercel/project.json`. Se il
+  link viene perso o ricreato, sincronizzare almeno `EMAIL_FROM`, `EMAIL_USER`,
   `EMAIL_PASSWORD`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `APP_URL` e
   `NEXT_PUBLIC_APP_URL`.
 - Supabase non necessita della password Gmail per questo flusso finché i
@@ -396,6 +410,12 @@ Decisioni:
 - Nel testo visibile all'utente non va citato il Washington Group o la
   classificazione tecnica delle aree funzionali; la documentazione può restare
   tecnica, ma la UI deve usare formulazioni semplici e inclusive.
+- Dopo la prima revisione UX della Milestone 12, il form pubblico mostra per
+  ora solo tre opzioni accessibilità: sentire, camminare/salire gradini, uso di
+  sedia a rotelle o altro ausilio per la mobilità. Sono state rimosse
+  temporaneamente le opzioni vedere, cura di sé, ricordare/concentrarsi,
+  comunicare e bisogno di assistenza durante l'evento. Il campo note pratiche
+  non deve avere placeholder/suggerimenti nel box.
 - L'evento test versionato e' `assisi-2026-test`; i dati creati dalla migration
   sono distinguibili dai dati reali.
 - `participants.public_code` e' un identificativo secondario semplice per email
@@ -421,7 +441,7 @@ Lo script richiede `SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` e
 
 ## Vercel production e magic link
 
-Configurazione verificata il 2026-06-15:
+Configurazione verificata e aggiornata il 2026-06-17:
 
 - Progetto Vercel: `iscrizioni-pace`.
 - Project ID: `prj_4n4oKj3S4sg5RUg5H6AsJLBAK7w6`.
@@ -431,7 +451,8 @@ Configurazione verificata il 2026-06-15:
 - Alias production aggiuntivi:
   `https://iscrizioni-pace-giovaniperlapaces-projects.vercel.app` e
   `https://iscrizioni-pace-giovaniperlapace-giovaniperlapaces-projects.vercel.app`.
-- Ultimo deployment production verificato: `dpl_88vmZqKD4owNWxPgnzJnoueYYmsW`.
+- Ultimo deployment production verificato: `dpl_31mPosisDYWVULXdLTcz5satRWKD`,
+  generato dal commit `f2baa4a` su `main`.
 
 Variabili Vercel production richieste:
 
@@ -481,6 +502,12 @@ Supabase Auth e redirect:
   token: l'action host era `iscrizioni-supabase.stefano-orlando.it`, il
   `redirect_to` puntava a `https://iscrizioni-pace.vercel.app/auth/callback`
   e il redirect applicativo era `/dashboard/partecipante`.
+- Il 2026-06-17 e' stato corretto un bug reale di login: i link applicativi
+  costruiti da `data.properties.hashed_token` devono usare
+  `token_hash=<hash>&type=email`. Prima usavano `type=magiclink` e Supabase
+  restituiva errore OTP/link scaduto. La produzione e' stata verificata con
+  redirect a `/dashboard/partecipante` per `type=email` e fallback
+  `type=magiclink` su token non ancora consumati.
 - L'invio reale delle email dipende da una password app Gmail valida nelle
   variabili SMTP; il dominio del link e' stato verificato separatamente
   dall'arrivo effettivo in inbox.
@@ -501,9 +528,10 @@ Guardrail aggiunti:
   controllano env richieste: Supabase public/private, SMTP,
   `QR_TOKEN_ENCRYPTION_SECRET` e, in modalità production, URL app stabili. Non
   stampano valori segreti.
-- Le dashboard operative minime mostrano il riquadro "La mia iscrizione":
-  se una registrazione personale e' collegata apre `/dashboard/partecipante`,
-  altrimenti rimanda alla home per completarla con la stessa email.
+- Le dashboard operative usano tab condivise fra area admin, manager,
+  accoglienza, capogruppo e `Iscrizione e QR personale`. La vecchia card
+  "La mia iscrizione" e' stata rimossa dalle dashboard operative perché la
+  stessa funzione e' raggiungibile dalla tab personale.
 - `app/dashboard/capogruppo/page.tsx` ora valida la sessione lato server e usa
   `group_memberships` come fonte reale dei nodi/gruppi assegnati.
 
@@ -624,7 +652,9 @@ Deliverable:
   `/dashboard/partecipante?overlay=iscrizione`.
 - I pulsanti hanno icone stilizzate: QR code per l'accesso e pagina/form per
   iscrizione e modifica dati.
-- L'overlay QR mostra placeholder QR, stato QR e codice partecipante.
+- L'overlay QR mostrava inizialmente un placeholder; dopo l'anticipo QR reale
+  mostra il QR quando `token_encrypted` e' disponibile, con stato QR e codice
+  partecipante.
 - L'overlay iscrizione mostra riepilogo e modifiche controllate gia' previste da
   Milestone 6.
 
@@ -753,7 +783,7 @@ Verifiche previste:
 
 ## Milestone 9 - dashboard capogruppo minima
 
-Dashboard capogruppo minima completata localmente il 2026-06-16.
+Dashboard capogruppo minima completata e consolidata su `main`.
 
 Deliverable:
 
@@ -935,14 +965,15 @@ Verifiche eseguite:
 - `npm run typecheck`.
 - `npm test`.
 - Browser integrato su localhost: login capogruppo reale, link riservato
-  generato e aperto, form pubblico con `groupLink`, inserimento manuale
-  placeholder, tabella partecipanti e overlay link/manuale verificati.
+  generato e aperto, form pubblico con `groupLink`, inserimento manuale,
+  tabella partecipanti e overlay link/manuale verificati.
 
 ## Rifinitura dashboard operative - 2026-06-16
 
-Rifinitura locale realizzata dopo review nel browser integrato. Le modifiche
-sono successive al commit `f7244fe` e, al momento dell'aggiornamento di questo
-file, restano locali finche' non viene richiesto commit/push.
+Rifinitura realizzata dopo review nel browser integrato e consolidata su
+`main`. Il diario della sessione e' in
+`docs/diario-2026-06-16-dashboard-layout.md`; il commit di documentazione e
+riallineamento e' `f2baa4a`.
 
 Deliverable:
 
@@ -988,12 +1019,11 @@ Decisioni:
 
 Note operative:
 
-- Durante il test l'utente `nicolamastrorilli33@gmail.com` ha perso
-  temporaneamente il ruolo admin; e' stato ripristinato manualmente via
-  Supabase service role. Dopo il ripristino risultavano `admin` globale e
-  `manager` sull'evento test.
-- Il diario locale della giornata e' fuori repository:
-  `/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/Sviluppo-app/Diario di Lavoro/2026-06-16 - iscrizioni pace.md`.
+- Durante il test un utente operativo reale ha perso temporaneamente il ruolo
+  admin per effetto della nuova gestione ruolo; e' stato ripristinato
+  manualmente via Supabase service role. Dopo il ripristino risultavano
+  `admin` globale e `manager` sull'evento test. Per modifiche future al select
+  ruolo, verificare sempre anche l'utente admin che sta eseguendo la modifica.
 
 Verifiche eseguite durante la sessione:
 
@@ -1005,7 +1035,7 @@ Verifiche eseguite durante la sessione:
 
 ## Anticipo QR code reale
 
-Funzionalità anticipata il 2026-06-15 rispetto alla Milestone 12.
+Funzionalità anticipata il 2026-06-15 rispetto alla roadmap originaria.
 
 Deliverable:
 
@@ -1035,8 +1065,8 @@ Decisioni:
   codice partecipante.
 - `QR_TOKEN_ENCRYPTION_SECRET` e' il segreto consigliato per cifrare/decifrare
   token recuperabili. Deve restare stabile tra deploy.
-- Lo scanner accoglienza e la verifica token restano da completare nella
-  Milestone 12.
+- Lo scanner accoglienza e la verifica token restano da completare in una
+  milestone successiva dedicata a QR/check-in.
 
 Verifiche eseguite:
 
@@ -1142,7 +1172,9 @@ Il form iniziale deve raccogliere almeno:
 - Nome, cognome, data di nascita.
 - Paese da lista preimpostata con opzione altro.
 - Città filtrata per paese con opzione altro.
-- Disabilità o bisogni di accessibilità con domande basate sul Washington Group.
+- Disabilità o bisogni di accessibilità con lista ridotta e temporanea:
+  sentire, camminare/salire gradini, sedia a rotelle o altro ausilio per la
+  mobilita'.
 - Partecipazione precedente a eventi/iniziative Sant'Egidio.
 - Partecipazione con gruppo Sant'Egidio o come singolo.
 - Se gruppo: selezione da elenco gruppi cercabile per nome gruppo e capogruppo.
@@ -1356,7 +1388,7 @@ Non creare migration senza una milestone dedicata e un diff SQL revisionabile.
 
 App modello locale:
 
-`/Users/giovaniperlapace/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/modello_app`
+`/Users/stefanolaptop/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/modello_app`
 
 Usarla come riferimento, non come sorgente da copiare automaticamente.
 
