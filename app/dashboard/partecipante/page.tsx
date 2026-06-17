@@ -490,7 +490,6 @@ export default async function PartecipanteDashboardPage({
                               selectedDays={[...selectedDays]}
                             />
                             <PreserveMoments momentChoices={momentChoices} />
-                            <PreserveAccessibility accessibility={accessibility} />
                             <Field label="Telefono">
                               <input
                                 name="phone"
@@ -525,7 +524,6 @@ export default async function PartecipanteDashboardPage({
                               selectedDays={[...selectedDays]}
                             />
                             <PreserveMoments momentChoices={momentChoices} />
-                            <PreserveAccessibility accessibility={accessibility} />
                             <Field label="Lingua preferita">
                               <select
                                 name="preferredLocale"
@@ -570,7 +568,6 @@ export default async function PartecipanteDashboardPage({
                             value={participant.preferred_locale ?? "it"}
                           />
                           <PreserveMoments momentChoices={momentChoices} />
-                          <PreserveAccessibility accessibility={accessibility} />
                           <fieldset
                             disabled={!editable}
                             className="grid gap-3 disabled:opacity-70"
@@ -633,6 +630,11 @@ export default async function PartecipanteDashboardPage({
                             selectedDays={[...selectedDays]}
                           />
                           <PreserveMoments momentChoices={momentChoices} />
+                          <input
+                            type="hidden"
+                            name="updatesAccessibility"
+                            value="on"
+                          />
                           <fieldset
                             disabled={!editable}
                             className="grid gap-3 disabled:opacity-70"
@@ -873,46 +875,6 @@ function PreserveMoments({
           value={choice.choice}
         />
       ))}
-    </>
-  );
-}
-
-function PreserveAccessibility({
-  accessibility,
-}: {
-  accessibility: AccessibilityRow | null;
-}) {
-  const hasAccessibilityRequest =
-    Boolean(accessibility?.needs_operational_support) ||
-    Boolean(accessibility?.operational_notes) ||
-    Object.values(accessibility?.washington_group_answers ?? {}).some(Boolean);
-
-  return (
-    <>
-      {hasAccessibilityRequest ? (
-        <input type="hidden" name="hasAccessibilityNeeds" value="on" />
-      ) : null}
-      {Object.entries(accessibility?.washington_group_answers ?? {}).map(
-        ([key, value]) =>
-          value ? (
-            <input
-              key={key}
-              type="hidden"
-              name={`accessibility_${key}`}
-              value="on"
-            />
-          ) : null
-      )}
-      {accessibility?.needs_operational_support ? (
-        <input type="hidden" name="needsOperationalSupport" value="on" />
-      ) : null}
-      {accessibility?.operational_notes ? (
-        <input
-          type="hidden"
-          name="accessibilityNotes"
-          value={accessibility.operational_notes}
-        />
-      ) : null}
     </>
   );
 }

@@ -20,6 +20,7 @@ import {
   canParticipantEditRegistration,
   diffParticipantDashboardUpdate,
   parseParticipantDashboardUpdate,
+  preserveAccessibilityUnlessEdited,
 } from "../lib/registrations/participant-dashboard.ts";
 import { buildAppMagicLink } from "../lib/registrations/magic-link.ts";
 import {
@@ -435,6 +436,48 @@ test("parseParticipantDashboardUpdate clears hidden accessibility details when s
     assert.equal(parsed.value.needsOperationalSupport, false);
     assert.equal(parsed.value.accessibilityNotes, null);
   }
+});
+
+test("preserveAccessibilityUnlessEdited keeps sensitive details out of unrelated dashboard forms", () => {
+  const formData = new FormData();
+  formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
+  formData.set("phone", "+3906000000");
+  formData.append("availabilityDays", "2026-09-04");
+
+  const parsed = parseParticipantDashboardUpdate(formData);
+
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) {
+    return;
+  }
+
+  const preserved = preserveAccessibilityUnlessEdited(
+    parsed.value,
+    {
+      accessibilityAnswers: { walkingOrSteps: true },
+      needsOperationalSupport: true,
+      accessibilityNotes: "Preferisce ingresso senza scale.",
+    },
+    false
+  );
+
+  assert.deepEqual(preserved.accessibilityAnswers, { walkingOrSteps: true });
+  assert.equal(preserved.needsOperationalSupport, true);
+  assert.equal(preserved.accessibilityNotes, "Preferisce ingresso senza scale.");
+
+  const edited = preserveAccessibilityUnlessEdited(
+    parsed.value,
+    {
+      accessibilityAnswers: { walkingOrSteps: true },
+      needsOperationalSupport: true,
+      accessibilityNotes: "Preferisce ingresso senza scale.",
+    },
+    true
+  );
+
+  assert.deepEqual(edited.accessibilityAnswers, {});
+  assert.equal(edited.needsOperationalSupport, false);
+  assert.equal(edited.accessibilityNotes, null);
 });
 
 test("canParticipantEditRegistration closes cancelled and late registrations", () => {

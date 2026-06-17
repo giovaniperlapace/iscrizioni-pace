@@ -79,6 +79,14 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   mostrato/richiesto solo quando l'utente segnala bisogni di accessibilità,
   login non autenticato senza path tecnico, riduzione temporanea delle domande
   accessibilità e rimozione dei placeholder dai campi note accessibilità.
+- Nella seconda tranche della Milestone 12 sono state riviste in localhost la
+  dashboard partecipante con utente test non personale, dashboard capogruppo,
+  manager, admin e accoglienza. Patch approvate: i dati accessibilità della
+  dashboard partecipante non vengono più duplicati in input hidden nei form non
+  dedicati e sono preservati lato server; i controlli `Gestisci` della tabella
+  capogruppo hanno etichette accessibili contestuali; il proxy reindirizza gli
+  accessi a dashboard non consentite verso la prima dashboard consentita invece
+  che sempre verso l'area partecipante.
 - Il 2026-06-17 la dashboard partecipante e' stata rifinita dopo revisione UX:
   il QR personale deve essere visibile subito nella prima schermata, non dietro
   un pulsante; sotto al QR compare `Il tuo codice: <codice>`; le azioni QR

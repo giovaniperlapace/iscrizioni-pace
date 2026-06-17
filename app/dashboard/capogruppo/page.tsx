@@ -983,6 +983,9 @@ function AssignmentsTable({ assignments }: { assignments: AssignmentView[] }) {
 
 function AssignmentRowView({ assignment }: { assignment: AssignmentView }) {
   const canDecide = assignment.isCurrent && assignment.status === "probable";
+  const manageLabel = `Gestisci ${assignment.participantName}${
+    assignment.participantCode ? ` ${assignment.participantCode}` : ""
+  }`;
 
   return (
     <tr className="border-b border-[#edf1e8] align-top last:border-b-0">
@@ -1026,7 +1029,10 @@ function AssignmentRowView({ assignment }: { assignment: AssignmentView }) {
       </td>
       <td className="py-4 pr-4">
         <details className="group">
-          <summary className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]">
+          <summary
+            aria-label={manageLabel}
+            className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-md border border-[#b8c5ad] px-3 text-sm font-semibold text-[#2f5e46] transition hover:bg-[#eef2e7]"
+          >
             Gestisci
           </summary>
           <form

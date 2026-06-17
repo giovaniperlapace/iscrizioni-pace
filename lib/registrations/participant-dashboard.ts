@@ -144,6 +144,27 @@ export function diffParticipantDashboardUpdate(
   return changed;
 }
 
+export function preserveAccessibilityUnlessEdited(
+  input: ParticipantDashboardUpdate,
+  previous: {
+    accessibilityAnswers: Record<string, boolean>;
+    needsOperationalSupport: boolean | null;
+    accessibilityNotes: string | null;
+  },
+  updatesAccessibility: boolean
+): ParticipantDashboardUpdate {
+  if (updatesAccessibility) {
+    return input;
+  }
+
+  return {
+    ...input,
+    accessibilityAnswers: previous.accessibilityAnswers,
+    needsOperationalSupport: Boolean(previous.needsOperationalSupport),
+    accessibilityNotes: previous.accessibilityNotes,
+  };
+}
+
 function parseAvailabilityDays(formData: FormData): string[] {
   return uniqueStrings(
     formData

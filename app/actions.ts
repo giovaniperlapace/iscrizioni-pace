@@ -21,6 +21,7 @@ import {
   canParticipantEditRegistration,
   diffParticipantDashboardUpdate,
   parseParticipantDashboardUpdate,
+  preserveAccessibilityUnlessEdited,
 } from "@/lib/registrations/participant-dashboard";
 import {
   buildManualRegistrationQuestionnaireAnswers,
@@ -161,6 +162,7 @@ export async function submitPublicRegistration(formData: FormData) {
 
 export async function updateParticipantDashboard(formData: FormData) {
   const parsed = parseParticipantDashboardUpdate(formData);
+  const updatesAccessibility = formData.get("updatesAccessibility") === "on";
 
   if (!parsed.ok) {
     redirect(
@@ -268,6 +270,15 @@ export async function updateParticipantDashboard(formData: FormData) {
         operational_notes: string | null;
       }
     | null;
+  const dashboardUpdate = preserveAccessibilityUnlessEdited(
+    parsed.value,
+    {
+      accessibilityAnswers: previousAccessibility?.washington_group_answers ?? {},
+      needsOperationalSupport: previousAccessibility?.needs_operational_support ?? false,
+      accessibilityNotes: previousAccessibility?.operational_notes ?? null,
+    },
+    updatesAccessibility
+  );
   const changedFields = diffParticipantDashboardUpdate(
     {
       phone: primaryContact?.phone ?? null,
@@ -279,22 +290,22 @@ export async function updateParticipantDashboard(formData: FormData) {
       needsOperationalSupport: previousAccessibility?.needs_operational_support ?? false,
       accessibilityNotes: previousAccessibility?.operational_notes ?? null,
     },
-    parsed.value
+    dashboardUpdate
   );
 
   const writes = [
     supabase
       .from("participants")
-      .update({ preferred_locale: parsed.value.preferredLocale })
+      .update({ preferred_locale: dashboardUpdate.preferredLocale })
       .eq("id", registrationRow.participant_id),
     supabase
       .from("accessibility_needs")
       .upsert(
         {
           registration_id: registrationRow.id,
-          washington_group_answers: parsed.value.accessibilityAnswers,
-          needs_operational_support: parsed.value.needsOperationalSupport,
-          operational_notes: parsed.value.accessibilityNotes,
+          washington_group_answers: dashboardUpdate.accessibilityAnswers,
+          needs_operational_support: dashboardUpdate.needsOperationalSupport,
+          operational_notes: dashboardUpdate.accessibilityNotes,
         },
         { onConflict: "registration_id" }
       ),
@@ -312,14 +323,14 @@ export async function updateParticipantDashboard(formData: FormData) {
     writes.push(
       supabase
         .from("participant_contacts")
-        .update({ phone: parsed.value.phone })
+        .update({ phone: dashboardUpdate.phone })
         .eq("id", primaryContact.id)
     );
-  } else if (parsed.value.phone) {
+  } else if (dashboardUpdate.phone) {
     writes.push(
       supabase.from("participant_contacts").insert({
         participant_id: registrationRow.participant_id,
-        phone: parsed.value.phone,
+        phone: dashboardUpdate.phone,
         is_primary: true,
       })
     );
@@ -336,14 +347,14 @@ export async function updateParticipantDashboard(formData: FormData) {
     );
   }
 
-  const attendanceRows = parsed.value.availabilityUnknown
+  const attendanceRows = dashboardUpdate.availabilityUnknown
     ? [{ registration_id: registrationRow.id, choice: "unknown" }]
-    : parsed.value.availabilityDays.map((day) => ({
+    : dashboardUpdate.availabilityDays.map((day) => ({
         registration_id: registrationRow.id,
         day,
         choice: "yes",
       }));
-  const momentRows = Object.entries(parsed.value.momentAttendanceChoices).map(
+  const momentRows = Object.entries(dashboardUpdate.momentAttendanceChoices).map(
     ([momentId, choice]) => ({
       registration_id: registrationRow.id,
       moment_id: momentId,

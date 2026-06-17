@@ -100,9 +100,12 @@ export async function proxy(request: NextRequest) {
   const requiredRole = dashboardRoleFromPath(request.nextUrl.pathname);
 
   if (requiredRole && !isRoleAllowedForDashboard(requiredRole, availableRoles)) {
-    return NextResponse.redirect(
-      new URL(ROLE_ROUTES.partecipante, request.url)
-    );
+    const role =
+      requestedRole && isRoleAllowedForDashboard(requestedRole, availableRoles)
+        ? requestedRole
+        : pickFirstAllowedDashboard(availableRoles);
+
+    return NextResponse.redirect(new URL(ROLE_ROUTES[role], request.url));
   }
 
   return response;

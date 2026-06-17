@@ -52,6 +52,12 @@ Stato locale aggiornato al 2026-06-17:
   login non tecnico, domande accessibilità ridotte e note accessibilità senza
   placeholder. Restano da rivedere le dashboard operative una sezione alla
   volta.
+- Seconda tranche Milestone 12 completata in localhost su dashboard
+  partecipante con utente test non personale, capogruppo, manager, admin e
+  accoglienza. Patch approvate e verificate: minimizzazione DOM dei dati
+  accessibilità nella dashboard partecipante, etichette accessibili contestuali
+  sui controlli `Gestisci` capogruppo e redirect role-aware quando un utente
+  tenta una dashboard non consentita.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://iscrizioni-pace.vercel.app`.
 - Priorita' aggiornata il 2026-06-17: prima di proseguire con campagne email,
@@ -1095,11 +1101,26 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     camminare/salire gradini, sedia a rotelle o altro ausilio per la mobilità;
   - il campo note accessibilità non mostra placeholder/suggerimenti;
   - il login non autenticato non mostra più il path tecnico della dashboard.
+- Seconda tranche completata:
+  - dashboard partecipante con utente test non personale, dashboard
+    capogruppo, manager, admin e accoglienza sono state riviste in localhost;
+  - i form non dedicati della dashboard partecipante non duplicano più note e
+    risposte accessibilità in input hidden; la server action preserva i dati
+    esistenti quando si modifica telefono, lingua o presenza;
+  - nella dashboard capogruppo i controlli `Gestisci` delle righe hanno
+    etichette accessibili contestuali con nome/codice partecipante;
+  - il proxy reindirizza gli accessi a dashboard non consentite verso la prima
+    dashboard realmente disponibile per l'utente, evitando stati vuoti
+    fuorvianti nell'area personale;
+  - accoglienza resta una dashboard minima/placeholder: permessi e
+    minimizzazione dati sono corretti, ma scanner QR, stati di esito e storico
+    check-in restano nella milestone dedicata a QR/check-in.
 - Prossime sezioni consigliate:
-  - completare review dashboard partecipante con utente test non personale se
-    disponibile o da creare esplicitamente;
-  - proseguire con dashboard capogruppo, manager, admin e accoglienza,
-    mantenendo patch piccole e approvate una sezione alla volta.
+  - chiudere le eventuali micro-patch residue approvate su manager/admin, per
+    esempio comandi evento ridondanti quando l'evento e' gia' aperto e
+    selezione gruppo molto lunga nelle modali iscritto;
+  - decidere se anticipare una prima UI accoglienza minima o rimandarla
+    integralmente alla milestone QR/check-in.
 - Deliverable:
   - checklist di revisione UX/funzionale con stato per ogni sezione;
   - patch mirate su navigazione, layout informativo, testi, ordinamento dati,
