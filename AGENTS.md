@@ -180,6 +180,13 @@ Prima di ogni feature verificare:
 - `git status --short`.
 - `git branch --show-current`.
 - `git remote -v`, quando serve verificare GitHub.
+- Quando l'utente chiede di scrivere codice, prima di modificare file eseguire
+  sempre `git fetch origin` e verificare l'allineamento con
+  `git status --short --branch` o comando equivalente. Se il branch locale e'
+  indietro rispetto a `origin/main`, riallineare prima con GitHub oppure
+  avvisare esplicitamente l'utente se ci sono modifiche locali/conflitti da
+  gestire. Non iniziare nuove modifiche codice su una base non allineata senza
+  averlo segnalato.
 
 ## Milestone 0 - discovery
 

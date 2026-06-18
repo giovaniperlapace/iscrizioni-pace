@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Network, ShieldCheck, Users, X } from "lucide-react";
+import { BarChart3, CalendarDays, Network, ShieldCheck, Users, X } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import {
@@ -45,6 +45,11 @@ import {
   type OperationsDashboardFilters,
   type OperationsDashboardSummary,
 } from "@/lib/registrations/operations-dashboard";
+import {
+  buildEventStatisticsSnapshot,
+  type EventStatisticsSnapshot,
+  type ParticipantBreakdownLevel,
+} from "@/lib/registrations/event-statistics";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -76,6 +81,7 @@ type ManagerPageProps = {
     q?: string;
     nav?: string;
     section?: string;
+    stat?: string;
     status?: string;
   }>;
 };
@@ -232,6 +238,8 @@ type ManagerParticipantRow = {
   authUserId: string | null;
   name: string;
   publicCode: string | null;
+  country: string | null;
+  city: string | null;
   place: string;
   email: string | null;
   phone: string | null;
@@ -273,7 +281,13 @@ type EventSnapshot = {
   canManage: boolean;
 };
 
-type ManagerSection = "evento" | "iscritti" | "ruoli" | "gruppi";
+type AttendanceChoiceRow = {
+  registration_id: string;
+  day: string | null;
+  choice: string | null;
+};
+
+type ManagerSection = "evento" | "dashboard" | "iscritti" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -299,6 +313,11 @@ export default async function ManagerDashboardPage({
     getOpeningSnapshots(serviceSupabase, scope),
     getManagerOperationsSnapshot(serviceSupabase, scope, filters),
   ]);
+  const statistics = await getManagerStatisticsSnapshot(
+    serviceSupabase,
+    scope,
+    managerOperations.groupTree
+  );
   const selectedParticipant =
     managerOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
@@ -348,6 +367,15 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "evento" ? (
               <ManagerEventSection snapshots={snapshots} />
+            ) : null}
+
+            {activeSection === "dashboard" ? (
+              <StatisticsSection
+                statistics={statistics}
+                basePath="/dashboard/manager"
+                navMode={navMode}
+                activeLevel={resolveParticipantBreakdownLevel(params.stat)}
+              />
             ) : null}
 
             {activeSection === "iscritti" ? (
@@ -436,6 +464,13 @@ function ManagerSidebar({
       help: "Apertura e monitoraggio",
     },
     {
+      key: "dashboard",
+      href: `/dashboard/manager?section=dashboard&nav=${navMode}`,
+      Icon: BarChart3,
+      label: "Dashboard",
+      help: "Statistiche evento",
+    },
+    {
       key: "iscritti",
       href: `/dashboard/manager?section=iscritti&nav=${navMode}`,
       Icon: Users,
@@ -519,6 +554,20 @@ function ManagerSidebar({
 
 function managerPath(section: ManagerSection, navMode: ManagerNavMode): string {
   return `/dashboard/manager?section=${section}&nav=${navMode}`;
+}
+
+function statisticsPath(
+  basePath: "/dashboard/admin" | "/dashboard/manager",
+  navMode: ManagerNavMode,
+  level: ParticipantBreakdownLevel
+): string {
+  const params = new URLSearchParams({
+    section: "dashboard",
+    nav: navMode,
+    stat: level,
+  });
+
+  return `${basePath}?${params.toString()}`;
 }
 
 async function buildOperationalUserRows(
@@ -642,6 +691,152 @@ function ManagerEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
   );
 }
 
+function StatisticsSection({
+  statistics,
+  basePath,
+  navMode,
+  activeLevel,
+}: {
+  statistics: EventStatisticsSnapshot;
+  basePath: "/dashboard/admin" | "/dashboard/manager";
+  navMode: ManagerNavMode;
+  activeLevel: ParticipantBreakdownLevel;
+}) {
+  const breakdownRows = statistics.participantBreakdowns[activeLevel];
+  const tabs: Array<{ key: ParticipantBreakdownLevel; label: string }> = [
+    { key: "country", label: "Paesi" },
+    { key: "city", label: "Città" },
+    { key: "group", label: "Gruppi" },
+  ];
+
+  return (
+    <section className="grid min-w-0 gap-4">
+      <div className="surface-panel p-5">
+        <h2 className="text-lg font-semibold">Statistiche evento</h2>
+        <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+          Lettura operativa dei partecipanti per territorio e delle presenze
+          giornaliere indicate in iscrizione.
+        </p>
+      </div>
+
+      <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h3 className="text-base font-semibold">Partecipanti per albero gruppi</h3>
+            <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+              I paesi e le città vengono risaliti dall&apos;assegnazione corrente
+              quando disponibile.
+            </p>
+          </div>
+          <div className="inline-flex w-fit rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-1">
+            {tabs.map((tab) => {
+              const isActive = tab.key === activeLevel;
+
+              return (
+                <Link
+                  key={tab.key}
+                  href={statisticsPath(basePath, navMode, tab.key)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={[
+                    "inline-flex min-h-9 items-center rounded px-3 text-sm font-semibold transition",
+                    isActive
+                      ? "bg-white text-[var(--peace-blue-800)] shadow-sm"
+                      : "text-[var(--peace-muted)] hover:text-[var(--peace-ink)]",
+                  ].join(" ")}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[680px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+                <th className="py-3 pr-4 font-semibold">{participantBreakdownLabel(activeLevel)}</th>
+                <th className="py-3 pr-4 font-semibold">Evento</th>
+                <th className="py-3 text-right font-semibold">Partecipanti</th>
+              </tr>
+            </thead>
+            <tbody>
+              {breakdownRows.map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-b border-[var(--peace-border)] last:border-b-0"
+                >
+                  <td className="py-4 pr-4 font-semibold text-[var(--peace-ink)]">
+                    {row.label}
+                  </td>
+                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
+                    {row.eventTitle}
+                  </td>
+                  <td className="py-4 text-right text-xl font-semibold text-[var(--peace-ink)]">
+                    {row.participantCount}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {breakdownRows.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--peace-muted)]">
+            Nessun partecipante da aggregare.
+          </p>
+        ) : null}
+      </article>
+
+      <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <div>
+          <h3 className="text-base font-semibold">Presenze indicate per giornata</h3>
+          <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+            Conteggio delle iscrizioni con presenza confermata per giorno e di
+            quelle senza nessun giorno selezionato.
+          </p>
+        </div>
+
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[620px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+                <th className="py-3 pr-4 font-semibold">Giornata</th>
+                <th className="py-3 pr-4 font-semibold">Evento</th>
+                <th className="py-3 text-right font-semibold">Partecipanti</th>
+              </tr>
+            </thead>
+            <tbody>
+              {statistics.attendanceByDay.map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-b border-[var(--peace-border)] last:border-b-0"
+                >
+                  <td className="py-4 pr-4 font-semibold text-[var(--peace-ink)]">
+                    {row.kind === "day" ? formatDate(row.label) : row.label}
+                  </td>
+                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
+                    {row.eventTitle}
+                  </td>
+                  <td className="py-4 text-right text-xl font-semibold text-[var(--peace-ink)]">
+                    {row.participantCount}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {statistics.attendanceByDay.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--peace-muted)]">
+            Nessuna presenza giornaliera disponibile.
+          </p>
+        ) : null}
+      </article>
+    </section>
+  );
+}
+
 function getManagerEventScope(eventRoles: EventUserRole[]) {
   const isAdmin = eventRoles.some((role) => role.role === "admin");
   const managerEventIds = new Set(
@@ -667,6 +862,7 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
   if (
     params.section === "evento" ||
+    params.section === "dashboard" ||
     params.section === "iscritti" ||
     params.section === "ruoli" ||
     params.section === "gruppi"
@@ -711,6 +907,27 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
   }
 
   return "evento";
+}
+
+function resolveParticipantBreakdownLevel(
+  value: string | undefined
+): ParticipantBreakdownLevel {
+  if (value === "city" || value === "group") {
+    return value;
+  }
+
+  return "country";
+}
+
+function participantBreakdownLabel(level: ParticipantBreakdownLevel): string {
+  switch (level) {
+    case "city":
+      return "Città";
+    case "group":
+      return "Gruppo";
+    case "country":
+      return "Paese";
+  }
 }
 
 async function getManagerOperationsSnapshot(
@@ -868,6 +1085,8 @@ async function getManagerOperationsSnapshot(
           participant?.last_name ?? null
         ),
         publicCode: participant?.public_code ?? null,
+        country: participant?.country_other ?? null,
+        city: participant?.city_other ?? null,
         place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
         email: contact?.email ?? null,
         phone: contact?.phone ?? null,
@@ -936,6 +1155,87 @@ async function getManagerOperationsSnapshot(
       filteredParticipants
     ),
   };
+}
+
+async function getManagerStatisticsSnapshot(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  scope: ReturnType<typeof getManagerEventScope>,
+  groupTree: ManagerGroupTreeRow[]
+): Promise<EventStatisticsSnapshot> {
+  const registrationsQuery = supabase
+    .from("registrations")
+    .select(
+      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
+    )
+    .order("submitted_at", { ascending: false })
+    .range(0, 9999);
+
+  if (scope.eventIds) {
+    registrationsQuery.in("event_id", [...scope.eventIds]);
+  }
+
+  const { data: registrations } =
+    scope.eventIds?.size === 0 ? { data: [] } : await registrationsQuery;
+  const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
+  const registrationIds = registrationRows.map((row) => row.id);
+  const [{ data: assignments }, { data: attendanceChoices }] = await Promise.all([
+    registrationIds.length > 0
+      ? supabase
+          .from("participant_group_assignments")
+          .select(
+            "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)"
+          )
+          .in("registration_id", registrationIds)
+          .eq("is_current", true)
+      : Promise.resolve({ data: [] }),
+    registrationIds.length > 0
+      ? supabase
+          .from("event_attendance_choices")
+          .select("registration_id,day,choice")
+          .in("registration_id", registrationIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const assignmentByRegistrationId = new Map(
+    ((assignments ?? []) as ManagerCurrentAssignmentRow[]).map((row) => [
+      row.registration_id,
+      row,
+    ])
+  );
+  const participants = registrationRows.map((registration) => {
+    const participant = relatedOne(registration.participants);
+    const event = relatedOne(registration.events);
+    const assignment = assignmentByRegistrationId.get(registration.id);
+    const group = relatedOne(assignment?.groups ?? null);
+
+    return {
+      registrationId: registration.id,
+      eventId: registration.event_id,
+      eventTitle: event?.title ?? "Evento",
+      participantId: registration.participant_id,
+      authUserId: participant?.auth_user_id ?? null,
+      name: formatParticipantName(
+        participant?.first_name ?? null,
+        participant?.last_name ?? null
+      ),
+      publicCode: participant?.public_code ?? null,
+      country: participant?.country_other ?? null,
+      city: participant?.city_other ?? null,
+      place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
+      email: null,
+      phone: null,
+      registrationStatus: registration.status,
+      submittedAt: registration.submitted_at,
+      currentGroupId: assignment?.group_id ?? null,
+      currentGroupName: group?.name ?? null,
+      currentGroupStatus: assignment?.status ?? null,
+    };
+  });
+
+  return buildEventStatisticsSnapshot({
+    participants,
+    groups: groupTree,
+    attendanceChoices: (attendanceChoices ?? []) as AttendanceChoiceRow[],
+  });
 }
 
 async function getOpeningSnapshots(

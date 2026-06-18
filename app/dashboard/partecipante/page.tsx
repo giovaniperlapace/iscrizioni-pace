@@ -135,6 +135,8 @@ type ParticipantDashboardCopy = {
   qrOverlayBody: string;
   qrStatus: string;
   yourCode: string;
+  collapse: string;
+  expand: string;
   registrationSummary: string;
   registrationSummaryBody: (eventTitle: string, dateRange: string) => string;
   submittedAt: string;
@@ -203,6 +205,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       "Usa questo QR code per l'accesso all'evento quando l'accoglienza abiliterà la scansione. Il codice partecipante resta il riferimento operativo da comunicare se il QR non fosse disponibile.",
     qrStatus: "Stato QR",
     yourCode: "Il tuo codice",
+    collapse: "Comprimi",
+    expand: "Allarga",
     registrationSummary: "Riepilogo iscrizione",
     registrationSummaryBody: (eventTitle, dateRange) =>
       `Questo è il riepilogo della tua iscrizione per ${eventTitle}, che si terrà nei giorni ${dateRange}.`,
@@ -274,6 +278,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       "Use this QR code to access the event when scanning is enabled at the welcome desk. Your participant code remains the operational reference to share if the QR code is not available.",
     qrStatus: "QR status",
     yourCode: "Your code",
+    collapse: "Collapse",
+    expand: "Expand",
     registrationSummary: "Registration summary",
     registrationSummaryBody: (eventTitle, dateRange) =>
       `This is the summary of your registration for ${eventTitle}, taking place on ${dateRange}.`,
@@ -345,6 +351,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       "Utilise ce QR code pour accéder à l'événement lorsque l'accueil activera le scan. Ton code participant reste la référence à communiquer si le QR n'est pas disponible.",
     qrStatus: "État du QR",
     yourCode: "Ton code",
+    collapse: "Réduire",
+    expand: "Agrandir",
     registrationSummary: "Résumé de l'inscription",
     registrationSummaryBody: (eventTitle, dateRange) =>
       `Voici le résumé de ton inscription à ${eventTitle}, qui aura lieu ${dateRange}.`,
@@ -416,6 +424,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       "Nutze diesen QR-Code für den Zugang zur Veranstaltung, sobald der Empfang das Scannen aktiviert. Dein Teilnehmendencode bleibt die Referenz, falls der QR-Code nicht verfügbar ist.",
     qrStatus: "QR-Status",
     yourCode: "Dein Code",
+    collapse: "Einklappen",
+    expand: "Erweitern",
     registrationSummary: "Anmeldungsübersicht",
     registrationSummaryBody: (eventTitle, dateRange) =>
       `Dies ist die Übersicht deiner Anmeldung für ${eventTitle}, die ${dateRange} stattfindet.`,
@@ -487,6 +497,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       "Usa este código QR para acceder al evento cuando la acogida active el escaneo. Tu código de participante sigue siendo la referencia operativa si el QR no está disponible.",
     qrStatus: "Estado QR",
     yourCode: "Tu código",
+    collapse: "Contraer",
+    expand: "Ampliar",
     registrationSummary: "Resumen de inscripción",
     registrationSummaryBody: (eventTitle, dateRange) =>
       `Este es el resumen de tu inscripción para ${eventTitle}, que tendrá lugar ${dateRange}.`,
@@ -558,6 +570,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       "Gebruik deze QR-code voor toegang tot het evenement wanneer de ontvangst het scannen inschakelt. Je deelnemerscode blijft de operationele referentie als de QR-code niet beschikbaar is.",
     qrStatus: "QR-status",
     yourCode: "Je code",
+    collapse: "Samenvouwen",
+    expand: "Uitvouwen",
     registrationSummary: "Inschrijvingsoverzicht",
     registrationSummaryBody: (eventTitle, dateRange) =>
       `Dit is het overzicht van je inschrijving voor ${eventTitle}, dat plaatsvindt ${dateRange}.`,
@@ -629,6 +643,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       "Використовуйте цей QR-код для доступу до події, коли на прийомі буде увімкнено сканування. Ваш код учасника залишається робочим посиланням, якщо QR-код недоступний.",
     qrStatus: "Стан QR",
     yourCode: "Ваш код",
+    collapse: "Згорнути",
+    expand: "Розгорнути",
     registrationSummary: "Підсумок реєстрації",
     registrationSummaryBody: (eventTitle, dateRange) =>
       `Це підсумок вашої реєстрації на ${eventTitle}, що відбудеться ${dateRange}.`,
@@ -836,16 +852,11 @@ export default async function PartecipanteDashboardPage({
                   ? `${participant.first_name} ${participant.last_name}`
                   : copy.fallbackTitle}
               </h1>
-              <p className="mt-3 max-w-3xl text-[var(--peace-muted)]">
-                {event
-                  ? `${event.title} - ${event.city}, ${event.country} - ${formatDateRange(
-                      event.starts_on,
-                      event.ends_on,
-                      locale,
-                      copy
-                    )}`
-                  : copy.verifiedAccess(auth.user.email ?? "")}
-              </p>
+              {!event ? (
+                <p className="mt-3 max-w-3xl text-[var(--peace-muted)]">
+                  {copy.verifiedAccess(auth.user.email ?? "")}
+                </p>
+              ) : null}
               {participant && event && groupSummary ? (
                 <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#6f7f91]">
                   <span>
@@ -901,8 +912,8 @@ export default async function PartecipanteDashboardPage({
           <>
             <section className="relative rounded-lg border border-[var(--peace-border)] bg-white p-5 pt-10 sm:p-6">
               <QrStatusIndicator active={qrStatus?.status === "active"} copy={copy} />
-              <div className="grid gap-5 md:grid-cols-[minmax(24rem,auto)_1fr] md:items-center">
-                <div className="mx-auto grid w-full max-w-2xl gap-3 sm:grid-cols-[12rem_minmax(0,16rem)] sm:items-center md:mx-0">
+              <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
+                <div className="mx-auto grid w-full max-w-56 gap-3 lg:mx-0">
                   <QrPreview
                     participantCode={participant.public_code ?? ""}
                     qrDataUrl={qrDataUrl}
@@ -914,28 +925,18 @@ export default async function PartecipanteDashboardPage({
                     copy={copy}
                   />
                 </div>
-                <div className="grid gap-3">
-                  <div>
-                    <h2 className="text-2xl font-semibold">
-                      {copy.qrTitle}
-                    </h2>
-                  </div>
-                  <p className="max-w-2xl text-sm leading-6 text-[var(--peace-muted)]">
-                    {copy.qrBody}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
-              <div className="mx-auto w-full max-w-xl">
-                <DashboardButton
-                  href="/dashboard/partecipante?overlay=iscrizione"
+                <RegistrationSummaryCard
+                  copy={copy}
+                  participant={participant}
+                  primaryContact={primaryContact}
+                  questionnaire={questionnaire}
+                  attendanceSummary={attendanceSummary}
+                  supportSummary={supportSummary}
+                  groupSummary={groupSummary}
+                  selectedPanels={selectedPanels}
                   active={activeOverlay === "iscrizione"}
-                  icon="form"
-                >
-                  {copy.openRegistration}
-                </DashboardButton>
+                  locale={locale}
+                />
               </div>
             </section>
 
@@ -1460,7 +1461,7 @@ function SaveInlineButton({
     <button
       type="submit"
       disabled={!editable}
-      className="w-fit rounded-md bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#244938] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
+      className="w-fit rounded-md bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--peace-blue-900)] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
     >
       {copy.save}
     </button>
@@ -1513,7 +1514,7 @@ function QrActionButtons({
         <a
           href={qrDataUrl}
           download={`qr-${participantCode ?? copy.personalQrFile}.png`}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[#244938]"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
           <DownloadIcon />
           {copy.downloadImage}
@@ -1537,6 +1538,138 @@ function QrActionButtons({
         <WalletIcon />
         {copy.addToWallet}
       </button>
+    </div>
+  );
+}
+
+function RegistrationSummaryCard({
+  copy,
+  participant,
+  primaryContact,
+  questionnaire,
+  attendanceSummary,
+  supportSummary,
+  groupSummary,
+  selectedPanels,
+  active,
+  locale,
+}: {
+  copy: ParticipantDashboardCopy;
+  participant: ParticipantRow;
+  primaryContact: ContactRow | null;
+  questionnaire: QuestionnaireRow | null;
+  attendanceSummary: string;
+  supportSummary: string;
+  groupSummary: { name: string; leaderName: string | null } | null;
+  selectedPanels: MomentRow[];
+  active: boolean;
+  locale: SupportedLocale;
+}) {
+  const panelSummary =
+    selectedPanels.length > 0
+      ? selectedPanels.map((panel) => panel.title).join(", ")
+      : copy.notProvided;
+
+  return (
+    <details
+      open
+      data-testid="registration-summary-card"
+      className="group w-full rounded-lg border border-[var(--peace-border-strong)] bg-white shadow-sm"
+    >
+      <summary
+        data-testid="registration-summary-toggle"
+        className="grid cursor-pointer list-none gap-3 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center"
+      >
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold leading-tight text-[var(--peace-ink)] sm:text-xl">
+            {copy.registrationSummary}
+          </h2>
+        </div>
+        <span
+          className="inline-flex min-h-10 w-fit items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition group-open:bg-[var(--peace-sky-100)]"
+          aria-hidden="true"
+        >
+          <span className="group-open:hidden">{copy.expand}</span>
+          <span className="hidden group-open:inline">{copy.collapse}</span>
+          <ChevronIcon />
+        </span>
+      </summary>
+      <div className="border-t border-[var(--peace-border)] px-4 pb-4 pt-3">
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+          <SummaryInfo
+            label="Email"
+            value={primaryContact?.email ?? copy.notProvided}
+            className="col-span-2 xl:col-span-1"
+          />
+          <SummaryInfo
+            label={copy.phone}
+            value={primaryContact?.phone ?? copy.notProvided}
+          />
+          <SummaryInfo
+            label={copy.preferredLanguage}
+            value={formatLanguageName(participant.preferred_locale)}
+          />
+          <SummaryInfo
+            label={copy.birthDate}
+            value={formatDate(participant.birth_date, locale, copy)}
+          />
+          <SummaryInfo
+            label={copy.birthPlace}
+            value={questionnaire?.answers?.birthPlace ?? copy.notProvided}
+          />
+          <SummaryInfo
+            label={copy.nationality}
+            value={questionnaire?.answers?.nationality ?? copy.notProvided}
+          />
+          <SummaryInfo label={copy.expectedPresence} value={attendanceSummary} />
+          <SummaryInfo label={copy.accessibilitySupport} value={supportSummary} />
+          <SummaryInfo
+            label={copy.group}
+            value={groupSummary?.name ?? copy.notAssigned}
+          />
+          <SummaryInfo
+            label={copy.leader}
+            value={groupSummary?.leaderName ?? copy.notAssigned}
+          />
+          <SummaryInfo label={copy.panelsTitle} value={panelSummary} />
+        </div>
+        <div className="mt-3 flex justify-start">
+          <Link
+            href="/dashboard/partecipante?overlay=iscrizione"
+            className={
+              active
+                ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white"
+                : "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            }
+          >
+            <ActionIcon icon="form" active={active} />
+            {copy.edit}
+          </Link>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function SummaryInfo({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`min-w-0 rounded-md border border-[var(--peace-border)] bg-[var(--peace-soft)] px-3 py-1.5 ${className}`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
+        {label}
+      </p>
+      <p className="mt-0.5 break-words text-sm leading-5 text-[var(--peace-ink)]">
+        {value}
+      </p>
     </div>
   );
 }
@@ -1579,29 +1712,20 @@ function WalletIcon() {
   );
 }
 
-function DashboardButton({
-  href,
-  active,
-  icon,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  icon: "qr" | "form";
-  children: React.ReactNode;
-}) {
+function ChevronIcon() {
   return (
-    <Link
-      href={href}
-      className={
-        active
-          ? "flex h-16 items-center justify-center gap-3 rounded-md bg-[var(--peace-blue-800)] px-4 text-center text-sm font-semibold leading-5 text-white"
-          : "flex h-16 items-center justify-center gap-3 rounded-md border border-[var(--peace-border-strong)] px-4 text-center text-sm font-semibold leading-5 text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)]"
-      }
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-4 shrink-0 transition group-open:rotate-180"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
     >
-      <ActionIcon icon={icon} active={active} />
-      {children}
-    </Link>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
   );
 }
 
