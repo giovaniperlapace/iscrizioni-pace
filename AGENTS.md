@@ -156,6 +156,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` puntano a quel dominio,
   `GOTRUE_URI_ALLOW_LIST` del Supabase Auth self-hosted lo include, e i magic
   link generati per l'ambiente online devono usare quel dominio.
+- Il 2026-06-18 la maschera admin/manager per creare o modificare gruppi e'
+  stata semplificata: niente selezione evento visibile, niente distinzione tra
+  nome operativo e label pubblica, niente ordine pubblico modificabile
+  dall'utente. La posizione nell'albero si sceglie con un flusso guidato:
+  nuovo paese, nuova citta' sotto un paese esistente, nuova area sotto una
+  citta' esistente. Il referente principale si sceglie tra i capigruppo gia'
+  presenti oppure si crea nella stessa maschera con nome, cognome ed email; il
+  salvataggio aggiorna anche `group_memberships` come capogruppo primario.
+- Regola UX stabile: quando un selettore ha piu' di 15 opzioni non usare una
+  tendina nativa semplice; usare un controllo cercabile con filtro testuale e
+  selezione esplicita. Questa regola vale in particolare per paesi, citta',
+  gruppi, partecipanti, referenti e altri elenchi operativi lunghi.
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.

@@ -15,6 +15,10 @@ import {
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
+import {
+  GroupPlacementFields,
+  GroupPrimaryLeaderFields,
+} from "@/app/dashboard/group-edit-fields";
 import { AutoCopyLinkNotice, CopyLinkButton } from "@/app/dashboard/group-link-copy-tools";
 import { GroupLeaderKindField } from "@/app/dashboard/group-leader-kind-field";
 import { GroupLeaderModeTabs } from "@/app/dashboard/group-leader-mode-tabs";
@@ -375,6 +379,7 @@ export default async function ManagerDashboardPage({
                 groups={managerOperations.groupTree}
                 links={managerOperations.groupLinks}
                 participants={managerOperations.allParticipants}
+                roleUsers={managerOperations.roleUsers}
                 canManageEvent={scope.canManageEvent}
                 filters={parseGroupTableFilters(params)}
                 selectedGroup={selectedGroup}
@@ -1139,6 +1144,7 @@ function ManagerGroupTreeSection({
   groups,
   links,
   participants,
+  roleUsers,
   canManageEvent,
   filters,
   selectedGroup,
@@ -1150,6 +1156,7 @@ function ManagerGroupTreeSection({
   groups: ManagerGroupTreeRow[];
   links: ManagerGroupRegistrationLink[];
   participants: ManagerParticipantRow[];
+  roleUsers: OperationalUserRoleRow[];
   canManageEvent: (eventId: string) => boolean;
   filters: GroupTableFilters;
   selectedGroup: ManagerGroupTreeRow | null;
@@ -1343,6 +1350,8 @@ function ManagerGroupTreeSection({
           group={selectedGroup}
           groups={groups}
           eventOptions={eventOptions.filter((event) => canManageEvent(event.id))}
+          leaders={roleUsers}
+          navMode={navMode}
         />
       ) : null}
 
@@ -1374,15 +1383,16 @@ function ManagerGroupEditOverlay({
   group,
   groups,
   eventOptions,
+  leaders,
+  navMode,
 }: {
   group: ManagerGroupTreeRow | null;
   groups: ManagerGroupTreeRow[];
   eventOptions: Array<{ id: string; title: string }>;
+  leaders: OperationalUserRoleRow[];
+  navMode: ManagerNavMode;
 }) {
   const selectedEventId = group?.eventId ?? eventOptions[0]?.id ?? "";
-  const parentOptions = groups.filter(
-    (option) => option.eventId === selectedEventId && option.id !== group?.id
-  );
 
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
@@ -1396,97 +1406,19 @@ function ManagerGroupEditOverlay({
           <input type="hidden" name="sourceDashboard" value="manager" />
           {group ? <input type="hidden" name="groupId" value={group.id} /> : null}
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Evento
-              <select name="eventId" defaultValue={selectedEventId} className="field">
-                {eventOptions.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {event.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Nome operativo
+            <GroupPlacementFields
+              group={group}
+              groups={groups}
+              eventId={selectedEventId}
+            />
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] sm:col-span-2">
+              Nome gruppo
               <input name="name" defaultValue={group?.name ?? ""} className="field" required />
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Parent
-              <select name="parentGroupId" defaultValue={group?.parentGroupId ?? ""} className="field">
-                <option value="">Radice</option>
-                {parentOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Tipo
-              <select name="nodeType" defaultValue={group?.nodeType ?? "group"} className="field">
-                <option value="country">Paese</option>
-                <option value="city">Città</option>
-                <option value="area">Area</option>
-                <option value="group">Gruppo</option>
-                <option value="newcomers">Nuovi partecipanti</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Comunità
-              <select name="communityKind" defaultValue={group?.communityKind ?? "santegidio"} className="field">
-                <option value="santegidio">Sant&apos;Egidio</option>
-                <option value="newcomers">Nuovi partecipanti</option>
-                <option value="territorial">Territoriale</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Età
-              <select name="ageBracket" defaultValue={group?.ageBracket ?? "none"} className="field">
-                <option value="none">Non applicabile</option>
-                <option value="giovani">Giovani</option>
-                <option value="adulti">Adulti</option>
-                <option value="both">Giovani e adulti</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Referente principale
-              <input name="primaryLeaderName" defaultValue={group?.primaryLeaderName ?? ""} className="field" />
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Label pubblica
-              <input name="publicLabel" defaultValue={group?.publicLabel ?? ""} className="field" />
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Ordine pubblico
-              <input name="publicOrder" type="number" defaultValue={group?.publicOrder ?? 100} className="field" />
-            </label>
-            <div className="grid content-end gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              <label className="flex items-center gap-2">
-                <input name="isActive" type="checkbox" defaultChecked={group?.isActive ?? true} />
-                Attivo
-              </label>
-              <label className="flex items-center gap-2">
-                <input name="isAssignable" type="checkbox" defaultChecked={group?.isAssignable ?? true} />
-                Iscrivibile
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  name="isPublicCatalog"
-                  type="checkbox"
-                  defaultChecked={group?.isPublicCatalog ?? true}
-                  disabled={group ? !group.isAssignable : false}
-                />
-                Mostra nel form pubblico
-              </label>
-              {group && !group.isAssignable ? (
-                <p className="text-xs font-normal leading-5 text-[var(--peace-muted)]">
-                  Disponibile solo per gruppi iscrivibili.
-                </p>
-              ) : null}
-            </div>
+            <GroupPrimaryLeaderFields group={group} leaders={leaders} />
           </div>
           <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
-            <Link href="/dashboard/manager?section=gruppi" className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+            <Link href={managerPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
               Annulla
             </Link>
             <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">

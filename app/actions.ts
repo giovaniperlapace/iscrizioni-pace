@@ -57,6 +57,17 @@ const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 const MAGIC_LINK_SEND_COOLDOWN_MS = 60 * 1000;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
+type OperationsGroupRow = {
+  id: string;
+  event_id: string;
+  community_kind: string | null;
+  age_bracket: string | null;
+  is_assignable: boolean | null;
+  is_public_catalog: boolean | null;
+  is_active: boolean | null;
+  public_order: number | null;
+};
+
 export async function setAppLocale(formData: FormData) {
   const locale = normalizeLocale(String(formData.get("locale") ?? "")) ?? DEFAULT_LOCALE;
   const cookieStore = await cookies();
@@ -1121,27 +1132,20 @@ export async function saveOperationsGroup(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
   const eventId = optionalText(formData.get("eventId"));
   const name = optionalText(formData.get("name"));
-  const parentGroupId = optionalText(formData.get("parentGroupId"));
-  const nodeType = optionalText(formData.get("nodeType")) ?? "group";
-  const communityKind = optionalText(formData.get("communityKind")) ?? "santegidio";
-  const ageBracket = optionalText(formData.get("ageBracket")) ?? "none";
-  const primaryLeaderName = optionalText(formData.get("primaryLeaderName"));
-  const publicLabel = normalizeGroupRegistrationPublicLabel(
-    formData.get("publicLabel")
-  );
-  const publicOrder = optionalInteger(formData.get("publicOrder"));
-  const isAssignable = formData.get("isAssignable") === "on";
-  const isPublicCatalog =
-    isAssignable && formData.get("isPublicCatalog") === "on";
-  const isActive = formData.get("isActive") === "on";
+  const groupPlacement = parseGroupPlacement(formData.get("groupPlacement"));
+  const parentGroupId =
+    groupPlacement.parentGroupId ?? optionalText(formData.get("parentGroupId"));
+  const nodeType =
+    groupPlacement.nodeType ?? optionalText(formData.get("nodeType")) ?? "group";
+  const primaryLeaderUserId = optionalText(formData.get("primaryLeaderUserId"));
+  const primaryLeaderMode =
+    primaryLeaderUserId === "__new__"
+      ? "new"
+      : primaryLeaderUserId
+        ? "existing"
+        : "none";
 
-  if (
-    !eventId ||
-    !name ||
-    !isValidGroupNodeType(nodeType) ||
-    !isValidGroupCommunityKind(communityKind) ||
-    !isValidGroupAgeBracket(ageBracket)
-  ) {
+  if (!eventId || !name || !isValidGroupNodeType(nodeType)) {
     redirect(`${dashboardPath}?groupError=invalid`);
   }
 
@@ -1167,16 +1171,17 @@ export async function saveOperationsGroup(formData: FormData) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  let currentGroupRow: OperationsGroupRow | null = null;
 
   if (groupId) {
     const { data: currentGroup, error: currentGroupError } = await serviceSupabase
       .from("groups")
-      .select("id,event_id")
+      .select(
+        "id,event_id,community_kind,age_bracket,is_assignable,is_public_catalog,is_active,public_order"
+      )
       .eq("id", groupId)
       .maybeSingle();
-    const currentGroupRow = currentGroup as
-      | { id: string; event_id: string }
-      | null;
+    currentGroupRow = currentGroup as OperationsGroupRow | null;
 
     if (
       currentGroupError ||
@@ -1207,6 +1212,36 @@ export async function saveOperationsGroup(formData: FormData) {
     }
   }
 
+  const communityKind =
+    optionalText(formData.get("communityKind")) ??
+    currentGroupRow?.community_kind ??
+    (nodeType === "country" || nodeType === "city" || nodeType === "area"
+      ? "territorial"
+      : "santegidio");
+  const ageBracket =
+    optionalText(formData.get("ageBracket")) ??
+    currentGroupRow?.age_bracket ??
+    "none";
+  const isAssignable = formData.has("isAssignable")
+    ? formData.get("isAssignable") === "on"
+    : currentGroupRow?.is_assignable ?? true;
+  const isPublicCatalog = formData.has("isPublicCatalog")
+    ? isAssignable && formData.get("isPublicCatalog") === "on"
+    : currentGroupRow?.is_public_catalog ?? true;
+  const isActive = formData.has("isActive")
+    ? formData.get("isActive") === "on"
+    : currentGroupRow?.is_active ?? true;
+  const publicOrder =
+    currentGroupRow?.public_order ??
+    (await getNextGroupPublicOrder(serviceSupabase, eventId, parentGroupId));
+
+  if (
+    !isValidGroupCommunityKind(communityKind) ||
+    !isValidGroupAgeBracket(ageBracket)
+  ) {
+    redirect(`${dashboardPath}?groupError=invalid`);
+  }
+
   const values = {
     event_id: eventId,
     name,
@@ -1217,9 +1252,8 @@ export async function saveOperationsGroup(formData: FormData) {
     is_assignable: isAssignable,
     is_public_catalog: isPublicCatalog,
     is_active: isActive,
-    public_label: publicLabel,
-    primary_leader_name: primaryLeaderName,
-    public_order: publicOrder ?? 100,
+    public_label: normalizeGroupRegistrationPublicLabel(name),
+    public_order: publicOrder,
   };
   const result = groupId
     ? await serviceSupabase.from("groups").update(values).eq("id", groupId)
@@ -1232,6 +1266,46 @@ export async function saveOperationsGroup(formData: FormData) {
   const savedGroupId =
     groupId || ((result.data as { id?: string } | null)?.id ?? null);
 
+  if (!savedGroupId) {
+    redirect(`${dashboardPath}?groupError=create`);
+  }
+
+  let assignedLeader: GroupLeaderTargetResult | null = null;
+
+  if (primaryLeaderMode === "existing") {
+    assignedLeader = await getExistingGroupLeaderUserTarget(
+      serviceSupabase,
+      primaryLeaderUserId
+    );
+  } else if (primaryLeaderMode === "new") {
+    assignedLeader = await getNewGroupLeaderTarget(serviceSupabase, {
+      firstName: optionalText(formData.get("leaderFirstName")),
+      lastName: optionalText(formData.get("leaderLastName")),
+      email: normalizeEmail(formData.get("leaderEmail")),
+    });
+  }
+
+  if (assignedLeader && !assignedLeader.ok) {
+    redirect(`${dashboardPath}?groupError=${assignedLeader.error}`);
+  }
+
+  if (assignedLeader?.ok) {
+    const leaderError = await assignPrimaryGroupLeaderToGroup(
+      serviceSupabase,
+      {
+        groupId: savedGroupId,
+        eventId,
+        actorUserId: auth.user.id,
+        sourceDashboard,
+        leader: assignedLeader,
+      }
+    );
+
+    if (leaderError) {
+      redirect(`${dashboardPath}?groupError=${encodeURIComponent(leaderError)}`);
+    }
+  }
+
   await serviceSupabase.from("audit_logs").insert({
     event_id: eventId,
     actor_user_id: auth.user.id,
@@ -1243,6 +1317,7 @@ export async function saveOperationsGroup(formData: FormData) {
       is_assignable: isAssignable,
       is_public_catalog: isPublicCatalog,
       is_active: isActive,
+      assigned_primary_leader: Boolean(assignedLeader?.ok),
     },
   });
 
@@ -1656,6 +1731,55 @@ async function getExistingGroupLeaderTarget(
   };
 }
 
+async function getExistingGroupLeaderUserTarget(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  userId: string | null
+): Promise<GroupLeaderTargetResult> {
+  if (!userId || userId === "__new__") {
+    return { ok: false, error: "invalid" };
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("group_memberships")
+    .select("user_id")
+    .eq("user_id", userId)
+    .eq("role", "capogruppo")
+    .limit(1);
+
+  if (membershipError || !((membership ?? []) as Array<{ user_id: string }>)[0]) {
+    return { ok: false, error: "invalid-leader" };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id,email,full_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const profileRow = profile as
+    | { id: string; email: string | null; full_name: string | null }
+    | null;
+
+  if (profileError || !profileRow) {
+    return { ok: false, error: "invalid-leader" };
+  }
+
+  const { data: participant } = await supabase
+    .from("participants")
+    .select("id")
+    .eq("auth_user_id", userId)
+    .limit(1);
+  const participantId =
+    ((participant ?? []) as Array<{ id: string }>)[0]?.id ?? null;
+
+  return {
+    ok: true,
+    participantId,
+    userId,
+    fullName: profileRow.full_name || profileRow.email || "Capogruppo",
+    createdParticipant: false,
+  };
+}
+
 async function getNewGroupLeaderTarget(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   input: {
@@ -1823,6 +1947,92 @@ function parseGroupLeaderKind(value: FormDataEntryValue | null): GroupLeaderKind
   return value === "primary" ? "primary" : "secondary";
 }
 
+async function getNextGroupPublicOrder(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  eventId: string,
+  parentGroupId: string | null
+): Promise<number> {
+  let query = supabase
+    .from("groups")
+    .select("public_order")
+    .eq("event_id", eventId)
+    .order("public_order", { ascending: false })
+    .limit(1);
+
+  query = parentGroupId
+    ? query.eq("parent_group_id", parentGroupId)
+    : query.is("parent_group_id", null);
+
+  const { data } = await query;
+  const currentMax =
+    ((data ?? []) as Array<{ public_order: number | null }>)[0]?.public_order ??
+    90;
+
+  return currentMax + 10;
+}
+
+async function assignPrimaryGroupLeaderToGroup(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    groupId: string;
+    eventId: string;
+    actorUserId: string;
+    sourceDashboard: string | null;
+    leader: Extract<GroupLeaderTargetResult, { ok: true }>;
+  }
+): Promise<string | null> {
+  const demoteError = await demoteOtherPrimaryGroupLeaders(
+    supabase,
+    input.groupId,
+    input.leader.userId
+  );
+
+  if (demoteError) {
+    return demoteError;
+  }
+
+  const membership = await supabase.from("group_memberships").upsert(
+    {
+      group_id: input.groupId,
+      user_id: input.leader.userId,
+      role: "capogruppo",
+      is_primary: true,
+      created_by: input.actorUserId,
+    },
+    { onConflict: "group_id,user_id" }
+  );
+
+  if (membership.error) {
+    return membership.error.message;
+  }
+
+  const syncError = await syncGroupPrimaryLeaderName(
+    supabase,
+    input.groupId,
+    input.leader.fullName
+  );
+
+  if (syncError) {
+    return syncError;
+  }
+
+  await supabase.from("audit_logs").insert({
+    event_id: input.eventId,
+    actor_user_id: input.actorUserId,
+    action: "group.leader_assigned",
+    entity_table: "group_memberships",
+    entity_id: input.groupId,
+    metadata: {
+      source_dashboard: input.sourceDashboard === "admin" ? "admin" : "manager",
+      participant_id: input.leader.participantId,
+      created_minimal_participant: input.leader.createdParticipant,
+      leader_kind: "primary",
+    },
+  });
+
+  return null;
+}
+
 async function demoteOtherPrimaryGroupLeaders(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   groupId: string,
@@ -1903,7 +2113,7 @@ function getGroupLeaderSuccessPath(sourceDashboard: string | null): string {
 type GroupLeaderTargetResult =
   | {
       ok: true;
-      participantId: string;
+      participantId: string | null;
       userId: string;
       fullName: string;
       createdParticipant: boolean;
@@ -2032,16 +2242,26 @@ function optionalText(value: FormDataEntryValue | null): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function optionalInteger(value: FormDataEntryValue | null): number | null {
+function parseGroupPlacement(value: FormDataEntryValue | null): {
+  nodeType: string | null;
+  parentGroupId: string | null;
+} {
   const text = optionalText(value);
 
   if (!text) {
-    return null;
+    return { nodeType: null, parentGroupId: null };
   }
 
-  const parsed = Number.parseInt(text, 10);
+  const [nodeType, parentGroupId = ""] = text.split(":");
 
-  return Number.isFinite(parsed) ? parsed : null;
+  if (!isValidGroupNodeType(nodeType)) {
+    return { nodeType: null, parentGroupId: null };
+  }
+
+  return {
+    nodeType,
+    parentGroupId: parentGroupId || null,
+  };
 }
 
 function getGroupManagementDashboardPath(sourceDashboard: string | null): string {
