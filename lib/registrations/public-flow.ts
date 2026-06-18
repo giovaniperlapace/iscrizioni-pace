@@ -214,6 +214,68 @@ export async function hasExistingRegistrationForEmail(
   return !registrationError && Boolean(registrations?.length);
 }
 
+export async function hasExistingAppAccessForEmail(
+  supabase: SupabaseClient,
+  email: string,
+  eventId: string
+): Promise<boolean> {
+  if (await hasExistingRegistrationForEmail(supabase, email, eventId)) {
+    return true;
+  }
+
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .limit(1);
+
+  if (profileError || !profiles?.length) {
+    return false;
+  }
+
+  const userId = (profiles[0] as { id: string }).id;
+  const [{ data: eventRoles }, { data: memberships }] = await Promise.all([
+    supabase
+      .from("event_user_roles")
+      .select("id")
+      .eq("user_id", userId)
+      .or(`event_id.is.null,event_id.eq.${eventId}`)
+      .limit(1),
+    supabase
+      .from("group_memberships")
+      .select("id,groups!inner(event_id)")
+      .eq("user_id", userId)
+      .eq("groups.event_id", eventId)
+      .limit(1),
+  ]);
+
+  return Boolean(eventRoles?.length || memberships?.length);
+}
+
+async function getConfirmedLeaderGroupAssignment(
+  supabase: SupabaseClient,
+  userId: string,
+  eventId: string
+): Promise<{ groupId: string } | null> {
+  const { data, error } = await supabase
+    .from("group_memberships")
+    .select("group_id,is_primary,groups!inner(event_id,is_active,is_assignable)")
+    .eq("user_id", userId)
+    .eq("role", "capogruppo")
+    .eq("groups.event_id", eventId)
+    .eq("groups.is_active", true)
+    .order("is_primary", { ascending: false })
+    .limit(1);
+
+  if (error || !data?.length) {
+    return null;
+  }
+
+  const membership = data[0] as { group_id: string | null };
+
+  return membership.group_id ? { groupId: membership.group_id } : null;
+}
+
 export async function sendMagicLinkEmail(
   supabase: SupabaseClient,
   email: string,
@@ -247,7 +309,8 @@ export async function createPublicRegistration(
   supabase: SupabaseClient,
   input: RegistrationInput,
   requestMeta: { ipAddress: string | null; userAgent: string | null },
-  publicSiteUrl: string
+  publicSiteUrl: string,
+  authUserId?: string | null
 ): Promise<{ registrationId: string; qrToken: string }> {
   const event = await getCurrentPublicEvent(supabase);
 
@@ -264,6 +327,7 @@ export async function createPublicRegistration(
   const { data: participant, error: participantError } = await supabase
     .from("participants")
     .insert({
+      auth_user_id: authUserId ?? null,
       first_name: input.firstName,
       last_name: input.lastName,
       birth_date: input.birthDate,
@@ -316,6 +380,9 @@ export async function createPublicRegistration(
   const qrToken = createOpaqueQrToken();
   const allowedEventDays = getEventDayValues(event.starts_on, event.ends_on);
   const groups = await getEventGroupCandidates(supabase, event.id);
+  const leaderGroupAssignment = authUserId
+    ? await getConfirmedLeaderGroupAssignment(supabase, authUserId, event.id)
+    : null;
   const groupLink = await resolveActiveGroupRegistrationLink(
     supabase,
     event.id,
@@ -339,15 +406,30 @@ export async function createPublicRegistration(
     participatesWithGroup: input.participatesWithGroup,
     cannotFindLeader: input.cannotFindLeader,
   });
-  const resolvedGroupAssignment = groupLink
+  const resolvedGroupAssignment = leaderGroupAssignment
+    ? {
+        groupId: leaderGroupAssignment.groupId,
+        status: "confirmed" as const,
+        source: "capogruppo" as const,
+        confidence: 1,
+        reason: "operational_role_group_membership",
+        matcherVersion: "operational-role-v1",
+      }
+    : groupLink
     ? {
         groupId: groupLink.group.id,
+        status: "probable" as const,
         source: "participant_selected" as const,
         confidence: 0.95,
         reason: "group_registration_link",
         matcherVersion: GROUP_REGISTRATION_LINK_MATCHER_VERSION,
       }
-    : groupAssignment;
+    : groupAssignment
+      ? {
+          ...groupAssignment,
+          status: "probable" as const,
+        }
+      : null;
 
   if (
     !input.availabilityUnknown &&
@@ -398,15 +480,25 @@ export async function createPublicRegistration(
   ];
 
   if (resolvedGroupAssignment) {
+    const confirmedAt =
+      resolvedGroupAssignment.status === "confirmed" ? new Date().toISOString() : null;
+
     writes.push(
       supabase.from("participant_group_assignments").insert({
         registration_id: registrationId,
         group_id: resolvedGroupAssignment.groupId,
-        status: "probable",
+        status: resolvedGroupAssignment.status,
         source: resolvedGroupAssignment.source,
         confidence: resolvedGroupAssignment.confidence,
         assignment_reason: resolvedGroupAssignment.reason,
         matcher_version: resolvedGroupAssignment.matcherVersion,
+        confirmed_by:
+          resolvedGroupAssignment.status === "confirmed" ? authUserId : null,
+        confirmed_at: confirmedAt,
+        leader_decision_by:
+          resolvedGroupAssignment.status === "confirmed" ? authUserId : null,
+        leader_decision_at: confirmedAt,
+        leader_notification_read_at: confirmedAt,
       })
     );
   }

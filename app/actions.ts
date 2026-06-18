@@ -30,6 +30,7 @@ import {
 import {
   createPublicRegistration,
   getPublicRegistrationOptions,
+  hasExistingAppAccessForEmail,
   hasExistingRegistrationForEmail,
   sendMagicLinkEmail,
 } from "@/lib/registrations/public-flow";
@@ -109,7 +110,7 @@ export async function startPublicEmailFlow(formData: FormData) {
     redirect("/?error=no-event");
   }
 
-  const exists = await hasExistingRegistrationForEmail(supabase, email, event.id);
+  const exists = await hasExistingAppAccessForEmail(supabase, email, event.id);
 
   if (!exists) {
     redirect(`/registrazione?email=${encodeURIComponent(email)}`);
@@ -165,6 +166,14 @@ export async function submitPublicRegistration(formData: FormData) {
 
   const headerStore = await headers();
   const supabase = createSupabaseServiceClient();
+  const sessionSupabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await sessionSupabase.auth.getUser();
+  const authUserId =
+    user?.email?.toLowerCase() === parsed.value.email.toLowerCase()
+      ? user.id
+      : null;
 
   try {
     await createPublicRegistration(
@@ -174,7 +183,8 @@ export async function submitPublicRegistration(formData: FormData) {
         ipAddress: ipAddress === "local" ? null : ipAddress,
         userAgent: headerStore.get("user-agent"),
       },
-      getPublicSiteUrl()
+      getPublicSiteUrl(),
+      authUserId
     );
   } catch (error) {
     const message = getPublicRegistrationErrorMessage(error);
@@ -943,11 +953,9 @@ export async function createGroupRegistrationLink(formData: FormData) {
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
   const publicLabel = normalizeGroupRegistrationPublicLabel(
-    formData.get("publicLabel")
+    formData.get("displayName")
   );
-  const internalLabel = normalizeGroupRegistrationPublicLabel(
-    formData.get("internalLabel")
-  );
+  const internalLabel = publicLabel;
 
   if (!groupId) {
     redirect(`${dashboardPath}?groupLinkError=invalid`);
@@ -997,6 +1005,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
       event_id: groupRow.event_id,
       group_id: groupRow.id,
       token_hash: hashGroupRegistrationLinkToken(token),
+      token_encrypted: encryptQrToken(token),
       public_label: publicLabel,
       internal_label: internalLabel,
       created_by: auth.user.id,
@@ -1028,11 +1037,10 @@ export async function createGroupRegistrationLink(formData: FormData) {
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/capogruppo");
-  redirect(
-    `${dashboardPath}?groupTool=links&groupLinkSaved=1&groupLinkToken=${encodeURIComponent(
-      token
-    )}&groupLinkGroupId=${encodeURIComponent(groupRow.id)}`
-  );
+  redirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, {
+    saved: true,
+    token,
+  }));
 }
 
 export async function revokeGroupRegistrationLink(formData: FormData) {
@@ -1104,11 +1112,7 @@ export async function revokeGroupRegistrationLink(formData: FormData) {
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/capogruppo");
-  redirect(
-    `${dashboardPath}?groupTool=links&groupLinkSaved=1&groupLinkGroupId=${encodeURIComponent(
-      linkRow.group_id
-    )}`
-  );
+  redirect(getGroupLinksModalPath(sourceDashboard, linkRow.group_id, { saved: true }));
 }
 
 export async function saveOperationsGroup(formData: FormData) {
@@ -1252,6 +1256,8 @@ export async function assignGroupLeader(formData: FormData) {
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
   const groupId = optionalText(formData.get("groupId"));
   const mode = optionalText(formData.get("mode")) ?? "existing";
+  const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
+  const isPrimaryLeader = leaderKind === "primary";
 
   if (!groupId || (mode !== "existing" && mode !== "new")) {
     redirect(`${dashboardPath}?groupError=invalid`);
@@ -1306,11 +1312,24 @@ export async function assignGroupLeader(formData: FormData) {
     redirect(`${dashboardPath}?groupError=${leader.error}`);
   }
 
+  if (isPrimaryLeader) {
+    const demoteError = await demoteOtherPrimaryGroupLeaders(
+      serviceSupabase,
+      groupRow.id,
+      leader.userId
+    );
+
+    if (demoteError) {
+      redirect(`${dashboardPath}?groupError=${encodeURIComponent(demoteError)}`);
+    }
+  }
+
   const membership = await serviceSupabase.from("group_memberships").upsert(
     {
       group_id: groupRow.id,
       user_id: leader.userId,
       role: "capogruppo",
+      is_primary: isPrimaryLeader,
       created_by: auth.user.id,
     },
     { onConflict: "group_id,user_id" }
@@ -1322,10 +1341,15 @@ export async function assignGroupLeader(formData: FormData) {
     );
   }
 
-  await serviceSupabase
-    .from("groups")
-    .update({ primary_leader_name: leader.fullName })
-    .eq("id", groupRow.id);
+  const syncError = await syncGroupPrimaryLeaderName(
+    serviceSupabase,
+    groupRow.id,
+    isPrimaryLeader ? leader.fullName : null
+  );
+
+  if (syncError) {
+    redirect(`${dashboardPath}?groupError=${encodeURIComponent(syncError)}`);
+  }
 
   await serviceSupabase.from("audit_logs").insert({
     event_id: groupRow.event_id,
@@ -1337,13 +1361,229 @@ export async function assignGroupLeader(formData: FormData) {
       source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
       participant_id: leader.participantId,
       created_minimal_participant: leader.createdParticipant,
+      leader_kind: leaderKind,
     },
   });
 
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/capogruppo");
-  redirect(getGroupLeaderSuccessPath(sourceDashboard, groupRow.id));
+  redirect(getGroupLeaderSuccessPath(sourceDashboard));
+}
+
+export async function assignOperationalUserRole(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard);
+  const firstName = optionalText(formData.get("firstName"));
+  const lastName = optionalText(formData.get("lastName"));
+  const email = normalizeEmail(formData.get("email"));
+  const role = optionalText(formData.get("role"));
+  const eventId = optionalText(formData.get("eventId"));
+  const groupId = optionalText(formData.get("groupId"));
+  const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
+  const isPrimaryLeader = leaderKind === "primary";
+  const sendInvite = formData.get("sendInvite") === "on";
+
+  if (!firstName || !lastName || !email || !isAssignableOperationalRole(role)) {
+    redirect(`${dashboardPath}?roleError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const requestedRole = sourceDashboard === "admin" ? "admin" : "manager";
+  const auth = await getCurrentAuthContext(supabase, requestedRole);
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const isAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
+  const serviceSupabase = createSupabaseServiceClient();
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  if (role === "admin" && !isAdmin) {
+    redirect(`${dashboardPath}?roleError=forbidden`);
+  }
+
+  let roleEventId: string | null = null;
+  let roleGroupId: string | null = null;
+
+  if (role === "capogruppo") {
+    if (!groupId) {
+      redirect(`${dashboardPath}?roleError=missing-group`);
+    }
+
+    const { data: group, error: groupError } = await serviceSupabase
+      .from("groups")
+      .select("id,event_id,name")
+      .eq("id", groupId)
+      .maybeSingle();
+    const groupRow = group as
+      | { id: string; event_id: string; name: string | null }
+      | null;
+
+    if (groupError || !groupRow) {
+      redirect(`${dashboardPath}?roleError=invalid-group`);
+    }
+
+    const canManageGroupEvent =
+      isAdmin ||
+      auth.eventRoles.some(
+        (eventRole) =>
+          eventRole.role === "manager" && eventRole.eventId === groupRow.event_id
+      );
+
+    if (!canManageGroupEvent) {
+      redirect(`${dashboardPath}?roleError=forbidden`);
+    }
+
+    roleEventId = groupRow.event_id;
+    roleGroupId = groupRow.id;
+  } else if (role !== "admin") {
+    if (!eventId) {
+      redirect(`${dashboardPath}?roleError=missing-event`);
+    }
+
+    const canManageRoleEvent =
+      isAdmin ||
+      auth.eventRoles.some(
+        (eventRole) => eventRole.role === "manager" && eventRole.eventId === eventId
+      );
+
+    if (!canManageRoleEvent) {
+      redirect(`${dashboardPath}?roleError=forbidden`);
+    }
+
+    roleEventId = eventId;
+  }
+
+  const userId = await ensureAuthUserForGroupLeader(serviceSupabase, {
+    email,
+    fullName,
+  });
+
+  if (!userId) {
+    redirect(`${dashboardPath}?roleError=auth-user`);
+  }
+
+  if (role === "capogruppo") {
+    if (!roleGroupId) {
+      redirect(`${dashboardPath}?roleError=missing-group`);
+    }
+
+    if (isPrimaryLeader) {
+      const demoteError = await demoteOtherPrimaryGroupLeaders(
+        serviceSupabase,
+        roleGroupId,
+        userId
+      );
+
+      if (demoteError) {
+        redirect(`${dashboardPath}?roleError=${encodeURIComponent(demoteError)}`);
+      }
+    }
+
+    const membership = await serviceSupabase.from("group_memberships").upsert(
+      {
+        group_id: roleGroupId,
+        user_id: userId,
+        role: "capogruppo",
+        is_primary: isPrimaryLeader,
+        created_by: auth.user.id,
+      },
+      { onConflict: "group_id,user_id" }
+    );
+
+    if (membership.error) {
+      redirect(
+        `${dashboardPath}?roleError=${encodeURIComponent(membership.error.message)}`
+      );
+    }
+
+    const syncError = await syncGroupPrimaryLeaderName(
+      serviceSupabase,
+      roleGroupId,
+      isPrimaryLeader ? fullName : null
+    );
+
+    if (syncError) {
+      redirect(`${dashboardPath}?roleError=${encodeURIComponent(syncError)}`);
+    }
+  } else {
+    const roleMatch = serviceSupabase
+      .from("event_user_roles")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("role", role)
+      .limit(1);
+    const { data: existingRole, error: selectError } =
+      role === "admin"
+        ? await roleMatch.is("event_id", null)
+        : await roleMatch.eq("event_id", roleEventId);
+
+    if (selectError) {
+      redirect(`${dashboardPath}?roleError=${encodeURIComponent(selectError.message)}`);
+    }
+
+    if (!existingRole?.length) {
+      const { error: insertError } = await serviceSupabase
+        .from("event_user_roles")
+        .insert({
+          user_id: userId,
+          event_id: role === "admin" ? null : roleEventId,
+          role,
+          created_by: auth.user.id,
+        });
+
+      if (insertError) {
+        redirect(
+          `${dashboardPath}?roleError=${encodeURIComponent(insertError.message)}`
+        );
+      }
+    }
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: roleEventId,
+    actor_user_id: auth.user.id,
+    action: "operational_user.role_assigned",
+    entity_table: role === "capogruppo" ? "group_memberships" : "event_user_roles",
+    entity_id: userId,
+    metadata: {
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+      role,
+      email_hash: hashEmailForAudit(email),
+      group_id: roleGroupId,
+      leader_kind: role === "capogruppo" ? leaderKind : null,
+      invite_sent: sendInvite,
+    },
+  });
+
+  if (sendInvite) {
+    try {
+      const registrationPath = `/registrazione?email=${encodeURIComponent(email)}`;
+      await sendMagicLinkEmail(
+        serviceSupabase,
+        email,
+        `${getAppUrl()}/auth/callback?redirect_to=${encodeURIComponent(
+          registrationPath
+        )}`
+      );
+    } catch (error) {
+      await logEmailFailure(serviceSupabase, {
+        eventId: roleEventId,
+        action: "email.operational_role_invite_failed",
+        email,
+        error,
+      });
+
+      redirect(`${dashboardPath}?roleError=invite-email`);
+    }
+  }
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+  redirect(`${dashboardPath}?roleSaved=1`);
 }
 
 async function getExistingGroupLeaderTarget(
@@ -1577,15 +1817,87 @@ async function upsertGroupLeaderProfile(
   );
 }
 
-function getGroupLeaderSuccessPath(
-  sourceDashboard: string | null,
-  groupId: string
-): string {
-  if (sourceDashboard === "admin") {
-    return `/dashboard/admin?groupSaved=1&groupTool=leaders&groupId=${groupId}`;
+type GroupLeaderKind = "primary" | "secondary";
+
+function parseGroupLeaderKind(value: FormDataEntryValue | null): GroupLeaderKind {
+  return value === "primary" ? "primary" : "secondary";
+}
+
+async function demoteOtherPrimaryGroupLeaders(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  groupId: string,
+  selectedUserId: string
+): Promise<string | null> {
+  const { error } = await supabase
+    .from("group_memberships")
+    .update({ is_primary: false })
+    .eq("group_id", groupId)
+    .eq("is_primary", true)
+    .neq("user_id", selectedUserId);
+
+  return error?.message ?? null;
+}
+
+async function syncGroupPrimaryLeaderName(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  groupId: string,
+  selectedPrimaryName: string | null
+): Promise<string | null> {
+  if (selectedPrimaryName) {
+    const { error } = await supabase
+      .from("groups")
+      .update({ primary_leader_name: selectedPrimaryName })
+      .eq("id", groupId);
+
+    return error?.message ?? null;
   }
 
-  return `/dashboard/manager?section=gruppi&groupSaved=1&groupTool=leaders&groupId=${groupId}`;
+  const { data: primaryMembership, error: membershipError } = await supabase
+    .from("group_memberships")
+    .select("user_id")
+    .eq("group_id", groupId)
+    .eq("is_primary", true)
+    .maybeSingle();
+
+  if (membershipError) {
+    return membershipError.message;
+  }
+
+  const primaryUserId =
+    (primaryMembership as { user_id: string | null } | null)?.user_id ?? null;
+  let primaryName: string | null = null;
+
+  if (primaryUserId) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("full_name,email")
+      .eq("id", primaryUserId)
+      .maybeSingle();
+
+    if (profileError) {
+      return profileError.message;
+    }
+
+    const profileRow = profile as
+      | { full_name: string | null; email: string | null }
+      | null;
+    primaryName = profileRow?.full_name || profileRow?.email || null;
+  }
+
+  const { error } = await supabase
+    .from("groups")
+    .update({ primary_leader_name: primaryName })
+    .eq("id", groupId);
+
+  return error?.message ?? null;
+}
+
+function getGroupLeaderSuccessPath(sourceDashboard: string | null): string {
+  if (sourceDashboard === "admin") {
+    return "/dashboard/admin?section=gruppi&groupSaved=1";
+  }
+
+  return "/dashboard/manager?section=gruppi&groupSaved=1";
 }
 
 type GroupLeaderTargetResult =
@@ -1740,6 +2052,37 @@ function getGroupManagementDashboardPath(sourceDashboard: string | null): string
   return sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
 }
 
+function getGroupLinksModalPath(
+  sourceDashboard: string | null,
+  groupId: string,
+  options: { saved?: boolean; token?: string } = {}
+): string {
+  const basePath =
+    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({
+    section: "gruppi",
+    groupTool: "links",
+    groupId,
+  });
+
+  if (options.saved) {
+    params.set("groupLinkSaved", "1");
+    params.set("groupLinkGroupId", groupId);
+  }
+
+  if (options.token) {
+    params.set("groupLinkToken", options.token);
+  }
+
+  return `${basePath}?${params.toString()}`;
+}
+
+function getOperationalUsersDashboardPath(sourceDashboard: string | null): string {
+  return sourceDashboard === "admin"
+    ? "/dashboard/admin?section=ruoli"
+    : "/dashboard/manager?section=ruoli";
+}
+
 function getGroupManagementRequestedRole(
   sourceDashboard: string | null
 ): "admin" | "manager" | "capogruppo" {
@@ -1774,6 +2117,18 @@ function isValidGroupAgeBracket(value: string): boolean {
     value === "adulti" ||
     value === "both" ||
     value === "none"
+  );
+}
+
+function isAssignableOperationalRole(
+  value: string | null
+): value is "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo" {
+  return (
+    value === "admin" ||
+    value === "manager" ||
+    value === "manager_viewer" ||
+    value === "accoglienza" ||
+    value === "capogruppo"
   );
 }
 
@@ -1932,7 +2287,7 @@ async function canManageGroupRegistrationLink(
 async function logEmailFailure(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   input: {
-    eventId: string;
+    eventId: string | null;
     action: string;
     email: string;
     error: unknown;

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { CalendarDays, Network, Users } from "lucide-react";
+import { CalendarDays, Network, ShieldCheck, Users, X } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import {
+  assignOperationalUserRole,
   assignGroupLeader,
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
@@ -13,7 +14,14 @@ import {
   DashboardAreaDescription,
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
+import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
+import { AutoCopyLinkNotice, CopyLinkButton } from "@/app/dashboard/group-link-copy-tools";
+import { GroupLeaderKindField } from "@/app/dashboard/group-leader-kind-field";
+import { GroupLeaderModeTabs } from "@/app/dashboard/group-leader-mode-tabs";
+import { OperationalRoleFields } from "@/app/dashboard/operational-role-fields";
+import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
+import { decryptQrToken } from "@/lib/qrcode/secure-token";
 import {
   buildGroupRegistrationUrl,
   getGroupRegistrationLinkStatus,
@@ -54,10 +62,13 @@ type ManagerPageProps = {
     groupTool?: string;
     groupType?: string;
     groupVisibility?: string;
+    roleError?: string;
+    roleSaved?: string;
     edit?: string;
     editMode?: string;
     event?: string;
     group?: string;
+    contact?: string;
     q?: string;
     nav?: string;
     section?: string;
@@ -187,6 +198,7 @@ type ManagerGroupRegistrationLinkRow = {
   group_id: string;
   public_label: string | null;
   internal_label: string | null;
+  token_encrypted: string | null;
   use_count: number | null;
   max_uses: number | null;
   created_at: string | null;
@@ -200,6 +212,7 @@ type ManagerGroupRegistrationLink = {
   groupId: string;
   publicLabel: string | null;
   internalLabel: string | null;
+  url: string | null;
   useCount: number;
   maxUses: number | null;
   createdAt: string | null;
@@ -231,8 +244,21 @@ type ManagerOperationsSnapshot = {
   groupOptions: ManagerGroupOption[];
   groupTree: ManagerGroupTreeRow[];
   groupLinks: ManagerGroupRegistrationLink[];
+  roleUsers: OperationalUserRoleRow[];
   filters: OperationsDashboardFilters;
   summary: OperationsDashboardSummary;
+};
+
+type OperationalUserRoleRow = {
+  userId: string;
+  email: string | null;
+  fullName: string | null;
+  role: string;
+  isPrimaryGroupLeader: boolean | null;
+  eventId: string | null;
+  eventTitle: string | null;
+  groupId: string | null;
+  groupName: string | null;
 };
 
 type EventSnapshot = {
@@ -243,7 +269,7 @@ type EventSnapshot = {
   canManage: boolean;
 };
 
-type ManagerSection = "evento" | "iscritti" | "gruppi";
+type ManagerSection = "evento" | "iscritti" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -312,6 +338,8 @@ export default async function ManagerDashboardPage({
               groupLinkSaved={params.groupLinkSaved}
               groupError={params.groupError}
               groupSaved={params.groupSaved}
+              roleError={params.roleError}
+              roleSaved={params.roleSaved}
             />
 
             {activeSection === "evento" ? (
@@ -324,6 +352,20 @@ export default async function ManagerDashboardPage({
                 selectedParticipant={selectedCanManage ? selectedParticipant : null}
                 isEditingParticipant={params.editMode === "1"}
                 canManageEvent={scope.canManageEvent}
+                navMode={navMode}
+              />
+            ) : null}
+
+            {activeSection === "ruoli" ? (
+              <ManagerOperationalUsersSection
+                roles={managerOperations.roleUsers}
+                eventOptions={getRoleEventOptions(
+                  managerOperations.groupTree,
+                  scope.eventIds
+                )}
+                groupOptions={managerOperations.groupTree.filter(
+                  (group) => group.isActive && group.isAssignable
+                )}
                 navMode={navMode}
               />
             ) : null}
@@ -393,7 +435,14 @@ function ManagerSidebar({
       href: `/dashboard/manager?section=iscritti&nav=${navMode}`,
       Icon: Users,
       label: "Gestione iscritti",
-      help: "Partecipanti e ruoli",
+      help: "Partecipanti evento",
+    },
+    {
+      key: "ruoli",
+      href: `/dashboard/manager?section=ruoli&nav=${navMode}`,
+      Icon: ShieldCheck,
+      label: "Utenti e ruoli",
+      help: "Accessi operativi",
     },
     {
       key: "gruppi",
@@ -467,6 +516,103 @@ function managerPath(section: ManagerSection, navMode: ManagerNavMode): string {
   return `/dashboard/manager?section=${section}&nav=${navMode}`;
 }
 
+async function buildOperationalUserRows(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  eventRoles: unknown,
+  groupMemberships: unknown,
+  eventScope: Set<string> | null
+): Promise<OperationalUserRoleRow[]> {
+  const eventRoleRows = ((eventRoles ?? []) as Array<{
+    user_id: string;
+    role: string;
+    event_id: string | null;
+    events: { title: string | null } | Array<{ title: string | null }> | null;
+  }>).filter((row) => !eventScope || (row.event_id && eventScope.has(row.event_id)));
+  const membershipRows = ((groupMemberships ?? []) as Array<{
+    user_id: string;
+    role: string;
+    is_primary: boolean | null;
+    group_id: string | null;
+    groups:
+      | {
+          id: string;
+          name: string | null;
+          event_id: string | null;
+          events: { title: string | null } | Array<{ title: string | null }> | null;
+        }
+      | Array<{
+          id: string;
+          name: string | null;
+          event_id: string | null;
+          events: { title: string | null } | Array<{ title: string | null }> | null;
+        }>
+      | null;
+  }>).filter((row) => {
+    const group = relatedOne(row.groups);
+    return !eventScope || Boolean(group?.event_id && eventScope.has(group.event_id));
+  });
+  const userIds = Array.from(
+    new Set([
+      ...eventRoleRows.map((row) => row.user_id),
+      ...membershipRows.map((row) => row.user_id),
+    ])
+  );
+  const { data: profiles } =
+    userIds.length > 0
+      ? await supabase.from("profiles").select("id,email,full_name").in("id", userIds)
+      : { data: [] };
+  const profileById = new Map(
+    ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map(
+      (profile) => [profile.id, profile]
+    )
+  );
+  const rows: OperationalUserRoleRow[] = [
+    ...eventRoleRows.map((row) => {
+      const profile = profileById.get(row.user_id);
+      return {
+        userId: row.user_id,
+        email: profile?.email ?? null,
+        fullName: profile?.full_name ?? null,
+        role: row.role,
+        isPrimaryGroupLeader: null,
+        eventId: row.event_id,
+        eventTitle: relatedOne(row.events)?.title ?? null,
+        groupId: null,
+        groupName: null,
+      };
+    }),
+    ...membershipRows.map((row) => {
+      const group = relatedOne(row.groups);
+      const profile = profileById.get(row.user_id);
+      return {
+        userId: row.user_id,
+        email: profile?.email ?? null,
+        fullName: profile?.full_name ?? null,
+        role: row.role,
+        isPrimaryGroupLeader: row.is_primary ?? false,
+        eventId: group?.event_id ?? null,
+        eventTitle: relatedOne(group?.events ?? null)?.title ?? null,
+        groupId: group?.id ?? row.group_id,
+        groupName: group?.name ?? null,
+      };
+    }),
+  ];
+
+  return rows.sort((a, b) =>
+    (a.fullName ?? a.email ?? "").localeCompare(b.fullName ?? b.email ?? "")
+  );
+}
+
+function getRoleEventOptions(groups: ManagerGroupTreeRow[], eventScope: Set<string> | null) {
+  const options = new Map<string, string>();
+  groups.forEach((group) => {
+    if (!eventScope || eventScope.has(group.eventId)) {
+      options.set(group.eventId, group.eventTitle);
+    }
+  });
+  return Array.from(options, ([id, title]) => ({ id, title }));
+}
+
 function ManagerEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
   return (
     <section className="grid min-w-0 gap-4">
@@ -514,7 +660,12 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 }
 
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
-  if (params.section === "evento" || params.section === "iscritti" || params.section === "gruppi") {
+  if (
+    params.section === "evento" ||
+    params.section === "iscritti" ||
+    params.section === "ruoli" ||
+    params.section === "gruppi"
+  ) {
     return params.section;
   }
 
@@ -533,6 +684,13 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.groupLinkToken
   ) {
     return "gruppi";
+  }
+
+  if (
+    params.roleError ||
+    params.roleSaved
+  ) {
+    return "ruoli";
   }
 
   if (
@@ -591,7 +749,7 @@ async function getManagerOperationsSnapshot(
   const groupLinksQuery = supabase
     .from("group_registration_links")
     .select(
-      "id,event_id,group_id,public_label,internal_label,use_count,max_uses,created_at,expires_at,revoked_at"
+      "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
     )
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
@@ -599,17 +757,32 @@ async function getManagerOperationsSnapshot(
   if (scope.eventIds) {
     groupLinksQuery.in("event_id", [...scope.eventIds]);
   }
+  const eventRolesQuery = supabase
+    .from("event_user_roles")
+    .select("user_id,role,event_id,events(title)");
+  const groupMembershipsQuery = supabase
+    .from("group_memberships")
+    .select("user_id,role,is_primary,group_id,groups(id,name,event_id,events(title))");
+
+  if (scope.eventIds) {
+    eventRolesQuery.in("event_id", [...scope.eventIds]);
+    groupMembershipsQuery.in("groups.event_id", [...scope.eventIds]);
+  }
 
   const [
     { data: registrations },
     { data: groups },
     { data: groupTree },
     { data: groupLinks },
+    { data: eventRoles },
+    { data: groupMemberships },
   ] = await Promise.all([
     scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : registrationsQuery,
     scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupsQuery,
     scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupTreeQuery,
     scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupLinksQuery,
+    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : eventRolesQuery,
+    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupMembershipsQuery,
   ]);
   const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
   const registrationIds = registrationRows.map((row) => row.id);
@@ -663,6 +836,12 @@ async function getManagerOperationsSnapshot(
   }>;
   const groupNameById = new Map(
     groupTreeRows.map((group) => [group.id, group.name ?? "Gruppo senza nome"])
+  );
+  const roleUsers = await buildOperationalUserRows(
+    supabase,
+    eventRoles,
+    groupMemberships,
+    scope.eventIds
   );
 
   const participantRows = registrationRows.map((registration) => {
@@ -737,6 +916,7 @@ async function getManagerOperationsSnapshot(
         groupId: link.group_id,
         publicLabel: link.public_label,
         internalLabel: link.internal_label,
+        url: buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
         useCount: link.use_count ?? 0,
         maxUses: link.max_uses,
         createdAt: link.created_at,
@@ -744,6 +924,7 @@ async function getManagerOperationsSnapshot(
         revokedAt: link.revoked_at,
       })
     ),
+    roleUsers,
     filters,
     summary: summarizeOperationsDashboardParticipants(
       participantRows,
@@ -1001,13 +1182,6 @@ function ManagerGroupTreeSection({
         ) : null}
       </div>
 
-      <GroupTableFiltersForm
-        filters={filters}
-        eventOptions={eventOptions}
-        action="/dashboard/manager"
-        navMode={navMode}
-      />
-
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <EventValue label="Gruppi visibili" value={filteredGroups.length} />
         <EventValue label="Iscrivibili" value={filteredGroups.filter((group) => group.isAssignable).length} />
@@ -1016,16 +1190,83 @@ function ManagerGroupTreeSection({
       </div>
 
       <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-              <th className="py-3 pr-4 font-semibold">Nodo</th>
-              <th className="py-3 pr-4 font-semibold">Età</th>
-              <th className="py-3 pr-4 font-semibold">Referente principale</th>
-              <th className="py-3 pr-4 font-semibold">Accesso iscrizione</th>
-              <th className="py-3 text-right font-semibold">Azioni</th>
-            </tr>
-          </thead>
+        <AutoFilterForm
+          action="/dashboard/manager"
+          defaults={{
+            groupQ: "",
+            groupType: "all",
+            groupVisibility: "all",
+          }}
+        >
+          <input type="hidden" name="section" value="gruppi" />
+          <input type="hidden" name="nav" value={navMode} />
+          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+                <th className="py-3 pr-4 font-semibold">Nodo</th>
+                <th className="py-3 pr-4 font-semibold">Età</th>
+                <th className="py-3 pr-4 font-semibold">Referente principale</th>
+                <th className="py-3 pr-4 font-semibold">Accesso iscrizione</th>
+                <th className="py-3 text-right font-semibold">Azioni</th>
+              </tr>
+              <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-group-q">Cerca gruppo</label>
+                  <input
+                    id="manager-group-q"
+                    name="groupQ"
+                    defaultValue={filters.q}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                    placeholder="Nome, referente, label"
+                  />
+                </th>
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-group-type">Tipo nodo</label>
+                  <select
+                    id="manager-group-type"
+                    name="groupType"
+                    defaultValue={filters.nodeType}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                  >
+                    <option value="all">Tutti i tipi</option>
+                    <option value="country">Paese</option>
+                    <option value="city">Città</option>
+                    <option value="area">Area</option>
+                    <option value="group">Gruppo</option>
+                    <option value="newcomers">Nuovi partecipanti</option>
+                  </select>
+                </th>
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-group-visibility">Accesso iscrizione</label>
+                  <select
+                    id="manager-group-visibility"
+                    name="groupVisibility"
+                    defaultValue={filters.visibility}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                  >
+                    <option value="all">Tutti</option>
+                    <option value="public">Nel form pubblico</option>
+                    <option value="reserved">Solo con link</option>
+                    <option value="not-assignable">Non iscrivibile</option>
+                  </select>
+                </th>
+                <th className="py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    {filters.q ||
+                    filters.eventId !== "all" ||
+                    filters.nodeType !== "all" ||
+                    filters.visibility !== "all" ? (
+                      <Link
+                        href={managerPath("gruppi", navMode)}
+                        className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"
+                      >
+                        Reset
+                      </Link>
+                    ) : null}
+                  </div>
+                </th>
+              </tr>
+            </thead>
           <tbody>
             {filteredGroups.map((group) => {
               const canManage = canManageEvent(group.eventId);
@@ -1086,8 +1327,9 @@ function ManagerGroupTreeSection({
                 </tr>
               );
             })}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </AutoFilterForm>
       </div>
 
       {filteredGroups.length === 0 ? (
@@ -1125,99 +1367,6 @@ function ManagerGroupTreeSection({
         />
       ) : null}
     </section>
-  );
-}
-
-function GroupTableFiltersForm({
-  filters,
-  eventOptions,
-  action,
-  navMode,
-}: {
-  filters: GroupTableFilters;
-  eventOptions: Array<{ id: string; title: string }>;
-  action: string;
-  navMode: ManagerNavMode;
-}) {
-  const hasActiveFilters =
-    filters.q ||
-    filters.eventId !== "all" ||
-    filters.nodeType !== "all" ||
-    filters.visibility !== "all";
-
-  return (
-    <form
-      action={action}
-      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
-    >
-      <input type="hidden" name="section" value="gruppi" />
-      <input type="hidden" name="nav" value={navMode} />
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Cerca gruppo
-        <input
-          name="groupQ"
-          defaultValue={filters.q}
-          className="field bg-white font-normal"
-          placeholder="Nome, referente, label"
-        />
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Evento
-        <select
-          name="groupEvent"
-          defaultValue={filters.eventId}
-          className="field bg-white font-normal"
-        >
-          <option value="all">Tutti</option>
-          {eventOptions.map((event) => (
-            <option key={event.id} value={event.id}>
-              {event.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Tipo
-        <select
-          name="groupType"
-          defaultValue={filters.nodeType}
-          className="field bg-white font-normal"
-        >
-          <option value="all">Tutti</option>
-          <option value="country">Paese</option>
-          <option value="city">Città</option>
-          <option value="area">Area</option>
-          <option value="group">Gruppo</option>
-          <option value="newcomers">Nuovi partecipanti</option>
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Visibilità
-        <select
-          name="groupVisibility"
-          defaultValue={filters.visibility}
-          className="field bg-white font-normal"
-        >
-          <option value="all">Tutti</option>
-          <option value="public">Nel form pubblico</option>
-          <option value="reserved">Solo con link</option>
-          <option value="internal">Non iscrivibile</option>
-        </select>
-      </label>
-      <div className="flex items-end gap-2">
-        <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          Filtra
-        </button>
-        {hasActiveFilters ? (
-          <Link
-            href={managerPath("gruppi", navMode)}
-            className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            Reset
-          </Link>
-        ) : null}
-      </div>
-    </form>
   );
 }
 
@@ -1366,29 +1515,34 @@ function ManagerGroupLinksOverlay({
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
-        <div className="border-b border-[var(--peace-border)] px-5 py-4">
-          <h3 className="text-xl font-semibold">Link gruppo</h3>
-          <p className="mt-1 text-sm text-[var(--peace-muted)]">{group.name}</p>
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
+          <div>
+            <h3 className="text-xl font-semibold">Link gruppo</h3>
+            <p className="mt-1 text-sm text-[var(--peace-muted)]">{group.name}</p>
+          </div>
+          <Link
+            href={managerPath("gruppi", navMode)}
+            className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            aria-label="Chiudi modale link gruppo"
+          >
+            <X className="size-5" aria-hidden="true" />
+          </Link>
         </div>
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
-          {createdUrl ? (
-            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-              Link appena generato
-              <input readOnly className="field bg-white font-mono text-xs" value={createdUrl} />
-            </label>
-          ) : null}
+          <AutoCopyLinkNotice url={createdUrl} />
 
           {canManage ? (
             <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
               <input type="hidden" name="sourceDashboard" value="manager" />
               <input type="hidden" name="groupId" value={group.id} />
               <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                Label pubblica
-                <input name="publicLabel" className="field" defaultValue={group.publicLabel ?? ""} />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                Etichetta interna
-                <input name="internalLabel" className="field" placeholder="Per esempio: invito assemblea giugno" />
+                Nome visualizzato del link
+                <input
+                  name="displayName"
+                  className="field"
+                  defaultValue={group.publicLabel ?? group.name}
+                  required
+                />
               </label>
               <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                 Genera link
@@ -1403,35 +1557,44 @@ function ManagerGroupLinksOverlay({
           <div className="grid gap-2">
             {links.map((link) => (
               <div key={link.id} className="flex flex-col gap-2 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-[var(--peace-ink)]">
-                    {link.internalLabel ?? link.publicLabel ?? "Link senza etichetta"}
+                    {link.publicLabel ?? "Link senza nome"}
                   </p>
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {groupLinkStatusLabel(link)} - usi {link.useCount}
                     {link.maxUses ? `/${link.maxUses}` : ""}
                   </p>
+                  {link.url ? (
+                    <input
+                      readOnly
+                      className="field mt-2 bg-[#f7fbfe] font-mono text-xs"
+                      value={link.url}
+                    />
+                  ) : (
+                    <p className="mt-2 text-xs text-[var(--peace-muted)]">
+                      Link creato prima della copia persistente: genera un nuovo link per poterlo copiare da qui.
+                    </p>
+                  )}
                 </div>
-                {canManage ? (
-                  <form action={revokeGroupRegistrationLink}>
-                    <input type="hidden" name="sourceDashboard" value="manager" />
-                    <input type="hidden" name="linkId" value={link.id} />
-                    <button className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
-                      Revoca
-                    </button>
-                  </form>
-                ) : null}
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  {link.url ? <CopyLinkButton url={link.url} /> : null}
+                  {canManage ? (
+                    <form action={revokeGroupRegistrationLink}>
+                      <input type="hidden" name="sourceDashboard" value="manager" />
+                      <input type="hidden" name="linkId" value={link.id} />
+                      <button className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
+                        Revoca
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
               </div>
             ))}
             {links.length === 0 ? (
               <p className="text-sm text-[var(--peace-muted)]">Nessun link attivo per questo gruppo.</p>
             ) : null}
           </div>
-        </div>
-        <div className="flex justify-end border-t border-[var(--peace-border)] px-5 py-4">
-          <Link href={managerPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
-            Chiudi
-          </Link>
         </div>
       </div>
     </div>
@@ -1454,66 +1617,75 @@ function ManagerGroupLeaderOverlay({
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
-        <div className="border-b border-[var(--peace-border)] px-5 py-4">
-          <h3 className="text-xl font-semibold">Capogruppo</h3>
-          <p className="mt-1 text-sm text-[var(--peace-muted)]">{group.name}</p>
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
+          <div>
+            <h3 className="text-xl font-semibold">Assegna capogruppo</h3>
+            <p className="mt-1 text-sm text-[var(--peace-muted)]">{group.name}</p>
+          </div>
+          <Link
+            href={managerPath("gruppi", navMode)}
+            className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            aria-label="Chiudi modale capogruppo"
+          >
+            <X className="size-5" aria-hidden="true" />
+          </Link>
         </div>
-        <div className="grid gap-5 overflow-y-auto px-5 py-5">
+        <div className="overflow-y-auto px-5 py-5">
           {canManage ? (
-            <>
-              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
-                <input type="hidden" name="sourceDashboard" value="manager" />
-                <input type="hidden" name="groupId" value={group.id} />
-                <input type="hidden" name="mode" value="existing" />
-                <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                  Partecipante già iscritto
-                  <select name="participantId" className="field bg-white font-normal" required>
-                    <option value="">Seleziona una persona</option>
-                    {participantOptions.map((participant) => (
-                      <option key={participant.participantId} value={participant.participantId}>
-                        {participant.name} - {participant.email}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                  Rendi capogruppo
-                </button>
-              </form>
-
-              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4">
-                <input type="hidden" name="sourceDashboard" value="manager" />
-                <input type="hidden" name="groupId" value={group.id} />
-                <input type="hidden" name="mode" value="new" />
-                <div className="grid gap-3 sm:grid-cols-2">
+            <GroupLeaderModeTabs
+              existingForm={
+                <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+                  <input type="hidden" name="sourceDashboard" value="manager" />
+                  <input type="hidden" name="groupId" value={group.id} />
+                  <input type="hidden" name="mode" value="existing" />
+                  <ParticipantSearchField
+                    label="Partecipante già iscritto"
+                    name="participantId"
+                    options={participantOptions.map((participant) => ({
+                      id: participant.participantId,
+                      name: participant.name,
+                      email: participant.email,
+                    }))}
+                  />
+                  <div className="pt-3">
+                    <GroupLeaderKindField />
+                  </div>
+                  <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                    Assegna capogruppo
+                  </button>
+                </form>
+              }
+              newForm={
+                <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4">
+                  <input type="hidden" name="sourceDashboard" value="manager" />
+                  <input type="hidden" name="groupId" value={group.id} />
+                  <input type="hidden" name="mode" value="new" />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                      Nome
+                      <input name="firstName" className="field" required />
+                    </label>
+                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                      Cognome
+                      <input name="lastName" className="field" required />
+                    </label>
+                  </div>
                   <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                    Nome
-                    <input name="firstName" className="field" required />
+                    Email
+                    <input name="email" type="email" className="field" required />
                   </label>
-                  <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                    Cognome
-                    <input name="lastName" className="field" required />
-                  </label>
-                </div>
-                <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                  Email
-                  <input name="email" type="email" className="field" required />
-                </label>
-                <button className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
-                  Crea scheda minima e assegna
-                </button>
-              </form>
-            </>
+                  <GroupLeaderKindField />
+                  <button className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                    Crea utente e assegna
+                  </button>
+                </form>
+              }
+            />
           ) : (
             <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
               Consultazione senza permessi di modifica.
             </p>
           )}
-        </div>
-        <div className="flex justify-end border-t border-[var(--peace-border)] px-5 py-4">
-          <Link href={managerPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
-            Chiudi
-          </Link>
         </div>
       </div>
     </div>
@@ -1533,7 +1705,7 @@ function ManagerParticipantsSection({
   canManageEvent: (eventId: string) => boolean;
   navMode: ManagerNavMode;
 }) {
-  const eventOptions = getOperationsEventOptions(snapshot.allParticipants);
+  const currentGroupOptions = getCurrentGroupFilterOptions(snapshot.allParticipants);
 
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -1544,70 +1716,133 @@ function ManagerParticipantsSection({
         </p>
       </div>
 
-      <OperationsFiltersForm
-        filters={snapshot.filters}
-        eventOptions={eventOptions}
-        action="/dashboard/manager"
-        navMode={navMode}
-      />
-
       <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-              <th className="py-3 pr-4 font-semibold">Iscrizione</th>
-              <th className="py-3 pr-4 font-semibold">Contatti</th>
-              <th className="py-3 pr-4 font-semibold">Gruppo</th>
-              <th className="py-3 text-right font-semibold">Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {snapshot.participants.map((participant) => {
-              const canManage = canManageEvent(participant.eventId);
-
-              return (
-                <tr
-                  key={participant.registrationId}
-                  className="border-b border-[var(--peace-border)] align-top last:border-b-0"
-                >
-                  <td className="py-4 pr-4">
-                    <p className="font-semibold text-[var(--peace-ink)]">{participant.name}</p>
-                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                      {participant.publicCode ?? "Senza codice"} -{" "}
-                      {statusLabel(participant.registrationStatus)}
-                    </p>
-                  </td>
-                  <td className="py-4 pr-4 text-[var(--peace-ink)]">
-                    <p>{participant.email ?? "Email non indicata"}</p>
-                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                      {participant.phone ?? "Telefono non indicato"}
-                    </p>
-                  </td>
-                  <td className="py-4 pr-4">
-                    <p className="font-medium">
-                      {participant.currentGroupName ?? "Nessun gruppo corrente"}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                      {groupStatusLabel(participant.currentGroupStatus)}
-                    </p>
-                  </td>
-                  <td className="py-4 text-right">
-                    {canManage ? (
+        <AutoFilterForm
+          action="/dashboard/manager"
+          defaults={{ q: "", contact: "", group: "all", status: "all" }}
+        >
+          <input type="hidden" name="section" value="iscritti" />
+          <input type="hidden" name="nav" value={navMode} />
+          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+                <th className="py-3 pr-4 font-semibold">Iscrizione</th>
+                <th className="py-3 pr-4 font-semibold">Contatti</th>
+                <th className="py-3 pr-4 font-semibold">Gruppo</th>
+                <th className="py-3 text-right font-semibold">Azioni</th>
+              </tr>
+              <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-participant-q">Cerca iscrizione</label>
+                  <input
+                    id="manager-participant-q"
+                    name="q"
+                    defaultValue={snapshot.filters.q}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                    placeholder="Nome, codice, email"
+                  />
+                </th>
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-participant-contact">Cerca contatto</label>
+                  <input
+                    id="manager-participant-contact"
+                    name="contact"
+                    defaultValue={snapshot.filters.contact}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                    placeholder="Email, telefono"
+                  />
+                </th>
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-participant-group">Gruppo</label>
+                  <select
+                    id="manager-participant-group"
+                    name="group"
+                    defaultValue={snapshot.filters.group}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                  >
+                    <option value="all">Tutti i gruppi</option>
+                    <option value="none">Senza gruppo</option>
+                    {currentGroupOptions.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    <label className="sr-only" htmlFor="manager-participant-status">Stato</label>
+                    <select
+                      id="manager-participant-status"
+                      name="status"
+                      defaultValue={snapshot.filters.status}
+                      className="field min-h-10 max-w-36 bg-white text-sm font-normal"
+                    >
+                      <option value="all">Tutti</option>
+                      <option value="submitted">Inviata</option>
+                      <option value="confirmed">Confermata</option>
+                      <option value="cancelled">Annullata</option>
+                    </select>
+                    {hasActiveOperationsDashboardFilters(snapshot.filters) ? (
                       <Link
-                        href={`${managerPath("iscritti", navMode)}&edit=${participant.registrationId}`}
-                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+                        href={managerPath("iscritti", navMode)}
+                        className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"
                       >
-                        Dettagli
+                        Reset
                       </Link>
-                    ) : (
-                      <span className="text-sm text-[var(--peace-muted)]">Solo lettura</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    ) : null}
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshot.participants.map((participant) => {
+                const canManage = canManageEvent(participant.eventId);
+
+                return (
+                  <tr
+                    key={participant.registrationId}
+                    className="border-b border-[var(--peace-border)] align-top last:border-b-0"
+                  >
+                    <td className="py-4 pr-4">
+                      <p className="font-semibold text-[var(--peace-ink)]">{participant.name}</p>
+                      <p className="mt-1 text-xs text-[var(--peace-muted)]">
+                        {participant.publicCode ?? "Senza codice"} -{" "}
+                        {statusLabel(participant.registrationStatus)}
+                      </p>
+                    </td>
+                    <td className="py-4 pr-4 text-[var(--peace-ink)]">
+                      <p>{participant.email ?? "Email non indicata"}</p>
+                      <p className="mt-1 text-xs text-[var(--peace-muted)]">
+                        {participant.phone ?? "Telefono non indicato"}
+                      </p>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <p className="font-medium">
+                        {participant.currentGroupName ?? "Nessun gruppo corrente"}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--peace-muted)]">
+                        {groupStatusLabel(participant.currentGroupStatus)}
+                      </p>
+                    </td>
+                    <td className="py-4 text-right">
+                      {canManage ? (
+                        <Link
+                          href={`${managerPath("iscritti", navMode)}&edit=${participant.registrationId}`}
+                          className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+                        >
+                          Dettagli
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-[var(--peace-muted)]">Solo lettura</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </AutoFilterForm>
       </div>
 
       {snapshot.participants.length === 0 ? (
@@ -1630,90 +1865,103 @@ function ManagerParticipantsSection({
   );
 }
 
-function OperationsFiltersForm({
-  filters,
+function ManagerOperationalUsersSection({
+  roles,
   eventOptions,
-  action,
+  groupOptions,
   navMode,
 }: {
-  filters: OperationsDashboardFilters;
+  roles: OperationalUserRoleRow[];
   eventOptions: Array<{ id: string; title: string }>;
-  action: string;
+  groupOptions: ManagerGroupTreeRow[];
   navMode: ManagerNavMode;
 }) {
-  const hasActiveFilters = hasActiveOperationsDashboardFilters(filters);
-
   return (
-    <form
-      action={action}
-      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1.2fr_repeat(3,minmax(0,1fr))_auto]"
-    >
-      <input type="hidden" name="section" value="iscritti" />
-      <input type="hidden" name="nav" value={navMode} />
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Cerca
-        <input
-          name="q"
-          defaultValue={filters.q}
-          className="field bg-white font-normal"
-          placeholder="Nome, codice, email, gruppo"
-        />
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Evento
-        <select
-          name="event"
-          defaultValue={filters.eventId}
-          className="field bg-white font-normal"
-        >
-          <option value="all">Tutti</option>
-          {eventOptions.map((event) => (
-            <option key={event.id} value={event.id}>
-              {event.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Gruppo
-        <select
-          name="group"
-          defaultValue={filters.group}
-          className="field bg-white font-normal"
-        >
-          <option value="all">Tutti</option>
-          <option value="none">Senza gruppo</option>
-          <option value="probable">Da verificare</option>
-          <option value="confirmed">Confermato</option>
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        Stato
-        <select
-          name="status"
-          defaultValue={filters.status}
-          className="field bg-white font-normal"
-        >
-          <option value="all">Tutti</option>
-          <option value="submitted">Inviata</option>
-          <option value="confirmed">Confermata</option>
-          <option value="cancelled">Annullata</option>
-        </select>
-      </label>
-      <div className="flex items-end gap-2">
-        <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          Filtra
-        </button>
-        {hasActiveFilters ? (
-          <Link
-            href={managerPath("iscritti", navMode)}
-            className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            Reset
-          </Link>
+    <section className="grid min-w-0 gap-5">
+      <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <h2 className="text-lg font-semibold">Utenti e ruoli</h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
+          Crea accessi operativi per gli eventi assegnati senza creare una
+          iscrizione. La persona potra&apos; accedere con magic link e completare poi
+          la propria iscrizione personale.
+        </p>
+        <form action={assignOperationalUserRole} className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+          <input type="hidden" name="sourceDashboard" value="manager" />
+          <input type="hidden" name="nav" value={navMode} />
+          <div className="grid gap-3 lg:grid-cols-3">
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Nome
+              <input name="firstName" className="field bg-white font-normal" required />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Cognome
+              <input name="lastName" className="field bg-white font-normal" required />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Email
+              <input name="email" type="email" className="field bg-white font-normal" required />
+            </label>
+          </div>
+          <OperationalRoleFields
+            eventOptions={eventOptions}
+            groupOptions={groupOptions.map((group) => ({
+              id: group.id,
+              name: group.name,
+              eventTitle: group.eventTitle,
+            }))}
+            roleOptions={[
+              { value: "capogruppo", label: "Capogruppo" },
+              { value: "manager", label: "Manager" },
+              { value: "manager_viewer", label: "Manager viewer" },
+              { value: "accoglienza", label: "Accoglienza" },
+            ]}
+          />
+          <label className="flex items-start gap-2 text-sm text-[var(--peace-ink)]">
+            <input name="sendInvite" type="checkbox" className="mt-1" defaultChecked />
+            <span>Invia subito un magic link con invito a completare l&apos;iscrizione personale.</span>
+          </label>
+          <button className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+            Crea utente e assegna ruolo
+          </button>
+        </form>
+      </div>
+
+      <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <h3 className="text-base font-semibold">Ruoli assegnati</h3>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+                <th className="py-3 pr-4 font-semibold">Utente</th>
+                <th className="py-3 pr-4 font-semibold">Ruolo</th>
+                <th className="py-3 pr-4 font-semibold">Scope</th>
+                <th className="py-3 font-semibold">Stato iscrizione</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map((row) => (
+                <tr key={`${row.userId}-${row.role}-${row.eventId ?? row.groupId ?? "global"}`} className="border-b border-[var(--peace-border)] align-top last:border-b-0">
+                  <td className="py-4 pr-4">
+                    <p className="font-semibold">{row.fullName ?? row.email ?? "Utente senza profilo"}</p>
+                    <p className="mt-1 text-xs text-[var(--peace-muted)]">{row.email ?? row.userId}</p>
+                  </td>
+                  <td className="py-4 pr-4">{roleLabel(row.role, row.isPrimaryGroupLeader)}</td>
+                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
+                    {row.groupName ?? row.eventTitle ?? "Globale"}
+                  </td>
+                  <td className="py-4 text-[var(--peace-muted)]">
+                    Accesso operativo attivo; iscrizione personale separata.
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {roles.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--peace-muted)]">Nessun ruolo assegnato.</p>
         ) : null}
       </div>
-    </form>
+    </section>
   );
 }
 
@@ -1869,6 +2117,8 @@ function StatusMessage({
   groupLinkSaved,
   groupError,
   groupSaved,
+  roleError,
+  roleSaved,
 }: {
   error?: string;
   saved?: string;
@@ -1878,14 +2128,18 @@ function StatusMessage({
   groupLinkSaved?: string;
   groupError?: string;
   groupSaved?: string;
+  roleError?: string;
+  roleSaved?: string;
 }) {
-  if (saved || managerSaved || groupLinkSaved || groupSaved) {
+  if (saved || managerSaved || groupLinkSaved || groupSaved || roleSaved) {
     return (
       <p className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
         {groupSaved
           ? "Gruppo aggiornato."
           : groupLinkSaved
           ? "Link gruppo aggiornato."
+          : roleSaved
+            ? "Utente operativo aggiornato."
           : managerSaved
             ? "Gestione iscritti aggiornata."
             : "Configurazione apertura aggiornata."}
@@ -1893,7 +2147,7 @@ function StatusMessage({
     );
   }
 
-  if (!error && !managerError && !groupLinkError && !groupError) {
+  if (!error && !managerError && !groupLinkError && !groupError && !roleError) {
     return null;
   }
 
@@ -1903,8 +2157,12 @@ function StatusMessage({
     forbidden: "Non hai permessi di modifica su questo evento.",
     "invalid-group": "Gruppo non valido per questa iscrizione.",
     "invalid-parent": "Il gruppo parent non è valido per questo evento.",
+    "missing-event": "Seleziona un evento per questo ruolo.",
+    "missing-group": "Seleziona un gruppo per il ruolo capogruppo.",
+    "auth-user": "Non è stato possibile creare o recuperare l'utente.",
+    "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
   };
-  const messageKey = groupError ?? groupLinkError ?? managerError ?? error;
+  const messageKey = groupError ?? groupLinkError ?? roleError ?? managerError ?? error;
 
   return (
     <p className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
@@ -2003,16 +2261,20 @@ function formatPlace(city: string | null, country: string | null): string {
   return parts.length > 0 ? parts.join(", ") : "Provenienza non indicata";
 }
 
-function getOperationsEventOptions(
+function getCurrentGroupFilterOptions(
   participants: ManagerParticipantRow[]
-): Array<{ id: string; title: string }> {
-  const eventsById = new Map<string, string>();
+): Array<{ id: string; name: string }> {
+  const groupsById = new Map<string, string>();
 
   for (const participant of participants) {
-    eventsById.set(participant.eventId, participant.eventTitle);
+    if (participant.currentGroupId && participant.currentGroupName) {
+      groupsById.set(participant.currentGroupId, participant.currentGroupName);
+    }
   }
 
-  return [...eventsById].map(([id, title]) => ({ id, title }));
+  return [...groupsById]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function parseGroupTableFilters(input: {
@@ -2156,6 +2418,23 @@ function groupStatusLabel(status: string | null): string {
   }
 }
 
+function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string {
+  switch (role) {
+    case "admin":
+      return "Admin globale";
+    case "manager":
+      return "Manager";
+    case "manager_viewer":
+      return "Manager viewer";
+    case "accoglienza":
+      return "Accoglienza";
+    case "capogruppo":
+      return isPrimaryGroupLeader ? "Capogruppo principale" : "Capogruppo secondario";
+    default:
+      return role;
+  }
+}
+
 function groupLinkStatusLabel(link: ManagerGroupRegistrationLink): string {
   switch (
     getGroupRegistrationLinkStatus({
@@ -2199,6 +2478,12 @@ function getAppUrl(): string {
     process.env.APP_URL ||
     "http://localhost:3000"
   ).replace(/\/$/, "");
+}
+
+function buildGroupLinkUrlFromEncryptedToken(encryptedToken: string | null): string | null {
+  const token = decryptQrToken(encryptedToken);
+
+  return token ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token }) : null;
 }
 
 function ageBracketLabel(value: string | null): string {

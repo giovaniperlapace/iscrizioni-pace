@@ -47,19 +47,19 @@ const participants: OperationsParticipantForFilter[] = [
 test("parseOperationsDashboardFilters normalizes invalid and long inputs", () => {
   const filters = parseOperationsDashboardFilters({
     q: `  ${"a".repeat(100)}  `,
-    event: "",
+    contact: "  MARIA@EXAMPLE.ORG  ",
     group: "unknown",
     status: "submitted",
   });
 
   assert.equal(filters.q, "a".repeat(80));
-  assert.equal(filters.eventId, "all");
-  assert.equal(filters.group, "all");
+  assert.equal(filters.contact, "MARIA@EXAMPLE.ORG");
+  assert.equal(filters.group, "unknown");
   assert.equal(filters.status, "submitted");
   assert.equal(hasActiveOperationsDashboardFilters(filters), true);
 });
 
-test("applyOperationsDashboardFilters searches identity, contacts, groups and event", () => {
+test("applyOperationsDashboardFilters searches identity separately from contacts", () => {
   assert.deepEqual(
     applyOperationsDashboardFilters(
       participants,
@@ -71,9 +71,9 @@ test("applyOperationsDashboardFilters searches identity, contacts, groups and ev
   assert.deepEqual(
     applyOperationsDashboardFilters(
       participants,
-      parseOperationsDashboardFilters({ q: "milano" })
+      parseOperationsDashboardFilters({ contact: "3906123" })
     ).map((participant) => participant.name),
-    ["Luca Bianchi"]
+    ["Maria Rossi"]
   );
 
   assert.deepEqual(
@@ -85,13 +85,13 @@ test("applyOperationsDashboardFilters searches identity, contacts, groups and ev
   );
 });
 
-test("applyOperationsDashboardFilters combines event, group and status", () => {
+test("applyOperationsDashboardFilters combines contact, group and status", () => {
   assert.deepEqual(
     applyOperationsDashboardFilters(
       participants,
       parseOperationsDashboardFilters({
-        event: "assisi",
-        group: "probable",
+        contact: "",
+        group: "milano",
         status: "submitted",
       })
     ).map((participant) => participant.name),
@@ -113,16 +113,16 @@ test("applyOperationsDashboardFilters combines event, group and status", () => {
 test("summarizeOperationsDashboardParticipants reports loaded and filtered rows", () => {
   const filtered = applyOperationsDashboardFilters(
     participants,
-    parseOperationsDashboardFilters({ event: "assisi" })
+    parseOperationsDashboardFilters({ group: "roma" })
   );
 
   assert.deepEqual(summarizeOperationsDashboardParticipants(participants, filtered), {
     total: 3,
-    filtered: 2,
+    filtered: 1,
     withoutGroup: 0,
-    probableGroup: 1,
+    probableGroup: 0,
     confirmedGroup: 1,
-    withoutEmail: 1,
+    withoutEmail: 0,
   });
 });
 

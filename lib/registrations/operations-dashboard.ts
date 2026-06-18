@@ -14,8 +14,8 @@ export type OperationsParticipantForFilter = {
 
 export type OperationsDashboardFilters = {
   q: string;
-  eventId: string;
-  group: "all" | "none" | "probable" | "confirmed";
+  contact: string;
+  group: string;
   status: "all" | "submitted" | "confirmed" | "cancelled";
 };
 
@@ -30,21 +30,21 @@ export type OperationsDashboardSummary = {
 
 const DEFAULT_FILTERS: OperationsDashboardFilters = {
   q: "",
-  eventId: "all",
+  contact: "",
   group: "all",
   status: "all",
 };
 
 export function parseOperationsDashboardFilters(input: {
   q?: string;
-  event?: string;
+  contact?: string;
   group?: string;
   status?: string;
 }): OperationsDashboardFilters {
   return {
     q: normalizeQuery(input.q),
-    eventId: normalizeEventFilter(input.event),
-    group: isGroupFilter(input.group) ? input.group : DEFAULT_FILTERS.group,
+    contact: normalizeQuery(input.contact),
+    group: normalizeGroupFilter(input.group),
     status: isStatusFilter(input.status)
       ? input.status
       : DEFAULT_FILTERS.status,
@@ -85,7 +85,7 @@ export function hasActiveOperationsDashboardFilters(
 ): boolean {
   return (
     filters.q !== DEFAULT_FILTERS.q ||
-    filters.eventId !== DEFAULT_FILTERS.eventId ||
+    filters.contact !== DEFAULT_FILTERS.contact ||
     filters.group !== DEFAULT_FILTERS.group ||
     filters.status !== DEFAULT_FILTERS.status
   );
@@ -95,10 +95,6 @@ function matchesOperationsDashboardFilters(
   participant: OperationsParticipantForFilter,
   filters: OperationsDashboardFilters
 ): boolean {
-  if (filters.eventId !== "all" && participant.eventId !== filters.eventId) {
-    return false;
-  }
-
   if (
     filters.status !== "all" &&
     participant.registrationStatus !== filters.status
@@ -110,6 +106,17 @@ function matchesOperationsDashboardFilters(
     return false;
   }
 
+  if (filters.contact) {
+    const contactHaystack = [participant.email, participant.phone]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (!contactHaystack.includes(filters.contact.toLowerCase())) {
+      return false;
+    }
+  }
+
   if (!filters.q) {
     return true;
   }
@@ -117,10 +124,7 @@ function matchesOperationsDashboardFilters(
   const haystack = [
     participant.name,
     participant.publicCode,
-    participant.email,
-    participant.phone,
     participant.place,
-    participant.currentGroupName,
     participant.eventTitle,
   ]
     .filter(Boolean)
@@ -130,41 +134,26 @@ function matchesOperationsDashboardFilters(
   return haystack.includes(filters.q.toLowerCase());
 }
 
-function matchesGroupFilter(
-  participant: OperationsParticipantForFilter,
-  filter: OperationsDashboardFilters["group"]
-): boolean {
-  switch (filter) {
-    case "none":
-      return !participant.currentGroupId;
-    case "probable":
-      return participant.currentGroupStatus === "probable";
-    case "confirmed":
-      return participant.currentGroupStatus === "confirmed";
-    case "all":
-      return true;
+function matchesGroupFilter(participant: OperationsParticipantForFilter, filter: string): boolean {
+  if (filter === "all") {
+    return true;
   }
+
+  if (filter === "none") {
+    return !participant.currentGroupId;
+  }
+
+  return participant.currentGroupId === filter;
 }
 
 function normalizeQuery(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
 }
 
-function normalizeEventFilter(value: string | undefined): string {
+function normalizeGroupFilter(value: string | undefined): string {
   const normalized = (value ?? "").trim();
 
-  return normalized || DEFAULT_FILTERS.eventId;
-}
-
-function isGroupFilter(
-  value: string | undefined
-): value is OperationsDashboardFilters["group"] {
-  return (
-    value === "all" ||
-    value === "none" ||
-    value === "probable" ||
-    value === "confirmed"
-  );
+  return normalized || DEFAULT_FILTERS.group;
 }
 
 function isStatusFilter(
