@@ -87,7 +87,7 @@ export function LanguageSelector({
         <>
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute right-7 h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--peace-blue-200)] border-t-[var(--peace-blue-800)]"
+            className="pointer-events-none absolute right-5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--peace-blue-200)] border-t-[var(--peace-blue-800)]"
           />
           <span id="locale-pending-status" className="sr-only" role="status">
             {pendingLabel}
