@@ -305,14 +305,14 @@ test("reserved group registration link status handles revocation and use limits"
 
 test("reserved group registration URL keeps the token in a query parameter", () => {
   const url = buildGroupRegistrationUrl({
-    appUrl: "https://iscrizioni-pace.vercel.app/",
+    appUrl: "https://registrationspeace.santegidio.org/",
     token: "abc_DEF-123",
     email: "persona@example.org",
   });
 
   assert.equal(
     url,
-    "https://iscrizioni-pace.vercel.app/registrazione?groupLink=abc_DEF-123&email=persona%40example.org"
+    "https://registrationspeace.santegidio.org/registrazione?groupLink=abc_DEF-123&email=persona%40example.org"
   );
 });
 

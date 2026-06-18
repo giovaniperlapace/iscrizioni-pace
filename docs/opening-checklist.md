@@ -28,7 +28,7 @@ Non inserire segreti in questo documento.
   `QR_TOKEN_ENCRYPTION_SECRET`, `APP_URL`, `NEXT_PUBLIC_APP_URL` e
   `PUBLIC_SITE_URL`.
 - In produzione i tre URL app devono puntare a
-  `https://iscrizioni-pace.vercel.app`.
+  `https://registrationspeace.santegidio.org`.
 - `EMAIL_DELIVERY_MODE` deve essere `smtp` prima dell'apertura pubblica.
 - `QR_TOKEN_ENCRYPTION_SECRET` deve essere stabile tra deploy.
 - Eseguire:
@@ -56,7 +56,7 @@ npm run build
   - utente manager/referente -> dashboard operativa -> "La mia iscrizione";
   - utente operativo senza registrazione personale -> avviso e avvio iscrizione.
 - Eseguire smoke test production su
-  `https://iscrizioni-pace.vercel.app`.
+  `https://registrationspeace.santegidio.org`.
 
 ## 5. Decisione apertura
 

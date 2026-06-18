@@ -42,7 +42,7 @@ export function validateOpeningReadiness(
   const errors: OpeningReadinessIssue[] = [];
   const warnings: OpeningReadinessIssue[] = [];
   const expectedAppUrl =
-    options.expectedAppUrl ?? "https://iscrizioni-pace.vercel.app";
+    options.expectedAppUrl ?? "https://registrationspeace.santegidio.org";
 
   for (const name of REQUIRED_ENV) {
     if (!hasValue(env[name])) {

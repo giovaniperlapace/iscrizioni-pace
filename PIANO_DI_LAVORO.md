@@ -89,11 +89,12 @@ Stato locale aggiornato al 2026-06-17:
   mantenendo invariato lo slug tecnico `assisi-2026-test`; home e
   registrazione rispondono `200`, la dashboard manager non autenticata
   reindirizza correttamente a login, `lint`, `typecheck`, `test` e `build`
-  passano. Avviso residuo non collegato al titolo: in `.env.local` manca
-  `QR_TOKEN_ENCRYPTION_SECRET`, quindi `npm run opening:verify` fallisce finché
-  il segreto non viene configurato localmente.
+  passano.
+- Il 2026-06-18 e' stato configurato `QR_TOKEN_ENCRYPTION_SECRET` in locale e
+  su Vercel production; `npm run opening:verify` torna `OK`. La decifratura QR
+  mantiene fallback sui segreti storici per compatibilità con token già salvati.
 - La produzione Vercel e' configurata su `main` con alias stabile
-  `https://iscrizioni-pace.vercel.app`.
+  `https://registrationspeace.santegidio.org`.
 - Priorita' aggiornata il 2026-06-17: prima di proseguire con campagne email,
   programma, check-in e settori, chiudere la Milestone 14 completando i manuali
   operativi manager/capogruppo e, se utile, una breve nota d'uso per
@@ -617,17 +618,22 @@ Dati sensibili e minimizzazione:
   - progetto Vercel collegato alla repo;
   - production branch impostata su `main`;
   - env production impostate per Supabase, URL app e SMTP;
-  - alias stabile `https://iscrizioni-pace.vercel.app`;
+  - alias stabile `https://registrationspeace.santegidio.org`;
   - allowlist Supabase Auth aggiornata per localhost e domini Vercel;
   - deployment production verificato;
   - generazione magic link verificata senza stampare token.
 - Verifiche eseguite:
-  - `vercel inspect https://iscrizioni-pace.vercel.app` mostra target
+  - `vercel inspect https://registrationspeace.santegidio.org` mostra target
     `production` e stato `Ready`;
-  - `curl -I -L https://iscrizioni-pace.vercel.app/` risponde `HTTP 200`;
-  - `GOTRUE_URI_ALLOW_LIST` contiene `https://iscrizioni-pace.vercel.app/**`;
+  - `curl -I -L https://registrationspeace.santegidio.org/` risponde `HTTP 200`;
+  - `GOTRUE_URI_ALLOW_LIST` contiene `https://registrationspeace.santegidio.org/**`;
+  - deployment production verificato il 2026-06-18:
+    `dpl_DoqnqcsFuifN4xG6wbTa48s9k369`;
   - un magic link generato con Supabase admin usa action host pubblico Supabase
-    e redirect a `https://iscrizioni-pace.vercel.app/auth/callback`;
+    e redirect a `https://registrationspeace.santegidio.org/auth/callback`;
+  - login reale verificato con `nicolamastrorilli33@gmail.com`, email da
+    `registrationspeace@santegidio.org` e redirect finale a
+    `/dashboard/partecipante`;
   - il link applicativo costruito con `token_hash` usa lo stesso dominio;
   - il 2026-06-17 e' stato verificato che i link custom devono usare
     `type=email` con `token_hash`; `type=magiclink` causava errore OTP/link
@@ -843,7 +849,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   - test browser desktop/mobile del flusso iscrizione e dashboard;
   - test manuale con almeno un manager/referente già autenticato che completa o
     consulta la propria iscrizione partecipante;
-  - smoke test production su `https://iscrizioni-pace.vercel.app`;
+  - smoke test production su `https://registrationspeace.santegidio.org`;
   - verifica che nessun dato test appaia nel flusso pubblico reale;
   - verifica manuale di email consegnata e link funzionante.
 - Rischi:

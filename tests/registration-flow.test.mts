@@ -334,12 +334,38 @@ test("QR tokens are opaque and only hashes are stable", () => {
 });
 
 test("QR tokens can be encrypted for server-side dashboard rendering", () => {
-  process.env.QR_TOKEN_ENCRYPTION_SECRET = "test-secret";
-  const token = createOpaqueQrToken().token;
-  const encrypted = encryptQrToken(token);
+  withQrSecrets(
+    {
+      QR_TOKEN_ENCRYPTION_SECRET: "test-secret",
+      SUPABASE_SERVICE_ROLE_KEY: undefined,
+      EMAIL_PASSWORD: undefined,
+    },
+    () => {
+      const token = createOpaqueQrToken().token;
+      const encrypted = encryptQrToken(token);
 
-  assert.notEqual(encrypted, token);
-  assert.equal(decryptQrToken(encrypted), token);
+      assert.notEqual(encrypted, token);
+      assert.equal(decryptQrToken(encrypted), token);
+    }
+  );
+});
+
+test("QR token decryption keeps service-role fallback compatibility", () => {
+  withQrSecrets(
+    {
+      QR_TOKEN_ENCRYPTION_SECRET: undefined,
+      SUPABASE_SERVICE_ROLE_KEY: "legacy-service-secret",
+      EMAIL_PASSWORD: undefined,
+    },
+    () => {
+      const token = createOpaqueQrToken().token;
+      const encrypted = encryptQrToken(token);
+
+      process.env.QR_TOKEN_ENCRYPTION_SECRET = "new-stable-secret";
+
+      assert.equal(decryptQrToken(encrypted), token);
+    }
+  );
 });
 
 test("QR renderer returns an image data URL", async () => {
@@ -347,6 +373,41 @@ test("QR renderer returns an image data URL", async () => {
 
   assert.match(dataUrl, /^data:image\/png;base64,/);
 });
+
+function withQrSecrets(
+  values: {
+    QR_TOKEN_ENCRYPTION_SECRET: string | undefined;
+    SUPABASE_SERVICE_ROLE_KEY: string | undefined;
+    EMAIL_PASSWORD: string | undefined;
+  },
+  fn: () => void
+): void {
+  const previous = {
+    QR_TOKEN_ENCRYPTION_SECRET: process.env.QR_TOKEN_ENCRYPTION_SECRET,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+  };
+
+  try {
+    for (const [name, value] of Object.entries(values)) {
+      if (value === undefined) {
+        delete process.env[name];
+      } else {
+        process.env[name] = value;
+      }
+    }
+
+    fn();
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[name];
+      } else {
+        process.env[name] = value;
+      }
+    }
+  }
+}
 
 test("magic link template escapes action URLs", () => {
   const rendered = renderMagicLinkEmail({
@@ -358,7 +419,7 @@ test("magic link template escapes action URLs", () => {
 
 test("app magic links verify token hashes as email OTPs", () => {
   const link = buildAppMagicLink(
-    "https://iscrizioni-pace.vercel.app/auth/callback?redirect_to=/dashboard/partecipante",
+    "https://registrationspeace.santegidio.org/auth/callback?redirect_to=/dashboard/partecipante",
     "hashed-token"
   );
 
@@ -376,7 +437,7 @@ test("registration confirmation includes the short participant code", () => {
     lastName: "Rossi",
     participantCode: "A7K2",
     eventTitle: "Assisi 2026",
-    siteLink: "https://iscrizioni-pace.vercel.app",
+    siteLink: "https://registrationspeace.santegidio.org",
     qrCodeContentId: "registration-qr@example.org",
   });
 

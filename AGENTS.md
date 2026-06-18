@@ -151,10 +151,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Il 2026-06-15 e' stata anticipata la generazione QR reale: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
-- Il 2026-06-15 e' stata verificata e corretta la configurazione Vercel
-  production: la production branch e' `main`, l'alias stabile e'
-  `https://iscrizioni-pace.vercel.app`, e i magic link generati per l'ambiente
-  online puntano a quel dominio.
+- Il 2026-06-18 la production pubblica e' stata spostata sul dominio definitivo
+  `https://registrationspeace.santegidio.org`: le env Vercel production
+  `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` puntano a quel dominio,
+  `GOTRUE_URI_ALLOW_LIST` del Supabase Auth self-hosted lo include, e i magic
+  link generati per l'ambiente online devono usare quel dominio.
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
@@ -246,7 +247,7 @@ Note:
 - `npm run opening:verify` controlla la presenza delle env richieste per
   l'apertura pubblica usando `.env.local`, senza stampare valori segreti.
 - `npm run opening:verify:production` usa `.env.production.local` e verifica
-  anche che gli URL app puntino a `https://iscrizioni-pace.vercel.app`.
+  anche che gli URL app puntino a `https://registrationspeace.santegidio.org`.
 - Il runner e' volutamente leggero: per ora serve per test di funzioni pure e smoke test.
 - Non sono state introdotte dipendenze test esterne.
 - Non sono state create migration e non e' stato collegato alcun database reale.
@@ -499,18 +500,19 @@ Lo script richiede `SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` e
 
 ## Vercel production e magic link
 
-Configurazione verificata e aggiornata il 2026-06-17:
+Configurazione verificata e aggiornata il 2026-06-18:
 
 - Progetto Vercel: `iscrizioni-pace`.
 - Project ID: `prj_4n4oKj3S4sg5RUg5H6AsJLBAK7w6`.
 - Team/org ID: `team_ZzsE0ydPpm1T9muAU1xi2uCN`.
 - Production branch: `main`.
-- Dominio production stabile: `https://iscrizioni-pace.vercel.app`.
+- Dominio production stabile: `https://registrationspeace.santegidio.org`.
 - Alias production aggiuntivi:
+  `https://iscrizioni-pace.vercel.app`,
   `https://iscrizioni-pace-giovaniperlapaces-projects.vercel.app` e
   `https://iscrizioni-pace-giovaniperlapace-giovaniperlapaces-projects.vercel.app`.
-- Ultimo deployment production verificato: `dpl_31mPosisDYWVULXdLTcz5satRWKD`,
-  generato dal commit `f2baa4a` su `main`.
+- Ultimo deployment production verificato: `dpl_DoqnqcsFuifN4xG6wbTa48s9k369`,
+  deploy manuale Vercel del 2026-06-18 dopo aggiornamento dominio/env.
 
 Variabili Vercel production richieste:
 
@@ -519,10 +521,10 @@ Variabili Vercel production richieste:
 - `SUPABASE_URL`.
 - `SUPABASE_ANON_KEY`.
 - `SUPABASE_SERVICE_ROLE_KEY`.
-- `QR_TOKEN_ENCRYPTION_SECRET` consigliato per cifratura QR stabile.
-- `NEXT_PUBLIC_APP_URL=https://iscrizioni-pace.vercel.app`.
-- `APP_URL=https://iscrizioni-pace.vercel.app`.
-- `PUBLIC_SITE_URL=https://iscrizioni-pace.vercel.app`.
+- `QR_TOKEN_ENCRYPTION_SECRET` per cifratura QR stabile.
+- `NEXT_PUBLIC_APP_URL=https://registrationspeace.santegidio.org`.
+- `APP_URL=https://registrationspeace.santegidio.org`.
+- `PUBLIC_SITE_URL=https://registrationspeace.santegidio.org`.
 - `EMAIL_FROM`.
 - `EMAIL_USER`.
 - `EMAIL_PASSWORD`.
@@ -541,8 +543,9 @@ Note operative Vercel:
   lette via CLI/API, ed e' normale.
 - Se configurato, `QR_TOKEN_ENCRYPTION_SECRET` deve restare stabile tra deploy:
   se cambia, i QR già salvati in `token_encrypted` non saranno più
-  rigenerabili in dashboard. L'app ha fallback server-side per compatibilita',
-  ma in produzione e' preferibile configurare un segreto esplicito.
+  rigenerabili in dashboard. Dal 2026-06-18 la decifratura prova anche i
+  fallback storici `SUPABASE_SERVICE_ROLE_KEY` ed `EMAIL_PASSWORD`, così i QR
+  creati prima del segreto dedicato restano leggibili.
 - Dopo la modifica di qualunque `NEXT_PUBLIC_*` serve un nuovo deploy
   production, perché Next le incorpora nel build.
 - I push su `main` devono produrre deployment production; se tornano preview,
@@ -554,11 +557,11 @@ Supabase Auth e redirect:
 - `API_EXTERNAL_URL` di GoTrue deve essere
   `https://iscrizioni-supabase.stefano-orlando.it`.
 - `GOTRUE_URI_ALLOW_LIST` deve includere almeno:
-  `http://localhost:3000/**`, `https://iscrizioni-pace.vercel.app/**` e gli
-  alias production Vercel.
+  `http://localhost:3000/**`, `https://registrationspeace.santegidio.org/**`
+  e gli alias production Vercel/legacy.
 - La verifica del 2026-06-15 ha generato un magic link di prova senza stampare
   token: l'action host era `iscrizioni-supabase.stefano-orlando.it`, il
-  `redirect_to` puntava a `https://iscrizioni-pace.vercel.app/auth/callback`
+  `redirect_to` puntava a `https://registrationspeace.santegidio.org/auth/callback`
   e il redirect applicativo era `/dashboard/partecipante`.
 - Il 2026-06-17 e' stato corretto un bug reale di login: i link applicativi
   costruiti da `data.properties.hashed_token` devono usare
@@ -566,6 +569,11 @@ Supabase Auth e redirect:
   restituiva errore OTP/link scaduto. La produzione e' stata verificata con
   redirect a `/dashboard/partecipante` per `type=email` e fallback
   `type=magiclink` su token non ancora consumati.
+- Il 2026-06-18 e' stato verificato un login reale con magic link per
+  `nicolamastrorilli33@gmail.com`: email inviata da
+  `registrationspeace@santegidio.org`, link su
+  `https://registrationspeace.santegidio.org/auth/callback`, redirect finale a
+  `/dashboard/partecipante`.
 - L'invio reale delle email dipende da una password app Gmail valida nelle
   variabili SMTP; il dominio del link e' stato verificato separatamente
   dall'arrivo effettivo in inbox.
@@ -581,7 +589,7 @@ Guardrail aggiunti:
 - `.vercelignore` esclude `.env`, `.env.*`, `.next`, `node_modules`, log e
   artefatti locali, lasciando tracciabile `.env.example`.
 - `.env.example` usa URL locali per sviluppo e documenta il dominio production
-  stabile `https://iscrizioni-pace.vercel.app`.
+  stabile `https://registrationspeace.santegidio.org`.
 - Script `npm run opening:verify` e `npm run opening:verify:production`
   controllano env richieste: Supabase public/private, SMTP,
   `QR_TOKEN_ENCRYPTION_SECRET` e, in modalità production, URL app stabili. Non
@@ -1122,8 +1130,9 @@ Decisioni:
 
 - Il QR code contiene solo token opaco, non dati personali, nome, email o
   codice partecipante.
-- `QR_TOKEN_ENCRYPTION_SECRET` e' il segreto consigliato per cifrare/decifrare
-  token recuperabili. Deve restare stabile tra deploy.
+- `QR_TOKEN_ENCRYPTION_SECRET` e' il segreto usato per cifrare i nuovi token
+  recuperabili. Deve restare stabile tra deploy; la decifratura mantiene
+  fallback sui segreti storici per non perdere i QR gia' salvati.
 - Lo scanner accoglienza e la verifica token restano da completare in una
   milestone successiva dedicata a QR/check-in.
 

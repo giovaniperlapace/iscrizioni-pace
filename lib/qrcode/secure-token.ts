@@ -35,30 +35,31 @@ export function decryptQrToken(encryptedToken: string | null | undefined): strin
     return null;
   }
 
-  try {
-    const decipher = createDecipheriv(
-      ALGORITHM,
-      getEncryptionKey(),
-      Buffer.from(ivValue, "base64url"),
-      { authTagLength: AUTH_TAG_LENGTH }
-    );
+  for (const key of getDecryptionKeys()) {
+    try {
+      const decipher = createDecipheriv(
+        ALGORITHM,
+        key,
+        Buffer.from(ivValue, "base64url"),
+        { authTagLength: AUTH_TAG_LENGTH }
+      );
 
-    decipher.setAuthTag(Buffer.from(authTagValue, "base64url"));
+      decipher.setAuthTag(Buffer.from(authTagValue, "base64url"));
 
-    return Buffer.concat([
-      decipher.update(Buffer.from(encryptedValue, "base64url")),
-      decipher.final(),
-    ]).toString("utf8");
-  } catch {
-    return null;
+      return Buffer.concat([
+        decipher.update(Buffer.from(encryptedValue, "base64url")),
+        decipher.final(),
+      ]).toString("utf8");
+    } catch {
+      continue;
+    }
   }
+
+  return null;
 }
 
 function getEncryptionKey(): Buffer {
-  const secret =
-    process.env.QR_TOKEN_ENCRYPTION_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.EMAIL_PASSWORD;
+  const secret = getCandidateSecrets()[0];
 
   if (!secret) {
     throw new Error(
@@ -67,4 +68,30 @@ function getEncryptionKey(): Buffer {
   }
 
   return createHash("sha256").update(secret, "utf8").digest();
+}
+
+function getDecryptionKeys(): Buffer[] {
+  return getCandidateSecrets().map((secret) =>
+    createHash("sha256").update(secret, "utf8").digest()
+  );
+}
+
+function getCandidateSecrets(): string[] {
+  const seen = new Set<string>();
+  const secrets = [
+    process.env.QR_TOKEN_ENCRYPTION_SECRET,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    process.env.EMAIL_PASSWORD,
+  ];
+
+  return secrets.filter((secret): secret is string => {
+    const value = secret?.trim();
+
+    if (!value || seen.has(value)) {
+      return false;
+    }
+
+    seen.add(value);
+    return true;
+  });
 }
