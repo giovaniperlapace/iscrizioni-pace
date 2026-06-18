@@ -511,8 +511,9 @@ Configurazione verificata e aggiornata il 2026-06-18:
   `https://iscrizioni-pace.vercel.app`,
   `https://iscrizioni-pace-giovaniperlapaces-projects.vercel.app` e
   `https://iscrizioni-pace-giovaniperlapace-giovaniperlapaces-projects.vercel.app`.
-- Ultimo deployment production verificato: `dpl_DoqnqcsFuifN4xG6wbTa48s9k369`,
-  deploy manuale Vercel del 2026-06-18 dopo aggiornamento dominio/env.
+- Deployment production verificato il 2026-06-18 dopo aggiornamento dominio/env;
+  per verificare l'ultimo ID usare
+  `vercel inspect https://registrationspeace.santegidio.org`.
 
 Variabili Vercel production richieste:
 
