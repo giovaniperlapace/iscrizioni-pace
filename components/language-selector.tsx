@@ -49,7 +49,7 @@ export function LanguageSelector({
         aria-describedby={isBusy ? "locale-pending-status" : undefined}
         disabled={isBusy}
         value={selectedLocale}
-        className="min-h-9 rounded-[var(--radius-sm)] border border-[var(--peace-border-strong)] bg-white px-2 pr-8 text-lg font-semibold text-[var(--peace-blue-800)] outline-none transition focus-visible:shadow-[var(--focus-ring)] disabled:cursor-wait disabled:opacity-75"
+        className="min-h-9 w-[4.35rem] rounded-[var(--radius-sm)] border border-[var(--peace-border-strong)] bg-white py-1 pl-2 pr-10 text-lg font-semibold text-[var(--peace-blue-800)] outline-none transition focus-visible:shadow-[var(--focus-ring)] disabled:cursor-wait disabled:opacity-75"
         onChange={(event) => {
           const nextLocale = event.currentTarget.value as SupportedLocale;
 
@@ -87,7 +87,7 @@ export function LanguageSelector({
         <>
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute right-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--peace-blue-200)] border-t-[var(--peace-blue-800)]"
+            className="pointer-events-none absolute right-7 h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--peace-blue-200)] border-t-[var(--peace-blue-800)]"
           />
           <span id="locale-pending-status" className="sr-only" role="status">
             {pendingLabel}
