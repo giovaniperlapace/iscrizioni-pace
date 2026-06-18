@@ -45,6 +45,7 @@ export async function AppHeadbar() {
             action={setAppLocale}
             currentLocale={locale}
             label={copy.common.language}
+            pendingLabel={copy.common.languageChanging}
           />
 
           {user ? (

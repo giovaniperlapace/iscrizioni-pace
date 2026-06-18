@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE, type SupportedLocale } from "./config.ts";
 type PublicMessages = {
   common: {
     language: string;
+    languageChanging: string;
     logout: string;
     protectedArea: string;
     home: string;
@@ -59,6 +60,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
   it: {
     common: {
       language: "Lingua",
+      languageChanging: "Cambio lingua in corso",
       logout: "Esci",
       protectedArea: "Area protetta",
       home: "Home",
@@ -129,6 +131,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
   en: {
     common: {
       language: "Language",
+      languageChanging: "Changing language",
       logout: "Log out",
       protectedArea: "Protected area",
       home: "Home",
@@ -199,6 +202,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
   fr: {
     common: {
       language: "Langue",
+      languageChanging: "Changement de langue en cours",
       logout: "Se déconnecter",
       protectedArea: "Espace protégé",
       home: "Accueil",
@@ -269,6 +273,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
   de: {
     common: {
       language: "Sprache",
+      languageChanging: "Sprache wird geändert",
       logout: "Abmelden",
       protectedArea: "Geschützter Bereich",
       home: "Startseite",
@@ -339,6 +344,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
   es: {
     common: {
       language: "Idioma",
+      languageChanging: "Cambiando idioma",
       logout: "Salir",
       protectedArea: "Área protegida",
       home: "Inicio",
@@ -409,6 +415,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
   nl: {
     common: {
       language: "Taal",
+      languageChanging: "Taal wijzigen",
       logout: "Uitloggen",
       protectedArea: "Beveiligde omgeving",
       home: "Home",
@@ -479,6 +486,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
   uk: {
     common: {
       language: "Мова",
+      languageChanging: "Зміна мови",
       logout: "Вийти",
       protectedArea: "Захищена зона",
       home: "Головна",
