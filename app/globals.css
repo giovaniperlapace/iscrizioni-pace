@@ -167,6 +167,23 @@ input[type="radio"] {
     box-shadow: var(--focus-ring);
   }
 
+  .pending-submit-button[data-pending="true"] {
+    pointer-events: none;
+    cursor: wait;
+    border-color: #8aa6bd !important;
+    background: #8aa6bd !important;
+    color: #ffffff !important;
+    opacity: 0.92;
+  }
+
+  fieldset[aria-busy="true"] button {
+    cursor: wait;
+    border-color: #8aa6bd !important;
+    background: #8aa6bd !important;
+    color: #ffffff !important;
+    opacity: 0.92;
+  }
+
   .event-kicker {
     color: var(--peace-blue-800);
     font-size: 0.78rem;

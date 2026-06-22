@@ -45,12 +45,12 @@ Stato locale aggiornato al 2026-06-17:
   `type=magiclink` nel callback per link già inviati e non consumati.
 - Il 2026-06-17 le milestone non ancora eseguite sono state rinumerate dalla
   prossima in poi: la revisione UX/UI diventa Milestone 12, il multilingua
-  minimo diventa Milestone 13 e la rifinitura estetica/manuali diventa
-  Milestone 14. La scelta nasce dal fatto che l'app ha gia' funzioni
+  minimo diventa Milestone 13 e la rifinitura estetica diventa Milestone 14.
+  La scelta nasce dal fatto che l'app ha gia' funzioni
   sufficienti per andare verso l'apertura pubblica; ora serve verificare
   esperienza, navigazione, chiarezza grafica e flussi operativi, poi
-  localizzare i testi stabili, poi rifinire UI e manuali prima di aggiungere
-  moduli avanzati.
+  localizzare i testi stabili e rifinire UI prima di aggiungere moduli
+  avanzati.
 - Il 2026-06-17 la dashboard partecipante e' stata rifinita per mostrare il QR
   personale direttamente nella prima schermata, con download immagine, spazio
   futuro per wallet, indicatore stato compatto e collegamento ai ruoli
@@ -72,7 +72,7 @@ Stato locale aggiornato al 2026-06-17:
   tedesco/spagnolo/neerlandese/ucraino e localizzazione dei flussi pubblici,
   della dashboard partecipante e della dashboard capogruppo. Manager/admin
   restano prioritariamente italiani, con parti comuni e fallback inglese.
-- Milestone 14 e' avviata il 2026-06-17: la rifinitura estetica ispirata alla
+- Milestone 14 e' conclusa: la rifinitura estetica ispirata alla
   locandina ufficiale `UNHARMED AND DISARMING PEACE / PACE DISARMATA E
   DISARMANTE` e' stata implementata sui flussi pubblici e sulle dashboard con
   token CSS centralizzati, titolo evento ufficiale, header valorizzato, motivo
@@ -82,8 +82,7 @@ Stato locale aggiornato al 2026-06-17:
   `Gruppi`) con modalità compressa `nav=mini` per liberare spazio alle
   tabelle; in modalità mini usano icone Lucide invece di lettere iniziali. La
   favicon placeholder e' stata sostituita da una colomba bianca stilizzata su
-  fondo blu. Restano da completare i manuali operativi previsti dalla stessa
-  Milestone 14.
+  fondo blu.
 - Il 2026-06-17 e' stata verificata l'app dopo il cambio titolo evento:
   la migration di identità evento modifica solo `title`, `city` e `country`
   mantenendo invariato lo slug tecnico `assisi-2026-test`; home e
@@ -95,10 +94,13 @@ Stato locale aggiornato al 2026-06-17:
   mantiene fallback sui segreti storici per compatibilità con token già salvati.
 - La produzione Vercel e' configurata su `main` con alias stabile
   `https://registrationspeace.santegidio.org`.
-- Priorita' aggiornata il 2026-06-17: prima di proseguire con campagne email,
-  programma, check-in e settori, chiudere la Milestone 14 completando i manuali
-  operativi manager/capogruppo e, se utile, una breve nota d'uso per
-  accoglienza/admin sulle funzioni gia' stabili.
+- Priorita' aggiornata il 2026-06-22: prima di passare alle campagne email
+  generali della vecchia Milestone 15, inserire due milestone intermedie:
+  Milestone 14.1 per completare il flusso operativo capogruppo su notifiche,
+  conferma appartenenza, rifiuto/reindirizzamento e inserimento partecipanti;
+  Milestone 14.2 per introdurre tag operativi configurabili dal manager,
+  assegnabili dal capogruppo e filtrabili dal manager. Email personalizzate,
+  programma, check-in e settori slittano dopo questi blocchi.
 
 Metodo da seguire per ogni milestone:
 
@@ -174,6 +176,8 @@ Funzioni core:
 - QR code, scansione e check-in.
 - Dashboard partecipante, capogruppo, manager, admin e accoglienza.
 - Tabelle con filtri, ricerca, export e statistiche.
+- Tag operativi configurabili dal manager e assegnabili dal capogruppo ai
+  partecipanti del proprio gruppo, usabili poi come filtri manager.
 - Multilingua almeno italiano/inglese, estendibile.
 - Privacy, retention, audit log e sicurezza operativa.
 
@@ -1251,15 +1255,14 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   privacy/consenso definitivi senza revisione esplicita, localizzare in modo
   completo dashboard manager/admin avanzate finché restano strumenti interni.
 
-### Milestone 14: rifinitura estetica e manuali operativi
+### Milestone 14: rifinitura estetica
 
-- Stato: avviata il 2026-06-17. La parte di rifinitura estetica e' stata
-  implementata e verificata in localhost; la parte manuali operativi resta il
-  prossimo blocco da completare.
+- Stato: completata. La rifinitura estetica e' stata implementata e verificata
+  in localhost.
 - Scopo: dedicare una milestone separata solo alla cura finale dell'esperienza
-  visiva e alla documentazione d'uso, partendo dai flussi approvati nella
-  Milestone 12 e dai testi localizzati minimi della Milestone 13, senza
-  introdurre nuove funzioni di prodotto.
+  visiva, partendo dai flussi approvati nella Milestone 12 e dai testi
+  localizzati minimi della Milestone 13, senza introdurre nuove funzioni di
+  prodotto.
 - Deliverable estetica completati:
   - applicazione delle guideline visive ricavate dalla locandina ufficiale
     `UNHARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`;
@@ -1287,25 +1290,14 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     su sfondo blu istituzionale nello stile della locandina;
   - verifica browser su home, registrazione e dashboard operative, inclusi
     controlli responsive e overflow orizzontale.
-- Deliverable manuali ancora da completare:
-  - manuale utilizzo manager con flussi principali: monitoraggio iscrizioni,
-    gestione gruppi, modifica iscritti, ruoli consentiti, comunicazioni e casi
-    da controllare;
-  - manuale utilizzo capogruppi con flussi principali: lettura assegnazioni,
-    conferma/rifiuto partecipanti, note interne, inserimento persone senza
-    email e limiti di visibilità;
-  - eventuali screenshot o immagini solo se utili e non contenenti dati
-    personali reali.
 - File/cartelle: `app/*`, componenti UI condivisi, `app/globals.css`,
-  eventuali `components/*`, `app/favicon.ico`, `docs/manuale-manager.md`,
-  `docs/manuale-capogruppo.md` o nomi equivalenti.
+  eventuali `components/*`, `app/favicon.ico`.
 - Dipendenze:
   - richiede la Milestone 12 per avere flussi e permessi approvati;
-  - segue la Milestone 13 per evitare di rifinire layout e manuali su testi che
+  - segue la Milestone 13 per evitare di rifinire layout su testi che
     cambieranno subito dopo;
   - `lucide-react` e' una dipendenza intenzionale per icone minimali nelle
-    sidebar operative;
-  - resta indipendente da programma, campagne, check-in avanzato e settori.
+    sidebar operative.
 - Migration: aggiunta
   `supabase/migrations/20260617190000_promote_assisi_2026_event_identity.sql`
   per aggiornare il titolo visibile dell'evento Assisi 2026 gia' presente in
@@ -1316,23 +1308,119 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   768 e desktop dove rilevante. Dopo la separazione delle dashboard
   manager/admin: `npm run lint`, `npm run typecheck` e verifica browser delle
   sezioni `Evento`, `Gestione iscritti`, `Gruppi`, inclusa modalità `nav=mini`.
-- Verifiche ancora da eseguire sui manuali: review dei documenti con i flussi
-  reali e controllo che non contengano dati personali reali o istruzioni in
-  contrasto con i permessi effettivi.
-- Rischi: fare refactor funzionali mascherati da estetica; introdurre testi
-  manuali non allineati ai permessi reali; usare dati personali reali negli
-  screenshot; modificare traduzioni gia' revisionate senza tracciarlo.
+- Rischi: fare refactor funzionali mascherati da estetica; modificare
+  traduzioni gia' revisionate senza tracciarlo.
 - Accettazione: il sito appare coerente con le guideline fornite, le viste core
-  sono verificate su mobile/desktop anche con testi localizzati e
-  manager/capogruppi hanno manuali pratici per usare l'app senza assistenza
-  tecnica.
+  sono verificate su mobile/desktop anche con testi localizzati.
 - Non fare: nuove funzioni prodotto, cambi schema dati, campagne reali,
   revisione legale dei testi privacy.
+
+### Milestone 14.1: flusso capogruppo completo e notifiche
+
+- Stato: nuova milestone intermedia da svolgere prima della vecchia Milestone
+  15.
+- Scopo: rendere solido il ciclo operativo fra nuova iscrizione, attribuzione
+  al gruppo, lavoro del capogruppo e riallocazione delle persone non
+  appartenenti al gruppo.
+- Deliverable:
+  - invio email di notifica al capogruppo quando un partecipante viene
+    attribuito al suo gruppo o a un nodo nel suo scope; la email deve indicare
+    almeno nome e cognome della persona iscritta e rimandare alla dashboard
+    capogruppo;
+  - logging e audit degli invii falliti, senza bloccare la registrazione del
+    partecipante se la notifica al capogruppo non parte;
+  - dashboard capogruppo con tabella delle persone attribuite al gruppo/scope;
+  - colonna con controllo a check per confermare rapidamente le persone che
+    sono effettivamente nel gruppo;
+  - click sulla riga per aprire la scheda del partecipante, soprattutto quando
+    la persona non appartiene al gruppo;
+  - nella scheda, azioni per indirizzare la persona al parent precedente
+    nell'albero oppure alla coda/area degli esterni o nuovi partecipanti,
+    secondo la terminologia UI approvata;
+  - conservazione di note interne e audit delle decisioni del capogruppo;
+  - inserimento manuale partecipanti nel gruppo mantenuto coerente con lo
+    stesso modello di assegnazione e conferma.
+- File/cartelle: `app/actions.ts`, `app/dashboard/capogruppo/*`,
+  `lib/groups/*`, `lib/registrations/*`, `lib/email/*`, eventuali componenti
+  dashboard condivisi e test mirati.
+- Migration:
+  - solo se lo schema esistente non basta per notifiche, stato di conferma o
+    coda esterni/nuovi partecipanti;
+  - se serve una coda esplicita, modellarla in modo coerente con
+    `participant_group_assignments` e con l'albero `groups`, evitando stati
+    ambigui non filtrabili.
+- Verifiche:
+  - nuova iscrizione con gruppo scelto/probabile genera notifica al
+    capogruppo corretto;
+  - capogruppo vede solo persone nel proprio scope;
+  - check rapido conferma appartenenza e aggiorna stato/audit;
+  - rifiuto/reindirizzamento manda al parent corretto o alla coda esterni;
+  - lint, typecheck, test e build.
+- Rischi:
+  - notificare il capogruppo sbagliato per nodi padre/figlio;
+  - esporre dati personali non necessari nella email;
+  - confondere "esterni", "nuovi partecipanti" e persone semplicemente da
+    riassegnare;
+  - rendere il check rapido troppo facile da premere senza feedback.
+- Accettazione: un'iscrizione attribuita a un gruppo arriva al capogruppo, il
+  capogruppo puo' confermare con un check le persone corrette, aprire la scheda
+  delle persone non corrette e reindirizzarle al parent o alla coda prevista,
+  con audit e permessi coerenti.
+- Non fare: campagne email generali, tag operativi, programma/panel, scanner
+  accoglienza.
+
+### Milestone 14.2: tag operativi manager e capogruppo
+
+- Stato: nuova milestone intermedia da svolgere dopo la Milestone 14.1 e prima
+  della vecchia Milestone 15.
+- Scopo: permettere ai manager di definire tag informativi liberi e ai
+  capigruppo di applicarli ai partecipanti del proprio gruppo, rendendo poi
+  quei tag utilizzabili dal manager nei filtri operativi.
+- Deliverable:
+  - sezione manager per creare, modificare, attivare/disattivare e ordinare tag
+    dell'evento;
+  - tag liberi creati dal manager, ad esempio `settore riservato evento
+    inaugurazione`, `trasporti`, `accoglienza` o altri servizi;
+  - eventuale distinzione minima fra tag singoli e gruppi/categorie di tag solo
+    se serve davvero alla UI; la prima versione deve restare semplice;
+  - scheda partecipante capogruppo con settore `Tag` dove selezionare o
+    deselezionare i tag applicabili alle persone del proprio scope;
+  - salvataggio auditato delle assegnazioni tag, con tracciamento dell'utente
+    che le ha applicate;
+  - tabella iscritti manager filtrabile per uno o piu' tag;
+  - visualizzazione chiara dei tag nei dettagli partecipante manager/admin,
+    senza trasformarli in ruoli o stati di iscrizione.
+- File/cartelle: `app/dashboard/manager/*`, `app/dashboard/capogruppo/*`,
+  `lib/tags/*` o equivalente, `app/actions.ts`, test.
+- Migration:
+  - tabella definizioni tag evento, ad esempio `participant_tag_definitions`;
+  - tabella assegnazioni tag partecipante/registrazione, ad esempio
+    `participant_tag_assignments`;
+  - RLS: manager/admin gestiscono definizioni e leggono/filtrano assegnazioni
+    in scope evento; capogruppo assegna tag solo a partecipanti nel proprio
+    scope; partecipante ordinario non modifica tag operativi.
+- Verifiche:
+  - manager crea tag e lo vede disponibile;
+  - capogruppo assegna/rimuove tag solo a partecipanti nel proprio gruppo;
+  - manager filtra iscritti per tag;
+  - RLS/permessi impediscono uso fuori scope;
+  - lint, typecheck, test, build e verifica browser delle viste principali.
+- Rischi:
+  - usare i tag come contenitore generico per dati sensibili;
+  - creare troppe categorie prima di conoscere l'uso reale;
+  - confondere tag operativi con gruppi, ruoli o stati di conferma;
+  - filtri manager lenti se le join non sono indicizzate.
+- Accettazione: il manager crea tag liberi dell'evento, il capogruppo li
+  applica ai partecipanti del proprio gruppo dalla scheda partecipante e il
+  manager filtra le persone usando quei tag.
+- Non fare: template email/campagne, programma, check-in, settori/sedute
+  fisiche.
 
 ### Milestone 15: email personalizzate e template operativi
 
 - Scopo: passare dalle sole email transazionali a comunicazioni controllate per
-  gruppi o segmenti, dopo l'apertura pubblica.
+  gruppi o segmenti, dopo il completamento del flusso capogruppo e dei tag
+  operativi.
 - Deliverable:
   - template versionati;
   - invio filtrato con preview;
@@ -1510,18 +1598,18 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Completa la Milestone 14 scrivendo i manuali operativi mancanti. Prima
-> controlla `git status` e leggi `AGENTS.md` e `PIANO_DI_LAVORO.md`; poi
-> ispeziona in localhost i flussi reali già implementati per manager e
-> capogruppo. Crea almeno `docs/manuale-manager.md` e
-> `docs/manuale-capogruppo.md`, con istruzioni pratiche su navigazione,
-> monitoraggio evento, gestione iscritti, gruppi/link riservati, decisioni
-> capogruppo, inserimento manuale, limiti di visibilità, errori frequenti e
-> cosa rimandare ad admin/accoglienza. Non usare dati personali reali negli
-> esempi e non introdurre nuove funzioni. Alla fine esegui almeno lint,
-> typecheck e una review dei documenti.
+> Implementa la Milestone 14.1: flusso capogruppo completo e notifiche. Prima
+> controlla `git fetch origin`, `git status --short --branch`, `AGENTS.md` e
+> `PIANO_DI_LAVORO.md`. Completa l'invio email al capogruppo quando una nuova
+> iscrizione viene attribuita al suo gruppo/scope, con nome e cognome del
+> partecipante e link alla dashboard. Poi rifinisci la dashboard capogruppo:
+> tabella delle persone attribuite, check rapido per confermare appartenenza,
+> click sulla riga per aprire la scheda, azioni per reindirizzare chi non e'
+> del gruppo al parent precedente o alla coda esterni/nuovi partecipanti, note
+> interne e audit. Non introdurre tag, campagne email generali, programma o
+> check-in. Alla fine esegui lint, typecheck, test, build e verifica browser
+> dei flussi principali.
 
-Dopo i manuali, se sono approvati, il passo successivo naturale e' scegliere
-se procedere con Milestone 15 (email personalizzate e template operativi) o
-anticipare Milestone 17 (scanner QR/check-in accoglienza) in base alle
-priorità dell'apertura pubblica.
+Dopo la Milestone 14.1, il passo successivo naturale e' la Milestone 14.2 sui
+tag operativi manager/capogruppo. Solo dopo questi due blocchi si torna alla
+vecchia Milestone 15 sulle email personalizzate e template operativi.

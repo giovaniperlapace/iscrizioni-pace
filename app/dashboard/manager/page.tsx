@@ -35,6 +35,7 @@ import { GroupLeaderModeTabs } from "@/app/dashboard/group-leader-mode-tabs";
 import { OperationalRoleFields } from "@/app/dashboard/operational-role-fields";
 import { OperationalRoleDeleteButton } from "@/app/dashboard/operational-role-delete-button";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
 import {
@@ -1801,9 +1802,9 @@ function ManagerGroupEditOverlay({
             <Link href={managerPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
               Annulla
             </Link>
-            <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+            <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva gruppo
-            </button>
+            </PendingSubmitButton>
           </div>
         </form>
       </div>
@@ -1856,9 +1857,9 @@ function ManagerGroupLinksOverlay({
                   required
                 />
               </label>
-              <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                 Genera link
-              </button>
+              </PendingSubmitButton>
             </form>
           ) : (
             <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
@@ -1895,9 +1896,9 @@ function ManagerGroupLinksOverlay({
                     <form action={revokeGroupRegistrationLink}>
                       <input type="hidden" name="sourceDashboard" value="manager" />
                       <input type="hidden" name="linkId" value={link.id} />
-                      <button className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
+                      <PendingSubmitButton className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
                         Revoca
-                      </button>
+                      </PendingSubmitButton>
                     </form>
                   ) : null}
                 </div>
@@ -1962,9 +1963,9 @@ function ManagerGroupLeaderOverlay({
                   <div className="pt-3">
                     <GroupLeaderKindField />
                   </div>
-                  <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                  <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                     Assegna capogruppo
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               }
               newForm={
@@ -1987,9 +1988,9 @@ function ManagerGroupLeaderOverlay({
                     <input name="email" type="email" className="field" required />
                   </label>
                   <GroupLeaderKindField />
-                  <button className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                  <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
                     Crea utente e assegna
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               }
             />
@@ -2196,8 +2197,9 @@ function ManagerOperationalUsersSection({
         <h2 className="text-lg font-semibold">Utenti e ruoli</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
           Crea accessi operativi per gli eventi assegnati senza creare una
-          iscrizione. La persona potra&apos; accedere con magic link e completare poi
-          la propria iscrizione personale.
+          iscrizione. Manager, viewer e accoglienza accedono direttamente alla
+          dashboard operativa; solo il capogruppo completa anche
+          l&apos;iscrizione personale.
         </p>
         <form action={assignOperationalUserRole} className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
           <input type="hidden" name="sourceDashboard" value="manager" />
@@ -2229,14 +2231,11 @@ function ManagerOperationalUsersSection({
               { value: "manager_viewer", label: "Manager viewer" },
               { value: "accoglienza", label: "Accoglienza" },
             ]}
+            showInviteOption
           />
-          <label className="flex items-start gap-2 text-sm text-[var(--peace-ink)]">
-            <input name="sendInvite" type="checkbox" className="mt-1" defaultChecked />
-            <span>Invia subito un magic link con invito a completare l&apos;iscrizione personale.</span>
-          </label>
-          <button className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+          <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Crea utente e assegna ruolo
-          </button>
+          </PendingSubmitButton>
         </form>
       </div>
 
@@ -2408,9 +2407,9 @@ function ManagerOperationalRoleEditOverlay({
             >
               Annulla
             </Link>
-            <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+            <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva modifiche
-            </button>
+            </PendingSubmitButton>
           </div>
         </form>
       </div>
@@ -2505,9 +2504,9 @@ function ManagerParticipantEditOverlay({
                   ))}
                 </select>
               </label>
-              <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                 Salva gruppo
-              </button>
+              </PendingSubmitButton>
             </form>
           ) : null}
         </div>
@@ -2554,9 +2553,9 @@ function OpeningForm({
       <input type="hidden" name="sourceDashboard" value="manager" />
       <input type="hidden" name="eventId" value={eventId} />
       <input type="hidden" name="intent" value={intent} />
-      <button type="submit" className={className}>
+      <PendingSubmitButton className={className}>
         {label}
-      </button>
+      </PendingSubmitButton>
     </form>
   );
 }

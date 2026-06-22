@@ -12,6 +12,7 @@ import {
   DashboardAreaDescription,
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
 import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
 import { getCurrentAuthContext } from "@/lib/auth/session";
@@ -1927,9 +1928,9 @@ function GroupLeaderLinksSection({
                         <form action={revokeGroupRegistrationLink}>
                           <input type="hidden" name="sourceDashboard" value="capogruppo" />
                           <input type="hidden" name="linkId" value={link.id} />
-                          <button className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
+                          <PendingSubmitButton className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
                             {copy.revoke}
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       </div>
                     ))}
@@ -1965,9 +1966,9 @@ function GroupLeaderLinksSection({
                       {copy.internalLabelHelp}
                     </span>
                   </label>
-                  <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                  <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                     {copy.generateLink}
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               </div>
             </article>
@@ -2082,9 +2083,9 @@ function ManualRegistrationSection({
             {copy.consent}
           </label>
           <div className="lg:col-span-2">
-            <button className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+            <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               {copy.addParticipant}
-            </button>
+            </PendingSubmitButton>
           </div>
         </form>
       ) : (
@@ -2143,9 +2144,9 @@ function AssignmentFilters({
         </select>
       </label>
       <div className="flex items-end gap-2">
-        <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+        <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
           {copy.filters.apply}
-        </button>
+        </PendingSubmitButton>
         <Link
           href="/dashboard/capogruppo#assegnazioni-gruppo"
           className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
@@ -2286,36 +2287,36 @@ function AssignmentRowView({
                 className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
               />
             </label>
-            <button
+            <PendingSubmitButton
               name="intent"
               value="note"
               className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
               {copy.table.saveNote}
-            </button>
+            </PendingSubmitButton>
             {canDecide ? (
               <>
-                <button
+                <PendingSubmitButton
                   name="intent"
                   value="confirm"
                   className="min-h-9 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
                 >
                   {copy.table.confirm}
-                </button>
-                <button
+                </PendingSubmitButton>
+                <PendingSubmitButton
                   name="intent"
                   value="reject"
                   className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
                 >
                   {copy.table.reject}
-                </button>
-                <button
+                </PendingSubmitButton>
+                <PendingSubmitButton
                   name="intent"
                   value="read"
                   className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
                 >
                   {copy.table.markRead}
-                </button>
+                </PendingSubmitButton>
               </>
             ) : null}
           </form>

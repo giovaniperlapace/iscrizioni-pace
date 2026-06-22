@@ -14,13 +14,28 @@ type AutoCopyLinkNoticeProps = {
 export function CopyLinkButton({ label = "Copia link", url }: CopyLinkButtonProps) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
 
   return (
     <button
       type="button"
-      className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+      disabled={isCopying}
+      aria-busy={isCopying}
+      data-pending={isCopying ? "true" : "false"}
+      className="pending-submit-button min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
       onClick={async () => {
-        const didCopy = await copyTextFromUserGesture(url);
+        if (isCopying) {
+          return;
+        }
+
+        setIsCopying(true);
+        let didCopy = false;
+
+        try {
+          didCopy = await copyTextFromUserGesture(url);
+        } finally {
+          setIsCopying(false);
+        }
 
         setCopied(didCopy);
         setFailed(!didCopy);
@@ -30,7 +45,7 @@ export function CopyLinkButton({ label = "Copia link", url }: CopyLinkButtonProp
         }, 1800);
       }}
     >
-      {copied ? "Copiato" : failed ? "Copia non riuscita" : label}
+      {isCopying ? "Copia..." : copied ? "Copiato" : failed ? "Copia non riuscita" : label}
     </button>
   );
 }

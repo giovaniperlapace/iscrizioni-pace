@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import { useFormStatus } from "react-dom";
+
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 
 type EmailAccessFormProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -67,16 +68,13 @@ function SubmitButton({
   submitLabel: string;
   pendingLabel: string;
 }) {
-  const { pending } = useFormStatus();
-
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="btn-primary px-5 disabled:cursor-wait"
+    <PendingSubmitButton
+      pendingLabel={pendingLabel}
+      className="btn-primary px-5"
     >
-      {pending ? pendingLabel : submitLabel}
-    </button>
+      {submitLabel}
+    </PendingSubmitButton>
   );
 }
 

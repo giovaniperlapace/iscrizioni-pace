@@ -2,6 +2,8 @@
 
 import { Trash2 } from "lucide-react";
 
+import { PendingSubmitButton } from "@/components/pending-submit-button";
+
 type OperationalRoleDeleteButtonProps = {
   label: string;
 };
@@ -10,8 +12,7 @@ export function OperationalRoleDeleteButton({
   label,
 }: OperationalRoleDeleteButtonProps) {
   return (
-    <button
-      type="submit"
+    <PendingSubmitButton
       aria-label={label}
       title={label}
       className="inline-flex size-10 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300"
@@ -33,6 +34,6 @@ export function OperationalRoleDeleteButton({
       }}
     >
       <Trash2 className="size-4" aria-hidden="true" />
-    </button>
+    </PendingSubmitButton>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { updateParticipantDashboard } from "@/app/actions";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import {
   LANGUAGE_OPTIONS,
@@ -1458,13 +1459,12 @@ function SaveInlineButton({
   copy: ParticipantDashboardCopy;
 }) {
   return (
-    <button
-      type="submit"
+    <PendingSubmitButton
       disabled={!editable}
       className="w-fit rounded-md bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--peace-blue-900)] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
     >
       {copy.save}
-    </button>
+    </PendingSubmitButton>
   );
 }
 

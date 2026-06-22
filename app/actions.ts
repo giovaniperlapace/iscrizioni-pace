@@ -1636,12 +1636,12 @@ export async function assignOperationalUserRole(formData: FormData) {
 
   if (sendInvite) {
     try {
-      const registrationPath = `/registrazione?email=${encodeURIComponent(email)}`;
+      const invitePath = getOperationalRoleInvitePath(role, email);
       await sendMagicLinkEmail(
         serviceSupabase,
         email,
         `${getAppUrl()}/auth/callback?redirect_to=${encodeURIComponent(
-          registrationPath
+          invitePath
         )}`
       );
     } catch (error) {
@@ -2681,6 +2681,23 @@ function isAssignableOperationalRole(
     value === "accoglienza" ||
     value === "capogruppo"
   );
+}
+
+function getOperationalRoleInvitePath(
+  role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo",
+  email: string
+): string {
+  switch (role) {
+    case "admin":
+      return "/dashboard/admin";
+    case "manager":
+    case "manager_viewer":
+      return "/dashboard/manager";
+    case "accoglienza":
+      return "/dashboard/accoglienza";
+    case "capogruppo":
+      return `/registrazione?email=${encodeURIComponent(email)}`;
+  }
 }
 
 async function resolveOperationalRoleTarget(

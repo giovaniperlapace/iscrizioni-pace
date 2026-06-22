@@ -76,10 +76,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Il 2026-06-17 la roadmap futura e' stata rinumerata dalla prossima milestone
   in poi: Milestone 12 e' revisione guidata UX, navigazione e dati dashboard;
   Milestone 13 e' multilingua minima e testi localizzati; Milestone 14 e'
-  rifinitura estetica e manuali operativi. Motivo: le funzioni essenziali sono
+  rifinitura estetica. Motivo: le funzioni essenziali sono
   sufficienti per preparare l'apertura pubblica, quindi prima di aggiungere
   moduli avanzati bisogna verificare UX/flussi, localizzare testi stabili e
-  solo dopo rifinire UI, grafica e manuali.
+  solo dopo rifinire UI e grafica.
 - Milestone 12 e' stata avviata il 2026-06-17 con una prima revisione UX su
   home, registrazione, conferma/magic link e dashboard partecipante. Prime
   patch consolidate nel commit `3d4d00d`: messaggi rossi del form solo dopo
@@ -129,6 +129,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - La Milestone 14 ha sostituito la favicon placeholder con `app/favicon.ico`:
   colomba bianca stilizzata su sfondo blu istituzionale, coerente con la
   locandina e leggibile nelle tab browser.
+- Il 2026-06-22, dopo chiusura della Milestone 14, la roadmap e' stata
+  aggiornata: prima della vecchia Milestone 15 sulle email personalizzate
+  bisogna completare Milestone 14.1 e 14.2. Milestone 14.1 consolida il flusso
+  capogruppo: notifica email al capogruppo quando un partecipante viene
+  attribuito al suo gruppo/scope, tabella persone attribuite, check rapido di
+  conferma appartenenza, scheda su click riga, reindirizzamento dei non
+  appartenenti al parent precedente o alla coda esterni/nuovi partecipanti,
+  note interne e audit. Milestone 14.2 introduce tag operativi: il manager crea
+  tag liberi dell'evento, il capogruppo li assegna ai partecipanti del proprio
+  gruppo dalla scheda partecipante e il manager li usa come filtri nella
+  tabella iscritti. Email personalizzate, programma, check-in e settori
+  slittano dopo questi blocchi.
 - Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
   non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
   gestione manager. La migration di identità evento mantiene lo slug tecnico

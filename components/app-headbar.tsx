@@ -2,6 +2,7 @@ import Image from "next/image";
 
 import { logout, setAppLocale } from "@/app/actions";
 import { LanguageSelector } from "@/components/language-selector";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { DashboardRole } from "@/lib/auth/roles";
 import { getMessages } from "@/lib/i18n/messages";
@@ -59,10 +60,10 @@ export async function AppHeadbar() {
                 </p>
               </div>
               <form action={logout}>
-                <button className="btn-secondary inline-flex min-h-9 items-center justify-center gap-2 px-3 text-sm">
+                <PendingSubmitButton className="btn-secondary inline-flex min-h-9 items-center justify-center gap-2 px-3 text-sm">
                   <ExitIcon />
                   <span className="hidden sm:inline">{copy.common.logout}</span>
-                </button>
+                </PendingSubmitButton>
               </form>
             </>
           ) : null}
