@@ -26,6 +26,7 @@ type RegistrationFormProps = {
   email: string;
   error?: string;
   groupRegistrationLinkToken: string | null;
+  identitySuggestion: { firstName: string; lastName: string } | null;
   locale: SupportedLocale;
   options: PublicRegistrationOptions;
 };
@@ -636,6 +637,7 @@ export function RegistrationForm({
   email,
   error,
   groupRegistrationLinkToken,
+  identitySuggestion,
   locale,
   options,
 }: RegistrationFormProps) {
@@ -996,6 +998,7 @@ export function RegistrationForm({
             required
             className="field"
             autoComplete="given-name"
+            defaultValue={identitySuggestion?.firstName ?? ""}
             data-field="firstName"
           />
         </Field>
@@ -1005,6 +1008,7 @@ export function RegistrationForm({
             required
             className="field"
             autoComplete="family-name"
+            defaultValue={identitySuggestion?.lastName ?? ""}
             data-field="lastName"
           />
         </Field>

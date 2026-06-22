@@ -39,6 +39,7 @@ import {
   parseRegistrationForm,
   PRIVACY_VERSION,
 } from "@/lib/registrations/validation";
+import { syncOperationalIdentityByEmail } from "@/lib/operational-users/identity";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -1541,6 +1542,13 @@ export async function assignOperationalUserRole(formData: FormData) {
     redirect(`${dashboardPath}&roleError=auth-user`);
   }
 
+  await syncOperationalIdentityByEmail(serviceSupabase, {
+    email,
+    firstName,
+    lastName,
+    userId,
+  });
+
   if (role === "capogruppo") {
     if (!roleGroupId) {
       redirect(`${dashboardPath}&roleError=missing-group`);
@@ -1749,6 +1757,13 @@ export async function updateOperationalUserRole(formData: FormData) {
   if (!targetUserId) {
     redirect(`${dashboardPath}&roleError=auth-user`);
   }
+
+  await syncOperationalIdentityByEmail(serviceSupabase, {
+    email,
+    firstName,
+    lastName,
+    userId: targetUserId,
+  });
 
   const currentSignature = operationalRoleSignature({
     userId: currentUserId,

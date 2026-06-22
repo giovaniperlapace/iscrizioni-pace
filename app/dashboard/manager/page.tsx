@@ -62,6 +62,10 @@ import {
   type EventStatisticsSnapshot,
   type ParticipantBreakdownLevel,
 } from "@/lib/registrations/event-statistics";
+import {
+  getOperationalUserIdentities,
+  splitFullName,
+} from "@/lib/operational-users/identity";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -621,22 +625,6 @@ function matchesOperationalRoleParams(
   );
 }
 
-function splitFullName(fullName: string | null): {
-  firstName: string;
-  lastName: string;
-} {
-  const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
-
-  if (parts.length <= 1) {
-    return { firstName: parts[0] ?? "", lastName: "" };
-  }
-
-  return {
-    firstName: parts.slice(0, -1).join(" "),
-    lastName: parts.at(-1) ?? "",
-  };
-}
-
 function statisticsPath(
   basePath: "/dashboard/admin" | "/dashboard/manager",
   navMode: ManagerNavMode,
@@ -692,22 +680,14 @@ async function buildOperationalUserRows(
       ...membershipRows.map((row) => row.user_id),
     ])
   );
-  const { data: profiles } =
-    userIds.length > 0
-      ? await supabase.from("profiles").select("id,email,full_name").in("id", userIds)
-      : { data: [] };
-  const profileById = new Map(
-    ((profiles ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>).map(
-      (profile) => [profile.id, profile]
-    )
-  );
+  const identityByUserId = await getOperationalUserIdentities(supabase, userIds);
   const rows: OperationalUserRoleRow[] = [
     ...eventRoleRows.map((row) => {
-      const profile = profileById.get(row.user_id);
+      const identity = identityByUserId.get(row.user_id);
       return {
         userId: row.user_id,
-        email: profile?.email ?? null,
-        fullName: profile?.full_name ?? null,
+        email: identity?.email ?? null,
+        fullName: identity?.fullName ?? null,
         role: row.role,
         isPrimaryGroupLeader: null,
         eventId: row.event_id,
@@ -718,11 +698,11 @@ async function buildOperationalUserRows(
     }),
     ...membershipRows.map((row) => {
       const group = relatedOne(row.groups);
-      const profile = profileById.get(row.user_id);
+      const identity = identityByUserId.get(row.user_id);
       return {
         userId: row.user_id,
-        email: profile?.email ?? null,
-        fullName: profile?.full_name ?? null,
+        email: identity?.email ?? null,
+        fullName: identity?.fullName ?? null,
         role: row.role,
         isPrimaryGroupLeader: row.is_primary ?? false,
         eventId: group?.event_id ?? null,

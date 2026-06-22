@@ -4,6 +4,7 @@ import { GROUP_REGISTRATION_LINK_QUERY_PARAM } from "@/lib/groups/registration-l
 import { getMessages } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
 import {
+  getRegistrationIdentitySuggestionForEmail,
   getPublicRegistrationOptions,
   type PublicRegistrationOptions,
 } from "@/lib/registrations/public-flow";
@@ -26,6 +27,7 @@ export default async function RegistrationPage({
   const supabase = createSupabaseServiceClient();
   let groupLinkError: string | null = null;
   let options: PublicRegistrationOptions;
+  const email = params.email ?? "";
 
   try {
     options = await getPublicRegistrationOptions(
@@ -61,10 +63,15 @@ export default async function RegistrationPage({
   return (
     <main className="app-page text-[var(--peace-ink)]">
       <RegistrationForm
-        email={params.email ?? ""}
+        email={email}
         error={params.error ?? groupLinkError ?? undefined}
         groupRegistrationLinkToken={
           groupLinkError ? null : params[GROUP_REGISTRATION_LINK_QUERY_PARAM] ?? null
+        }
+        identitySuggestion={
+          email
+            ? await getRegistrationIdentitySuggestionForEmail(supabase, email)
+            : null
         }
         options={options}
         locale={locale}

@@ -24,6 +24,10 @@ import {
   getQuestionnaireVisibilitySummary,
   REGISTRATION_QUESTIONNAIRE_VERSION,
 } from "@/lib/questionnaire/registration";
+import {
+  getOperationalRegistrationSuggestion,
+  syncOperationalIdentityByEmail,
+} from "@/lib/operational-users/identity";
 import { renderQrPngBuffer } from "@/lib/qrcode/render";
 import { encryptQrToken } from "@/lib/qrcode/secure-token";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
@@ -252,6 +256,13 @@ export async function hasExistingAppAccessForEmail(
   return Boolean(eventRoles?.length || memberships?.length);
 }
 
+export async function getRegistrationIdentitySuggestionForEmail(
+  supabase: SupabaseClient,
+  email: string
+): Promise<{ firstName: string; lastName: string } | null> {
+  return getOperationalRegistrationSuggestion(supabase, email);
+}
+
 async function getConfirmedLeaderGroupAssignment(
   supabase: SupabaseClient,
   userId: string,
@@ -361,6 +372,14 @@ export async function createPublicRegistration(
   if (contactError) {
     throw contactError;
   }
+
+  await syncOperationalIdentityByEmail(supabase, {
+    email: input.email,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    userId: authUserId,
+    participantId: createdParticipant.id,
+  });
 
   const { data: registration, error: registrationError } = await supabase
     .from("registrations")
