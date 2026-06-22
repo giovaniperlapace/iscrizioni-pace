@@ -1,14 +1,24 @@
 import Link from "next/link";
-import { BarChart3, CalendarDays, Network, ShieldCheck, Users, X } from "lucide-react";
+import {
+  BarChart3,
+  CalendarDays,
+  Network,
+  Pencil,
+  ShieldCheck,
+  Users,
+  X,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 
 import {
   assignOperationalUserRole,
   assignGroupLeader,
   createGroupRegistrationLink,
+  deleteOperationalUserRole,
   revokeGroupRegistrationLink,
   saveOperationsGroup,
   updateEventOpeningState,
+  updateOperationalUserRole,
 } from "@/app/actions";
 import {
   DashboardAreaDescription,
@@ -23,6 +33,7 @@ import { AutoCopyLinkNotice, CopyLinkButton } from "@/app/dashboard/group-link-c
 import { GroupLeaderKindField } from "@/app/dashboard/group-leader-kind-field";
 import { GroupLeaderModeTabs } from "@/app/dashboard/group-leader-mode-tabs";
 import { OperationalRoleFields } from "@/app/dashboard/operational-role-fields";
+import { OperationalRoleDeleteButton } from "@/app/dashboard/operational-role-delete-button";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
@@ -73,6 +84,10 @@ type ManagerPageProps = {
     groupVisibility?: string;
     roleError?: string;
     roleSaved?: string;
+    roleUserId?: string;
+    roleRole?: string;
+    roleEventId?: string;
+    roleGroupId?: string;
     edit?: string;
     editMode?: string;
     event?: string;
@@ -328,6 +343,15 @@ export default async function ManagerDashboardPage({
   const selectedGroup =
     managerOperations.groupTree.find((group) => group.id === params.groupId) ??
     null;
+  const selectedOperationalRole =
+    managerOperations.roleUsers.find((role) =>
+      matchesOperationalRoleParams(role, {
+        userId: params.roleUserId,
+        role: params.roleRole,
+        eventId: params.roleEventId,
+        groupId: params.roleGroupId,
+      })
+    ) ?? null;
   const activeSection = resolveManagerSection(params);
   const navMode: ManagerNavMode = params.nav === "mini" ? "mini" : "full";
 
@@ -398,6 +422,7 @@ export default async function ManagerDashboardPage({
                 groupOptions={managerOperations.groupTree.filter(
                   (group) => group.isActive && group.isAssignable
                 )}
+                selectedRole={selectedOperationalRole}
                 navMode={navMode}
               />
             ) : null}
@@ -554,6 +579,61 @@ function ManagerSidebar({
 
 function managerPath(section: ManagerSection, navMode: ManagerNavMode): string {
   return `/dashboard/manager?section=${section}&nav=${navMode}`;
+}
+
+function managerRoleEditPath(
+  role: OperationalUserRoleRow,
+  navMode: ManagerNavMode
+): string {
+  const params = new URLSearchParams({
+    section: "ruoli",
+    nav: navMode,
+    roleUserId: role.userId,
+    roleRole: role.role,
+  });
+
+  if (role.eventId) {
+    params.set("roleEventId", role.eventId);
+  }
+
+  if (role.groupId) {
+    params.set("roleGroupId", role.groupId);
+  }
+
+  return `/dashboard/manager?${params.toString()}`;
+}
+
+function matchesOperationalRoleParams(
+  role: OperationalUserRoleRow,
+  params: {
+    userId?: string;
+    role?: string;
+    eventId?: string;
+    groupId?: string;
+  }
+): boolean {
+  return (
+    role.userId === params.userId &&
+    role.role === params.role &&
+    (role.eventId ?? "") === (params.eventId ?? "") &&
+    (role.groupId ?? "") === (params.groupId ?? "")
+  );
+}
+
+function splitFullName(fullName: string | null): {
+  firstName: string;
+  lastName: string;
+} {
+  const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length <= 1) {
+    return { firstName: parts[0] ?? "", lastName: "" };
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(" "),
+    lastName: parts.at(-1) ?? "",
+  };
 }
 
 function statisticsPath(
@@ -2101,11 +2181,13 @@ function ManagerOperationalUsersSection({
   roles,
   eventOptions,
   groupOptions,
+  selectedRole,
   navMode,
 }: {
   roles: OperationalUserRoleRow[];
   eventOptions: Array<{ id: string; title: string }>;
   groupOptions: ManagerGroupTreeRow[];
+  selectedRole: OperationalUserRoleRow | null;
   navMode: ManagerNavMode;
 }) {
   return (
@@ -2167,7 +2249,10 @@ function ManagerOperationalUsersSection({
                 <th className="py-3 pr-4 font-semibold">Utente</th>
                 <th className="py-3 pr-4 font-semibold">Ruolo</th>
                 <th className="py-3 pr-4 font-semibold">Scope</th>
-                <th className="py-3 font-semibold">Stato iscrizione</th>
+                <th className="py-3 pr-4 font-semibold">Stato iscrizione</th>
+                <th className="py-3 font-semibold">
+                  <span className="sr-only">Azioni</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -2181,8 +2266,31 @@ function ManagerOperationalUsersSection({
                   <td className="py-4 pr-4 text-[var(--peace-muted)]">
                     {row.groupName ?? row.eventTitle ?? "Globale"}
                   </td>
-                  <td className="py-4 text-[var(--peace-muted)]">
+                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
                     Accesso operativo attivo; iscrizione personale separata.
+                  </td>
+                  <td className="py-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={managerRoleEditPath(row, navMode)}
+                        aria-label={`Modifica ${row.fullName ?? row.email ?? "utente operativo"}`}
+                        title={`Modifica ${row.fullName ?? row.email ?? "utente operativo"}`}
+                        className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)] focus:outline-none focus:ring-2 focus:ring-[var(--peace-sky-300)]"
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </Link>
+                      <form action={deleteOperationalUserRole}>
+                        <input type="hidden" name="sourceDashboard" value="manager" />
+                        <input type="hidden" name="nav" value={navMode} />
+                        <input type="hidden" name="userId" value={row.userId} />
+                        <input type="hidden" name="role" value={row.role} />
+                        <input type="hidden" name="eventId" value={row.eventId ?? ""} />
+                        <input type="hidden" name="groupId" value={row.groupId ?? ""} />
+                        <OperationalRoleDeleteButton
+                          label={`Elimina ${row.fullName ?? row.email ?? "utente operativo"}`}
+                        />
+                      </form>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -2193,7 +2301,120 @@ function ManagerOperationalUsersSection({
           <p className="mt-4 text-sm text-[var(--peace-muted)]">Nessun ruolo assegnato.</p>
         ) : null}
       </div>
+
+      {selectedRole ? (
+        <ManagerOperationalRoleEditOverlay
+          role={selectedRole}
+          eventOptions={eventOptions}
+          groupOptions={groupOptions}
+          navMode={navMode}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function ManagerOperationalRoleEditOverlay({
+  role,
+  eventOptions,
+  groupOptions,
+  navMode,
+}: {
+  role: OperationalUserRoleRow;
+  eventOptions: Array<{ id: string; title: string }>;
+  groupOptions: ManagerGroupTreeRow[];
+  navMode: ManagerNavMode;
+}) {
+  const nameParts = splitFullName(role.fullName);
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(16,36,64,0.42)] px-4 py-8">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">Modifica utente operativo</h3>
+            <p className="mt-1 text-sm text-[var(--peace-muted)]">
+              Aggiorna dati, ruolo e scope della persona selezionata.
+            </p>
+          </div>
+          <Link
+            href={`/dashboard/manager?section=ruoli&nav=${navMode}`}
+            aria-label="Chiudi"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--peace-border)] text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
+          >
+            <X className="size-5" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <form action={updateOperationalUserRole} className="mt-5 grid gap-4">
+          <input type="hidden" name="sourceDashboard" value="manager" />
+          <input type="hidden" name="nav" value={navMode} />
+          <input type="hidden" name="currentUserId" value={role.userId} />
+          <input type="hidden" name="currentRole" value={role.role} />
+          <input type="hidden" name="currentEventId" value={role.eventId ?? ""} />
+          <input type="hidden" name="currentGroupId" value={role.groupId ?? ""} />
+          <div className="grid gap-3 lg:grid-cols-3">
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Nome
+              <input
+                name="firstName"
+                className="field bg-white font-normal"
+                defaultValue={nameParts.firstName}
+                required
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Cognome
+              <input
+                name="lastName"
+                className="field bg-white font-normal"
+                defaultValue={nameParts.lastName}
+                required
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Email
+              <input
+                name="email"
+                type="email"
+                className="field bg-white font-normal"
+                defaultValue={role.email ?? ""}
+                required
+              />
+            </label>
+          </div>
+          <OperationalRoleFields
+            eventOptions={eventOptions}
+            groupOptions={groupOptions.map((group) => ({
+              id: group.id,
+              name: group.name,
+              eventTitle: group.eventTitle,
+            }))}
+            roleOptions={[
+              { value: "capogruppo", label: "Capogruppo" },
+              { value: "manager", label: "Manager" },
+              { value: "manager_viewer", label: "Manager viewer" },
+              { value: "accoglienza", label: "Accoglienza" },
+            ]}
+            defaultRole={role.role}
+            defaultEventId={role.eventId}
+            defaultGroupId={role.groupId}
+            defaultLeaderKind={role.isPrimaryGroupLeader ? "primary" : "secondary"}
+          />
+          <div className="flex flex-wrap justify-end gap-3">
+            <Link
+              href={`/dashboard/manager?section=ruoli&nav=${navMode}`}
+              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-ink)] transition hover:bg-[var(--peace-sky-100)]"
+            >
+              Annulla
+            </Link>
+            <button className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva modifiche
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -2393,6 +2614,7 @@ function StatusMessage({
     "missing-group": "Seleziona un gruppo per il ruolo capogruppo.",
     "auth-user": "Non è stato possibile creare o recuperare l'utente.",
     "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
+    "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
   };
   const messageKey = groupError ?? groupLinkError ?? roleError ?? managerError ?? error;
 

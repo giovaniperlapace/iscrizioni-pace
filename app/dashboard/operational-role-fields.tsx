@@ -24,6 +24,10 @@ type OperationalRoleFieldsProps = {
   eventOptions: EventOption[];
   groupOptions: GroupOption[];
   roleOptions: RoleOption[];
+  defaultRole?: string | null;
+  defaultEventId?: string | null;
+  defaultGroupId?: string | null;
+  defaultLeaderKind?: "primary" | "secondary" | null;
 };
 
 const EVENT_SCOPED_ROLES = new Set(["manager", "manager_viewer", "accoglienza"]);
@@ -32,8 +36,15 @@ export function OperationalRoleFields({
   eventOptions,
   groupOptions,
   roleOptions,
+  defaultRole: defaultRoleProp,
+  defaultEventId,
+  defaultGroupId,
+  defaultLeaderKind,
 }: OperationalRoleFieldsProps) {
-  const defaultRole = roleOptions[0]?.value ?? "";
+  const defaultRole =
+    defaultRoleProp && roleOptions.some((option) => option.value === defaultRoleProp)
+      ? defaultRoleProp
+      : (roleOptions[0]?.value ?? "");
   const [role, setRole] = useState(defaultRole);
   const isGroupLeader = role === "capogruppo";
   const isEventScopedRole = EVENT_SCOPED_ROLES.has(role);
@@ -62,7 +73,7 @@ export function OperationalRoleFields({
           <select
             name="eventId"
             className="field bg-white font-normal"
-            defaultValue={eventOptions[0]?.id ?? ""}
+            defaultValue={defaultEventId ?? eventOptions[0]?.id ?? ""}
             required
           >
             <option value="">Seleziona evento</option>
@@ -78,7 +89,12 @@ export function OperationalRoleFields({
         <>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             Gruppo per capogruppo
-            <select name="groupId" className="field bg-white font-normal" defaultValue="" required>
+            <select
+              name="groupId"
+              className="field bg-white font-normal"
+              defaultValue={defaultGroupId ?? ""}
+              required
+            >
               <option value="">Seleziona gruppo</option>
               {groupOptions.map((group) => (
                 <option key={group.id} value={group.id}>
@@ -87,7 +103,7 @@ export function OperationalRoleFields({
               ))}
             </select>
           </label>
-          <GroupLeaderKindField />
+          <GroupLeaderKindField defaultValue={defaultLeaderKind ?? undefined} />
         </>
       ) : null}
     </div>

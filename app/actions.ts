@@ -1448,7 +1448,8 @@ export async function assignGroupLeader(formData: FormData) {
 
 export async function assignOperationalUserRole(formData: FormData) {
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
-  const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard);
+  const navMode = optionalText(formData.get("nav"));
+  const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard, navMode);
   const firstName = optionalText(formData.get("firstName"));
   const lastName = optionalText(formData.get("lastName"));
   const email = normalizeEmail(formData.get("email"));
@@ -1460,7 +1461,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   const sendInvite = formData.get("sendInvite") === "on";
 
   if (!firstName || !lastName || !email || !isAssignableOperationalRole(role)) {
-    redirect(`${dashboardPath}?roleError=invalid`);
+    redirect(`${dashboardPath}&roleError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1476,7 +1477,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   const fullName = `${firstName} ${lastName}`.trim();
 
   if (role === "admin" && !isAdmin) {
-    redirect(`${dashboardPath}?roleError=forbidden`);
+    redirect(`${dashboardPath}&roleError=forbidden`);
   }
 
   let roleEventId: string | null = null;
@@ -1484,7 +1485,7 @@ export async function assignOperationalUserRole(formData: FormData) {
 
   if (role === "capogruppo") {
     if (!groupId) {
-      redirect(`${dashboardPath}?roleError=missing-group`);
+      redirect(`${dashboardPath}&roleError=missing-group`);
     }
 
     const { data: group, error: groupError } = await serviceSupabase
@@ -1497,7 +1498,7 @@ export async function assignOperationalUserRole(formData: FormData) {
       | null;
 
     if (groupError || !groupRow) {
-      redirect(`${dashboardPath}?roleError=invalid-group`);
+      redirect(`${dashboardPath}&roleError=invalid-group`);
     }
 
     const canManageGroupEvent =
@@ -1508,14 +1509,14 @@ export async function assignOperationalUserRole(formData: FormData) {
       );
 
     if (!canManageGroupEvent) {
-      redirect(`${dashboardPath}?roleError=forbidden`);
+      redirect(`${dashboardPath}&roleError=forbidden`);
     }
 
     roleEventId = groupRow.event_id;
     roleGroupId = groupRow.id;
   } else if (role !== "admin") {
     if (!eventId) {
-      redirect(`${dashboardPath}?roleError=missing-event`);
+      redirect(`${dashboardPath}&roleError=missing-event`);
     }
 
     const canManageRoleEvent =
@@ -1525,7 +1526,7 @@ export async function assignOperationalUserRole(formData: FormData) {
       );
 
     if (!canManageRoleEvent) {
-      redirect(`${dashboardPath}?roleError=forbidden`);
+      redirect(`${dashboardPath}&roleError=forbidden`);
     }
 
     roleEventId = eventId;
@@ -1537,12 +1538,12 @@ export async function assignOperationalUserRole(formData: FormData) {
   });
 
   if (!userId) {
-    redirect(`${dashboardPath}?roleError=auth-user`);
+    redirect(`${dashboardPath}&roleError=auth-user`);
   }
 
   if (role === "capogruppo") {
     if (!roleGroupId) {
-      redirect(`${dashboardPath}?roleError=missing-group`);
+      redirect(`${dashboardPath}&roleError=missing-group`);
     }
 
     if (isPrimaryLeader) {
@@ -1553,7 +1554,7 @@ export async function assignOperationalUserRole(formData: FormData) {
       );
 
       if (demoteError) {
-        redirect(`${dashboardPath}?roleError=${encodeURIComponent(demoteError)}`);
+        redirect(`${dashboardPath}&roleError=${encodeURIComponent(demoteError)}`);
       }
     }
 
@@ -1570,7 +1571,7 @@ export async function assignOperationalUserRole(formData: FormData) {
 
     if (membership.error) {
       redirect(
-        `${dashboardPath}?roleError=${encodeURIComponent(membership.error.message)}`
+        `${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`
       );
     }
 
@@ -1581,7 +1582,7 @@ export async function assignOperationalUserRole(formData: FormData) {
     );
 
     if (syncError) {
-      redirect(`${dashboardPath}?roleError=${encodeURIComponent(syncError)}`);
+      redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
     }
   } else {
     const roleMatch = serviceSupabase
@@ -1596,7 +1597,7 @@ export async function assignOperationalUserRole(formData: FormData) {
         : await roleMatch.eq("event_id", roleEventId);
 
     if (selectError) {
-      redirect(`${dashboardPath}?roleError=${encodeURIComponent(selectError.message)}`);
+      redirect(`${dashboardPath}&roleError=${encodeURIComponent(selectError.message)}`);
     }
 
     if (!existingRole?.length) {
@@ -1611,7 +1612,7 @@ export async function assignOperationalUserRole(formData: FormData) {
 
       if (insertError) {
         redirect(
-          `${dashboardPath}?roleError=${encodeURIComponent(insertError.message)}`
+          `${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`
         );
       }
     }
@@ -1651,14 +1652,335 @@ export async function assignOperationalUserRole(formData: FormData) {
         error,
       });
 
-      redirect(`${dashboardPath}?roleError=invite-email`);
+      redirect(`${dashboardPath}&roleError=invite-email`);
     }
   }
 
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/capogruppo");
-  redirect(`${dashboardPath}?roleSaved=1`);
+  redirect(`${dashboardPath}&roleSaved=1`);
+}
+
+export async function updateOperationalUserRole(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const navMode = optionalText(formData.get("nav"));
+  const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard, navMode);
+  const currentUserId = optionalText(formData.get("currentUserId"));
+  const currentRole = optionalText(formData.get("currentRole"));
+  const currentEventId = optionalText(formData.get("currentEventId"));
+  const currentGroupId = optionalText(formData.get("currentGroupId"));
+  const firstName = optionalText(formData.get("firstName"));
+  const lastName = optionalText(formData.get("lastName"));
+  const email = normalizeEmail(formData.get("email"));
+  const role = optionalText(formData.get("role"));
+  const eventId = optionalText(formData.get("eventId"));
+  const groupId = optionalText(formData.get("groupId"));
+  const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
+  const isPrimaryLeader = leaderKind === "primary";
+
+  if (
+    !currentUserId ||
+    !isAssignableOperationalRole(currentRole) ||
+    !firstName ||
+    !lastName ||
+    !email ||
+    !isAssignableOperationalRole(role)
+  ) {
+    redirect(`${dashboardPath}&roleError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const requestedRole = sourceDashboard === "admin" ? "admin" : "manager";
+  const auth = await getCurrentAuthContext(supabase, requestedRole);
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const isAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
+  const currentTarget = await resolveOperationalRoleTarget(serviceSupabase, {
+    userId: currentUserId,
+    role: currentRole,
+    eventId: currentEventId,
+    groupId: currentGroupId,
+  });
+
+  if (!currentTarget.ok) {
+    redirect(`${dashboardPath}&roleError=invalid`);
+  }
+
+  if (
+    !canManageOperationalRole(auth.eventRoles, isAdmin, {
+      role: currentRole,
+      eventId: currentTarget.eventId,
+    })
+  ) {
+    redirect(`${dashboardPath}&roleError=forbidden`);
+  }
+
+  const nextTarget = await resolveOperationalRoleTarget(serviceSupabase, {
+    userId: null,
+    role,
+    eventId,
+    groupId,
+  });
+
+  if (!nextTarget.ok) {
+    redirect(`${dashboardPath}&roleError=invalid`);
+  }
+
+  if (
+    !canManageOperationalRole(auth.eventRoles, isAdmin, {
+      role,
+      eventId: nextTarget.eventId,
+    })
+  ) {
+    redirect(`${dashboardPath}&roleError=forbidden`);
+  }
+
+  const fullName = `${firstName} ${lastName}`.trim();
+  const targetUserId = await ensureAuthUserForGroupLeader(serviceSupabase, {
+    email,
+    fullName,
+  });
+
+  if (!targetUserId) {
+    redirect(`${dashboardPath}&roleError=auth-user`);
+  }
+
+  const currentSignature = operationalRoleSignature({
+    userId: currentUserId,
+    role: currentRole,
+    eventId: currentRole === "admin" ? null : currentTarget.eventId,
+    groupId: currentTarget.groupId,
+  });
+  const nextSignature = operationalRoleSignature({
+    userId: targetUserId,
+    role,
+    eventId: role === "admin" ? null : nextTarget.eventId,
+    groupId: nextTarget.groupId,
+  });
+
+  if (currentUserId === auth.user.id && currentSignature !== nextSignature) {
+    redirect(`${dashboardPath}&roleError=self-role`);
+  }
+
+  if (currentSignature !== nextSignature) {
+    const removeError = await removeOperationalRoleAssignment(serviceSupabase, {
+      userId: currentUserId,
+      role: currentRole,
+      eventId: currentRole === "admin" ? null : currentTarget.eventId,
+      groupId: currentTarget.groupId,
+    });
+
+    if (removeError) {
+      redirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
+    }
+
+    if (currentTarget.isPrimaryGroupLeader && currentTarget.groupId) {
+      const syncError = await syncGroupPrimaryLeaderName(
+        serviceSupabase,
+        currentTarget.groupId,
+        null
+      );
+
+      if (syncError) {
+        redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+      }
+    }
+  }
+
+  if (role === "capogruppo") {
+    if (!nextTarget.groupId) {
+      redirect(`${dashboardPath}&roleError=missing-group`);
+    }
+
+    if (isPrimaryLeader) {
+      const demoteError = await demoteOtherPrimaryGroupLeaders(
+        serviceSupabase,
+        nextTarget.groupId,
+        targetUserId
+      );
+
+      if (demoteError) {
+        redirect(`${dashboardPath}&roleError=${encodeURIComponent(demoteError)}`);
+      }
+    }
+
+    const membership = await serviceSupabase.from("group_memberships").upsert(
+      {
+        group_id: nextTarget.groupId,
+        user_id: targetUserId,
+        role: "capogruppo",
+        is_primary: isPrimaryLeader,
+        created_by: auth.user.id,
+      },
+      { onConflict: "group_id,user_id" }
+    );
+
+    if (membership.error) {
+      redirect(
+        `${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`
+      );
+    }
+
+    const syncError = await syncGroupPrimaryLeaderName(
+      serviceSupabase,
+      nextTarget.groupId,
+      isPrimaryLeader ? fullName : null
+    );
+
+    if (syncError) {
+      redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+    }
+  } else {
+    const roleMatch = serviceSupabase
+      .from("event_user_roles")
+      .select("id")
+      .eq("user_id", targetUserId)
+      .eq("role", role)
+      .limit(1);
+    const { data: existingRole, error: selectError } =
+      role === "admin"
+        ? await roleMatch.is("event_id", null)
+        : await roleMatch.eq("event_id", nextTarget.eventId);
+
+    if (selectError) {
+      redirect(`${dashboardPath}&roleError=${encodeURIComponent(selectError.message)}`);
+    }
+
+    if (!existingRole?.length) {
+      const { error: insertError } = await serviceSupabase
+        .from("event_user_roles")
+        .insert({
+          user_id: targetUserId,
+          event_id: role === "admin" ? null : nextTarget.eventId,
+          role,
+          created_by: auth.user.id,
+        });
+
+      if (insertError) {
+        redirect(
+          `${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`
+        );
+      }
+    }
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: nextTarget.eventId,
+    actor_user_id: auth.user.id,
+    action: "operational_user.role_updated",
+    entity_table: role === "capogruppo" ? "group_memberships" : "event_user_roles",
+    entity_id: targetUserId,
+    metadata: {
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+      previous_user_id: currentUserId,
+      previous_role: currentRole,
+      previous_event_id: currentTarget.eventId,
+      previous_group_id: currentTarget.groupId,
+      role,
+      email_hash: hashEmailForAudit(email),
+      group_id: nextTarget.groupId,
+      leader_kind: role === "capogruppo" ? leaderKind : null,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+  redirect(`${dashboardPath}&roleSaved=1`);
+}
+
+export async function deleteOperationalUserRole(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const navMode = optionalText(formData.get("nav"));
+  const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard, navMode);
+  const userId = optionalText(formData.get("userId"));
+  const role = optionalText(formData.get("role"));
+  const eventId = optionalText(formData.get("eventId"));
+  const groupId = optionalText(formData.get("groupId"));
+
+  if (!userId || !isAssignableOperationalRole(role)) {
+    redirect(`${dashboardPath}&roleError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const requestedRole = sourceDashboard === "admin" ? "admin" : "manager";
+  const auth = await getCurrentAuthContext(supabase, requestedRole);
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  if (userId === auth.user.id) {
+    redirect(`${dashboardPath}&roleError=self-role`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const isAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
+  const target = await resolveOperationalRoleTarget(serviceSupabase, {
+    userId,
+    role,
+    eventId,
+    groupId,
+  });
+
+  if (!target.ok) {
+    redirect(`${dashboardPath}&roleError=invalid`);
+  }
+
+  if (
+    !canManageOperationalRole(auth.eventRoles, isAdmin, {
+      role,
+      eventId: target.eventId,
+    })
+  ) {
+    redirect(`${dashboardPath}&roleError=forbidden`);
+  }
+
+  const removeError = await removeOperationalRoleAssignment(serviceSupabase, {
+    userId,
+    role,
+    eventId: role === "admin" ? null : target.eventId,
+    groupId: target.groupId,
+  });
+
+  if (removeError) {
+    redirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
+  }
+
+  if (target.isPrimaryGroupLeader && target.groupId) {
+    const syncError = await syncGroupPrimaryLeaderName(
+      serviceSupabase,
+      target.groupId,
+      null
+    );
+
+    if (syncError) {
+      redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+    }
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: target.eventId,
+    actor_user_id: auth.user.id,
+    action: "operational_user.role_deleted",
+    entity_table: role === "capogruppo" ? "group_memberships" : "event_user_roles",
+    entity_id: userId,
+    metadata: {
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+      role,
+      group_id: target.groupId,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+  redirect(`${dashboardPath}&roleSaved=1`);
 }
 
 async function getExistingGroupLeaderTarget(
@@ -2297,10 +2619,19 @@ function getGroupLinksModalPath(
   return `${basePath}?${params.toString()}`;
 }
 
-function getOperationalUsersDashboardPath(sourceDashboard: string | null): string {
-  return sourceDashboard === "admin"
-    ? "/dashboard/admin?section=ruoli"
-    : "/dashboard/manager?section=ruoli";
+function getOperationalUsersDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath =
+    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({ section: "ruoli" });
+
+  if (navMode === "mini" || navMode === "full") {
+    params.set("nav", navMode);
+  }
+
+  return `${basePath}?${params.toString()}`;
 }
 
 function getGroupManagementRequestedRole(
@@ -2350,6 +2681,160 @@ function isAssignableOperationalRole(
     value === "accoglienza" ||
     value === "capogruppo"
   );
+}
+
+async function resolveOperationalRoleTarget(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    userId: string | null;
+    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo";
+    eventId: string | null;
+    groupId: string | null;
+  }
+): Promise<
+  | {
+      ok: true;
+      eventId: string | null;
+      groupId: string | null;
+      isPrimaryGroupLeader: boolean;
+    }
+  | { ok: false }
+> {
+  if (input.role === "admin") {
+    return {
+      ok: true,
+      eventId: null,
+      groupId: null,
+      isPrimaryGroupLeader: false,
+    };
+  }
+
+  if (input.role === "capogruppo") {
+    if (!input.groupId) {
+      return { ok: false };
+    }
+
+    const { data: group, error: groupError } = await supabase
+      .from("groups")
+      .select("id,event_id")
+      .eq("id", input.groupId)
+      .maybeSingle();
+    const groupRow = group as { id: string; event_id: string | null } | null;
+
+    if (groupError || !groupRow?.event_id) {
+      return { ok: false };
+    }
+
+    let isPrimaryGroupLeader = false;
+
+    if (input.userId) {
+      const { data: membership } = await supabase
+        .from("group_memberships")
+        .select("is_primary")
+        .eq("user_id", input.userId)
+        .eq("group_id", input.groupId)
+        .eq("role", "capogruppo")
+        .maybeSingle();
+
+      isPrimaryGroupLeader =
+        ((membership as { is_primary: boolean | null } | null)?.is_primary ?? false) ===
+        true;
+    }
+
+    return {
+      ok: true,
+      eventId: groupRow.event_id,
+      groupId: groupRow.id,
+      isPrimaryGroupLeader,
+    };
+  }
+
+  if (!input.eventId) {
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    eventId: input.eventId,
+    groupId: null,
+    isPrimaryGroupLeader: false,
+  };
+}
+
+function canManageOperationalRole(
+  eventRoles: EventUserRole[],
+  isAdmin: boolean,
+  target: {
+    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo";
+    eventId: string | null;
+  }
+): boolean {
+  if (target.role === "admin") {
+    return isAdmin;
+  }
+
+  if (isAdmin) {
+    return true;
+  }
+
+  return Boolean(
+    target.eventId &&
+      eventRoles.some(
+        (eventRole) =>
+          eventRole.role === "manager" && eventRole.eventId === target.eventId
+      )
+  );
+}
+
+async function removeOperationalRoleAssignment(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    userId: string;
+    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo";
+    eventId: string | null;
+    groupId: string | null;
+  }
+): Promise<string | null> {
+  if (input.role === "capogruppo") {
+    if (!input.groupId) {
+      return "missing-group";
+    }
+
+    const { error } = await supabase
+      .from("group_memberships")
+      .delete()
+      .eq("user_id", input.userId)
+      .eq("group_id", input.groupId)
+      .eq("role", "capogruppo");
+
+    return error?.message ?? null;
+  }
+
+  const roleQuery = supabase
+    .from("event_user_roles")
+    .delete()
+    .eq("user_id", input.userId)
+    .eq("role", input.role);
+  const { error } =
+    input.role === "admin"
+      ? await roleQuery.is("event_id", null)
+      : await roleQuery.eq("event_id", input.eventId);
+
+  return error?.message ?? null;
+}
+
+function operationalRoleSignature(input: {
+  userId: string;
+  role: string;
+  eventId: string | null;
+  groupId: string | null;
+}): string {
+  return [
+    input.userId,
+    input.role,
+    input.eventId ?? "global",
+    input.groupId ?? "no-group",
+  ].join(":");
 }
 
 function getEventOpeningUpdate(
