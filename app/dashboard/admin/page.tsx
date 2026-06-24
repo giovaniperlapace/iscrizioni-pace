@@ -13,10 +13,12 @@ import {
 import {
   assignOperationalUserRole,
   assignGroupLeader,
+  createFutureEvent,
   createGroupRegistrationLink,
   deleteOperationalUserRole,
   revokeGroupRegistrationLink,
   saveOperationsGroup,
+  setCurrentOperationalEvent,
   updateEventOpeningState,
   updateOperationalUserRole,
 } from "@/app/actions";
@@ -66,6 +68,7 @@ import {
   getOperationalUserIdentities,
   splitFullName,
 } from "@/lib/operational-users/identity";
+import { getCurrentOperationalEvent } from "@/lib/events/current";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -76,6 +79,7 @@ type AdminPageProps = {
     adminError?: string;
     adminSaved?: string;
     editMode?: string;
+    eventTool?: string;
     edit?: string;
     event?: string;
     groupError?: string;
@@ -111,6 +115,7 @@ type EventRow = {
   slug: string;
   title: string;
   status: string;
+  is_current: boolean | null;
   city: string | null;
   country: string | null;
   starts_on: string | null;
@@ -322,11 +327,16 @@ export default async function AdminDashboardPage({
 
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
+  const currentEvent = await getCurrentOperationalEvent(serviceSupabase, "id,title");
+  const currentEventId = currentEvent?.id ?? null;
   const [snapshots, adminOperations] = await Promise.all([
     getOpeningSnapshots(),
-    getAdminOperationsSnapshot(filters),
+    getAdminOperationsSnapshot(filters, currentEventId),
   ]);
-  const statistics = await getAdminStatisticsSnapshot(adminOperations.groupTree);
+  const statistics = await getAdminStatisticsSnapshot(
+    adminOperations.groupTree,
+    currentEventId
+  );
   const selectedAdminParticipant =
     adminOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
@@ -381,7 +391,11 @@ export default async function AdminDashboardPage({
             />
 
             {activeSection === "evento" ? (
-              <AdminEventSection snapshots={snapshots} />
+              <AdminEventSection
+                snapshots={snapshots}
+                isCreatingEvent={params.eventTool === "new"}
+                navMode={navMode}
+              />
             ) : null}
 
             {activeSection === "dashboard" ? (
@@ -405,7 +419,9 @@ export default async function AdminDashboardPage({
             {activeSection === "ruoli" ? (
               <AdminOperationalUsersSection
                 roles={adminOperations.roleUsers}
-                eventOptions={getRoleEventOptions(adminOperations.groupTree)}
+                eventOptions={
+                  currentEvent ? [{ id: currentEvent.id, title: currentEvent.title }] : []
+                }
                 groupOptions={adminOperations.groupTree.filter(
                   (group) => group.isActive && group.isAssignable
                 )}
@@ -420,6 +436,9 @@ export default async function AdminDashboardPage({
                 links={adminOperations.groupLinks}
                 participants={adminOperations.allParticipants}
                 roleUsers={adminOperations.roleUsers}
+                currentEventOption={
+                  currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null
+                }
                 filters={parseGroupTableFilters(params)}
                 selectedGroup={selectedGroup}
                 selectedTool={
@@ -450,8 +469,22 @@ export default async function AdminDashboardPage({
   );
 
   async function getAdminOperationsSnapshot(
-    filters: OperationsDashboardFilters
+    filters: OperationsDashboardFilters,
+    currentEventId: string | null
   ): Promise<AdminOperationsSnapshot> {
+    if (!currentEventId) {
+      return {
+        participants: [],
+        allParticipants: [],
+        groupOptions: [],
+        groupTree: [],
+        groupLinks: [],
+        roleUsers: [],
+        filters,
+        summary: summarizeOperationsDashboardParticipants([], []),
+      };
+    }
+
     const [
       { data: registrations },
       { data: groups },
@@ -465,11 +498,13 @@ export default async function AdminDashboardPage({
         .select(
           "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
         )
+        .eq("event_id", currentEventId)
         .order("submitted_at", { ascending: false })
         .limit(200),
       serviceSupabase
         .from("groups")
         .select("id,event_id,name,is_assignable,is_active")
+        .eq("event_id", currentEventId)
         .eq("is_active", true)
         .eq("is_assignable", true)
         .order("name", { ascending: true }),
@@ -478,6 +513,7 @@ export default async function AdminDashboardPage({
         .select(
           "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_bracket,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
         )
+        .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
         .order("name", { ascending: true }),
       serviceSupabase
@@ -485,14 +521,17 @@ export default async function AdminDashboardPage({
         .select(
           "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
         )
+        .eq("event_id", currentEventId)
         .is("revoked_at", null)
         .order("created_at", { ascending: false }),
       serviceSupabase
         .from("event_user_roles")
-        .select("user_id,role,event_id,events(title)"),
+        .select("user_id,role,event_id,events(title)")
+        .or(`event_id.is.null,event_id.eq.${currentEventId}`),
       serviceSupabase
         .from("group_memberships")
-        .select("user_id,role,is_primary,group_id,groups(id,name,event_id,events(title))"),
+        .select("user_id,role,is_primary,group_id,groups!inner(id,name,event_id,events(title))")
+        .eq("groups.event_id", currentEventId),
     ]);
     const registrationRows = (registrations ?? []) as AdminRegistrationRow[];
     const registrationIds = registrationRows.map((row) => row.id);
@@ -644,13 +683,23 @@ export default async function AdminDashboardPage({
   }
 
   async function getAdminStatisticsSnapshot(
-    groupTree: AdminGroupTreeRow[]
+    groupTree: AdminGroupTreeRow[],
+    currentEventId: string | null
   ): Promise<EventStatisticsSnapshot> {
+    if (!currentEventId) {
+      return buildEventStatisticsSnapshot({
+        participants: [],
+        groups: [],
+        attendanceChoices: [],
+      });
+    }
+
     const { data: registrations } = await serviceSupabase
       .from("registrations")
       .select(
         "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
       )
+      .eq("event_id", currentEventId)
       .order("submitted_at", { ascending: false })
       .range(0, 9999);
     const registrationRows = (registrations ?? []) as AdminRegistrationRow[];
@@ -719,7 +768,7 @@ export default async function AdminDashboardPage({
     const { data: events } = await serviceSupabase
       .from("events")
       .select(
-        "id,slug,title,status,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
+        "id,slug,title,status,is_current,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
       )
       .order("starts_on", { ascending: false });
 
@@ -941,15 +990,31 @@ function AdminSidebar({
   );
 }
 
-function AdminEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
+function AdminEventSection({
+  snapshots,
+  isCreatingEvent,
+  navMode,
+}: {
+  snapshots: EventSnapshot[];
+  isCreatingEvent: boolean;
+  navMode: AdminNavMode;
+}) {
   return (
     <section className="grid min-w-0 gap-4">
-      <div className="surface-panel p-5">
-        <h2 className="text-lg font-semibold">Apertura e monitoraggio</h2>
-        <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Usa questi comandi solo durante finestre operative concordate.
-          Ogni modifica viene registrata negli audit.
-        </p>
+      <div className="surface-panel flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Apertura e monitoraggio</h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+            Usa questi comandi solo durante finestre operative concordate.
+            Ogni modifica viene registrata negli audit.
+          </p>
+        </div>
+        <Link
+          href={adminPath("evento", navMode, "eventTool=new")}
+          className="inline-flex min-h-11 w-fit items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+        >
+          Nuovo evento futuro
+        </Link>
       </div>
 
       {snapshots.map((snapshot) => (
@@ -961,6 +1026,8 @@ function AdminEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
           Nessun evento visibile.
         </div>
       ) : null}
+
+      {isCreatingEvent ? <NewEventOverlay navMode={navMode} /> : null}
     </section>
   );
 }
@@ -1030,7 +1097,6 @@ function StatisticsSection({
             <thead>
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">{participantBreakdownLabel(activeLevel)}</th>
-                <th className="py-3 pr-4 font-semibold">Evento</th>
                 <th className="py-3 text-right font-semibold">Partecipanti</th>
               </tr>
             </thead>
@@ -1042,9 +1108,6 @@ function StatisticsSection({
                 >
                   <td className="py-4 pr-4 font-semibold text-[var(--peace-ink)]">
                     {row.label}
-                  </td>
-                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
-                    {row.eventTitle}
                   </td>
                   <td className="py-4 text-right text-xl font-semibold text-[var(--peace-ink)]">
                     {row.participantCount}
@@ -1076,7 +1139,6 @@ function StatisticsSection({
             <thead>
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">Giornata</th>
-                <th className="py-3 pr-4 font-semibold">Evento</th>
                 <th className="py-3 text-right font-semibold">Partecipanti</th>
               </tr>
             </thead>
@@ -1088,9 +1150,6 @@ function StatisticsSection({
                 >
                   <td className="py-4 pr-4 font-semibold text-[var(--peace-ink)]">
                     {row.kind === "day" ? formatDate(row.label) : row.label}
-                  </td>
-                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
-                    {row.eventTitle}
                   </td>
                   <td className="py-4 text-right text-xl font-semibold text-[var(--peace-ink)]">
                     {row.participantCount}
@@ -1255,14 +1314,98 @@ async function buildOperationalUserRows(
   );
 }
 
-function getRoleEventOptions(groups: AdminGroupTreeRow[]) {
-  const options = new Map<string, string>();
-  groups.forEach((group) => options.set(group.eventId, group.eventTitle));
-  return Array.from(options, ([id, title]) => ({ id, title }));
+function NewEventOverlay({ navMode }: { navMode: AdminNavMode }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(16,36,64,0.42)] px-4 py-8">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">Nuovo evento futuro</h3>
+            <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+              L&apos;evento viene creato in bozza e non diventa corrente finché
+              un admin non lo rende operativo.
+            </p>
+          </div>
+          <Link
+            href={adminPath("evento", navMode)}
+            aria-label="Chiudi"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--peace-border)] text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
+          >
+            <X className="size-5" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <form action={createFutureEvent} className="mt-5 grid gap-4">
+          <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+            Titolo evento
+            <input name="title" className="field" required />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+            Slug tecnico
+            <input
+              name="slug"
+              className="field"
+              placeholder="assisi-2027"
+              required
+            />
+          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Città
+              <input name="city" className="field" required />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Paese
+              <input name="country" className="field" defaultValue="Italia" required />
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Inizio evento
+              <input name="startsOn" type="date" className="field" />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Fine evento
+              <input name="endsOn" type="date" className="field" />
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Apertura iscrizioni
+              <input name="registrationOpensAt" type="datetime-local" className="field" />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Chiusura iscrizioni
+              <input name="registrationClosesAt" type="datetime-local" className="field" />
+            </label>
+          </div>
+          <div className="flex flex-wrap justify-end gap-3 border-t border-[var(--peace-border)] pt-4">
+            <Link
+              href={adminPath("evento", navMode)}
+              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-ink)] transition hover:bg-[var(--peace-sky-100)]"
+            >
+              Annulla
+            </Link>
+            <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Crea evento in bozza
+            </PendingSubmitButton>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
   const { event, summary } = snapshot;
+  const isOpen = snapshot.openingState === "open";
+  const isHidden = snapshot.openingState === "not-published";
+  const openLabel =
+    snapshot.openingState === "scheduled"
+      ? "Apri subito"
+      : snapshot.openingState === "closed"
+        ? "Riapri iscrizioni"
+        : "Pubblica e apri";
 
   return (
     <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -1273,6 +1416,11 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
             <span className="rounded-full border border-[var(--peace-border-strong)] bg-[var(--peace-sky-100)] px-3 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
               {openingStateLabel(snapshot.openingState)}
             </span>
+            {event.is_current ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Evento corrente
+              </span>
+            ) : null}
           </div>
           <p className="mt-2 text-sm text-[var(--peace-muted)]">
             {event.city}, {event.country} - {event.slug}
@@ -1285,24 +1433,44 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
         </div>
 
         <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-          <OpeningForm
-            eventId={event.id}
-            intent="open"
-            label="Apri ora"
-            tone="primary"
-          />
-          <OpeningForm
-            eventId={event.id}
-            intent="pause"
-            label="Pausa"
-            tone="secondary"
-          />
-          <OpeningForm
-            eventId={event.id}
-            intent="draft"
-            label="Nascondi"
-            tone="secondary"
-          />
+          {event.is_current ? (
+            <DisabledAction label="È l'evento corrente" />
+          ) : (
+            <form action={setCurrentOperationalEvent}>
+              <input type="hidden" name="eventId" value={event.id} />
+              <PendingSubmitButton className="min-h-11 w-full rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                Rendi corrente
+              </PendingSubmitButton>
+            </form>
+          )}
+          {isOpen ? (
+            <DisabledAction label="Iscrizioni aperte" primary />
+          ) : (
+            <OpeningForm
+              eventId={event.id}
+              intent="open"
+              label={openLabel}
+              tone="primary"
+            />
+          )}
+          {isOpen || snapshot.openingState === "scheduled" ? (
+            <OpeningForm
+              eventId={event.id}
+              intent="pause"
+              label="Sospendi iscrizioni"
+              tone="secondary"
+            />
+          ) : null}
+          {isHidden ? (
+            <DisabledAction label="Evento nascosto" />
+          ) : (
+            <OpeningForm
+              eventId={event.id}
+              intent="draft"
+              label="Nascondi evento"
+              tone="secondary"
+            />
+          )}
         </div>
       </div>
 
@@ -1743,6 +1911,7 @@ function AdminGroupTreeSection({
   links,
   participants,
   roleUsers,
+  currentEventOption,
   filters,
   selectedGroup,
   selectedTool,
@@ -1754,6 +1923,7 @@ function AdminGroupTreeSection({
   links: AdminGroupRegistrationLink[];
   participants: AdminParticipantRow[];
   roleUsers: OperationalUserRoleRow[];
+  currentEventOption: { id: string; title: string } | null;
   filters: GroupTableFilters;
   selectedGroup: AdminGroupTreeRow | null;
   selectedTool: "edit" | "links" | "leaders" | null;
@@ -1763,7 +1933,9 @@ function AdminGroupTreeSection({
 }) {
   const filteredGroups = filterGroupRows(groups, filters);
   const linksByGroupId = groupLinksByGroupId(links);
-  const eventOptions = getGroupEventOptions(groups);
+  const eventOptions = currentEventOption
+    ? [currentEventOption]
+    : getGroupEventOptions(groups);
 
   return (
     <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -1877,7 +2049,7 @@ function AdminGroupTreeSection({
                   <td className="py-4 pr-4">
                     <p className="font-semibold text-[var(--peace-ink)]">{group.name}</p>
                     <p className="mt-1 text-xs leading-5 text-[var(--peace-muted)]">
-                      {group.eventTitle} - {groupNodeTypeLabel(group.nodeType)}
+                      {groupNodeTypeLabel(group.nodeType)}
                       {group.parentName ? ` sotto ${group.parentName}` : ""}
                     </p>
                   </td>
@@ -2252,10 +2424,6 @@ function AdminParticipantEditOverlay({
             </span>
           </div>
           <div className="grid gap-1 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">Evento</span>
-            <span className="text-[var(--peace-muted)]">{participant.eventTitle}</span>
-          </div>
-          <div className="grid gap-1 text-sm">
             <span className="font-semibold text-[var(--peace-ink)]">Gruppo corrente</span>
             <span className="text-[var(--peace-muted)]">
               {participant.currentGroupName ?? "Nessun gruppo corrente"} -{" "}
@@ -2320,6 +2488,24 @@ function AdminParticipantEditOverlay({
   );
 }
 
+function DisabledAction({
+  label,
+  primary = false,
+}: {
+  label: string;
+  primary?: boolean;
+}) {
+  const className = primary
+    ? "min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white opacity-55"
+    : "min-h-11 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-4 text-sm font-semibold text-[var(--peace-muted)]";
+
+  return (
+    <button type="button" className={className} disabled>
+      {label}
+    </button>
+  );
+}
+
 function OpeningForm({
   eventId,
   intent,
@@ -2381,7 +2567,9 @@ function StatusMessage({
               ? "Utente operativo aggiornato."
             : adminSaved
               ? "Gestione iscritti aggiornata."
-              : "Configurazione apertura aggiornata."}
+              : saved === "created"
+                ? "Evento futuro creato in bozza."
+                : "Configurazione apertura aggiornata."}
       </p>
     );
   }
@@ -2392,6 +2580,7 @@ function StatusMessage({
 
   const messages: Record<string, string> = {
     invalid: "Comando apertura non valido.",
+    "invalid-dates": "Le date indicate non sono coerenti.",
     "not-found": "Evento non trovato.",
     "invalid-group": "Gruppo non valido per questa iscrizione.",
     "invalid-parent": "Il gruppo parent non è valido per questo evento.",

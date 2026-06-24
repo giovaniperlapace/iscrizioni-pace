@@ -16,6 +16,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
 import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
 import { getCurrentAuthContext } from "@/lib/auth/session";
+import { getCurrentOperationalEventId } from "@/lib/events/current";
 import {
   collectDescendantGroupIds,
   matchesGroupLeaderFilter,
@@ -1510,6 +1511,12 @@ export default async function CapogruppoDashboardPage({
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  const currentEventId = await getCurrentOperationalEventId(serviceSupabase);
+
+  if (!currentEventId) {
+    redirect("/login");
+  }
+
   const { data: memberships } = await serviceSupabase
     .from("group_memberships")
     .select("group_id")
@@ -1521,7 +1528,8 @@ export default async function CapogruppoDashboardPage({
     .from("groups")
     .select(
       "id,event_id,name,parent_group_id,node_type,is_assignable,is_public_catalog,is_active,public_label,primary_leader_name,events(title,starts_on,ends_on)"
-    );
+    )
+    .eq("event_id", currentEventId);
   const groupRows = (groups ?? []) as GroupRow[];
   const activeGroupRows = groupRows.filter((group) => group.is_active ?? true);
   const groupNodes = activeGroupRows.map<GroupTreeNode>((group) => ({
@@ -1648,9 +1656,10 @@ export default async function CapogruppoDashboardPage({
     const { data, error } = await serviceSupabase
       .from("participant_group_assignments")
       .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group))"
+        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group))"
       )
       .in("group_id", groupIds)
+      .eq("registrations.event_id", currentEventId)
       .eq("is_current", true)
       .order("updated_at", { ascending: false })
       .limit(100);
@@ -1676,6 +1685,7 @@ export default async function CapogruppoDashboardPage({
         "id,event_id,group_id,public_label,internal_label,use_count,max_uses,created_at,expires_at,revoked_at"
       )
       .in("group_id", groupIds)
+      .eq("event_id", currentEventId)
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
 

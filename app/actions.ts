@@ -40,6 +40,7 @@ import {
   PRIVACY_VERSION,
 } from "@/lib/registrations/validation";
 import { syncOperationalIdentityByEmail } from "@/lib/operational-users/identity";
+import { getCurrentOperationalEventId } from "@/lib/events/current";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -525,6 +526,145 @@ export async function updateEventOpeningState(formData: FormData) {
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
   redirect(`${dashboardPath}?openingSaved=1`);
+}
+
+export async function setCurrentOperationalEvent(formData: FormData) {
+  const eventId = optionalText(formData.get("eventId"));
+
+  if (!eventId) {
+    redirect("/dashboard/admin?openingError=invalid");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "admin");
+
+  if (!auth || !auth.eventRoles.some((role) => role.role === "admin")) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: event, error: eventError } = await serviceSupabase
+    .from("events")
+    .select("id,is_current")
+    .eq("id", eventId)
+    .maybeSingle();
+  const eventRow = event as { id: string; is_current: boolean | null } | null;
+
+  if (eventError || !eventRow) {
+    redirect("/dashboard/admin?openingError=not-found");
+  }
+
+  if (!eventRow.is_current) {
+    const { error: clearError } = await serviceSupabase
+      .from("events")
+      .update({ is_current: false })
+      .eq("is_current", true);
+
+    if (clearError) {
+      redirect(`/dashboard/admin?openingError=${encodeURIComponent(clearError.message)}`);
+    }
+
+    const { error: setError } = await serviceSupabase
+      .from("events")
+      .update({ is_current: true })
+      .eq("id", eventRow.id);
+
+    if (setError) {
+      redirect(`/dashboard/admin?openingError=${encodeURIComponent(setError.message)}`);
+    }
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventRow.id,
+    actor_user_id: auth.user.id,
+    action: "event.set_current",
+    entity_table: "events",
+    entity_id: eventRow.id,
+    metadata: {
+      previous_is_current: eventRow.is_current,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+  redirect("/dashboard/admin?section=evento&openingSaved=1");
+}
+
+export async function createFutureEvent(formData: FormData) {
+  const title = optionalText(formData.get("title"));
+  const slug = normalizeEventSlug(formData.get("slug"));
+  const city = optionalText(formData.get("city"));
+  const country = optionalText(formData.get("country"));
+  const startsOn = optionalDateOnly(formData.get("startsOn"));
+  const endsOn = optionalDateOnly(formData.get("endsOn"));
+  const registrationOpensAt = optionalDateTimeLocal(formData.get("registrationOpensAt"));
+  const registrationClosesAt = optionalDateTimeLocal(formData.get("registrationClosesAt"));
+
+  if (!title || !slug || !city || !country) {
+    redirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid");
+  }
+
+  if (startsOn && endsOn && endsOn < startsOn) {
+    redirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid-dates");
+  }
+
+  if (
+    registrationOpensAt &&
+    registrationClosesAt &&
+    new Date(registrationClosesAt).getTime() < new Date(registrationOpensAt).getTime()
+  ) {
+    redirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid-dates");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "admin");
+
+  if (!auth || !auth.eventRoles.some((role) => role.role === "admin")) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: event, error } = await serviceSupabase
+    .from("events")
+    .insert({
+      slug,
+      title,
+      city,
+      country,
+      starts_on: startsOn,
+      ends_on: endsOn,
+      status: "draft",
+      registration_opens_at: registrationOpensAt,
+      registration_closes_at: registrationClosesAt,
+      is_current: false,
+    })
+    .select("id")
+    .single();
+
+  if (error || !event) {
+    redirect(
+      `/dashboard/admin?section=evento&eventTool=new&openingError=${encodeURIComponent(
+        error?.message ?? "create"
+      )}`
+    );
+  }
+
+  const eventRow = event as { id: string };
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventRow.id,
+    actor_user_id: auth.user.id,
+    action: "event.created",
+    entity_table: "events",
+    entity_id: eventRow.id,
+    metadata: {
+      status: "draft",
+      is_current: false,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  redirect("/dashboard/admin?section=evento&openingSaved=created");
 }
 
 export async function updateGroupLeaderAssignment(formData: FormData) {
@@ -1131,7 +1271,6 @@ export async function saveOperationsGroup(formData: FormData) {
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
   const groupId = optionalText(formData.get("groupId"));
-  const eventId = optionalText(formData.get("eventId"));
   const name = optionalText(formData.get("name"));
   const groupPlacement = parseGroupPlacement(formData.get("groupPlacement"));
   const parentGroupId =
@@ -1146,7 +1285,7 @@ export async function saveOperationsGroup(formData: FormData) {
         ? "existing"
         : "none";
 
-  if (!eventId || !name || !isValidGroupNodeType(nodeType)) {
+  if (!name || !isValidGroupNodeType(nodeType)) {
     redirect(`${dashboardPath}?groupError=invalid`);
   }
 
@@ -1160,6 +1299,15 @@ export async function saveOperationsGroup(formData: FormData) {
     redirect("/login");
   }
 
+  const serviceSupabase = createSupabaseServiceClient();
+  const eventId =
+    optionalText(formData.get("eventId")) ??
+    (await getCurrentOperationalEventId(serviceSupabase));
+
+  if (!eventId) {
+    redirect(`${dashboardPath}?groupError=invalid`);
+  }
+
   const isAdmin = auth.eventRoles.some((role) => role.role === "admin");
   const canManageEvent =
     isAdmin ||
@@ -1171,7 +1319,6 @@ export async function saveOperationsGroup(formData: FormData) {
     redirect(`${dashboardPath}?groupError=forbidden`);
   }
 
-  const serviceSupabase = createSupabaseServiceClient();
   let currentGroupRow: OperationsGroupRow | null = null;
 
   if (groupId) {
@@ -1455,7 +1602,6 @@ export async function assignOperationalUserRole(formData: FormData) {
   const lastName = optionalText(formData.get("lastName"));
   const email = normalizeEmail(formData.get("email"));
   const role = optionalText(formData.get("role"));
-  const eventId = optionalText(formData.get("eventId"));
   const groupId = optionalText(formData.get("groupId"));
   const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
   const isPrimaryLeader = leaderKind === "primary";
@@ -1476,6 +1622,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   const isAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
   const serviceSupabase = createSupabaseServiceClient();
   const fullName = `${firstName} ${lastName}`.trim();
+  const currentEventId = await getCurrentOperationalEventId(serviceSupabase);
 
   if (role === "admin" && !isAdmin) {
     redirect(`${dashboardPath}&roleError=forbidden`);
@@ -1516,21 +1663,22 @@ export async function assignOperationalUserRole(formData: FormData) {
     roleEventId = groupRow.event_id;
     roleGroupId = groupRow.id;
   } else if (role !== "admin") {
-    if (!eventId) {
+    if (!currentEventId) {
       redirect(`${dashboardPath}&roleError=missing-event`);
     }
 
     const canManageRoleEvent =
       isAdmin ||
       auth.eventRoles.some(
-        (eventRole) => eventRole.role === "manager" && eventRole.eventId === eventId
+        (eventRole) =>
+          eventRole.role === "manager" && eventRole.eventId === currentEventId
       );
 
     if (!canManageRoleEvent) {
       redirect(`${dashboardPath}&roleError=forbidden`);
     }
 
-    roleEventId = eventId;
+    roleEventId = currentEventId;
   }
 
   const userId = await ensureAuthUserForGroupLeader(serviceSupabase, {
@@ -1708,6 +1856,7 @@ export async function updateOperationalUserRole(formData: FormData) {
 
   const serviceSupabase = createSupabaseServiceClient();
   const isAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
+  const currentOperationalEventId = await getCurrentOperationalEventId(serviceSupabase);
   const currentTarget = await resolveOperationalRoleTarget(serviceSupabase, {
     userId: currentUserId,
     role: currentRole,
@@ -1731,7 +1880,7 @@ export async function updateOperationalUserRole(formData: FormData) {
   const nextTarget = await resolveOperationalRoleTarget(serviceSupabase, {
     userId: null,
     role,
-    eventId,
+    eventId: role === "admin" || role === "capogruppo" ? eventId : currentOperationalEventId,
     groupId,
   });
 
@@ -2577,6 +2726,41 @@ function optionalText(value: FormDataEntryValue | null): string | null {
   const trimmed = value.trim();
 
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeEventSlug(value: FormDataEntryValue | null): string | null {
+  const text = optionalText(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const slug = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug || null;
+}
+
+function optionalDateOnly(value: FormDataEntryValue | null): string | null {
+  const text = optionalText(value);
+
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+function optionalDateTimeLocal(value: FormDataEntryValue | null): string | null {
+  const text = optionalText(value);
+
+  if (!text || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(text)) {
+    return null;
+  }
+
+  const date = new Date(text);
+
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function parseGroupPlacement(value: FormDataEntryValue | null): {

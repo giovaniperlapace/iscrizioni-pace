@@ -712,8 +712,9 @@ export default async function PartecipanteDashboardPage({
   const { data: registrationData } = await supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events(id,title,slug,city,country,starts_on,ends_on,registration_closes_at),participants!inner(auth_user_id,first_name,last_name,birth_date,preferred_locale,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
+      "id,event_id,participant_id,status,submitted_at,events!inner(id,title,slug,city,country,starts_on,ends_on,registration_closes_at,is_current),participants!inner(auth_user_id,first_name,last_name,birth_date,preferred_locale,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
     )
+    .eq("events.is_current", true)
     .order("submitted_at", { ascending: false });
 
   const registrations = ((registrationData ?? []) as RegistrationRow[]).filter(

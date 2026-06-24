@@ -180,6 +180,15 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   tendina nativa semplice; usare un controllo cercabile con filtro testuale e
   selezione esplicita. Questa regola vale in particolare per paesi, citta',
   gruppi, partecipanti, referenti e altri elenchi operativi lunghi.
+- Dal 2026-06-24 il multievento e' trattato come archivio storico, non come
+  gestione di eventi contemporanei. La tabella `events` ha il flag
+  `is_current`, unico tramite indice parziale, che identifica l'evento corrente
+  operativo. Admin puo' cambiarlo dalla sezione `Evento`; manager, capogruppi e
+  partecipanti non scelgono l'evento e vedono/creano solo dati legati
+  all'evento corrente. La stessa sezione admin permette di creare eventi futuri
+  in bozza, non correnti, con dati minimi di identita' e finestre iscrizioni.
+  Nelle tabelle operative non mostrare colonne evento ridondanti. Migration:
+  `20260624100000_current_operational_event.sql`.
 - Branch di lavoro ordinario: `main`.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.

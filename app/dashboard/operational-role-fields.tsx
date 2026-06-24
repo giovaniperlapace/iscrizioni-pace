@@ -71,22 +71,11 @@ export function OperationalRoleFields({
           </select>
         </label>
         {isEventScopedRole ? (
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            Evento per ruoli evento
-            <select
-              name="eventId"
-              className="field bg-white font-normal"
-              defaultValue={defaultEventId ?? eventOptions[0]?.id ?? ""}
-              required
-            >
-              <option value="">Seleziona evento</option>
-              {eventOptions.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.title}
-                </option>
-              ))}
-            </select>
-          </label>
+          <input
+            type="hidden"
+            name="eventId"
+            value={defaultEventId ?? eventOptions[0]?.id ?? ""}
+          />
         ) : null}
         {isGroupLeader ? (
           <>
@@ -101,7 +90,7 @@ export function OperationalRoleFields({
                 <option value="">Seleziona gruppo</option>
                 {groupOptions.map((group) => (
                   <option key={group.id} value={group.id}>
-                    {group.name} - {group.eventTitle}
+                    {group.name}
                   </option>
                 ))}
               </select>

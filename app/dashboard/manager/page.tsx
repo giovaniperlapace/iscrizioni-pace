@@ -66,6 +66,7 @@ import {
   getOperationalUserIdentities,
   splitFullName,
 } from "@/lib/operational-users/identity";
+import { getCurrentOperationalEvent } from "@/lib/events/current";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -111,6 +112,7 @@ type EventRow = {
   slug: string;
   title: string;
   status: string;
+  is_current: boolean | null;
   city: string | null;
   country: string | null;
   starts_on: string | null;
@@ -329,14 +331,17 @@ export default async function ManagerDashboardPage({
 
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
+  const currentEvent = await getCurrentOperationalEvent(serviceSupabase, "id,title");
+  const currentEventId = currentEvent?.id ?? null;
   const [snapshots, managerOperations] = await Promise.all([
-    getOpeningSnapshots(serviceSupabase, scope),
-    getManagerOperationsSnapshot(serviceSupabase, scope, filters),
+    getOpeningSnapshots(serviceSupabase, scope, currentEventId),
+    getManagerOperationsSnapshot(serviceSupabase, scope, filters, currentEventId),
   ]);
   const statistics = await getManagerStatisticsSnapshot(
     serviceSupabase,
     scope,
-    managerOperations.groupTree
+    managerOperations.groupTree,
+    currentEventId
   );
   const selectedParticipant =
     managerOperations.allParticipants.find(
@@ -420,10 +425,9 @@ export default async function ManagerDashboardPage({
             {activeSection === "ruoli" ? (
               <ManagerOperationalUsersSection
                 roles={managerOperations.roleUsers}
-                eventOptions={getRoleEventOptions(
-                  managerOperations.groupTree,
-                  scope.eventIds
-                )}
+                eventOptions={
+                  currentEvent ? [{ id: currentEvent.id, title: currentEvent.title }] : []
+                }
                 groupOptions={managerOperations.groupTree.filter(
                   (group) => group.isActive && group.isAssignable
                 )}
@@ -438,6 +442,9 @@ export default async function ManagerDashboardPage({
                 links={managerOperations.groupLinks}
                 participants={managerOperations.allParticipants}
                 roleUsers={managerOperations.roleUsers}
+                currentEventOption={
+                  currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null
+                }
                 canManageEvent={scope.canManageEvent}
                 filters={parseGroupTableFilters(params)}
                 selectedGroup={selectedGroup}
@@ -718,16 +725,6 @@ async function buildOperationalUserRows(
   );
 }
 
-function getRoleEventOptions(groups: ManagerGroupTreeRow[], eventScope: Set<string> | null) {
-  const options = new Map<string, string>();
-  groups.forEach((group) => {
-    if (!eventScope || eventScope.has(group.eventId)) {
-      options.set(group.eventId, group.eventTitle);
-    }
-  });
-  return Array.from(options, ([id, title]) => ({ id, title }));
-}
-
 function ManagerEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
   return (
     <section className="grid min-w-0 gap-4">
@@ -817,7 +814,6 @@ function StatisticsSection({
             <thead>
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">{participantBreakdownLabel(activeLevel)}</th>
-                <th className="py-3 pr-4 font-semibold">Evento</th>
                 <th className="py-3 text-right font-semibold">Partecipanti</th>
               </tr>
             </thead>
@@ -829,9 +825,6 @@ function StatisticsSection({
                 >
                   <td className="py-4 pr-4 font-semibold text-[var(--peace-ink)]">
                     {row.label}
-                  </td>
-                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
-                    {row.eventTitle}
                   </td>
                   <td className="py-4 text-right text-xl font-semibold text-[var(--peace-ink)]">
                     {row.participantCount}
@@ -863,7 +856,6 @@ function StatisticsSection({
             <thead>
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">Giornata</th>
-                <th className="py-3 pr-4 font-semibold">Evento</th>
                 <th className="py-3 text-right font-semibold">Partecipanti</th>
               </tr>
             </thead>
@@ -875,9 +867,6 @@ function StatisticsSection({
                 >
                   <td className="py-4 pr-4 font-semibold text-[var(--peace-ink)]">
                     {row.kind === "day" ? formatDate(row.label) : row.label}
-                  </td>
-                  <td className="py-4 pr-4 text-[var(--peace-muted)]">
-                    {row.eventTitle}
                   </td>
                   <td className="py-4 text-right text-xl font-semibold text-[var(--peace-ink)]">
                     {row.participantCount}
@@ -994,63 +983,68 @@ function participantBreakdownLabel(level: ParticipantBreakdownLevel): string {
 async function getManagerOperationsSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   scope: ReturnType<typeof getManagerEventScope>,
-  filters: OperationsDashboardFilters
+  filters: OperationsDashboardFilters,
+  currentEventId: string | null
 ): Promise<ManagerOperationsSnapshot> {
+  if (
+    !currentEventId ||
+    (scope.eventIds !== null && !scope.eventIds.has(currentEventId))
+  ) {
+    return {
+      participants: [],
+      allParticipants: [],
+      groupOptions: [],
+      groupTree: [],
+      groupLinks: [],
+      roleUsers: [],
+      filters,
+      summary: summarizeOperationsDashboardParticipants([], []),
+    };
+  }
+
   const registrationsQuery = supabase
     .from("registrations")
     .select(
       "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
     )
+    .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
     .limit(200);
   const groupsQuery = supabase
     .from("groups")
     .select("id,event_id,name,is_assignable,is_active")
+    .eq("event_id", currentEventId)
     .eq("is_active", true)
     .eq("is_assignable", true)
     .order("name", { ascending: true });
-
-  if (scope.eventIds) {
-    const eventIds = [...scope.eventIds];
-    registrationsQuery.in("event_id", eventIds);
-    groupsQuery.in("event_id", eventIds);
-  }
 
   const groupTreeQuery = supabase
     .from("groups")
     .select(
       "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_bracket,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
     )
+    .eq("event_id", currentEventId)
     .eq("is_active", true)
     .order("public_order", { ascending: true })
     .order("name", { ascending: true });
-
-  if (scope.eventIds) {
-    groupTreeQuery.in("event_id", [...scope.eventIds]);
-  }
 
   const groupLinksQuery = supabase
     .from("group_registration_links")
     .select(
       "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
     )
+    .eq("event_id", currentEventId)
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
 
-  if (scope.eventIds) {
-    groupLinksQuery.in("event_id", [...scope.eventIds]);
-  }
   const eventRolesQuery = supabase
     .from("event_user_roles")
-    .select("user_id,role,event_id,events(title)");
+    .select("user_id,role,event_id,events(title)")
+    .eq("event_id", currentEventId);
   const groupMembershipsQuery = supabase
     .from("group_memberships")
-    .select("user_id,role,is_primary,group_id,groups(id,name,event_id,events(title))");
-
-  if (scope.eventIds) {
-    eventRolesQuery.in("event_id", [...scope.eventIds]);
-    groupMembershipsQuery.in("groups.event_id", [...scope.eventIds]);
-  }
+    .select("user_id,role,is_primary,group_id,groups!inner(id,name,event_id,events(title))")
+    .eq("groups.event_id", currentEventId);
 
   const [
     { data: registrations },
@@ -1060,12 +1054,12 @@ async function getManagerOperationsSnapshot(
     { data: eventRoles },
     { data: groupMemberships },
   ] = await Promise.all([
-    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : registrationsQuery,
-    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupsQuery,
-    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupTreeQuery,
-    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupLinksQuery,
-    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : eventRolesQuery,
-    scope.eventIds?.size === 0 ? Promise.resolve({ data: [] }) : groupMembershipsQuery,
+    registrationsQuery,
+    groupsQuery,
+    groupTreeQuery,
+    groupLinksQuery,
+    eventRolesQuery,
+    groupMembershipsQuery,
   ]);
   const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
   const registrationIds = registrationRows.map((row) => row.id);
@@ -1221,22 +1215,30 @@ async function getManagerOperationsSnapshot(
 async function getManagerStatisticsSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   scope: ReturnType<typeof getManagerEventScope>,
-  groupTree: ManagerGroupTreeRow[]
+  groupTree: ManagerGroupTreeRow[],
+  currentEventId: string | null
 ): Promise<EventStatisticsSnapshot> {
+  if (
+    !currentEventId ||
+    (scope.eventIds !== null && !scope.eventIds.has(currentEventId))
+  ) {
+    return buildEventStatisticsSnapshot({
+      participants: [],
+      groups: [],
+      attendanceChoices: [],
+    });
+  }
+
   const registrationsQuery = supabase
     .from("registrations")
     .select(
       "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
     )
+    .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
     .range(0, 9999);
 
-  if (scope.eventIds) {
-    registrationsQuery.in("event_id", [...scope.eventIds]);
-  }
-
-  const { data: registrations } =
-    scope.eventIds?.size === 0 ? { data: [] } : await registrationsQuery;
+  const { data: registrations } = await registrationsQuery;
   const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
   const registrationIds = registrationRows.map((row) => row.id);
   const [{ data: assignments }, { data: attendanceChoices }] = await Promise.all([
@@ -1301,21 +1303,25 @@ async function getManagerStatisticsSnapshot(
 
 async function getOpeningSnapshots(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
-  scope: ReturnType<typeof getManagerEventScope>
+  scope: ReturnType<typeof getManagerEventScope>,
+  currentEventId: string | null
 ): Promise<EventSnapshot[]> {
+  if (
+    !currentEventId ||
+    (scope.eventIds !== null && !scope.eventIds.has(currentEventId))
+  ) {
+    return [];
+  }
+
   const eventsQuery = supabase
     .from("events")
     .select(
-      "id,slug,title,status,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
+      "id,slug,title,status,is_current,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
     )
+    .eq("id", currentEventId)
     .order("starts_on", { ascending: false });
 
-  if (scope.eventIds) {
-    eventsQuery.in("id", [...scope.eventIds]);
-  }
-
-  const { data: events } =
-    scope.eventIds?.size === 0 ? { data: [] } : await eventsQuery;
+  const { data: events } = await eventsQuery;
 
   return Promise.all(
     ((events ?? []) as EventRow[]).map((event) =>
@@ -1506,6 +1512,7 @@ function ManagerGroupTreeSection({
   links,
   participants,
   roleUsers,
+  currentEventOption,
   canManageEvent,
   filters,
   selectedGroup,
@@ -1518,6 +1525,7 @@ function ManagerGroupTreeSection({
   links: ManagerGroupRegistrationLink[];
   participants: ManagerParticipantRow[];
   roleUsers: OperationalUserRoleRow[];
+  currentEventOption: { id: string; title: string } | null;
   canManageEvent: (eventId: string) => boolean;
   filters: GroupTableFilters;
   selectedGroup: ManagerGroupTreeRow | null;
@@ -1528,7 +1536,9 @@ function ManagerGroupTreeSection({
 }) {
   const filteredGroups = filterGroupRows(groups, filters);
   const linksByGroupId = groupLinksByGroupId(links);
-  const eventOptions = getGroupEventOptions(groups);
+  const eventOptions = currentEventOption
+    ? [currentEventOption]
+    : getGroupEventOptions(groups);
 
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -1647,7 +1657,7 @@ function ManagerGroupTreeSection({
                   <td className="py-4 pr-4">
                     <p className="font-semibold text-[var(--peace-ink)]">{group.name}</p>
                     <p className="mt-1 text-xs leading-5 text-[var(--peace-muted)]">
-                      {group.eventTitle} - {groupNodeTypeLabel(group.nodeType)}
+                      {groupNodeTypeLabel(group.nodeType)}
                       {group.parentName ? ` sotto ${group.parentName}` : ""}
                     </p>
                   </td>
@@ -2445,10 +2455,6 @@ function ManagerParticipantEditOverlay({
             <span className="text-[var(--peace-muted)]">
               {participant.phone ?? "Telefono non indicato"}
             </span>
-          </div>
-          <div className="grid gap-1 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">Evento</span>
-            <span className="text-[var(--peace-muted)]">{participant.eventTitle}</span>
           </div>
           <div className="grid gap-1 text-sm">
             <span className="font-semibold text-[var(--peace-ink)]">Gruppo corrente</span>

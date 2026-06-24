@@ -652,6 +652,7 @@ async function getCurrentPublicEvent(
   const { data } = await supabase
     .from("events")
     .select("id,title,city,country,starts_on,ends_on")
+    .eq("is_current", true)
     .eq("status", "published")
     .or(`registration_opens_at.is.null,registration_opens_at.lte.${now}`)
     .or(`registration_closes_at.is.null,registration_closes_at.gte.${now}`)
