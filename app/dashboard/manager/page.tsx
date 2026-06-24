@@ -17,7 +17,6 @@ import {
   deleteOperationalUserRole,
   revokeGroupRegistrationLink,
   saveOperationsGroup,
-  updateEventOpeningState,
   updateOperationalUserRole,
 } from "@/app/actions";
 import {
@@ -300,7 +299,6 @@ type EventSnapshot = {
   openingState: ReturnType<typeof getOpeningState>;
   summary: RegistrationMonitoringSummary;
   emailErrorsLast24Hours: number;
-  canManage: boolean;
 };
 
 type AttendanceChoiceRow = {
@@ -731,8 +729,9 @@ function ManagerEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          I manager possono aprire o sospendere le iscrizioni degli eventi
-          assegnati. I manager viewer consultano soltanto i dati.
+          I manager consultano lo stato dell&apos;evento corrente e i segnali
+          operativi. Apertura, sospensione, nascondimento e cambio evento
+          corrente sono riservati all&apos;admin.
         </p>
       </div>
 
@@ -1325,15 +1324,14 @@ async function getOpeningSnapshots(
 
   return Promise.all(
     ((events ?? []) as EventRow[]).map((event) =>
-      getEventSnapshot(supabase, event, scope.canManageEvent(event.id))
+    getEventSnapshot(supabase, event)
     )
   );
 }
 
 async function getEventSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
-  event: EventRow,
-  canManage: boolean
+  event: EventRow
 ): Promise<EventSnapshot> {
   const { data: registrations } = await supabase
     .from("registrations")
@@ -1429,7 +1427,6 @@ async function getEventSnapshot(
     openingState: getOpeningState(event),
     summary: summarizeRegistrationMonitoring(monitoringRows),
     emailErrorsLast24Hours: emailErrors?.length ?? 0,
-    canManage,
   };
 }
 
@@ -1456,32 +1453,10 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
           </dl>
         </div>
 
-        {snapshot.canManage ? (
-          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-            <OpeningForm
-              eventId={event.id}
-              intent="open"
-              label="Apri ora"
-              tone="primary"
-            />
-            <OpeningForm
-              eventId={event.id}
-              intent="pause"
-              label="Pausa"
-              tone="secondary"
-            />
-            <OpeningForm
-              eventId={event.id}
-              intent="draft"
-              label="Nascondi"
-              tone="secondary"
-            />
-          </div>
-        ) : (
-          <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-4 py-3 text-sm text-[var(--peace-muted)]">
-            Consultazione senza permessi di modifica.
-          </p>
-        )}
+        <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-4 py-3 text-sm text-[var(--peace-muted)]">
+          Consultazione evento. Le azioni di apertura e pubblicazione sono
+          disponibili solo nella dashboard admin.
+        </p>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -2515,34 +2490,6 @@ function ManagerParticipantEditOverlay({
         </div>
       </div>
     </div>
-  );
-}
-
-function OpeningForm({
-  eventId,
-  intent,
-  label,
-  tone,
-}: {
-  eventId: string;
-  intent: string;
-  label: string;
-  tone: "primary" | "secondary";
-}) {
-  const className =
-    tone === "primary"
-      ? "min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-      : "min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]";
-
-  return (
-    <form action={updateEventOpeningState}>
-      <input type="hidden" name="sourceDashboard" value="manager" />
-      <input type="hidden" name="eventId" value={eventId} />
-      <input type="hidden" name="intent" value={intent} />
-      <PendingSubmitButton className={className}>
-        {label}
-      </PendingSubmitButton>
-    </form>
   );
 }
 

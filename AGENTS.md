@@ -321,10 +321,11 @@ Decisioni RLS iniziali:
 - Accoglienza può operare su QR/check-in in scope evento, ma non leggere contatti o dati sensibili completi.
 - `manager_viewer` legge dati operativi in scope ma non gestisce registrazioni.
 - `admin` e' ruolo globale con `event_id` nullo in `event_user_roles`; gli altri ruoli hanno sempre scope evento.
-- Intenzione prodotto aggiornata: `admin` e `manager` devono avere permessi
-  operativi sostanzialmente identici sui dati dell'evento. Le differenze
-  riservate all'admin sono creare/avviare nuovi eventi e assegnare/promuovere
-  il ruolo `manager` a persone gia' iscritte.
+- Intenzione prodotto aggiornata: `admin` e `manager` condividono la gestione
+  dei dati operativi dell'evento corrente, ma il governo del ciclo evento e'
+  riservato all'admin. Solo l'admin puo' creare eventi futuri, rendere corrente
+  un evento, aprire, sospendere o nascondere le iscrizioni e
+  assegnare/promuovere il ruolo `manager` a persone gia' iscritte.
 - Le funzioni helper RLS vivono nello schema `app` e sono `security definer`.
 
 Applicazione su Hetzner/Coolify:
@@ -1228,21 +1229,22 @@ Ruoli minimi da supportare:
 
 - `partecipante`: accede alla propria dashboard, modifica la propria iscrizione quando consentito, consulta QR code, programma e scelte.
 - `capogruppo`: utente reale dell'app; vede solo i partecipanti dei propri gruppi o nodi territoriali; conferma appartenenza/esternalita'; inserisce persone senza email; riceve notifiche.
-- `admin`: ha gli stessi poteri operativi del manager sugli eventi, piu' la
-  possibilita' riservata di creare/avviare nuovi eventi e assegnare il ruolo
-  `manager` a persone gia' iscritte.
+- `admin`: governa il ciclo evento, crea eventi futuri, rende corrente un
+  evento, apre/sospende/nasconde le iscrizioni e assegna il ruolo `manager` a
+  persone gia' iscritte; gestisce anche dati operativi, gruppi e ruoli.
 - `manager`: collegato a uno specifico evento; vede tutti i partecipanti e
-  gruppi dell'evento e puo' modificare dati operativi, configurazione evento,
-  gruppi e funzioni organizzative come l'admin, tranne creare nuovi eventi o
-  nominare altri manager.
+  gruppi dell'evento corrente e puo' modificare dati operativi, gruppi e
+  funzioni organizzative consentite. Non puo' creare eventi, cambiare evento
+  corrente, aprire, sospendere o nascondere le iscrizioni, né nominare altri
+  manager.
 - `manager_viewer`: vede ciò che vede il manager ma non modifica iscrizioni.
 - `accoglienza`: scansiona QR code e verifica iscrizioni/check-in vedendo solo dati minimi necessari.
 
 I ruoli devono vivere in profili o membership applicative, non solo nei metadata Supabase Auth. Dove serve, il ruolo deve essere scoperto da uno scope: evento, gruppo, funzione di accoglienza.
 
-Le dashboard admin e manager devono convergere: entrambe sono console operative
-per configurare l'evento corrente, iscritti, gruppi, link riservati e
-capigruppo. La tabella iscritti serve a vedere e filtrare persone iscritte,
+Le dashboard admin e manager devono condividere le viste operative su iscritti,
+gruppi, link riservati e capigruppo, ma la configurazione dello stato evento
+resta esclusiva dell'admin. La tabella iscritti serve a vedere e filtrare persone iscritte,
 aprire i dettagli della loro iscrizione e, con un secondo click esplicito,
 modificare il gruppo corrente; non va usata come tabella di assegnazione ruoli.
 La gestione dei capigruppo vive nella sezione gruppi tramite azione

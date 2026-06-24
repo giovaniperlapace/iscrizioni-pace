@@ -455,9 +455,7 @@ export async function updateParticipantDashboard(formData: FormData) {
 export async function updateEventOpeningState(formData: FormData) {
   const eventId = optionalText(formData.get("eventId"));
   const intent = optionalText(formData.get("intent"));
-  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
-  const dashboardPath =
-    sourceDashboard === "manager" ? "/dashboard/manager" : "/dashboard/admin";
+  const dashboardPath = "/dashboard/admin";
 
   if (!eventId || !intent) {
     redirect(`${dashboardPath}?openingError=invalid`);
@@ -470,11 +468,9 @@ export async function updateEventOpeningState(formData: FormData) {
     redirect("/login");
   }
 
-  const canManageEventOpening =
-    auth.eventRoles.some((role) => role.role === "admin") ||
-    auth.eventRoles.some(
-      (role) => role.role === "manager" && role.eventId === eventId
-    );
+  const canManageEventOpening = auth.eventRoles.some(
+    (role) => role.role === "admin"
+  );
 
   if (!canManageEventOpening) {
     redirect(`${dashboardPath}?openingError=forbidden`);
