@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  renderGroupLeaderAssignmentNotificationEmail,
   renderMagicLinkEmail,
   renderRegistrationConfirmationEmail,
 } from "../lib/email/templates.ts";
@@ -445,6 +446,22 @@ test("registration confirmation includes the short participant code", () => {
   assert.match(rendered.html, /A7K2/);
   assert.match(rendered.text, /QR code personale/);
   assert.match(rendered.html, /cid:registration-qr@example\.org/);
+});
+
+test("group leader assignment notification points to the review dashboard", () => {
+  const rendered = renderGroupLeaderAssignmentNotificationEmail({
+    leaderName: "Referente",
+    participantName: "Maria Rossi",
+    participantCode: "A7K2",
+    groupName: "Roma",
+    eventTitle: "Assisi 2026",
+    dashboardLink: "https://registrationspeace.santegidio.org/dashboard/capogruppo?filter=to-review",
+  });
+
+  assert.match(rendered.subject, /Nuova persona da verificare/);
+  assert.match(rendered.text, /Maria Rossi \(A7K2\)/);
+  assert.match(rendered.text, /filter=to-review/);
+  assert.match(rendered.html, /Apri la dashboard capogruppo/);
 });
 
 test("rate limit blocks attempts after the configured threshold", () => {

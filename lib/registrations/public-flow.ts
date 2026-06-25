@@ -19,6 +19,7 @@ import {
   hashGroupRegistrationLinkToken,
   isValidGroupRegistrationLinkToken,
 } from "@/lib/groups/registration-links";
+import { notifyGroupLeadersForAssignment } from "@/lib/groups/leader-notifications";
 import {
   buildRegistrationQuestionnaireAnswers,
   getQuestionnaireVisibilitySummary,
@@ -574,6 +575,23 @@ export async function createPublicRegistration(
         },
       }),
     ]);
+  }
+
+  if (resolvedGroupAssignment?.status === "probable") {
+    const { data: assignment } = await supabase
+      .from("participant_group_assignments")
+      .select("id")
+      .eq("registration_id", registrationId)
+      .eq("group_id", resolvedGroupAssignment.groupId)
+      .maybeSingle();
+    const assignmentId = (assignment as { id: string } | null)?.id ?? null;
+
+    if (assignmentId) {
+      await notifyGroupLeadersForAssignment(supabase, {
+        assignmentId,
+        appUrl: publicSiteUrl,
+      });
+    }
   }
 
   try {

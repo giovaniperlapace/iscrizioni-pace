@@ -141,6 +141,14 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   gruppo dalla scheda partecipante e il manager li usa come filtri nella
   tabella iscritti. Email personalizzate, programma, check-in e settori
   slittano dopo questi blocchi.
+- Il 2026-06-25 e' stata implementata la prima tranche della Milestone 14.1:
+  notifica email applicativa ai capigruppo quando nasce una nuova assegnazione
+  probabile da verificare, sia da iscrizione pubblica sia da rifiuto con
+  risalita al parent; audit degli invii riusciti/falliti; tabella capogruppo
+  con azioni rapide conferma/rifiuto; scheda partecipante in overlay da riga
+  con identita', contatti, gruppo, stato assegnazione e note interne. Se un
+  rifiuto non ha parent, l'assegnazione viene marcata non corrente/rifiutata e
+  l'audit registra `moved_to_external_queue`.
 - Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
   non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
   gestione manager. La migration di identità evento mantiene lo slug tecnico

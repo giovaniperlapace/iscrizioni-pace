@@ -17,6 +17,7 @@ import {
   hashGroupRegistrationLinkToken,
   normalizeGroupRegistrationPublicLabel,
 } from "@/lib/groups/registration-links";
+import { notifyGroupLeadersForAssignment } from "@/lib/groups/leader-notifications";
 import {
   canParticipantEditRegistration,
   diffParticipantDashboardUpdate,
@@ -666,7 +667,10 @@ export async function createFutureEvent(formData: FormData) {
 export async function updateGroupLeaderAssignment(formData: FormData) {
   const assignmentId = optionalText(formData.get("assignmentId"));
   const intent = optionalText(formData.get("intent"));
-  const note = normalizeLeaderInternalNote(formData.get("leaderInternalNote"));
+  const hasLeaderInternalNote = formData.has("leaderInternalNote");
+  const note = hasLeaderInternalNote
+    ? normalizeLeaderInternalNote(formData.get("leaderInternalNote"))
+    : null;
 
   if (!assignmentId || !intent) {
     redirect("/dashboard/capogruppo?error=invalid");
@@ -772,20 +776,25 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   if (intent === "confirm") {
+    const updates: Record<string, string | boolean | null> = {
+      status: "confirmed",
+      is_current: true,
+      confirmed_by: auth.user.id,
+      confirmed_at: now,
+      leader_decision_by: auth.user.id,
+      leader_decision_at: now,
+      leader_notification_read_at: now,
+    };
+
+    if (hasLeaderInternalNote) {
+      updates.leader_internal_note = note;
+      updates.leader_note_updated_by = note ? auth.user.id : null;
+      updates.leader_note_updated_at = note ? now : null;
+    }
+
     const { error } = await serviceSupabase
       .from("participant_group_assignments")
-      .update({
-        status: "confirmed",
-        is_current: true,
-        confirmed_by: auth.user.id,
-        confirmed_at: now,
-        leader_decision_by: auth.user.id,
-        leader_decision_at: now,
-        leader_notification_read_at: now,
-        leader_internal_note: note,
-        leader_note_updated_by: note ? auth.user.id : null,
-        leader_note_updated_at: note ? now : null,
-      })
+      .update(updates)
       .eq("id", assignmentRow.id);
 
     if (error) {
@@ -796,7 +805,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       actorUserId: auth.user.id,
       assignment: assignmentRow,
       action: "group_leader.assignment_confirmed",
-      metadata: { note_changed: Boolean(note) },
+      metadata: { note_changed: hasLeaderInternalNote },
     });
 
     revalidatePath("/dashboard/capogruppo");
@@ -808,18 +817,23 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       groupsById,
       assignmentRow.group_id
     );
+    const rejectUpdates: Record<string, string | boolean | null> = {
+      status: "rejected",
+      is_current: false,
+      leader_decision_by: auth.user.id,
+      leader_decision_at: now,
+      leader_notification_read_at: now,
+    };
+
+    if (hasLeaderInternalNote) {
+      rejectUpdates.leader_internal_note = note;
+      rejectUpdates.leader_note_updated_by = note ? auth.user.id : null;
+      rejectUpdates.leader_note_updated_at = note ? now : null;
+    }
+
     const { error: rejectError } = await serviceSupabase
       .from("participant_group_assignments")
-      .update({
-        status: "rejected",
-        is_current: false,
-        leader_decision_by: auth.user.id,
-        leader_decision_at: now,
-        leader_notification_read_at: now,
-        leader_internal_note: note,
-        leader_note_updated_by: note ? auth.user.id : null,
-        leader_note_updated_at: note ? now : null,
-      })
+      .update(rejectUpdates)
       .eq("id", assignmentRow.id);
 
     if (rejectError) {
@@ -829,7 +843,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     }
 
     if (parentGroupId) {
-      const { error: escalationError } = await serviceSupabase
+      const { data: escalatedAssignment, error: escalationError } = await serviceSupabase
         .from("participant_group_assignments")
         .upsert(
           {
@@ -846,7 +860,9 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
             leader_notification_read_at: null,
           },
           { onConflict: "registration_id,group_id" }
-        );
+        )
+        .select("id")
+        .maybeSingle();
 
       if (escalationError) {
         redirect(
@@ -855,6 +871,17 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
           )}`
         );
       }
+
+      const escalatedAssignmentId =
+        (escalatedAssignment as { id: string } | null)?.id ?? null;
+
+      if (escalatedAssignmentId) {
+        await notifyGroupLeadersForAssignment(serviceSupabase, {
+          assignmentId: escalatedAssignmentId,
+          appUrl: getAppUrl(),
+          actorUserId: auth.user.id,
+        });
+      }
     }
 
     await auditGroupLeaderDecision(serviceSupabase, {
@@ -862,8 +889,9 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       assignment: assignmentRow,
       action: "group_leader.assignment_rejected",
       metadata: {
-        note_changed: Boolean(note),
+        note_changed: hasLeaderInternalNote,
         escalated_to_group_id: parentGroupId,
+        moved_to_external_queue: !parentGroupId,
       },
     });
 
