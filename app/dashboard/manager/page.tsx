@@ -13,10 +13,12 @@ import { redirect } from "next/navigation";
 import {
   assignOperationalUserRole,
   assignGroupLeader,
+  createOperationalTag,
   createGroupRegistrationLink,
   deleteOperationalUserRole,
   revokeGroupRegistrationLink,
   saveOperationsGroup,
+  updateParticipantOperationalTags,
   updateOperationalUserRole,
 } from "@/app/actions";
 import {
@@ -56,6 +58,10 @@ import {
   type OperationsDashboardFilters,
   type OperationsDashboardSummary,
 } from "@/lib/registrations/operations-dashboard";
+import type {
+  OperationalTagOption,
+  ParticipantOperationalTag,
+} from "@/lib/registrations/operational-tags";
 import {
   buildEventStatisticsSnapshot,
   type EventStatisticsSnapshot,
@@ -98,6 +104,7 @@ type ManagerPageProps = {
     event?: string;
     group?: string;
     contact?: string;
+    tag?: string;
     q?: string;
     nav?: string;
     section?: string;
@@ -269,6 +276,8 @@ type ManagerParticipantRow = {
   currentGroupId: string | null;
   currentGroupName: string | null;
   currentGroupStatus: string | null;
+  tagIds: string[];
+  tags: ParticipantOperationalTag[];
 };
 
 type ManagerOperationsSnapshot = {
@@ -277,9 +286,29 @@ type ManagerOperationsSnapshot = {
   groupOptions: ManagerGroupOption[];
   groupTree: ManagerGroupTreeRow[];
   groupLinks: ManagerGroupRegistrationLink[];
+  operationalTags: OperationalTagOption[];
   roleUsers: OperationalUserRoleRow[];
   filters: OperationsDashboardFilters;
   summary: OperationsDashboardSummary;
+};
+
+type ParticipantOperationalTagRow = {
+  participant_id: string;
+  assigned_at: string | null;
+  operational_tags:
+    | {
+        id: string;
+        event_id: string;
+        label: string;
+        color: string;
+      }
+    | Array<{
+        id: string;
+        event_id: string;
+        label: string;
+        color: string;
+      }>
+    | null;
 };
 
 type OperationalUserRoleRow = {
@@ -995,6 +1024,7 @@ async function getManagerOperationsSnapshot(
       groupOptions: [],
       groupTree: [],
       groupLinks: [],
+      operationalTags: [],
       roleUsers: [],
       filters,
       summary: summarizeOperationsDashboardParticipants([], []),
@@ -1035,6 +1065,11 @@ async function getManagerOperationsSnapshot(
     .eq("event_id", currentEventId)
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
+  const operationalTagsQuery = supabase
+    .from("operational_tags")
+    .select("id,event_id,label,color")
+    .eq("event_id", currentEventId)
+    .order("label", { ascending: true });
 
   const eventRolesQuery = supabase
     .from("event_user_roles")
@@ -1050,6 +1085,7 @@ async function getManagerOperationsSnapshot(
     { data: groups },
     { data: groupTree },
     { data: groupLinks },
+    { data: operationalTags },
     { data: eventRoles },
     { data: groupMemberships },
   ] = await Promise.all([
@@ -1057,6 +1093,7 @@ async function getManagerOperationsSnapshot(
     groupsQuery,
     groupTreeQuery,
     groupLinksQuery,
+    operationalTagsQuery,
     eventRolesQuery,
     groupMembershipsQuery,
   ]);
@@ -1064,7 +1101,7 @@ async function getManagerOperationsSnapshot(
   const registrationIds = registrationRows.map((row) => row.id);
   const participantIds = registrationRows.map((row) => row.participant_id);
   const emptyResult = { data: [] };
-  const [{ data: contacts }, { data: assignments }] = await Promise.all([
+  const [{ data: contacts }, { data: assignments }, { data: participantTags }] = await Promise.all([
     participantIds.length > 0
       ? supabase
           .from("participant_contacts")
@@ -1080,6 +1117,12 @@ async function getManagerOperationsSnapshot(
           )
           .in("registration_id", registrationIds)
           .eq("is_current", true)
+      : Promise.resolve(emptyResult),
+    participantIds.length > 0
+      ? supabase
+          .from("participant_operational_tags")
+          .select("participant_id,assigned_at,operational_tags(id,event_id,label,color)")
+          .in("participant_id", participantIds)
       : Promise.resolve(emptyResult),
   ]);
   const contactByParticipantId = new Map(
@@ -1113,6 +1156,7 @@ async function getManagerOperationsSnapshot(
   const groupNameById = new Map(
     groupTreeRows.map((group) => [group.id, group.name ?? "Gruppo senza nome"])
   );
+  const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
   const roleUsers = await buildOperationalUserRows(
     supabase,
     eventRoles,
@@ -1149,6 +1193,10 @@ async function getManagerOperationsSnapshot(
         currentGroupId: assignment?.group_id ?? null,
         currentGroupName: group?.name ?? null,
         currentGroupStatus: assignment?.status ?? null,
+        tagIds: (tagsByParticipantId.get(registration.participant_id) ?? []).map(
+          (tag) => tag.id
+        ),
+        tags: tagsByParticipantId.get(registration.participant_id) ?? [],
       };
     });
   const filteredParticipants = applyOperationsDashboardFilters(
@@ -1202,6 +1250,17 @@ async function getManagerOperationsSnapshot(
         revokedAt: link.revoked_at,
       })
     ),
+    operationalTags: ((operationalTags ?? []) as Array<{
+      id: string;
+      event_id: string;
+      label: string;
+      color: string;
+    }>).map((tag) => ({
+      id: tag.id,
+      eventId: tag.event_id,
+      label: tag.label,
+      color: tag.color,
+    })),
     roleUsers,
     filters,
     summary: summarizeOperationsDashboardParticipants(
@@ -1290,6 +1349,8 @@ async function getManagerStatisticsSnapshot(
       currentGroupId: assignment?.group_id ?? null,
       currentGroupName: group?.name ?? null,
       currentGroupStatus: assignment?.status ?? null,
+      tagIds: [],
+      tags: [],
     };
   });
 
@@ -1984,29 +2045,60 @@ function ManagerParticipantsSection({
   navMode: ManagerNavMode;
 }) {
   const currentGroupOptions = getCurrentGroupFilterOptions(snapshot.allParticipants);
+  const activeEventId = snapshot.allParticipants[0]?.eventId ?? snapshot.operationalTags[0]?.eventId ?? null;
 
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
-      <div>
-        <h2 className="text-lg font-semibold">Gestione iscritti</h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
-          Ultime iscrizioni nello scope manager, fino a 200 risultati recenti.
-        </p>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Gestione iscritti</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
+            Ultime iscrizioni nello scope manager, fino a 200 risultati recenti.
+          </p>
+        </div>
+        {activeEventId ? (
+          <form
+            action={createOperationalTag}
+            className="grid gap-2 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 sm:grid-cols-[1fr_auto_auto]"
+          >
+            <input type="hidden" name="eventId" value={activeEventId} />
+            <input type="hidden" name="nav" value={navMode} />
+            <label className="sr-only" htmlFor="new-operational-tag">
+              Nuovo tag operativo
+            </label>
+            <input
+              id="new-operational-tag"
+              name="label"
+              className="field min-h-10 bg-white text-sm font-normal"
+              maxLength={40}
+              placeholder="Nuovo tag"
+              required
+            />
+            <label className="grid min-h-10 w-12 place-items-center rounded-md border border-[var(--peace-border-strong)] bg-white">
+              <span className="sr-only">Colore tag</span>
+              <input name="color" type="color" defaultValue="#0f5f8f" className="h-7 w-8" />
+            </label>
+            <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Crea
+            </PendingSubmitButton>
+          </form>
+        ) : null}
       </div>
 
       <div className="mt-5 overflow-x-auto">
         <AutoFilterForm
           action="/dashboard/manager"
-          defaults={{ q: "", contact: "", group: "all", status: "all" }}
+          defaults={{ q: "", contact: "", group: "all", tag: "all", status: "all" }}
         >
           <input type="hidden" name="section" value="iscritti" />
           <input type="hidden" name="nav" value={navMode} />
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[920px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">Iscrizione</th>
                 <th className="py-3 pr-4 font-semibold">Contatti</th>
                 <th className="py-3 pr-4 font-semibold">Gruppo</th>
+                <th className="py-3 pr-4 font-semibold">Tag</th>
                 <th className="py-3 text-right font-semibold">Azioni</th>
               </tr>
               <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
@@ -2043,6 +2135,23 @@ function ManagerParticipantsSection({
                     {currentGroupOptions.map((group) => (
                       <option key={group.id} value={group.id}>
                         {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-participant-tag">Tag</label>
+                  <select
+                    id="manager-participant-tag"
+                    name="tag"
+                    defaultValue={snapshot.filters.tag}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                  >
+                    <option value="all">Tutti i tag</option>
+                    <option value="none">Senza tag</option>
+                    {snapshot.operationalTags.map((tag) => (
+                      <option key={tag.id} value={tag.id}>
+                        {tag.label}
                       </option>
                     ))}
                   </select>
@@ -2103,6 +2212,9 @@ function ManagerParticipantsSection({
                         {groupStatusLabel(participant.currentGroupStatus)}
                       </p>
                     </td>
+                    <td className="py-4 pr-4">
+                      <OperationalTagList tags={participant.tags} emptyLabel="Senza tag" />
+                    </td>
                     <td className="py-4 text-right">
                       {canManage ? (
                         <Link
@@ -2134,6 +2246,9 @@ function ManagerParticipantsSection({
           participant={selectedParticipant}
           groupOptions={snapshot.groupOptions.filter(
             (group) => group.eventId === selectedParticipant.eventId
+          )}
+          tagOptions={snapshot.operationalTags.filter(
+            (tag) => tag.eventId === selectedParticipant.eventId
           )}
           isEditing={isEditingParticipant}
           navMode={navMode}
@@ -2385,11 +2500,13 @@ function ManagerOperationalRoleEditOverlay({
 function ManagerParticipantEditOverlay({
   participant,
   groupOptions,
+  tagOptions,
   isEditing,
   navMode,
 }: {
   participant: ManagerParticipantRow;
   groupOptions: ManagerGroupOption[];
+  tagOptions: OperationalTagOption[];
   isEditing: boolean;
   navMode: ManagerNavMode;
 }) {
@@ -2438,37 +2555,66 @@ function ManagerParticipantEditOverlay({
               {groupStatusLabel(participant.currentGroupStatus)}
             </span>
           </div>
+          <div className="grid gap-2 text-sm">
+            <span className="font-semibold text-[var(--peace-ink)]">Tag operativi</span>
+            <OperationalTagList tags={participant.tags} emptyLabel="Senza tag" />
+          </div>
 
           {isEditing ? (
-            <form
-              action="/dashboard/admin/participants/update"
-              method="post"
-              className="grid gap-5"
-            >
-              <input type="hidden" name="sourceDashboard" value="manager" />
-              <input type="hidden" name="registrationId" value={participant.registrationId} />
-              <input type="hidden" name="participantId" value={participant.participantId} />
-              <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-                Gruppo
-                <select
-                  name="groupId"
-                  defaultValue={participant.currentGroupId ?? ""}
-                  className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
-                >
-                  {!participant.currentGroupId ? (
-                    <option value="">Nessun gruppo corrente</option>
-                  ) : null}
-                  {visibleGroupOptions.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                Salva gruppo
-              </PendingSubmitButton>
-            </form>
+            <div className="grid gap-5">
+              <form
+                action="/dashboard/admin/participants/update"
+                method="post"
+                className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+              >
+                <input type="hidden" name="sourceDashboard" value="manager" />
+                <input type="hidden" name="registrationId" value={participant.registrationId} />
+                <input type="hidden" name="participantId" value={participant.participantId} />
+                <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+                  Gruppo
+                  <select
+                    name="groupId"
+                    defaultValue={participant.currentGroupId ?? ""}
+                    className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
+                  >
+                    {!participant.currentGroupId ? (
+                      <option value="">Nessun gruppo corrente</option>
+                    ) : null}
+                    {visibleGroupOptions.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                  Salva gruppo
+                </PendingSubmitButton>
+              </form>
+              <form
+                action={updateParticipantOperationalTags}
+                className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+              >
+                <input type="hidden" name="sourceDashboard" value="manager" />
+                <input type="hidden" name="nav" value={navMode} />
+                <input type="hidden" name="registrationId" value={participant.registrationId} />
+                <input type="hidden" name="participantId" value={participant.participantId} />
+                <input type="hidden" name="eventId" value={participant.eventId} />
+                <fieldset className="grid gap-2">
+                  <legend className="text-sm font-semibold text-[var(--peace-ink)]">
+                    Tag operativi
+                  </legend>
+                  <TagCheckboxGrid
+                    tagOptions={tagOptions}
+                    selectedTagIds={participant.tagIds}
+                    emptyLabel="Nessun tag creato per questo evento."
+                  />
+                </fieldset>
+                <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                  Salva tag
+                </PendingSubmitButton>
+              </form>
+            </div>
           ) : null}
         </div>
 
@@ -2547,6 +2693,7 @@ function StatusMessage({
     "auth-user": "Non è stato possibile creare o recuperare l'utente.",
     "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
+    "duplicate-tag": "Esiste già un tag con questo nome per l'evento corrente.",
   };
   const messageKey = groupError ?? groupLinkError ?? roleError ?? managerError ?? error;
 
@@ -2594,6 +2741,77 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
+function OperationalTagList({
+  tags,
+  emptyLabel,
+}: {
+  tags: ParticipantOperationalTag[];
+  emptyLabel: string;
+}) {
+  if (tags.length === 0) {
+    return <span className="text-sm text-[var(--peace-muted)]">{emptyLabel}</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag.id}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--peace-border)] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--peace-ink)]"
+        >
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-full"
+            style={{ backgroundColor: tag.color }}
+          />
+          {tag.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TagCheckboxGrid({
+  tagOptions,
+  selectedTagIds,
+  emptyLabel,
+}: {
+  tagOptions: OperationalTagOption[];
+  selectedTagIds: string[];
+  emptyLabel: string;
+}) {
+  if (tagOptions.length === 0) {
+    return <p className="text-sm text-[var(--peace-muted)]">{emptyLabel}</p>;
+  }
+
+  const selected = new Set(selectedTagIds);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {tagOptions.map((tag) => (
+        <label
+          key={tag.id}
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-semibold text-[var(--peace-ink)]"
+        >
+          <input
+            type="checkbox"
+            name="tagIds"
+            value={tag.id}
+            defaultChecked={selected.has(tag.id)}
+            className="size-4 accent-[var(--peace-blue-800)]"
+          />
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-full"
+            style={{ backgroundColor: tag.color }}
+          />
+          {tag.label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function formatDateRange(start: string | null, end: string | null): string {
   if (!start) {
     return "Date da definire";
@@ -2630,6 +2848,32 @@ function formatDateTime(value: string | null): string {
 
 function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
+
+function mapParticipantOperationalTags(
+  rows: unknown
+): Map<string, ParticipantOperationalTag[]> {
+  const tagsByParticipantId = new Map<string, ParticipantOperationalTag[]>();
+
+  for (const row of (rows ?? []) as ParticipantOperationalTagRow[]) {
+    const tag = relatedOne(row.operational_tags);
+
+    if (!tag) {
+      continue;
+    }
+
+    const participantTags = tagsByParticipantId.get(row.participant_id) ?? [];
+    participantTags.push({
+      id: tag.id,
+      eventId: tag.event_id,
+      label: tag.label,
+      color: tag.color,
+      assignedAt: row.assigned_at,
+    });
+    tagsByParticipantId.set(row.participant_id, participantTags);
+  }
+
+  return tagsByParticipantId;
 }
 
 function formatParticipantName(

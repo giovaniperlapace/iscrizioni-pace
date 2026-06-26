@@ -40,6 +40,10 @@ import {
   parseRegistrationForm,
   PRIVACY_VERSION,
 } from "@/lib/registrations/validation";
+import {
+  normalizeOperationalTagColor,
+  normalizeOperationalTagLabel,
+} from "@/lib/registrations/operational-tags";
 import { syncOperationalIdentityByEmail } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -900,6 +904,250 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   redirect("/dashboard/capogruppo?error=invalid");
+}
+
+export async function createOperationalTag(formData: FormData) {
+  const label = normalizeOperationalTagLabel(formData.get("label"));
+  const color = normalizeOperationalTagColor(formData.get("color"));
+  const eventId =
+    optionalText(formData.get("eventId")) ??
+    (await getCurrentOperationalEventId(createSupabaseServiceClient()));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+
+  if (!label || !eventId) {
+    redirect(`/dashboard/manager?section=iscritti&nav=${nav}&managerError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "manager");
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`/dashboard/manager?section=iscritti&nav=${nav}&managerError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: tag, error } = await serviceSupabase
+    .from("operational_tags")
+    .insert({
+      event_id: eventId,
+      label,
+      color,
+      created_by: auth.user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error || !tag) {
+    redirect(
+      `/dashboard/manager?section=iscritti&nav=${nav}&managerError=${encodeURIComponent(
+        error?.code === "23505" ? "duplicate-tag" : error?.message ?? "tag"
+      )}`
+    );
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: "operational_tag.created",
+    entity_table: "operational_tags",
+    entity_id: (tag as { id: string }).id,
+    metadata: { label },
+  });
+
+  revalidatePath("/dashboard/manager");
+  redirect(`/dashboard/manager?section=iscritti&nav=${nav}&managerSaved=tag`);
+}
+
+export async function updateParticipantOperationalTags(formData: FormData) {
+  const participantId = optionalText(formData.get("participantId"));
+  const registrationId = optionalText(formData.get("registrationId"));
+  const eventId = optionalText(formData.get("eventId"));
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const assignmentId = optionalText(formData.get("assignmentId"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const selectedTagIds = Array.from(
+    new Set(
+      formData
+        .getAll("tagIds")
+        .map((value) => optionalText(value))
+        .filter((value): value is string => Boolean(value))
+    )
+  );
+  const isCapogruppo = sourceDashboard === "capogruppo";
+  const dashboardPath = isCapogruppo
+    ? "/dashboard/capogruppo"
+    : `/dashboard/manager?section=iscritti&nav=${nav}`;
+
+  if (!participantId || !eventId) {
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    isCapogruppo ? "capogruppo" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const canUpdate = isCapogruppo
+    ? await canGroupLeaderTagParticipant(
+        serviceSupabase,
+        auth.user.id,
+        participantId,
+        eventId,
+        assignmentId
+      )
+    : auth.eventRoles.some(
+        (role) =>
+          role.role === "admin" ||
+          (role.role === "manager" && role.eventId === eventId)
+      );
+
+  if (!canUpdate) {
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=forbidden`);
+  }
+
+  const { data: tags, error: tagsError } = await serviceSupabase
+    .from("operational_tags")
+    .select("id")
+    .eq("event_id", eventId);
+
+  if (tagsError) {
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=${encodeURIComponent(tagsError.message)}`);
+  }
+
+  const eventTagIds = ((tags ?? []) as Array<{ id: string }>).map((tag) => tag.id);
+  const eventTagIdSet = new Set(eventTagIds);
+
+  if (selectedTagIds.some((tagId) => !eventTagIdSet.has(tagId))) {
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=invalid`);
+  }
+
+  if (eventTagIds.length > 0) {
+    const { error: deleteError } = await serviceSupabase
+      .from("participant_operational_tags")
+      .delete()
+      .eq("participant_id", participantId)
+      .in("tag_id", eventTagIds);
+
+    if (deleteError) {
+      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=${encodeURIComponent(deleteError.message)}`);
+    }
+  }
+
+  if (selectedTagIds.length > 0) {
+    const { error: insertError } = await serviceSupabase
+      .from("participant_operational_tags")
+      .insert(
+        selectedTagIds.map((tagId) => ({
+          participant_id: participantId,
+          tag_id: tagId,
+          assigned_by: auth.user.id,
+        }))
+      );
+
+    if (insertError) {
+      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=${encodeURIComponent(insertError.message)}`);
+    }
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: "participant.operational_tags_updated",
+    entity_table: "participants",
+    entity_id: participantId,
+    metadata: {
+      source_dashboard: isCapogruppo ? "capogruppo" : "manager",
+      tag_ids: selectedTagIds,
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/capogruppo");
+
+  if (isCapogruppo) {
+    redirect(
+      assignmentId
+        ? `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignmentId)}&saved=tags`
+        : "/dashboard/capogruppo?saved=tags"
+    );
+  }
+
+  const managerRedirectParams = new URLSearchParams({
+    section: "iscritti",
+    nav,
+    managerSaved: "tags",
+  });
+
+  if (registrationId) {
+    managerRedirectParams.set("edit", registrationId);
+  }
+
+  redirect(`/dashboard/manager?${managerRedirectParams.toString()}`);
+}
+
+async function canGroupLeaderTagParticipant(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  userId: string,
+  participantId: string,
+  eventId: string,
+  assignmentId: string | null
+): Promise<boolean> {
+  const [{ data: memberships }, { data: groups }] = await Promise.all([
+    supabase.from("group_memberships").select("group_id").eq("user_id", userId),
+    supabase
+      .from("groups")
+      .select("id,parent_group_id")
+      .eq("event_id", eventId)
+      .eq("is_active", true),
+  ]);
+  const rootGroupIds = ((memberships ?? []) as Array<{ group_id: string | null }>)
+    .map((membership) => membership.group_id)
+    .filter((groupId): groupId is string => Boolean(groupId));
+  const groupNodes = ((groups ?? []) as Array<{
+    id: string;
+    parent_group_id: string | null;
+  }>).map<GroupTreeNode>((group) => ({
+    id: group.id,
+    parentGroupId: group.parent_group_id,
+  }));
+  const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
+
+  if (scopedGroupIds.size === 0) {
+    return false;
+  }
+
+  let query = supabase
+    .from("participant_group_assignments")
+    .select("id,group_id,registrations!inner(event_id,participant_id)")
+    .eq("is_current", true)
+    .eq("registrations.event_id", eventId)
+    .eq("registrations.participant_id", participantId)
+    .in("group_id", [...scopedGroupIds])
+    .limit(1);
+
+  if (assignmentId) {
+    query = query.eq("id", assignmentId);
+  }
+
+  const { data, error } = await query;
+
+  return !error && Boolean(data?.length);
 }
 
 export async function createGroupLeaderManualRegistration(formData: FormData) {

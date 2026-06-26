@@ -20,6 +20,7 @@ const participants: OperationsParticipantForFilter[] = [
     currentGroupId: "roma",
     currentGroupName: "Roma centro",
     currentGroupStatus: "confirmed",
+    tagIds: ["tag-pranzo"],
   }),
   participant({
     eventId: "assisi",
@@ -30,6 +31,7 @@ const participants: OperationsParticipantForFilter[] = [
     currentGroupId: "milano",
     currentGroupName: "Milano",
     currentGroupStatus: "probable",
+    tagIds: ["tag-bus"],
   }),
   participant({
     eventId: "roma",
@@ -41,6 +43,7 @@ const participants: OperationsParticipantForFilter[] = [
     currentGroupName: null,
     currentGroupStatus: null,
     registrationStatus: "cancelled",
+    tagIds: [],
   }),
 ];
 
@@ -49,14 +52,34 @@ test("parseOperationsDashboardFilters normalizes invalid and long inputs", () =>
     q: `  ${"a".repeat(100)}  `,
     contact: "  MARIA@EXAMPLE.ORG  ",
     group: "unknown",
+    tag: "tag-pranzo",
     status: "submitted",
   });
 
   assert.equal(filters.q, "a".repeat(80));
   assert.equal(filters.contact, "MARIA@EXAMPLE.ORG");
   assert.equal(filters.group, "unknown");
+  assert.equal(filters.tag, "tag-pranzo");
   assert.equal(filters.status, "submitted");
   assert.equal(hasActiveOperationsDashboardFilters(filters), true);
+});
+
+test("applyOperationsDashboardFilters filters by operational tag", () => {
+  assert.deepEqual(
+    applyOperationsDashboardFilters(
+      participants,
+      parseOperationsDashboardFilters({ tag: "tag-pranzo" })
+    ).map((participant) => participant.name),
+    ["Maria Rossi"]
+  );
+
+  assert.deepEqual(
+    applyOperationsDashboardFilters(
+      participants,
+      parseOperationsDashboardFilters({ tag: "none" })
+    ).map((participant) => participant.name),
+    ["Anna Verdi"]
+  );
 });
 
 test("applyOperationsDashboardFilters searches identity separately from contacts", () => {
@@ -141,6 +164,7 @@ function participant(
     currentGroupId: null,
     currentGroupName: null,
     currentGroupStatus: null,
+    tagIds: [],
     ...overrides,
   };
 }

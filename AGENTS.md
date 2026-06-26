@@ -149,6 +149,16 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   con identita', contatti, gruppo, stato assegnazione e note interne. Se un
   rifiuto non ha parent, l'assegnazione viene marcata non corrente/rifiutata e
   l'audit registra `moved_to_external_queue`.
+- Il 2026-06-26 e' stata implementata la Milestone 14.2 sui tag operativi:
+  migration `20260626100000_operational_tags.sql` con tabelle
+  `operational_tags` e `participant_operational_tags`, RLS per lettura
+  operativa e assegnazione da manager o capogruppo in scope, helper
+  `app.can_assign_participant_tag`, audit `operational_tag.created` e
+  `participant.operational_tags_updated`. Il manager crea tag liberi
+  dell'evento corrente dalla sezione `Gestione iscritti`, li vede come badge e
+  li usa come filtro; il capogruppo assegna/rimuove i tag dalla scheda del
+  partecipante attribuito al proprio scope. I tag sono operativi interni e non
+  sono mostrati al partecipante nel flusso pubblico o nella dashboard personale.
 - Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
   non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
   gestione manager. La migration di identità evento mantiene lo slug tecnico

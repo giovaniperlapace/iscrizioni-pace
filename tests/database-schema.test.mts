@@ -27,6 +27,10 @@ const groupRegistrationLinksMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260617130000_group_registration_links.sql"
 );
+const operationalTagsMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260626100000_operational_tags.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -38,6 +42,10 @@ const groupLeaderDashboardMigration = readFileSync(
 const groupTreeSeedMigration = readFileSync(groupTreeSeedMigrationPath, "utf8");
 const groupRegistrationLinksMigration = readFileSync(
   groupRegistrationLinksMigrationPath,
+  "utf8"
+);
+const operationalTagsMigration = readFileSync(
+  operationalTagsMigrationPath,
   "utf8"
 );
 
@@ -153,4 +161,33 @@ test("group registration links migration separates hidden groups from reserved a
   );
   assert.match(groupRegistrationLinksMigration, /group registration links read operational/);
   assert.match(groupRegistrationLinksMigration, /group registration links manage direct leaders/);
+});
+
+test("operational tags migration scopes manager-created tags to event participants", () => {
+  assert.match(
+    operationalTagsMigration,
+    /create table if not exists public\.operational_tags/
+  );
+  assert.match(
+    operationalTagsMigration,
+    /create table if not exists public\.participant_operational_tags/
+  );
+  assert.match(operationalTagsMigration, /operational_tags_event_label_unique/);
+  assert.match(
+    operationalTagsMigration,
+    /create or replace function app\.can_assign_participant_tag/
+  );
+  assert.match(
+    operationalTagsMigration,
+    /alter table public\.operational_tags enable row level security/
+  );
+  assert.match(
+    operationalTagsMigration,
+    /alter table public\.participant_operational_tags enable row level security/
+  );
+  assert.match(operationalTagsMigration, /operational tags manage managers/);
+  assert.match(
+    operationalTagsMigration,
+    /participant operational tags assign managers or leaders/
+  );
 });

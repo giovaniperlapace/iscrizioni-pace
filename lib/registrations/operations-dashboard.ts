@@ -10,12 +10,14 @@ export type OperationsParticipantForFilter = {
   currentGroupId: string | null;
   currentGroupName: string | null;
   currentGroupStatus: string | null;
+  tagIds?: string[];
 };
 
 export type OperationsDashboardFilters = {
   q: string;
   contact: string;
   group: string;
+  tag: string;
   status: "all" | "submitted" | "confirmed" | "cancelled";
 };
 
@@ -32,6 +34,7 @@ const DEFAULT_FILTERS: OperationsDashboardFilters = {
   q: "",
   contact: "",
   group: "all",
+  tag: "all",
   status: "all",
 };
 
@@ -39,12 +42,14 @@ export function parseOperationsDashboardFilters(input: {
   q?: string;
   contact?: string;
   group?: string;
+  tag?: string;
   status?: string;
 }): OperationsDashboardFilters {
   return {
     q: normalizeQuery(input.q),
     contact: normalizeQuery(input.contact),
     group: normalizeGroupFilter(input.group),
+    tag: normalizeTagFilter(input.tag),
     status: isStatusFilter(input.status)
       ? input.status
       : DEFAULT_FILTERS.status,
@@ -87,6 +92,7 @@ export function hasActiveOperationsDashboardFilters(
     filters.q !== DEFAULT_FILTERS.q ||
     filters.contact !== DEFAULT_FILTERS.contact ||
     filters.group !== DEFAULT_FILTERS.group ||
+    filters.tag !== DEFAULT_FILTERS.tag ||
     filters.status !== DEFAULT_FILTERS.status
   );
 }
@@ -103,6 +109,10 @@ function matchesOperationsDashboardFilters(
   }
 
   if (!matchesGroupFilter(participant, filters.group)) {
+    return false;
+  }
+
+  if (!matchesTagFilter(participant, filters.tag)) {
     return false;
   }
 
@@ -146,6 +156,20 @@ function matchesGroupFilter(participant: OperationsParticipantForFilter, filter:
   return participant.currentGroupId === filter;
 }
 
+function matchesTagFilter(participant: OperationsParticipantForFilter, filter: string): boolean {
+  const tagIds = participant.tagIds ?? [];
+
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === "none") {
+    return tagIds.length === 0;
+  }
+
+  return tagIds.includes(filter);
+}
+
 function normalizeQuery(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
 }
@@ -154,6 +178,12 @@ function normalizeGroupFilter(value: string | undefined): string {
   const normalized = (value ?? "").trim();
 
   return normalized || DEFAULT_FILTERS.group;
+}
+
+function normalizeTagFilter(value: string | undefined): string {
+  const normalized = (value ?? "").trim();
+
+  return normalized || DEFAULT_FILTERS.tag;
 }
 
 function isStatusFilter(

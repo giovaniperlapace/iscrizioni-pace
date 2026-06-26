@@ -7,6 +7,7 @@ import {
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
   updateGroupLeaderAssignment,
+  updateParticipantOperationalTags,
 } from "@/app/actions";
 import {
   DashboardAreaDescription,
@@ -30,6 +31,10 @@ import {
 } from "@/lib/groups/registration-links";
 import { LANGUAGE_OPTIONS, type SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
+import type {
+  OperationalTagOption,
+  ParticipantOperationalTag,
+} from "@/lib/registrations/operational-tags";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -174,6 +179,25 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_operational_tags:
+                | Array<{
+                    assigned_at: string | null;
+                    operational_tags:
+                      | {
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }
+                      | Array<{
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }>
+                      | null;
+                  }>
+                | null;
             }
           | Array<{
               id: string;
@@ -199,6 +223,25 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_operational_tags:
+                | Array<{
+                    assigned_at: string | null;
+                    operational_tags:
+                      | {
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }
+                      | Array<{
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }>
+                      | null;
+                  }>
+                | null;
             }>
           | null;
       }
@@ -232,6 +275,25 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_operational_tags:
+                | Array<{
+                    assigned_at: string | null;
+                    operational_tags:
+                      | {
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }
+                      | Array<{
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }>
+                      | null;
+                  }>
+                | null;
             }
           | Array<{
               id: string;
@@ -257,6 +319,25 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_operational_tags:
+                | Array<{
+                    assigned_at: string | null;
+                    operational_tags:
+                      | {
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }
+                      | Array<{
+                          id: string;
+                          event_id: string;
+                          label: string;
+                          color: string;
+                        }>
+                      | null;
+                  }>
+                | null;
             }>
           | null;
       }>
@@ -266,6 +347,8 @@ type AssignmentRow = {
 type AssignmentView = {
   id: string;
   registrationId: string;
+  eventId: string;
+  participantId: string;
   groupId: string;
   groupName: string;
   groupNodeType: string | null;
@@ -288,6 +371,8 @@ type AssignmentView = {
   leaderNotificationReadAt: string | null;
   leaderDecisionAt: string | null;
   updatedAt: string | null;
+  tags: ParticipantOperationalTag[];
+  tagIds: string[];
 };
 type DashboardTool = "link" | "manual";
 
@@ -1604,6 +1689,7 @@ export default async function CapogruppoDashboardPage({
   const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
 
   const assignments = await getAssignments([...scopedGroupIds]);
+  const operationalTags = await getOperationalTags();
   const assignedGroups = groupRows
     .filter((group) => rootGroupIds.includes(group.id))
     .map((group) => toScopedGroupView(group, copy));
@@ -1717,6 +1803,7 @@ export default async function CapogruppoDashboardPage({
           <DashboardToolOverlay title={copy.detail.title} copy={copy}>
             <AssignmentDetailCard
               assignment={selectedAssignment}
+              tagOptions={operationalTags}
               locale={locale}
               copy={copy}
             />
@@ -1735,7 +1822,7 @@ export default async function CapogruppoDashboardPage({
     const { data, error } = await serviceSupabase
       .from("participant_group_assignments")
       .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group))"
+        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
       )
       .in("group_id", groupIds)
       .eq("registrations.event_id", currentEventId)
@@ -1779,6 +1866,26 @@ export default async function CapogruppoDashboardPage({
       createdAt: link.created_at,
       expiresAt: link.expires_at,
       revokedAt: link.revoked_at,
+    }));
+  }
+
+  async function getOperationalTags(): Promise<OperationalTagOption[]> {
+    const { data } = await serviceSupabase
+      .from("operational_tags")
+      .select("id,event_id,label,color")
+      .eq("event_id", currentEventId)
+      .order("label", { ascending: true });
+
+    return ((data ?? []) as Array<{
+      id: string;
+      event_id: string;
+      label: string;
+      color: string;
+    }>).map((tag) => ({
+      id: tag.id,
+      eventId: tag.event_id,
+      label: tag.label,
+      color: tag.color,
     }));
   }
 }
@@ -2460,10 +2567,12 @@ function AssignmentRowView({
 
 function AssignmentDetailCard({
   assignment,
+  tagOptions,
   locale,
   copy,
 }: {
   assignment: AssignmentView;
+  tagOptions: OperationalTagOption[];
   locale: SupportedLocale;
   copy: GroupLeaderCopy;
 }) {
@@ -2510,6 +2619,10 @@ function AssignmentDetailCard({
           <DetailLine label={copy.phone}>
             {assignment.participantPhone ?? copy.table.phoneMissing}
           </DetailLine>
+        </DetailBlock>
+
+        <DetailBlock title="Tag operativi">
+          <OperationalTagList tags={assignment.tags} emptyLabel="Senza tag" />
         </DetailBlock>
 
         <DetailBlock title={copy.detail.group}>
@@ -2588,6 +2701,30 @@ function AssignmentDetailCard({
           ) : null}
         </div>
       </form>
+
+      <form
+        action={updateParticipantOperationalTags}
+        className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+      >
+        <input type="hidden" name="sourceDashboard" value="capogruppo" />
+        <input type="hidden" name="assignmentId" value={assignment.id} />
+        <input type="hidden" name="registrationId" value={assignment.registrationId} />
+        <input type="hidden" name="participantId" value={assignment.participantId} />
+        <input type="hidden" name="eventId" value={assignment.eventId} />
+        <fieldset className="grid gap-2">
+          <legend className="text-sm font-semibold text-[var(--peace-ink)]">
+            Tag operativi
+          </legend>
+          <TagCheckboxGrid
+            tagOptions={tagOptions}
+            selectedTagIds={assignment.tagIds}
+            emptyLabel="Nessun tag creato dal manager per questo evento."
+          />
+        </fieldset>
+        <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+          Salva tag
+        </PendingSubmitButton>
+      </form>
     </section>
   );
 }
@@ -2642,6 +2779,77 @@ function ScopeBadge({
     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>
       {label}
     </span>
+  );
+}
+
+function OperationalTagList({
+  tags,
+  emptyLabel,
+}: {
+  tags: ParticipantOperationalTag[];
+  emptyLabel: string;
+}) {
+  if (tags.length === 0) {
+    return <span className="text-sm text-[var(--peace-muted)]">{emptyLabel}</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag.id}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--peace-border)] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--peace-ink)]"
+        >
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-full"
+            style={{ backgroundColor: tag.color }}
+          />
+          {tag.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TagCheckboxGrid({
+  tagOptions,
+  selectedTagIds,
+  emptyLabel,
+}: {
+  tagOptions: OperationalTagOption[];
+  selectedTagIds: string[];
+  emptyLabel: string;
+}) {
+  if (tagOptions.length === 0) {
+    return <p className="text-sm text-[var(--peace-muted)]">{emptyLabel}</p>;
+  }
+
+  const selected = new Set(selectedTagIds);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {tagOptions.map((tag) => (
+        <label
+          key={tag.id}
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-semibold text-[var(--peace-ink)]"
+        >
+          <input
+            type="checkbox"
+            name="tagIds"
+            value={tag.id}
+            defaultChecked={selected.has(tag.id)}
+            className="size-4 accent-[var(--peace-blue-800)]"
+          />
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-full"
+            style={{ backgroundColor: tag.color }}
+          />
+          {tag.label}
+        </label>
+      ))}
+    </div>
   );
 }
 
@@ -2709,9 +2917,13 @@ function toAssignmentView(
     return null;
   }
 
+  const tags = mapParticipantOperationalTags(participant.participant_operational_tags);
+
   return {
     id: row.id,
     registrationId: row.registration_id,
+    eventId: registration.event_id,
+    participantId: participant.id,
     groupId: row.group_id,
     groupName: group.name ?? copy.groupFallback,
     groupNodeType: group.node_type,
@@ -2742,6 +2954,8 @@ function toAssignmentView(
     leaderNotificationReadAt: row.leader_notification_read_at,
     leaderDecisionAt: row.leader_decision_at,
     updatedAt: row.updated_at,
+    tags,
+    tagIds: tags.map((tag) => tag.id),
   };
 }
 
@@ -2769,6 +2983,44 @@ function getPrimaryContact(
   }
 
   return contacts.find((contact) => contact.is_primary) ?? contacts[0] ?? null;
+}
+
+function mapParticipantOperationalTags(
+  rows:
+    | Array<{
+        assigned_at: string | null;
+        operational_tags:
+          | {
+              id: string;
+              event_id: string;
+              label: string;
+              color: string;
+            }
+          | Array<{
+              id: string;
+              event_id: string;
+              label: string;
+              color: string;
+            }>
+          | null;
+      }>
+    | null
+): ParticipantOperationalTag[] {
+  return (rows ?? [])
+    .map((row) => {
+      const tag = relatedOne(row.operational_tags);
+
+      return tag
+        ? {
+            id: tag.id,
+            eventId: tag.event_id,
+            label: tag.label,
+            color: tag.color,
+            assignedAt: row.assigned_at,
+          }
+        : null;
+    })
+    .filter((tag): tag is ParticipantOperationalTag => Boolean(tag));
 }
 
 function formatPlace(
