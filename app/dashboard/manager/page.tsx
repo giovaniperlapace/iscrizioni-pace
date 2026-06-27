@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   BarChart3,
-  CalendarDays,
   Network,
   Pencil,
   ShieldCheck,
@@ -21,10 +20,6 @@ import {
   updateParticipantOperationalTags,
   updateOperationalUserRole,
 } from "@/app/actions";
-import {
-  DashboardAreaDescription,
-  DashboardRoleTabs,
-} from "@/app/dashboard/role-tabs";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import {
   GroupPlacementFields,
@@ -43,13 +38,6 @@ import {
   buildGroupRegistrationUrl,
   getGroupRegistrationLinkStatus,
 } from "@/lib/groups/registration-links";
-import {
-  getOpeningState,
-  openingStateLabel,
-  summarizeRegistrationMonitoring,
-  type RegistrationMonitoringInput,
-  type RegistrationMonitoringSummary,
-} from "@/lib/registrations/opening-monitoring";
 import {
   applyOperationsDashboardFilters,
   hasActiveOperationsDashboardFilters,
@@ -111,44 +99,6 @@ type ManagerPageProps = {
     stat?: string;
     status?: string;
   }>;
-};
-
-type EventRow = {
-  id: string;
-  slug: string;
-  title: string;
-  status: string;
-  is_current: boolean | null;
-  city: string | null;
-  country: string | null;
-  starts_on: string | null;
-  ends_on: string | null;
-  registration_opens_at: string | null;
-  registration_closes_at: string | null;
-};
-
-type RegistrationRow = {
-  id: string;
-  participant_id: string;
-  status: string | null;
-  submitted_at: string | null;
-};
-
-type AssignmentRow = {
-  registration_id: string;
-  status: string | null;
-  source: string | null;
-  is_current: boolean | null;
-  assignment_reason: string | null;
-};
-
-type QrTokenRow = {
-  registration_id: string;
-};
-
-type AccessibilityRow = {
-  registration_id: string;
-  needs_operational_support: boolean | null;
 };
 
 type ContactRow = {
@@ -323,20 +273,13 @@ type OperationalUserRoleRow = {
   groupName: string | null;
 };
 
-type EventSnapshot = {
-  event: EventRow;
-  openingState: ReturnType<typeof getOpeningState>;
-  summary: RegistrationMonitoringSummary;
-  emailErrorsLast24Hours: number;
-};
-
 type AttendanceChoiceRow = {
   registration_id: string;
   day: string | null;
   choice: string | null;
 };
 
-type ManagerSection = "evento" | "dashboard" | "iscritti" | "ruoli" | "gruppi";
+type ManagerSection = "dashboard" | "iscritti" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -360,10 +303,12 @@ export default async function ManagerDashboardPage({
   const filters = parseOperationsDashboardFilters(params);
   const currentEvent = await getCurrentOperationalEvent(serviceSupabase, "id,title");
   const currentEventId = currentEvent?.id ?? null;
-  const [snapshots, managerOperations] = await Promise.all([
-    getOpeningSnapshots(serviceSupabase, scope, currentEventId),
-    getManagerOperationsSnapshot(serviceSupabase, scope, filters, currentEventId),
-  ]);
+  const managerOperations = await getManagerOperationsSnapshot(
+    serviceSupabase,
+    scope,
+    filters,
+    currentEventId
+  );
   const statistics = await getManagerStatisticsSnapshot(
     serviceSupabase,
     scope,
@@ -397,11 +342,6 @@ export default async function ManagerDashboardPage({
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard manager</h1>
-          <DashboardRoleTabs activeRole="manager" eventRoles={auth.eventRoles} />
-          <DashboardAreaDescription>
-            In questa area puoi seguire apertura, iscrizioni, gruppi e ruoli
-            operativi degli eventi assegnati.
-          </DashboardAreaDescription>
         </header>
 
         <div
@@ -425,10 +365,6 @@ export default async function ManagerDashboardPage({
               roleError={params.roleError}
               roleSaved={params.roleSaved}
             />
-
-            {activeSection === "evento" ? (
-              <ManagerEventSection snapshots={snapshots} />
-            ) : null}
 
             {activeSection === "dashboard" ? (
               <StatisticsSection
@@ -516,17 +452,10 @@ function ManagerSidebar({
   const items: Array<{
     key: ManagerSection;
     href: string;
-    Icon: typeof CalendarDays;
+    Icon: typeof BarChart3;
     label: string;
     help: string;
   }> = [
-    {
-      key: "evento",
-      href: `/dashboard/manager?section=evento&nav=${navMode}`,
-      Icon: CalendarDays,
-      label: "Evento",
-      help: "Apertura e monitoraggio",
-    },
     {
       key: "dashboard",
       href: `/dashboard/manager?section=dashboard&nav=${navMode}`,
@@ -752,31 +681,6 @@ async function buildOperationalUserRows(
   );
 }
 
-function ManagerEventSection({ snapshots }: { snapshots: EventSnapshot[] }) {
-  return (
-    <section className="grid min-w-0 gap-4">
-      <div className="surface-panel p-5">
-        <h2 className="text-lg font-semibold">Evento</h2>
-        <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          I manager consultano lo stato dell&apos;evento corrente e i segnali
-          operativi. Apertura, sospensione, nascondimento e cambio evento
-          corrente sono riservati all&apos;admin.
-        </p>
-      </div>
-
-      {snapshots.map((snapshot) => (
-        <EventOpeningCard key={snapshot.event.id} snapshot={snapshot} />
-      ))}
-
-      {snapshots.length === 0 ? (
-        <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5 text-sm text-[var(--peace-muted)]">
-          Nessun evento manager assegnato a questo utente.
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
 function StatisticsSection({
   statistics,
   basePath,
@@ -939,7 +843,6 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
   if (
-    params.section === "evento" ||
     params.section === "dashboard" ||
     params.section === "iscritti" ||
     params.section === "ruoli" ||
@@ -984,7 +887,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     return "iscritti";
   }
 
-  return "evento";
+  return "dashboard";
 }
 
 function resolveParticipantBreakdownLevel(
@@ -1359,188 +1262,6 @@ async function getManagerStatisticsSnapshot(
     groups: groupTree,
     attendanceChoices: (attendanceChoices ?? []) as AttendanceChoiceRow[],
   });
-}
-
-async function getOpeningSnapshots(
-  supabase: ReturnType<typeof createSupabaseServiceClient>,
-  scope: ReturnType<typeof getManagerEventScope>,
-  currentEventId: string | null
-): Promise<EventSnapshot[]> {
-  if (
-    !currentEventId ||
-    (scope.eventIds !== null && !scope.eventIds.has(currentEventId))
-  ) {
-    return [];
-  }
-
-  const eventsQuery = supabase
-    .from("events")
-    .select(
-      "id,slug,title,status,is_current,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
-    )
-    .eq("id", currentEventId)
-    .order("starts_on", { ascending: false });
-
-  const { data: events } = await eventsQuery;
-
-  return Promise.all(
-    ((events ?? []) as EventRow[]).map((event) =>
-    getEventSnapshot(supabase, event)
-    )
-  );
-}
-
-async function getEventSnapshot(
-  supabase: ReturnType<typeof createSupabaseServiceClient>,
-  event: EventRow
-): Promise<EventSnapshot> {
-  const { data: registrations } = await supabase
-    .from("registrations")
-    .select("id,participant_id,status,submitted_at")
-    .eq("event_id", event.id)
-    .order("submitted_at", { ascending: false });
-  const registrationRows = (registrations ?? []) as RegistrationRow[];
-  const registrationIds = registrationRows.map((row) => row.id);
-  const participantIds = registrationRows.map((row) => row.participant_id);
-  const emptyResult = { data: [] };
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-  const [
-    { data: assignments },
-    { data: qrTokens },
-    { data: accessibilityNeeds },
-    { data: contacts },
-    { data: emailErrors },
-  ] = await Promise.all([
-    registrationIds.length > 0
-      ? supabase
-          .from("participant_group_assignments")
-          .select("registration_id,status,source,is_current,assignment_reason")
-          .in("registration_id", registrationIds)
-          .eq("is_current", true)
-      : Promise.resolve(emptyResult),
-    registrationIds.length > 0
-      ? supabase.from("qr_tokens").select("registration_id").in("registration_id", registrationIds)
-      : Promise.resolve(emptyResult),
-    registrationIds.length > 0
-      ? supabase
-          .from("accessibility_needs")
-          .select("registration_id,needs_operational_support")
-          .in("registration_id", registrationIds)
-      : Promise.resolve(emptyResult),
-    participantIds.length > 0
-      ? supabase
-          .from("participant_contacts")
-          .select("participant_id,email")
-          .in("participant_id", participantIds)
-          .eq("is_primary", true)
-      : Promise.resolve(emptyResult),
-    supabase
-      .from("audit_logs")
-      .select("id")
-      .eq("event_id", event.id)
-      .in("action", [
-        "email.magic_link_failed",
-        "email.registration_confirmation_failed",
-      ])
-      .gte("created_at", since),
-  ]);
-  const assignmentByRegistrationId = new Map(
-    ((assignments ?? []) as AssignmentRow[]).map((row) => [
-      row.registration_id,
-      row,
-    ])
-  );
-  const qrRegistrationIds = new Set(
-    ((qrTokens ?? []) as QrTokenRow[]).map((row) => row.registration_id)
-  );
-  const supportRegistrationIds = new Set(
-    ((accessibilityNeeds ?? []) as AccessibilityRow[])
-      .filter((row) => row.needs_operational_support)
-      .map((row) => row.registration_id)
-  );
-  const emailByParticipantId = new Map(
-    ((contacts ?? []) as ContactRow[]).map((row) => [
-      row.participant_id,
-      row.email,
-    ])
-  );
-  const monitoringRows: RegistrationMonitoringInput[] = registrationRows.map(
-    (registration) => {
-      const assignment = assignmentByRegistrationId.get(registration.id);
-
-      return {
-        submittedAt: registration.submitted_at,
-        status: registration.status,
-        currentAssignmentStatus: assignment?.status ?? null,
-        currentAssignmentSource: assignment?.source ?? null,
-        currentAssignmentReason: assignment?.assignment_reason ?? null,
-        hasCurrentAssignment: Boolean(assignment),
-        hasQrToken: qrRegistrationIds.has(registration.id),
-        needsOperationalSupport: supportRegistrationIds.has(registration.id),
-        email: emailByParticipantId.get(registration.participant_id) ?? null,
-      };
-    }
-  );
-
-  return {
-    event,
-    openingState: getOpeningState(event),
-    summary: summarizeRegistrationMonitoring(monitoringRows),
-    emailErrorsLast24Hours: emailErrors?.length ?? 0,
-  };
-}
-
-function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
-  const { event, summary } = snapshot;
-
-  return (
-    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-semibold">{event.title}</h3>
-            <span className="rounded-full border border-[var(--peace-border-strong)] bg-[var(--peace-sky-100)] px-3 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
-              {openingStateLabel(snapshot.openingState)}
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-[var(--peace-muted)]">
-            {event.city}, {event.country} - {event.slug}
-          </p>
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-            <Info label="Evento" value={formatDateRange(event.starts_on, event.ends_on)} />
-            <Info label="Apre" value={formatDateTime(event.registration_opens_at)} />
-            <Info label="Chiude" value={formatDateTime(event.registration_closes_at)} />
-          </dl>
-        </div>
-
-        <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-4 py-3 text-sm text-[var(--peace-muted)]">
-          Consultazione evento. Le azioni di apertura e pubblicazione sono
-          disponibili solo nella dashboard admin.
-        </p>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <EventValue label="Iscrizioni" value={summary.total} />
-        <EventValue label="Ultime 24 ore" value={summary.last24Hours} />
-        <EventValue label="Assegnazioni da verificare" value={summary.probableGroup} />
-        <EventValue label="Supporto richiesto" value={summary.needsOperationalSupport} />
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <WatchItem label="Senza gruppo corrente" value={summary.withoutCurrentGroup} />
-        <WatchItem label="QR mancante" value={summary.missingQrToken} />
-        <WatchItem label="Email fallite 24h" value={snapshot.emailErrorsLast24Hours} />
-        <WatchItem label="Email duplicate" value={summary.duplicateContactEmails} />
-      </div>
-
-      <p className="mt-4 text-sm text-[var(--peace-muted)]">
-        Scelte gruppo: {summary.participantSelectedGroup} dichiarate,
-        {` ${summary.ruleMatchedGroup}`} da regola, {summary.newcomerGroup} nuovi
-        partecipanti.
-      </p>
-    </article>
-  );
 }
 
 function ManagerGroupTreeSection({
@@ -2706,37 +2427,11 @@ function StatusMessage({
   );
 }
 
-function WatchItem({ label, value }: { label: string; value: number }) {
-  const hasIssue = value > 0;
-
-  return (
-    <div
-      className={
-        hasIssue
-          ? "border-l-4 border-[#b85f47] bg-[#fff8f5] px-4 py-3"
-          : "border-l-4 border-[var(--peace-border-strong)] bg-[#f7fbfe] px-4 py-3"
-      }
-    >
-      <p className="text-sm text-[var(--peace-muted)]">{label}</p>
-      <p className="mt-2 text-xl font-semibold">{value}</p>
-    </div>
-  );
-}
-
 function EventValue({ label, value }: { label: string; value: number }) {
   return (
     <div className="border-t border-[var(--peace-border)] pt-3">
       <p className="text-sm text-[var(--peace-muted)]">{label}</p>
       <p className="mt-2 text-xl font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[var(--peace-muted)]">{label}</dt>
-      <dd className="mt-1 font-medium text-[var(--peace-ink)]">{value}</dd>
     </div>
   );
 }
@@ -2810,18 +2505,6 @@ function TagCheckboxGrid({
       ))}
     </div>
   );
-}
-
-function formatDateRange(start: string | null, end: string | null): string {
-  if (!start) {
-    return "Date da definire";
-  }
-
-  if (!end || start === end) {
-    return formatDate(start);
-  }
-
-  return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
 function formatDate(value: string): string {
