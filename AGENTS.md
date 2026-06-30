@@ -198,6 +198,29 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   tendina nativa semplice; usare un controllo cercabile con filtro testuale e
   selezione esplicita. Questa regola vale in particolare per paesi, citta',
   gruppi, partecipanti, referenti e altri elenchi operativi lunghi.
+- Regola UX stabile: nei testi rivolti a manager, admin e operatori evitare
+  etichette tecniche come "albero gruppi". Quando si descrive la struttura
+  paese -> citta' -> gruppo, usare formulazioni comprensibili come
+  "territori e gruppi", "paesi, citta' e gruppi" o "Partecipanti per
+  territorio e gruppi", mantenendo "albero gruppi" solo in documentazione
+  tecnica o commenti interni quando necessario.
+- Regola UX stabile: le modali aperte da dashboard operative tramite link o
+  query string devono preservare il contesto di scroll della pagina sottostante.
+  In Next `Link` usare `scroll={false}` per apertura e chiusura delle modali
+  quando l'utente sta lavorando su liste/tabelle. Anche i submit riusciti da
+  modale che chiudono via redirect server action devono ripristinare lo scroll
+  precedente. Pattern corrente: montare
+  `app/dashboard/preserve-dashboard-scroll.tsx` nella dashboard interessata e
+  aggiungere `data-preserve-dashboard-scroll` alle form modali che salvano,
+  generano, revocano o assegnano dati. Ogni nuova form modale nelle dashboard
+  operative deve seguire questo pattern, cosi' l'utente non viene riportato in
+  cima pagina mentre modifica piu' righe consecutive.
+- Regola UX stabile: quando una modale dashboard e' aperta, la pagina
+  sottostante non deve scorrere né ricevere lo scroll quando l'utente arriva a
+  inizio/fine dello scroll interno. Ogni overlay modale dashboard deve avere la
+  classe `dashboard-modal`, che attiva il blocco scroll globale in
+  `app/globals.css`; lo scroll deve restare confinato al contenuto della
+  modale finché l'utente chiude o salva.
 - Dal 2026-06-24 il multievento e' trattato come archivio storico, non come
   gestione di eventi contemporanei. La tabella `events` ha il flag
   `is_current`, unico tramite indice parziale, che identifica l'evento corrente
@@ -1296,6 +1319,14 @@ Decisione stabile su ruoli operativi e partecipazione personale:
   nome, cognome ed email nella scheda minima. Quando farà login potrà gestire il
   gruppo assegnato e completare/modificare la propria scheda personale dai
   flussi partecipante, senza duplicare l'identità.
+- Nelle tabelle ruoli operative mostrare una sola riga per persona/email. Se un
+  capogruppo segue più gruppi, elencarli tutti nella colonna
+  `Responsabilità`; non duplicare la riga per ogni gruppo. La UI rivolta a
+  manager/admin non deve usare la label tecnica `Scope`.
+- La modifica di un capogruppo deve permettere l'assegnazione a più gruppi
+  nella stessa modale. L'email identifica una sola utenza operativa: quando si
+  crea o modifica un ruolo, non creare una nuova utenza se esiste già un utente
+  con quella email.
 
 ## Workflow pubblico
 

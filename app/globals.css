@@ -42,6 +42,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+html:has(body .dashboard-modal),
+body:has(.dashboard-modal) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.dashboard-modal {
+  overscroll-behavior: contain;
+}
+
 ::selection {
   background: rgba(64, 200, 239, 0.32);
   color: var(--peace-blue-950);

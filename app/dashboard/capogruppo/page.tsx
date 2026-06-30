@@ -2010,7 +2010,7 @@ function DashboardToolOverlay({
   children: ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center modal-backdrop px-4 py-6">
+    <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center modal-backdrop px-4 py-6">
       <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-[var(--peace-border)] bg-white p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-xl font-semibold text-[var(--peace-ink)]">{title}</h2>

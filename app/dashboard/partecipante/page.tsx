@@ -1789,7 +1789,7 @@ function DashboardOverlay({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center modal-backdrop px-4 py-5 backdrop-blur-sm sm:px-6">
+    <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center modal-backdrop px-4 py-5 backdrop-blur-sm sm:px-6">
       <section
         role="dialog"
         aria-modal="true"

@@ -2104,6 +2104,14 @@ export async function updateOperationalUserRole(formData: FormData) {
   const role = optionalText(formData.get("role"));
   const eventId = optionalText(formData.get("eventId"));
   const groupId = optionalText(formData.get("groupId"));
+  const selectedGroupIds = Array.from(
+    new Set(
+      formData
+        .getAll("groupIds")
+        .map((value) => optionalText(value))
+        .filter((value): value is string => Boolean(value))
+    )
+  );
   const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
   const isPrimaryLeader = leaderKind === "primary";
 
@@ -2153,7 +2161,7 @@ export async function updateOperationalUserRole(formData: FormData) {
     userId: null,
     role,
     eventId: role === "admin" || role === "capogruppo" ? eventId : currentOperationalEventId,
-    groupId,
+    groupId: role === "capogruppo" ? (selectedGroupIds[0] ?? groupId) : groupId,
   });
 
   if (!nextTarget.ok) {
@@ -2179,12 +2187,168 @@ export async function updateOperationalUserRole(formData: FormData) {
     redirect(`${dashboardPath}&roleError=auth-user`);
   }
 
+  if (targetUserId !== currentUserId) {
+    redirect(`${dashboardPath}&roleError=email-taken`);
+  }
+
   await syncOperationalIdentityByEmail(serviceSupabase, {
     email,
     firstName,
     lastName,
     userId: targetUserId,
   });
+
+  if (role === "capogruppo" && selectedGroupIds.length > 0) {
+    const { data: selectedGroups, error: selectedGroupsError } = await serviceSupabase
+      .from("groups")
+      .select("id,event_id")
+      .in("id", selectedGroupIds);
+    const selectedGroupRows = (selectedGroups ?? []) as Array<{
+      id: string;
+      event_id: string;
+    }>;
+
+    if (selectedGroupsError || selectedGroupRows.length !== selectedGroupIds.length) {
+      redirect(`${dashboardPath}&roleError=invalid-group`);
+    }
+
+    const selectedGroupIdsSet = new Set(selectedGroupIds);
+
+    if (
+      selectedGroupRows.some(
+        (group) =>
+          !canManageOperationalRole(auth.eventRoles, isAdmin, {
+            role: "capogruppo",
+            eventId: group.event_id,
+          })
+      )
+    ) {
+      redirect(`${dashboardPath}&roleError=forbidden`);
+    }
+
+    const { data: existingMemberships } = await serviceSupabase
+      .from("group_memberships")
+      .select("group_id,is_primary,groups!inner(id,event_id)")
+      .eq("user_id", targetUserId)
+      .eq("role", "capogruppo");
+    const manageableExistingMemberships = ((existingMemberships ?? []) as Array<{
+      group_id: string | null;
+      is_primary: boolean | null;
+      groups:
+        | { id: string; event_id: string }
+        | Array<{ id: string; event_id: string }>
+        | null;
+    }>).filter((membership) => {
+      const group = relatedOne(membership.groups);
+
+      return Boolean(
+        membership.group_id &&
+          group &&
+          canManageOperationalRole(auth.eventRoles, isAdmin, {
+            role: "capogruppo",
+            eventId: group.event_id,
+          })
+      );
+    });
+    const removedMemberships = manageableExistingMemberships.filter(
+      (membership) =>
+        membership.group_id && !selectedGroupIdsSet.has(membership.group_id)
+    );
+
+    if (removedMemberships.length > 0) {
+      const removedGroupIds = removedMemberships
+        .map((membership) => membership.group_id)
+        .filter((removedGroupId): removedGroupId is string => Boolean(removedGroupId));
+      const { error: removeError } = await serviceSupabase
+        .from("group_memberships")
+        .delete()
+        .eq("user_id", targetUserId)
+        .eq("role", "capogruppo")
+        .in("group_id", removedGroupIds);
+
+      if (removeError) {
+        redirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError.message)}`);
+      }
+
+      for (const membership of removedMemberships) {
+        if (membership.is_primary && membership.group_id) {
+          const syncError = await syncGroupPrimaryLeaderName(
+            serviceSupabase,
+            membership.group_id,
+            null
+          );
+
+          if (syncError) {
+            redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+          }
+        }
+      }
+    }
+
+    for (const selectedGroupId of selectedGroupIds) {
+      if (isPrimaryLeader) {
+        const demoteError = await demoteOtherPrimaryGroupLeaders(
+          serviceSupabase,
+          selectedGroupId,
+          targetUserId
+        );
+
+        if (demoteError) {
+          redirect(`${dashboardPath}&roleError=${encodeURIComponent(demoteError)}`);
+        }
+      }
+
+      const membership = await serviceSupabase.from("group_memberships").upsert(
+        {
+          group_id: selectedGroupId,
+          user_id: targetUserId,
+          role: "capogruppo",
+          is_primary: isPrimaryLeader,
+          created_by: auth.user.id,
+        },
+        { onConflict: "group_id,user_id" }
+      );
+
+      if (membership.error) {
+        redirect(
+          `${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`
+        );
+      }
+
+      const syncError = await syncGroupPrimaryLeaderName(
+        serviceSupabase,
+        selectedGroupId,
+        isPrimaryLeader ? fullName : null
+      );
+
+      if (syncError) {
+        redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+      }
+    }
+
+    await serviceSupabase.from("audit_logs").insert({
+      event_id: selectedGroupRows[0]?.event_id ?? null,
+      actor_user_id: auth.user.id,
+      action: "operational_user.group_leader_groups_updated",
+      entity_table: "group_memberships",
+      entity_id: targetUserId,
+      metadata: {
+        source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+        role,
+        email_hash: hashEmailForAudit(email),
+        group_ids: selectedGroupIds,
+        removed_group_ids: removedMemberships
+          .map((membership) => membership.group_id)
+          .filter(Boolean),
+        leader_kind: leaderKind,
+      },
+    });
+
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/manager");
+    revalidatePath("/dashboard/capogruppo");
+    redirect(`${dashboardPath}&roleSaved=1`);
+  }
 
   const currentSignature = operationalRoleSignature({
     userId: currentUserId,

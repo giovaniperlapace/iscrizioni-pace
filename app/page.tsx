@@ -3,8 +3,6 @@ import { EmailAccessForm } from "@/app/email-access-form";
 import { EventIdentity, PeaceLineMark } from "@/components/event-identity";
 import { getMessages } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
-import { getPublicRegistrationOptions } from "@/lib/registrations/public-flow";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type HomeProps = {
   searchParams: Promise<{
@@ -18,7 +16,6 @@ export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const locale = await getRequestLocale();
   const copy = getMessages(locale);
-  const options = await getOptionsSafely();
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -40,35 +37,6 @@ export default async function Home({ searchParams }: HomeProps) {
                 sent={params.sent}
                 copy={copy.emailAccess}
               />
-
-              <aside className="surface-card p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <h2 className="text-base font-extrabold text-[var(--peace-blue-900)]">
-                    {copy.home.eventTitle}
-                  </h2>
-                  <span className="event-kicker text-[0.62rem]">40 Spirit of Assisi</span>
-                </div>
-                {options.event ? (
-                  <div className="mt-4 space-y-2 text-sm text-[var(--peace-muted)]">
-                    <p className="text-lg font-bold text-[var(--peace-ink)]">
-                      {options.event.title}
-                    </p>
-                    <p>
-                      {options.event.city}, {options.event.country}
-                    </p>
-                    <p>
-                      {formatDate(options.event.starts_on, locale, copy.common.dateToBeDefined)}
-                      {options.event.ends_on
-                        ? ` - ${formatDate(options.event.ends_on, locale, copy.common.dateToBeDefined)}`
-                        : ""}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-3 text-sm leading-6 text-[var(--peace-muted)]">
-                    {copy.home.noEvent}
-                  </p>
-                )}
-              </aside>
             </div>
           </div>
         </div>
@@ -78,34 +46,4 @@ export default async function Home({ searchParams }: HomeProps) {
       </section>
     </main>
   );
-}
-
-async function getOptionsSafely() {
-  try {
-    return getPublicRegistrationOptions(createSupabaseServiceClient());
-  } catch {
-    return {
-      event: null,
-      countries: [],
-      cities: [],
-      groups: [],
-      moments: [],
-    };
-  }
-}
-
-function formatDate(
-  value: string | null,
-  locale: string,
-  fallback: string
-): string {
-  if (!value) {
-    return fallback;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(value));
 }

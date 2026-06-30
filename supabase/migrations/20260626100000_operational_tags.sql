@@ -19,7 +19,7 @@ create index if not exists operational_tags_event_id_idx
 
 create trigger operational_tags_set_updated_at
   before update on public.operational_tags
-  for each row execute function public.set_updated_at();
+  for each row execute function app.set_updated_at();
 
 alter table public.operational_tags enable row level security;
 

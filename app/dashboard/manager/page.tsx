@@ -14,7 +14,6 @@ import {
   assignGroupLeader,
   createOperationalTag,
   createGroupRegistrationLink,
-  deleteOperationalUserRole,
   revokeGroupRegistrationLink,
   saveOperationsGroup,
   updateParticipantOperationalTags,
@@ -22,6 +21,7 @@ import {
 } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import {
+  type GroupEditLeaderRow,
   GroupPlacementFields,
   GroupPrimaryLeaderFields,
 } from "@/app/dashboard/group-edit-fields";
@@ -29,8 +29,8 @@ import { AutoCopyLinkNotice, CopyLinkButton } from "@/app/dashboard/group-link-c
 import { GroupLeaderKindField } from "@/app/dashboard/group-leader-kind-field";
 import { GroupLeaderModeTabs } from "@/app/dashboard/group-leader-mode-tabs";
 import { OperationalRoleFields } from "@/app/dashboard/operational-role-fields";
-import { OperationalRoleDeleteButton } from "@/app/dashboard/operational-role-delete-button";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
@@ -265,6 +265,12 @@ type OperationalUserRoleRow = {
   userId: string;
   email: string | null;
   fullName: string | null;
+  assignments: OperationalUserRoleAssignment[];
+  eventRoles: OperationalUserRoleAssignment[];
+  groupLeaderAssignments: OperationalUserRoleAssignment[];
+};
+
+type OperationalUserRoleAssignment = {
   role: string;
   isPrimaryGroupLeader: boolean | null;
   eventId: string | null;
@@ -326,19 +332,14 @@ export default async function ManagerDashboardPage({
     managerOperations.groupTree.find((group) => group.id === params.groupId) ??
     null;
   const selectedOperationalRole =
-    managerOperations.roleUsers.find((role) =>
-      matchesOperationalRoleParams(role, {
-        userId: params.roleUserId,
-        role: params.roleRole,
-        eventId: params.roleEventId,
-        groupId: params.roleGroupId,
-      })
-    ) ?? null;
+    managerOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
+    null;
   const activeSection = resolveManagerSection(params);
   const navMode: ManagerNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
+      <PreserveDashboardScroll />
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard manager</h1>
@@ -460,29 +461,29 @@ function ManagerSidebar({
       key: "dashboard",
       href: `/dashboard/manager?section=dashboard&nav=${navMode}`,
       Icon: BarChart3,
-      label: "Dashboard",
-      help: "Statistiche evento",
+      label: "Statistiche",
+      help: "Evento e partecipanti",
     },
     {
       key: "iscritti",
       href: `/dashboard/manager?section=iscritti&nav=${navMode}`,
       Icon: Users,
       label: "Gestione iscritti",
-      help: "Partecipanti evento",
+      help: "Elenco e modifiche",
     },
     {
       key: "ruoli",
       href: `/dashboard/manager?section=ruoli&nav=${navMode}`,
       Icon: ShieldCheck,
-      label: "Utenti e ruoli",
+      label: "Gestione ruoli",
       help: "Accessi operativi",
     },
     {
       key: "gruppi",
       href: `/dashboard/manager?section=gruppi&nav=${navMode}`,
       Icon: Network,
-      label: "Gruppi",
-      help: "Albero e link riservati",
+      label: "Gestione gruppi",
+      help: "Territori, gruppi e link",
     },
   ];
 
@@ -557,35 +558,9 @@ function managerRoleEditPath(
     section: "ruoli",
     nav: navMode,
     roleUserId: role.userId,
-    roleRole: role.role,
   });
 
-  if (role.eventId) {
-    params.set("roleEventId", role.eventId);
-  }
-
-  if (role.groupId) {
-    params.set("roleGroupId", role.groupId);
-  }
-
   return `/dashboard/manager?${params.toString()}`;
-}
-
-function matchesOperationalRoleParams(
-  role: OperationalUserRoleRow,
-  params: {
-    userId?: string;
-    role?: string;
-    eventId?: string;
-    groupId?: string;
-  }
-): boolean {
-  return (
-    role.userId === params.userId &&
-    role.role === params.role &&
-    (role.eventId ?? "") === (params.eventId ?? "") &&
-    (role.groupId ?? "") === (params.groupId ?? "")
-  );
 }
 
 function statisticsPath(
@@ -644,19 +619,26 @@ async function buildOperationalUserRows(
     ])
   );
   const identityByUserId = await getOperationalUserIdentities(supabase, userIds);
-  const rows: OperationalUserRoleRow[] = [
+  const assignments: Array<{
+    userId: string;
+    email: string | null;
+    fullName: string | null;
+    assignment: OperationalUserRoleAssignment;
+  }> = [
     ...eventRoleRows.map((row) => {
       const identity = identityByUserId.get(row.user_id);
       return {
         userId: row.user_id,
         email: identity?.email ?? null,
         fullName: identity?.fullName ?? null,
-        role: row.role,
-        isPrimaryGroupLeader: null,
-        eventId: row.event_id,
-        eventTitle: relatedOne(row.events)?.title ?? null,
-        groupId: null,
-        groupName: null,
+        assignment: {
+          role: row.role,
+          isPrimaryGroupLeader: null,
+          eventId: row.event_id,
+          eventTitle: relatedOne(row.events)?.title ?? null,
+          groupId: null,
+          groupName: null,
+        },
       };
     }),
     ...membershipRows.map((row) => {
@@ -666,19 +648,89 @@ async function buildOperationalUserRows(
         userId: row.user_id,
         email: identity?.email ?? null,
         fullName: identity?.fullName ?? null,
-        role: row.role,
-        isPrimaryGroupLeader: row.is_primary ?? false,
-        eventId: group?.event_id ?? null,
-        eventTitle: relatedOne(group?.events ?? null)?.title ?? null,
-        groupId: group?.id ?? row.group_id,
-        groupName: group?.name ?? null,
+        assignment: {
+          role: row.role,
+          isPrimaryGroupLeader: row.is_primary ?? false,
+          eventId: group?.event_id ?? null,
+          eventTitle: relatedOne(group?.events ?? null)?.title ?? null,
+          groupId: group?.id ?? row.group_id,
+          groupName: group?.name ?? null,
+        },
       };
     }),
   ];
 
-  return rows.sort((a, b) =>
+  return aggregateOperationalUserRows(assignments).sort((a, b) =>
     (a.fullName ?? a.email ?? "").localeCompare(b.fullName ?? b.email ?? "")
   );
+}
+
+function aggregateOperationalUserRows(
+  assignments: Array<{
+    userId: string;
+    email: string | null;
+    fullName: string | null;
+    assignment: OperationalUserRoleAssignment;
+  }>
+): OperationalUserRoleRow[] {
+  const rowsByKey = new Map<string, OperationalUserRoleRow>();
+
+  for (const item of assignments) {
+    const key = item.email ? `email:${item.email.toLowerCase()}` : `user:${item.userId}`;
+    const row =
+      rowsByKey.get(key) ??
+      {
+        userId: item.userId,
+        email: item.email,
+        fullName: item.fullName,
+        assignments: [],
+        eventRoles: [],
+        groupLeaderAssignments: [],
+      };
+
+    row.email ||= item.email;
+    row.fullName ||= item.fullName;
+    row.assignments.push(item.assignment);
+
+    if (item.assignment.role === "capogruppo") {
+      row.groupLeaderAssignments.push(item.assignment);
+    } else {
+      row.eventRoles.push(item.assignment);
+    }
+
+    rowsByKey.set(key, row);
+  }
+
+  return [...rowsByKey.values()].map((row) => ({
+    ...row,
+    assignments: deduplicateOperationalAssignments(row.assignments),
+    eventRoles: deduplicateOperationalAssignments(row.eventRoles),
+    groupLeaderAssignments: deduplicateOperationalAssignments(row.groupLeaderAssignments),
+  }));
+}
+
+function deduplicateOperationalAssignments(
+  assignments: OperationalUserRoleAssignment[]
+): OperationalUserRoleAssignment[] {
+  const seen = new Set<string>();
+
+  return assignments.filter((assignment) => {
+    const key = [
+      assignment.role,
+      assignment.eventId ?? "no-event",
+      assignment.groupId ?? "no-group",
+      assignment.isPrimaryGroupLeader === null
+        ? "no-primary-flag"
+        : String(assignment.isPrimaryGroupLeader),
+    ].join(":");
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
 }
 
 function StatisticsSection({
@@ -712,10 +764,9 @@ function StatisticsSection({
       <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h3 className="text-base font-semibold">Partecipanti per albero gruppi</h3>
+            <h3 className="text-base font-semibold">Partecipanti per territorio e gruppi</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-              I paesi e le città vengono risaliti dall&apos;assegnazione corrente
-              quando disponibile.
+              Scegli se leggere le iscrizioni per paese, città o gruppo assegnato.
             </p>
           </div>
           <div className="inline-flex w-fit rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-1">
@@ -1310,6 +1361,7 @@ function ManagerGroupTreeSection({
         {eventOptions.some((event) => canManageEvent(event.id)) ? (
           <Link
             href={`${managerPath("gruppi", navMode)}&groupTool=edit`}
+            scroll={false}
             className="inline-flex min-h-11 w-fit items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
           >
             Nuovo gruppo
@@ -1438,6 +1490,7 @@ function ManagerGroupTreeSection({
                       {canManage ? (
                         <Link
                           href={`${managerPath("gruppi", navMode)}&groupTool=edit&groupId=${group.id}`}
+                          scroll={false}
                           className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                         >
                           Modifica
@@ -1445,6 +1498,7 @@ function ManagerGroupTreeSection({
                       ) : null}
                       <Link
                         href={`${managerPath("gruppi", navMode)}&groupTool=links&groupId=${group.id}`}
+                        scroll={false}
                         className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                       >
                         Gestisci link
@@ -1452,6 +1506,7 @@ function ManagerGroupTreeSection({
                       {canManage ? (
                         <Link
                           href={`${managerPath("gruppi", navMode)}&groupTool=leaders&groupId=${group.id}`}
+                          scroll={false}
                           className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                         >
                           Capogruppo
@@ -1523,14 +1578,14 @@ function ManagerGroupEditOverlay({
   const selectedEventId = group?.eventId ?? eventOptions[0]?.id ?? "";
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+    <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="border-b border-[var(--peace-border)] px-5 py-4">
           <h3 className="text-xl font-semibold">
             {group ? "Modifica gruppo" : "Nuovo gruppo"}
           </h3>
         </div>
-        <form action={saveOperationsGroup} className="grid overflow-y-auto">
+        <form action={saveOperationsGroup} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           {group ? <input type="hidden" name="groupId" value={group.id} /> : null}
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
@@ -1543,10 +1598,13 @@ function ManagerGroupEditOverlay({
               Nome gruppo
               <input name="name" defaultValue={group?.name ?? ""} className="field" required />
             </label>
-            <GroupPrimaryLeaderFields group={group} leaders={leaders} />
+            <GroupPrimaryLeaderFields
+              group={group}
+              leaders={operationalRowsForGroupEdit(leaders)}
+            />
           </div>
           <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
-            <Link href={managerPath("gruppi", navMode)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+            <Link href={managerPath("gruppi", navMode)} scroll={false} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
               Annulla
             </Link>
             <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
@@ -1573,7 +1631,7 @@ function ManagerGroupLinksOverlay({
   navMode: ManagerNavMode;
 }) {
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+    <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
           <div>
@@ -1582,6 +1640,7 @@ function ManagerGroupLinksOverlay({
           </div>
           <Link
             href={managerPath("gruppi", navMode)}
+            scroll={false}
             className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label="Chiudi modale link gruppo"
           >
@@ -1592,7 +1651,7 @@ function ManagerGroupLinksOverlay({
           <AutoCopyLinkNotice url={createdUrl} />
 
           {canManage ? (
-            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
               <input type="hidden" name="sourceDashboard" value="manager" />
               <input type="hidden" name="groupId" value={group.id} />
               <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
@@ -1640,7 +1699,7 @@ function ManagerGroupLinksOverlay({
                 <div className="flex flex-wrap gap-2 sm:justify-end">
                   {link.url ? <CopyLinkButton url={link.url} /> : null}
                   {canManage ? (
-                    <form action={revokeGroupRegistrationLink}>
+                    <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
                       <input type="hidden" name="sourceDashboard" value="manager" />
                       <input type="hidden" name="linkId" value={link.id} />
                       <PendingSubmitButton className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
@@ -1675,7 +1734,7 @@ function ManagerGroupLeaderOverlay({
   const participantOptions = participants.filter((participant) => participant.email);
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+    <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
           <div>
@@ -1684,6 +1743,7 @@ function ManagerGroupLeaderOverlay({
           </div>
           <Link
             href={managerPath("gruppi", navMode)}
+            scroll={false}
             className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label="Chiudi modale capogruppo"
           >
@@ -1694,7 +1754,7 @@ function ManagerGroupLeaderOverlay({
           {canManage ? (
             <GroupLeaderModeTabs
               existingForm={
-                <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
                   <input type="hidden" name="sourceDashboard" value="manager" />
                   <input type="hidden" name="groupId" value={group.id} />
                   <input type="hidden" name="mode" value="existing" />
@@ -1716,7 +1776,7 @@ function ManagerGroupLeaderOverlay({
                 </form>
               }
               newForm={
-                <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4">
+              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4" data-preserve-dashboard-scroll>
                   <input type="hidden" name="sourceDashboard" value="manager" />
                   <input type="hidden" name="groupId" value={group.id} />
                   <input type="hidden" name="mode" value="new" />
@@ -1774,7 +1834,7 @@ function ManagerParticipantsSection({
         <div>
           <h2 className="text-lg font-semibold">Gestione iscritti</h2>
           <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
-            Ultime iscrizioni nello scope manager, fino a 200 risultati recenti.
+            Ultime iscrizioni visibili al manager, fino a 200 risultati recenti.
           </p>
         </div>
         {activeEventId ? (
@@ -1940,6 +2000,7 @@ function ManagerParticipantsSection({
                       {canManage ? (
                         <Link
                           href={`${managerPath("iscritti", navMode)}&edit=${participant.registrationId}`}
+                          scroll={false}
                           className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                         >
                           Dettagli
@@ -2048,7 +2109,7 @@ function ManagerOperationalUsersSection({
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">Utente</th>
                 <th className="py-3 pr-4 font-semibold">Ruolo</th>
-                <th className="py-3 pr-4 font-semibold">Scope</th>
+                <th className="py-3 pr-4 font-semibold">Responsabilità</th>
                 <th className="py-3 pr-4 font-semibold">Stato iscrizione</th>
                 <th className="py-3 font-semibold">
                   <span className="sr-only">Azioni</span>
@@ -2057,14 +2118,14 @@ function ManagerOperationalUsersSection({
             </thead>
             <tbody>
               {roles.map((row) => (
-                <tr key={`${row.userId}-${row.role}-${row.eventId ?? row.groupId ?? "global"}`} className="border-b border-[var(--peace-border)] align-top last:border-b-0">
+                <tr key={operationalRoleRowKey(row)} className="border-b border-[var(--peace-border)] align-top last:border-b-0">
                   <td className="py-4 pr-4">
                     <p className="font-semibold">{row.fullName ?? row.email ?? "Utente senza profilo"}</p>
                     <p className="mt-1 text-xs text-[var(--peace-muted)]">{row.email ?? row.userId}</p>
                   </td>
-                  <td className="py-4 pr-4">{roleLabel(row.role, row.isPrimaryGroupLeader)}</td>
+                  <td className="py-4 pr-4">{operationalRoleSummary(row)}</td>
                   <td className="py-4 pr-4 text-[var(--peace-muted)]">
-                    {row.groupName ?? row.eventTitle ?? "Globale"}
+                    <OperationalResponsibilityList row={row} />
                   </td>
                   <td className="py-4 pr-4 text-[var(--peace-muted)]">
                     Accesso operativo attivo; iscrizione personale separata.
@@ -2073,23 +2134,13 @@ function ManagerOperationalUsersSection({
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         href={managerRoleEditPath(row, navMode)}
+                        scroll={false}
                         aria-label={`Modifica ${row.fullName ?? row.email ?? "utente operativo"}`}
                         title={`Modifica ${row.fullName ?? row.email ?? "utente operativo"}`}
                         className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)] focus:outline-none focus:ring-2 focus:ring-[var(--peace-sky-300)]"
                       >
                         <Pencil className="size-4" aria-hidden="true" />
                       </Link>
-                      <form action={deleteOperationalUserRole}>
-                        <input type="hidden" name="sourceDashboard" value="manager" />
-                        <input type="hidden" name="nav" value={navMode} />
-                        <input type="hidden" name="userId" value={row.userId} />
-                        <input type="hidden" name="role" value={row.role} />
-                        <input type="hidden" name="eventId" value={row.eventId ?? ""} />
-                        <input type="hidden" name="groupId" value={row.groupId ?? ""} />
-                        <OperationalRoleDeleteButton
-                          label={`Elimina ${row.fullName ?? row.email ?? "utente operativo"}`}
-                        />
-                      </form>
                     </div>
                   </td>
                 </tr>
@@ -2126,19 +2177,21 @@ function ManagerOperationalRoleEditOverlay({
   navMode: ManagerNavMode;
 }) {
   const nameParts = splitFullName(role.fullName);
+  const currentAssignment = preferredOperationalAssignment(role);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(16,36,64,0.42)] px-4 py-8">
+    <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[rgba(16,36,64,0.42)] px-4 py-8">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold">Modifica utente operativo</h3>
             <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Aggiorna dati, ruolo e scope della persona selezionata.
+              Aggiorna dati, ruolo e responsabilità della persona selezionata.
             </p>
           </div>
           <Link
             href={`/dashboard/manager?section=ruoli&nav=${navMode}`}
+            scroll={false}
             aria-label="Chiudi"
             className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--peace-border)] text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
           >
@@ -2146,13 +2199,13 @@ function ManagerOperationalRoleEditOverlay({
           </Link>
         </div>
 
-        <form action={updateOperationalUserRole} className="mt-5 grid gap-4">
+        <form action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="nav" value={navMode} />
           <input type="hidden" name="currentUserId" value={role.userId} />
-          <input type="hidden" name="currentRole" value={role.role} />
-          <input type="hidden" name="currentEventId" value={role.eventId ?? ""} />
-          <input type="hidden" name="currentGroupId" value={role.groupId ?? ""} />
+          <input type="hidden" name="currentRole" value={preferredOperationalRole(role)} />
+          <input type="hidden" name="currentEventId" value={currentAssignment?.eventId ?? ""} />
+          <input type="hidden" name="currentGroupId" value={currentAssignment?.groupId ?? ""} />
           <div className="grid gap-3 lg:grid-cols-3">
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
               Nome
@@ -2179,6 +2232,7 @@ function ManagerOperationalRoleEditOverlay({
                 type="email"
                 className="field bg-white font-normal"
                 defaultValue={role.email ?? ""}
+                readOnly
                 required
               />
             </label>
@@ -2196,14 +2250,22 @@ function ManagerOperationalRoleEditOverlay({
               { value: "manager_viewer", label: "Manager viewer" },
               { value: "accoglienza", label: "Accoglienza" },
             ]}
-            defaultRole={role.role}
-            defaultEventId={role.eventId}
-            defaultGroupId={role.groupId}
-            defaultLeaderKind={role.isPrimaryGroupLeader ? "primary" : "secondary"}
+            defaultRole={preferredOperationalRole(role)}
+            defaultEventId={role.eventRoles[0]?.eventId ?? role.groupLeaderAssignments[0]?.eventId}
+            defaultGroupIds={role.groupLeaderAssignments
+              .map((assignment) => assignment.groupId)
+              .filter((groupId): groupId is string => Boolean(groupId))}
+            defaultLeaderKind={role.groupLeaderAssignments.some(
+              (assignment) => assignment.isPrimaryGroupLeader
+            )
+              ? "primary"
+              : "secondary"}
+            allowMultipleGroupLeaders
           />
           <div className="flex flex-wrap justify-end gap-3">
             <Link
               href={`/dashboard/manager?section=ruoli&nav=${navMode}`}
+              scroll={false}
               className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-ink)] transition hover:bg-[var(--peace-sky-100)]"
             >
               Annulla
@@ -2249,7 +2311,7 @@ function ManagerParticipantEditOverlay({
         ];
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+    <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="border-b border-[var(--peace-border)] px-5 py-4">
           <div>
@@ -2287,6 +2349,7 @@ function ManagerParticipantEditOverlay({
                 action="/dashboard/admin/participants/update"
                 method="post"
                 className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+                data-preserve-dashboard-scroll
               >
                 <input type="hidden" name="sourceDashboard" value="manager" />
                 <input type="hidden" name="registrationId" value={participant.registrationId} />
@@ -2315,6 +2378,7 @@ function ManagerParticipantEditOverlay({
               <form
                 action={updateParticipantOperationalTags}
                 className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+                data-preserve-dashboard-scroll
               >
                 <input type="hidden" name="sourceDashboard" value="manager" />
                 <input type="hidden" name="nav" value={navMode} />
@@ -2342,6 +2406,7 @@ function ManagerParticipantEditOverlay({
         <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
           <Link
             href={managerPath("iscritti", navMode)}
+            scroll={false}
             className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             Chiudi
@@ -2349,6 +2414,7 @@ function ManagerParticipantEditOverlay({
           {!isEditing ? (
             <Link
               href={`${managerPath("iscritti", navMode)}&edit=${participant.registrationId}&editMode=1`}
+              scroll={false}
               className="inline-flex min-h-11 items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
             >
               Modifica gruppo
@@ -2412,6 +2478,7 @@ function StatusMessage({
     "missing-event": "Seleziona un evento per questo ruolo.",
     "missing-group": "Seleziona un gruppo per il ruolo capogruppo.",
     "auth-user": "Non è stato possibile creare o recuperare l'utente.",
+    "email-taken": "Questa email è già associata a un altro utente operativo.",
     "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
     "duplicate-tag": "Esiste già un tag con questo nome per l'evento corrente.",
@@ -2746,6 +2813,106 @@ function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string 
     default:
       return role;
   }
+}
+
+function operationalRoleRowKey(row: OperationalUserRoleRow): string {
+  return row.email ? `email:${row.email.toLowerCase()}` : `user:${row.userId}`;
+}
+
+function preferredOperationalRole(row: OperationalUserRoleRow): string {
+  return row.groupLeaderAssignments.length > 0
+    ? "capogruppo"
+    : (row.eventRoles[0]?.role ?? row.assignments[0]?.role ?? "manager");
+}
+
+function preferredOperationalAssignment(
+  row: OperationalUserRoleRow
+): OperationalUserRoleAssignment | null {
+  return row.groupLeaderAssignments[0] ?? row.eventRoles[0] ?? row.assignments[0] ?? null;
+}
+
+function operationalRoleSummary(row: OperationalUserRoleRow): string {
+  const labels = new Set<string>();
+
+  for (const assignment of row.eventRoles) {
+    labels.add(roleLabel(assignment.role));
+  }
+
+  if (row.groupLeaderAssignments.length > 0) {
+    const hasPrimary = row.groupLeaderAssignments.some(
+      (assignment) => assignment.isPrimaryGroupLeader
+    );
+    const hasSecondary = row.groupLeaderAssignments.some(
+      (assignment) => !assignment.isPrimaryGroupLeader
+    );
+
+    labels.add(
+      hasPrimary && hasSecondary
+        ? "Capogruppo principale e secondario"
+        : hasPrimary
+          ? "Capogruppo principale"
+          : "Capogruppo secondario"
+    );
+  }
+
+  return [...labels].join(", ") || "Ruolo non indicato";
+}
+
+function OperationalResponsibilityList({ row }: { row: OperationalUserRoleRow }) {
+  const eventLabels = Array.from(
+    new Set(
+      row.eventRoles.map((assignment) =>
+        assignment.role === "admin"
+          ? "Globale"
+          : (assignment.eventTitle ?? "Evento corrente")
+      )
+    )
+  );
+  const primaryGroups = groupNamesForLeaderKind(row, true);
+  const secondaryGroups = groupNamesForLeaderKind(row, false);
+
+  return (
+    <div className="grid gap-1">
+      {eventLabels.map((label) => (
+        <p key={`event-${label}`}>{label}</p>
+      ))}
+      {primaryGroups.length > 0 ? (
+        <p>Capogruppo principale: {primaryGroups.join(", ")}</p>
+      ) : null}
+      {secondaryGroups.length > 0 ? (
+        <p>Capogruppo secondario: {secondaryGroups.join(", ")}</p>
+      ) : null}
+      {eventLabels.length === 0 && primaryGroups.length === 0 && secondaryGroups.length === 0 ? (
+        <p>Responsabilità non indicata</p>
+      ) : null}
+    </div>
+  );
+}
+
+function groupNamesForLeaderKind(
+  row: OperationalUserRoleRow,
+  isPrimary: boolean
+): string[] {
+  return row.groupLeaderAssignments
+    .filter((assignment) => Boolean(assignment.isPrimaryGroupLeader) === isPrimary)
+    .map((assignment) => assignment.groupName ?? "Gruppo senza nome");
+}
+
+function operationalRowsForGroupEdit(
+  rows: OperationalUserRoleRow[]
+): GroupEditLeaderRow[] {
+  return rows
+    .filter((row) => row.assignments.some((assignment) => assignment.role === "capogruppo"))
+    .map((row) => ({
+      userId: row.userId,
+      email: row.email,
+      fullName: row.fullName,
+      role: "capogruppo",
+      eventId:
+        row.groupLeaderAssignments[0]?.eventId ??
+        row.eventRoles[0]?.eventId ??
+        null,
+    }));
 }
 
 function groupLinkStatusLabel(link: ManagerGroupRegistrationLink): string {

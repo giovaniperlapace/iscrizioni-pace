@@ -27,7 +27,9 @@ type OperationalRoleFieldsProps = {
   defaultRole?: string | null;
   defaultEventId?: string | null;
   defaultGroupId?: string | null;
+  defaultGroupIds?: string[];
   defaultLeaderKind?: "primary" | "secondary" | null;
+  allowMultipleGroupLeaders?: boolean;
   showInviteOption?: boolean;
 };
 
@@ -40,7 +42,9 @@ export function OperationalRoleFields({
   defaultRole: defaultRoleProp,
   defaultEventId,
   defaultGroupId,
+  defaultGroupIds,
   defaultLeaderKind,
+  allowMultipleGroupLeaders = false,
   showInviteOption = false,
 }: OperationalRoleFieldsProps) {
   const defaultRole =
@@ -50,6 +54,12 @@ export function OperationalRoleFields({
   const [role, setRole] = useState(defaultRole);
   const isGroupLeader = role === "capogruppo";
   const isEventScopedRole = EVENT_SCOPED_ROLES.has(role);
+  const selectedGroupIds =
+    defaultGroupIds && defaultGroupIds.length > 0
+      ? defaultGroupIds
+      : defaultGroupId
+        ? [defaultGroupId]
+        : [];
 
   return (
     <div className="grid gap-3">
@@ -77,7 +87,36 @@ export function OperationalRoleFields({
             value={defaultEventId ?? eventOptions[0]?.id ?? ""}
           />
         ) : null}
-        {isGroupLeader ? (
+        {isGroupLeader && allowMultipleGroupLeaders ? (
+          <>
+            <fieldset className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
+              <legend>Gruppi da seguire</legend>
+              <div className="grid max-h-64 gap-2 overflow-y-auto rounded-md border border-[var(--peace-border-strong)] bg-white p-3">
+                {groupOptions.map((group) => (
+                  <label
+                    key={group.id}
+                    className="flex items-start gap-2 rounded border border-transparent p-2 text-sm font-normal transition hover:border-[var(--peace-border)] hover:bg-[#f7fbfe]"
+                  >
+                    <input
+                      name="groupIds"
+                      type="checkbox"
+                      value={group.id}
+                      defaultChecked={selectedGroupIds.includes(group.id)}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="font-semibold text-[var(--peace-ink)]">{group.name}</span>
+                      <span className="block text-xs text-[var(--peace-muted)]">
+                        {group.eventTitle}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <GroupLeaderKindField defaultValue={defaultLeaderKind ?? undefined} />
+          </>
+        ) : isGroupLeader ? (
           <>
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
               Gruppo per capogruppo
