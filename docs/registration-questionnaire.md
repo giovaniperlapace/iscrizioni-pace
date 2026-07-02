@@ -21,13 +21,16 @@ manutenzione futura, non per sostituire lo schema relazionale principale.
 | Disabilità o bisogni di accessibilità | Sì | sensibile | `accessibility_needs.washington_group_answers` | partecipante, manager, admin | Sì |
 | Dettagli accessibilità | Solo se accessibilità = Sì | sensibile | `accessibility_needs` | partecipante, manager, admin | Sì |
 | Partecipazione precedente Sant'Egidio nella propria città | Sì | operativo | `participants.has_previous_santegidio_participation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
+| Gruppo o associazione esterna | No, solo se partecipazione precedente Sant'Egidio = No | operativo | snapshot `registration_questionnaire_answers.answers.externalGroupAssociation` | partecipante, manager, manager_viewer, admin | Sì |
 | Partecipazione con gruppo/referente | Solo se partecipazione precedente = Sì | operativo | `participants.participates_with_group`, `participant_group_assignments`, snapshot `groupParticipation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
-| Giorni di presenza previsti | Sì | operativo | `event_attendance_choices` e snapshot questionario | partecipante, capogruppo, manager, manager_viewer, admin, accoglienza | Sì |
+| Fasce di presenza previste | Sì | operativo | `event_attendance_choices.day` + `day_part` e snapshot questionario | partecipante, capogruppo, manager, manager_viewer, admin, accoglienza | Sì |
 | Privacy e consenso trattamento dati | Sì | legale | `participant_consents` | partecipante, manager, admin | No |
 
-Lingua preferita, programma e momenti evento non sono più richiesti in questa
-prima iscrizione. Restano supportati dal modello dati per dashboard o passaggi
-successivi.
+La lingua preferita non viene più raccolta nei flussi di iscrizione o modifica
+partecipante. Il modello dati conserva un valore tecnico di default per
+compatibilità con lo schema esistente. Programma e momenti evento non sono
+richiesti in questa prima iscrizione e restano supportati per dashboard o
+passaggi successivi.
 
 Tutti i campi visibili della prima iscrizione sono obbligatori, tranne il
 telefono. Il telefono può restare vuoto; se compilato, il form richiede un
@@ -55,11 +58,11 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 - Se partecipazione precedente Sant'Egidio = Sì ma parteciperà senza gruppo,
   l'app crea comunque un'assegnazione probabile a un nodo/referente coerente
   con territorio ed età.
-- Prima della privacy viene chiesto in quali giorni dell'evento la persona sarà
-  presente. I giorni sono generati da `events.starts_on` e `events.ends_on`, così
-  cambiano automaticamente per eventi futuri di 2, 3, 4 o più giorni. In
+- Prima della privacy viene chiesto in quali fasce la persona sarà presente:
+  pomeriggio del giorno precedente l'inizio evento, poi mattina e pomeriggio
+  per ogni giorno compreso tra `events.starts_on` e `events.ends_on`. In
   alternativa può scegliere `Non lo so ancora, lo comunicherò in seguito`; in
-  quel caso i singoli giorni non sono selezionabili.
+  quel caso le singole fasce non sono selezionabili.
 
 ## Paesi e città
 

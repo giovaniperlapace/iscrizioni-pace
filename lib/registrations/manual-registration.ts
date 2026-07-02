@@ -1,7 +1,6 @@
 import {
   DEFAULT_LOCALE,
   type SupportedLocale,
-  normalizeLocale,
 } from "../i18n/config.ts";
 
 import {
@@ -10,6 +9,11 @@ import {
   optionalUuid,
   type ValidationResult,
 } from "./validation.ts";
+import {
+  attendanceSlotKey,
+  parseAttendanceSlot,
+  type AttendanceSlot,
+} from "./attendance-slots.ts";
 
 export type ManualRegistrationInput = {
   groupId: string;
@@ -19,7 +23,7 @@ export type ManualRegistrationInput = {
   phone: string | null;
   birthDate: string | null;
   preferredLocale: SupportedLocale;
-  availabilityDays: string[];
+  availabilitySlots: AttendanceSlot[];
   availabilityUnknown: boolean;
   hasAccessibilityNeeds: boolean | null;
   accessibilityAnswers: Record<string, boolean>;
@@ -42,10 +46,9 @@ export function parseManualRegistrationForm(
     email: email.length > 0 ? email : null,
     phone: normalizePhone(formData.get("phone")),
     birthDate: optionalDate(formData.get("birthDate")),
-    preferredLocale:
-      normalizeLocale(String(formData.get("preferredLocale") ?? "")) ?? DEFAULT_LOCALE,
+    preferredLocale: DEFAULT_LOCALE,
     availabilityUnknown: formData.get("availabilityUnknown") === "on",
-    availabilityDays: parseAvailabilityDays(formData),
+    availabilitySlots: parseAvailabilitySlots(formData),
     hasAccessibilityNeeds: parseBooleanChoice(formData.get("hasAccessibilityNeeds")),
     accessibilityAnswers: parseAccessibilityAnswers(formData),
     accessibilityNotes: optionalText(formData.get("accessibilityNotes")),
@@ -83,7 +86,7 @@ export function validateManualRegistrationInput(
     errors.push("Inserisci un telefono valido con prefisso internazionale.");
   }
 
-  if (!input.availabilityUnknown && input.availabilityDays.length === 0) {
+  if (!input.availabilityUnknown && input.availabilitySlots.length === 0) {
     errors.push(
       "Seleziona almeno un giorno di presenza o indica che sarà confermato più avanti."
     );
@@ -106,7 +109,6 @@ export function buildManualRegistrationQuestionnaireAnswers(
       firstName: input.firstName,
       lastName: input.lastName,
       birthDate: input.birthDate,
-      preferredLocale: input.preferredLocale,
     },
     contact: {
       hasEmail: Boolean(input.email),
@@ -122,7 +124,8 @@ export function buildManualRegistrationQuestionnaireAnswers(
     attendance: {
       overallChoice: input.availabilityUnknown ? "unknown" : "yes",
       availabilityUnknown: input.availabilityUnknown,
-      availabilityDays: input.availabilityDays,
+      availabilitySlots: input.availabilitySlots,
+      availabilityDays: [...new Set(input.availabilitySlots.map((slot) => slot.day))],
     },
     accessibility: {
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
@@ -158,15 +161,33 @@ function optionalDate(value: FormDataEntryValue | null): string | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }
 
-function parseAvailabilityDays(formData: FormData): string[] {
+function parseAvailabilitySlots(formData: FormData): AttendanceSlot[] {
   if (formData.get("availabilityUnknown") === "on") {
     return [];
   }
 
-  return formData
-    .getAll("availabilityDays")
-    .map((value) => String(value))
-    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+  const slots = new Map<string, AttendanceSlot>();
+
+  for (const rawValue of formData.getAll("availabilitySlots")) {
+    const slot = parseAttendanceSlot(String(rawValue));
+
+    if (slot) {
+      slots.set(attendanceSlotKey(slot), slot);
+    }
+  }
+
+  for (const rawValue of formData.getAll("availabilityDays")) {
+    const day = String(rawValue);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      for (const part of ["morning", "afternoon"] as const) {
+        const slot = { day, part };
+        slots.set(attendanceSlotKey(slot), slot);
+      }
+    }
+  }
+
+  return [...slots.values()];
 }
 
 function parseBooleanChoice(value: FormDataEntryValue | null): boolean | null {

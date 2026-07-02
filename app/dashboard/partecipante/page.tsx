@@ -5,16 +5,20 @@ import { updateParticipantDashboard } from "@/app/actions";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getCurrentAuthContext } from "@/lib/auth/session";
-import {
-  LANGUAGE_OPTIONS,
-  type SupportedLocale,
-  normalizeLocale,
-} from "@/lib/i18n/config";
+import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
 import { renderQrDataUrl } from "@/lib/qrcode/render";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
 import { canParticipantEditRegistration } from "@/lib/registrations/participant-dashboard";
+import {
+  ATTENDANCE_PARTS,
+  buildAttendanceDayColumns,
+  encodeAttendanceSlot,
+  attendanceSlotKey,
+  type AttendancePart,
+  type AttendanceSlot,
+} from "@/lib/registrations/attendance-slots";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -50,7 +54,6 @@ type ParticipantRow = {
   first_name: string;
   last_name: string;
   birth_date: string | null;
-  preferred_locale: string | null;
   country_other: string | null;
   city_other: string | null;
   has_previous_santegidio_participation: boolean | null;
@@ -75,6 +78,7 @@ type AccessibilityRow = {
 
 type AttendanceRow = {
   day: string | null;
+  day_part: "morning" | "afternoon" | null;
   choice: "yes" | "no" | "unknown";
 };
 
@@ -142,7 +146,6 @@ type ParticipantDashboardCopy = {
   registrationSummaryBody: (eventTitle: string, dateRange: string) => string;
   submittedAt: string;
   phone: string;
-  preferredLanguage: string;
   birthDate: string;
   birthPlace: string;
   nationality: string;
@@ -213,7 +216,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       `Questo è il riepilogo della tua iscrizione per ${eventTitle}, che si terrà nei giorni ${dateRange}.`,
     submittedAt: "Iscrizione effettuata il",
     phone: "Telefono",
-    preferredLanguage: "Lingua preferita",
     birthDate: "Data di nascita",
     birthPlace: "Luogo di nascita",
     nationality: "Nazionalità",
@@ -286,7 +288,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       `This is the summary of your registration for ${eventTitle}, taking place on ${dateRange}.`,
     submittedAt: "Registration submitted on",
     phone: "Phone",
-    preferredLanguage: "Preferred language",
     birthDate: "Date of birth",
     birthPlace: "Place of birth",
     nationality: "Nationality",
@@ -359,7 +360,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       `Voici le résumé de ton inscription à ${eventTitle}, qui aura lieu ${dateRange}.`,
     submittedAt: "Inscription effectuée le",
     phone: "Téléphone",
-    preferredLanguage: "Langue préférée",
     birthDate: "Date de naissance",
     birthPlace: "Lieu de naissance",
     nationality: "Nationalité",
@@ -432,7 +432,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       `Dies ist die Übersicht deiner Anmeldung für ${eventTitle}, die ${dateRange} stattfindet.`,
     submittedAt: "Anmeldung eingereicht am",
     phone: "Telefon",
-    preferredLanguage: "Bevorzugte Sprache",
     birthDate: "Geburtsdatum",
     birthPlace: "Geburtsort",
     nationality: "Staatsangehörigkeit",
@@ -505,7 +504,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       `Este es el resumen de tu inscripción para ${eventTitle}, que tendrá lugar ${dateRange}.`,
     submittedAt: "Inscripción realizada el",
     phone: "Teléfono",
-    preferredLanguage: "Idioma preferido",
     birthDate: "Fecha de nacimiento",
     birthPlace: "Lugar de nacimiento",
     nationality: "Nacionalidad",
@@ -578,7 +576,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       `Dit is het overzicht van je inschrijving voor ${eventTitle}, dat plaatsvindt ${dateRange}.`,
     submittedAt: "Inschrijving ingediend op",
     phone: "Telefoon",
-    preferredLanguage: "Voorkeurstaal",
     birthDate: "Geboortedatum",
     birthPlace: "Geboorteplaats",
     nationality: "Nationaliteit",
@@ -651,7 +648,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
       `Це підсумок вашої реєстрації на ${eventTitle}, що відбудеться ${dateRange}.`,
     submittedAt: "Реєстрацію подано",
     phone: "Телефон",
-    preferredLanguage: "Бажана мова",
     birthDate: "Дата народження",
     birthPlace: "Місце народження",
     nationality: "Громадянство",
@@ -712,7 +708,7 @@ export default async function PartecipanteDashboardPage({
   const { data: registrationData } = await supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events!inner(id,title,slug,city,country,starts_on,ends_on,registration_closes_at,is_current),participants!inner(auth_user_id,first_name,last_name,birth_date,preferred_locale,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
+      "id,event_id,participant_id,status,submitted_at,events!inner(id,title,slug,city,country,starts_on,ends_on,registration_closes_at,is_current),participants!inner(auth_user_id,first_name,last_name,birth_date,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
     )
     .eq("events.is_current", true)
     .order("submitted_at", { ascending: false });
@@ -753,7 +749,7 @@ export default async function PartecipanteDashboardPage({
           .maybeSingle(),
         supabase
           .from("event_attendance_choices")
-          .select("day,choice")
+          .select("day,day_part,choice")
           .eq("registration_id", registrationId)
           .order("day"),
         supabase
@@ -807,11 +803,23 @@ export default async function PartecipanteDashboardPage({
       status: selectedRegistration.status,
       events: event,
     });
-  const eventDays = buildEventDays(event?.starts_on ?? null, event?.ends_on ?? null);
-  const selectedDays = new Set(
-    attendanceChoices
-      .filter((choice) => choice.choice === "yes" && choice.day)
-      .map((choice) => choice.day as string)
+  const attendanceDayColumns = buildAttendanceDayColumns(
+    event?.starts_on ?? null,
+    event?.ends_on ?? null,
+    locale
+  );
+  const selectedAttendanceSlots = attendanceChoices
+    .filter((choice) => choice.choice === "yes" && choice.day)
+    .flatMap((choice) =>
+      choice.day_part
+        ? [{ day: choice.day as string, part: choice.day_part }]
+        : (["morning", "afternoon"] as const).map((part) => ({
+            day: choice.day as string,
+            part,
+          }))
+    );
+  const selectedAttendanceSlotKeys = new Set(
+    selectedAttendanceSlots.map(attendanceSlotKey)
   );
   const availabilityUnknown =
     attendanceChoices.length === 0 ||
@@ -828,10 +836,11 @@ export default async function PartecipanteDashboardPage({
     sensitiveNeedCount > 0;
   const attendanceSummary = availabilityUnknown
     ? copy.attendanceUnknownSummary
-    : eventDays
-        .filter((day) => selectedDays.has(day))
-        .map((day) => formatDate(day, locale, copy))
-        .join(", ") || copy.notProvided;
+    : formatAttendanceSlotSummary(
+        attendanceDayColumns,
+        selectedAttendanceSlotKeys,
+        locale
+      ) || copy.notProvided;
   const selectedPanels = moments.filter(
     (moment) => momentChoiceById.get(moment.id) === "yes"
   );
@@ -1042,12 +1051,9 @@ export default async function PartecipanteDashboardPage({
                             <BaseDashboardFields
                               registrationId={selectedRegistration.id}
                             />
-                            <PreserveLocale
-                              value={participant.preferred_locale ?? "it"}
-                            />
                             <PreserveAttendance
                               availabilityUnknown={availabilityUnknown}
-                              selectedDays={[...selectedDays]}
+                              selectedSlots={selectedAttendanceSlots}
                             />
                             <PreserveMoments momentChoices={momentChoices} />
                             <Field label={copy.phone}>
@@ -1058,41 +1064,6 @@ export default async function PartecipanteDashboardPage({
                                 placeholder="+3906000000"
                                 autoComplete="tel"
                               />
-                            </Field>
-                            <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                          </form>
-                        </EditableInfo>
-                        <EditableInfo
-                          label={copy.preferredLanguage}
-                          value={formatLanguageName(participant.preferred_locale)}
-                          editable={Boolean(editable)}
-                          copy={copy}
-                        >
-                          <form
-                            action={updateParticipantDashboard}
-                            className="grid gap-3"
-                          >
-                            <BaseDashboardFields
-                              registrationId={selectedRegistration.id}
-                            />
-                            <PreservePhone value={primaryContact?.phone ?? null} />
-                            <PreserveAttendance
-                              availabilityUnknown={availabilityUnknown}
-                              selectedDays={[...selectedDays]}
-                            />
-                            <PreserveMoments momentChoices={momentChoices} />
-                            <Field label={copy.preferredLanguage}>
-                              <select
-                                name="preferredLocale"
-                                className="field"
-                                defaultValue={participant.preferred_locale ?? "it"}
-                              >
-                                {LANGUAGE_OPTIONS.map((option) => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.nativeLabel}
-                                  </option>
-                                ))}
-                              </select>
                             </Field>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                           </form>
@@ -1125,9 +1096,6 @@ export default async function PartecipanteDashboardPage({
                             registrationId={selectedRegistration.id}
                           />
                           <PreservePhone value={primaryContact?.phone ?? null} />
-                          <PreserveLocale
-                            value={participant.preferred_locale ?? "it"}
-                          />
                           <PreserveMoments momentChoices={momentChoices} />
                           <fieldset
                             disabled={!editable}
@@ -1144,23 +1112,11 @@ export default async function PartecipanteDashboardPage({
                                 {copy.attendanceUnknown}
                               </span>
                             </label>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                              {eventDays.map((day) => (
-                                <label
-                                  key={day}
-                                  className="flex gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    name="availabilityDays"
-                                    value={day}
-                                    defaultChecked={selectedDays.has(day)}
-                                    className="mt-1"
-                                  />
-                                  <span>{formatDate(day, locale, copy)}</span>
-                                </label>
-                              ))}
-                            </div>
+                            <AttendanceSlotTable
+                              columns={attendanceDayColumns}
+                              selectedSlots={selectedAttendanceSlotKeys}
+                              locale={locale}
+                            />
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                         </form>
@@ -1184,12 +1140,9 @@ export default async function PartecipanteDashboardPage({
                             registrationId={selectedRegistration.id}
                           />
                           <PreservePhone value={primaryContact?.phone ?? null} />
-                          <PreserveLocale
-                            value={participant.preferred_locale ?? "it"}
-                          />
                           <PreserveAttendance
                             availabilityUnknown={availabilityUnknown}
-                            selectedDays={[...selectedDays]}
+                            selectedSlots={selectedAttendanceSlots}
                           />
                           <PreserveMoments momentChoices={momentChoices} />
                           <input
@@ -1388,36 +1341,95 @@ function BaseDashboardFields({ registrationId }: { registrationId: string }) {
   return <input type="hidden" name="registrationId" value={registrationId} />;
 }
 
-function formatLanguageName(value: string | null): string {
-  const locale = normalizeLocale(value) ?? "en";
-  return (
-    LANGUAGE_OPTIONS.find((option) => option.value === locale)?.nativeLabel ??
-    "English"
-  );
-}
-
 function PreservePhone({ value }: { value: string | null }) {
   return value ? <input type="hidden" name="phone" value={value} /> : null;
 }
 
-function PreserveLocale({ value }: { value: string | null }) {
-  const locale = normalizeLocale(value) ?? "en";
+function AttendanceSlotTable({
+  columns,
+  selectedSlots,
+  locale,
+}: {
+  columns: ReturnType<typeof buildAttendanceDayColumns>;
+  selectedSlots: Set<string>;
+  locale: SupportedLocale;
+}) {
+  if (columns.length === 0) {
+    return null;
+  }
+
+  const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${columns.length}, minmax(5.5rem, 1fr))`;
 
   return (
-    <input
-      type="hidden"
-      name="preferredLocale"
-      value={locale}
-    />
+    <div className="overflow-hidden rounded-lg border border-[var(--peace-border)]">
+      <div
+        className="grid bg-[#f7fbfe] text-center text-xs font-semibold uppercase text-[var(--peace-muted)]"
+        style={{ gridTemplateColumns }}
+      >
+        <div className="border-r border-[var(--peace-border)] px-3 py-3 text-left">
+          Fascia
+        </div>
+        {columns.map((column) => (
+          <div
+            key={column.day}
+            className="border-r border-[var(--peace-border)] px-3 py-3 last:border-r-0"
+          >
+            {column.label}
+          </div>
+        ))}
+      </div>
+      {ATTENDANCE_PARTS.map((part) => (
+        <div
+          key={part.value}
+          className="grid border-t border-[var(--peace-border)]"
+          style={{ gridTemplateColumns }}
+        >
+          <div className="border-r border-[var(--peace-border)] bg-[#fbfdff] px-3 py-3 text-sm font-medium text-[var(--peace-ink)]">
+            {part.label[locale] ?? part.label.en}
+          </div>
+          {columns.map((column) => {
+            const slotAvailable = column.parts.includes(part.value);
+            const slotValue = encodeAttendanceSlot({
+              day: column.day,
+              part: part.value as AttendancePart,
+            });
+
+            return (
+              <label
+                key={`${column.day}-${part.value}`}
+                className={`flex min-h-14 items-center justify-center border-r border-[var(--peace-border)] px-3 py-2 last:border-r-0 ${
+                  slotAvailable
+                    ? "bg-white text-[var(--peace-ink)]"
+                    : "bg-[#f3f6f9] text-[#9aa8b8]"
+                }`}
+              >
+                {slotAvailable ? (
+                  <input
+                    type="checkbox"
+                    name="availabilitySlots"
+                    value={slotValue}
+                    defaultChecked={selectedSlots.has(slotValue)}
+                    className="h-4 w-4 accent-[var(--peace-blue-800)]"
+                    aria-label={`${part.label[locale] ?? part.label.en} ${column.label}`}
+                  />
+                ) : (
+                  <span aria-hidden="true">-</span>
+                )}
+              </label>
+            );
+          })}
+        </div>
+      ))}
+    </div>
   );
 }
 
 function PreserveAttendance({
   availabilityUnknown,
-  selectedDays,
+  selectedSlots,
 }: {
   availabilityUnknown: boolean;
-  selectedDays: string[];
+  selectedSlots: AttendanceSlot[];
 }) {
   return (
     <>
@@ -1425,8 +1437,13 @@ function PreserveAttendance({
         <input type="hidden" name="availabilityUnknown" value="on" />
       ) : null}
       {!availabilityUnknown
-        ? selectedDays.map((day) => (
-            <input key={day} type="hidden" name="availabilityDays" value={day} />
+        ? selectedSlots.map((slot) => (
+            <input
+              key={attendanceSlotKey(slot)}
+              type="hidden"
+              name="availabilitySlots"
+              value={encodeAttendanceSlot(slot)}
+            />
           ))
         : null}
     </>
@@ -1605,10 +1622,6 @@ function RegistrationSummaryCard({
           <SummaryInfo
             label={copy.phone}
             value={primaryContact?.phone ?? copy.notProvided}
-          />
-          <SummaryInfo
-            label={copy.preferredLanguage}
-            value={formatLanguageName(participant.preferred_locale)}
           />
           <SummaryInfo
             label={copy.birthDate}
@@ -1854,31 +1867,6 @@ function relatedOne<T>(value: Related<T>): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
 
-function buildEventDays(startsOn: string | null, endsOn: string | null): string[] {
-  if (!startsOn) {
-    return [];
-  }
-
-  const start = parseDateOnly(startsOn);
-  const end = parseDateOnly(endsOn ?? startsOn);
-
-  if (!start || !end || end.getTime() < start.getTime()) {
-    return [];
-  }
-
-  const days: string[] = [];
-
-  for (
-    let cursor = start;
-    cursor.getTime() <= end.getTime();
-    cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000)
-  ) {
-    days.push(cursor.toISOString().slice(0, 10));
-  }
-
-  return days;
-}
-
 function parseDateOnly(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 
@@ -1889,6 +1877,36 @@ function parseDateOnly(value: string): Date | null {
   return new Date(
     Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
   );
+}
+
+function formatAttendanceSlotSummary(
+  columns: ReturnType<typeof buildAttendanceDayColumns>,
+  selectedSlots: Set<string>,
+  locale: SupportedLocale
+): string {
+  return columns
+    .map((column) => {
+      const selectedParts = ATTENDANCE_PARTS.filter(
+        (part) =>
+          column.parts.includes(part.value) &&
+          selectedSlots.has(
+            encodeAttendanceSlot({
+              day: column.day,
+              part: part.value as AttendancePart,
+            })
+          )
+      );
+
+      if (selectedParts.length === 0) {
+        return null;
+      }
+
+      return `${column.label}: ${selectedParts
+        .map((part) => part.label[locale] ?? part.label.en)
+        .join(" e ")}`;
+    })
+    .filter(Boolean)
+    .join(", ");
 }
 
 function formatDate(

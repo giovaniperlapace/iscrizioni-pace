@@ -17,10 +17,13 @@ import {
   PLACEHOLDER_GROUPS,
 } from "@/lib/questionnaire/registration";
 import type { PublicRegistrationOptions } from "@/lib/registrations/public-flow";
+import type { SupportedLocale } from "@/lib/i18n/config";
 import {
-  LANGUAGE_OPTIONS,
-  type SupportedLocale,
-} from "@/lib/i18n/config";
+  ATTENDANCE_PARTS,
+  buildAttendanceDayColumns,
+  encodeAttendanceSlot,
+  type AttendancePart,
+} from "@/lib/registrations/attendance-slots";
 
 type RegistrationFormProps = {
   email: string;
@@ -35,7 +38,6 @@ const OTHER_COUNTRY = "Altro / non in lista";
 const OTHER_CITY = "Altro / non in lista";
 const OTHER_PHONE_PREFIX = "other";
 const FORM_STORAGE_PREFIX = "iscrizioni-pace.registration-form";
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const PHONE_PREFIX_OPTIONS = [
   { value: "+39", label: "Italia +39" },
   { value: "+33", label: "Francia +33" },
@@ -104,8 +106,9 @@ type StoredRegistrationForm = {
     phonePrefix: string;
     customPhonePrefix: string;
     phoneNumber: string;
-    selectedEventDays: string[];
-  availabilityUnknown: boolean;
+    selectedAttendanceSlots: string[];
+    selectedEventDays?: string[];
+    availabilityUnknown: boolean;
   };
 };
 
@@ -139,12 +142,13 @@ type RegistrationFormCopy = {
   phoneNumberPlaceholder: string;
   phonePrefixPlaceholder: string;
   phoneTitle: string;
-  preferredLanguage: string;
   accessibilityQuestion: string;
   accessibilityTitle: string;
   accessibilityHelp: string;
   accessibilityNotes: string;
   previousQuestion: string;
+  externalGroupQuestion: string;
+  externalGroupPlaceholder: string;
   groupQuestion: string;
   groupLabel: string;
   groupPlaceholder: string;
@@ -200,7 +204,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Numero",
     phonePrefixPlaceholder: "Scrivi il prefisso, per esempio +234",
     phoneTitle: "Inserisci solo cifre, spazi, punti, parentesi o trattini.",
-    preferredLanguage: "Lingua preferita",
     accessibilityQuestion:
       "Hai una disabilità, una condizione di salute o un bisogno di accessibilità che desideri segnalarci per organizzare meglio l'accoglienza?",
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
@@ -209,6 +212,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityNotes: "Ci sono indicazioni pratiche che vuoi comunicarci? (opzionale)",
     previousQuestion:
       "Hai mai partecipato ad altri eventi o attività della Comunità di Sant'Egidio nella tua città?",
+    externalGroupQuestion: "Fai parte di qualche gruppo o associazione? (opzionale)",
+    externalGroupPlaceholder: "Scrivi il nome del gruppo o associazione, se vuoi",
     groupQuestion:
       "Fai parte di un gruppo o una assemblea della Comunità di Sant'Egidio?",
     groupLabel: "Gruppo o referente",
@@ -267,7 +272,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Number",
     phonePrefixPlaceholder: "Write the prefix, for example +234",
     phoneTitle: "Use only digits, spaces, dots, brackets or hyphens.",
-    preferredLanguage: "Preferred language",
     accessibilityQuestion:
       "Do you have a disability, health condition or accessibility need that you would like to tell us about so we can organise the welcome better?",
     accessibilityTitle: "Which aspects should we consider?",
@@ -276,6 +280,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityNotes: "Are there any practical notes you would like to share? (optional)",
     previousQuestion:
       "Have you ever taken part in other Sant'Egidio events or activities in your city?",
+    externalGroupQuestion: "Are you part of any group or association? (optional)",
+    externalGroupPlaceholder: "Write the name of the group or association, if you wish",
     groupQuestion: "Are you part of a Sant'Egidio group or assembly?",
     groupLabel: "Group or contact person",
     groupPlaceholder: "Search by group or contact person",
@@ -333,7 +339,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Numéro",
     phonePrefixPlaceholder: "Écris le préfixe, par exemple +234",
     phoneTitle: "Saisis uniquement des chiffres, espaces, points, parenthèses ou tirets.",
-    preferredLanguage: "Langue préférée",
     accessibilityQuestion:
       "As-tu un handicap, un problème de santé ou un besoin d'accessibilité que tu souhaites nous signaler pour mieux organiser l'accueil ?",
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
@@ -342,6 +347,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityNotes: "Y a-t-il des indications pratiques que tu veux nous communiquer ? (optionnel)",
     previousQuestion:
       "As-tu déjà participé à d'autres événements ou activités de la Communauté de Sant'Egidio dans ta ville ?",
+    externalGroupQuestion: "Fais-tu partie d'un groupe ou d'une association ? (optionnel)",
+    externalGroupPlaceholder: "Écris le nom du groupe ou de l'association, si tu veux",
     groupQuestion: "Fais-tu partie d'un groupe ou d'une assemblée de Sant'Egidio ?",
     groupLabel: "Groupe ou référent",
     groupPlaceholder: "Chercher par groupe ou référent",
@@ -399,7 +406,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Nummer",
     phonePrefixPlaceholder: "Schreibe die Vorwahl, zum Beispiel +234",
     phoneTitle: "Gib nur Ziffern, Leerzeichen, Punkte, Klammern oder Bindestriche ein.",
-    preferredLanguage: "Bevorzugte Sprache",
     accessibilityQuestion:
       "Hast du eine Behinderung, gesundheitliche Situation oder einen Barrierefreiheitsbedarf, den du uns mitteilen möchtest, damit wir den Empfang besser organisieren können?",
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
@@ -408,6 +414,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityNotes: "Gibt es praktische Hinweise, die du uns mitteilen möchtest? (optional)",
     previousQuestion:
       "Hast du bereits an anderen Veranstaltungen oder Aktivitäten der Gemeinschaft Sant'Egidio in deiner Stadt teilgenommen?",
+    externalGroupQuestion: "Gehörst du zu einer Gruppe oder einem Verein? (optional)",
+    externalGroupPlaceholder: "Schreibe den Namen der Gruppe oder des Vereins, wenn du möchtest",
     groupQuestion: "Gehörst du zu einer Gruppe oder Versammlung von Sant'Egidio?",
     groupLabel: "Gruppe oder Kontaktperson",
     groupPlaceholder: "Nach Gruppe oder Kontaktperson suchen",
@@ -465,7 +473,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Número",
     phonePrefixPlaceholder: "Escribe el prefijo, por ejemplo +234",
     phoneTitle: "Introduce solo cifras, espacios, puntos, paréntesis o guiones.",
-    preferredLanguage: "Idioma preferido",
     accessibilityQuestion:
       "¿Tienes una discapacidad, condición de salud o necesidad de accesibilidad que quieras comunicarnos para organizar mejor la acogida?",
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
@@ -474,6 +481,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityNotes: "¿Hay indicaciones prácticas que quieras comunicarnos? (opcional)",
     previousQuestion:
       "¿Has participado alguna vez en otros eventos o actividades de la Comunidad de Sant'Egidio en tu ciudad?",
+    externalGroupQuestion: "¿Formas parte de algún grupo o asociación? (opcional)",
+    externalGroupPlaceholder: "Escribe el nombre del grupo o asociación, si quieres",
     groupQuestion: "¿Formas parte de un grupo o asamblea de Sant'Egidio?",
     groupLabel: "Grupo o referente",
     groupPlaceholder: "Buscar por grupo o referente",
@@ -531,7 +540,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Nummer",
     phonePrefixPlaceholder: "Schrijf het kengetal, bijvoorbeeld +234",
     phoneTitle: "Gebruik alleen cijfers, spaties, punten, haakjes of streepjes.",
-    preferredLanguage: "Voorkeurstaal",
     accessibilityQuestion:
       "Heb je een handicap, gezondheidssituatie of toegankelijkheidsbehoefte die je ons wilt melden zodat we de ontvangst beter kunnen organiseren?",
     accessibilityTitle: "Waar moeten we rekening mee houden?",
@@ -540,6 +548,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityNotes: "Zijn er praktische aanwijzingen die je wilt delen? (optioneel)",
     previousQuestion:
       "Heb je eerder deelgenomen aan andere evenementen of activiteiten van de Gemeenschap van Sant'Egidio in je stad?",
+    externalGroupQuestion: "Maak je deel uit van een groep of vereniging? (optioneel)",
+    externalGroupPlaceholder: "Schrijf de naam van de groep of vereniging, als je wilt",
     groupQuestion: "Maak je deel uit van een groep of vergadering van Sant'Egidio?",
     groupLabel: "Groep of contactpersoon",
     groupPlaceholder: "Zoek op groep of contactpersoon",
@@ -597,7 +607,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Номер",
     phonePrefixPlaceholder: "Напишіть код, наприклад +234",
     phoneTitle: "Вводьте лише цифри, пробіли, крапки, дужки або дефіси.",
-    preferredLanguage: "Бажана мова",
     accessibilityQuestion:
       "Чи маєте ви інвалідність, стан здоров'я або потребу в доступності, про які хочете повідомити нам, щоб ми краще організували прийом?",
     accessibilityTitle: "Що нам потрібно врахувати?",
@@ -606,6 +615,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityNotes: "Чи є практичні вказівки, які ви хочете нам повідомити? (необов'язково)",
     previousQuestion:
       "Чи брали ви раніше участь в інших подіях або діяльності Спільноти Sant'Egidio у вашому місті?",
+    externalGroupQuestion: "Ви належите до якоїсь групи або асоціації? (необов'язково)",
+    externalGroupPlaceholder: "Напишіть назву групи або асоціації, якщо хочете",
     groupQuestion: "Ви належите до групи або зібрання Sant'Egidio?",
     groupLabel: "Група або контактна особа",
     groupPlaceholder: "Шукати за групою або контактною особою",
@@ -674,7 +685,7 @@ export function RegistrationForm({
   const [phonePrefix, setPhonePrefix] = useState("+39");
   const [customPhonePrefix, setCustomPhonePrefix] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [selectedEventDays, setSelectedEventDays] = useState<string[]>([]);
+  const [selectedAttendanceSlots, setSelectedAttendanceSlots] = useState<string[]>([]);
   const [availabilityUnknown, setAvailabilityUnknown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(Boolean(error));
@@ -682,7 +693,7 @@ export function RegistrationForm({
     Partial<Record<PromptField, boolean>>
   >({});
 
-  const eventDays = buildEventDays(
+  const attendanceDayColumns = buildAttendanceDayColumns(
     options.event?.starts_on ?? null,
     options.event?.ends_on ?? null,
     locale
@@ -773,7 +784,7 @@ export function RegistrationForm({
       phonePrefix,
       customPhonePrefix,
       phoneNumber,
-      selectedEventDays,
+      selectedAttendanceSlots,
       availabilityUnknown,
     });
   }, [
@@ -796,7 +807,7 @@ export function RegistrationForm({
     phonePrefix,
     customPhonePrefix,
     phoneNumber,
-    selectedEventDays,
+    selectedAttendanceSlots,
     availabilityUnknown,
   ]);
 
@@ -843,7 +854,14 @@ export function RegistrationForm({
       setPhonePrefix(stored.state.phonePrefix);
       setCustomPhonePrefix(stored.state.customPhonePrefix);
       setPhoneNumber(stored.state.phoneNumber);
-      setSelectedEventDays(stored.state.selectedEventDays);
+      setSelectedAttendanceSlots(
+        stored.state.selectedAttendanceSlots ??
+          stored.state.selectedEventDays?.flatMap((day) => [
+            encodeAttendanceSlot({ day, part: "morning" }),
+            encodeAttendanceSlot({ day, part: "afternoon" }),
+          ]) ??
+          []
+      );
       setAvailabilityUnknown(stored.state.availabilityUnknown);
 
       window.setTimeout(() => {
@@ -897,7 +915,7 @@ export function RegistrationForm({
             effectiveParticipatesWithGroup === "yes" &&
             !cannotFindLeader &&
             !selectedGroupValue) ||
-          (!availabilityUnknown && selectedEventDays.length === 0)
+          (!availabilityUnknown && selectedAttendanceSlots.length === 0)
         ) {
           event.preventDefault();
           setHasAttemptedSubmit(true);
@@ -906,7 +924,7 @@ export function RegistrationForm({
             hasPreviousParticipation: effectiveHasPreviousParticipation,
             participatesWithGroup: effectiveParticipatesWithGroup,
             availabilityUnknown,
-            selectedEventDays,
+            selectedAttendanceSlots,
             needsGroupChoice:
               effectiveHasPreviousParticipation === "yes" &&
               effectiveParticipatesWithGroup === "yes" &&
@@ -1303,20 +1321,6 @@ export function RegistrationForm({
             />
           ) : null}
         </div>
-        <Field label={copy.preferredLanguage} className="sm:col-span-2">
-          <select
-            name="preferredLocale"
-            className="field"
-            defaultValue={locale}
-            data-field="preferredLocale"
-          >
-            {LANGUAGE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.nativeLabel}
-              </option>
-            ))}
-          </select>
-        </Field>
       </section>
 
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -1469,6 +1473,16 @@ export function RegistrationForm({
           </div>
         ) : null}
 
+        {hasPreviousParticipation === "no" ? (
+          <Field label={copy.externalGroupQuestion}>
+            <input
+              name="externalGroupAssociation"
+              className="field"
+              placeholder={copy.externalGroupPlaceholder}
+            />
+          </Field>
+        ) : null}
+
         {hasPreviousParticipation === "yes" &&
         participatesWithGroup === "yes" &&
         !hasGroupLink ? (
@@ -1589,37 +1603,20 @@ export function RegistrationForm({
             {copy.daysHelp}
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {eventDays.map((day) => (
-            <label
-              key={day.value}
-              className={`flex min-h-14 items-center gap-3 rounded-md border p-3 text-sm transition ${
-                availabilityUnknown
-                  ? "border-[var(--peace-border)] bg-[#eef5fa] text-[#718196]"
-                  : "border-[var(--peace-border)] text-[var(--peace-ink)]"
-              }`}
-            >
-              <input
-                name="availabilityDays"
-                type="checkbox"
-                value={day.value}
-                checked={selectedEventDays.includes(day.value)}
-                disabled={availabilityUnknown}
-                className="h-4 w-4"
-                data-field="availabilityDays"
-                onChange={(event) => {
-                  markPromptFieldTouched("availabilityDays");
-                  setSelectedEventDays((current) =>
-                    event.target.checked
-                      ? [...current, day.value]
-                      : current.filter((value) => value !== day.value)
-                  );
-                }}
-              />
-              <span>{day.label}</span>
-            </label>
-          ))}
-        </div>
+        <AttendanceSlotTable
+          columns={attendanceDayColumns}
+          disabled={availabilityUnknown}
+          selectedSlots={selectedAttendanceSlots}
+          locale={locale}
+          onToggle={(slotValue, checked) => {
+            markPromptFieldTouched("availabilityDays");
+            setSelectedAttendanceSlots((current) =>
+              checked
+                ? [...current, slotValue]
+                : current.filter((value) => value !== slotValue)
+            );
+          }}
+        />
         <label className="flex min-h-14 items-center gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm text-[var(--peace-ink)]">
           <input
             name="availabilityUnknown"
@@ -1631,13 +1628,13 @@ export function RegistrationForm({
               markPromptFieldTouched("availabilityDays");
               setAvailabilityUnknown(event.target.checked);
               if (event.target.checked) {
-                setSelectedEventDays([]);
+                setSelectedAttendanceSlots([]);
               }
             }}
           />
           <span>{copy.daysUnknown}</span>
         </label>
-        {!availabilityUnknown && selectedEventDays.length === 0 ? (
+        {!availabilityUnknown && selectedAttendanceSlots.length === 0 ? (
           shouldShowPrompt("availabilityDays") ? (
             <p className="text-xs text-[#8a3323]">
               {copy.requiredDays}
@@ -1707,6 +1704,97 @@ function Field({
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+function AttendanceSlotTable({
+  columns,
+  disabled,
+  selectedSlots,
+  locale,
+  onToggle,
+}: {
+  columns: ReturnType<typeof buildAttendanceDayColumns>;
+  disabled: boolean;
+  selectedSlots: string[];
+  locale: SupportedLocale;
+  onToggle: (slotValue: string, checked: boolean) => void;
+}) {
+  const selected = new Set(selectedSlots);
+
+  if (columns.length === 0) {
+    return null;
+  }
+
+  const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${columns.length}, minmax(5.5rem, 1fr))`;
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-[var(--peace-border)]">
+      <div
+        className="grid bg-[#f7fbfe] text-center text-xs font-semibold uppercase text-[var(--peace-muted)]"
+        style={{ gridTemplateColumns }}
+      >
+        <div className="border-r border-[var(--peace-border)] px-3 py-3 text-left">
+          Fascia
+        </div>
+        {columns.map((column) => (
+          <div
+            key={column.day}
+            className="border-r border-[var(--peace-border)] px-3 py-3 last:border-r-0"
+          >
+            {column.label}
+          </div>
+        ))}
+      </div>
+      {ATTENDANCE_PARTS.map((part) => (
+        <div
+          key={part.value}
+          className="grid border-t border-[var(--peace-border)]"
+          style={{ gridTemplateColumns }}
+        >
+          <div className="border-r border-[var(--peace-border)] bg-[#fbfdff] px-3 py-3 text-sm font-medium text-[var(--peace-ink)]">
+            {part.label[locale] ?? part.label.en}
+          </div>
+          {columns.map((column) => {
+            const slotAvailable = column.parts.includes(part.value);
+            const slotValue = encodeAttendanceSlot({
+              day: column.day,
+              part: part.value as AttendancePart,
+            });
+            const partLabel = part.label[locale] ?? part.label.en;
+
+            return (
+              <label
+                key={`${column.day}-${part.value}`}
+                className={`flex min-h-14 items-center justify-center border-r border-[var(--peace-border)] px-3 py-2 last:border-r-0 ${
+                  slotAvailable
+                    ? disabled
+                      ? "bg-[#eef5fa] text-[#718196]"
+                      : "bg-white text-[var(--peace-ink)]"
+                    : "bg-[#f3f6f9] text-[#9aa8b8]"
+                }`}
+              >
+                {slotAvailable ? (
+                  <input
+                    name="availabilitySlots"
+                    type="checkbox"
+                    value={slotValue}
+                    checked={selected.has(slotValue)}
+                    disabled={disabled}
+                    className="h-4 w-4 accent-[var(--peace-blue-800)]"
+                    data-field="availabilityDays"
+                    aria-label={`${partLabel} ${column.label}`}
+                    onChange={(event) => onToggle(slotValue, event.target.checked)}
+                  />
+                ) : (
+                  <span aria-hidden="true">-</span>
+                )}
+              </label>
+            );
+          })}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1841,7 +1929,7 @@ function focusClientSideMissingField(
     hasPreviousParticipation: string;
     participatesWithGroup: string;
     availabilityUnknown: boolean;
-    selectedEventDays: string[];
+    selectedAttendanceSlots: string[];
     needsGroupChoice: boolean;
   }
 ) {
@@ -1868,7 +1956,7 @@ function focusClientSideMissingField(
     return;
   }
 
-  if (!state.availabilityUnknown && state.selectedEventDays.length === 0) {
+  if (!state.availabilityUnknown && state.selectedAttendanceSlots.length === 0) {
     focusField(form, "availabilityDays");
   }
 }
@@ -1963,53 +2051,4 @@ function normalizeSearchText(value: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-}
-
-function buildEventDays(
-  startsOn: string | null,
-  endsOn: string | null,
-  locale: SupportedLocale
-): Array<{ value: string; label: string }> {
-  if (!startsOn) {
-    return [];
-  }
-
-  const start = parseDateOnly(startsOn);
-  const end = parseDateOnly(endsOn ?? startsOn);
-
-  if (!start || !end || end.getTime() < start.getTime()) {
-    return [];
-  }
-
-  const days: Array<{ value: string; label: string }> = [];
-  const formatter = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-
-  for (
-    let cursor = start;
-    cursor.getTime() <= end.getTime();
-    cursor = new Date(cursor.getTime() + DAY_IN_MS)
-  ) {
-    days.push({
-      value: cursor.toISOString().slice(0, 10),
-      label: formatter.format(cursor),
-    });
-  }
-
-  return days;
-}
-
-function parseDateOnly(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (!match) {
-    return null;
-  }
-
-  return new Date(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-  );
 }

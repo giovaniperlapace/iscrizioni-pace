@@ -1453,6 +1453,47 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
 - Accettazione: programma multi-giorno gestito senza hardcode.
 - Non fare: check-in completo.
 
+### Milestone 16.1: dashboard statistiche manager
+
+- Scopo: completare la sezione `Dashboard` della dashboard manager, gia'
+  avviata con `section=dashboard`, trasformandola in una pagina statistiche
+  utile per leggere andamento iscrizioni, provenienze, gruppi e presenze prima
+  di passare al check-in accoglienza.
+- Contesto:
+  - le statistiche ridondanti sono state rimosse dalla tabella iscritti nella
+    Milestone 11;
+  - l'inventario delle metriche disponibili vive in
+    `docs/statistiche-disponibili.md`;
+  - la prima implementazione usa `lib/registrations/event-statistics.ts` e la
+    sezione `Dashboard` di `app/dashboard/manager/page.tsx`.
+- Deliverable:
+  - pagina/sezione `Dashboard` manager rifinita e leggibile, distinta dalla
+    tabella iscritti e dai comandi evento;
+  - riepiloghi essenziali su iscrizioni, provenienza geografica, gruppi,
+    presenze giornaliere e stati operativi realmente utili;
+  - filtri o tab coerenti con evento corrente e, dove serve, con territori,
+    gruppi, tag operativi e stato iscrizione;
+  - collegamenti dai numeri alle viste operative filtrate quando il dato serve
+    ad agire su persone o gruppi;
+  - eventuale vista read-only coerente per `manager_viewer` e accesso admin
+    senza duplicare logica.
+- File/cartelle: `app/dashboard/manager/page.tsx`,
+  `app/dashboard/admin/page.tsx` se condivide la sezione,
+  `lib/registrations/event-statistics.ts`,
+  `docs/statistiche-disponibili.md`, test mirati in `tests/*`.
+- Migration: nessuna prevista salvo emergano aggregate o materializzazioni
+  necessarie; partire dai dati gia' disponibili.
+- Verifiche: aggregati corretti su dati test, permessi manager/manager_viewer,
+  assenza di dati sensibili granulari, link verso filtri funzionanti, layout
+  desktop/mobile senza sovraccaricare la dashboard.
+- Rischi: metriche decorative o fuorvianti, percentuali su numeri piccoli,
+  esposizione indiretta di dati sensibili di accessibilita' o supporto.
+- Accettazione: un manager apre `Dashboard`, capisce rapidamente andamento e
+  criticita' operative dell'evento corrente e puo' passare alle viste filtrate
+  senza perdere contesto.
+- Non fare: export ufficiali post-evento, classifiche competitive fra gruppi o
+  paesi, statistiche accessibilita' granulari.
+
 ### Milestone 17: QR code, verifica e check-in accoglienza
 
 - Scopo: completare scanner, verifica token e check-in accoglienza usando il QR

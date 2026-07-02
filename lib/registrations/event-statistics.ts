@@ -19,6 +19,7 @@ export type StatisticsGroup = {
 export type StatisticsAttendanceChoice = {
   registration_id: string;
   day: string | null;
+  day_part?: string | null;
   choice: string | null;
 };
 
@@ -173,8 +174,13 @@ function buildAttendanceByDay(
 
     const selectedDays =
       yesDaysByRegistrationId.get(choice.registration_id) ?? new Set<string>();
+    const alreadyCountedForDay = selectedDays.has(choice.day);
     selectedDays.add(choice.day);
     yesDaysByRegistrationId.set(choice.registration_id, selectedDays);
+
+    if (alreadyCountedForDay) {
+      continue;
+    }
 
     const key = `${participant.eventId}:${choice.day}`;
     const existing = dayRowsByKey.get(key);

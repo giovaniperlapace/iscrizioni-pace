@@ -108,8 +108,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   conferma iscrizione, form pubblico, tab dashboard condivise, testi comuni
   header, dashboard partecipante e dashboard capogruppo. Lingue supportate:
   italiano, inglese, francese, tedesco, spagnolo, neerlandese e ucraino.
-  La lingua preferita del partecipante ora accetta le stesse lingue nei flussi
-  pubblico, dashboard partecipante e inserimento manuale capogruppo.
+  Dal 2026-07-02 la lingua preferita non viene piu' raccolta come dato del
+  partecipante nei flussi pubblico, dashboard partecipante o inserimento
+  manuale capogruppo; resta solo la lingua dell'interfaccia tramite cookie.
 - Milestone 14 e' stata avviata il 2026-06-17 con un restyling esclusivamente
   grafico ispirato alla locandina ufficiale
   `UNHARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`: token CSS
@@ -149,6 +150,15 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   con identita', contatti, gruppo, stato assegnazione e note interne. Se un
   rifiuto non ha parent, l'assegnazione viene marcata non corrente/rifiutata e
   l'audit registra `moved_to_external_queue`.
+- Il 2026-07-02 la tabella partecipanti della dashboard capogruppo e' stata
+  semplificata: mostra solo partecipante, telefono, email e un interruttore di
+  conferma. La colonna gruppo compare solo quando nella vista filtrata ci sono
+  partecipanti di piu' gruppi. Non mostrare piu' colonne ridondanti come
+  provenienza, stato iscrizione, date o pulsanti `Gestisci` nella tabella. Il
+  click sui dati della riga apre la scheda iscrizione in overlay; la scheda ha
+  modalita' modifica per identita' minima e contatti, piu' note/tag/decisione.
+  La conferma usa `updateGroupLeaderAssignment` con intent `confirm` e
+  `unconfirm`, visualizzato come switch accessibile.
 - Il 2026-06-26 e' stata implementata la Milestone 14.2 sui tag operativi:
   migration `20260626100000_operational_tags.sql` con tabelle
   `operational_tags` e `participant_operational_tags`, RLS per lettura
@@ -181,6 +191,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Il 2026-06-15 e' stata anticipata la generazione QR reale: le nuove
   iscrizioni generano un QR code reale, inviato nella email di conferma e
   visualizzato nella dashboard partecipante.
+- Il 2026-07-02 la presenza prevista e' stata portata da giorni interi a fasce
+  mattina/pomeriggio: la tabella `event_attendance_choices` ha `day_part`
+  (`morning`/`afternoon`), il form pubblico e l'inserimento manuale capogruppo
+  mostrano una griglia con colonne 24, 25, 26 e 27 ottobre e righe mattina/
+  pomeriggio, senza scelta per la mattina del 24. Il 24 ottobre serve solo per
+  segnalare chi arriva il pomeriggio precedente ed e' gia' in localita'.
+  Migration applicata: `20260702100000_attendance_half_day_slots.sql`.
+- Dal 2026-07-02, se nel form pubblico la persona risponde "No" alla domanda
+  sulla partecipazione precedente ad attivita' Sant'Egidio, compare un campo
+  libero opzionale "Fai parte di qualche gruppo o associazione?". Il dato non
+  blocca l'iscrizione e viene salvato solo nello snapshot questionario come
+  `externalGroupAssociation`.
 - Il 2026-06-18 la production pubblica e' stata spostata sul dominio definitivo
   `https://registrationspeace.santegidio.org`: le env Vercel production
   `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` puntano a quel dominio,
@@ -536,8 +558,11 @@ Decisioni:
   `participant_contacts`, `participant_consents`, `accessibility_needs`,
   `event_attendance_choices`, `moment_attendance_choices` e
   `participant_group_assignments`.
-- Lingua preferita, momenti del programma e partecipazione prevista non sono
-  richiesti nella prima iscrizione; restano supportati per passaggi successivi.
+- Lingua preferita non viene raccolta nei flussi partecipante. Il campo
+  database `participants.preferred_locale` resta valorizzato con default
+  tecnico per compatibilita' schema; non reintrodurre select o campi hidden
+  utente salvo nuova decisione esplicita. Momenti del programma e
+  partecipazione prevista restano supportati per passaggi successivi.
 - La lista paesi del primo form usa nazioni dell'Europa geografica, non solo
   politica, includendo paesi transcontinentali come Russia e Turchia.
 - `registration_questionnaire_answers` conserva solo uno snapshot versionato
@@ -746,8 +771,8 @@ Funzioni disponibili:
 - Codice partecipante `participants.public_code` visibile in dashboard come
   identificativo operativo semplice dentro l'area QR con etichetta "Il tuo
   codice"; non va duplicato nell'header.
-- Modifica controllata di telefono, lingua preferita, giorni di presenza,
-  richiesta di supporto e note pratiche.
+- Modifica controllata di telefono, giorni di presenza, richiesta di supporto e
+  note pratiche. La lingua preferita non e' modificabile/richiesta.
 - Le modifiche sono consentite solo se la registrazione non e' `cancelled` e
   se `events.registration_closes_at` non e' superato.
 - La dashboard filtra sempre le iscrizioni sul `participants.auth_user_id`
@@ -930,6 +955,17 @@ Verifiche previste:
 - Prima di chiudere una modifica collegata alla 6.3 usare ancora
   `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 
+## Dati di prova operativi
+
+- Il 2026-07-02 e' stato usato `capogruppo-test@example.org` come account test
+  capogruppo per `Roma - Giovani per la Pace`.
+- Per testare la tabella capogruppo sono stati creati direttamente nel database
+  15 partecipanti fittizi nel gruppo `Roma - Giovani per la Pace`, riconoscibili
+  dai cognomi `fittizio1` ... `fittizio15` e dalle email
+  `fittizio1@example.test` ... `fittizio15@example.test`. Sono record di test,
+  con assegnazione gruppo corrente `confirmed`, source `capogruppo`, contatti,
+  consensi, presenze, QR token e audit coerenti. Non usarli come dati reali.
+
 ## Milestone 9 - dashboard capogruppo minima
 
 Dashboard capogruppo minima completata e consolidata su `main`.
@@ -949,18 +985,24 @@ Deliverable:
   metriche, accesso "La mia iscrizione", filtri `Da verificare`, `Probabili`,
   `Confermati`, `Rifiutati` e schede assegnazione.
 - Server action `updateGroupLeaderAssignment` in `app/actions.ts` con intent
-  `note`, `read`, `confirm`, `reject`.
+  `note`, `read`, `confirm`, `unconfirm`, `reject`.
+- Server action `updateGroupLeaderParticipantContact` in `app/actions.ts` per
+  modificare dalla scheda capogruppo identita' minima e contatti primari, dopo
+  verifica dello scope del capogruppo.
 
 Decisioni:
 
 - La dashboard capogruppo usa il service role lato server solo dopo aver
   verificato sessione e membership del referente, così include anche i
   discendenti dei nodi assegnati. Il service role non arriva mai al browser.
-- La UI mostra dati personali minimi: nome, codice operativo, provenienza,
-  gruppo, stato e metadati di assegnazione. Non mostra email, telefono,
-  accessibilità o altri dati sensibili.
+- La UI della tabella mostra dati personali minimi utili al lavoro del
+  capogruppo: nome/cognome, telefono, email e conferma appartenenza. Il gruppo
+  e' mostrato solo se nella vista corrente compaiono piu' gruppi. Accessibilità
+  e altri dati sensibili non devono comparire nella tabella.
 - `confirm` imposta l'assegnazione corrente a `confirmed`, registra
   `confirmed_by/confirmed_at`, decisione referente e lettura.
+- `unconfirm` riporta un'assegnazione corrente a `probable`, svuota
+  `confirmed_by/confirmed_at` e registra decisione/lettura del referente.
 - `reject` porta l'assegnazione rifiutata a `status = 'rejected'` e
   `is_current = false`; se il gruppo ha un padre crea o riattiva una nuova
   assegnazione corrente `probable` sul padre con `source = 'capogruppo'`.
@@ -1063,9 +1105,11 @@ Deliverable:
 Funzioni disponibili:
 
 - Il capogruppo può inserire nome, cognome, email o telefono, eventuale data di
-  nascita, lingua, presenza prevista e nota interna.
+  nascita, presenza prevista e nota interna. La lingua preferita non viene
+  raccolta nell'inserimento manuale.
 - La presenza manuale usa le date reali dell'evento, non etichette riassuntive;
-  può restare "da confermare".
+  può restare "da confermare". Dal 2026-07-02 usa fasce mattina/pomeriggio
+  tramite `event_attendance_choices.day_part`.
 - Le domande accessibilità nell'inserimento manuale mostrano i follow-up solo
   se viene selezionato "Sì".
 - Il gruppo selezionabile è limitato ai gruppi iscrivibili nello scope

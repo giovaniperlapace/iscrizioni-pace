@@ -1,8 +1,12 @@
 import {
   DEFAULT_LOCALE,
   type SupportedLocale,
-  normalizeLocale,
 } from "../i18n/config.ts";
+import {
+  attendanceSlotKey,
+  parseAttendanceSlot,
+  type AttendanceSlot,
+} from "./attendance-slots.ts";
 
 export const PRIVACY_VERSION = "2026-06-14-gdpr-accessibility";
 
@@ -20,13 +24,14 @@ export type RegistrationInput = {
   cityId: string | null;
   cityOther: string | null;
   hasPreviousSantegidioParticipation: boolean | null;
+  externalGroupAssociation: string | null;
   participatesWithGroup: boolean | null;
   groupId: string | null;
   groupName: string | null;
   groupRegistrationLinkToken: string | null;
   cannotFindLeader: boolean;
   attendanceChoice: "yes" | "no" | "unknown";
-  availabilityDays: string[];
+  availabilitySlots: AttendanceSlot[];
   availabilityUnknown: boolean;
   momentAttendanceChoices: Record<string, "yes" | "no" | "unknown">;
   hasAccessibilityNeeds: boolean | null;
@@ -69,10 +74,11 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   const birthDate = optionalDate(formData.get("birthDate"));
   const birthPlace = optionalText(formData.get("birthPlace"));
   const nationality = optionalText(formData.get("nationality"));
-  const preferredLocale =
-    normalizeLocale(String(formData.get("preferredLocale") ?? "")) ?? DEFAULT_LOCALE;
   const participatesWithGroup = parseBooleanChoice(
     formData.get("participatesWithGroup")
+  );
+  const hasPreviousSantegidioParticipation = parseBooleanChoice(
+    formData.get("hasPreviousSantegidioParticipation")
   );
   const cannotFindLeader = formData.get("cannotFindLeader") === "on";
   const groupId = optionalUuid(formData.get("groupId"));
@@ -100,14 +106,16 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     birthDate,
     birthPlace,
     nationality,
-    preferredLocale,
+    preferredLocale: DEFAULT_LOCALE,
     countryId: null,
     countryOther: optionalText(formData.get("countryOther")),
     cityId: null,
     cityOther: optionalText(formData.get("cityOther")),
-    hasPreviousSantegidioParticipation: parseBooleanChoice(
-      formData.get("hasPreviousSantegidioParticipation")
-    ),
+    hasPreviousSantegidioParticipation,
+    externalGroupAssociation:
+      hasPreviousSantegidioParticipation === false
+        ? optionalText(formData.get("externalGroupAssociation"))
+        : null,
     participatesWithGroup,
     groupId: participatesWithGroup === true && !cannotFindLeader ? groupId : null,
     groupName:
@@ -117,7 +125,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     groupRegistrationLinkToken,
     cannotFindLeader: participatesWithGroup === true ? cannotFindLeader : false,
     attendanceChoice: parseAttendanceChoice(formData.get("attendanceChoice")),
-    availabilityDays: availabilityUnknown ? [] : parseAvailabilityDays(formData),
+    availabilitySlots: availabilityUnknown ? [] : parseAvailabilitySlots(formData),
     availabilityUnknown,
     momentAttendanceChoices: parseMomentAttendanceChoices(formData),
     hasAccessibilityNeeds,
@@ -207,7 +215,7 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
     errors.push("Se partecipi con un gruppo, seleziona il gruppo.");
   }
 
-  if (!input.availabilityUnknown && input.availabilityDays.length === 0) {
+  if (!input.availabilityUnknown && input.availabilitySlots.length === 0) {
     errors.push(
       "Seleziona almeno un giorno di presenza o indica che lo comunicherai in seguito."
     );
@@ -226,11 +234,29 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
   return errors;
 }
 
-function parseAvailabilityDays(formData: FormData): string[] {
-  return formData
-    .getAll("availabilityDays")
-    .map((value) => String(value))
-    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+function parseAvailabilitySlots(formData: FormData): AttendanceSlot[] {
+  const slots = new Map<string, AttendanceSlot>();
+
+  for (const rawValue of formData.getAll("availabilitySlots")) {
+    const slot = parseAttendanceSlot(String(rawValue));
+
+    if (slot) {
+      slots.set(attendanceSlotKey(slot), slot);
+    }
+  }
+
+  for (const rawValue of formData.getAll("availabilityDays")) {
+    const day = String(rawValue);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      for (const part of ["morning", "afternoon"] as const) {
+        const slot = { day, part };
+        slots.set(attendanceSlotKey(slot), slot);
+      }
+    }
+  }
+
+  return [...slots.values()];
 }
 
 function normalizePhone(value: FormDataEntryValue | string | null): string | null {

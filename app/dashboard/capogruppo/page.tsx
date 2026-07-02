@@ -7,6 +7,7 @@ import {
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
   updateGroupLeaderAssignment,
+  updateGroupLeaderParticipantContact,
   updateParticipantOperationalTags,
 } from "@/app/actions";
 import {
@@ -16,6 +17,7 @@ import {
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
 import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
+import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
 import {
@@ -29,12 +31,16 @@ import {
   buildGroupRegistrationUrl,
   getGroupRegistrationLinkStatus,
 } from "@/lib/groups/registration-links";
-import { LANGUAGE_OPTIONS, type SupportedLocale } from "@/lib/i18n/config";
+import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
 import type {
   OperationalTagOption,
   ParticipantOperationalTag,
 } from "@/lib/registrations/operational-tags";
+import {
+  buildAttendanceDayColumns,
+  type AttendanceDayColumn,
+} from "@/lib/registrations/attendance-slots";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -54,6 +60,7 @@ type CapogruppoPageProps = {
     tool?: string;
     groupId?: string;
     assignmentId?: string;
+    edit?: string;
   }>;
 };
 
@@ -352,6 +359,8 @@ type AssignmentView = {
   groupId: string;
   groupName: string;
   groupNodeType: string | null;
+  participantFirstName: string | null;
+  participantLastName: string | null;
   participantName: string;
   participantCode: string | null;
   participantEmail: string | null;
@@ -378,7 +387,6 @@ type DashboardTool = "link" | "manual";
 
 const ASSIGNMENT_SORT_VALUES = ["name", "updated", "submitted", "status"] as const;
 type AssignmentSort = (typeof ASSIGNMENT_SORT_VALUES)[number];
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 type GroupLeaderCopy = {
   srTitle: string;
   areaDescription: string;
@@ -430,7 +438,6 @@ type GroupLeaderCopy = {
   email: string;
   phone: string;
   birthDate: string;
-  language: string;
   internalNote: string;
   consent: string;
   filters: {
@@ -591,7 +598,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   email: "Email",
   phone: "Telefono",
   birthDate: "Data di nascita",
-  language: "Lingua",
   internalNote: "Nota interna",
   consent: "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione.",
   filters: {
@@ -763,7 +769,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   lastName: "Last name",
   phone: "Phone",
   birthDate: "Date of birth",
-  language: "Language",
   internalNote: "Internal note",
   consent: "I have the registered person's consent to process data for this registration.",
   filters: {
@@ -938,7 +943,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     lastName: "Nom",
     phone: "Téléphone",
     birthDate: "Date de naissance",
-    language: "Langue",
     internalNote: "Note interne",
     consent: "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription.",
     filters: {
@@ -1089,7 +1093,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     lastName: "Nachname",
     phone: "Telefon",
     birthDate: "Geburtsdatum",
-    language: "Sprache",
     internalNote: "Interne Notiz",
     consent: "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung.",
     filters: {
@@ -1240,7 +1243,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     lastName: "Apellidos",
     phone: "Teléfono",
     birthDate: "Fecha de nacimiento",
-    language: "Idioma",
     internalNote: "Nota interna",
     consent: "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción.",
     filters: {
@@ -1391,7 +1393,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     lastName: "Achternaam",
     phone: "Telefoon",
     birthDate: "Geboortedatum",
-    language: "Taal",
     internalNote: "Interne notitie",
     consent: "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken.",
     filters: {
@@ -1542,7 +1543,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     lastName: "Прізвище",
     phone: "Телефон",
     birthDate: "Дата народження",
-    language: "Мова",
     internalNote: "Внутрішня нотатка",
     consent: "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації.",
     filters: {
@@ -1706,13 +1706,18 @@ export default async function CapogruppoDashboardPage({
     sort,
     locale
   );
+  const visibleGroupCount = new Set(
+    filteredAssignments.map((assignment) => assignment.groupId)
+  ).size;
   const selectedAssignment =
     params.assignmentId
       ? assignments.find((assignment) => assignment.id === params.assignmentId) ?? null
       : null;
+  const isEditingAssignment = params.edit === "1";
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
+      <PreserveDashboardScroll />
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">{copy.srTitle}</h1>
@@ -1763,8 +1768,8 @@ export default async function CapogruppoDashboardPage({
 
           <AssignmentsTable
             assignments={filteredAssignments}
-            locale={locale}
             copy={copy}
+            showGroupColumn={visibleGroupCount > 1}
           />
         </section>
 
@@ -1806,6 +1811,7 @@ export default async function CapogruppoDashboardPage({
               tagOptions={operationalTags}
               locale={locale}
               copy={copy}
+              isEditing={isEditingAssignment}
             />
           </DashboardToolOverlay>
         ) : null}
@@ -2190,7 +2196,7 @@ function ManualRegistrationSection({
 }: {
   groups: ScopedGroupView[];
   selectedGroupId: string | null;
-  eventDays: Array<{ value: string; label: string }>;
+  eventDays: AttendanceDayColumn[];
   locale: SupportedLocale;
   copy: GroupLeaderCopy;
 }) {
@@ -2245,16 +2251,6 @@ function ManualRegistrationSection({
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.birthDate}
             <input name="birthDate" type="date" className="field" />
-          </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.language}
-            <select name="preferredLocale" className="field" defaultValue="it">
-              {LANGUAGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.nativeLabel}
-                </option>
-              ))}
-            </select>
           </label>
           <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} />
           <ManualAccessibilityFields
@@ -2356,12 +2352,12 @@ function AssignmentFilters({
 
 function AssignmentsTable({
   assignments,
-  locale,
   copy,
+  showGroupColumn,
 }: {
   assignments: AssignmentView[];
-  locale: SupportedLocale;
   copy: GroupLeaderCopy;
+  showGroupColumn: boolean;
 }) {
   if (assignments.length === 0) {
     return (
@@ -2373,16 +2369,16 @@ function AssignmentsTable({
 
   return (
     <div className="mt-5 overflow-x-auto rounded-md border border-[var(--peace-border)]">
-      <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[760px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
             <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.origin}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.registration}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.status}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.actions}</th>
+            <th className="py-3 pr-4 font-semibold">{copy.phone}</th>
+            <th className="py-3 pr-4 font-semibold">{copy.email}</th>
+            {showGroupColumn ? (
+              <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
+            ) : null}
+            <th className="py-3 pr-4 text-right font-semibold">{copy.table.confirm}</th>
           </tr>
         </thead>
         <tbody>
@@ -2390,8 +2386,8 @@ function AssignmentsTable({
             <AssignmentRowView
               key={assignment.id}
               assignment={assignment}
-              locale={locale}
               copy={copy}
+              showGroupColumn={showGroupColumn}
             />
           ))}
         </tbody>
@@ -2402,164 +2398,73 @@ function AssignmentsTable({
 
 function AssignmentRowView({
   assignment,
-  locale,
   copy,
+  showGroupColumn,
 }: {
   assignment: AssignmentView;
-  locale: SupportedLocale;
   copy: GroupLeaderCopy;
+  showGroupColumn: boolean;
 }) {
-  const canDecide = assignment.isCurrent && assignment.status === "probable";
-  const manageLabel = copy.table.manageAria(
-    assignment.participantName,
-    assignment.participantCode
-  );
   const cardLabel = copy.table.openCardAria(
     assignment.participantName,
     assignment.participantCode
   );
+  const detailHref = `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`;
+  const isConfirmed = assignment.isCurrent && assignment.status === "confirmed";
 
   return (
-    <tr className="border-b border-[var(--peace-border)] align-top transition hover:bg-[#f7fbfe] last:border-b-0">
-      <td className="py-4 pl-4 pr-4">
+    <tr className="border-b border-[var(--peace-border)] align-middle transition hover:bg-[#f7fbfe] last:border-b-0">
+      <td className="py-3 pl-4 pr-4">
         <Link
-          href={`/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`}
+          href={detailHref}
+          scroll={false}
           aria-label={cardLabel}
-          className="font-semibold text-[var(--peace-blue-800)] underline-offset-4 hover:underline"
+          className="block font-semibold text-[var(--peace-blue-800)] underline-offset-4 hover:underline"
         >
           {assignment.participantName}
         </Link>
-        <p className="mt-1 text-xs text-[var(--peace-muted)]">
-          {assignment.participantCode ?? copy.table.withoutCode}
-          {assignment.birthDate
-            ? ` - ${copy.table.bornOn(formatDate(assignment.birthDate, locale))}`
-            : ""}
-        </p>
       </td>
-      <td className="py-4 pr-4 text-[var(--peace-ink)]">
-        <p>{assignment.participantEmail ?? copy.table.emailMissing}</p>
-        <p className="mt-1 text-xs text-[var(--peace-muted)]">
+      <td className="py-3 pr-4 text-[var(--peace-ink)]">
+        <Link href={detailHref} scroll={false} className="block hover:underline">
           {assignment.participantPhone ?? copy.table.phoneMissing}
-        </p>
+        </Link>
       </td>
-      <td className="py-4 pr-4">
-        <p className="font-medium text-[var(--peace-ink)]">{assignment.groupName}</p>
-        <p className="mt-1 text-xs text-[var(--peace-muted)]">
-          {assignment.assignmentReason
-            ? assignmentReasonLabel(assignment.assignmentReason, copy)
-            : sourceLabel(assignment.source, copy)}
-        </p>
+      <td className="py-3 pr-4 text-[var(--peace-ink)]">
+        <Link href={detailHref} scroll={false} className="block hover:underline">
+          {assignment.participantEmail ?? copy.table.emailMissing}
+        </Link>
       </td>
-      <td className="py-4 pr-4 text-[var(--peace-ink)]">{assignment.participantPlace}</td>
-      <td className="py-4 pr-4 text-[var(--peace-ink)]">
-        <p>{formatDateTime(assignment.submittedAt, locale, copy.notProvided)}</p>
-        <p className="mt-1 text-xs text-[var(--peace-muted)]">
-          {copy.table.updated(formatDateTime(assignment.updatedAt, locale, copy.notProvided))}
-        </p>
-      </td>
-      <td className="py-4 pr-4">
-        <div className="flex flex-wrap gap-1.5">
-          <StatusBadge
-            status={assignment.status}
-            isCurrent={assignment.isCurrent}
-            copy={copy}
-          />
-          {!assignment.leaderNotificationReadAt && canDecide ? (
-            <span className="rounded-full bg-[#fff1c2] px-2.5 py-1 text-xs font-semibold text-[#6b5214]">
-              {copy.table.unread}
-            </span>
-          ) : null}
-        </div>
-      </td>
-      <td className="py-4 pr-4">
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`}
-            aria-label={cardLabel}
-            className="inline-flex min-h-9 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            {copy.table.openCard}
+      {showGroupColumn ? (
+        <td className="py-3 pr-4 text-[var(--peace-ink)]">
+          <Link href={detailHref} scroll={false} className="block hover:underline">
+            {assignment.groupName}
           </Link>
-          {canDecide ? (
-            <>
-              <form action={updateGroupLeaderAssignment}>
-                <input type="hidden" name="assignmentId" value={assignment.id} />
-                <PendingSubmitButton
-                  name="intent"
-                  value="confirm"
-                  className="min-h-9 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-                >
-                  {copy.table.confirm}
-                </PendingSubmitButton>
-              </form>
-              <form action={updateGroupLeaderAssignment}>
-                <input type="hidden" name="assignmentId" value={assignment.id} />
-                <PendingSubmitButton
-                  name="intent"
-                  value="reject"
-                  className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
-                >
-                  {copy.table.reject}
-                </PendingSubmitButton>
-              </form>
-            </>
-          ) : null}
-        </div>
-        <details className="group mt-2">
-          <summary
-            aria-label={manageLabel}
-            className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+        </td>
+      ) : null}
+      <td className="py-3 pr-4">
+        <form action={updateGroupLeaderAssignment} className="flex justify-end">
+          <input type="hidden" name="assignmentId" value={assignment.id} />
+          <PendingSubmitButton
+            name="intent"
+            value={isConfirmed ? "unconfirm" : "confirm"}
+            role="switch"
+            aria-checked={isConfirmed}
+            aria-label={`${copy.table.confirm}: ${assignment.participantName}`}
+            className={`relative h-7 w-12 rounded-full border transition ${
+              isConfirmed
+                ? "border-[#bad2b8] bg-[#2f6541]"
+                : "border-[var(--peace-border-strong)] bg-[#d8e3ec]"
+            }`}
           >
-            {copy.table.manage}
-          </summary>
-          <form
-            action={updateGroupLeaderAssignment}
-            className="mt-3 grid min-w-[260px] gap-2 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3"
-          >
-            <input type="hidden" name="assignmentId" value={assignment.id} />
-            <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-              {copy.internalNote}
-              <textarea
-                name="leaderInternalNote"
-                defaultValue={assignment.leaderInternalNote ?? ""}
-                rows={3}
-                className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
-              />
-            </label>
-            <PendingSubmitButton
-              name="intent"
-              value="note"
-              className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-            >
-              {copy.table.saveNote}
-            </PendingSubmitButton>
-            {canDecide ? (
-              <>
-                <PendingSubmitButton
-                  name="intent"
-                  value="confirm"
-                  className="min-h-9 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-                >
-                  {copy.table.confirm}
-                </PendingSubmitButton>
-                <PendingSubmitButton
-                  name="intent"
-                  value="reject"
-                  className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
-                >
-                  {copy.table.reject}
-                </PendingSubmitButton>
-                <PendingSubmitButton
-                  name="intent"
-                  value="read"
-                  className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
-                >
-                  {copy.table.markRead}
-                </PendingSubmitButton>
-              </>
-            ) : null}
-          </form>
-        </details>
+            <span
+              aria-hidden="true"
+              className={`absolute top-1 size-5 rounded-full bg-white shadow transition ${
+                isConfirmed ? "left-6" : "left-1"
+              }`}
+            />
+            <span className="sr-only">{copy.table.confirm}</span>
+          </PendingSubmitButton>
+        </form>
       </td>
     </tr>
   );
@@ -2570,13 +2475,16 @@ function AssignmentDetailCard({
   tagOptions,
   locale,
   copy,
+  isEditing,
 }: {
   assignment: AssignmentView;
   tagOptions: OperationalTagOption[];
   locale: SupportedLocale;
   copy: GroupLeaderCopy;
+  isEditing: boolean;
 }) {
   const canDecide = assignment.isCurrent && assignment.status === "probable";
+  const detailHref = `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`;
 
   return (
     <section className="grid gap-5">
@@ -2599,26 +2507,110 @@ function AssignmentDetailCard({
         />
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={isEditing ? detailHref : `${detailHref}&edit=1`}
+          scroll={false}
+          className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+        >
+          {isEditing ? "Torna alla scheda" : "Modifica"}
+        </Link>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <DetailBlock title={copy.detail.identity}>
-          <DetailLine label={copy.birthDate}>
-            {assignment.birthDate
-              ? formatDate(assignment.birthDate, locale)
-              : copy.notProvided}
-          </DetailLine>
-          <DetailLine label={copy.table.origin}>{assignment.participantPlace}</DetailLine>
-          <DetailLine label={copy.detail.participatesWithGroup}>
-            {formatOptionalBoolean(assignment.participatesWithGroup, copy)}
-          </DetailLine>
+          {isEditing ? (
+            <form
+              action={updateGroupLeaderParticipantContact}
+              className="grid gap-3"
+              data-preserve-dashboard-scroll
+            >
+              <input type="hidden" name="assignmentId" value={assignment.id} />
+              <input type="hidden" name="participantId" value={assignment.participantId} />
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                {copy.firstName}
+                <input
+                  name="firstName"
+                  defaultValue={assignment.participantFirstName ?? ""}
+                  className="field bg-white font-normal"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                {copy.lastName}
+                <input
+                  name="lastName"
+                  defaultValue={assignment.participantLastName ?? ""}
+                  className="field bg-white font-normal"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                {copy.birthDate}
+                <input
+                  name="birthDate"
+                  type="date"
+                  defaultValue={assignment.birthDate ?? ""}
+                  className="field bg-white font-normal"
+                />
+              </label>
+              <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                Salva identità
+              </PendingSubmitButton>
+            </form>
+          ) : (
+            <>
+              <DetailLine label={copy.birthDate}>
+                {assignment.birthDate
+                  ? formatDate(assignment.birthDate, locale)
+                  : copy.notProvided}
+              </DetailLine>
+              <DetailLine label={copy.table.origin}>{assignment.participantPlace}</DetailLine>
+              <DetailLine label={copy.detail.participatesWithGroup}>
+                {formatOptionalBoolean(assignment.participatesWithGroup, copy)}
+              </DetailLine>
+            </>
+          )}
         </DetailBlock>
 
         <DetailBlock title={copy.detail.contacts}>
-          <DetailLine label={copy.email}>
-            {assignment.participantEmail ?? copy.table.emailMissing}
-          </DetailLine>
-          <DetailLine label={copy.phone}>
-            {assignment.participantPhone ?? copy.table.phoneMissing}
-          </DetailLine>
+          {isEditing ? (
+            <form
+              action={updateGroupLeaderParticipantContact}
+              className="grid gap-3"
+              data-preserve-dashboard-scroll
+            >
+              <input type="hidden" name="assignmentId" value={assignment.id} />
+              <input type="hidden" name="participantId" value={assignment.participantId} />
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                {copy.email}
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={assignment.participantEmail ?? ""}
+                  className="field bg-white font-normal"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                {copy.phone}
+                <input
+                  name="phone"
+                  defaultValue={assignment.participantPhone ?? ""}
+                  className="field bg-white font-normal"
+                />
+              </label>
+              <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                Salva contatti
+              </PendingSubmitButton>
+            </form>
+          ) : (
+            <>
+              <DetailLine label={copy.email}>
+                {assignment.participantEmail ?? copy.table.emailMissing}
+              </DetailLine>
+              <DetailLine label={copy.phone}>
+                {assignment.participantPhone ?? copy.table.phoneMissing}
+              </DetailLine>
+            </>
+          )}
         </DetailBlock>
 
         <DetailBlock title="Tag operativi">
@@ -2698,6 +2690,15 @@ function AssignmentDetailCard({
                 {copy.table.reject}
               </PendingSubmitButton>
             </>
+          ) : null}
+          {assignment.isCurrent && assignment.status === "confirmed" ? (
+            <PendingSubmitButton
+              name="intent"
+              value="unconfirm"
+              className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            >
+              Segna da verificare
+            </PendingSubmitButton>
           ) : null}
         </div>
       </form>
@@ -2927,6 +2928,8 @@ function toAssignmentView(
     groupId: row.group_id,
     groupName: group.name ?? copy.groupFallback,
     groupNodeType: group.node_type,
+    participantFirstName: participant.first_name,
+    participantLastName: participant.last_name,
     participantName: formatParticipantName(
       participant.first_name,
       participant.last_name,
@@ -3251,50 +3254,13 @@ function statusSortValue(assignment: AssignmentView): number {
 function getManualRegistrationEventDays(
   groups: ScopedGroupView[],
   locale: SupportedLocale
-): Array<{ value: string; label: string }> {
+): AttendanceDayColumn[] {
   const event = groups.find((group) => group.eventStartsOn);
 
-  if (!event?.eventStartsOn) {
-    return [];
-  }
-
-  const start = parseDateOnly(event.eventStartsOn);
-  const end = parseDateOnly(event.eventEndsOn ?? event.eventStartsOn);
-
-  if (!start || !end || end.getTime() < start.getTime()) {
-    return [];
-  }
-
-  const days: Array<{ value: string; label: string }> = [];
-  const formatter = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-
-  for (
-    let cursor = start;
-    cursor.getTime() <= end.getTime();
-    cursor = new Date(cursor.getTime() + DAY_IN_MS)
-  ) {
-    days.push({
-      value: cursor.toISOString().slice(0, 10),
-      label: formatter.format(cursor),
-    });
-  }
-
-  return days;
-}
-
-function parseDateOnly(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (!match) {
-    return null;
-  }
-
-  return new Date(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  return buildAttendanceDayColumns(
+    event?.eventStartsOn ?? null,
+    event?.eventEndsOn ?? null,
+    locale
   );
 }
 

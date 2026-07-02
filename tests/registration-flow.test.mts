@@ -47,6 +47,7 @@ test("parseRegistrationForm validates required public registration fields", () =
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("externalGroupAssociation", "Associazione Giovani del quartiere");
   formData.append("availabilityDays", "2026-10-25");
   formData.append("availabilityDays", "2026-10-27");
   formData.set("moment_11111111-1111-4111-8111-111111111111", "yes");
@@ -60,15 +61,25 @@ test("parseRegistrationForm validates required public registration fields", () =
     assert.equal(parsed.value.email, "maria@example.org");
     assert.equal(parsed.value.phone, "+3906000000");
     assert.equal(parsed.value.preferredLocale, "en");
+    assert.equal(
+      parsed.value.externalGroupAssociation,
+      "Associazione Giovani del quartiere"
+    );
     assert.equal(parsed.value.attendanceChoice, "unknown");
-    assert.deepEqual(parsed.value.availabilityDays, [
-      "2026-10-25",
-      "2026-10-27",
+    assert.deepEqual(parsed.value.availabilitySlots, [
+      { day: "2026-10-25", part: "morning" },
+      { day: "2026-10-25", part: "afternoon" },
+      { day: "2026-10-27", part: "morning" },
+      { day: "2026-10-27", part: "afternoon" },
     ]);
     assert.equal(parsed.value.availabilityUnknown, false);
     assert.deepEqual(parsed.value.momentAttendanceChoices, {
       "11111111-1111-4111-8111-111111111111": "yes",
     });
+    assert.equal(
+      buildRegistrationQuestionnaireAnswers(parsed.value).externalGroupAssociation,
+      "Associazione Giovani del quartiere"
+    );
   }
 });
 
@@ -238,7 +249,6 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   formData.set("firstName", "Paolo");
   formData.set("lastName", "Bianchi");
   formData.set("phone", "+39 333 123 4567");
-  formData.set("preferredLocale", "fr");
   formData.append("availabilityDays", "2026-10-25");
   formData.append("availabilityDays", "2026-10-26");
   formData.set("hasAccessibilityNeeds", "yes");
@@ -254,11 +264,13 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   if (parsed.ok) {
     assert.equal(parsed.value.email, null);
     assert.equal(parsed.value.phone, "+393331234567");
-    assert.equal(parsed.value.preferredLocale, "fr");
+    assert.equal(parsed.value.preferredLocale, "en");
     assert.equal(parsed.value.availabilityUnknown, false);
-    assert.deepEqual(parsed.value.availabilityDays, [
-      "2026-10-25",
-      "2026-10-26",
+    assert.deepEqual(parsed.value.availabilitySlots, [
+      { day: "2026-10-25", part: "morning" },
+      { day: "2026-10-25", part: "afternoon" },
+      { day: "2026-10-26", part: "morning" },
+      { day: "2026-10-26", part: "afternoon" },
     ]);
     assert.equal(parsed.value.hasAccessibilityNeeds, true);
     assert.deepEqual(parsed.value.accessibilityAnswers, {
@@ -475,7 +487,6 @@ test("parseParticipantDashboardUpdate validates editable participant fields", ()
   const formData = new FormData();
   formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
   formData.set("phone", "+39 06 000000");
-  formData.set("preferredLocale", "uk-UA");
   formData.append("availabilityDays", "2026-09-04");
   formData.set("moment_22222222-2222-4222-8222-222222222222", "yes");
   formData.set("hasAccessibilityNeeds", "on");
@@ -487,8 +498,10 @@ test("parseParticipantDashboardUpdate validates editable participant fields", ()
   assert.equal(parsed.ok, true);
   if (parsed.ok) {
     assert.equal(parsed.value.phone, "+3906000000");
-    assert.equal(parsed.value.preferredLocale, "uk");
-    assert.deepEqual(parsed.value.availabilityDays, ["2026-09-04"]);
+    assert.deepEqual(parsed.value.availabilitySlots, [
+      { day: "2026-09-04", part: "morning" },
+      { day: "2026-09-04", part: "afternoon" },
+    ]);
     assert.deepEqual(parsed.value.momentAttendanceChoices, {
       "22222222-2222-4222-8222-222222222222": "yes",
     });
@@ -592,8 +605,10 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
   const changed = diffParticipantDashboardUpdate(
     {
       phone: "+3906000000",
-      preferredLocale: "it",
-      availabilityDays: ["2026-09-04"],
+      availabilitySlots: [
+        { day: "2026-09-04", part: "morning" },
+        { day: "2026-09-04", part: "afternoon" },
+      ],
       availabilityUnknown: false,
       momentAttendanceChoices: {
         "22222222-2222-4222-8222-222222222222": "unknown",
@@ -605,8 +620,10 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
     {
       registrationId: "11111111-1111-4111-8111-111111111111",
       phone: "+3906000000",
-      preferredLocale: "en",
-      availabilityDays: ["2026-09-05"],
+      availabilitySlots: [
+        { day: "2026-09-05", part: "morning" },
+        { day: "2026-09-05", part: "afternoon" },
+      ],
       availabilityUnknown: false,
       momentAttendanceChoices: {
         "22222222-2222-4222-8222-222222222222": "yes",
@@ -620,8 +637,7 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
   );
 
   assert.deepEqual(changed, [
-    "preferred_locale",
-    "availability_days",
+    "availability_slots",
     "moment_attendance_choices",
     "accessibility_answers",
     "needs_operational_support",

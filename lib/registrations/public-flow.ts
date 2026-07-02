@@ -34,6 +34,10 @@ import { encryptQrToken } from "@/lib/qrcode/secure-token";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
 import { buildAppMagicLink } from "@/lib/registrations/magic-link";
 import {
+  buildAllowedAttendanceSlotKeys,
+  attendanceSlotKey,
+} from "@/lib/registrations/attendance-slots";
+import {
   PRIVACY_VERSION,
   type RegistrationInput,
 } from "@/lib/registrations/validation";
@@ -95,8 +99,6 @@ type PublicGroupRegistrationLinkRow = {
   revoked_at: string | null;
   groups: PublicGroupRow | PublicGroupRow[] | null;
 };
-
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export type PublicRegistrationOptions = {
   event: PublicEvent | null;
@@ -398,7 +400,10 @@ export async function createPublicRegistration(
 
   const registrationId = registration.id;
   const qrToken = createOpaqueQrToken();
-  const allowedEventDays = getEventDayValues(event.starts_on, event.ends_on);
+  const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
+    event.starts_on,
+    event.ends_on
+  );
   const groups = await getEventGroupCandidates(supabase, event.id);
   const leaderGroupAssignment = authUserId
     ? await getConfirmedLeaderGroupAssignment(supabase, authUserId, event.id)
@@ -453,9 +458,11 @@ export async function createPublicRegistration(
 
   if (
     !input.availabilityUnknown &&
-    input.availabilityDays.some((day) => !allowedEventDays.has(day))
+    input.availabilitySlots.some(
+      (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
+    )
   ) {
-    throw new Error("I giorni di presenza selezionati non appartengono all'evento.");
+    throw new Error("Le fasce di presenza selezionate non appartengono all'evento.");
   }
 
   const writes = [
@@ -526,12 +533,14 @@ export async function createPublicRegistration(
   const attendanceChoices: Array<{
     registration_id: string;
     day?: string;
+    day_part?: "morning" | "afternoon";
     choice: "yes" | "no" | "unknown";
   }> = input.availabilityUnknown
     ? [{ registration_id: registrationId, choice: "unknown" }]
-    : input.availabilityDays.map((day) => ({
+    : input.availabilitySlots.map((slot) => ({
         registration_id: registrationId,
-        day,
+        day: slot.day,
+        day_part: slot.part,
         choice: "yes",
       }));
 
@@ -679,46 +688,6 @@ async function getCurrentPublicEvent(
     .maybeSingle();
 
   return data ?? null;
-}
-
-function getEventDayValues(
-  startsOn: string | null,
-  endsOn: string | null
-): Set<string> {
-  if (!startsOn) {
-    return new Set();
-  }
-
-  const start = parseDateOnly(startsOn);
-  const end = parseDateOnly(endsOn ?? startsOn);
-
-  if (!start || !end || end.getTime() < start.getTime()) {
-    return new Set();
-  }
-
-  const days = new Set<string>();
-
-  for (
-    let cursor = start;
-    cursor.getTime() <= end.getTime();
-    cursor = new Date(cursor.getTime() + DAY_IN_MS)
-  ) {
-    days.add(cursor.toISOString().slice(0, 10));
-  }
-
-  return days;
-}
-
-function parseDateOnly(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (!match) {
-    return null;
-  }
-
-  return new Date(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-  );
 }
 
 async function resolveParticipantGeography(

@@ -1,17 +1,15 @@
-import {
-  DEFAULT_LOCALE,
-  type SupportedLocale,
-  normalizeLocale,
-} from "../i18n/config.ts";
-
 import { optionalText } from "./validation.ts";
+import {
+  attendanceSlotKey,
+  parseAttendanceSlot,
+  type AttendanceSlot,
+} from "./attendance-slots.ts";
 
 export type ParticipantDashboardUpdate = {
   registrationId: string;
   phone: string | null;
-  preferredLocale: SupportedLocale;
   availabilityUnknown: boolean;
-  availabilityDays: string[];
+  availabilitySlots: AttendanceSlot[];
   momentAttendanceChoices: Record<string, "yes" | "no" | "unknown">;
   accessibilityAnswers: Record<string, boolean>;
   needsOperationalSupport: boolean;
@@ -31,17 +29,14 @@ export function parseParticipantDashboardUpdate(
 ): ParticipantDashboardValidation {
   const registrationId = optionalText(formData.get("registrationId")) ?? "";
   const phone = normalizePhone(formData.get("phone"));
-  const preferredLocale =
-    normalizeLocale(String(formData.get("preferredLocale") ?? "")) ?? DEFAULT_LOCALE;
   const availabilityUnknown = formData.get("availabilityUnknown") === "on";
   const hasAccessibilityNeeds = formData.get("hasAccessibilityNeeds") === "on";
 
   const value: ParticipantDashboardUpdate = {
     registrationId,
     phone,
-    preferredLocale,
     availabilityUnknown,
-    availabilityDays: availabilityUnknown ? [] : parseAvailabilityDays(formData),
+    availabilitySlots: availabilityUnknown ? [] : parseAvailabilitySlots(formData),
     momentAttendanceChoices: parseMomentAttendanceChoices(formData),
     accessibilityAnswers: hasAccessibilityNeeds
       ? parseAccessibilityAnswers(formData)
@@ -70,7 +65,7 @@ export function validateParticipantDashboardUpdate(
     errors.push("Inserisci un numero di telefono valido con prefisso internazionale.");
   }
 
-  if (!input.availabilityUnknown && input.availabilityDays.length === 0) {
+  if (!input.availabilityUnknown && input.availabilitySlots.length === 0) {
     errors.push(
       "Seleziona almeno un giorno di presenza o indica che lo comunicherai in seguito."
     );
@@ -104,8 +99,7 @@ export function canParticipantEditRegistration(
 export function diffParticipantDashboardUpdate(
   before: {
     phone: string | null;
-    preferredLocale: string | null;
-    availabilityDays: string[];
+    availabilitySlots: AttendanceSlot[];
     availabilityUnknown: boolean;
     momentAttendanceChoices: Record<string, string>;
     accessibilityAnswers: Record<string, boolean>;
@@ -120,16 +114,17 @@ export function diffParticipantDashboardUpdate(
     changed.push("phone");
   }
 
-  if ((before.preferredLocale ?? "it") !== after.preferredLocale) {
-    changed.push("preferred_locale");
-  }
-
   if (before.availabilityUnknown !== after.availabilityUnknown) {
     changed.push("availability_unknown");
   }
 
-  if (!sameStringList(before.availabilityDays, after.availabilityDays)) {
-    changed.push("availability_days");
+  if (
+    !sameStringList(
+      before.availabilitySlots.map(attendanceSlotKey),
+      after.availabilitySlots.map(attendanceSlotKey)
+    )
+  ) {
+    changed.push("availability_slots");
   }
 
   if (!sameChoiceMap(before.momentAttendanceChoices, after.momentAttendanceChoices)) {
@@ -172,13 +167,29 @@ export function preserveAccessibilityUnlessEdited(
   };
 }
 
-function parseAvailabilityDays(formData: FormData): string[] {
-  return uniqueStrings(
-    formData
-      .getAll("availabilityDays")
-      .map((value) => String(value))
-      .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
-  );
+function parseAvailabilitySlots(formData: FormData): AttendanceSlot[] {
+  const slots = new Map<string, AttendanceSlot>();
+
+  for (const rawValue of formData.getAll("availabilitySlots")) {
+    const slot = parseAttendanceSlot(String(rawValue));
+
+    if (slot) {
+      slots.set(attendanceSlotKey(slot), slot);
+    }
+  }
+
+  for (const rawValue of formData.getAll("availabilityDays")) {
+    const day = String(rawValue);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      for (const part of ["morning", "afternoon"] as const) {
+        const slot = { day, part };
+        slots.set(attendanceSlotKey(slot), slot);
+      }
+    }
+  }
+
+  return [...slots.values()];
 }
 
 function parseMomentAttendanceChoices(
@@ -266,8 +277,4 @@ function sameBooleanMap(
   const rightKeys = Object.keys(right).filter((key) => right[key]).sort();
 
   return sameStringList(leftKeys, rightKeys);
-}
-
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values)];
 }

@@ -504,15 +504,6 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
     editableAfterSubmit: true,
   },
   {
-    id: "preferred_locale",
-    label: { it: "Lingua preferita", en: "Preferred language" },
-    required: true,
-    dataClass: "operational",
-    structuredStorage: "participants.preferred_locale",
-    visibleTo: ["partecipante", "manager", "manager_viewer", "admin"],
-    editableAfterSubmit: true,
-  },
-  {
     id: "place",
     label: { it: "Paese e città", en: "Country and city" },
     required: true,
@@ -608,6 +599,7 @@ export function buildRegistrationQuestionnaireAnswers(input: RegistrationInput) 
     nationality: input.nationality,
     phone: input.phone,
     previousSantegidioParticipation: input.hasPreviousSantegidioParticipation,
+    externalGroupAssociation: input.externalGroupAssociation,
     groupParticipation: {
       participatesWithGroup: input.participatesWithGroup,
       selectedGroupId: input.groupId,
@@ -616,7 +608,8 @@ export function buildRegistrationQuestionnaireAnswers(input: RegistrationInput) 
     },
     attendance: {
       overallChoice: input.attendanceChoice,
-      availabilityDays: input.availabilityDays,
+      availabilitySlots: input.availabilitySlots,
+      availabilityDays: [...new Set(input.availabilitySlots.map((slot) => slot.day))],
       availabilityUnknown: input.availabilityUnknown,
       moments: input.momentAttendanceChoices,
     },

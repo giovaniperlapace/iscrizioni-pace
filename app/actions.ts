@@ -58,11 +58,14 @@ import {
   LOCALE_COOKIE_NAME,
   normalizeLocale,
 } from "@/lib/i18n/config";
+import {
+  attendanceSlotKey,
+  buildAllowedAttendanceSlotKeys,
+} from "@/lib/registrations/attendance-slots";
 
 const EMAIL_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 const MAGIC_LINK_SEND_COOLDOWN_MS = 60 * 1000;
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 type OperationsGroupRow = {
   id: string;
@@ -241,7 +244,7 @@ export async function updateParticipantDashboard(formData: FormData) {
   const { data: registration, error: registrationError } = await supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,events(registration_closes_at),participants!inner(auth_user_id,preferred_locale)"
+      "id,event_id,participant_id,status,events(starts_on,ends_on,registration_closes_at),participants!inner(auth_user_id)"
     )
     .eq("id", parsed.value.registrationId)
     .maybeSingle();
@@ -255,9 +258,15 @@ export async function updateParticipantDashboard(formData: FormData) {
     event_id: string;
     participant_id: string;
     status: string | null;
-    events: Array<{ registration_closes_at: string | null }> | null;
+    events:
+      | Array<{
+          starts_on: string | null;
+          ends_on: string | null;
+          registration_closes_at: string | null;
+        }>
+      | null;
     participants:
-      | Array<{ auth_user_id: string | null; preferred_locale: string | null }>
+      | Array<{ auth_user_id: string | null }>
       | null;
   };
   const registrationRow = {
@@ -277,6 +286,20 @@ export async function updateParticipantDashboard(formData: FormData) {
     redirect("/dashboard/partecipante?error=closed");
   }
 
+  const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
+    registrationRow.events?.starts_on ?? null,
+    registrationRow.events?.ends_on ?? null
+  );
+
+  if (
+    !parsed.value.availabilityUnknown &&
+    parsed.value.availabilitySlots.some(
+      (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
+    )
+  ) {
+    redirect("/dashboard/partecipante?error=invalid-days");
+  }
+
   const [
     { data: contacts },
     { data: attendanceChoices },
@@ -291,7 +314,7 @@ export async function updateParticipantDashboard(formData: FormData) {
       .limit(1),
     supabase
       .from("event_attendance_choices")
-      .select("day,choice")
+      .select("day,day_part,choice")
       .eq("registration_id", registrationRow.id),
     supabase
       .from("moment_attendance_choices")
@@ -312,12 +335,20 @@ export async function updateParticipantDashboard(formData: FormData) {
       (choice) => [choice.moment_id, choice.choice]
     )
   );
-  const previousAvailabilityDays = ((attendanceChoices ?? []) as Array<{
+  const previousAvailabilitySlots = ((attendanceChoices ?? []) as Array<{
     day: string | null;
+    day_part: "morning" | "afternoon" | null;
     choice: string;
   }>)
     .filter((choice) => choice.choice === "yes" && choice.day)
-    .map((choice) => choice.day as string);
+    .flatMap((choice) =>
+      choice.day_part
+        ? [{ day: choice.day as string, part: choice.day_part }]
+        : (["morning", "afternoon"] as const).map((part) => ({
+            day: choice.day as string,
+            part,
+          }))
+    );
   const previousAvailabilityUnknown = ((attendanceChoices ?? []) as Array<{
     day: string | null;
     choice: string;
@@ -341,8 +372,7 @@ export async function updateParticipantDashboard(formData: FormData) {
   const changedFields = diffParticipantDashboardUpdate(
     {
       phone: primaryContact?.phone ?? null,
-      preferredLocale: registrationRow.participants?.preferred_locale ?? "it",
-      availabilityDays: previousAvailabilityDays,
+      availabilitySlots: previousAvailabilitySlots,
       availabilityUnknown: previousAvailabilityUnknown,
       momentAttendanceChoices: previousMomentChoices,
       accessibilityAnswers: previousAccessibility?.washington_group_answers ?? {},
@@ -352,11 +382,7 @@ export async function updateParticipantDashboard(formData: FormData) {
     dashboardUpdate
   );
 
-  const writes = [
-    supabase
-      .from("participants")
-      .update({ preferred_locale: dashboardUpdate.preferredLocale })
-      .eq("id", registrationRow.participant_id),
+  const writes: Array<PromiseLike<{ error: { message: string } | null }>> = [
     supabase
       .from("accessibility_needs")
       .upsert(
@@ -408,9 +434,10 @@ export async function updateParticipantDashboard(formData: FormData) {
 
   const attendanceRows = dashboardUpdate.availabilityUnknown
     ? [{ registration_id: registrationRow.id, choice: "unknown" }]
-    : dashboardUpdate.availabilityDays.map((day) => ({
+    : dashboardUpdate.availabilitySlots.map((slot) => ({
         registration_id: registrationRow.id,
-        day,
+        day: slot.day,
+        day_part: slot.part,
         choice: "yes",
       }));
   const momentRows = Object.entries(dashboardUpdate.momentAttendanceChoices).map(
@@ -816,6 +843,35 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     redirect("/dashboard/capogruppo?saved=1");
   }
 
+  if (intent === "unconfirm") {
+    const { error } = await serviceSupabase
+      .from("participant_group_assignments")
+      .update({
+        status: "probable",
+        is_current: true,
+        confirmed_by: null,
+        confirmed_at: null,
+        leader_decision_by: auth.user.id,
+        leader_decision_at: now,
+        leader_notification_read_at: now,
+      })
+      .eq("id", assignmentRow.id);
+
+    if (error) {
+      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
+    }
+
+    await auditGroupLeaderDecision(serviceSupabase, {
+      actorUserId: auth.user.id,
+      assignment: assignmentRow,
+      action: "group_leader.assignment_unconfirmed",
+      metadata: { from_status: assignmentRow.status },
+    });
+
+    revalidatePath("/dashboard/capogruppo");
+    redirect("/dashboard/capogruppo?saved=1");
+  }
+
   if (intent === "reject") {
     const parentGroupId = getEscalationTargetGroupId(
       groupsById,
@@ -904,6 +960,107 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   redirect("/dashboard/capogruppo?error=invalid");
+}
+
+export async function updateGroupLeaderParticipantContact(formData: FormData) {
+  const assignmentId = optionalText(formData.get("assignmentId"));
+  const participantId = optionalText(formData.get("participantId"));
+  const email = normalizeEmail(formData.get("email"));
+  const phone = normalizeGroupLeaderContactPhone(formData.get("phone"));
+  const firstName = optionalText(formData.get("firstName"));
+  const lastName = optionalText(formData.get("lastName"));
+  const birthDate = normalizeDateOnly(formData.get("birthDate"));
+  const hasIdentityUpdate =
+    formData.has("firstName") || formData.has("lastName") || formData.has("birthDate");
+
+  if (!assignmentId || !participantId || (!email && !phone && !hasIdentityUpdate)) {
+    redirect("/dashboard/capogruppo?error=invalid");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "capogruppo");
+
+  if (!auth || auth.dashboardRole !== "capogruppo") {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const canUpdate = await canGroupLeaderTagParticipant(
+    serviceSupabase,
+    auth.user.id,
+    participantId,
+    (await getCurrentOperationalEventId(serviceSupabase)) ?? "",
+    assignmentId
+  );
+
+  if (!canUpdate) {
+    redirect("/dashboard/capogruppo?error=forbidden");
+  }
+
+  if (hasIdentityUpdate) {
+    const { error: participantUpdateError } = await serviceSupabase
+      .from("participants")
+      .update({
+        first_name: firstName,
+        last_name: lastName,
+        birth_date: birthDate,
+      })
+      .eq("id", participantId);
+
+    if (participantUpdateError) {
+      redirect(
+        `/dashboard/capogruppo?error=${encodeURIComponent(participantUpdateError.message)}`
+      );
+    }
+  }
+
+  if (formData.has("email") || formData.has("phone")) {
+    const { data: currentContacts, error: contactReadError } = await serviceSupabase
+      .from("participant_contacts")
+      .select("id")
+      .eq("participant_id", participantId)
+      .eq("is_primary", true)
+      .limit(1);
+
+    if (contactReadError) {
+      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(contactReadError.message)}`);
+    }
+
+    const primaryContactId =
+      ((currentContacts ?? []) as Array<{ id: string }>)[0]?.id ?? null;
+    const values = {
+      participant_id: participantId,
+      email: email || null,
+      phone,
+      is_primary: true,
+    };
+    const result = primaryContactId
+      ? await serviceSupabase
+          .from("participant_contacts")
+          .update({ email: values.email, phone: values.phone })
+          .eq("id", primaryContactId)
+      : await serviceSupabase.from("participant_contacts").insert(values);
+
+    if (result.error) {
+      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(result.error.message)}`);
+    }
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    actor_user_id: auth.user.id,
+    action: "group_leader.participant_contact_updated",
+    entity_table: "participants",
+    entity_id: participantId,
+    metadata: {
+      assignment_id: assignmentId,
+      identity_updated: hasIdentityUpdate,
+      has_email: Boolean(email),
+      has_phone: Boolean(phone),
+    },
+  });
+
+  revalidatePath("/dashboard/capogruppo");
+  redirect(`/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignmentId)}&saved=contact`);
 }
 
 export async function createOperationalTag(formData: FormData) {
@@ -1261,13 +1418,16 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   const registrationId = (registration as { id: string }).id;
   const qrToken = createOpaqueQrToken();
   const eventDates = relatedOne(groupRow.events);
-  const allowedEventDays = new Set(
-    getEventDayValues(eventDates?.starts_on ?? null, eventDates?.ends_on ?? null)
+  const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
+    eventDates?.starts_on ?? null,
+    eventDates?.ends_on ?? null
   );
 
   if (
     !parsed.value.availabilityUnknown &&
-    parsed.value.availabilityDays.some((day) => !allowedEventDays.has(day))
+    parsed.value.availabilitySlots.some(
+      (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
+    )
   ) {
     redirect("/dashboard/capogruppo?manualError=invalid-days");
   }
@@ -1275,9 +1435,10 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   const attendanceRows =
     parsed.value.availabilityUnknown
       ? [{ registration_id: registrationId, choice: "unknown" }]
-      : parsed.value.availabilityDays.map((day) => ({
+      : parsed.value.availabilitySlots.map((slot) => ({
           registration_id: registrationId,
-          day,
+          day: slot.day,
+          day_part: slot.part,
           choice: "yes",
         }));
   const writes = [
@@ -3524,43 +3685,6 @@ function getEventOpeningUpdate(
   }
 }
 
-function getEventDayValues(startsOn: string | null, endsOn: string | null): string[] {
-  if (!startsOn) {
-    return [];
-  }
-
-  const start = parseDateOnly(startsOn);
-  const end = parseDateOnly(endsOn ?? startsOn);
-
-  if (!start || !end || end.getTime() < start.getTime()) {
-    return [];
-  }
-
-  const days: string[] = [];
-
-  for (
-    let cursor = start;
-    cursor.getTime() <= end.getTime();
-    cursor = new Date(cursor.getTime() + DAY_IN_MS)
-  ) {
-    days.push(cursor.toISOString().slice(0, 10));
-  }
-
-  return days;
-}
-
-function parseDateOnly(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (!match) {
-    return null;
-  }
-
-  return new Date(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-  );
-}
-
 function relatedOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
@@ -3668,4 +3792,22 @@ async function logEmailFailure(
 
 function getEmailDomain(email: string): string | null {
   return email.split("@")[1]?.toLowerCase() ?? null;
+}
+
+function normalizeGroupLeaderContactPhone(
+  value: FormDataEntryValue | string | null
+): string | null {
+  const text = optionalText(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const compact = text.replaceAll(" ", "");
+  return /^\+[1-9]\d{6,14}$/.test(compact) ? compact : text;
+}
+
+function normalizeDateOnly(value: FormDataEntryValue | string | null): string | null {
+  const text = optionalText(value);
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }

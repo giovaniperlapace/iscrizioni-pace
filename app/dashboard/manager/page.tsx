@@ -282,6 +282,7 @@ type OperationalUserRoleAssignment = {
 type AttendanceChoiceRow = {
   registration_id: string;
   day: string | null;
+  day_part: string | null;
   choice: string | null;
 };
 
@@ -1266,7 +1267,7 @@ async function getManagerStatisticsSnapshot(
     registrationIds.length > 0
       ? supabase
           .from("event_attendance_choices")
-          .select("registration_id,day,choice")
+          .select("registration_id,day,day_part,choice")
           .in("registration_id", registrationIds)
       : Promise.resolve({ data: [] }),
   ]);
