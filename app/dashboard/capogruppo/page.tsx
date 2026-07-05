@@ -14,6 +14,7 @@ import {
   DashboardAreaDescription,
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
+import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
 import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
@@ -56,6 +57,9 @@ type CapogruppoPageProps = {
     manualError?: string;
     manualSaved?: string;
     q?: string;
+    contact?: string;
+    group?: string;
+    tag?: string;
     sort?: string;
     tool?: string;
     groupId?: string;
@@ -443,6 +447,13 @@ type GroupLeaderCopy = {
   filters: {
     search: string;
     searchPlaceholder: string;
+    contact: string;
+    contactPlaceholder: string;
+    group: string;
+    allGroups: string;
+    tag: string;
+    allTags: string;
+    noTags: string;
     status: string;
     sort: string;
     apply: string;
@@ -454,6 +465,7 @@ type GroupLeaderCopy = {
   table: {
     participant: string;
     contacts: string;
+    tags: string;
     group: string;
     origin: string;
     registration: string;
@@ -473,6 +485,12 @@ type GroupLeaderCopy = {
     confirm: string;
     reject: string;
     markRead: string;
+    details: string;
+  };
+  pending: {
+    title: string;
+    help: string;
+    empty: string;
   };
   detail: {
     title: string;
@@ -603,6 +621,13 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   filters: {
     search: "Cerca partecipante",
     searchPlaceholder: "Nome, email, telefono, codice",
+    contact: "Contatto",
+    contactPlaceholder: "Email o telefono",
+    group: "Gruppo",
+    allGroups: "Tutti i gruppi",
+    tag: "Tag",
+    allTags: "Tutti i tag",
+    noTags: "Senza tag",
     status: "Stato",
     sort: "Ordina per",
     apply: "Applica",
@@ -625,6 +650,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   table: {
     participant: "Partecipante",
     contacts: "Contatti",
+    tags: "Tag",
     group: "Gruppo",
     origin: "Provenienza",
     registration: "Iscrizione",
@@ -644,6 +670,12 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     confirm: "Conferma",
     reject: "Non riconosciuto",
     markRead: "Segna letta",
+    details: "Dettagli",
+  },
+  pending: {
+    title: "Da confermare",
+    help: "Controlla prima queste persone: risultano collegate al tuo gruppo, ma attendono una conferma esplicita.",
+    empty: "Non ci sono partecipanti in attesa di conferma con questi filtri.",
   },
   detail: {
     title: "Scheda partecipante",
@@ -774,6 +806,13 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   filters: {
     search: "Search participant",
     searchPlaceholder: "Name, email, phone, code",
+    contact: "Contact",
+    contactPlaceholder: "Email or phone",
+    group: "Group",
+    allGroups: "All groups",
+    tag: "Tag",
+    allTags: "All tags",
+    noTags: "No tag",
     status: "Status",
     sort: "Sort by",
     apply: "Apply",
@@ -796,6 +835,7 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   table: {
     participant: "Participant",
     contacts: "Contacts",
+    tags: "Tags",
     group: "Group",
     origin: "Origin",
     registration: "Registration",
@@ -815,6 +855,12 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     confirm: "Confirm",
     reject: "Not recognised",
     markRead: "Mark as read",
+    details: "Details",
+  },
+  pending: {
+    title: "To confirm",
+    help: "Start here: these people are linked to your group, but still need an explicit confirmation.",
+    empty: "No participant is waiting for confirmation with these filters.",
   },
   detail: {
     title: "Participant card",
@@ -946,6 +992,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalNote: "Note interne",
     consent: "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription.",
     filters: {
+      ...EN_GROUP_LEADER_COPY.filters,
       search: "Chercher un participant",
       searchPlaceholder: "Nom, email, téléphone, code",
       status: "État",
@@ -1096,6 +1143,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalNote: "Interne Notiz",
     consent: "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung.",
     filters: {
+      ...EN_GROUP_LEADER_COPY.filters,
       search: "Teilnehmende suchen",
       searchPlaceholder: "Name, E-Mail, Telefon, Code",
       status: "Status",
@@ -1246,6 +1294,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalNote: "Nota interna",
     consent: "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción.",
     filters: {
+      ...EN_GROUP_LEADER_COPY.filters,
       search: "Buscar participante",
       searchPlaceholder: "Nombre, email, teléfono, código",
       status: "Estado",
@@ -1396,6 +1445,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalNote: "Interne notitie",
     consent: "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken.",
     filters: {
+      ...EN_GROUP_LEADER_COPY.filters,
       search: "Deelnemer zoeken",
       searchPlaceholder: "Naam, e-mail, telefoon, code",
       status: "Status",
@@ -1546,6 +1596,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalNote: "Внутрішня нотатка",
     consent: "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації.",
     filters: {
+      ...EN_GROUP_LEADER_COPY.filters,
       search: "Шукати учасника",
       searchPlaceholder: "Ім'я, email, телефон, код",
       status: "Стан",
@@ -1647,6 +1698,9 @@ export default async function CapogruppoDashboardPage({
     ? parseGroupLeaderReviewFilter(params.filter)
     : "all";
   const query = normalizeSearchQuery(params.q);
+  const contactQuery = normalizeSearchQuery(params.contact);
+  const groupFilter = normalizeFilterParam(params.group);
+  const tagFilter = normalizeFilterParam(params.tag);
   const sort = parseAssignmentSort(params.sort);
   const activeTool =
     params.groupLinkToken || params.groupLinkGroupId
@@ -1698,16 +1752,25 @@ export default async function CapogruppoDashboardPage({
     .map((group) => toScopedGroupView(group, copy));
   const groupLinks = await getGroupLinks([...scopedGroupIds]);
   const filteredAssignments = sortAssignments(
-    assignments.filter(
-      (assignment) =>
-        matchesGroupLeaderFilter(assignment, filter) &&
-        matchesAssignmentQuery(assignment, query)
+    assignments.filter((assignment) =>
+      matchesAssignmentFilters(assignment, {
+        filter,
+        query,
+        contactQuery,
+        groupFilter,
+        tagFilter,
+      })
     ),
     sort,
     locale
   );
+  const pendingAssignments = filteredAssignments.filter(isPendingAssignment);
+  const tableAssignments = filteredAssignments.filter(
+    (assignment) => !isPendingAssignment(assignment)
+  );
+  const groupFilterOptions = buildGroupFilterOptions(assignments, locale);
   const visibleGroupCount = new Set(
-    filteredAssignments.map((assignment) => assignment.groupId)
+    tableAssignments.map((assignment) => assignment.groupId)
   ).size;
   const selectedAssignment =
     params.assignmentId
@@ -1762,12 +1825,23 @@ export default async function CapogruppoDashboardPage({
           <AssignmentFilters
             filter={filter}
             query={query}
+            contactQuery={contactQuery}
+            groupFilter={groupFilter}
+            tagFilter={tagFilter}
+            groupOptions={groupFilterOptions}
+            tagOptions={operationalTags}
             sort={sort}
             copy={copy}
           />
 
+          <PendingAssignmentsPanel
+            assignments={pendingAssignments}
+            copy={copy}
+            showGroupColumn={new Set(pendingAssignments.map((assignment) => assignment.groupId)).size > 1}
+          />
+
           <AssignmentsTable
-            assignments={filteredAssignments}
+            assignments={tableAssignments}
             copy={copy}
             showGroupColumn={visibleGroupCount > 1}
           />
@@ -2292,61 +2366,290 @@ function ManualRegistrationSection({
 function AssignmentFilters({
   filter,
   query,
+  contactQuery,
+  groupFilter,
+  tagFilter,
+  groupOptions,
+  tagOptions,
   sort,
   copy,
 }: {
   filter: GroupLeaderReviewFilter;
   query: string;
+  contactQuery: string;
+  groupFilter: string;
+  tagFilter: string;
+  groupOptions: Array<{ id: string; name: string }>;
+  tagOptions: OperationalTagOption[];
   sort: AssignmentSort;
   copy: GroupLeaderCopy;
 }) {
   return (
-    <form
-      method="get"
+    <AutoFilterForm
       action="/dashboard/capogruppo"
-      className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:grid-cols-[1fr_190px_210px_auto]"
+      className="mt-5"
+      defaults={{
+        q: "",
+        contact: "",
+        group: "all",
+        tag: "all",
+        filter: "all",
+        sort: "name",
+      }}
     >
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        {copy.filters.search}
-        <input
-          name="q"
-          defaultValue={query}
-          className="field bg-white"
-          placeholder={copy.filters.searchPlaceholder}
-        />
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        {copy.filters.status}
-        <select name="filter" defaultValue={filter} className="field bg-white">
-          {Object.entries(copy.filterLabels).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-        {copy.filters.sort}
-        <select name="sort" defaultValue={sort} className="field bg-white">
-          {ASSIGNMENT_SORT_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {copy.sortLabels[value]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex items-end gap-2">
-        <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          {copy.filters.apply}
-        </PendingSubmitButton>
-        <Link
-          href="/dashboard/capogruppo#assegnazioni-gruppo"
-          className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-        >
-          {copy.filters.reset}
-        </Link>
+      <div className="overflow-x-auto rounded-md border border-[var(--peace-border)]">
+        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+              <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
+              <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
+              <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
+              <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
+              <th className="py-3 pr-4 font-semibold">{copy.table.status}</th>
+              <th className="py-3 pr-4 text-right font-semibold">{copy.filters.sort}</th>
+            </tr>
+            <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
+              <th className="py-3 pl-4 pr-4">
+                <label className="sr-only" htmlFor="leader-participant-q">
+                  {copy.filters.search}
+                </label>
+                <input
+                  id="leader-participant-q"
+                  name="q"
+                  defaultValue={query}
+                  className="field min-h-10 bg-white text-sm font-normal"
+                  placeholder={copy.filters.searchPlaceholder}
+                />
+              </th>
+              <th className="py-3 pr-4">
+                <label className="sr-only" htmlFor="leader-participant-contact">
+                  {copy.filters.contact}
+                </label>
+                <input
+                  id="leader-participant-contact"
+                  name="contact"
+                  defaultValue={contactQuery}
+                  className="field min-h-10 bg-white text-sm font-normal"
+                  placeholder={copy.filters.contactPlaceholder}
+                />
+              </th>
+              <th className="py-3 pr-4">
+                <label className="sr-only" htmlFor="leader-participant-group">
+                  {copy.filters.group}
+                </label>
+                <select
+                  id="leader-participant-group"
+                  name="group"
+                  defaultValue={groupFilter}
+                  className="field min-h-10 bg-white text-sm font-normal"
+                >
+                  <option value="all">{copy.filters.allGroups}</option>
+                  {groupOptions.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              <th className="py-3 pr-4">
+                <label className="sr-only" htmlFor="leader-participant-tag">
+                  {copy.filters.tag}
+                </label>
+                <select
+                  id="leader-participant-tag"
+                  name="tag"
+                  defaultValue={tagFilter}
+                  className="field min-h-10 bg-white text-sm font-normal"
+                >
+                  <option value="all">{copy.filters.allTags}</option>
+                  <option value="none">{copy.filters.noTags}</option>
+                  {tagOptions.map((tag) => (
+                    <option key={tag.id} value={tag.id}>
+                      {tag.label}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              <th className="py-3 pr-4">
+                <label className="sr-only" htmlFor="leader-participant-status">
+                  {copy.filters.status}
+                </label>
+                <select
+                  id="leader-participant-status"
+                  name="filter"
+                  defaultValue={filter}
+                  className="field min-h-10 bg-white text-sm font-normal"
+                >
+                  {Object.entries(copy.filterLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              <th className="py-3 pr-4 text-right">
+                <div className="flex justify-end gap-2">
+                  <label className="sr-only" htmlFor="leader-participant-sort">
+                    {copy.filters.sort}
+                  </label>
+                  <select
+                    id="leader-participant-sort"
+                    name="sort"
+                    defaultValue={sort}
+                    className="field min-h-10 max-w-44 bg-white text-sm font-normal"
+                  >
+                    {ASSIGNMENT_SORT_VALUES.map((value) => (
+                      <option key={value} value={value}>
+                        {copy.sortLabels[value]}
+                      </option>
+                    ))}
+                  </select>
+                  <Link
+                    href="/dashboard/capogruppo#assegnazioni-gruppo"
+                    className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"
+                  >
+                    {copy.filters.reset}
+                  </Link>
+                </div>
+              </th>
+            </tr>
+          </thead>
+        </table>
       </div>
-    </form>
+    </AutoFilterForm>
+  );
+}
+
+function PendingAssignmentsPanel({
+  assignments,
+  copy,
+  showGroupColumn,
+}: {
+  assignments: AssignmentView[];
+  copy: GroupLeaderCopy;
+  showGroupColumn: boolean;
+}) {
+  return (
+    <section className="mt-5 rounded-lg border border-[#dfc46d] bg-[#fff8dc] p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-[var(--peace-ink)]">
+            {copy.pending.title}
+          </h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
+            {copy.pending.help}
+          </p>
+        </div>
+        <span className="w-fit rounded-full border border-[#dfc46d] bg-white px-3 py-1 text-sm font-semibold text-[#6b5214]">
+          {assignments.length}
+        </span>
+      </div>
+
+      {assignments.length === 0 ? (
+        <p className="mt-4 rounded-md border border-[#ead894] bg-white/70 p-3 text-sm text-[var(--peace-muted)]">
+          {copy.pending.empty}
+        </p>
+      ) : (
+        <div className="mt-4 overflow-x-auto rounded-md border border-[#ead894] bg-white">
+          <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-[#ead894] text-xs uppercase tracking-wide text-[#6f7f91]">
+                <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
+                <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
+                {showGroupColumn ? (
+                  <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
+                ) : null}
+                <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
+                <th className="py-3 pr-4 text-right font-semibold">{copy.table.actions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assignments.map((assignment) => (
+                <PendingAssignmentRow
+                  key={assignment.id}
+                  assignment={assignment}
+                  copy={copy}
+                  showGroupColumn={showGroupColumn}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PendingAssignmentRow({
+  assignment,
+  copy,
+  showGroupColumn,
+}: {
+  assignment: AssignmentView;
+  copy: GroupLeaderCopy;
+  showGroupColumn: boolean;
+}) {
+  const detailHref = `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`;
+
+  return (
+    <tr className="border-b border-[#ead894] align-top last:border-b-0">
+      <td className="py-4 pl-4 pr-4">
+        <Link
+          href={detailHref}
+          scroll={false}
+          className="font-semibold text-[var(--peace-blue-800)] underline-offset-4 hover:underline"
+        >
+          {assignment.participantName}
+        </Link>
+        <p className="mt-1 text-xs text-[var(--peace-muted)]">
+          {assignment.participantCode ?? copy.table.withoutCode} -{" "}
+          {statusLabel(assignment.status, assignment.isCurrent, copy)}
+        </p>
+      </td>
+      <td className="py-4 pr-4 text-[var(--peace-ink)]">
+        <p>{assignment.participantEmail ?? copy.table.emailMissing}</p>
+        <p className="mt-1 text-xs text-[var(--peace-muted)]">
+          {assignment.participantPhone ?? copy.table.phoneMissing}
+        </p>
+      </td>
+      {showGroupColumn ? (
+        <td className="py-4 pr-4 text-[var(--peace-ink)]">{assignment.groupName}</td>
+      ) : null}
+      <td className="py-4 pr-4">
+        <OperationalTagList tags={assignment.tags} emptyLabel={copy.filters.noTags} />
+      </td>
+      <td className="py-4 pr-4">
+        <div className="flex justify-end gap-2">
+          <form action={updateGroupLeaderAssignment}>
+            <input type="hidden" name="assignmentId" value={assignment.id} />
+            <PendingSubmitButton
+              name="intent"
+              value="confirm"
+              className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+            >
+              {copy.table.confirm}
+            </PendingSubmitButton>
+          </form>
+          <form action={updateGroupLeaderAssignment}>
+            <input type="hidden" name="assignmentId" value={assignment.id} />
+            <PendingSubmitButton
+              name="intent"
+              value="reject"
+              className="min-h-10 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
+            >
+              {copy.table.reject}
+            </PendingSubmitButton>
+          </form>
+          <Link
+            href={detailHref}
+            scroll={false}
+            className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+          >
+            {copy.table.details}
+          </Link>
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -2369,16 +2672,17 @@ function AssignmentsTable({
 
   return (
     <div className="mt-5 overflow-x-auto rounded-md border border-[var(--peace-border)]">
-      <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
             <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.phone}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.email}</th>
+            <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
             {showGroupColumn ? (
               <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
             ) : null}
-            <th className="py-3 pr-4 text-right font-semibold">{copy.table.confirm}</th>
+            <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
+            <th className="py-3 pr-4 font-semibold">{copy.table.status}</th>
+            <th className="py-3 pr-4 text-right font-semibold">{copy.table.actions}</th>
           </tr>
         </thead>
         <tbody>
@@ -2410,11 +2714,10 @@ function AssignmentRowView({
     assignment.participantCode
   );
   const detailHref = `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`;
-  const isConfirmed = assignment.isCurrent && assignment.status === "confirmed";
 
   return (
-    <tr className="border-b border-[var(--peace-border)] align-middle transition hover:bg-[#f7fbfe] last:border-b-0">
-      <td className="py-3 pl-4 pr-4">
+    <tr className="border-b border-[var(--peace-border)] align-top transition hover:bg-[#f7fbfe] last:border-b-0">
+      <td className="py-4 pl-4 pr-4">
         <Link
           href={detailHref}
           scroll={false}
@@ -2423,48 +2726,44 @@ function AssignmentRowView({
         >
           {assignment.participantName}
         </Link>
+        <p className="mt-1 text-xs text-[var(--peace-muted)]">
+          {assignment.participantCode ?? copy.table.withoutCode} - {assignment.participantPlace}
+        </p>
       </td>
-      <td className="py-3 pr-4 text-[var(--peace-ink)]">
-        <Link href={detailHref} scroll={false} className="block hover:underline">
-          {assignment.participantPhone ?? copy.table.phoneMissing}
-        </Link>
-      </td>
-      <td className="py-3 pr-4 text-[var(--peace-ink)]">
+      <td className="py-4 pr-4 text-[var(--peace-ink)]">
         <Link href={detailHref} scroll={false} className="block hover:underline">
           {assignment.participantEmail ?? copy.table.emailMissing}
         </Link>
+        <Link
+          href={detailHref}
+          scroll={false}
+          className="mt-1 block text-xs text-[var(--peace-muted)] hover:underline"
+        >
+          {assignment.participantPhone ?? copy.table.phoneMissing}
+        </Link>
       </td>
       {showGroupColumn ? (
-        <td className="py-3 pr-4 text-[var(--peace-ink)]">
+        <td className="py-4 pr-4 text-[var(--peace-ink)]">
           <Link href={detailHref} scroll={false} className="block hover:underline">
             {assignment.groupName}
           </Link>
         </td>
       ) : null}
-      <td className="py-3 pr-4">
-        <form action={updateGroupLeaderAssignment} className="flex justify-end">
-          <input type="hidden" name="assignmentId" value={assignment.id} />
-          <PendingSubmitButton
-            name="intent"
-            value={isConfirmed ? "unconfirm" : "confirm"}
-            role="switch"
-            aria-checked={isConfirmed}
-            aria-label={`${copy.table.confirm}: ${assignment.participantName}`}
-            className={`relative h-7 w-12 rounded-full border transition ${
-              isConfirmed
-                ? "border-[#bad2b8] bg-[#2f6541]"
-                : "border-[var(--peace-border-strong)] bg-[#d8e3ec]"
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className={`absolute top-1 size-5 rounded-full bg-white shadow transition ${
-                isConfirmed ? "left-6" : "left-1"
-              }`}
-            />
-            <span className="sr-only">{copy.table.confirm}</span>
-          </PendingSubmitButton>
-        </form>
+      <td className="py-4 pr-4">
+        <OperationalTagList tags={assignment.tags} emptyLabel={copy.filters.noTags} />
+      </td>
+      <td className="py-4 pr-4">
+        <StatusBadge status={assignment.status} isCurrent={assignment.isCurrent} copy={copy} />
+      </td>
+      <td className="py-4 pr-4 text-right">
+        <Link
+          href={detailHref}
+          scroll={false}
+          aria-label={cardLabel}
+          className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+        >
+          {copy.table.details}
+        </Link>
       </td>
     </tr>
   );
@@ -3164,6 +3463,12 @@ function normalizeSearchQuery(value: string | null | undefined): string {
   return typeof value === "string" ? value.trim().slice(0, 80) : "";
 }
 
+function normalizeFilterParam(value: string | null | undefined): string {
+  const normalized = typeof value === "string" ? value.trim() : "";
+
+  return normalized || "all";
+}
+
 function parseAssignmentSort(value: string | null | undefined): AssignmentSort {
   return ASSIGNMENT_SORT_VALUES.some((option) => option === value)
     ? (value as AssignmentSort)
@@ -3179,6 +3484,29 @@ function dashboardToolTitle(
   copy: GroupLeaderCopy
 ): string {
   return tool === "link" ? copy.generateLink : copy.addParticipant;
+}
+
+function isPendingAssignment(assignment: AssignmentView): boolean {
+  return assignment.isCurrent && assignment.status === "probable";
+}
+
+function matchesAssignmentFilters(
+  assignment: AssignmentView,
+  filters: {
+    filter: GroupLeaderReviewFilter;
+    query: string;
+    contactQuery: string;
+    groupFilter: string;
+    tagFilter: string;
+  }
+): boolean {
+  return (
+    matchesGroupLeaderFilter(assignment, filters.filter) &&
+    matchesAssignmentQuery(assignment, filters.query) &&
+    matchesAssignmentContact(assignment, filters.contactQuery) &&
+    matchesAssignmentGroup(assignment, filters.groupFilter) &&
+    matchesAssignmentTag(assignment, filters.tagFilter)
+  );
 }
 
 function matchesAssignmentQuery(
@@ -3203,6 +3531,60 @@ function matchesAssignmentQuery(
     .toLowerCase();
 
   return haystack.includes(normalizedQuery);
+}
+
+function matchesAssignmentContact(
+  assignment: AssignmentView,
+  query: string
+): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const normalizedQuery = query.toLowerCase();
+
+  return [assignment.participantEmail, assignment.participantPhone]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .includes(normalizedQuery);
+}
+
+function matchesAssignmentGroup(
+  assignment: AssignmentView,
+  groupFilter: string
+): boolean {
+  return groupFilter === "all" || assignment.groupId === groupFilter;
+}
+
+function matchesAssignmentTag(
+  assignment: AssignmentView,
+  tagFilter: string
+): boolean {
+  if (tagFilter === "all") {
+    return true;
+  }
+
+  if (tagFilter === "none") {
+    return assignment.tagIds.length === 0;
+  }
+
+  return assignment.tagIds.includes(tagFilter);
+}
+
+function buildGroupFilterOptions(
+  assignments: AssignmentView[],
+  locale: SupportedLocale
+): Array<{ id: string; name: string }> {
+  const groups = new Map<string, string>();
+
+  for (const assignment of assignments) {
+    groups.set(assignment.groupId, assignment.groupName);
+  }
+
+  return [...groups.entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((left, right) => left.name.localeCompare(right.name, locale));
 }
 
 function sortAssignments(
