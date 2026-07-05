@@ -15,6 +15,7 @@ import {
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
+import { ConfirmSubmitButton } from "@/app/dashboard/confirm-submit-button";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
 import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
@@ -363,6 +364,8 @@ type AssignmentView = {
   groupId: string;
   groupName: string;
   groupNodeType: string | null;
+  parentGroupId: string | null;
+  parentGroupName: string | null;
   participantFirstName: string | null;
   participantLastName: string | null;
   participantName: string;
@@ -484,6 +487,11 @@ type GroupLeaderCopy = {
     saveNote: string;
     confirm: string;
     reject: string;
+    rejectWarning: (
+      participantName: string,
+      currentGroupName: string,
+      parentGroupName: string | null
+    ) => string;
     markRead: string;
     details: string;
   };
@@ -669,6 +677,10 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     saveNote: "Salva nota",
     confirm: "Conferma",
     reject: "Non riconosciuto",
+    rejectWarning: (participantName, currentGroupName, parentGroupName) =>
+      parentGroupName
+        ? `Stai per indicare che ${participantName} non appartiene al gruppo ${currentGroupName}. La sua assegnazione risalira' a ${parentGroupName}, dove dovra' essere verificata e confermata da un referente. Vuoi continuare?`
+        : `Stai per indicare che ${participantName} non appartiene al gruppo ${currentGroupName}. Non c'e' un gruppo superiore disponibile: la persona uscira' dalle assegnazioni correnti del gruppo e andra' gestita manualmente da manager/admin. Vuoi continuare?`,
     markRead: "Segna letta",
     details: "Dettagli",
   },
@@ -854,6 +866,10 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     saveNote: "Save note",
     confirm: "Confirm",
     reject: "Not recognised",
+    rejectWarning: (participantName, currentGroupName, parentGroupName) =>
+      parentGroupName
+        ? `You are about to mark ${participantName} as not belonging to ${currentGroupName}. Their assignment will move up to ${parentGroupName}, where another leader will need to review and confirm it. Continue?`
+        : `You are about to mark ${participantName} as not belonging to ${currentGroupName}. There is no higher group available, so the person will leave the current group assignments and will need manual manager/admin handling. Continue?`,
     markRead: "Mark as read",
     details: "Details",
   },
@@ -1916,7 +1932,7 @@ export default async function CapogruppoDashboardPage({
     }
 
     return ((data ?? []) as AssignmentRow[])
-      .map((row) => toAssignmentView(row, copy))
+      .map((row) => toAssignmentView(row, copy, groupRows))
       .filter((assignment): assignment is AssignmentView => Boolean(assignment));
   }
 
@@ -2632,13 +2648,18 @@ function PendingAssignmentRow({
           </form>
           <form action={updateGroupLeaderAssignment}>
             <input type="hidden" name="assignmentId" value={assignment.id} />
-            <PendingSubmitButton
+            <ConfirmSubmitButton
               name="intent"
               value="reject"
+              confirmMessage={copy.table.rejectWarning(
+                assignment.participantName,
+                assignment.groupName,
+                assignment.parentGroupName
+              )}
               className="min-h-10 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
             >
               {copy.table.reject}
-            </PendingSubmitButton>
+            </ConfirmSubmitButton>
           </form>
           <Link
             href={detailHref}
@@ -2672,7 +2693,7 @@ function AssignmentsTable({
 
   return (
     <div className="mt-5 overflow-x-auto rounded-md border border-[var(--peace-border)]">
-      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[860px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
             <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
@@ -2681,7 +2702,6 @@ function AssignmentsTable({
               <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
             ) : null}
             <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.status}</th>
             <th className="py-3 pr-4 text-right font-semibold">{copy.table.actions}</th>
           </tr>
         </thead>
@@ -2751,9 +2771,6 @@ function AssignmentRowView({
       ) : null}
       <td className="py-4 pr-4">
         <OperationalTagList tags={assignment.tags} emptyLabel={copy.filters.noTags} />
-      </td>
-      <td className="py-4 pr-4">
-        <StatusBadge status={assignment.status} isCurrent={assignment.isCurrent} copy={copy} />
       </td>
       <td className="py-4 pr-4 text-right">
         <Link
@@ -2981,13 +2998,18 @@ function AssignmentDetailCard({
               >
                 {copy.table.confirm}
               </PendingSubmitButton>
-              <PendingSubmitButton
+              <ConfirmSubmitButton
                 name="intent"
                 value="reject"
+                confirmMessage={copy.table.rejectWarning(
+                  assignment.participantName,
+                  assignment.groupName,
+                  assignment.parentGroupName
+                )}
                 className="min-h-10 rounded-md border border-[#d1a7a0] px-4 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
               >
                 {copy.table.reject}
-              </PendingSubmitButton>
+              </ConfirmSubmitButton>
             </>
           ) : null}
           {assignment.isCurrent && assignment.status === "confirmed" ? (
@@ -3207,7 +3229,8 @@ function StatusMessage({
 
 function toAssignmentView(
   row: AssignmentRow,
-  copy: GroupLeaderCopy
+  copy: GroupLeaderCopy,
+  groups: GroupRow[]
 ): AssignmentView | null {
   const registration = relatedOne(row.registrations);
   const participant = relatedOne(registration?.participants ?? null);
@@ -3218,6 +3241,9 @@ function toAssignmentView(
   }
 
   const tags = mapParticipantOperationalTags(participant.participant_operational_tags);
+  const parentGroup = group.parent_group_id
+    ? groups.find((candidate) => candidate.id === group.parent_group_id)
+    : null;
 
   return {
     id: row.id,
@@ -3227,6 +3253,8 @@ function toAssignmentView(
     groupId: row.group_id,
     groupName: group.name ?? copy.groupFallback,
     groupNodeType: group.node_type,
+    parentGroupId: group.parent_group_id,
+    parentGroupName: parentGroup?.name ?? null,
     participantFirstName: participant.first_name,
     participantLastName: participant.last_name,
     participantName: formatParticipantName(
