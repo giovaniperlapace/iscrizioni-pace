@@ -1639,18 +1639,21 @@ Review per ogni blocco:
 
 Prompt consigliato per la prossima milestone:
 
-> Implementa la Milestone 14.1: flusso capogruppo completo e notifiche. Prima
+> Implementa la Milestone 15: email personalizzate e template operativi. Prima
 > controlla `git fetch origin`, `git status --short --branch`, `AGENTS.md` e
-> `PIANO_DI_LAVORO.md`. Completa l'invio email al capogruppo quando una nuova
-> iscrizione viene attribuita al suo gruppo/scope, con nome e cognome del
-> partecipante e link alla dashboard. Poi rifinisci la dashboard capogruppo:
-> tabella delle persone attribuite, check rapido per confermare appartenenza,
-> click sulla riga per aprire la scheda, azioni per reindirizzare chi non e'
-> del gruppo al parent precedente o alla coda esterni/nuovi partecipanti, note
-> interne e audit. Non introdurre tag, campagne email generali, programma o
-> check-in. Alla fine esegui lint, typecheck, test, build e verifica browser
-> dei flussi principali.
+> `PIANO_DI_LAVORO.md`, e verifica che la base locale sia allineata a
+> `origin/main` oppure segnala eventuali modifiche locali da gestire. Parti da
+> una prima versione conservativa: template email versionati per l'evento
+> corrente, preview prima dell'invio, invio test obbligatorio, selezione
+> destinatari tramite filtri gia' esistenti su gruppi/tag/stato, log auditato
+> di invii e destinatari, e limiti anti-invio accidentale. Non inviare email
+> reali massive senza una conferma esplicita e senza distinguere chiaramente
+> ambiente locale/produzione. Mantieni separati template, log e destinatari dai
+> dati sensibili; non introdurre programma, check-in, wallet o settori fisici.
+> Alla fine esegui almeno `npm run lint`, `npm run typecheck`, `npm test`,
+> `npm run build` quando compatibile con l'ambiente, e una verifica browser
+> delle viste operative coinvolte.
 
-Dopo la Milestone 14.1, il passo successivo naturale e' la Milestone 14.2 sui
-tag operativi manager/capogruppo. Solo dopo questi due blocchi si torna alla
-vecchia Milestone 15 sulle email personalizzate e template operativi.
+La Milestone 14.1 sul flusso capogruppo e la Milestone 14.2 sui tag operativi
+sono gia' state implementate. Il prossimo blocco naturale e' quindi la
+Milestone 15 sulle email personalizzate e template operativi.

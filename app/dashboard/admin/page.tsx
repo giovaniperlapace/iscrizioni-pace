@@ -18,6 +18,7 @@ import {
   revokeGroupRegistrationLink,
   saveOperationsGroup,
   setCurrentOperationalEvent,
+  updateGroupPublicCatalogVisibility,
   updateEventOpeningState,
   updateOperationalUserRole,
 } from "@/app/actions";
@@ -26,6 +27,7 @@ import {
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
+import { GroupPublicCatalogSwitch } from "@/app/dashboard/group-public-catalog-switch";
 import {
   type GroupEditLeaderRow,
   GroupPlacementFields,
@@ -1938,6 +1940,14 @@ function AdminOperationalRoleEditOverlay({
             defaultGroupIds={role.groupLeaderAssignments
               .map((assignment) => assignment.groupId)
               .filter((groupId): groupId is string => Boolean(groupId))}
+            defaultLeaderKindsByGroupId={Object.fromEntries(
+              role.groupLeaderAssignments
+                .filter((assignment) => assignment.groupId)
+                .map((assignment) => [
+                  assignment.groupId,
+                  assignment.isPrimaryGroupLeader ? "primary" : "secondary",
+                ])
+            )}
             defaultLeaderKind={role.groupLeaderAssignments.some(
               (assignment) => assignment.isPrimaryGroupLeader
             )
@@ -2099,6 +2109,8 @@ function AdminGroupTreeSection({
             </thead>
           <tbody>
             {filteredGroups.map((group) => {
+              const isPublicCatalog = Boolean(group.isPublicCatalog);
+
               return (
                 <tr
                   key={group.id}
@@ -2118,13 +2130,22 @@ function AdminGroupTreeSection({
                     {group.primaryLeaderName ?? "Da assegnare"}
                   </td>
                   <td className="py-4 pr-4">
-                    {group.isAssignable && group.isPublicCatalog ? (
-                      <span className="font-semibold text-[var(--peace-blue-800)]">Nel form pubblico</span>
-                    ) : group.isAssignable ? (
-                      <span className="text-[var(--peace-muted)]">Solo con link</span>
-                    ) : (
-                      <span className="text-[var(--peace-muted)]">Non iscrivibile</span>
-                    )}
+                    <div className="grid gap-2">
+                      {group.isAssignable && isPublicCatalog ? (
+                        <span className="font-semibold text-[var(--peace-blue-800)]">Nel form pubblico</span>
+                      ) : group.isAssignable ? (
+                        <span className="text-[var(--peace-muted)]">Solo con link</span>
+                      ) : (
+                        <span className="text-[var(--peace-muted)]">Non iscrivibile</span>
+                      )}
+                      {group.isAssignable ? (
+                        <GroupPublicCatalogSwitch
+                          formId={`admin-public-catalog-${group.id}`}
+                          groupName={group.name}
+                          isPublicCatalog={isPublicCatalog}
+                        />
+                      ) : null}
+                    </div>
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -2169,6 +2190,30 @@ function AdminGroupTreeSection({
             </tbody>
           </table>
         </AutoFilterForm>
+        {filteredGroups.map((group) => {
+          const isPublicCatalog = Boolean(group.isPublicCatalog);
+
+          if (!group.isAssignable) {
+            return null;
+          }
+
+          return (
+            <form
+              key={group.id}
+              id={`admin-public-catalog-${group.id}`}
+              action={updateGroupPublicCatalogVisibility}
+              data-preserve-dashboard-scroll
+              className="hidden"
+            >
+              <input type="hidden" name="sourceDashboard" value="admin" />
+              <input type="hidden" name="groupId" value={group.id} />
+              <input type="hidden" name="nav" value={navMode} />
+              {!isPublicCatalog ? (
+                <input type="hidden" name="isPublicCatalog" value="on" />
+              ) : null}
+            </form>
+          );
+        })}
       </div>
 
       {filteredGroups.length === 0 ? (
@@ -2473,7 +2518,9 @@ function AdminParticipantEditOverlay({
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="border-b border-[var(--peace-border)] px-5 py-4">
           <div>
-            <h3 className="text-xl font-semibold">Modifica iscritto</h3>
+            <h3 className="text-xl font-semibold">
+              {isEditing ? "Modifica iscritto" : "Dettagli iscritto"}
+            </h3>
             <p className="mt-1 text-sm text-[var(--peace-muted)]">
               {participant.name}
               {participant.publicCode ? ` - ${participant.publicCode}` : ""}
@@ -2548,7 +2595,7 @@ function AdminParticipantEditOverlay({
               scroll={false}
               className="inline-flex min-h-11 items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
             >
-              Modifica gruppo
+              Modifica iscritto
             </Link>
           ) : null}
         </div>

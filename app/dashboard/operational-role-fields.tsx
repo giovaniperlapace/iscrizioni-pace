@@ -29,6 +29,7 @@ type OperationalRoleFieldsProps = {
   defaultGroupId?: string | null;
   defaultGroupIds?: string[];
   defaultLeaderKind?: "primary" | "secondary" | null;
+  defaultLeaderKindsByGroupId?: Record<string, "primary" | "secondary">;
   allowMultipleGroupLeaders?: boolean;
   showInviteOption?: boolean;
 };
@@ -44,6 +45,7 @@ export function OperationalRoleFields({
   defaultGroupId,
   defaultGroupIds,
   defaultLeaderKind,
+  defaultLeaderKindsByGroupId = {},
   allowMultipleGroupLeaders = false,
   showInviteOption = false,
 }: OperationalRoleFieldsProps) {
@@ -60,6 +62,22 @@ export function OperationalRoleFields({
       : defaultGroupId
         ? [defaultGroupId]
         : [];
+  const [selectedGroupIdSet, setSelectedGroupIdSet] = useState(
+    () => new Set(selectedGroupIds)
+  );
+  const [leaderKindsByGroupId, setLeaderKindsByGroupId] = useState<
+    Record<string, "primary" | "secondary">
+  >(() =>
+    Object.fromEntries(
+      groupOptions.map((group) => [
+        group.id,
+        defaultLeaderKindsByGroupId[group.id] ??
+          (selectedGroupIds.includes(group.id)
+            ? defaultLeaderKind ?? "secondary"
+            : "secondary"),
+      ])
+    )
+  );
 
   return (
     <div className="grid gap-3">
@@ -92,29 +110,100 @@ export function OperationalRoleFields({
             <fieldset className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
               <legend>Gruppi da seguire</legend>
               <div className="grid max-h-64 gap-2 overflow-y-auto rounded-md border border-[var(--peace-border-strong)] bg-white p-3">
-                {groupOptions.map((group) => (
-                  <label
-                    key={group.id}
-                    className="flex items-start gap-2 rounded border border-transparent p-2 text-sm font-normal transition hover:border-[var(--peace-border)] hover:bg-[#f7fbfe]"
-                  >
-                    <input
-                      name="groupIds"
-                      type="checkbox"
-                      value={group.id}
-                      defaultChecked={selectedGroupIds.includes(group.id)}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="font-semibold text-[var(--peace-ink)]">{group.name}</span>
-                      <span className="block text-xs text-[var(--peace-muted)]">
-                        {group.eventTitle}
-                      </span>
-                    </span>
-                  </label>
-                ))}
+                {groupOptions.map((group) => {
+                  const isSelected = selectedGroupIdSet.has(group.id);
+                  const leaderKind =
+                    leaderKindsByGroupId[group.id] ?? "secondary";
+
+                  return (
+                    <div
+                      key={group.id}
+                      className={`grid gap-3 rounded-md border p-3 text-sm font-normal transition sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${
+                        isSelected
+                          ? "border-[var(--peace-blue-800)] bg-[var(--peace-sky-100)]"
+                          : "border-transparent hover:border-[var(--peace-border)] hover:bg-[#f7fbfe]"
+                      }`}
+                    >
+                      <label className="flex min-w-0 items-start gap-2">
+                        <input
+                          name="groupIds"
+                          type="checkbox"
+                          value={group.id}
+                          checked={isSelected}
+                          className="mt-1"
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+
+                            setSelectedGroupIdSet((current) => {
+                              const next = new Set(current);
+
+                              if (checked) {
+                                next.add(group.id);
+                              } else {
+                                next.delete(group.id);
+                              }
+
+                              return next;
+                            });
+                          }}
+                        />
+                        <span className="min-w-0">
+                          <span className="font-semibold text-[var(--peace-ink)]">
+                            {group.name}
+                          </span>
+                          <span className="block text-xs text-[var(--peace-muted)]">
+                            {group.eventTitle}
+                          </span>
+                        </span>
+                      </label>
+                      <fieldset
+                        className={`grid gap-1 transition ${
+                          isSelected ? "" : "opacity-45"
+                        }`}
+                      >
+                        <legend className="sr-only">
+                          Tipo di capogruppo per {group.name}
+                        </legend>
+                        <div className="grid grid-cols-2 gap-1 rounded-md border border-[var(--peace-border)] bg-white p-1">
+                          <label className="flex min-h-9 items-center justify-center gap-2 rounded px-3 text-xs font-semibold transition has-[:checked]:bg-[var(--peace-blue-800)] has-[:checked]:text-white">
+                            <input
+                              name={`leaderKindByGroup:${group.id}`}
+                              type="radio"
+                              value="primary"
+                              checked={leaderKind === "primary"}
+                              disabled={!isSelected}
+                              onChange={() =>
+                                setLeaderKindsByGroupId((current) => ({
+                                  ...current,
+                                  [group.id]: "primary",
+                                }))
+                              }
+                            />
+                            Principale
+                          </label>
+                          <label className="flex min-h-9 items-center justify-center gap-2 rounded px-3 text-xs font-semibold transition has-[:checked]:bg-[var(--peace-blue-800)] has-[:checked]:text-white">
+                            <input
+                              name={`leaderKindByGroup:${group.id}`}
+                              type="radio"
+                              value="secondary"
+                              checked={leaderKind !== "primary"}
+                              disabled={!isSelected}
+                              onChange={() =>
+                                setLeaderKindsByGroupId((current) => ({
+                                  ...current,
+                                  [group.id]: "secondary",
+                                }))
+                              }
+                            />
+                            Secondario
+                          </label>
+                        </div>
+                      </fieldset>
+                    </div>
+                  );
+                })}
               </div>
             </fieldset>
-            <GroupLeaderKindField defaultValue={defaultLeaderKind ?? undefined} />
           </>
         ) : isGroupLeader ? (
           <>

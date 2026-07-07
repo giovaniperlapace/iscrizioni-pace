@@ -16,10 +16,12 @@ import {
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
   saveOperationsGroup,
+  updateGroupPublicCatalogVisibility,
   updateParticipantOperationalTags,
   updateOperationalUserRole,
 } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
+import { GroupPublicCatalogSwitch } from "@/app/dashboard/group-public-catalog-switch";
 import {
   type GroupEditLeaderRow,
   GroupPlacementFields,
@@ -88,7 +90,6 @@ type ManagerPageProps = {
     roleEventId?: string;
     roleGroupId?: string;
     edit?: string;
-    editMode?: string;
     event?: string;
     group?: string;
     contact?: string;
@@ -123,6 +124,7 @@ type ManagerRegistrationRow = {
         auth_user_id: string | null;
         first_name: string | null;
         last_name: string | null;
+        birth_date: string | null;
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
@@ -132,6 +134,7 @@ type ManagerRegistrationRow = {
         auth_user_id: string | null;
         first_name: string | null;
         last_name: string | null;
+        birth_date: string | null;
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
@@ -214,8 +217,11 @@ type ManagerParticipantRow = {
   eventTitle: string;
   participantId: string;
   authUserId: string | null;
+  firstName: string | null;
+  lastName: string | null;
   name: string;
   publicCode: string | null;
+  birthDate: string | null;
   country: string | null;
   city: string | null;
   place: string;
@@ -381,7 +387,6 @@ export default async function ManagerDashboardPage({
               <ManagerParticipantsSection
                 snapshot={managerOperations}
                 selectedParticipant={selectedCanManage ? selectedParticipant : null}
-                isEditingParticipant={params.editMode === "1"}
                 canManageEvent={scope.canManageEvent}
                 navMode={navMode}
               />
@@ -989,7 +994,7 @@ async function getManagerOperationsSnapshot(
   const registrationsQuery = supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
+      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other)"
     )
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
@@ -1133,11 +1138,14 @@ async function getManagerOperationsSnapshot(
         eventTitle: event?.title ?? "Evento",
         participantId: registration.participant_id,
         authUserId,
+        firstName: participant?.first_name ?? null,
+        lastName: participant?.last_name ?? null,
         name: formatParticipantName(
           participant?.first_name ?? null,
           participant?.last_name ?? null
         ),
         publicCode: participant?.public_code ?? null,
+        birthDate: participant?.birth_date ?? null,
         country: participant?.country_other ?? null,
         city: participant?.city_other ?? null,
         place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
@@ -1245,7 +1253,7 @@ async function getManagerStatisticsSnapshot(
   const registrationsQuery = supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
+      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other)"
     )
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
@@ -1289,11 +1297,14 @@ async function getManagerStatisticsSnapshot(
       eventTitle: event?.title ?? "Evento",
       participantId: registration.participant_id,
       authUserId: participant?.auth_user_id ?? null,
+      firstName: participant?.first_name ?? null,
+      lastName: participant?.last_name ?? null,
       name: formatParticipantName(
         participant?.first_name ?? null,
         participant?.last_name ?? null
       ),
       publicCode: participant?.public_code ?? null,
+      birthDate: participant?.birth_date ?? null,
       country: participant?.country_other ?? null,
       city: participant?.city_other ?? null,
       place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
@@ -1458,6 +1469,7 @@ function ManagerGroupTreeSection({
           <tbody>
             {filteredGroups.map((group) => {
               const canManage = canManageEvent(group.eventId);
+              const isPublicCatalog = Boolean(group.isPublicCatalog);
 
               return (
                 <tr
@@ -1478,13 +1490,22 @@ function ManagerGroupTreeSection({
                     {group.primaryLeaderName ?? "Da assegnare"}
                   </td>
                   <td className="py-4 pr-4">
-                    {group.isAssignable && group.isPublicCatalog ? (
-                      <span className="font-semibold text-[var(--peace-blue-800)]">Nel form pubblico</span>
-                    ) : group.isAssignable ? (
-                      <span className="text-[var(--peace-muted)]">Solo con link</span>
-                    ) : (
-                      <span className="text-[var(--peace-muted)]">Non iscrivibile</span>
-                    )}
+                    <div className="grid gap-2">
+                      {group.isAssignable && isPublicCatalog ? (
+                        <span className="font-semibold text-[var(--peace-blue-800)]">Nel form pubblico</span>
+                      ) : group.isAssignable ? (
+                        <span className="text-[var(--peace-muted)]">Solo con link</span>
+                      ) : (
+                        <span className="text-[var(--peace-muted)]">Non iscrivibile</span>
+                      )}
+                      {canManage && group.isAssignable ? (
+                        <GroupPublicCatalogSwitch
+                          formId={`manager-public-catalog-${group.id}`}
+                          groupName={group.name}
+                          isPublicCatalog={isPublicCatalog}
+                        />
+                      ) : null}
+                    </div>
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -1521,6 +1542,31 @@ function ManagerGroupTreeSection({
             </tbody>
           </table>
         </AutoFilterForm>
+        {filteredGroups.map((group) => {
+          const canManage = canManageEvent(group.eventId);
+          const isPublicCatalog = Boolean(group.isPublicCatalog);
+
+          if (!canManage || !group.isAssignable) {
+            return null;
+          }
+
+          return (
+            <form
+              key={group.id}
+              id={`manager-public-catalog-${group.id}`}
+              action={updateGroupPublicCatalogVisibility}
+              data-preserve-dashboard-scroll
+              className="hidden"
+            >
+              <input type="hidden" name="sourceDashboard" value="manager" />
+              <input type="hidden" name="groupId" value={group.id} />
+              <input type="hidden" name="nav" value={navMode} />
+              {!isPublicCatalog ? (
+                <input type="hidden" name="isPublicCatalog" value="on" />
+              ) : null}
+            </form>
+          );
+        })}
       </div>
 
       {filteredGroups.length === 0 ? (
@@ -1816,13 +1862,11 @@ function ManagerGroupLeaderOverlay({
 function ManagerParticipantsSection({
   snapshot,
   selectedParticipant,
-  isEditingParticipant,
   canManageEvent,
   navMode,
 }: {
   snapshot: ManagerOperationsSnapshot;
   selectedParticipant: ManagerParticipantRow | null;
-  isEditingParticipant: boolean;
   canManageEvent: (eventId: string) => boolean;
   navMode: ManagerNavMode;
 }) {
@@ -2033,7 +2077,6 @@ function ManagerParticipantsSection({
           tagOptions={snapshot.operationalTags.filter(
             (tag) => tag.eventId === selectedParticipant.eventId
           )}
-          isEditing={isEditingParticipant}
           navMode={navMode}
         />
       ) : null}
@@ -2256,6 +2299,14 @@ function ManagerOperationalRoleEditOverlay({
             defaultGroupIds={role.groupLeaderAssignments
               .map((assignment) => assignment.groupId)
               .filter((groupId): groupId is string => Boolean(groupId))}
+            defaultLeaderKindsByGroupId={Object.fromEntries(
+              role.groupLeaderAssignments
+                .filter((assignment) => assignment.groupId)
+                .map((assignment) => [
+                  assignment.groupId,
+                  assignment.isPrimaryGroupLeader ? "primary" : "secondary",
+                ])
+            )}
             defaultLeaderKind={role.groupLeaderAssignments.some(
               (assignment) => assignment.isPrimaryGroupLeader
             )
@@ -2285,13 +2336,11 @@ function ManagerParticipantEditOverlay({
   participant,
   groupOptions,
   tagOptions,
-  isEditing,
   navMode,
 }: {
   participant: ManagerParticipantRow;
   groupOptions: ManagerGroupOption[];
   tagOptions: OperationalTagOption[];
-  isEditing: boolean;
   navMode: ManagerNavMode;
 }) {
   const includesCurrentGroup =
@@ -2316,7 +2365,7 @@ function ManagerParticipantEditOverlay({
       <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="border-b border-[var(--peace-border)] px-5 py-4">
           <div>
-            <h3 className="text-xl font-semibold">Modifica iscritto</h3>
+            <h3 className="text-xl font-semibold">Scheda partecipante</h3>
             <p className="mt-1 text-sm text-[var(--peace-muted)]">
               {participant.name}
               {participant.publicCode ? ` - ${participant.publicCode}` : ""}
@@ -2325,83 +2374,123 @@ function ManagerParticipantEditOverlay({
         </div>
 
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
-          <div className="grid gap-1 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">Contatti</span>
-            <span className="text-[var(--peace-muted)]">{participant.email ?? "Email non indicata"}</span>
-            <span className="text-[var(--peace-muted)]">
-              {participant.phone ?? "Telefono non indicato"}
-            </span>
-          </div>
-          <div className="grid gap-1 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">Gruppo corrente</span>
-            <span className="text-[var(--peace-muted)]">
-              {participant.currentGroupName ?? "Nessun gruppo corrente"} -{" "}
-              {groupStatusLabel(participant.currentGroupStatus)}
-            </span>
-          </div>
-          <div className="grid gap-2 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">Tag operativi</span>
-            <OperationalTagList tags={participant.tags} emptyLabel="Senza tag" />
-          </div>
-
-          {isEditing ? (
-            <div className="grid gap-5">
-              <form
-                action="/dashboard/admin/participants/update"
-                method="post"
-                className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
-                data-preserve-dashboard-scroll
-              >
-                <input type="hidden" name="sourceDashboard" value="manager" />
-                <input type="hidden" name="registrationId" value={participant.registrationId} />
-                <input type="hidden" name="participantId" value={participant.participantId} />
-                <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-                  Gruppo
-                  <select
-                    name="groupId"
-                    defaultValue={participant.currentGroupId ?? ""}
-                    className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
-                  >
-                    {!participant.currentGroupId ? (
-                      <option value="">Nessun gruppo corrente</option>
-                    ) : null}
-                    {visibleGroupOptions.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                  Salva gruppo
-                </PendingSubmitButton>
-              </form>
-              <form
-                action={updateParticipantOperationalTags}
-                className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
-                data-preserve-dashboard-scroll
-              >
-                <input type="hidden" name="sourceDashboard" value="manager" />
-                <input type="hidden" name="nav" value={navMode} />
-                <input type="hidden" name="registrationId" value={participant.registrationId} />
-                <input type="hidden" name="participantId" value={participant.participantId} />
-                <input type="hidden" name="eventId" value={participant.eventId} />
-                <fieldset className="grid gap-2">
-                  <legend className="text-sm font-semibold text-[var(--peace-ink)]">
-                    Tag operativi
-                  </legend>
-                  <TagCheckboxGrid
-                    tagOptions={tagOptions}
-                    selectedTagIds={participant.tagIds}
-                    emptyLabel="Nessun tag creato per questo evento."
-                  />
-                </fieldset>
-                <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                  Salva tag
-                </PendingSubmitButton>
-              </form>
+          <form
+            action="/dashboard/admin/participants/update"
+            method="post"
+            className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+            data-preserve-dashboard-scroll
+          >
+            <input type="hidden" name="sourceDashboard" value="manager" />
+            <input type="hidden" name="registrationId" value={participant.registrationId} />
+            <input type="hidden" name="participantId" value={participant.participantId} />
+            <h4 className="text-sm font-semibold text-[var(--peace-ink)]">Identità</h4>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Nome
+                <input name="firstName" defaultValue={participant.firstName ?? ""} className="field bg-white font-normal" />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Cognome
+                <input name="lastName" defaultValue={participant.lastName ?? ""} className="field bg-white font-normal" />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Data di nascita
+                <input name="birthDate" type="date" defaultValue={participant.birthDate ?? ""} className="field bg-white font-normal" />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Città
+                <input name="city" defaultValue={participant.city ?? ""} className="field bg-white font-normal" />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Paese
+                <input name="country" defaultValue={participant.country ?? ""} className="field bg-white font-normal" />
+              </label>
             </div>
-          ) : null}
+            <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva
+            </PendingSubmitButton>
+          </form>
+
+          <form
+            action="/dashboard/admin/participants/update"
+            method="post"
+            className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+            data-preserve-dashboard-scroll
+          >
+            <input type="hidden" name="sourceDashboard" value="manager" />
+            <input type="hidden" name="registrationId" value={participant.registrationId} />
+            <input type="hidden" name="participantId" value={participant.participantId} />
+            <h4 className="text-sm font-semibold text-[var(--peace-ink)]">Contatti</h4>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Email
+                <input name="email" type="email" defaultValue={participant.email ?? ""} className="field bg-white font-normal" />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Telefono
+                <input name="phone" defaultValue={participant.phone ?? ""} className="field bg-white font-normal" />
+              </label>
+            </div>
+            <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva
+            </PendingSubmitButton>
+          </form>
+
+          <form
+            action="/dashboard/admin/participants/update"
+            method="post"
+            className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+            data-preserve-dashboard-scroll
+          >
+            <input type="hidden" name="sourceDashboard" value="manager" />
+            <input type="hidden" name="registrationId" value={participant.registrationId} />
+            <input type="hidden" name="participantId" value={participant.participantId} />
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Gruppo
+              <select
+                name="groupId"
+                defaultValue={participant.currentGroupId ?? ""}
+                className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
+              >
+                {!participant.currentGroupId ? (
+                  <option value="">Nessun gruppo corrente</option>
+                ) : null}
+                {visibleGroupOptions.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva
+            </PendingSubmitButton>
+          </form>
+
+          <form
+            action={updateParticipantOperationalTags}
+            className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+            data-preserve-dashboard-scroll
+          >
+            <input type="hidden" name="sourceDashboard" value="manager" />
+            <input type="hidden" name="nav" value={navMode} />
+            <input type="hidden" name="registrationId" value={participant.registrationId} />
+            <input type="hidden" name="participantId" value={participant.participantId} />
+            <input type="hidden" name="eventId" value={participant.eventId} />
+            <fieldset className="grid gap-2">
+              <legend className="text-sm font-semibold text-[var(--peace-ink)]">
+                Tag operativi
+              </legend>
+              <TagCheckboxGrid
+                tagOptions={tagOptions}
+                selectedTagIds={participant.tagIds}
+                emptyLabel="Nessun tag creato per questo evento."
+              />
+            </fieldset>
+            <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva
+            </PendingSubmitButton>
+          </form>
         </div>
 
         <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
@@ -2412,15 +2501,6 @@ function ManagerParticipantEditOverlay({
           >
             Chiudi
           </Link>
-          {!isEditing ? (
-            <Link
-              href={`${managerPath("iscritti", navMode)}&edit=${participant.registrationId}&editMode=1`}
-              scroll={false}
-              className="inline-flex min-h-11 items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-            >
-              Modifica gruppo
-            </Link>
-          ) : null}
         </div>
       </div>
     </div>

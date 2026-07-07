@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check, Copy } from "lucide-react";
 
 type CopyLinkButtonProps = {
+  iconOnly?: boolean;
   label?: string;
   url: string;
 };
@@ -11,18 +13,41 @@ type AutoCopyLinkNoticeProps = {
   url: string | null;
 };
 
-export function CopyLinkButton({ label = "Copia link", url }: CopyLinkButtonProps) {
+export function CopyLinkButton({
+  iconOnly = false,
+  label = "Copia link",
+  url,
+}: CopyLinkButtonProps) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
+  const statusLabel = isCopying
+    ? "Copia..."
+    : copied
+      ? "Copiato"
+      : failed
+        ? "Copia non riuscita"
+        : label;
 
   return (
     <button
       type="button"
       disabled={isCopying}
       aria-busy={isCopying}
+      aria-label={iconOnly ? statusLabel : undefined}
       data-pending={isCopying ? "true" : "false"}
-      className="pending-submit-button min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+      title={iconOnly ? statusLabel : undefined}
+      className={`pending-submit-button min-h-9 rounded-md border text-xs font-semibold transition ${
+        copied
+          ? "border-[#7ebf8a] text-[#247a3b] hover:bg-[#eefaf0]"
+          : failed
+            ? "border-[#d1a7a0] text-[#8a3f35] hover:bg-[#fff0ee]"
+            : "border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)]"
+      } ${
+        iconOnly
+          ? "inline-flex size-9 items-center justify-center p-0"
+          : "px-3"
+      }`}
       onClick={async () => {
         if (isCopying) {
           return;
@@ -45,7 +70,18 @@ export function CopyLinkButton({ label = "Copia link", url }: CopyLinkButtonProp
         }, 1800);
       }}
     >
-      {isCopying ? "Copia..." : copied ? "Copiato" : failed ? "Copia non riuscita" : label}
+      {iconOnly ? (
+        <>
+          {copied ? (
+            <Check className="size-4" aria-hidden="true" />
+          ) : (
+            <Copy className="size-4" aria-hidden="true" />
+          )}
+          <span className="sr-only">{statusLabel}</span>
+        </>
+      ) : (
+        statusLabel
+      )}
     </button>
   );
 }
@@ -91,7 +127,7 @@ async function safeWriteClipboard(text: string): Promise<boolean> {
 }
 
 async function copyTextFromUserGesture(text: string): Promise<boolean> {
-  return copyTextWithTextarea(text) || (await safeWriteClipboard(text));
+  return (await safeWriteClipboard(text)) || copyTextWithTextarea(text);
 }
 
 function copyTextWithTextarea(text: string): boolean {

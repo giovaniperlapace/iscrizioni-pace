@@ -970,8 +970,14 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
   const firstName = optionalText(formData.get("firstName"));
   const lastName = optionalText(formData.get("lastName"));
   const birthDate = normalizeDateOnly(formData.get("birthDate"));
+  const city = optionalText(formData.get("city"));
+  const country = optionalText(formData.get("country"));
   const hasIdentityUpdate =
-    formData.has("firstName") || formData.has("lastName") || formData.has("birthDate");
+    formData.has("firstName") ||
+    formData.has("lastName") ||
+    formData.has("birthDate") ||
+    formData.has("city") ||
+    formData.has("country");
 
   if (!assignmentId || !participantId || (!email && !phone && !hasIdentityUpdate)) {
     redirect("/dashboard/capogruppo?error=invalid");
@@ -1004,6 +1010,8 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
         first_name: firstName,
         last_name: lastName,
         birth_date: birthDate,
+        city_other: city,
+        country_other: country,
       })
       .eq("id", participantId);
 
@@ -1907,6 +1915,93 @@ export async function saveOperationsGroup(formData: FormData) {
   redirect(`${dashboardPath}?groupSaved=1`);
 }
 
+export async function updateGroupPublicCatalogVisibility(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const groupId = optionalText(formData.get("groupId"));
+  const navMode = optionalText(formData.get("nav"));
+  const isPublicCatalog = formData.get("isPublicCatalog") === "on";
+
+  if (!groupId) {
+    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=invalid"));
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    getGroupManagementRequestedRole(sourceDashboard)
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: group, error: groupError } = await serviceSupabase
+    .from("groups")
+    .select("id,event_id,is_assignable,is_public_catalog")
+    .eq("id", groupId)
+    .maybeSingle();
+  const groupRow = group as
+    | {
+        id: string;
+        event_id: string;
+        is_assignable: boolean | null;
+        is_public_catalog: boolean | null;
+      }
+    | null;
+
+  if (groupError || !groupRow) {
+    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=not-found"));
+  }
+
+  const isAdmin = auth.eventRoles.some((role) => role.role === "admin");
+  const canManageEvent =
+    isAdmin ||
+    auth.eventRoles.some(
+      (role) => role.role === "manager" && role.eventId === groupRow.event_id
+    );
+
+  if (!canManageEvent || sourceDashboard === "capogruppo") {
+    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=forbidden"));
+  }
+
+  if (!groupRow.is_assignable && isPublicCatalog) {
+    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=invalid"));
+  }
+
+  const { error: updateError } = await serviceSupabase
+    .from("groups")
+    .update({ is_public_catalog: isPublicCatalog })
+    .eq("id", groupId);
+
+  if (updateError) {
+    redirect(
+      getGroupManagementListPath(
+        sourceDashboard,
+        navMode,
+        `groupError=${encodeURIComponent(updateError.message)}`
+      )
+    );
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: groupRow.event_id,
+    actor_user_id: auth.user.id,
+    action: "group.public_catalog_updated",
+    entity_table: "groups",
+    entity_id: groupId,
+    metadata: {
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+      previous_is_public_catalog: groupRow.is_public_catalog,
+      is_public_catalog: isPublicCatalog,
+    },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/manager");
+  redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupSaved=1"));
+}
+
 export async function assignGroupLeader(formData: FormData) {
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
@@ -2275,6 +2370,15 @@ export async function updateOperationalUserRole(formData: FormData) {
   );
   const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
   const isPrimaryLeader = leaderKind === "primary";
+  const selectedLeaderKindsByGroupId = Object.fromEntries(
+    selectedGroupIds.map((selectedGroupId) => [
+      selectedGroupId,
+      parseGroupLeaderKind(
+        formData.get(`leaderKindByGroup:${selectedGroupId}`) ??
+          formData.get("leaderKind")
+      ),
+    ])
+  ) as Record<string, GroupLeaderKind>;
 
   if (
     !currentUserId ||
@@ -2415,7 +2519,6 @@ export async function updateOperationalUserRole(formData: FormData) {
       (membership) =>
         membership.group_id && !selectedGroupIdsSet.has(membership.group_id)
     );
-
     if (removedMemberships.length > 0) {
       const removedGroupIds = removedMemberships
         .map((membership) => membership.group_id)
@@ -2447,7 +2550,11 @@ export async function updateOperationalUserRole(formData: FormData) {
     }
 
     for (const selectedGroupId of selectedGroupIds) {
-      if (isPrimaryLeader) {
+      const selectedLeaderKind =
+        selectedLeaderKindsByGroupId[selectedGroupId] ?? "secondary";
+      const isSelectedPrimaryLeader = selectedLeaderKind === "primary";
+
+      if (isSelectedPrimaryLeader) {
         const demoteError = await demoteOtherPrimaryGroupLeaders(
           serviceSupabase,
           selectedGroupId,
@@ -2464,7 +2571,7 @@ export async function updateOperationalUserRole(formData: FormData) {
           group_id: selectedGroupId,
           user_id: targetUserId,
           role: "capogruppo",
-          is_primary: isPrimaryLeader,
+          is_primary: isSelectedPrimaryLeader,
           created_by: auth.user.id,
         },
         { onConflict: "group_id,user_id" }
@@ -2479,7 +2586,7 @@ export async function updateOperationalUserRole(formData: FormData) {
       const syncError = await syncGroupPrimaryLeaderName(
         serviceSupabase,
         selectedGroupId,
-        isPrimaryLeader ? fullName : null
+        isSelectedPrimaryLeader ? fullName : null
       );
 
       if (syncError) {
@@ -2501,7 +2608,7 @@ export async function updateOperationalUserRole(formData: FormData) {
         removed_group_ids: removedMemberships
           .map((membership) => membership.group_id)
           .filter(Boolean),
-        leader_kind: leaderKind,
+        leader_kinds_by_group_id: selectedLeaderKindsByGroupId,
       },
     });
 
@@ -3388,6 +3495,26 @@ function getGroupManagementDashboardPath(sourceDashboard: string | null): string
   }
 
   return sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+}
+
+function getGroupManagementListPath(
+  sourceDashboard: string | null,
+  navMode?: string | null,
+  extra?: string
+): string {
+  const basePath = getGroupManagementDashboardPath(sourceDashboard);
+  const params = new URLSearchParams({ section: "gruppi" });
+
+  if (navMode === "mini" || navMode === "full") {
+    params.set("nav", navMode);
+  }
+
+  if (extra) {
+    const extraParams = new URLSearchParams(extra);
+    extraParams.forEach((value, key) => params.set(key, value));
+  }
+
+  return `${basePath}?${params.toString()}`;
 }
 
 function getGroupLinksModalPath(

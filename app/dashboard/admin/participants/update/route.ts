@@ -11,12 +11,26 @@ export async function POST(request: NextRequest) {
   const groupId = optionalText(formData.get("groupId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const redirectDashboard = sourceDashboard === "manager" ? "manager" : "admin";
+  const hasIdentityUpdate =
+    formData.has("firstName") ||
+    formData.has("lastName") ||
+    formData.has("birthDate") ||
+    formData.has("city") ||
+    formData.has("country");
+  const hasContactUpdate = formData.has("email") || formData.has("phone");
+  const firstName = optionalText(formData.get("firstName"));
+  const lastName = optionalText(formData.get("lastName"));
+  const birthDate = normalizeDateOnly(formData.get("birthDate"));
+  const city = optionalText(formData.get("city"));
+  const country = optionalText(formData.get("country"));
+  const email = normalizeEmail(formData.get("email"));
+  const phone = optionalText(formData.get("phone"));
 
   if (!registrationId || !participantId) {
     return dashboardRedirect(request, redirectDashboard, "invalid-participant");
   }
 
-  if (!groupId) {
+  if (!groupId && !hasIdentityUpdate && !hasContactUpdate) {
     return dashboardRedirect(request, redirectDashboard, null, true);
   }
 
@@ -60,7 +74,61 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
   const changed: string[] = [];
 
-  if (groupId) {
+  if (hasIdentityUpdate) {
+    const { error: participantUpdateError } = await serviceSupabase
+      .from("participants")
+      .update({
+        first_name: firstName,
+        last_name: lastName,
+        birth_date: birthDate,
+        city_other: city,
+        country_other: country,
+      })
+      .eq("id", participantId);
+
+    if (participantUpdateError) {
+      return dashboardRedirect(request, redirectDashboard, participantUpdateError.message);
+    }
+
+    changed.push("identity");
+  }
+
+  if (hasContactUpdate) {
+    const { data: currentContacts, error: contactReadError } = await serviceSupabase
+      .from("participant_contacts")
+      .select("id")
+      .eq("participant_id", participantId)
+      .eq("is_primary", true)
+      .limit(1);
+
+    if (contactReadError) {
+      return dashboardRedirect(request, redirectDashboard, contactReadError.message);
+    }
+
+    const primaryContactId =
+      ((currentContacts ?? []) as Array<{ id: string }>)[0]?.id ?? null;
+    const contactResult = primaryContactId
+      ? await serviceSupabase
+          .from("participant_contacts")
+          .update({ email: email || null, phone })
+          .eq("id", primaryContactId)
+      : email || phone
+        ? await serviceSupabase.from("participant_contacts").insert({
+            participant_id: participantId,
+            email: email || null,
+            phone,
+            is_primary: true,
+          })
+        : { error: null };
+
+    if (contactResult.error) {
+      return dashboardRedirect(request, redirectDashboard, contactResult.error.message);
+    }
+
+    changed.push("contact");
+  }
+
+  if (formData.has("groupId") && groupId) {
     const groupResult = await updateCurrentGroup({
       supabase: serviceSupabase,
       registrationId,
@@ -89,6 +157,10 @@ export async function POST(request: NextRequest) {
     metadata: {
       changed,
       group_id: groupId,
+      identity_updated: hasIdentityUpdate,
+      contact_updated: hasContactUpdate,
+      has_email: Boolean(email),
+      has_phone: Boolean(phone),
     },
   });
 
@@ -184,4 +256,16 @@ function optionalText(value: FormDataEntryValue | null): string | null {
   const trimmed = value.trim();
 
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeEmail(value: FormDataEntryValue | null): string | null {
+  const text = optionalText(value);
+
+  return text ? text.toLowerCase() : null;
+}
+
+function normalizeDateOnly(value: FormDataEntryValue | null): string | null {
+  const text = optionalText(value);
+
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }

@@ -16,6 +16,7 @@ import {
 } from "@/app/dashboard/role-tabs";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ConfirmSubmitButton } from "@/app/dashboard/confirm-submit-button";
+import { CopyLinkButton } from "@/app/dashboard/group-link-copy-tools";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
 import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
@@ -35,6 +36,7 @@ import {
 } from "@/lib/groups/registration-links";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
+import { decryptQrToken } from "@/lib/qrcode/secure-token";
 import type {
   OperationalTagOption,
   ParticipantOperationalTag,
@@ -45,6 +47,7 @@ import {
 } from "@/lib/registrations/attendance-slots";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { Trash2 } from "lucide-react";
 
 type CapogruppoPageProps = {
   searchParams: Promise<{
@@ -96,6 +99,7 @@ type GroupLinkRow = {
   group_id: string;
   public_label: string | null;
   internal_label: string | null;
+  token_encrypted: string | null;
   use_count: number | null;
   max_uses: number | null;
   created_at: string | null;
@@ -109,6 +113,7 @@ type GroupLinkView = {
   groupId: string;
   publicLabel: string | null;
   internalLabel: string | null;
+  url: string | null;
   useCount: number;
   maxUses: number | null;
   createdAt: string | null;
@@ -372,8 +377,9 @@ type AssignmentView = {
   participantCode: string | null;
   participantEmail: string | null;
   participantPhone: string | null;
+  participantCity: string | null;
+  participantCountry: string | null;
   participantPlace: string;
-  participatesWithGroup: boolean | null;
   birthDate: string | null;
   registrationStatus: string | null;
   submittedAt: string | null;
@@ -407,6 +413,7 @@ type GroupLeaderCopy = {
   publicVisible: string;
   publicHidden: string;
   leader: string;
+  manageLinks: string;
   generateLink: string;
   addParticipant: string;
   inactiveGroupHelp: string;
@@ -427,6 +434,9 @@ type GroupLeaderCopy = {
   notProvided: string;
   justCreatedLink: string;
   unlabeledLink: string;
+  existingLinks: string;
+  newLink: string;
+  copyLink: string;
   uses: string;
   revoke: string;
   noActiveLinks: string;
@@ -514,10 +524,6 @@ type GroupLeaderCopy = {
     updatedAt: string;
     decisionAt: string;
     escalationDepth: string;
-    participatesWithGroup: string;
-    yes: string;
-    no: string;
-    unknown: string;
   };
   attendance: {
     title: string;
@@ -580,6 +586,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   publicVisible: "Visibile nel form pubblico",
   publicHidden: "Non visibile nel form pubblico",
   leader: "referente",
+  manageLinks: "Gestisci link",
   generateLink: "Genera link",
   addParticipant: "Inserisci partecipante",
   inactiveGroupHelp:
@@ -603,10 +610,13 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   notProvided: "Non indicata",
   justCreatedLink: "Link appena generato",
   unlabeledLink: "Link senza etichetta",
+  existingLinks: "Link già esistenti",
+  newLink: "Genera un nuovo link",
+  copyLink: "Copia link",
   uses: "usi",
   revoke: "Revoca",
   noActiveLinks: "Nessun link attivo.",
-  publicLabel: "Nome mostrato a chi si iscrive",
+  publicLabel: "Nome visualizzato del link",
   publicLabelHelp:
     "Opzionale. Se compilato, chi apre questo link vedrà questo nome invece del nome interno del gruppo.",
   internalLabel: "Promemoria per te",
@@ -703,10 +713,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     updatedAt: "Ultimo aggiornamento",
     decisionAt: "Decisione",
     escalationDepth: "Passaggi di risalita",
-    participatesWithGroup: "Dichiara di partecipare con un gruppo",
-    yes: "Sì",
-    no: "No",
-    unknown: "Non indicato",
   },
   attendance: {
     title: "Presenza",
@@ -770,6 +776,7 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   publicVisible: "Visible in the public form",
   publicHidden: "Not visible in the public form",
   leader: "contact person",
+  manageLinks: "Manage links",
   generateLink: "Generate link",
   addParticipant: "Add participant",
   inactiveGroupHelp:
@@ -793,10 +800,13 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   notProvided: "Not provided",
   justCreatedLink: "Newly generated link",
   unlabeledLink: "Unlabelled link",
+  existingLinks: "Existing links",
+  newLink: "Generate a new link",
+  copyLink: "Copy link",
   uses: "uses",
   revoke: "Revoke",
   noActiveLinks: "No active link.",
-  publicLabel: "Name shown to registrants",
+  publicLabel: "Link display name",
   publicLabelHelp:
     "Optional. If filled in, people opening this link will see this name instead of the internal group name.",
   internalLabel: "Reminder for you",
@@ -892,10 +902,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     updatedAt: "Last update",
     decisionAt: "Decision",
     escalationDepth: "Escalation steps",
-    participatesWithGroup: "Says they participate with a group",
-    yes: "Yes",
-    no: "No",
-    unknown: "Not provided",
   },
   attendance: {
     title: "Attendance",
@@ -1792,7 +1798,6 @@ export default async function CapogruppoDashboardPage({
     params.assignmentId
       ? assignments.find((assignment) => assignment.id === params.assignmentId) ?? null
       : null;
-  const isEditingAssignment = params.edit === "1";
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -1899,9 +1904,7 @@ export default async function CapogruppoDashboardPage({
             <AssignmentDetailCard
               assignment={selectedAssignment}
               tagOptions={operationalTags}
-              locale={locale}
               copy={copy}
-              isEditing={isEditingAssignment}
             />
           </DashboardToolOverlay>
         ) : null}
@@ -1944,7 +1947,7 @@ export default async function CapogruppoDashboardPage({
     const { data } = await serviceSupabase
       .from("group_registration_links")
       .select(
-        "id,event_id,group_id,public_label,internal_label,use_count,max_uses,created_at,expires_at,revoked_at"
+        "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
       )
       .in("group_id", groupIds)
       .eq("event_id", currentEventId)
@@ -1957,6 +1960,7 @@ export default async function CapogruppoDashboardPage({
       groupId: link.group_id,
       publicLabel: link.public_label,
       internalLabel: link.internal_label,
+      url: buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
       useCount: link.use_count ?? 0,
       maxUses: link.max_uses,
       createdAt: link.created_at,
@@ -2069,7 +2073,7 @@ function AssignedScopeSection({
                     href={`/dashboard/capogruppo?tool=link&groupId=${encodeURIComponent(group.id)}`}
                     className="min-h-9 rounded-md border border-[var(--peace-border-strong)] px-3 py-2 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                   >
-                    {copy.generateLink}
+                    {copy.manageLinks}
                   </Link>
                   <Link
                     href={`/dashboard/capogruppo?tool=manual&groupId=${encodeURIComponent(group.id)}`}
@@ -2184,12 +2188,6 @@ function GroupLeaderLinksSection({
                     {group.eventTitle} - {copy.leader}{" "}
                     {group.primaryLeaderName ?? copy.leaderMissing}
                   </p>
-                  <p className="mt-2 text-sm text-[var(--peace-ink)]">
-                    {copy.formPublicName}:{" "}
-                    <span className="font-medium">
-                      {group.publicLabel ?? copy.notSet}
-                    </span>
-                  </p>
 
                   {createdUrl && createdGroupId === group.id ? (
                     <label className="mt-4 grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
@@ -2202,28 +2200,54 @@ function GroupLeaderLinksSection({
                     </label>
                   ) : null}
 
-                  <div className="mt-4 grid gap-2">
+                  <div className="mt-5 grid gap-3 border-t border-[var(--peace-border)] pt-4">
+                    <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
+                      {copy.existingLinks}
+                    </h4>
                     {groupLinks.map((link) => (
                       <div
                         key={link.id}
-                        className="flex flex-col gap-2 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                        className="rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm"
                       >
-                        <div>
-                          <p className="font-medium text-[var(--peace-ink)]">
-                            {link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink}
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                            {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
-                            {link.maxUses ? `/${link.maxUses}` : ""}
-                          </p>
+                        <p className="font-medium text-[var(--peace-ink)]">
+                          {link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--peace-muted)]">
+                          {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
+                          {link.maxUses ? `/${link.maxUses}` : ""}
+                        </p>
+                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                          {link.url ? (
+                            <input
+                              readOnly
+                              className="field min-w-0 flex-1 bg-[#f7fbfe] font-mono text-xs"
+                              value={link.url}
+                            />
+                          ) : null}
+                          <div className="flex gap-2 sm:shrink-0">
+                            {link.url ? (
+                              <CopyLinkButton
+                                iconOnly
+                                label={copy.copyLink}
+                                url={link.url}
+                              />
+                            ) : null}
+                            <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
+                              <input type="hidden" name="sourceDashboard" value="capogruppo" />
+                              <input type="hidden" name="linkId" value={link.id} />
+                              <PendingSubmitButton
+                                aria-label={`${copy.revoke}: ${
+                                  link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink
+                                }`}
+                                className="inline-flex size-9 items-center justify-center rounded-md border border-[#d1a7a0] p-0 text-[#8a3f35] transition hover:bg-[#fff0ee]"
+                                title={copy.revoke}
+                              >
+                                <Trash2 className="size-4" aria-hidden="true" />
+                                <span className="sr-only">{copy.revoke}</span>
+                              </PendingSubmitButton>
+                            </form>
+                          </div>
                         </div>
-                        <form action={revokeGroupRegistrationLink}>
-                          <input type="hidden" name="sourceDashboard" value="capogruppo" />
-                          <input type="hidden" name="linkId" value={link.id} />
-                          <PendingSubmitButton className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
-                            {copy.revoke}
-                          </PendingSubmitButton>
-                        </form>
                       </div>
                     ))}
                     {groupLinks.length === 0 ? (
@@ -2232,31 +2256,24 @@ function GroupLeaderLinksSection({
                   </div>
                 </div>
 
-                <form action={createGroupRegistrationLink} className="grid gap-3">
+                <form
+                  action={createGroupRegistrationLink}
+                  className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4"
+                  data-preserve-dashboard-scroll
+                >
                   <input type="hidden" name="sourceDashboard" value="capogruppo" />
                   <input type="hidden" name="groupId" value={group.id} />
+                  <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
+                    {copy.newLink}
+                  </h4>
                   <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
                     {copy.publicLabel}
                     <input
-                      name="publicLabel"
+                      name="displayName"
                       className="field"
-                      defaultValue={group.publicLabel ?? ""}
-                      placeholder={group.name}
+                      defaultValue={group.publicLabel ?? group.name}
+                      required
                     />
-                    <span className="text-xs font-normal leading-5 text-[var(--peace-muted)]">
-                      {copy.publicLabelHelp}
-                    </span>
-                  </label>
-                  <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                    {copy.internalLabel}
-                    <input
-                      name="internalLabel"
-                      className="field"
-                      placeholder={copy.internalLabelPlaceholder}
-                    />
-                    <span className="text-xs font-normal leading-5 text-[var(--peace-muted)]">
-                      {copy.internalLabelHelp}
-                    </span>
                   </label>
                   <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                     {copy.generateLink}
@@ -2789,18 +2806,13 @@ function AssignmentRowView({
 function AssignmentDetailCard({
   assignment,
   tagOptions,
-  locale,
   copy,
-  isEditing,
 }: {
   assignment: AssignmentView;
   tagOptions: OperationalTagOption[];
-  locale: SupportedLocale;
   copy: GroupLeaderCopy;
-  isEditing: boolean;
 }) {
   const canDecide = assignment.isCurrent && assignment.status === "probable";
-  const detailHref = `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`;
 
   return (
     <section className="grid gap-5">
@@ -2816,148 +2828,97 @@ function AssignmentDetailCard({
             </span>
           </p>
         </div>
-        <StatusBadge
-          status={assignment.status}
-          isCurrent={assignment.isCurrent}
-          copy={copy}
-        />
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href={isEditing ? detailHref : `${detailHref}&edit=1`}
-          scroll={false}
-          className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-        >
-          {isEditing ? "Torna alla scheda" : "Modifica"}
-        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <DetailBlock title={copy.detail.identity}>
-          {isEditing ? (
-            <form
-              action={updateGroupLeaderParticipantContact}
-              className="grid gap-3"
-              data-preserve-dashboard-scroll
-            >
-              <input type="hidden" name="assignmentId" value={assignment.id} />
-              <input type="hidden" name="participantId" value={assignment.participantId} />
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                {copy.firstName}
-                <input
-                  name="firstName"
-                  defaultValue={assignment.participantFirstName ?? ""}
-                  className="field bg-white font-normal"
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                {copy.lastName}
-                <input
-                  name="lastName"
-                  defaultValue={assignment.participantLastName ?? ""}
-                  className="field bg-white font-normal"
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                {copy.birthDate}
-                <input
-                  name="birthDate"
-                  type="date"
-                  defaultValue={assignment.birthDate ?? ""}
-                  className="field bg-white font-normal"
-                />
-              </label>
-              <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                Salva identità
-              </PendingSubmitButton>
-            </form>
-          ) : (
-            <>
-              <DetailLine label={copy.birthDate}>
-                {assignment.birthDate
-                  ? formatDate(assignment.birthDate, locale)
-                  : copy.notProvided}
-              </DetailLine>
-              <DetailLine label={copy.table.origin}>{assignment.participantPlace}</DetailLine>
-              <DetailLine label={copy.detail.participatesWithGroup}>
-                {formatOptionalBoolean(assignment.participatesWithGroup, copy)}
-              </DetailLine>
-            </>
-          )}
+          <form
+            action={updateGroupLeaderParticipantContact}
+            className="grid gap-3"
+            data-preserve-dashboard-scroll
+          >
+            <input type="hidden" name="assignmentId" value={assignment.id} />
+            <input type="hidden" name="participantId" value={assignment.participantId} />
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              {copy.firstName}
+              <input
+                name="firstName"
+                defaultValue={assignment.participantFirstName ?? ""}
+                className="field bg-white font-normal"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              {copy.lastName}
+              <input
+                name="lastName"
+                defaultValue={assignment.participantLastName ?? ""}
+                className="field bg-white font-normal"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              {copy.birthDate}
+              <input
+                name="birthDate"
+                type="date"
+                defaultValue={assignment.birthDate ?? ""}
+                className="field bg-white font-normal"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Città
+              <input
+                name="city"
+                defaultValue={assignment.participantCity ?? ""}
+                className="field bg-white font-normal"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              Paese
+              <input
+                name="country"
+                defaultValue={assignment.participantCountry ?? ""}
+                className="field bg-white font-normal"
+              />
+            </label>
+            <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva
+            </PendingSubmitButton>
+          </form>
         </DetailBlock>
 
         <DetailBlock title={copy.detail.contacts}>
-          {isEditing ? (
-            <form
-              action={updateGroupLeaderParticipantContact}
-              className="grid gap-3"
-              data-preserve-dashboard-scroll
-            >
-              <input type="hidden" name="assignmentId" value={assignment.id} />
-              <input type="hidden" name="participantId" value={assignment.participantId} />
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                {copy.email}
-                <input
-                  name="email"
-                  type="email"
-                  defaultValue={assignment.participantEmail ?? ""}
-                  className="field bg-white font-normal"
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                {copy.phone}
-                <input
-                  name="phone"
-                  defaultValue={assignment.participantPhone ?? ""}
-                  className="field bg-white font-normal"
-                />
-              </label>
-              <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                Salva contatti
-              </PendingSubmitButton>
-            </form>
-          ) : (
-            <>
-              <DetailLine label={copy.email}>
-                {assignment.participantEmail ?? copy.table.emailMissing}
-              </DetailLine>
-              <DetailLine label={copy.phone}>
-                {assignment.participantPhone ?? copy.table.phoneMissing}
-              </DetailLine>
-            </>
-          )}
-        </DetailBlock>
-
-        <DetailBlock title="Tag operativi">
-          <OperationalTagList tags={assignment.tags} emptyLabel="Senza tag" />
+          <form
+            action={updateGroupLeaderParticipantContact}
+            className="grid gap-3"
+            data-preserve-dashboard-scroll
+          >
+            <input type="hidden" name="assignmentId" value={assignment.id} />
+            <input type="hidden" name="participantId" value={assignment.participantId} />
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              {copy.email}
+              <input
+                name="email"
+                type="email"
+                defaultValue={assignment.participantEmail ?? ""}
+                className="field bg-white font-normal"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+              {copy.phone}
+              <input
+                name="phone"
+                defaultValue={assignment.participantPhone ?? ""}
+                className="field bg-white font-normal"
+              />
+            </label>
+            <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva
+            </PendingSubmitButton>
+          </form>
         </DetailBlock>
 
         <DetailBlock title={copy.detail.group}>
           <DetailLine label={copy.group}>{assignment.groupName}</DetailLine>
-          <DetailLine label={copy.table.origin}>
-            {assignment.assignmentReason
-              ? assignmentReasonLabel(assignment.assignmentReason, copy)
-              : sourceLabel(assignment.source, copy)}
-          </DetailLine>
-          <DetailLine label={copy.detail.escalationDepth}>
-            {String(assignment.escalationDepth)}
-          </DetailLine>
-        </DetailBlock>
-
-        <DetailBlock title={copy.detail.assignment}>
-          <DetailLine label={copy.detail.registrationStatus}>
-            {assignment.registrationStatus ?? copy.notProvided}
-          </DetailLine>
-          <DetailLine label={copy.detail.submittedAt}>
-            {formatDateTime(assignment.submittedAt, locale, copy.notProvided)}
-          </DetailLine>
-          <DetailLine label={copy.detail.updatedAt}>
-            {formatDateTime(assignment.updatedAt, locale, copy.notProvided)}
-          </DetailLine>
-          <DetailLine label={copy.detail.decisionAt}>
-            {formatDateTime(assignment.leaderDecisionAt, locale, copy.notProvided)}
-          </DetailLine>
         </DetailBlock>
       </div>
 
@@ -3044,7 +3005,7 @@ function AssignmentDetailCard({
           />
         </fieldset>
         <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          Salva tag
+          Salva
         </PendingSubmitButton>
       </form>
     </section>
@@ -3175,30 +3136,6 @@ function TagCheckboxGrid({
   );
 }
 
-function StatusBadge({
-  status,
-  isCurrent,
-  copy,
-}: {
-  status: string | null;
-  isCurrent: boolean;
-  copy: GroupLeaderCopy;
-}) {
-  const label = statusLabel(status, isCurrent, copy);
-  const className =
-    status === "confirmed" && isCurrent
-      ? "bg-[#e6f3e8] text-[#2f6541]"
-      : status === "rejected"
-        ? "bg-[#f8e8e5] text-[#8a3f35]"
-        : "bg-[#fff1c2] text-[#6b5214]";
-
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${className}`}>
-      {label}
-    </span>
-  );
-}
-
 function StatusMessage({
   error,
   saved,
@@ -3265,12 +3202,13 @@ function toAssignmentView(
     participantCode: participant.public_code,
     participantEmail: getPrimaryContact(participant.participant_contacts)?.email ?? null,
     participantPhone: getPrimaryContact(participant.participant_contacts)?.phone ?? null,
+    participantCity: relatedOne(participant.cities)?.name ?? participant.city_other,
+    participantCountry: relatedOne(participant.countries)?.name_it ?? participant.country_other,
     participantPlace: formatPlace(
       relatedOne(participant.cities)?.name ?? participant.city_other,
       relatedOne(participant.countries)?.name_it ?? participant.country_other,
       copy
     ),
-    participatesWithGroup: participant.participates_with_group,
     birthDate: participant.birth_date,
     registrationStatus: registration.status,
     submittedAt: registration.submitted_at,
@@ -3363,21 +3301,6 @@ function formatPlace(
   return parts.length > 0 ? parts.join(", ") : copy.notProvided;
 }
 
-function formatOptionalBoolean(
-  value: boolean | null,
-  copy: GroupLeaderCopy
-): string {
-  if (value === true) {
-    return copy.detail.yes;
-  }
-
-  if (value === false) {
-    return copy.detail.no;
-  }
-
-  return copy.detail.unknown;
-}
-
 function statusLabel(
   status: string | null,
   isCurrent: boolean,
@@ -3396,50 +3319,6 @@ function statusLabel(
   }
 
   return copy.statusLabels.probable;
-}
-
-function sourceLabel(source: string | null, copy: GroupLeaderCopy): string {
-  switch (source) {
-    case "participant_selected":
-      return copy.sourceLabels.participantSelected;
-    case "rule":
-      return copy.sourceLabels.rule;
-    case "capogruppo":
-      return copy.sourceLabels.capogruppo;
-    case "manager":
-      return copy.sourceLabels.manager;
-    case "admin":
-      return copy.sourceLabels.admin;
-    default:
-      return copy.notProvided;
-  }
-}
-
-function assignmentReasonLabel(reason: string, copy: GroupLeaderCopy): string {
-  switch (reason) {
-    case "participant_selected_group":
-      return copy.assignmentReasonLabels.participantSelectedGroup;
-    case "group_registration_link":
-      return copy.assignmentReasonLabels.groupRegistrationLink;
-    case "newcomer_territorial_fallback":
-      return copy.assignmentReasonLabels.newcomerTerritorialFallback;
-    case "participant_cannot_find_leader":
-      return copy.assignmentReasonLabels.participantCannotFindLeader;
-    case "santegidio_territorial_fallback":
-      return copy.assignmentReasonLabels.santegidioTerritorialFallback;
-    case "group_leader_rejected_escalated_to_parent":
-      return copy.assignmentReasonLabels.groupLeaderRejectedEscalatedToParent;
-    case "group_leader_manual_entry":
-      return copy.assignmentReasonLabels.groupLeaderManualEntry;
-    case "admin_updated_group":
-      return copy.assignmentReasonLabels.adminUpdatedGroup;
-    case "manager_updated_group":
-      return copy.assignmentReasonLabels.managerUpdatedGroup;
-    case "capogruppo_updated_group":
-      return copy.assignmentReasonLabels.capogruppoUpdatedGroup;
-    default:
-      return reason;
-  }
 }
 
 function groupLinkStatusLabel(
@@ -3481,12 +3360,6 @@ function formatDateTime(
   }).format(new Date(value));
 }
 
-function formatDate(value: string, locale: SupportedLocale = "it"): string {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-  }).format(new Date(value));
-}
-
 function normalizeSearchQuery(value: string | null | undefined): string {
   return typeof value === "string" ? value.trim().slice(0, 80) : "";
 }
@@ -3511,7 +3384,7 @@ function dashboardToolTitle(
   tool: DashboardTool,
   copy: GroupLeaderCopy
 ): string {
-  return tool === "link" ? copy.generateLink : copy.addParticipant;
+  return tool === "link" ? copy.manageLinks : copy.addParticipant;
 }
 
 function isPendingAssignment(assignment: AssignmentView): boolean {
@@ -3684,4 +3557,10 @@ function getAppUrl(): string {
     process.env.APP_URL ||
     "http://localhost:3000"
   ).replace(/\/$/, "");
+}
+
+function buildGroupLinkUrlFromEncryptedToken(encryptedToken: string | null): string | null {
+  const token = decryptQrToken(encryptedToken);
+
+  return token ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token }) : null;
 }
