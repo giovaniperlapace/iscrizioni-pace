@@ -25,8 +25,6 @@ import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
 import {
   collectDescendantGroupIds,
-  matchesGroupLeaderFilter,
-  parseGroupLeaderReviewFilter,
   type GroupLeaderReviewFilter,
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
@@ -398,8 +396,7 @@ type AssignmentView = {
 };
 type DashboardTool = "link" | "manual";
 
-const ASSIGNMENT_SORT_VALUES = ["name", "updated", "submitted", "status"] as const;
-type AssignmentSort = (typeof ASSIGNMENT_SORT_VALUES)[number];
+type AssignmentSort = "name" | "updated" | "submitted" | "status";
 type GroupLeaderCopy = {
   srTitle: string;
   areaDescription: string;
@@ -637,9 +634,9 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   internalNote: "Nota interna",
   consent: "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione.",
   filters: {
-    search: "Cerca partecipante",
-    searchPlaceholder: "Nome, email, telefono, codice",
-    contact: "Contatto",
+    search: "Nome o codice",
+    searchPlaceholder: "Nome o codice",
+    contact: "Email o telefono",
     contactPlaceholder: "Email o telefono",
     group: "Gruppo",
     allGroups: "Tutti i gruppi",
@@ -697,7 +694,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   pending: {
     title: "Da confermare",
     help: "Controlla prima queste persone: risultano collegate al tuo gruppo, ma attendono una conferma esplicita.",
-    empty: "Non ci sono partecipanti in attesa di conferma con questi filtri.",
+    empty: "Non ci sono partecipanti in attesa di conferma.",
   },
   detail: {
     title: "Scheda partecipante",
@@ -826,9 +823,9 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   internalNote: "Internal note",
   consent: "I have the registered person's consent to process data for this registration.",
   filters: {
-    search: "Search participant",
-    searchPlaceholder: "Name, email, phone, code",
-    contact: "Contact",
+    search: "Name or code",
+    searchPlaceholder: "Name or code",
+    contact: "Email or phone",
     contactPlaceholder: "Email or phone",
     group: "Group",
     allGroups: "All groups",
@@ -886,7 +883,7 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   pending: {
     title: "To confirm",
     help: "Start here: these people are linked to your group, but still need an explicit confirmation.",
-    empty: "No participant is waiting for confirmation with these filters.",
+    empty: "No participant is waiting for confirmation.",
   },
   detail: {
     title: "Participant card",
@@ -1015,8 +1012,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     consent: "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
-      search: "Chercher un participant",
-      searchPlaceholder: "Nom, email, téléphone, code",
+      search: "Nom ou code",
+      searchPlaceholder: "Nom ou code",
+      contact: "Email ou téléphone",
+      contactPlaceholder: "Email ou téléphone",
       status: "État",
       sort: "Trier par",
       apply: "Appliquer",
@@ -1166,8 +1165,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     consent: "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
-      search: "Teilnehmende suchen",
-      searchPlaceholder: "Name, E-Mail, Telefon, Code",
+      search: "Name oder Code",
+      searchPlaceholder: "Name oder Code",
+      contact: "E-Mail oder Telefon",
+      contactPlaceholder: "E-Mail oder Telefon",
       status: "Status",
       sort: "Sortieren nach",
       apply: "Anwenden",
@@ -1317,8 +1318,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     consent: "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
-      search: "Buscar participante",
-      searchPlaceholder: "Nombre, email, teléfono, código",
+      search: "Nombre o código",
+      searchPlaceholder: "Nombre o código",
+      contact: "Email o teléfono",
+      contactPlaceholder: "Email o teléfono",
       status: "Estado",
       sort: "Ordenar por",
       apply: "Aplicar",
@@ -1468,8 +1471,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     consent: "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
-      search: "Deelnemer zoeken",
-      searchPlaceholder: "Naam, e-mail, telefoon, code",
+      search: "Naam of code",
+      searchPlaceholder: "Naam of code",
+      contact: "E-mail of telefoon",
+      contactPlaceholder: "E-mail of telefoon",
       status: "Status",
       sort: "Sorteren op",
       apply: "Toepassen",
@@ -1619,8 +1624,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     consent: "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
-      search: "Шукати учасника",
-      searchPlaceholder: "Ім'я, email, телефон, код",
+      search: "Ім'я або код",
+      searchPlaceholder: "Ім'я або код",
+      contact: "Email або телефон",
+      contactPlaceholder: "Email або телефон",
       status: "Стан",
       sort: "Сортувати за",
       apply: "Застосувати",
@@ -1716,14 +1723,10 @@ export default async function CapogruppoDashboardPage({
   const locale = await getRequestLocale();
   const copy = GROUP_LEADER_COPY[locale] ?? GROUP_LEADER_COPY.en;
   const params = await searchParams;
-  const filter = params.filter
-    ? parseGroupLeaderReviewFilter(params.filter)
-    : "all";
   const query = normalizeSearchQuery(params.q);
   const contactQuery = normalizeSearchQuery(params.contact);
   const groupFilter = normalizeFilterParam(params.group);
   const tagFilter = normalizeFilterParam(params.tag);
-  const sort = parseAssignmentSort(params.sort);
   const activeTool =
     params.groupLinkToken || params.groupLinkGroupId
       ? "link"
@@ -1773,27 +1776,30 @@ export default async function CapogruppoDashboardPage({
     .filter((group) => scopedGroupIds.has(group.id))
     .map((group) => toScopedGroupView(group, copy));
   const groupLinks = await getGroupLinks([...scopedGroupIds]);
+  const confirmedAssignments = assignments.filter(
+    (assignment) => assignment.isCurrent && assignment.status === "confirmed"
+  );
+  const groupFilterOptions = buildGroupFilterOptions(confirmedAssignments, locale);
+  const showGroupColumn = groupFilterOptions.length > 1;
+  const effectiveGroupFilter = showGroupColumn ? groupFilter : "all";
   const filteredAssignments = sortAssignments(
     assignments.filter((assignment) =>
       matchesAssignmentFilters(assignment, {
-        filter,
         query,
         contactQuery,
-        groupFilter,
+        groupFilter: effectiveGroupFilter,
         tagFilter,
       })
     ),
-    sort,
     locale
   );
-  const pendingAssignments = filteredAssignments.filter(isPendingAssignment);
-  const tableAssignments = filteredAssignments.filter(
-    (assignment) => !isPendingAssignment(assignment)
+  const pendingAssignments = sortAssignments(
+    assignments.filter(isPendingAssignment),
+    locale
   );
-  const groupFilterOptions = buildGroupFilterOptions(assignments, locale);
-  const visibleGroupCount = new Set(
-    tableAssignments.map((assignment) => assignment.groupId)
-  ).size;
+  const tableAssignments = filteredAssignments.filter(
+    (assignment) => assignment.isCurrent && assignment.status === "confirmed"
+  );
   const selectedAssignment =
     params.assignmentId
       ? assignments.find((assignment) => assignment.id === params.assignmentId) ?? null
@@ -1830,6 +1836,12 @@ export default async function CapogruppoDashboardPage({
           copy={copy}
         />
 
+        <PendingAssignmentsPanel
+          assignments={pendingAssignments}
+          copy={copy}
+          showGroupColumn={new Set(pendingAssignments.map((assignment) => assignment.groupId)).size > 1}
+        />
+
         <section
           id="assegnazioni-gruppo"
           className="rounded-lg border border-[var(--peace-border)] bg-white p-5"
@@ -1844,27 +1856,20 @@ export default async function CapogruppoDashboardPage({
           </div>
 
           <AssignmentFilters
-            filter={filter}
             query={query}
             contactQuery={contactQuery}
-            groupFilter={groupFilter}
+            groupFilter={effectiveGroupFilter}
             tagFilter={tagFilter}
             groupOptions={groupFilterOptions}
             tagOptions={operationalTags}
-            sort={sort}
+            showGroupColumn={showGroupColumn}
             copy={copy}
-          />
-
-          <PendingAssignmentsPanel
-            assignments={pendingAssignments}
-            copy={copy}
-            showGroupColumn={new Set(pendingAssignments.map((assignment) => assignment.groupId)).size > 1}
           />
 
           <AssignmentsTable
             assignments={tableAssignments}
             copy={copy}
-            showGroupColumn={visibleGroupCount > 1}
+            showGroupColumn={showGroupColumn}
           />
         </section>
 
@@ -2397,26 +2402,28 @@ function ManualRegistrationSection({
 }
 
 function AssignmentFilters({
-  filter,
   query,
   contactQuery,
   groupFilter,
   tagFilter,
   groupOptions,
   tagOptions,
-  sort,
+  showGroupColumn,
   copy,
 }: {
-  filter: GroupLeaderReviewFilter;
   query: string;
   contactQuery: string;
   groupFilter: string;
   tagFilter: string;
   groupOptions: Array<{ id: string; name: string }>;
   tagOptions: OperationalTagOption[];
-  sort: AssignmentSort;
+  showGroupColumn: boolean;
   copy: GroupLeaderCopy;
 }) {
+  const filterGridClassName = showGroupColumn
+    ? "grid min-w-[860px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(190px,1fr)_minmax(170px,1fr)_auto] gap-3"
+    : "grid min-w-[760px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(170px,1fr)_auto] gap-3";
+
   return (
     <AutoFilterForm
       action="/dashboard/capogruppo"
@@ -2426,128 +2433,81 @@ function AssignmentFilters({
         contact: "",
         group: "all",
         tag: "all",
-        filter: "all",
         sort: "name",
       }}
     >
-      <div className="overflow-x-auto rounded-md border border-[var(--peace-border)]">
-        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-              <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
-              <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
-              <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
-              <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
-              <th className="py-3 pr-4 font-semibold">{copy.table.status}</th>
-              <th className="py-3 pr-4 text-right font-semibold">{copy.filters.sort}</th>
-            </tr>
-            <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
-              <th className="py-3 pl-4 pr-4">
-                <label className="sr-only" htmlFor="leader-participant-q">
-                  {copy.filters.search}
-                </label>
-                <input
-                  id="leader-participant-q"
-                  name="q"
-                  defaultValue={query}
-                  className="field min-h-10 bg-white text-sm font-normal"
-                  placeholder={copy.filters.searchPlaceholder}
-                />
-              </th>
-              <th className="py-3 pr-4">
-                <label className="sr-only" htmlFor="leader-participant-contact">
-                  {copy.filters.contact}
-                </label>
-                <input
-                  id="leader-participant-contact"
-                  name="contact"
-                  defaultValue={contactQuery}
-                  className="field min-h-10 bg-white text-sm font-normal"
-                  placeholder={copy.filters.contactPlaceholder}
-                />
-              </th>
-              <th className="py-3 pr-4">
-                <label className="sr-only" htmlFor="leader-participant-group">
-                  {copy.filters.group}
-                </label>
-                <select
-                  id="leader-participant-group"
-                  name="group"
-                  defaultValue={groupFilter}
-                  className="field min-h-10 bg-white text-sm font-normal"
-                >
-                  <option value="all">{copy.filters.allGroups}</option>
-                  {groupOptions.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th className="py-3 pr-4">
-                <label className="sr-only" htmlFor="leader-participant-tag">
-                  {copy.filters.tag}
-                </label>
-                <select
-                  id="leader-participant-tag"
-                  name="tag"
-                  defaultValue={tagFilter}
-                  className="field min-h-10 bg-white text-sm font-normal"
-                >
-                  <option value="all">{copy.filters.allTags}</option>
-                  <option value="none">{copy.filters.noTags}</option>
-                  {tagOptions.map((tag) => (
-                    <option key={tag.id} value={tag.id}>
-                      {tag.label}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th className="py-3 pr-4">
-                <label className="sr-only" htmlFor="leader-participant-status">
-                  {copy.filters.status}
-                </label>
-                <select
-                  id="leader-participant-status"
-                  name="filter"
-                  defaultValue={filter}
-                  className="field min-h-10 bg-white text-sm font-normal"
-                >
-                  {Object.entries(copy.filterLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th className="py-3 pr-4 text-right">
-                <div className="flex justify-end gap-2">
-                  <label className="sr-only" htmlFor="leader-participant-sort">
-                    {copy.filters.sort}
-                  </label>
-                  <select
-                    id="leader-participant-sort"
-                    name="sort"
-                    defaultValue={sort}
-                    className="field min-h-10 max-w-44 bg-white text-sm font-normal"
-                  >
-                    {ASSIGNMENT_SORT_VALUES.map((value) => (
-                      <option key={value} value={value}>
-                        {copy.sortLabels[value]}
-                      </option>
-                    ))}
-                  </select>
-                  <Link
-                    href="/dashboard/capogruppo#assegnazioni-gruppo"
-                    className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"
-                  >
-                    {copy.filters.reset}
-                  </Link>
-                </div>
-              </th>
-            </tr>
-          </thead>
-        </table>
+      <input type="hidden" name="sort" value="name" />
+      {!showGroupColumn ? <input type="hidden" name="group" value="all" /> : null}
+      <div className="overflow-x-auto rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3">
+        <div className={filterGridClassName}>
+          <label className="sr-only" htmlFor="leader-participant-q">
+            {copy.filters.search}
+          </label>
+          <input
+            id="leader-participant-q"
+            name="q"
+            defaultValue={query}
+            className="field min-h-10 bg-white text-sm font-normal"
+            placeholder={copy.filters.searchPlaceholder}
+          />
+
+          <label className="sr-only" htmlFor="leader-participant-contact">
+            {copy.filters.contact}
+          </label>
+          <input
+            id="leader-participant-contact"
+            name="contact"
+            defaultValue={contactQuery}
+            className="field min-h-10 bg-white text-sm font-normal"
+            placeholder={copy.filters.contactPlaceholder}
+          />
+
+          {showGroupColumn ? (
+            <>
+              <label className="sr-only" htmlFor="leader-participant-group">
+                {copy.filters.group}
+              </label>
+              <select
+                id="leader-participant-group"
+                name="group"
+                defaultValue={groupFilter}
+                className="field min-h-10 bg-white text-sm font-normal"
+              >
+                <option value="all">{copy.filters.allGroups}</option>
+                {groupOptions.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+
+          <label className="sr-only" htmlFor="leader-participant-tag">
+            {copy.filters.tag}
+          </label>
+          <select
+            id="leader-participant-tag"
+            name="tag"
+            defaultValue={tagFilter}
+            className="field min-h-10 bg-white text-sm font-normal"
+          >
+            <option value="all">{copy.filters.allTags}</option>
+            <option value="none">{copy.filters.noTags}</option>
+            {tagOptions.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.label}
+              </option>
+            ))}
+          </select>
+
+          <Link
+            href="/dashboard/capogruppo#assegnazioni-gruppo"
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+          >
+            {copy.filters.reset}
+          </Link>
+        </div>
       </div>
     </AutoFilterForm>
   );
@@ -3370,12 +3330,6 @@ function normalizeFilterParam(value: string | null | undefined): string {
   return normalized || "all";
 }
 
-function parseAssignmentSort(value: string | null | undefined): AssignmentSort {
-  return ASSIGNMENT_SORT_VALUES.some((option) => option === value)
-    ? (value as AssignmentSort)
-    : "name";
-}
-
 function parseDashboardTool(value: string | null | undefined): DashboardTool | null {
   return value === "link" || value === "manual" ? value : null;
 }
@@ -3394,7 +3348,6 @@ function isPendingAssignment(assignment: AssignmentView): boolean {
 function matchesAssignmentFilters(
   assignment: AssignmentView,
   filters: {
-    filter: GroupLeaderReviewFilter;
     query: string;
     contactQuery: string;
     groupFilter: string;
@@ -3402,7 +3355,6 @@ function matchesAssignmentFilters(
   }
 ): boolean {
   return (
-    matchesGroupLeaderFilter(assignment, filters.filter) &&
     matchesAssignmentQuery(assignment, filters.query) &&
     matchesAssignmentContact(assignment, filters.contactQuery) &&
     matchesAssignmentGroup(assignment, filters.groupFilter) &&
@@ -3419,14 +3371,7 @@ function matchesAssignmentQuery(
   }
 
   const normalizedQuery = query.toLowerCase();
-  const haystack = [
-    assignment.participantName,
-    assignment.participantCode,
-    assignment.participantEmail,
-    assignment.participantPhone,
-    assignment.groupName,
-    assignment.participantPlace,
-  ]
+  const haystack = [assignment.participantName, assignment.participantCode]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
@@ -3490,48 +3435,17 @@ function buildGroupFilterOptions(
 
 function sortAssignments(
   assignments: AssignmentView[],
-  sort: AssignmentSort,
   locale: SupportedLocale
 ): AssignmentView[] {
-  return [...assignments].sort((left, right) => {
-    switch (sort) {
-      case "updated":
-        return compareDateDesc(left.updatedAt, right.updatedAt);
-      case "submitted":
-        return compareDateDesc(left.submittedAt, right.submittedAt);
-      case "status":
-        return (
-          statusSortValue(left) - statusSortValue(right) ||
-          left.participantName.localeCompare(right.participantName, locale)
-        );
-      case "name":
-        return left.participantName.localeCompare(right.participantName, locale);
-    }
-  });
-}
-
-function compareDateDesc(left: string | null, right: string | null): number {
-  return dateTimeValue(right) - dateTimeValue(left);
+  return [...assignments].sort(
+    (left, right) =>
+      dateTimeValue(right.submittedAt) - dateTimeValue(left.submittedAt) ||
+      left.participantName.localeCompare(right.participantName, locale)
+  );
 }
 
 function dateTimeValue(value: string | null): number {
   return value ? new Date(value).getTime() : 0;
-}
-
-function statusSortValue(assignment: AssignmentView): number {
-  if (assignment.status === "probable" && assignment.isCurrent) {
-    return assignment.leaderNotificationReadAt ? 1 : 0;
-  }
-
-  if (assignment.status === "confirmed" && assignment.isCurrent) {
-    return 2;
-  }
-
-  if (assignment.status === "rejected") {
-    return 3;
-  }
-
-  return 4;
 }
 
 function getManualRegistrationEventDays(
