@@ -31,6 +31,10 @@ const operationalTagsMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260626100000_operational_tags.sql"
 );
+const eventServicesMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260711100000_event_services.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -48,6 +52,7 @@ const operationalTagsMigration = readFileSync(
   operationalTagsMigrationPath,
   "utf8"
 );
+const eventServicesMigration = readFileSync(eventServicesMigrationPath, "utf8");
 
 const createdTables = Array.from(
   migration.matchAll(/create table public\.([a-z_]+) \(/g),
@@ -189,5 +194,46 @@ test("operational tags migration scopes manager-created tags to event participan
   assert.match(
     operationalTagsMigration,
     /participant operational tags assign managers or leaders/
+  );
+});
+
+test("event services migration separates service catalog from participant assignment", () => {
+  assert.match(
+    eventServicesMigration,
+    /create table if not exists public\.event_services/
+  );
+  assert.match(
+    eventServicesMigration,
+    /create table if not exists public\.participant_event_services/
+  );
+  assert.match(eventServicesMigration, /event_services_event_label_unique/);
+  assert.match(
+    eventServicesMigration,
+    /participant_event_services_one_per_event_participant_idx/
+  );
+  assert.match(
+    eventServicesMigration,
+    /participant_event_services_no_self_assignment/
+  );
+  assert.match(
+    eventServicesMigration,
+    /create or replace function app\.can_manage_participant_event_service/
+  );
+  assert.match(
+    eventServicesMigration,
+    /alter table public\.event_services enable row level security/
+  );
+  assert.match(
+    eventServicesMigration,
+    /alter table public\.participant_event_services enable row level security/
+  );
+  assert.match(eventServicesMigration, /event services manage managers/);
+  assert.match(
+    eventServicesMigration,
+    /participant event services participant preference/
+  );
+  assert.match(
+    eventServicesMigration,
+    /participant event services manage operators/
   );
 });

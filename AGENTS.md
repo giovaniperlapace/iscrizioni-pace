@@ -169,6 +169,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   li usa come filtro; il capogruppo assegna/rimuove i tag dalla scheda del
   partecipante attribuito al proprio scope. I tag sono operativi interni e non
   sono mostrati al partecipante nel flusso pubblico o nella dashboard personale.
+- Il 2026-07-11 e' stata aggiunta la gestione dei servizi evento:
+  migration `20260711100000_event_services.sql` con catalogo
+  `event_services` e assegnazione corrente `participant_event_services`.
+  La lista servizi e' modificabile solo da admin/manager nella nuova sezione
+  `Servizi` della dashboard operativa; il partecipante non puo' auto-assegnarsi
+  un servizio, ma lo schema consente una futura preferenza con stato
+  `preference_pending` da flussi notificati via email. Manager/admin e
+  capogruppo in scope possono impostare `assigned`, registrare una preferenza
+  da approvare o creare una `proposal_pending` alternativa. La tabella iscritti
+  manager/admin e la tabella capogruppo mostrano il servizio come colonna
+  separata dai tag; i tag restano marcatori operativi liberi, mentre i servizi
+  sono un catalogo evento strutturato.
 - Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
   non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
   gestione manager. La migration di identità evento mantiene lo slug tecnico

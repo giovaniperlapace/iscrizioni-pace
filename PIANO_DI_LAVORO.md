@@ -101,6 +101,13 @@ Stato locale aggiornato al 2026-06-17:
   Milestone 14.2 per introdurre tag operativi configurabili dal manager,
   assegnabili dal capogruppo e filtrabili dal manager. Email personalizzate,
   programma, check-in e settori slittano dopo questi blocchi.
+- Il 2026-07-11 e' stata avviata la funzione servizi evento: catalogo servizi
+  modificabile da admin/manager, nuova sezione `Servizi` nelle dashboard
+  operative, colonna/filtro servizio nella gestione iscritti, assegnazione o
+  proposta servizio da manager/admin e capogruppo in scope. Lo schema distingue
+  preferenza partecipante futura (`preference_pending`), proposta alternativa
+  (`proposal_pending`) e assegnazione effettiva (`assigned`); l'iscrizione
+  pubblica non richiede il servizio.
 
 Metodo da seguire per ogni milestone:
 
@@ -178,6 +185,9 @@ Funzioni core:
 - Tabelle con filtri, ricerca, export e statistiche.
 - Tag operativi configurabili dal manager e assegnabili dal capogruppo ai
   partecipanti del proprio gruppo, usabili poi come filtri manager.
+- Servizi evento strutturati, configurabili da admin/manager e assegnabili o
+  proponibili da manager/admin/capogruppo; le preferenze partecipante saranno
+  raccolte solo da flussi dedicati futuri, non nel form di iscrizione iniziale.
 - Multilingua almeno italiano/inglese, estendibile.
 - Privacy, retention, audit log e sicurezza operativa.
 

@@ -21,6 +21,8 @@ const participants: OperationsParticipantForFilter[] = [
     currentGroupName: "Roma centro",
     currentGroupStatus: "confirmed",
     tagIds: ["tag-pranzo"],
+    currentServiceId: "servizio-accoglienza",
+    currentServiceStatus: "assigned",
   }),
   participant({
     eventId: "assisi",
@@ -32,6 +34,8 @@ const participants: OperationsParticipantForFilter[] = [
     currentGroupName: "Milano",
     currentGroupStatus: "probable",
     tagIds: ["tag-bus"],
+    currentServiceId: "servizio-mobilita",
+    currentServiceStatus: "proposal_pending",
   }),
   participant({
     eventId: "roma",
@@ -53,6 +57,7 @@ test("parseOperationsDashboardFilters normalizes invalid and long inputs", () =>
     contact: "  MARIA@EXAMPLE.ORG  ",
     group: "unknown",
     tag: "tag-pranzo",
+    service: "servizio-accoglienza",
     status: "submitted",
   });
 
@@ -60,6 +65,7 @@ test("parseOperationsDashboardFilters normalizes invalid and long inputs", () =>
   assert.equal(filters.contact, "MARIA@EXAMPLE.ORG");
   assert.equal(filters.group, "unknown");
   assert.equal(filters.tag, "tag-pranzo");
+  assert.equal(filters.service, "servizio-accoglienza");
   assert.equal(filters.status, "submitted");
   assert.equal(hasActiveOperationsDashboardFilters(filters), true);
 });
@@ -77,6 +83,24 @@ test("applyOperationsDashboardFilters filters by operational tag", () => {
     applyOperationsDashboardFilters(
       participants,
       parseOperationsDashboardFilters({ tag: "none" })
+    ).map((participant) => participant.name),
+    ["Anna Verdi"]
+  );
+});
+
+test("applyOperationsDashboardFilters filters by event service", () => {
+  assert.deepEqual(
+    applyOperationsDashboardFilters(
+      participants,
+      parseOperationsDashboardFilters({ service: "servizio-accoglienza" })
+    ).map((participant) => participant.name),
+    ["Maria Rossi"]
+  );
+
+  assert.deepEqual(
+    applyOperationsDashboardFilters(
+      participants,
+      parseOperationsDashboardFilters({ service: "none" })
     ).map((participant) => participant.name),
     ["Anna Verdi"]
   );
@@ -146,6 +170,7 @@ test("summarizeOperationsDashboardParticipants reports loaded and filtered rows"
     probableGroup: 0,
     confirmedGroup: 1,
     withoutEmail: 0,
+    withoutService: 0,
   });
 });
 
@@ -165,6 +190,8 @@ function participant(
     currentGroupName: null,
     currentGroupStatus: null,
     tagIds: [],
+    currentServiceId: null,
+    currentServiceStatus: null,
     ...overrides,
   };
 }

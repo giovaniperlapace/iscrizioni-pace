@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   BarChart3,
+  ClipboardList,
   Network,
   Pencil,
   ShieldCheck,
@@ -15,12 +16,14 @@ import {
   createOperationalTag,
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
+  saveEventService,
   saveOperationsGroup,
   updateGroupPublicCatalogVisibility,
   updateParticipantOperationalTags,
   updateOperationalUserRole,
 } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
+import { EventServiceActiveSwitch } from "@/app/dashboard/event-service-active-switch";
 import { GroupPublicCatalogSwitch } from "@/app/dashboard/group-public-catalog-switch";
 import {
   type GroupEditLeaderRow,
@@ -52,6 +55,7 @@ import type {
   OperationalTagOption,
   ParticipantOperationalTag,
 } from "@/lib/registrations/operational-tags";
+import type { EventServiceOption } from "@/lib/registrations/event-services";
 import {
   buildEventStatisticsSnapshot,
   type EventStatisticsSnapshot,
@@ -83,6 +87,9 @@ type ManagerPageProps = {
     groupTool?: string;
     groupType?: string;
     groupVisibility?: string;
+    serviceError?: string;
+    serviceId?: string;
+    serviceSaved?: string;
     roleError?: string;
     roleSaved?: string;
     roleUserId?: string;
@@ -243,6 +250,7 @@ type ManagerOperationsSnapshot = {
   groupTree: ManagerGroupTreeRow[];
   groupLinks: ManagerGroupRegistrationLink[];
   operationalTags: OperationalTagOption[];
+  eventServices: EventServiceOption[];
   roleUsers: OperationalUserRoleRow[];
   filters: OperationsDashboardFilters;
   summary: OperationsDashboardSummary;
@@ -292,7 +300,7 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type ManagerSection = "dashboard" | "iscritti" | "ruoli" | "gruppi";
+type ManagerSection = "dashboard" | "iscritti" | "servizi" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -370,6 +378,8 @@ export default async function ManagerDashboardPage({
               groupLinkSaved={params.groupLinkSaved}
               groupError={params.groupError}
               groupSaved={params.groupSaved}
+              serviceError={params.serviceError}
+              serviceSaved={params.serviceSaved}
               roleError={params.roleError}
               roleSaved={params.roleSaved}
             />
@@ -388,6 +398,23 @@ export default async function ManagerDashboardPage({
                 snapshot={managerOperations}
                 selectedParticipant={selectedCanManage ? selectedParticipant : null}
                 canManageEvent={scope.canManageEvent}
+                navMode={navMode}
+              />
+            ) : null}
+
+            {activeSection === "servizi" ? (
+              <ManagerServicesSection
+                services={managerOperations.eventServices}
+                currentEventOption={
+                  currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null
+                }
+                selectedService={
+                  params.serviceId
+                    ? managerOperations.eventServices.find(
+                        (service) => service.id === params.serviceId
+                      ) ?? null
+                    : null
+                }
                 navMode={navMode}
               />
             ) : null}
@@ -476,6 +503,13 @@ function ManagerSidebar({
       Icon: Users,
       label: "Gestione iscritti",
       help: "Elenco e modifiche",
+    },
+    {
+      key: "servizi",
+      href: `/dashboard/manager?section=servizi&nav=${navMode}`,
+      Icon: ClipboardList,
+      label: "Servizi",
+      help: "Lista e assegnazioni",
     },
     {
       key: "ruoli",
@@ -902,6 +936,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
   if (
     params.section === "dashboard" ||
     params.section === "iscritti" ||
+    params.section === "servizi" ||
     params.section === "ruoli" ||
     params.section === "gruppi"
   ) {
@@ -923,6 +958,14 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.groupLinkToken
   ) {
     return "gruppi";
+  }
+
+  if (
+    params.serviceError ||
+    params.serviceId ||
+    params.serviceSaved
+  ) {
+    return "servizi";
   }
 
   if (
@@ -985,6 +1028,7 @@ async function getManagerOperationsSnapshot(
       groupTree: [],
       groupLinks: [],
       operationalTags: [],
+      eventServices: [],
       roleUsers: [],
       filters,
       summary: summarizeOperationsDashboardParticipants([], []),
@@ -1030,6 +1074,12 @@ async function getManagerOperationsSnapshot(
     .select("id,event_id,label,color")
     .eq("event_id", currentEventId)
     .order("label", { ascending: true });
+  const eventServicesQuery = supabase
+    .from("event_services")
+    .select("id,event_id,label,description,is_active,public_order")
+    .eq("event_id", currentEventId)
+    .order("public_order", { ascending: true })
+    .order("label", { ascending: true });
 
   const eventRolesQuery = supabase
     .from("event_user_roles")
@@ -1046,6 +1096,7 @@ async function getManagerOperationsSnapshot(
     { data: groupTree },
     { data: groupLinks },
     { data: operationalTags },
+    { data: eventServices },
     { data: eventRoles },
     { data: groupMemberships },
   ] = await Promise.all([
@@ -1054,6 +1105,7 @@ async function getManagerOperationsSnapshot(
     groupTreeQuery,
     groupLinksQuery,
     operationalTagsQuery,
+    eventServicesQuery,
     eventRolesQuery,
     groupMembershipsQuery,
   ]);
@@ -1223,6 +1275,21 @@ async function getManagerOperationsSnapshot(
       eventId: tag.event_id,
       label: tag.label,
       color: tag.color,
+    })),
+    eventServices: ((eventServices ?? []) as Array<{
+      id: string;
+      event_id: string;
+      label: string | null;
+      description: string | null;
+      is_active: boolean | null;
+      public_order: number | null;
+    }>).map((service) => ({
+      id: service.id,
+      eventId: service.event_id,
+      label: service.label ?? "Servizio senza nome",
+      description: service.description,
+      isActive: service.is_active ?? true,
+      publicOrder: service.public_order ?? 100,
     })),
     roleUsers,
     filters,
@@ -2084,6 +2151,217 @@ function ManagerParticipantsSection({
   );
 }
 
+function ManagerServicesSection({
+  services,
+  currentEventOption,
+  selectedService,
+  navMode,
+}: {
+  services: EventServiceOption[];
+  currentEventOption: { id: string; title: string } | null;
+  selectedService: EventServiceOption | null;
+  navMode: ManagerNavMode;
+}) {
+  return (
+    <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <div>
+        <h2 className="text-lg font-semibold">Servizi</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
+          Lista dei servizi disponibili nell&apos;evento. I partecipanti non
+          possono assegnarsi un servizio in autonomia: manager e capigruppo
+          possono registrare una preferenza, una proposta o l&apos;assegnazione.
+        </p>
+      </div>
+
+      {currentEventOption ? (
+        <form
+          action={saveEventService}
+          className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 md:grid-cols-[1fr_1.4fr_auto]"
+          data-preserve-dashboard-scroll
+        >
+          <input type="hidden" name="sourceDashboard" value="manager" />
+          <input type="hidden" name="eventId" value={currentEventOption.id} />
+          <input type="hidden" name="nav" value={navMode} />
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+            Nuovo servizio
+            <input name="label" className="field bg-white font-normal" maxLength={60} required />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+            Descrizione
+            <textarea
+              name="description"
+              className="field min-h-20 resize-y bg-white font-normal"
+              maxLength={240}
+            />
+          </label>
+          <PendingSubmitButton className="min-h-11 self-end rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+            Crea
+          </PendingSubmitButton>
+        </form>
+      ) : null}
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-sm">
+          <colgroup>
+            <col className="w-[28%]" />
+            <col className="w-[42%]" />
+            <col className="w-[16%]" />
+            <col className="w-[14%]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+              <th className="py-3 pr-4 font-semibold">Servizio</th>
+              <th className="py-3 pr-4 font-semibold">Descrizione</th>
+              <th className="py-3 pr-4 font-semibold">Stato</th>
+              <th className="py-3 text-right font-semibold">Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {services.map((service) => {
+              const statusFormId = `event-service-status-${service.id}`;
+
+              return (
+              <tr key={service.id} className="border-b border-[var(--peace-border)] align-top last:border-b-0">
+                <td className="py-4 pr-4 font-semibold text-[var(--peace-ink)]">
+                  {service.label}
+                </td>
+                <td className="py-4 pr-4 leading-6 text-[var(--peace-muted)]">
+                  {service.description ? (
+                    service.description
+                  ) : (
+                    <span className="text-[#7a8da1]">Nessuna descrizione</span>
+                  )}
+                </td>
+                <td className="py-4 pr-4">
+                  <form
+                    id={statusFormId}
+                    action={saveEventService}
+                    className="hidden"
+                    data-preserve-dashboard-scroll
+                  >
+                    <input type="hidden" name="sourceDashboard" value="manager" />
+                    <input type="hidden" name="serviceId" value={service.id} />
+                    <input type="hidden" name="eventId" value={service.eventId} />
+                    <input type="hidden" name="nav" value={navMode} />
+                    <input type="hidden" name="publicOrder" value={service.publicOrder} />
+                    <input type="hidden" name="label" value={service.label} />
+                    <input
+                      type="hidden"
+                      name="description"
+                      value={service.description ?? ""}
+                    />
+                    {!service.isActive ? (
+                      <input type="hidden" name="isActive" value="1" />
+                    ) : null}
+                  </form>
+                  <EventServiceActiveSwitch
+                    formId={statusFormId}
+                    isActive={service.isActive}
+                    serviceLabel={service.label}
+                  />
+                </td>
+                <td className="py-4 text-right">
+                  <Link
+                    href={`${managerPath("servizi", navMode)}&serviceId=${service.id}`}
+                    scroll={false}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Modifica
+                  </Link>
+                </td>
+              </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {services.length === 0 ? (
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
+          Nessun servizio configurato per l&apos;evento corrente.
+        </p>
+      ) : null}
+
+      {selectedService ? (
+        <ManagerServiceEditOverlay service={selectedService} navMode={navMode} />
+      ) : null}
+    </section>
+  );
+}
+
+function ManagerServiceEditOverlay({
+  service,
+  navMode,
+}: {
+  service: EventServiceOption;
+  navMode: ManagerNavMode;
+}) {
+  return (
+    <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
+      <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
+          <div>
+            <h3 className="text-xl font-semibold">Modifica servizio</h3>
+            <p className="mt-1 text-sm text-[var(--peace-muted)]">
+              Aggiorna nome e descrizione del servizio.
+            </p>
+          </div>
+          <Link
+            href={managerPath("servizi", navMode)}
+            scroll={false}
+            className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            aria-label="Chiudi modale modifica servizio"
+          >
+            <X className="size-5" aria-hidden="true" />
+          </Link>
+        </div>
+        <form action={saveEventService} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
+          <input type="hidden" name="sourceDashboard" value="manager" />
+          <input type="hidden" name="serviceId" value={service.id} />
+          <input type="hidden" name="eventId" value={service.eventId} />
+          <input type="hidden" name="nav" value={navMode} />
+          <input type="hidden" name="publicOrder" value={service.publicOrder} />
+          {service.isActive ? <input type="hidden" name="isActive" value="1" /> : null}
+          <div className="grid gap-4 px-5 py-5">
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Nome servizio
+              <input
+                name="label"
+                defaultValue={service.label}
+                className="field"
+                maxLength={60}
+                required
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+              Descrizione
+              <textarea
+                name="description"
+                defaultValue={service.description ?? ""}
+                className="field min-h-36 resize-y"
+                maxLength={240}
+              />
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
+            <Link
+              href={managerPath("servizi", navMode)}
+              scroll={false}
+              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            >
+              Annulla
+            </Link>
+            <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+              Salva servizio
+            </PendingSubmitButton>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function ManagerOperationalUsersSection({
   roles,
   eventOptions,
@@ -2516,6 +2794,8 @@ function StatusMessage({
   groupLinkSaved,
   groupError,
   groupSaved,
+  serviceError,
+  serviceSaved,
   roleError,
   roleSaved,
 }: {
@@ -2527,16 +2807,20 @@ function StatusMessage({
   groupLinkSaved?: string;
   groupError?: string;
   groupSaved?: string;
+  serviceError?: string;
+  serviceSaved?: string;
   roleError?: string;
   roleSaved?: string;
 }) {
-  if (saved || managerSaved || groupLinkSaved || groupSaved || roleSaved) {
+  if (saved || managerSaved || groupLinkSaved || groupSaved || serviceSaved || roleSaved) {
     return (
       <p className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
         {groupSaved
           ? "Gruppo aggiornato."
           : groupLinkSaved
           ? "Link gruppo aggiornato."
+          : serviceSaved
+            ? "Servizi aggiornati."
           : roleSaved
             ? "Utente operativo aggiornato."
           : managerSaved
@@ -2546,7 +2830,7 @@ function StatusMessage({
     );
   }
 
-  if (!error && !managerError && !groupLinkError && !groupError && !roleError) {
+  if (!error && !managerError && !groupLinkError && !groupError && !serviceError && !roleError) {
     return null;
   }
 
@@ -2563,8 +2847,9 @@ function StatusMessage({
     "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
     "duplicate-tag": "Esiste già un tag con questo nome per l'evento corrente.",
+    "duplicate-service": "Esiste già un servizio con questo nome per l'evento corrente.",
   };
-  const messageKey = groupError ?? groupLinkError ?? roleError ?? managerError ?? error;
+  const messageKey = groupError ?? groupLinkError ?? serviceError ?? roleError ?? managerError ?? error;
 
   return (
     <p className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">

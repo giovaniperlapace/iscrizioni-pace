@@ -44,6 +44,12 @@ import {
   normalizeOperationalTagColor,
   normalizeOperationalTagLabel,
 } from "@/lib/registrations/operational-tags";
+import {
+  normalizeEventServiceDescription,
+  normalizeEventServiceLabel,
+  normalizeEventServiceOrder,
+  parseParticipantEventServiceStatus,
+} from "@/lib/registrations/event-services";
 import { syncOperationalIdentityByEmail } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -1264,6 +1270,255 @@ export async function updateParticipantOperationalTags(formData: FormData) {
   }
 
   redirect(`/dashboard/manager?${managerRedirectParams.toString()}`);
+}
+
+export async function saveEventService(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const serviceId = optionalText(formData.get("serviceId"));
+  const eventId =
+    optionalText(formData.get("eventId")) ??
+    (await getCurrentOperationalEventId(createSupabaseServiceClient()));
+  const label = normalizeEventServiceLabel(formData.get("label"));
+  const description = normalizeEventServiceDescription(formData.get("description"));
+  const publicOrder = normalizeEventServiceOrder(formData.get("publicOrder"));
+  const isActive = formData.get("isActive") === "1" || !serviceId;
+  const dashboardPath = getEventServicesDashboardPath(sourceDashboard, nav);
+  const errorParam = sourceDashboard === "admin" ? "adminError" : "serviceError";
+
+  if (!eventId || !label) {
+    redirect(`${dashboardPath}&${errorParam}=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&${errorParam}=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const payload = {
+    event_id: eventId,
+    label,
+    description,
+    public_order: publicOrder,
+    is_active: isActive,
+    updated_by: auth.user.id,
+  };
+  const result = serviceId
+    ? await serviceSupabase
+        .from("event_services")
+        .update(payload)
+        .eq("id", serviceId)
+        .eq("event_id", eventId)
+        .select("id")
+        .maybeSingle()
+    : await serviceSupabase
+        .from("event_services")
+        .insert({
+          ...payload,
+          created_by: auth.user.id,
+        })
+        .select("id")
+        .single();
+
+  if (result.error || !result.data) {
+    redirect(
+      `${dashboardPath}&${errorParam}=${encodeURIComponent(
+        result.error?.code === "23505"
+          ? "duplicate-service"
+          : result.error?.message ?? "service"
+      )}`
+    );
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: serviceId ? "event_service.updated" : "event_service.created",
+    entity_table: "event_services",
+    entity_id: (result.data as { id: string }).id,
+    metadata: {
+      label,
+      is_active: isActive,
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+
+  const savedParam = sourceDashboard === "admin" ? "adminSaved" : "serviceSaved";
+  redirect(`${dashboardPath}&${savedParam}=service`);
+}
+
+export async function updateParticipantEventService(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const participantId = optionalText(formData.get("participantId"));
+  const registrationId = optionalText(formData.get("registrationId"));
+  const eventId = optionalText(formData.get("eventId"));
+  const serviceId = optionalText(formData.get("serviceId"));
+  const assignmentId = optionalText(formData.get("assignmentId"));
+  const operatorNote = normalizeEventServiceDescription(formData.get("operatorNote"));
+  const status = parseParticipantEventServiceStatus(formData.get("status"));
+  const isCapogruppo = sourceDashboard === "capogruppo";
+  const isAdmin = sourceDashboard === "admin";
+  const dashboardPath = getParticipantServiceDashboardPath(
+    sourceDashboard,
+    nav,
+    registrationId,
+    assignmentId
+  );
+  const errorParam = isCapogruppo ? "error" : isAdmin ? "adminError" : "managerError";
+
+  if (!participantId || !registrationId || !eventId) {
+    redirect(`${dashboardPath}&${errorParam}=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    isCapogruppo ? "capogruppo" : isAdmin ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const canUpdate = isCapogruppo
+    ? await canGroupLeaderTagParticipant(
+        serviceSupabase,
+        auth.user.id,
+        participantId,
+        eventId,
+        assignmentId
+      )
+    : auth.eventRoles.some(
+        (role) =>
+          role.role === "admin" ||
+          (role.role === "manager" && role.eventId === eventId)
+      );
+
+  if (!canUpdate) {
+    redirect(`${dashboardPath}&${errorParam}=forbidden`);
+  }
+
+  if (!serviceId) {
+    const { error: deleteError } = await serviceSupabase
+      .from("participant_event_services")
+      .delete()
+      .eq("event_id", eventId)
+      .eq("participant_id", participantId);
+
+    if (deleteError) {
+      redirect(`${dashboardPath}&${errorParam}=${encodeURIComponent(deleteError.message)}`);
+    }
+
+    await serviceSupabase.from("audit_logs").insert({
+      event_id: eventId,
+      actor_user_id: auth.user.id,
+      action: "participant.event_service_removed",
+      entity_table: "participants",
+      entity_id: participantId,
+      metadata: { source_dashboard: sourceDashboard ?? "manager" },
+    });
+
+    revalidatePath("/dashboard/manager");
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/capogruppo");
+    redirect(getParticipantServiceSuccessPath(sourceDashboard, nav, registrationId, assignmentId));
+  }
+
+  const [{ data: service }, { data: registration }] = await Promise.all([
+    serviceSupabase
+      .from("event_services")
+      .select("id,event_id,is_active")
+      .eq("id", serviceId)
+      .eq("event_id", eventId)
+      .maybeSingle(),
+    serviceSupabase
+      .from("registrations")
+      .select("id,event_id,participant_id")
+      .eq("id", registrationId)
+      .eq("event_id", eventId)
+      .eq("participant_id", participantId)
+      .maybeSingle(),
+  ]);
+
+  if (!service || !registration) {
+    redirect(`${dashboardPath}&${errorParam}=invalid`);
+  }
+
+  const now = new Date().toISOString();
+  const source = isCapogruppo ? "capogruppo" : "manager";
+  const payload = {
+    event_id: eventId,
+    registration_id: registrationId,
+    participant_id: participantId,
+    service_id: serviceId,
+    status,
+    source,
+    operator_note: operatorNote,
+    updated_by: auth.user.id,
+    proposed_at: status === "proposal_pending" ? now : null,
+    assigned_at: status === "assigned" ? now : null,
+    decided_at: status === "assigned" || status === "declined" ? now : null,
+  };
+  const { data: savedService, error: upsertError } = await serviceSupabase
+    .from("participant_event_services")
+    .upsert(
+      {
+        ...payload,
+        created_by: auth.user.id,
+      },
+      { onConflict: "event_id,participant_id" }
+    )
+    .select("id")
+    .single();
+
+  if (upsertError || !savedService) {
+    redirect(
+      `${dashboardPath}&${errorParam}=${encodeURIComponent(
+        upsertError?.message ?? "service"
+      )}`
+    );
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: "participant.event_service_updated",
+    entity_table: "participant_event_services",
+    entity_id: (savedService as { id: string }).id,
+    metadata: {
+      participant_id: participantId,
+      registration_id: registrationId,
+      service_id: serviceId,
+      status,
+      source_dashboard: sourceDashboard ?? "manager",
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/capogruppo");
+  redirect(getParticipantServiceSuccessPath(sourceDashboard, nav, registrationId, assignmentId));
 }
 
 async function canGroupLeaderTagParticipant(
@@ -3555,6 +3810,75 @@ function getOperationalUsersDashboardPath(
   }
 
   return `${basePath}?${params.toString()}`;
+}
+
+function getEventServicesDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath =
+    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({ section: "servizi" });
+
+  if (navMode === "mini" || navMode === "full") {
+    params.set("nav", navMode);
+  }
+
+  return `${basePath}?${params.toString()}`;
+}
+
+function getParticipantServiceDashboardPath(
+  sourceDashboard: string | null,
+  navMode: string,
+  registrationId: string | null,
+  assignmentId: string | null
+): string {
+  if (sourceDashboard === "capogruppo") {
+    const params = new URLSearchParams();
+
+    if (assignmentId) {
+      params.set("assignmentId", assignmentId);
+    }
+
+    return `/dashboard/capogruppo?${params.toString()}`;
+  }
+
+  const basePath = sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({
+    section: "iscritti",
+    nav: navMode,
+  });
+
+  if (registrationId) {
+    params.set("edit", registrationId);
+  }
+
+  return `${basePath}?${params.toString()}`;
+}
+
+function getParticipantServiceSuccessPath(
+  sourceDashboard: string | null,
+  navMode: string,
+  registrationId: string | null,
+  assignmentId: string | null
+): string {
+  const path = getParticipantServiceDashboardPath(
+    sourceDashboard,
+    navMode,
+    registrationId,
+    assignmentId
+  );
+  const url = new URL(path, "https://local.invalid");
+
+  if (sourceDashboard === "capogruppo") {
+    url.searchParams.set("saved", "service");
+  } else if (sourceDashboard === "admin") {
+    url.searchParams.set("adminSaved", "service");
+  } else {
+    url.searchParams.set("managerSaved", "service");
+  }
+
+  return `${url.pathname}?${url.searchParams.toString()}`;
 }
 
 function getGroupManagementRequestedRole(

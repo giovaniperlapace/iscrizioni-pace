@@ -6,6 +6,7 @@ import {
   createGroupLeaderManualRegistration,
   createGroupRegistrationLink,
   revokeGroupRegistrationLink,
+  updateParticipantEventService,
   updateGroupLeaderAssignment,
   updateGroupLeaderParticipantContact,
   updateParticipantOperationalTags,
@@ -39,6 +40,11 @@ import type {
   OperationalTagOption,
   ParticipantOperationalTag,
 } from "@/lib/registrations/operational-tags";
+import {
+  eventServiceStatusLabel,
+  type EventServiceOption,
+  type ParticipantEventService,
+} from "@/lib/registrations/event-services";
 import {
   buildAttendanceDayColumns,
   type AttendanceDayColumn,
@@ -194,6 +200,9 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_event_services:
+                | Array<ParticipantEventServiceRelationRow>
+                | null;
               participant_operational_tags:
                 | Array<{
                     assigned_at: string | null;
@@ -238,6 +247,9 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_event_services:
+                | Array<ParticipantEventServiceRelationRow>
+                | null;
               participant_operational_tags:
                 | Array<{
                     assigned_at: string | null;
@@ -290,6 +302,9 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_event_services:
+                | Array<ParticipantEventServiceRelationRow>
+                | null;
               participant_operational_tags:
                 | Array<{
                     assigned_at: string | null;
@@ -334,6 +349,9 @@ type AssignmentRow = {
                 | Array<{ name: string | null }>
                 | null;
               participates_with_group: boolean | null;
+              participant_event_services:
+                | Array<ParticipantEventServiceRelationRow>
+                | null;
               participant_operational_tags:
                 | Array<{
                     assigned_at: string | null;
@@ -393,6 +411,26 @@ type AssignmentView = {
   updatedAt: string | null;
   tags: ParticipantOperationalTag[];
   tagIds: string[];
+  service: ParticipantEventService | null;
+  currentServiceId: string | null;
+  currentServiceStatus: string | null;
+};
+
+type ParticipantEventServiceRelationRow = {
+  id: string;
+  event_id: string;
+  registration_id: string;
+  participant_id: string;
+  service_id: string;
+  status: string | null;
+  source: string | null;
+  participant_note: string | null;
+  operator_note: string | null;
+  updated_at: string | null;
+  event_services:
+    | { label: string | null }
+    | Array<{ label: string | null }>
+    | null;
 };
 type DashboardTool = "link" | "manual";
 
@@ -1769,6 +1807,7 @@ export default async function CapogruppoDashboardPage({
 
   const assignments = await getAssignments([...scopedGroupIds]);
   const operationalTags = await getOperationalTags();
+  const eventServices = await getEventServices();
   const assignedGroups = groupRows
     .filter((group) => rootGroupIds.includes(group.id))
     .map((group) => toScopedGroupView(group, copy));
@@ -1909,6 +1948,7 @@ export default async function CapogruppoDashboardPage({
             <AssignmentDetailCard
               assignment={selectedAssignment}
               tagOptions={operationalTags}
+              serviceOptions={eventServices}
               copy={copy}
             />
           </DashboardToolOverlay>
@@ -1924,9 +1964,9 @@ export default async function CapogruppoDashboardPage({
     }
 
     const { data, error } = await serviceSupabase
-      .from("participant_group_assignments")
-      .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
+          .from("participant_group_assignments")
+          .select(
+        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
       )
       .in("group_id", groupIds)
       .eq("registrations.event_id", currentEventId)
@@ -1991,6 +2031,32 @@ export default async function CapogruppoDashboardPage({
       eventId: tag.event_id,
       label: tag.label,
       color: tag.color,
+    }));
+  }
+
+  async function getEventServices(): Promise<EventServiceOption[]> {
+    const { data } = await serviceSupabase
+      .from("event_services")
+      .select("id,event_id,label,description,is_active,public_order")
+      .eq("event_id", currentEventId)
+      .eq("is_active", true)
+      .order("public_order", { ascending: true })
+      .order("label", { ascending: true });
+
+    return ((data ?? []) as Array<{
+      id: string;
+      event_id: string;
+      label: string | null;
+      description: string | null;
+      is_active: boolean | null;
+      public_order: number | null;
+    }>).map((service) => ({
+      id: service.id,
+      eventId: service.event_id,
+      label: service.label ?? "Servizio senza nome",
+      description: service.description,
+      isActive: service.is_active ?? true,
+      publicOrder: service.public_order ?? 100,
     }));
   }
 }
@@ -2544,7 +2610,7 @@ function PendingAssignmentsPanel({
         </p>
       ) : (
         <div className="mt-4 overflow-x-auto rounded-md border border-[#ead894] bg-white">
-          <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[#ead894] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
@@ -2552,6 +2618,7 @@ function PendingAssignmentsPanel({
                 {showGroupColumn ? (
                   <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
                 ) : null}
+                <th className="py-3 pr-4 font-semibold">Servizio</th>
                 <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
                 <th className="py-3 pr-4 text-right font-semibold">{copy.table.actions}</th>
               </tr>
@@ -2608,6 +2675,9 @@ function PendingAssignmentRow({
       {showGroupColumn ? (
         <td className="py-4 pr-4 text-[var(--peace-ink)]">{assignment.groupName}</td>
       ) : null}
+      <td className="py-4 pr-4">
+        <ParticipantServiceSummary service={assignment.service} />
+      </td>
       <td className="py-4 pr-4">
         <OperationalTagList tags={assignment.tags} emptyLabel={copy.filters.noTags} />
       </td>
@@ -2670,7 +2740,7 @@ function AssignmentsTable({
 
   return (
     <div className="mt-5 overflow-x-auto rounded-md border border-[var(--peace-border)]">
-      <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
             <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
@@ -2678,6 +2748,7 @@ function AssignmentsTable({
             {showGroupColumn ? (
               <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
             ) : null}
+            <th className="py-3 pr-4 font-semibold">Servizio</th>
             <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
             <th className="py-3 pr-4 text-right font-semibold">{copy.table.actions}</th>
           </tr>
@@ -2747,6 +2818,9 @@ function AssignmentRowView({
         </td>
       ) : null}
       <td className="py-4 pr-4">
+        <ParticipantServiceSummary service={assignment.service} />
+      </td>
+      <td className="py-4 pr-4">
         <OperationalTagList tags={assignment.tags} emptyLabel={copy.filters.noTags} />
       </td>
       <td className="py-4 pr-4 text-right">
@@ -2766,10 +2840,12 @@ function AssignmentRowView({
 function AssignmentDetailCard({
   assignment,
   tagOptions,
+  serviceOptions,
   copy,
 }: {
   assignment: AssignmentView;
   tagOptions: OperationalTagOption[];
+  serviceOptions: EventServiceOption[];
   copy: GroupLeaderCopy;
 }) {
   const canDecide = assignment.isCurrent && assignment.status === "probable";
@@ -2888,6 +2964,10 @@ function AssignmentDetailCard({
         </p>
       </DetailBlock>
 
+      <DetailBlock title="Servizio">
+        <ParticipantServiceSummary service={assignment.service} />
+      </DetailBlock>
+
       <form
         action={updateGroupLeaderAssignment}
         className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
@@ -2943,6 +3023,58 @@ function AssignmentDetailCard({
             </PendingSubmitButton>
           ) : null}
         </div>
+      </form>
+
+      <form
+        action={updateParticipantEventService}
+        className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+      >
+        <input type="hidden" name="sourceDashboard" value="capogruppo" />
+        <input type="hidden" name="assignmentId" value={assignment.id} />
+        <input type="hidden" name="registrationId" value={assignment.registrationId} />
+        <input type="hidden" name="participantId" value={assignment.participantId} />
+        <input type="hidden" name="eventId" value={assignment.eventId} />
+        <div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+            Servizio
+            <select
+              name="serviceId"
+              defaultValue={assignment.currentServiceId ?? ""}
+              className="field bg-white font-normal"
+            >
+              <option value="">Senza servizio</option>
+              {serviceOptions.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+            Stato
+            <select
+              name="status"
+              defaultValue={assignment.currentServiceStatus ?? "assigned"}
+              className="field bg-white font-normal"
+            >
+              <option value="assigned">Assegnato</option>
+              <option value="proposal_pending">Proposta inviata</option>
+              <option value="preference_pending">Preferenza da approvare</option>
+            </select>
+          </label>
+        </div>
+        <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+          Nota interna
+          <textarea
+            name="operatorNote"
+            defaultValue={assignment.service?.operatorNote ?? ""}
+            rows={3}
+            className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
+          />
+        </label>
+        <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+          Salva servizio
+        </PendingSubmitButton>
       </form>
 
       <form
@@ -3055,6 +3187,25 @@ function OperationalTagList({
   );
 }
 
+function ParticipantServiceSummary({
+  service,
+}: {
+  service: ParticipantEventService | null;
+}) {
+  if (!service) {
+    return <span className="text-sm text-[var(--peace-muted)]">Senza servizio</span>;
+  }
+
+  return (
+    <div className="grid gap-1">
+      <span className="font-semibold text-[var(--peace-ink)]">{service.serviceLabel}</span>
+      <span className="text-xs text-[var(--peace-muted)]">
+        {eventServiceStatusLabel(service.status)}
+      </span>
+    </div>
+  );
+}
+
 function TagCheckboxGrid({
   tagOptions,
   selectedTagIds,
@@ -3138,6 +3289,10 @@ function toAssignmentView(
   }
 
   const tags = mapParticipantOperationalTags(participant.participant_operational_tags);
+  const service = mapParticipantEventService(
+    participant.participant_event_services,
+    participant.id
+  );
   const parentGroup = group.parent_group_id
     ? groups.find((candidate) => candidate.id === group.parent_group_id)
     : null;
@@ -3184,6 +3339,9 @@ function toAssignmentView(
     updatedAt: row.updated_at,
     tags,
     tagIds: tags.map((tag) => tag.id),
+    service,
+    currentServiceId: service?.serviceId ?? null,
+    currentServiceStatus: service?.status ?? null,
   };
 }
 
@@ -3249,6 +3407,44 @@ function mapParticipantOperationalTags(
         : null;
     })
     .filter((tag): tag is ParticipantOperationalTag => Boolean(tag));
+}
+
+function mapParticipantEventService(
+  rows: Array<ParticipantEventServiceRelationRow> | null,
+  participantId: string
+): ParticipantEventService | null {
+  const row = rows?.[0] ?? null;
+
+  if (!row) {
+    return null;
+  }
+
+  const service = relatedOne(row.event_services);
+
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    registrationId: row.registration_id,
+    participantId,
+    serviceId: row.service_id,
+    serviceLabel: service?.label ?? "Servizio senza nome",
+    status:
+      row.status === "preference_pending" ||
+      row.status === "proposal_pending" ||
+      row.status === "assigned" ||
+      row.status === "declined"
+        ? row.status
+        : "assigned",
+    source:
+      row.source === "participant_preference" ||
+      row.source === "capogruppo" ||
+      row.source === "manager"
+        ? row.source
+        : "manager",
+    participantNote: row.participant_note,
+    operatorNote: row.operator_note,
+    updatedAt: row.updated_at,
+  };
 }
 
 function formatPlace(

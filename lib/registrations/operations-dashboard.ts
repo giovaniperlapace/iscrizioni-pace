@@ -11,6 +11,8 @@ export type OperationsParticipantForFilter = {
   currentGroupName: string | null;
   currentGroupStatus: string | null;
   tagIds?: string[];
+  currentServiceId?: string | null;
+  currentServiceStatus?: string | null;
 };
 
 export type OperationsDashboardFilters = {
@@ -18,6 +20,7 @@ export type OperationsDashboardFilters = {
   contact: string;
   group: string;
   tag: string;
+  service: string;
   status: "all" | "submitted" | "confirmed" | "cancelled";
 };
 
@@ -28,6 +31,7 @@ export type OperationsDashboardSummary = {
   probableGroup: number;
   confirmedGroup: number;
   withoutEmail: number;
+  withoutService: number;
 };
 
 const DEFAULT_FILTERS: OperationsDashboardFilters = {
@@ -35,6 +39,7 @@ const DEFAULT_FILTERS: OperationsDashboardFilters = {
   contact: "",
   group: "all",
   tag: "all",
+  service: "all",
   status: "all",
 };
 
@@ -43,6 +48,7 @@ export function parseOperationsDashboardFilters(input: {
   contact?: string;
   group?: string;
   tag?: string;
+  service?: string;
   status?: string;
 }): OperationsDashboardFilters {
   return {
@@ -50,6 +56,7 @@ export function parseOperationsDashboardFilters(input: {
     contact: normalizeQuery(input.contact),
     group: normalizeGroupFilter(input.group),
     tag: normalizeTagFilter(input.tag),
+    service: normalizeServiceFilter(input.service),
     status: isStatusFilter(input.status)
       ? input.status
       : DEFAULT_FILTERS.status,
@@ -82,6 +89,9 @@ export function summarizeOperationsDashboardParticipants(
     ).length,
     withoutEmail: filteredParticipants.filter((participant) => !participant.email)
       .length,
+    withoutService: filteredParticipants.filter(
+      (participant) => !participant.currentServiceId
+    ).length,
   };
 }
 
@@ -93,6 +103,7 @@ export function hasActiveOperationsDashboardFilters(
     filters.contact !== DEFAULT_FILTERS.contact ||
     filters.group !== DEFAULT_FILTERS.group ||
     filters.tag !== DEFAULT_FILTERS.tag ||
+    filters.service !== DEFAULT_FILTERS.service ||
     filters.status !== DEFAULT_FILTERS.status
   );
 }
@@ -113,6 +124,10 @@ function matchesOperationsDashboardFilters(
   }
 
   if (!matchesTagFilter(participant, filters.tag)) {
+    return false;
+  }
+
+  if (!matchesServiceFilter(participant, filters.service)) {
     return false;
   }
 
@@ -170,6 +185,18 @@ function matchesTagFilter(participant: OperationsParticipantForFilter, filter: s
   return tagIds.includes(filter);
 }
 
+function matchesServiceFilter(participant: OperationsParticipantForFilter, filter: string): boolean {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === "none") {
+    return !participant.currentServiceId;
+  }
+
+  return participant.currentServiceId === filter;
+}
+
 function normalizeQuery(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
 }
@@ -184,6 +211,12 @@ function normalizeTagFilter(value: string | undefined): string {
   const normalized = (value ?? "").trim();
 
   return normalized || DEFAULT_FILTERS.tag;
+}
+
+function normalizeServiceFilter(value: string | undefined): string {
+  const normalized = (value ?? "").trim();
+
+  return normalized || DEFAULT_FILTERS.service;
 }
 
 function isStatusFilter(
