@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   BarChart3,
   ClipboardList,
+  Mail,
   Network,
   Pencil,
   ShieldCheck,
@@ -24,6 +25,7 @@ import {
 } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { EventServiceActiveSwitch } from "@/app/dashboard/event-service-active-switch";
+import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
 import { GroupPublicCatalogSwitch } from "@/app/dashboard/group-public-catalog-switch";
 import {
   type GroupEditLeaderRow,
@@ -55,7 +57,11 @@ import type {
   OperationalTagOption,
   ParticipantOperationalTag,
 } from "@/lib/registrations/operational-tags";
-import type { EventServiceOption } from "@/lib/registrations/event-services";
+import {
+  eventServiceStatusLabel,
+  type EventServiceOption,
+  type ParticipantEventService,
+} from "@/lib/registrations/event-services";
 import {
   buildEventStatisticsSnapshot,
   type EventStatisticsSnapshot,
@@ -239,6 +245,9 @@ type ManagerParticipantRow = {
   currentGroupId: string | null;
   currentGroupName: string | null;
   currentGroupStatus: string | null;
+  currentServiceId: string | null;
+  currentServiceStatus: string | null;
+  service: ParticipantEventService | null;
   tagIds: string[];
   tags: ParticipantOperationalTag[];
 };
@@ -275,6 +284,23 @@ type ParticipantOperationalTagRow = {
     | null;
 };
 
+type ParticipantEventServiceRelationRow = {
+  id: string;
+  event_id: string;
+  registration_id: string;
+  participant_id: string;
+  service_id: string;
+  status: string | null;
+  source: string | null;
+  participant_note: string | null;
+  operator_note: string | null;
+  updated_at: string | null;
+  event_services:
+    | { label: string | null }
+    | Array<{ label: string | null }>
+    | null;
+};
+
 type OperationalUserRoleRow = {
   userId: string;
   email: string | null;
@@ -300,7 +326,7 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type ManagerSection = "dashboard" | "iscritti" | "servizi" | "ruoli" | "gruppi";
+type ManagerSection = "dashboard" | "iscritti" | "servizi" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -419,6 +445,13 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
+            {activeSection === "email" ? (
+              <ManagerEmailSection
+                eventId={currentEventId}
+                canManage={currentEventId ? scope.canManageEvent(currentEventId) : false}
+              />
+            ) : null}
+
             {activeSection === "ruoli" ? (
               <ManagerOperationalUsersSection
                 roles={managerOperations.roleUsers}
@@ -510,6 +543,13 @@ function ManagerSidebar({
       Icon: ClipboardList,
       label: "Servizi",
       help: "Lista e assegnazioni",
+    },
+    {
+      key: "email",
+      href: `/dashboard/manager?section=email&nav=${navMode}`,
+      Icon: Mail,
+      label: "Comunicazioni",
+      help: "Template e campagne email",
     },
     {
       key: "ruoli",
@@ -937,6 +977,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.section === "dashboard" ||
     params.section === "iscritti" ||
     params.section === "servizi" ||
+    params.section === "email" ||
     params.section === "ruoli" ||
     params.section === "gruppi"
   ) {
@@ -1113,7 +1154,12 @@ async function getManagerOperationsSnapshot(
   const registrationIds = registrationRows.map((row) => row.id);
   const participantIds = registrationRows.map((row) => row.participant_id);
   const emptyResult = { data: [] };
-  const [{ data: contacts }, { data: assignments }, { data: participantTags }] = await Promise.all([
+  const [
+    { data: contacts },
+    { data: assignments },
+    { data: participantTags },
+    { data: participantServices },
+  ] = await Promise.all([
     participantIds.length > 0
       ? supabase
           .from("participant_contacts")
@@ -1135,6 +1181,15 @@ async function getManagerOperationsSnapshot(
           .from("participant_operational_tags")
           .select("participant_id,assigned_at,operational_tags(id,event_id,label,color)")
           .in("participant_id", participantIds)
+      : Promise.resolve(emptyResult),
+    participantIds.length > 0
+      ? supabase
+          .from("participant_event_services")
+          .select(
+            "id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)"
+          )
+          .in("participant_id", participantIds)
+          .eq("event_id", currentEventId)
       : Promise.resolve(emptyResult),
   ]);
   const contactByParticipantId = new Map(
@@ -1169,6 +1224,7 @@ async function getManagerOperationsSnapshot(
     groupTreeRows.map((group) => [group.id, group.name ?? "Gruppo senza nome"])
   );
   const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
+  const serviceByParticipantId = mapParticipantEventServices(participantServices);
   const roleUsers = await buildOperationalUserRows(
     supabase,
     eventRoles,
@@ -1183,6 +1239,7 @@ async function getManagerOperationsSnapshot(
       const assignment = assignmentByRegistrationId.get(registration.id);
       const group = relatedOne(assignment?.groups ?? null);
       const authUserId = participant?.auth_user_id ?? null;
+      const service = serviceByParticipantId.get(registration.participant_id) ?? null;
 
       return {
         registrationId: registration.id,
@@ -1208,6 +1265,9 @@ async function getManagerOperationsSnapshot(
         currentGroupId: assignment?.group_id ?? null,
         currentGroupName: group?.name ?? null,
         currentGroupStatus: assignment?.status ?? null,
+        currentServiceId: service?.serviceId ?? null,
+        currentServiceStatus: service?.status ?? null,
+        service,
         tagIds: (tagsByParticipantId.get(registration.participant_id) ?? []).map(
           (tag) => tag.id
         ),
@@ -1953,6 +2013,7 @@ function ManagerParticipantsSection({
           <form
             action={createOperationalTag}
             className="grid gap-2 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 sm:grid-cols-[1fr_auto_auto]"
+            autoComplete="off"
           >
             <input type="hidden" name="eventId" value={activeEventId} />
             <input type="hidden" name="nav" value={navMode} />
@@ -1961,10 +2022,13 @@ function ManagerParticipantsSection({
             </label>
             <input
               id="new-operational-tag"
-              name="label"
+              name="operationalTagLabel"
               className="field min-h-10 bg-white text-sm font-normal"
               maxLength={40}
               placeholder="Nuovo tag"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               required
             />
             <label className="grid min-h-10 w-12 place-items-center rounded-md border border-[var(--peace-border-strong)] bg-white">
@@ -1981,16 +2045,24 @@ function ManagerParticipantsSection({
       <div className="mt-5 overflow-x-auto">
         <AutoFilterForm
           action="/dashboard/manager"
-          defaults={{ q: "", contact: "", group: "all", tag: "all", status: "all" }}
+          defaults={{
+            q: "",
+            contact: "",
+            group: "all",
+            service: "all",
+            tag: "all",
+            status: "all",
+          }}
         >
           <input type="hidden" name="section" value="iscritti" />
           <input type="hidden" name="nav" value={navMode} />
-          <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">Iscrizione</th>
                 <th className="py-3 pr-4 font-semibold">Contatti</th>
                 <th className="py-3 pr-4 font-semibold">Gruppo</th>
+                <th className="py-3 pr-4 font-semibold">Servizio</th>
                 <th className="py-3 pr-4 font-semibold">Tag</th>
                 <th className="py-3 text-right font-semibold">Azioni</th>
               </tr>
@@ -2028,6 +2100,23 @@ function ManagerParticipantsSection({
                     {currentGroupOptions.map((group) => (
                       <option key={group.id} value={group.id}>
                         {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-3 pr-4">
+                  <label className="sr-only" htmlFor="manager-participant-service">Servizio</label>
+                  <select
+                    id="manager-participant-service"
+                    name="service"
+                    defaultValue={snapshot.filters.service}
+                    className="field min-h-10 bg-white text-sm font-normal"
+                  >
+                    <option value="all">Tutti i servizi</option>
+                    <option value="none">Senza servizio</option>
+                    {snapshot.eventServices.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.label}
                       </option>
                     ))}
                   </select>
@@ -2106,6 +2195,9 @@ function ManagerParticipantsSection({
                       </p>
                     </td>
                     <td className="py-4 pr-4">
+                      <ParticipantServiceSummary service={participant.service} />
+                    </td>
+                    <td className="py-4 pr-4">
                       <OperationalTagList tags={participant.tags} emptyLabel="Senza tag" />
                     </td>
                     <td className="py-4 text-right">
@@ -2178,13 +2270,22 @@ function ManagerServicesSection({
           action={saveEventService}
           className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 md:grid-cols-[1fr_1.4fr_auto]"
           data-preserve-dashboard-scroll
+          autoComplete="off"
         >
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="eventId" value={currentEventOption.id} />
           <input type="hidden" name="nav" value={navMode} />
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             Nuovo servizio
-            <input name="label" className="field bg-white font-normal" maxLength={60} required />
+            <input
+              name="eventServiceLabel"
+              className="field bg-white font-normal"
+              maxLength={60}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+            />
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             Descrizione
@@ -2899,6 +3000,25 @@ function OperationalTagList({
   );
 }
 
+function ParticipantServiceSummary({
+  service,
+}: {
+  service: ParticipantEventService | null;
+}) {
+  if (!service) {
+    return <span className="text-sm text-[var(--peace-muted)]">Senza servizio</span>;
+  }
+
+  return (
+    <div className="grid gap-1">
+      <span className="font-semibold text-[var(--peace-ink)]">{service.serviceLabel}</span>
+      <span className="text-xs text-[var(--peace-muted)]">
+        {eventServiceStatusLabel(service.status)}
+      </span>
+    </div>
+  );
+}
+
 function TagCheckboxGrid({
   tagOptions,
   selectedTagIds,
@@ -2990,6 +3110,41 @@ function mapParticipantOperationalTags(
   }
 
   return tagsByParticipantId;
+}
+
+function mapParticipantEventServices(rows: unknown): Map<string, ParticipantEventService> {
+  const servicesByParticipantId = new Map<string, ParticipantEventService>();
+
+  for (const row of (rows ?? []) as ParticipantEventServiceRelationRow[]) {
+    const service = relatedOne(row.event_services);
+
+    servicesByParticipantId.set(row.participant_id, {
+      id: row.id,
+      eventId: row.event_id,
+      registrationId: row.registration_id,
+      participantId: row.participant_id,
+      serviceId: row.service_id,
+      serviceLabel: service?.label ?? "Servizio senza nome",
+      status:
+        row.status === "preference_pending" ||
+        row.status === "proposal_pending" ||
+        row.status === "assigned" ||
+        row.status === "declined"
+          ? row.status
+          : "assigned",
+      source:
+        row.source === "participant_preference" ||
+        row.source === "capogruppo" ||
+        row.source === "manager"
+          ? row.source
+          : "manager",
+      participantNote: row.participant_note,
+      operatorNote: row.operator_note,
+      updatedAt: row.updated_at,
+    });
+  }
+
+  return servicesByParticipantId;
 }
 
 function formatParticipantName(

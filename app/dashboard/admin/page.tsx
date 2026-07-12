@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   BarChart3,
   CalendarDays,
+  Mail,
   Network,
   Pencil,
   ShieldCheck,
@@ -320,7 +321,7 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type AdminSection = "evento" | "dashboard" | "iscritti" | "ruoli" | "gruppi";
+type AdminSection = "evento" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
@@ -918,6 +919,13 @@ function AdminSidebar({
       Icon: Users,
       label: "Gestione iscritti",
       help: "Elenco e modifiche",
+    },
+    {
+      key: "email",
+      href: "/dashboard/manager?section=email",
+      Icon: Mail,
+      label: "Comunicazioni",
+      help: "Template e campagne email",
     },
     {
       key: "ruoli",

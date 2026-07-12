@@ -120,6 +120,13 @@ type QrStatusRow = {
   token_encrypted: string | null;
 };
 
+type ParticipantServiceRow = {
+  status: string | null;
+  event_services: Related<{
+    label: string | null;
+  }>;
+};
+
 type ParticipantDashboardCopy = {
   area: string;
   fallbackTitle: string;
@@ -151,6 +158,7 @@ type ParticipantDashboardCopy = {
   nationality: string;
   expectedPresence: string;
   accessibilitySupport: string;
+  eventService: string;
   attendanceUnknown: string;
   attendanceUnknownSummary: string;
   accessibilityRequest: string;
@@ -221,6 +229,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     nationality: "Nazionalità",
     expectedPresence: "Presenza prevista",
     accessibilitySupport: "Accessibilità e supporto",
+    eventService: "Servizio",
     attendanceUnknown: "Comunicherò più avanti i giorni di presenza.",
     attendanceUnknownSummary: "Da comunicare",
     accessibilityRequest: "Desidero richiedere supporto per l'accessibilità all'evento.",
@@ -293,6 +302,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     nationality: "Nationality",
     expectedPresence: "Expected attendance",
     accessibilitySupport: "Accessibility and support",
+    eventService: "Service",
     attendanceUnknown: "I will communicate my attendance days later.",
     attendanceUnknownSummary: "To be communicated",
     accessibilityRequest: "I would like to request accessibility support for the event.",
@@ -365,6 +375,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     nationality: "Nationalité",
     expectedPresence: "Présence prévue",
     accessibilitySupport: "Accessibilité et support",
+    eventService: "Service",
     attendanceUnknown: "Je communiquerai plus tard mes jours de présence.",
     attendanceUnknownSummary: "À communiquer",
     accessibilityRequest: "Je souhaite demander un support d'accessibilité pour l'événement.",
@@ -437,6 +448,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     nationality: "Staatsangehörigkeit",
     expectedPresence: "Geplante Anwesenheit",
     accessibilitySupport: "Barrierefreiheit und Unterstützung",
+    eventService: "Dienst",
     attendanceUnknown: "Ich teile meine Anwesenheitstage später mit.",
     attendanceUnknownSummary: "Noch mitzuteilen",
     accessibilityRequest: "Ich möchte Unterstützung für Barrierefreiheit bei der Veranstaltung anfragen.",
@@ -509,6 +521,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     nationality: "Nacionalidad",
     expectedPresence: "Presencia prevista",
     accessibilitySupport: "Accesibilidad y apoyo",
+    eventService: "Servicio",
     attendanceUnknown: "Comunicaré más adelante los días de presencia.",
     attendanceUnknownSummary: "Por comunicar",
     accessibilityRequest: "Quiero solicitar apoyo de accesibilidad para el evento.",
@@ -581,6 +594,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     nationality: "Nationaliteit",
     expectedPresence: "Verwachte aanwezigheid",
     accessibilitySupport: "Toegankelijkheid en ondersteuning",
+    eventService: "Dienst",
     attendanceUnknown: "Ik geef mijn aanwezigheidsdagen later door.",
     attendanceUnknownSummary: "Nog door te geven",
     accessibilityRequest: "Ik wil toegankelijkheidsondersteuning voor het evenement aanvragen.",
@@ -653,6 +667,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     nationality: "Громадянство",
     expectedPresence: "Очікувана присутність",
     accessibilitySupport: "Доступність і підтримка",
+    eventService: "Служіння",
     attendanceUnknown: "Я повідомлю дні присутності пізніше.",
     attendanceUnknownSummary: "Буде повідомлено",
     accessibilityRequest: "Я хочу попросити підтримку доступності для події.",
@@ -735,6 +750,7 @@ export default async function PartecipanteDashboardPage({
     groupAssignmentsResult,
     questionnaireResult,
     qrStatusResult,
+    participantServiceResult,
   ] = registrationId && participantId && eventId
     ? await Promise.all([
         supabase
@@ -773,6 +789,14 @@ export default async function PartecipanteDashboardPage({
           .order("created_at", { ascending: false })
           .limit(1),
         getQrStatus(registrationId),
+        supabase
+          .from("participant_event_services")
+          .select("status,event_services(label)")
+          .eq("event_id", eventId)
+          .eq("registration_id", registrationId)
+          .eq("participant_id", participantId)
+          .eq("status", "assigned")
+          .maybeSingle(),
       ])
     : [
         { data: [] },
@@ -782,6 +806,7 @@ export default async function PartecipanteDashboardPage({
         { data: [] },
         { data: [] },
         { data: [] },
+        { data: null },
         { data: null },
       ];
 
@@ -796,6 +821,9 @@ export default async function PartecipanteDashboardPage({
   const questionnaire =
     ((questionnaireResult.data ?? []) as QuestionnaireRow[])[0] ?? null;
   const qrStatus = qrStatusResult.data as QrStatusRow | null;
+  const participantService = participantServiceResult.data as ParticipantServiceRow | null;
+  const participantServiceLabel =
+    relatedOne(participantService?.event_services ?? null)?.label ?? null;
   const qrDataUrl = await getQrDataUrl(qrStatus);
   const editable =
     selectedRegistration &&
@@ -944,6 +972,7 @@ export default async function PartecipanteDashboardPage({
                   attendanceSummary={attendanceSummary}
                   supportSummary={supportSummary}
                   groupSummary={groupSummary}
+                  serviceLabel={participantServiceLabel}
                   selectedPanels={selectedPanels}
                   active={activeOverlay === "iscrizione"}
                   locale={locale}
@@ -1568,6 +1597,7 @@ function RegistrationSummaryCard({
   attendanceSummary,
   supportSummary,
   groupSummary,
+  serviceLabel,
   selectedPanels,
   active,
   locale,
@@ -1579,6 +1609,7 @@ function RegistrationSummaryCard({
   attendanceSummary: string;
   supportSummary: string;
   groupSummary: { name: string; leaderName: string | null } | null;
+  serviceLabel: string | null;
   selectedPanels: MomentRow[];
   active: boolean;
   locale: SupportedLocale;
@@ -1644,6 +1675,10 @@ function RegistrationSummaryCard({
           <SummaryInfo
             label={copy.leader}
             value={groupSummary?.leaderName ?? copy.notAssigned}
+          />
+          <SummaryInfo
+            label={copy.eventService}
+            value={serviceLabel ?? copy.notAssigned}
           />
           <SummaryInfo label={copy.panelsTitle} value={panelSummary} />
         </div>

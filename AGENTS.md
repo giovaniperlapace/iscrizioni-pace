@@ -180,7 +180,40 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   da approvare o creare una `proposal_pending` alternativa. La tabella iscritti
   manager/admin e la tabella capogruppo mostrano il servizio come colonna
   separata dai tag; i tag restano marcatori operativi liberi, mentre i servizi
-  sono un catalogo evento strutturato.
+  sono un catalogo evento strutturato. Regola stabile: tag operativi e servizi
+  non vanno confusi nella UX, nei nomi dei campi o nella comunicazione. I tag
+  sono marcatori interni per casi particolari, filtri e note operative, non
+  devono mai arrivare direttamente al partecipante e i campi di creazione tag
+  devono evitare autocomplete/suggerimenti del browser che possano mescolare
+  dati non pertinenti. I servizi sono invece assegnazioni operative strutturate:
+  quando un servizio risulta assegnato/approvato deve essere visibile al
+  partecipante, oltre che come colonna separata nelle tabelle manager/admin e
+  capogruppo. Una futura dashboard/area servizio partecipante dovra' partire da
+  `participant_event_services`, non dai tag.
+- Il 2026-07-12 e' stata completata la Milestone 15 per email personalizzate e
+  template operativi. La migration
+  `20260712100000_email_campaigns.sql` introduce `email_templates`, versioni
+  immutabili in `email_template_versions`, campagne in `email_campaigns` e
+  log per destinatario in `email_campaign_recipients`, con RLS per admin,
+  manager e lettura `manager_viewer`. La composizione vive in
+  `/dashboard/manager/email` ed e' raggiungibile dalle sidebar manager/admin.
+  I segmenti usano evento corrente, gruppo, tag operativo e stato iscrizione;
+  per chi non ha email viene usato, quando disponibile, il contatto del
+  capogruppo primario come consegna delegata. Il flusso obbligatorio e'
+  anteprima congelata, invio test all'operatore e frase di conferma contenente
+  il numero esatto di destinatari. Il limite iniziale e' 100 destinatari e
+  l'invio usa concorrenza 3. Gli indirizzi email e i corpi personalizzati non
+  vengono copiati nei log campagna; il message id del provider viene salvato
+  solo come hash. L'ambiente locale puo' usare `EMAIL_DELIVERY_MODE=log` per
+  simulare gli invii. Dal 2026-07-12 la console campagne riprende il pattern
+  maturo dell'app modello: editor ricco TipTap con formattazione e link,
+  template salvati in schede, campi personalizzati inseribili al cursore,
+  destinatari separati, attività recente e anteprima in modale. L'HTML viene
+  sanificato lato server con `sanitize-html`, i valori partecipante vengono
+  escapati prima dell'inserimento e viene sempre generato il fallback testo.
+  Nodemailer e' stato aggiornato alla serie 9 per correggere la vulnerabilità
+  segnalata dall'audit. Gli allegati restano un'estensione futura e non fanno
+  parte dell'accettazione della milestone completata.
 - Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
   non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
   gestione manager. La migration di identità evento mantiene lo slug tecnico

@@ -35,9 +35,14 @@ const eventServicesMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260711100000_event_services.sql"
 );
+const emailCampaignsMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260712100000_email_campaigns.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
+const emailCampaignsMigration = readFileSync(emailCampaignsMigrationPath, "utf8");
 const groupMatchingMigration = readFileSync(groupMatchingMigrationPath, "utf8");
 const groupLeaderDashboardMigration = readFileSync(
   groupLeaderDashboardMigrationPath,
@@ -236,4 +241,21 @@ test("event services migration separates service catalog from participant assign
     eventServicesMigration,
     /participant event services manage operators/
   );
+});
+
+test("email campaigns migration versions templates and logs recipient outcomes", () => {
+  for (const table of [
+    "email_templates",
+    "email_template_versions",
+    "email_campaigns",
+    "email_campaign_recipients",
+  ]) {
+    assert.match(emailCampaignsMigration, new RegExp(`create table public\\.${table}`));
+    assert.match(
+      emailCampaignsMigration,
+      new RegExp(`alter table public\\.${table} enable row level security`)
+    );
+  }
+  assert.match(emailCampaignsMigration, /recipient_count integer[\s\S]+?between 0 and 100/);
+  assert.match(emailCampaignsMigration, /delivery_kind in \('direct','delegated'\)/);
 });

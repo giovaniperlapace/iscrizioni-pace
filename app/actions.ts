@@ -1078,7 +1078,9 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
 }
 
 export async function createOperationalTag(formData: FormData) {
-  const label = normalizeOperationalTagLabel(formData.get("label"));
+  const label = normalizeOperationalTagLabel(
+    formData.get("operationalTagLabel") ?? formData.get("label")
+  );
   const color = normalizeOperationalTagColor(formData.get("color"));
   const eventId =
     optionalText(formData.get("eventId")) ??
@@ -1279,7 +1281,9 @@ export async function saveEventService(formData: FormData) {
   const eventId =
     optionalText(formData.get("eventId")) ??
     (await getCurrentOperationalEventId(createSupabaseServiceClient()));
-  const label = normalizeEventServiceLabel(formData.get("label"));
+  const label = normalizeEventServiceLabel(
+    formData.get("eventServiceLabel") ?? formData.get("label")
+  );
   const description = normalizeEventServiceDescription(formData.get("description"));
   const publicOrder = normalizeEventServiceOrder(formData.get("publicOrder"));
   const isActive = formData.get("isActive") === "1" || !serviceId;
