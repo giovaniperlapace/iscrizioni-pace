@@ -32,6 +32,9 @@ export type ParticipantEventServiceSource =
   | "manager"
   | "capogruppo";
 
+export const EVENT_SERVICE_LABEL_MAX_LENGTH = 40;
+export const EVENT_SERVICE_DESCRIPTION_MAX_LENGTH = 160;
+
 export function normalizeEventServiceLabel(
   value: FormDataEntryValue | null
 ): string | null {
@@ -41,7 +44,17 @@ export function normalizeEventServiceLabel(
 
   const label = value.replace(/\s+/g, " ").trim();
 
-  return label.length > 0 ? label.slice(0, 60) : null;
+  return label.length > 0 ? label.slice(0, EVENT_SERVICE_LABEL_MAX_LENGTH) : null;
+}
+
+export function isEventServiceLabelWithinLimit(
+  value: FormDataEntryValue | null
+): boolean {
+  if (typeof value !== "string") {
+    return true;
+  }
+
+  return normalizeWhitespace(value).length <= EVENT_SERVICE_LABEL_MAX_LENGTH;
 }
 
 export function normalizeEventServiceDescription(
@@ -54,6 +67,30 @@ export function normalizeEventServiceDescription(
   const description = value.replace(/\s+/g, " ").trim();
 
   return description.length > 0 ? description.slice(0, 240) : null;
+}
+
+export function isEventServiceDescriptionWithinLimit(
+  value: FormDataEntryValue | null
+): boolean {
+  if (typeof value !== "string") {
+    return true;
+  }
+
+  return normalizeWhitespace(value).length <= EVENT_SERVICE_DESCRIPTION_MAX_LENGTH;
+}
+
+export function normalizeEventServiceCatalogDescription(
+  value: FormDataEntryValue | null
+): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const description = normalizeWhitespace(value);
+
+  return description.length > 0
+    ? description.slice(0, EVENT_SERVICE_DESCRIPTION_MAX_LENGTH)
+    : null;
 }
 
 export function normalizeEventServiceOrder(
@@ -99,4 +136,8 @@ export function eventServiceStatusLabel(
     default:
       return "Senza servizio";
   }
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }

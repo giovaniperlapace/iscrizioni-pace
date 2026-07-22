@@ -190,6 +190,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   partecipante, oltre che come colonna separata nelle tabelle manager/admin e
   capogruppo. Una futura dashboard/area servizio partecipante dovra' partire da
   `participant_event_services`, non dai tag.
+  Dal 2026-07-22 il nome e la descrizione del catalogo servizi sono limitati
+  rispettivamente a 40 e 160 caratteri, sia in creazione sia in modifica. I
+  limiti devono essere mostrati nei form e validati anche lato server; non
+  troncare silenziosamente input piu' lunghi. Questa regola non riduce il limite
+  delle note operative sulle assegnazioni partecipante-servizio.
 - Il 2026-07-12 e' stata completata la Milestone 15 per email personalizzate e
   template operativi. La migration
   `20260712100000_email_campaigns.sql` introduce `email_templates`, versioni
@@ -207,7 +212,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   solo come hash. L'ambiente locale puo' usare `EMAIL_DELIVERY_MODE=log` per
   simulare gli invii. Dal 2026-07-12 la console campagne riprende il pattern
   maturo dell'app modello: editor ricco TipTap con formattazione e link,
-  template salvati in schede, campi personalizzati inseribili al cursore,
+  template riutilizzabili, campi personalizzati inseribili al cursore,
   destinatari separati, attività recente e anteprima in modale. L'HTML viene
   sanificato lato server con `sanitize-html`, i valori partecipante vengono
   escapati prima dell'inserimento e viene sempre generato il fallback testo.
@@ -217,6 +222,23 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `skipped` di `email_campaign_recipients`; ogni modifica aggiorna
   `recipient_count`, la frase di conferma e invalida l'eventuale test gia'
   inviato, che deve essere ripetuto prima dell'invio definitivo.
+  Dal 2026-07-22 l'elenco dei partecipanti raggiungibili e' gia' disponibile al
+  primo rendering della console campagne. I filtri cercabili per gruppo, tag
+  operativo e servizio, insieme alla ricerca per nome/email, modificano solo la
+  vista dell'elenco e non la selezione corrente. I destinatari scelti vivono in
+  una sottosezione separata e possono essere rimossi o riaggiunti uno alla
+  volta; l'anteprima usa sempre questa selezione esplicita, indipendentemente
+  dai filtri visivi attivi.
+  Sempre dal 2026-07-22 i modelli riutilizzabili si scelgono da una modale
+  aperta nel passaggio 1; la selezione chiude la modale e carica oggetto e
+  messaggio nell'editor, dove restano modificabili. L'azione `Salva come
+  modello` vive in fondo al passaggio 1 e apre una seconda modale che richiede
+  il titolo interno del modello. Il titolo interno non e' un campo della
+  campagna: nell'attivita' recente la campagna usa l'oggetto email come nome
+  operativo. Quando il messaggio parte da un modello salvato, il manager puo'
+  scegliere se aggiornare quel modello creando una nuova versione oppure
+  salvare il contenuto come nuovo modello con un titolo interno diverso; in
+  questo secondo caso il modello di partenza deve restare invariato.
   Nodemailer e' stato aggiornato alla serie 9 per correggere la vulnerabilità
   segnalata dall'audit. Dal 2026-07-20 le campagne supportano fino a 5 file,
   massimo 5 MB ciascuno e 10 MB complessivi, conservati nel bucket Supabase

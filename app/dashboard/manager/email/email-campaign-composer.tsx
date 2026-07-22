@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
+import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Search, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { CAMPAIGN_TEMPLATE_FIELDS } from "@/lib/email/campaign-templates";
@@ -27,12 +27,16 @@ type RecipientRow = {
   destinationEmail: string;
   deliveryKind: "direct" | "delegated";
   selected: boolean;
+  groupIds: string[];
+  tagIds: string[];
+  serviceIds: string[];
 };
 type AttachmentDraft = {
   id: string;
   file: File;
   inline: boolean;
 };
+type TemplateSaveMode = "create" | "update";
 type Preview = {
   campaignId: string;
   recipientCount: number;
@@ -53,6 +57,8 @@ type Preview = {
 type EmailCampaignComposerProps = {
   groups: Option[];
   tags: Option[];
+  services: Option[];
+  initialRecipients: RecipientRow[];
   templates: Template[];
   campaigns: CampaignSummary[];
 };
@@ -60,21 +66,30 @@ type EmailCampaignComposerProps = {
 export function EmailCampaignComposer({
   groups,
   tags,
+  services,
+  initialRecipients,
   templates: initialTemplates,
   campaigns,
 }: EmailCampaignComposerProps) {
   const [savedTemplates, setSavedTemplates] = useState(initialTemplates);
   const [templateId, setTemplateId] = useState("");
-  const [name, setName] = useState("");
+  const [templateName, setTemplateName] = useState("");
+  const [templateSaveError, setTemplateSaveError] = useState("");
+  const [templateSaveMode, setTemplateSaveMode] = useState<TemplateSaveMode>("create");
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showTemplateSave, setShowTemplateSave] = useState(false);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("<p></p>");
   const [tokenToInsert, setTokenToInsert] = useState<string | null>(null);
-  const [groupId, setGroupId] = useState("");
-  const [tagId, setTagId] = useState("");
-  const [status, setStatus] = useState("active");
-  const [recipientRows, setRecipientRows] = useState<RecipientRow[]>([]);
+  const [groupFilter, setGroupFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const recipientRows = initialRecipients;
   const [preview, setPreview] = useState<Preview | null>(null);
-  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(
+    initialRecipients.map((recipient) => recipient.participantId)
+  );
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [confirmation, setConfirmation] = useState("");
   const [notice, setNotice] = useState("");
@@ -92,26 +107,52 @@ export function EmailCampaignComposer({
     () => new Set(selectedRecipientIds),
     [selectedRecipientIds]
   );
-  const selectedDirectCount = useMemo(
-    () => recipientRows.filter((recipient) => selectedRecipientIdSet.has(recipient.participantId) && recipient.deliveryKind === "direct").length,
+  const filteredRecipientRows = useMemo(() => {
+    const groupIds = matchingOptionIds(groups, groupFilter);
+    const tagIds = matchingOptionIds(tags, tagFilter);
+    const serviceIds = matchingOptionIds(services, serviceFilter);
+    const search = normalizeRecipientSearch(recipientSearch);
+
+    return recipientRows.filter((recipient) =>
+      (!groupFilter || recipient.groupIds.some((id) => groupIds.has(id))) &&
+      (!tagFilter || recipient.tagIds.some((id) => tagIds.has(id))) &&
+      (!serviceFilter || recipient.serviceIds.some((id) => serviceIds.has(id))) &&
+      (!search || normalizeRecipientSearch(`${recipient.fullName} ${recipient.destinationEmail}`).includes(search))
+    );
+  }, [groupFilter, groups, recipientRows, recipientSearch, serviceFilter, services, tagFilter, tags]);
+  const selectedRecipientRows = useMemo(
+    () => recipientRows.filter((recipient) => selectedRecipientIdSet.has(recipient.participantId)),
     [recipientRows, selectedRecipientIdSet]
+  );
+  const selectedDirectCount = useMemo(
+    () => selectedRecipientRows.filter((recipient) => recipient.deliveryKind === "direct").length,
+    [selectedRecipientRows]
   );
   const selectedDelegatedCount = selectedRecipientIds.length - selectedDirectCount;
 
   function startNewTemplate() {
     setTemplateId("");
-    setName("");
+    setTemplateName("");
     setSubject("");
     setMessage("<p></p>");
     setPreview(null);
+    setShowTemplatePicker(false);
   }
 
   function loadTemplate(template: Template) {
     setTemplateId(template.id);
-    setName(template.name);
+    setTemplateName(template.name);
     setSubject(template.subject);
     setMessage(template.bodyText);
     setPreview(null);
+    setShowTemplatePicker(false);
+  }
+
+  function openTemplateSave(mode: TemplateSaveMode) {
+    setTemplateSaveMode(mode);
+    setTemplateName(mode === "update" ? selectedTemplate?.name ?? "" : "");
+    setTemplateSaveError("");
+    setShowTemplateSave(true);
   }
 
   async function callCampaign(payload: Record<string, unknown>) {
@@ -135,31 +176,9 @@ export function EmailCampaignComposer({
     }
   }
 
-  function resetRecipients() {
-    setRecipientRows([]);
-    setSelectedRecipientIds([]);
-    resetPreview();
-  }
-
-  async function loadRecipients() {
-    const data = await callCampaign({
-      action: "recipients",
-      groupId: groupId || null,
-      tagId: tagId || null,
-      status,
-    });
-    if (data) {
-      setRecipientRows(data.recipients);
-      setSelectedRecipientIds(
-        data.recipients.map((recipient: RecipientRow) => recipient.participantId)
-      );
-      setPreview(null);
-    }
-  }
-
   async function createPreview() {
     if (!recipientRows.length || !selectedRecipientIds.length) {
-      setError("Prima mostra l’elenco e seleziona almeno un destinatario.");
+      setError("Seleziona almeno un destinatario.");
       return;
     }
     setBusy(true);
@@ -169,12 +188,10 @@ export function EmailCampaignComposer({
       const formData = new FormData();
       formData.set("action", "preview");
       formData.set("templateId", templateId);
-      formData.set("name", name);
+      formData.set("name", subject.trim());
       formData.set("subject", subject);
       formData.set("message", message);
-      formData.set("groupId", groupId);
-      formData.set("tagId", tagId);
-      formData.set("status", status);
+      formData.set("status", "active");
       formData.set("selectedParticipantIds", JSON.stringify(selectedRecipientIds));
       formData.set(
         "inlineAttachmentIndexes",
@@ -230,20 +247,30 @@ export function EmailCampaignComposer({
   }
 
   async function saveTemplate() {
+    const cleanTemplateName = templateName.trim();
+    if (!cleanTemplateName) {
+      setTemplateSaveError("Inserisci un titolo interno per il modello.");
+      return;
+    }
     setBusy(true);
-    setError("");
+    setTemplateSaveError("");
     try {
       const response = await fetch("/api/email-templates", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: selectedTemplate?.id, name, subject, message }),
+        body: JSON.stringify({
+          id: templateSaveMode === "update" ? selectedTemplate?.id : undefined,
+          name: cleanTemplateName,
+          subject,
+          message,
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Salvataggio non riuscito.");
 
       const updatedTemplate: Template = {
         id: data.id,
-        name,
+        name: cleanTemplateName,
         subject,
         bodyText: message,
         version: data.version,
@@ -253,9 +280,16 @@ export function EmailCampaignComposer({
         ...current.filter((item) => item.id !== updatedTemplate.id),
       ]);
       setTemplateId(updatedTemplate.id);
-      setNotice(selectedTemplate ? "Modello aggiornato." : "Modello salvato per usi futuri.");
+      setNotice(
+        templateSaveMode === "update"
+          ? "Modello aggiornato."
+          : selectedTemplate
+            ? "Nuovo modello salvato. Il modello originale non è stato modificato."
+            : "Modello salvato per usi futuri."
+      );
+      setShowTemplateSave(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Salvataggio non riuscito.");
+      setTemplateSaveError(cause instanceof Error ? cause.message : "Salvataggio non riuscito.");
     } finally {
       setBusy(false);
     }
@@ -269,8 +303,9 @@ export function EmailCampaignComposer({
             <p className="eyebrow">Comunicazioni</p>
             <h2 className="mt-1 text-2xl font-bold">Campagne email</h2>
             <p className="mt-2 max-w-3xl text-sm text-[var(--peace-muted)]">
-              Segui i passaggi nell’ordine: prepara il messaggio, controlla chi lo
-              riceverà, aggiungi eventuali file e invia prima una prova.
+              Segui i passaggi nell’ordine: scrivi il messaggio o parti da un
+              modello, controlla chi lo riceverà, aggiungi eventuali file e invia
+              prima una prova.
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-full bg-[var(--peace-sky-100)] px-3 py-1.5 text-xs font-bold text-[var(--peace-blue-800)]">
@@ -279,7 +314,7 @@ export function EmailCampaignComposer({
           </div>
         </div>
         <ol className="mt-5 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
-          {["Scrivi il messaggio", "Scegli i destinatari", "Aggiungi file", "Controlla e invia"].map((step, index) => (
+          {["Scrivi un messaggio o usa un modello", "Scegli i destinatari", "Aggiungi file", "Controlla e invia"].map((step, index) => (
             <li key={step} className="flex items-center gap-2 rounded-md bg-[#f7fbfe] px-3 py-2 font-semibold">
               <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--peace-blue-700)] text-xs text-white">{index + 1}</span>
               {step}
@@ -293,28 +328,31 @@ export function EmailCampaignComposer({
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(17rem,1fr)]">
         <section className="surface-card grid gap-5 p-5 sm:p-6">
-          <div>
-            <p className="eyebrow">Passaggio 1</p>
-            <h3 className="mt-1 text-lg font-bold">Scrivi il messaggio</h3>
-            <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Il titolo interno ti aiuta a ritrovare la campagna e non sarà mostrato ai destinatari.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow">Passaggio 1</p>
+              <h3 className="mt-1 text-lg font-bold">
+                Scrivi un messaggio o usa un modello già salvato
+              </h3>
+              <p className="mt-1 text-sm text-[var(--peace-muted)]">
+                Il titolo interno viene richiesto solo quando salvi il contenuto come modello.
+              </p>
+              {selectedTemplate ? (
+                <p className="mt-2 text-xs font-semibold text-[var(--peace-blue-800)]">
+                  Modello caricato: {selectedTemplate.name}
+                </p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="btn-secondary inline-flex shrink-0 items-center justify-center gap-2 px-4"
+              onClick={() => setShowTemplatePicker(true)}
+            >
+              <FileText aria-hidden="true" className="h-4 w-4" />
+              Usa un modello già salvato
+            </button>
           </div>
 
-          <label className="grid gap-1 text-sm font-semibold">
-            Titolo interno
-            <input
-              className="field font-normal"
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                resetPreview();
-              }}
-              maxLength={120}
-              placeholder="Es. Informazioni pratiche di ottobre"
-              autoComplete="off"
-            />
-          </label>
           <label className="grid gap-1 text-sm font-semibold">
             Oggetto
             <input
@@ -340,72 +378,36 @@ export function EmailCampaignComposer({
               onTokenInserted={clearPendingToken}
             />
           </div>
+          <div className="flex flex-col gap-3 border-t border-[var(--peace-border)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[var(--peace-muted)]">
+              Salva oggetto e messaggio come modello solo se pensi di riutilizzarli.
+            </p>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {selectedTemplate ? (
+                <button
+                  type="button"
+                  className="btn-secondary inline-flex items-center justify-center gap-2 px-4"
+                  disabled={busy}
+                  onClick={() => openTemplateSave("update")}
+                >
+                  <Save aria-hidden="true" className="h-4 w-4" />
+                  Aggiorna modello
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="btn-secondary inline-flex items-center justify-center gap-2 px-4"
+                disabled={busy}
+                onClick={() => openTemplateSave("create")}
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                {selectedTemplate ? "Salva come nuovo modello" : "Salva come modello"}
+              </button>
+            </div>
+          </div>
         </section>
 
         <aside className="grid gap-6 xl:sticky xl:top-24">
-          <section className="surface-card p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="font-bold">Modelli riutilizzabili</h3>
-                <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                  Facoltativo: carica un messaggio già preparato.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="grid min-h-9 min-w-9 place-items-center rounded border border-[var(--peace-border)] hover:bg-[var(--peace-sky-100)]"
-                aria-label="Nuovo messaggio vuoto"
-                title="Nuovo messaggio vuoto"
-                onClick={startNewTemplate}
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-              </button>
-            </div>
-            {savedTemplates.length === 0 ? (
-              <p className="mt-4 rounded-md bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
-                Nessun modello salvato.
-              </p>
-            ) : (
-              <div className="mt-4 grid gap-2">
-                {savedTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    className={[
-                      "rounded-md border p-3 text-left transition",
-                      template.id === templateId
-                        ? "border-[var(--peace-blue-700)] bg-[var(--peace-sky-100)]"
-                        : "border-[var(--peace-border)] hover:bg-[#f7fbfe]",
-                    ].join(" ")}
-                    onClick={() => loadTemplate(template)}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-bold">
-                      <FileText aria-hidden="true" className="h-4 w-4" />
-                      {template.name}
-                    </span>
-                    <span className="mt-1 block truncate text-xs text-[var(--peace-muted)]">
-                      {template.subject}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="mt-4 border-t border-[var(--peace-border)] pt-4">
-              <p className="text-xs text-[var(--peace-muted)]">
-                Salva il testo corrente solo se pensi di riutilizzarlo in altre campagne.
-              </p>
-              <button
-                type="button"
-                className="btn-secondary mt-3 w-full"
-                disabled={busy}
-                onClick={saveTemplate}
-              >
-                <Save aria-hidden="true" className="h-4 w-4" />
-                {selectedTemplate ? "Aggiorna questo modello" : "Salva come modello"}
-              </button>
-            </div>
-          </section>
-
           <section className="surface-card p-5">
             <h3 className="font-bold">Campi personalizzati</h3>
             <p className="mt-1 text-xs text-[var(--peace-muted)]">
@@ -437,139 +439,142 @@ export function EmailCampaignComposer({
               <h3 className="text-lg font-bold">Scegli i destinatari</h3>
             </div>
             <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Applica i filtri, mostra l’elenco e deseleziona le persone che non
-              devono ricevere questa campagna.
+              Filtra l’elenco per trovare rapidamente le persone. Cambiare i
+              filtri non modifica i destinatari già scelti.
             </p>
           </div>
           <span className="rounded-full border border-[var(--peace-border)] px-3 py-1 text-xs font-bold">
             Massimo 100 destinatari
           </span>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <RecipientFilterInput
+            id="campaign-recipient-group"
+            label="Gruppo"
+            options={groups}
+            placeholder="Tutti i gruppi"
+            value={groupFilter}
+            onChange={setGroupFilter}
+          />
+          <RecipientFilterInput
+            id="campaign-recipient-tag"
+            label="Tag operativo"
+            options={tags}
+            placeholder="Tutti i tag"
+            value={tagFilter}
+            onChange={setTagFilter}
+          />
+          <RecipientFilterInput
+            id="campaign-recipient-service"
+            label="Servizio"
+            options={services}
+            placeholder="Tutti i servizi"
+            value={serviceFilter}
+            onChange={setServiceFilter}
+          />
           <label className="grid gap-1 text-sm font-semibold">
-            Gruppo
-            <select
-              className="field font-normal"
-              value={groupId}
-              onChange={(event) => {
-                setGroupId(event.target.value);
-                resetRecipients();
-              }}
-            >
-              <option value="">Tutti i gruppi</option>
-              {groups.map((item) => (
-                <option key={item.id} value={item.id}>{item.label}</option>
-              ))}
-            </select>
+            Cerca persona
+            <span className="relative">
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--peace-muted)]" />
+              <input
+                type="search"
+                className="field pl-10 font-normal"
+                value={recipientSearch}
+                onChange={(event) => setRecipientSearch(event.target.value)}
+                placeholder="Nome o email"
+                autoComplete="off"
+              />
+            </span>
           </label>
-          <label className="grid gap-1 text-sm font-semibold">
-            Tag operativo
-            <select
-              className="field font-normal"
-              value={tagId}
-              onChange={(event) => {
-                setTagId(event.target.value);
-                resetRecipients();
-              }}
-            >
-              <option value="">Tutti i tag</option>
-              {tags.map((item) => (
-                <option key={item.id} value={item.id}>{item.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-semibold">
-            Stato iscrizione
-            <select
-              className="field font-normal"
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-                resetRecipients();
-              }}
-            >
-              <option value="active">Iscrizioni attive</option>
-              <option value="submitted">Inviate</option>
-              <option value="confirmed">Confermate</option>
-              <option value="cancelled">Annullate</option>
-              <option value="all">Tutte</option>
-            </select>
-          </label>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-[var(--peace-muted)]">
-            Chi non ha un’email può ricevere il messaggio tramite il proprio referente.
-          </p>
-          <button type="button" className="btn-primary" disabled={busy} onClick={loadRecipients}>
-            <Users aria-hidden="true" className="h-4 w-4" />
-            Mostra l’elenco
-          </button>
         </div>
         {recipientRows.length ? (
-          <div className="rounded-md border border-[var(--peace-border)] p-4">
+          <div className="grid gap-5">
+            <div className="rounded-md border border-[var(--peace-border)] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-bold">Persone disponibili</p>
+                  <p className="mt-1 text-sm text-[var(--peace-muted)]">
+                    {filteredRecipientRows.length} risultati su {recipientRows.length}. Chi non ha un’email può ricevere il messaggio tramite il proprio referente.
+                  </p>
+                </div>
+              </div>
+              {filteredRecipientRows.length ? (
+                <div className="mt-4 max-h-80 overflow-y-auto rounded-md border border-[var(--peace-border)]">
+                  {filteredRecipientRows.map((recipient) => {
+                    const isSelected = selectedRecipientIdSet.has(recipient.participantId);
+                    return (
+                      <div
+                        key={recipient.participantId}
+                        className="flex items-center gap-3 border-b border-[var(--peace-border)] px-3 py-3 last:border-0"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-semibold">{recipient.fullName}</span>
+                          <span className="block truncate text-xs text-[var(--peace-muted)]">
+                            {recipient.destinationEmail}
+                          </span>
+                        </span>
+                        <span className="hidden rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)] sm:inline-flex">
+                          {recipient.deliveryKind === "direct" ? "Diretta" : "Tramite referente"}
+                        </span>
+                        <button
+                          type="button"
+                          className={isSelected ? "btn-secondary inline-flex items-center gap-2 px-3 text-xs" : "btn-primary inline-flex min-h-11 items-center gap-2 px-3 text-xs"}
+                          onClick={() => toggleRecipient(recipient.participantId)}
+                          aria-label={`${isSelected ? "Rimuovi" : "Aggiungi"} ${recipient.fullName} ${isSelected ? "dai" : "ai"} destinatari`}
+                        >
+                          {isSelected ? <X aria-hidden="true" className="h-3.5 w-3.5" /> : <Plus aria-hidden="true" className="h-3.5 w-3.5" />}
+                          {isSelected ? "Rimuovi" : "Aggiungi"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-4 rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
+                  Nessuna persona corrisponde ai filtri impostati.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-bold">Elenco destinatari</p>
+                  <p className="font-bold">Destinatari scelti</p>
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
                   {selectedRecipientIds.length} selezionati: {selectedDirectCount} diretti e {selectedDelegatedCount} tramite referente.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-2 text-xs"
-                  onClick={() => {
-                    setSelectedRecipientIds(recipientRows.map((recipient) => recipient.participantId));
-                    resetPreview();
-                  }}
-                >
-                  Seleziona tutti
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-2 text-xs"
-                  onClick={() => {
-                    setSelectedRecipientIds([]);
-                    resetPreview();
-                  }}
-                >
-                  Deseleziona tutti
-                </button>
-              </div>
             </div>
-            <div className="mt-4 max-h-80 overflow-y-auto rounded-md border border-[var(--peace-border)]">
-              {recipientRows.map((recipient) => (
-                <label
-                  key={recipient.participantId}
-                  className="flex cursor-pointer items-start gap-3 border-b border-[var(--peace-border)] px-3 py-3 last:border-0 hover:bg-[#f7fbfe]"
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 accent-[var(--peace-blue-700)]"
-                    checked={selectedRecipientIdSet.has(recipient.participantId)}
-                    onChange={() => toggleRecipient(recipient.participantId)}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">{recipient.fullName}</span>
-                    <span className="block truncate text-xs text-[var(--peace-muted)]">
-                      {recipient.destinationEmail}
-                    </span>
-                  </span>
-                  <span className="rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)]">
-                    {recipient.deliveryKind === "direct" ? "Diretta" : "Tramite referente"}
-                  </span>
-                </label>
-              ))}
+              {selectedRecipientRows.length ? (
+                <div className="mt-4 grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
+                  {selectedRecipientRows.map((recipient) => (
+                    <div key={recipient.participantId} className="flex min-w-0 items-center gap-2 rounded-md border border-[var(--peace-border)] bg-white px-3 py-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">{recipient.fullName}</span>
+                        <span className="block truncate text-xs text-[var(--peace-muted)]">{recipient.destinationEmail}</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="grid min-h-9 min-w-9 shrink-0 place-items-center rounded border border-[var(--peace-border)] hover:bg-[var(--peace-sky-100)]"
+                        onClick={() => toggleRecipient(recipient.participantId)}
+                        aria-label={`Rimuovi ${recipient.fullName} dai destinatari`}
+                        title="Rimuovi destinatario"
+                      >
+                        <X aria-hidden="true" className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm font-semibold text-[var(--peace-danger)]">
+                  Seleziona almeno un destinatario per continuare.
+                </p>
+              )}
             </div>
-            {selectedRecipientIds.length === 0 ? (
-              <p className="mt-3 text-sm font-semibold text-[var(--peace-danger)]">
-                Seleziona almeno un destinatario per continuare.
-              </p>
-            ) : null}
           </div>
         ) : (
           <p className="rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
-            L’elenco comparirà qui prima dell’anteprima finale.
+            Non ci sono partecipanti raggiungibili per l’evento corrente.
           </p>
         )}
       </section>
@@ -694,6 +699,157 @@ export function EmailCampaignComposer({
         )}
       </section>
 
+      {showTemplatePicker ? (
+        <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[#072c49]/55 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="template-picker-title"
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius-lg)] bg-white p-5 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="template-picker-title" className="text-xl font-bold">
+                  Modelli riutilizzabili
+                </h3>
+                <p className="mt-1 text-sm text-[var(--peace-muted)]">
+                  Scegli un modello: oggetto e messaggio verranno caricati nel passaggio 1 e resteranno modificabili.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="grid min-h-9 min-w-9 shrink-0 place-items-center rounded border border-[var(--peace-border)]"
+                aria-label="Chiudi modelli riutilizzabili"
+                onClick={() => setShowTemplatePicker(false)}
+              >
+                <X aria-hidden="true" className="h-4 w-4" />
+              </button>
+            </div>
+            {savedTemplates.length ? (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {savedTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className={[
+                      "rounded-md border p-4 text-left transition",
+                      template.id === templateId
+                        ? "border-[var(--peace-blue-700)] bg-[var(--peace-sky-100)]"
+                        : "border-[var(--peace-border)] hover:bg-[#f7fbfe]",
+                    ].join(" ")}
+                    onClick={() => loadTemplate(template)}
+                  >
+                    <span className="flex items-center gap-2 font-bold">
+                      <FileText aria-hidden="true" className="h-4 w-4" />
+                      {template.name}
+                    </span>
+                    <span className="mt-2 block text-sm text-[var(--peace-muted)]">
+                      {template.subject}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-5 rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
+                Nessun modello salvato.
+              </p>
+            )}
+            <div className="mt-5 border-t border-[var(--peace-border)] pt-4">
+              <button
+                type="button"
+                className="btn-secondary inline-flex items-center justify-center gap-2 px-4"
+                onClick={startNewTemplate}
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                Inizia con un messaggio vuoto
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {showTemplateSave ? (
+        <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[#072c49]/55 p-4">
+          <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="template-save-title"
+            className="w-full max-w-lg rounded-[var(--radius-lg)] bg-white p-5 shadow-2xl sm:p-6"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveTemplate();
+            }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="template-save-title" className="text-xl font-bold">
+                  {templateSaveMode === "update"
+                    ? "Aggiorna il modello"
+                    : selectedTemplate
+                      ? "Salva come nuovo modello"
+                      : "Salva come modello"}
+                </h3>
+                <p className="mt-1 text-sm text-[var(--peace-muted)]">
+                  {templateSaveMode === "update"
+                    ? "Oggetto, messaggio e titolo interno del modello selezionato verranno aggiornati."
+                    : selectedTemplate
+                      ? "Scegli un nuovo titolo interno. Il modello di partenza non verrà modificato."
+                      : "Il titolo interno serve a riconoscere il modello e non viene mostrato ai destinatari."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="grid min-h-9 min-w-9 shrink-0 place-items-center rounded border border-[var(--peace-border)]"
+                aria-label="Chiudi salvataggio modello"
+                onClick={() => setShowTemplateSave(false)}
+              >
+                <X aria-hidden="true" className="h-4 w-4" />
+              </button>
+            </div>
+            <label className="mt-5 grid gap-1 text-sm font-semibold">
+              Titolo interno del modello
+              <input
+                className="field font-normal"
+                value={templateName}
+                onChange={(event) => {
+                  setTemplateName(event.target.value);
+                  setTemplateSaveError("");
+                }}
+                maxLength={80}
+                placeholder="Es. Informazioni pratiche di ottobre"
+                autoComplete="off"
+                required
+                autoFocus
+              />
+            </label>
+            {templateSaveError ? (
+              <p className="status-error mt-3">{templateSaveError}</p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                className="btn-secondary px-4"
+                onClick={() => setShowTemplateSave(false)}
+              >
+                Annulla
+              </button>
+              <button
+                type="submit"
+                className="btn-primary inline-flex items-center justify-center gap-2 px-4"
+                disabled={busy || !templateName.trim()}
+              >
+                <Save aria-hidden="true" className="h-4 w-4" />
+                {templateSaveMode === "update"
+                  ? "Aggiorna modello"
+                  : selectedTemplate
+                    ? "Salva nuovo modello"
+                    : "Salva modello"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
       {preview ? (
         <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[#072c49]/55 p-4">
           <section
@@ -757,6 +913,62 @@ export function EmailCampaignComposer({
       ) : null}
     </div>
   );
+}
+
+function RecipientFilterInput({
+  id,
+  label,
+  onChange,
+  options,
+  placeholder,
+  value,
+}: {
+  id: string;
+  label: string;
+  onChange: (value: string) => void;
+  options: Option[];
+  placeholder: string;
+  value: string;
+}) {
+  const listId = `${id}-options`;
+
+  return (
+    <label className="grid gap-1 text-sm font-semibold" htmlFor={id}>
+      {label}
+      <input
+        id={id}
+        type="search"
+        className="field font-normal"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        list={listId}
+        autoComplete="off"
+      />
+      <datalist id={listId}>
+        {options.map((option) => (
+          <option key={option.id} value={option.label} />
+        ))}
+      </datalist>
+    </label>
+  );
+}
+
+function matchingOptionIds(options: Option[], query: string) {
+  const normalizedQuery = normalizeRecipientSearch(query);
+  return new Set(
+    options
+      .filter((option) => !normalizedQuery || normalizeRecipientSearch(option.label).includes(normalizedQuery))
+      .map((option) => option.id)
+  );
+}
+
+function normalizeRecipientSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function campaignStatusLabel(status: string) {

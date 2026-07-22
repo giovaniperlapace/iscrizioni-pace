@@ -58,6 +58,8 @@ import type {
   ParticipantOperationalTag,
 } from "@/lib/registrations/operational-tags";
 import {
+  EVENT_SERVICE_DESCRIPTION_MAX_LENGTH,
+  EVENT_SERVICE_LABEL_MAX_LENGTH,
   eventServiceStatusLabel,
   type EventServiceOption,
   type ParticipantEventService,
@@ -2280,20 +2282,28 @@ function ManagerServicesSection({
             <input
               name="eventServiceLabel"
               className="field bg-white font-normal"
-              maxLength={60}
+              maxLength={EVENT_SERVICE_LABEL_MAX_LENGTH}
+              aria-describedby="new-service-label-limit"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
               required
             />
+            <span id="new-service-label-limit" className="text-xs font-normal text-[var(--peace-muted)]">
+              Max {EVENT_SERVICE_LABEL_MAX_LENGTH} caratteri
+            </span>
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             Descrizione
             <textarea
               name="description"
               className="field min-h-20 resize-y bg-white font-normal"
-              maxLength={240}
+              maxLength={EVENT_SERVICE_DESCRIPTION_MAX_LENGTH}
+              aria-describedby="new-service-description-limit"
             />
+            <span id="new-service-description-limit" className="text-xs font-normal text-[var(--peace-muted)]">
+              Max {EVENT_SERVICE_DESCRIPTION_MAX_LENGTH} caratteri
+            </span>
           </label>
           <PendingSubmitButton className="min-h-11 self-end rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Crea
@@ -2302,19 +2312,19 @@ function ManagerServicesSection({
       ) : null}
 
       <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-sm">
+        <table className="w-full min-w-[820px] table-fixed border-collapse text-left text-sm">
           <colgroup>
-            <col className="w-[28%]" />
-            <col className="w-[42%]" />
+            <col className="w-[26%]" />
+            <col className="w-[38%]" />
+            <col className="w-[20%]" />
             <col className="w-[16%]" />
-            <col className="w-[14%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
               <th className="py-3 pr-4 font-semibold">Servizio</th>
               <th className="py-3 pr-4 font-semibold">Descrizione</th>
               <th className="py-3 pr-4 font-semibold">Stato</th>
-              <th className="py-3 text-right font-semibold">Azioni</th>
+              <th className="py-3 pl-4 text-right font-semibold">Azioni</th>
             </tr>
           </thead>
           <tbody>
@@ -2361,7 +2371,7 @@ function ManagerServicesSection({
                     serviceLabel={service.label}
                   />
                 </td>
-                <td className="py-4 text-right">
+                <td className="py-4 pl-4 text-right">
                   <Link
                     href={`${managerPath("servizi", navMode)}&serviceId=${service.id}`}
                     scroll={false}
@@ -2431,9 +2441,13 @@ function ManagerServiceEditOverlay({
                 name="label"
                 defaultValue={service.label}
                 className="field"
-                maxLength={60}
+                maxLength={EVENT_SERVICE_LABEL_MAX_LENGTH}
+                aria-describedby="edit-service-label-limit"
                 required
               />
+              <span id="edit-service-label-limit" className="text-xs font-normal text-[var(--peace-muted)]">
+                Max {EVENT_SERVICE_LABEL_MAX_LENGTH} caratteri
+              </span>
             </label>
             <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
               Descrizione
@@ -2441,8 +2455,12 @@ function ManagerServiceEditOverlay({
                 name="description"
                 defaultValue={service.description ?? ""}
                 className="field min-h-36 resize-y"
-                maxLength={240}
+                maxLength={EVENT_SERVICE_DESCRIPTION_MAX_LENGTH}
+                aria-describedby="edit-service-description-limit"
               />
+              <span id="edit-service-description-limit" className="text-xs font-normal text-[var(--peace-muted)]">
+                Max {EVENT_SERVICE_DESCRIPTION_MAX_LENGTH} caratteri
+              </span>
             </label>
           </div>
           <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
@@ -2949,6 +2967,8 @@ function StatusMessage({
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
     "duplicate-tag": "Esiste già un tag con questo nome per l'evento corrente.",
     "duplicate-service": "Esiste già un servizio con questo nome per l'evento corrente.",
+    "service-label-too-long": "Il nome del servizio non può superare 40 caratteri.",
+    "service-description-too-long": "La descrizione del servizio non può superare 160 caratteri.",
   };
   const messageKey = groupError ?? groupLinkError ?? serviceError ?? roleError ?? managerError ?? error;
 

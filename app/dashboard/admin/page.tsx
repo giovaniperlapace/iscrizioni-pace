@@ -2715,6 +2715,8 @@ function StatusMessage({
     "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
     forbidden: "Non hai permessi di modifica su questo evento.",
+    "service-label-too-long": "Il nome del servizio non può superare 40 caratteri.",
+    "service-description-too-long": "La descrizione del servizio non può superare 160 caratteri.",
   };
   const messageKey = groupError ?? groupLinkError ?? roleError ?? adminError ?? error;
 

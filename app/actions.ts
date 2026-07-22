@@ -45,6 +45,9 @@ import {
   normalizeOperationalTagLabel,
 } from "@/lib/registrations/operational-tags";
 import {
+  isEventServiceDescriptionWithinLimit,
+  isEventServiceLabelWithinLimit,
+  normalizeEventServiceCatalogDescription,
   normalizeEventServiceDescription,
   normalizeEventServiceLabel,
   normalizeEventServiceOrder,
@@ -1281,10 +1284,10 @@ export async function saveEventService(formData: FormData) {
   const eventId =
     optionalText(formData.get("eventId")) ??
     (await getCurrentOperationalEventId(createSupabaseServiceClient()));
-  const label = normalizeEventServiceLabel(
-    formData.get("eventServiceLabel") ?? formData.get("label")
-  );
-  const description = normalizeEventServiceDescription(formData.get("description"));
+  const labelInput = formData.get("eventServiceLabel") ?? formData.get("label");
+  const label = normalizeEventServiceLabel(labelInput);
+  const descriptionInput = formData.get("description");
+  const description = normalizeEventServiceCatalogDescription(descriptionInput);
   const publicOrder = normalizeEventServiceOrder(formData.get("publicOrder"));
   const isActive = formData.get("isActive") === "1" || !serviceId;
   const dashboardPath = getEventServicesDashboardPath(sourceDashboard, nav);
@@ -1292,6 +1295,14 @@ export async function saveEventService(formData: FormData) {
 
   if (!eventId || !label) {
     redirect(`${dashboardPath}&${errorParam}=invalid`);
+  }
+
+  if (!isEventServiceLabelWithinLimit(labelInput)) {
+    redirect(`${dashboardPath}&${errorParam}=service-label-too-long`);
+  }
+
+  if (!isEventServiceDescriptionWithinLimit(descriptionInput)) {
+    redirect(`${dashboardPath}&${errorParam}=service-description-too-long`);
   }
 
   const supabase = await createSupabaseServerClient();
