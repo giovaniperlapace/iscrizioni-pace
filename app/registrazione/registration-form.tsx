@@ -162,6 +162,7 @@ type RegistrationFormCopy = {
   privacyBody: string;
   privacyConsent: string;
   sensitiveConsent: string;
+  futureEventsConsent: string;
   requiredChoice: string;
   requiredGroup: string;
   requiredDays: string;
@@ -220,7 +221,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     groupPlaceholder: "Cerca per gruppo o referente",
     groupDisabledPlaceholder: "Indica prima paese, città e data di nascita",
     noMatchingLeader: "Nessun referente affine trovato",
-    cannotFindLeader: "Non trovo il mio referente",
+    cannotFindLeader: "Non trovo il mio gruppo o referente",
     daysTitle: "In quali giorni pensi di essere presente?",
     daysHelp:
       "Puoi selezionare uno o più giorni dell'evento, oppure indicare che lo comunicherai più avanti.",
@@ -232,6 +233,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Accetto l'informativa privacy e autorizzo il trattamento dei dati necessari alla gestione dell'iscrizione e dell'evento.",
     sensitiveConsent:
       "Acconsento al trattamento delle informazioni su disabilità, salute o bisogni di accessibilità indicate, per predisporre misure di accoglienza e supporto durante l'evento.",
+    futureEventsConsent:
+      "Acconsento a ricevere comunicazioni informative su futuri eventi e iniziative della Comunità di Sant'Egidio. Il consenso è facoltativo e può essere revocato in qualsiasi momento.",
     requiredChoice: "Seleziona una risposta per proseguire.",
     requiredGroup: "Seleziona un referente o indica che non lo trovi.",
     requiredDays: "Seleziona almeno un giorno o indica che lo comunicherai in seguito.",
@@ -287,7 +290,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     groupPlaceholder: "Search by group or contact person",
     groupDisabledPlaceholder: "Enter country, city and date of birth first",
     noMatchingLeader: "No matching contact person found",
-    cannotFindLeader: "I cannot find my contact person",
+    cannotFindLeader: "I cannot find my group or contact person",
     daysTitle: "Which days do you think you will attend?",
     daysHelp:
       "You can select one or more event days, or say that you will communicate this later.",
@@ -299,6 +302,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "I accept the privacy notice and authorise the processing of the data needed to manage the registration and the event.",
     sensitiveConsent:
       "I consent to the processing of the information provided about disability, health or accessibility needs, so that welcome and support measures can be prepared during the event.",
+    futureEventsConsent:
+      "I agree to receive information about future events and initiatives of the Community of Sant'Egidio. This consent is optional and may be withdrawn at any time.",
     requiredChoice: "Select an answer to continue.",
     requiredGroup: "Select a contact person or indicate that you cannot find one.",
     requiredDays: "Select at least one day or indicate that you will communicate it later.",
@@ -354,7 +359,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     groupPlaceholder: "Chercher par groupe ou référent",
     groupDisabledPlaceholder: "Indique d'abord pays, ville et date de naissance",
     noMatchingLeader: "Aucun référent correspondant trouvé",
-    cannotFindLeader: "Je ne trouve pas mon référent",
+    cannotFindLeader: "Je ne trouve pas mon groupe ou mon référent",
     daysTitle: "Quels jours penses-tu être présent ?",
     daysHelp:
       "Tu peux sélectionner un ou plusieurs jours de l'événement, ou indiquer que tu le communiqueras plus tard.",
@@ -366,6 +371,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "J'accepte la notice de confidentialité et j'autorise le traitement des données nécessaires à la gestion de l'inscription et de l'événement.",
     sensitiveConsent:
       "Je consens au traitement des informations indiquées concernant un handicap, la santé ou des besoins d'accessibilité, afin de préparer des mesures d'accueil et de support pendant l'événement.",
+    futureEventsConsent:
+      "J'accepte de recevoir des communications d'information sur les futurs événements et initiatives de la Communauté de Sant'Egidio. Ce consentement est facultatif et peut être retiré à tout moment.",
     requiredChoice: "Sélectionne une réponse pour continuer.",
     requiredGroup: "Sélectionne un référent ou indique que tu ne le trouves pas.",
     requiredDays: "Sélectionne au moins un jour ou indique que tu le communiqueras plus tard.",
@@ -421,7 +428,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     groupPlaceholder: "Nach Gruppe oder Kontaktperson suchen",
     groupDisabledPlaceholder: "Gib zuerst Land, Stadt und Geburtsdatum an",
     noMatchingLeader: "Keine passende Kontaktperson gefunden",
-    cannotFindLeader: "Ich finde meine Kontaktperson nicht",
+    cannotFindLeader: "Ich finde meine Gruppe oder Kontaktperson nicht",
     daysTitle: "An welchen Tagen wirst du voraussichtlich anwesend sein?",
     daysHelp:
       "Du kannst einen oder mehrere Veranstaltungstage auswählen oder angeben, dass du es später mitteilst.",
@@ -433,6 +440,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Ich akzeptiere die Datenschutzhinweise und erlaube die Verarbeitung der Daten, die für die Verwaltung der Anmeldung und der Veranstaltung erforderlich sind.",
     sensitiveConsent:
       "Ich stimme der Verarbeitung der angegebenen Informationen zu Behinderung, Gesundheit oder Barrierefreiheitsbedarf zu, damit Empfangs- und Unterstützungsmaßnahmen während der Veranstaltung vorbereitet werden können.",
+    futureEventsConsent:
+      "Ich willige ein, Informationen über zukünftige Veranstaltungen und Initiativen der Gemeinschaft Sant'Egidio zu erhalten. Diese Einwilligung ist freiwillig und kann jederzeit widerrufen werden.",
     requiredChoice: "Wähle eine Antwort aus, um fortzufahren.",
     requiredGroup: "Wähle eine Kontaktperson aus oder gib an, dass du sie nicht findest.",
     requiredDays: "Wähle mindestens einen Tag aus oder gib an, dass du es später mitteilst.",
@@ -488,7 +497,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     groupPlaceholder: "Buscar por grupo o referente",
     groupDisabledPlaceholder: "Indica primero país, ciudad y fecha de nacimiento",
     noMatchingLeader: "No se encontró ningún referente compatible",
-    cannotFindLeader: "No encuentro a mi referente",
+    cannotFindLeader: "No encuentro mi grupo o referente",
     daysTitle: "¿Qué días crees que estarás presente?",
     daysHelp:
       "Puedes seleccionar uno o más días del evento, o indicar que lo comunicarás más adelante.",
@@ -500,6 +509,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Acepto la información de privacidad y autorizo el tratamiento de los datos necesarios para gestionar la inscripción y el evento.",
     sensitiveConsent:
       "Consiento el tratamiento de la información indicada sobre discapacidad, salud o necesidades de accesibilidad para preparar medidas de acogida y apoyo durante el evento.",
+    futureEventsConsent:
+      "Acepto recibir comunicaciones informativas sobre futuros eventos e iniciativas de la Comunidad de Sant'Egidio. Este consentimiento es opcional y puede retirarse en cualquier momento.",
     requiredChoice: "Selecciona una respuesta para continuar.",
     requiredGroup: "Selecciona un referente o indica que no lo encuentras.",
     requiredDays: "Selecciona al menos un día o indica que lo comunicarás más adelante.",
@@ -555,7 +566,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     groupPlaceholder: "Zoek op groep of contactpersoon",
     groupDisabledPlaceholder: "Vul eerst land, stad en geboortedatum in",
     noMatchingLeader: "Geen passende contactpersoon gevonden",
-    cannotFindLeader: "Ik kan mijn contactpersoon niet vinden",
+    cannotFindLeader: "Ik kan mijn groep of contactpersoon niet vinden",
     daysTitle: "Op welke dagen denk je aanwezig te zijn?",
     daysHelp:
       "Je kunt een of meer dagen van het evenement selecteren, of aangeven dat je dit later doorgeeft.",
@@ -567,6 +578,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Ik accepteer de privacyverklaring en geef toestemming voor de verwerking van de gegevens die nodig zijn om de inschrijving en het evenement te beheren.",
     sensitiveConsent:
       "Ik stem in met de verwerking van de verstrekte informatie over handicap, gezondheid of toegankelijkheidsbehoeften, zodat ontvangst- en ondersteuningsmaatregelen tijdens het evenement kunnen worden voorbereid.",
+    futureEventsConsent:
+      "Ik ga ermee akkoord informatie te ontvangen over toekomstige evenementen en initiatieven van de Gemeenschap van Sant'Egidio. Deze toestemming is vrijwillig en kan op elk moment worden ingetrokken.",
     requiredChoice: "Selecteer een antwoord om door te gaan.",
     requiredGroup: "Selecteer een contactpersoon of geef aan dat je die niet kunt vinden.",
     requiredDays: "Selecteer ten minste één dag of geef aan dat je dit later doorgeeft.",
@@ -622,7 +635,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     groupPlaceholder: "Шукати за групою або контактною особою",
     groupDisabledPlaceholder: "Спочатку вкажіть країну, місто і дату народження",
     noMatchingLeader: "Відповідну контактну особу не знайдено",
-    cannotFindLeader: "Я не можу знайти свою контактну особу",
+    cannotFindLeader: "Я не можу знайти свою групу або контактну особу",
     daysTitle: "У які дні ви плануєте бути присутніми?",
     daysHelp:
       "Можна вибрати один або кілька днів події або вказати, що повідомите це пізніше.",
@@ -634,6 +647,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Я приймаю повідомлення про конфіденційність і дозволяю обробку даних, необхідних для управління реєстрацією та подією.",
     sensitiveConsent:
       "Я погоджуюся на обробку вказаної інформації про інвалідність, здоров'я або потреби доступності, щоб підготувати заходи прийому та підтримки під час події.",
+    futureEventsConsent:
+      "Я погоджуюся отримувати інформаційні повідомлення про майбутні події та ініціативи Спільноти Sant'Egidio. Ця згода є добровільною і може бути відкликана в будь-який час.",
     requiredChoice: "Виберіть відповідь, щоб продовжити.",
     requiredGroup: "Виберіть контактну особу або вкажіть, що не можете її знайти.",
     requiredDays: "Виберіть принаймні один день або вкажіть, що повідомите пізніше.",
@@ -1674,6 +1689,14 @@ export function RegistrationForm({
             </span>
           </label>
         ) : null}
+        <label className="mt-3 flex items-start gap-3 border-t border-[var(--peace-border)] pt-3 text-sm text-[var(--peace-ink)]">
+          <input
+            name="futureEventsCommunicationsAccepted"
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+          />
+          <span>{copy.futureEventsConsent}</span>
+        </label>
       </section>
 
       <div className="flex justify-end">

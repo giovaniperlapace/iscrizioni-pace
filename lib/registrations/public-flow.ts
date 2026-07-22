@@ -38,6 +38,7 @@ import {
   attendanceSlotKey,
 } from "@/lib/registrations/attendance-slots";
 import {
+  FUTURE_EVENTS_COMMUNICATIONS_CONSENT_VERSION,
   PRIVACY_VERSION,
   type RegistrationInput,
 } from "@/lib/registrations/validation";
@@ -162,6 +163,7 @@ export async function getPublicRegistrationOptions(
           .eq("is_active", true)
           .eq("is_public_catalog", true)
           .eq("is_assignable", true)
+          .in("node_type", ["area", "group"])
           .order("name")
       : Promise.resolve({ data: [], error: null }),
     event
@@ -465,12 +467,23 @@ export async function createPublicRegistration(
     throw new Error("Le fasce di presenza selezionate non appartengono all'evento.");
   }
 
+  const privacyAcceptedAt = new Date().toISOString();
+  const futureEventsCommunicationsAcceptedAt =
+    input.futureEventsCommunicationsAccepted ? privacyAcceptedAt : null;
   const writes = [
     supabase.from("participant_consents").insert({
       registration_id: registrationId,
       privacy_version: PRIVACY_VERSION,
-      privacy_accepted_at: new Date().toISOString(),
+      privacy_accepted_at: privacyAcceptedAt,
       data_processing_accepted: input.dataProcessingAccepted,
+      future_events_communications_accepted:
+        input.futureEventsCommunicationsAccepted,
+      future_events_communications_accepted_at:
+        futureEventsCommunicationsAcceptedAt,
+      future_events_communications_consent_version:
+        input.futureEventsCommunicationsAccepted
+          ? FUTURE_EVENTS_COMMUNICATIONS_CONSENT_VERSION
+          : null,
       accepted_by_name: `${input.firstName} ${input.lastName}`.trim(),
       ip_address: requestMeta.ipAddress,
       user_agent: requestMeta.userAgent,
@@ -501,6 +514,8 @@ export async function createPublicRegistration(
       metadata: {
         source: "public_form",
         privacy_version: PRIVACY_VERSION,
+        future_events_communications_accepted:
+          input.futureEventsCommunicationsAccepted,
         group_registration_link_id: groupLink?.id ?? null,
       },
     }),

@@ -100,8 +100,14 @@ export function findMatchingGroupCandidates(
         return false;
       }
 
-      if (options.publicOnly && !group.isPublicCatalog) {
-        return false;
+      if (options.publicOnly) {
+        if (!group.isPublicCatalog) {
+          return false;
+        }
+
+        if (group.nodeType !== "area" && group.nodeType !== "group") {
+          return false;
+        }
       }
 
       if (group.communityKind !== communityKind) {

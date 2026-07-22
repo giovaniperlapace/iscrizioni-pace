@@ -211,9 +211,20 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   destinatari separati, attività recente e anteprima in modale. L'HTML viene
   sanificato lato server con `sanitize-html`, i valori partecipante vengono
   escapati prima dell'inserimento e viene sempre generato il fallback testo.
+  Prima dell'anteprima congelata il manager puo' consultare nella pagina la
+  lista nominale dei destinatari, l'indirizzo di consegna e il tipo di recapito,
+  quindi includere o escludere singole persone. Le esclusioni usano lo stato
+  `skipped` di `email_campaign_recipients`; ogni modifica aggiorna
+  `recipient_count`, la frase di conferma e invalida l'eventuale test gia'
+  inviato, che deve essere ripetuto prima dell'invio definitivo.
   Nodemailer e' stato aggiornato alla serie 9 per correggere la vulnerabilità
-  segnalata dall'audit. Gli allegati restano un'estensione futura e non fanno
-  parte dell'accettazione della milestone completata.
+  segnalata dall'audit. Dal 2026-07-20 le campagne supportano fino a 5 file,
+  massimo 5 MB ciascuno e 10 MB complessivi, conservati nel bucket Supabase
+  Storage privato `email-campaign-attachments` e descritti dalla tabella RLS
+  `email_campaign_attachments`. Sono ammessi documenti comuni e immagini
+  JPEG/PNG/GIF/WebP; le immagini possono essere allegate normalmente oppure
+  mostrate nel corpo dell'email tramite CID, senza URL pubblici. Migration:
+  `20260720190000_email_campaign_attachments.sql`.
 - Il 2026-06-17, dopo una verifica completa seguita al cambio titolo evento,
   non sono emersi conflitti sui flussi di iscrizione, attribuzione gruppo e
   gestione manager. La migration di identità evento mantiene lo slug tecnico
@@ -248,6 +259,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   libero opzionale "Fai parte di qualche gruppo o associazione?". Il dato non
   blocca l'iscrizione e viene salvato solo nello snapshot questionario come
   `externalGroupAssociation`.
+- Dal 2026-07-20 il selettore gruppo/referente del form pubblico mostra solo i
+  suggerimenti coerenti con citta' ed eta' che appartengono a nodi operativi di
+  tipo `area` o `group`. I nodi `country` e `city` non devono comparire nella
+  lista: restano disponibili solo al matching interno per ricondurre la persona
+  al gruppo piu' probabile. Un link riservato continua a preselezionare il gruppo
+  specifico collegato al token anche quando non appartiene al catalogo pubblico.
+- Dal 2026-07-20 la sezione privacy del form pubblico include un consenso
+  facoltativo, separato e non preselezionato per ricevere comunicazioni su
+  eventi e iniziative future della Comunita' di Sant'Egidio. L'iscrizione deve
+  restare completabile senza tale consenso. `participant_consents` registra
+  l'esito e, solo in caso positivo, data e versione del testo; gli inserimenti
+  manuali del capogruppo non possono attribuire questo consenso alla persona.
 - Il 2026-06-18 la production pubblica e' stata spostata sul dominio definitivo
   `https://registrationspeace.santegidio.org`: le env Vercel production
   `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` puntano a quel dominio,

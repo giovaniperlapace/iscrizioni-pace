@@ -53,6 +53,7 @@ test("parseRegistrationForm validates required public registration fields", () =
   formData.set("moment_11111111-1111-4111-8111-111111111111", "yes");
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
+  formData.set("futureEventsCommunicationsAccepted", "on");
 
   const parsed = parseRegistrationForm(formData);
 
@@ -73,6 +74,7 @@ test("parseRegistrationForm validates required public registration fields", () =
       { day: "2026-10-27", part: "afternoon" },
     ]);
     assert.equal(parsed.value.availabilityUnknown, false);
+    assert.equal(parsed.value.futureEventsCommunicationsAccepted, true);
     assert.deepEqual(parsed.value.momentAttendanceChoices, {
       "11111111-1111-4111-8111-111111111111": "yes",
     });
@@ -113,6 +115,7 @@ test("questionnaire answers snapshot keeps configurable answers together", () =>
   formData.set("availabilityUnknown", "on");
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
+  formData.set("futureEventsCommunicationsAccepted", "on");
 
   const parsed = parseRegistrationForm(formData);
 
@@ -131,6 +134,7 @@ test("questionnaire answers snapshot keeps configurable answers together", () =>
       hearing: true,
     });
     assert.equal(answers.consents.privacyAccepted, true);
+    assert.equal(answers.consents.futureEventsCommunicationsAccepted, true);
   }
 });
 
@@ -179,6 +183,10 @@ test("parseRegistrationForm requires sensitive consent only for accessibility ne
   assert.equal(withoutAccessibilityNeeds.ok, true);
   if (withoutAccessibilityNeeds.ok) {
     assert.equal(withoutAccessibilityNeeds.value.dataProcessingAccepted, false);
+    assert.equal(
+      withoutAccessibilityNeeds.value.futureEventsCommunicationsAccepted,
+      false
+    );
   }
 
   formData.set("hasAccessibilityNeeds", "yes");

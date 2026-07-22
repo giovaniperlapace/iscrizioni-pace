@@ -1,6 +1,6 @@
 # Questionario iscrizione
 
-Versione applicativa corrente: `2026-06-14-first-event`.
+Versione applicativa corrente: `2026-07-20-future-events-consent`.
 
 Questa versione copre l'evento Assisi 2026 e mantiene la prima iscrizione
 essenziale e condizionale: i dati stabili restano in colonne o tabelle strutturate, mentre
@@ -25,6 +25,7 @@ manutenzione futura, non per sostituire lo schema relazionale principale.
 | Partecipazione con gruppo/referente | Solo se partecipazione precedente = Sì | operativo | `participants.participates_with_group`, `participant_group_assignments`, snapshot `groupParticipation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
 | Fasce di presenza previste | Sì | operativo | `event_attendance_choices.day` + `day_part` e snapshot questionario | partecipante, capogruppo, manager, manager_viewer, admin, accoglienza | Sì |
 | Privacy e consenso trattamento dati | Sì | legale | `participant_consents` | partecipante, manager, admin | No |
+| Comunicazioni su eventi e iniziative future | No | legale | `participant_consents.future_events_communications_*` | partecipante, manager, admin | No |
 
 La lingua preferita non viene più raccolta nei flussi di iscrizione o modifica
 partecipante. Il modello dati conserva un valore tecnico di default per
@@ -33,7 +34,11 @@ richiesti in questa prima iscrizione e restano supportati per dashboard o
 passaggi successivi.
 
 Tutti i campi visibili della prima iscrizione sono obbligatori, tranne il
-telefono. Il telefono può restare vuoto; se compilato, il form richiede un
+telefono e il consenso separato per ricevere comunicazioni su eventi e
+iniziative future. Quest'ultimo non e' preselezionato e non blocca
+l'iscrizione. Se viene espresso, l'app registra esito positivo, data e versione
+del testo; in caso contrario salva l'esito negativo senza data o versione di
+accettazione. Il telefono può restare vuoto; se compilato, il form richiede un
 prefisso internazionale e salva un numero normalizzato in formato `+...`.
 
 ## Logica condizionale
@@ -88,9 +93,11 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 - La migration `20260616110000_backfill_group_tree_test_seed.sql` riallinea i
   dati test sui database dove la migration 6.3 era già stata registrata prima
   della correzione del seed.
-- I nodi pubblici selezionabili nel form hanno `is_public_catalog = true`; i
-  nodi territoriali interni dei nuovi partecipanti restano fuori dalla lista
-  pubblica.
+- I nodi selezionabili nel form devono avere `is_public_catalog = true` ed
+  essere di tipo `area` o `group`. I nodi territoriali `country` e `city`
+  restano interni e servono solo al matching/fallback verso il gruppo piu'
+  probabile. Un link riservato di gruppo puo' invece preselezionare direttamente
+  il gruppo specifico a cui e' collegato.
 - `group_assignment_rules` modella regole di evento per paese, città, fascia
   età e priorità. La prima logica applicativa usa anche i metadati di `groups`
   per garantire fallback immediato.

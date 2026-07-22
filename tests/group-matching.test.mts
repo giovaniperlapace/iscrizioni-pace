@@ -132,6 +132,44 @@ test("matching prefers the closest Roma area before broader city groups", () => 
   assert.ok(!candidates.some((candidate) => candidate.id === "torino-giovani"));
 });
 
+test("public suggestions exclude territorial city and country nodes", () => {
+  const cityNode = group({
+    id: "roma-city",
+    name: "Roma",
+    countryId: ITALY,
+    cityId: ROME,
+    nodeType: "city",
+    ageBracket: "both",
+  });
+  const publicCandidates = findMatchingGroupCandidates(
+    [...groups, cityNode],
+    {
+      countryId: ITALY,
+      cityId: ROME,
+      birthDate: "2004-01-01",
+      eventStartsOn: "2026-10-25",
+    },
+    { publicOnly: true }
+  );
+
+  assert.ok(publicCandidates.some((candidate) => candidate.id === "roma-area"));
+  assert.ok(publicCandidates.some((candidate) => candidate.id === "roma-giovani"));
+  assert.ok(!publicCandidates.some((candidate) => candidate.id === "roma-city"));
+
+  const internalFallback = findTerritorialFallback(
+    [cityNode],
+    {
+      countryId: ITALY,
+      cityId: ROME,
+      birthDate: "2004-01-01",
+      eventStartsOn: "2026-10-25",
+    },
+    "santegidio"
+  );
+
+  assert.equal(internalFallback?.id, "roma-city");
+});
+
 test("new participants resolve to the closest territorial newcomers node", () => {
   const assignment = resolveGroupAssignmentForRegistration({
     groups,

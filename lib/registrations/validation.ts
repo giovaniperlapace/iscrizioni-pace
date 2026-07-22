@@ -8,7 +8,8 @@ import {
   type AttendanceSlot,
 } from "./attendance-slots.ts";
 
-export const PRIVACY_VERSION = "2026-06-14-gdpr-accessibility";
+export const PRIVACY_VERSION = "2026-07-20-gdpr-future-events";
+export const FUTURE_EVENTS_COMMUNICATIONS_CONSENT_VERSION = "2026-07-20-v1";
 
 export type RegistrationInput = {
   email: string;
@@ -40,6 +41,7 @@ export type RegistrationInput = {
   needsOperationalSupport: boolean;
   privacyAccepted: boolean;
   dataProcessingAccepted: boolean;
+  futureEventsCommunicationsAccepted: boolean;
 };
 
 export type ValidationResult<T> =
@@ -96,6 +98,8 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   const dataProcessingAccepted =
     hasAccessibilityNeeds === true &&
     formData.get("dataProcessingAccepted") === "on";
+  const futureEventsCommunicationsAccepted =
+    formData.get("futureEventsCommunicationsAccepted") === "on";
   const availabilityUnknown = formData.get("availabilityUnknown") === "on";
 
   const value: RegistrationInput = {
@@ -136,6 +140,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
       formData.get("needsOperationalSupport") === "on",
     privacyAccepted,
     dataProcessingAccepted,
+    futureEventsCommunicationsAccepted,
   };
 
   const errors = validateRegistrationInput(value);

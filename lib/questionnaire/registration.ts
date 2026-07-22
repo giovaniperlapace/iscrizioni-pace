@@ -1,6 +1,7 @@
 import type { RegistrationInput } from "@/lib/registrations/validation";
 
-export const REGISTRATION_QUESTIONNAIRE_VERSION = "2026-06-14-first-event";
+export const REGISTRATION_QUESTIONNAIRE_VERSION =
+  "2026-07-20-future-events-consent";
 
 export type QuestionnaireLocale = "it" | "en";
 export type QuestionDataClass = "personal" | "sensitive" | "operational" | "legal";
@@ -578,6 +579,19 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
     visibleTo: ["partecipante", "manager", "admin"],
     editableAfterSubmit: false,
   },
+  {
+    id: "future_events_communications_consent",
+    label: {
+      it: "Consenso comunicazioni su eventi futuri",
+      en: "Consent to communications about future events",
+    },
+    required: false,
+    dataClass: "legal",
+    structuredStorage:
+      "participant_consents.future_events_communications_accepted,future_events_communications_accepted_at,future_events_communications_consent_version",
+    visibleTo: ["partecipante", "manager", "admin"],
+    editableAfterSubmit: false,
+  },
 ];
 
 export function getQuestionnaireVisibilitySummary() {
@@ -622,6 +636,8 @@ export function buildRegistrationQuestionnaireAnswers(input: RegistrationInput) 
     consents: {
       privacyAccepted: input.privacyAccepted,
       dataProcessingAccepted: input.dataProcessingAccepted,
+      futureEventsCommunicationsAccepted:
+        input.futureEventsCommunicationsAccepted,
     },
   };
 }

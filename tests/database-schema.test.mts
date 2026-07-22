@@ -39,6 +39,14 @@ const emailCampaignsMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260712100000_email_campaigns.sql"
 );
+const futureEventsConsentMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260720100000_future_events_communications_consent.sql"
+);
+const emailCampaignAttachmentsMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260720190000_email_campaign_attachments.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -58,6 +66,14 @@ const operationalTagsMigration = readFileSync(
   "utf8"
 );
 const eventServicesMigration = readFileSync(eventServicesMigrationPath, "utf8");
+const futureEventsConsentMigration = readFileSync(
+  futureEventsConsentMigrationPath,
+  "utf8"
+);
+const emailCampaignAttachmentsMigration = readFileSync(
+  emailCampaignAttachmentsMigrationPath,
+  "utf8"
+);
 
 const createdTables = Array.from(
   migration.matchAll(/create table public\.([a-z_]+) \(/g),
@@ -98,6 +114,25 @@ test("initial database migration keeps sensitive tables behind scoped helpers", 
   assert.match(migration, /create or replace function app\.can_check_in/);
   assert.match(migration, /on public\.accessibility_needs for select/);
   assert.doesNotMatch(accessibilityPolicies, /accoglienza/);
+});
+
+test("future events consent migration records explicit optional acceptance", () => {
+  assert.match(
+    futureEventsConsentMigration,
+    /future_events_communications_accepted boolean not null default false/
+  );
+  assert.match(
+    futureEventsConsentMigration,
+    /future_events_communications_accepted_at timestamptz/
+  );
+  assert.match(
+    futureEventsConsentMigration,
+    /future_events_communications_consent_version text/
+  );
+  assert.match(
+    futureEventsConsentMigration,
+    /participant_consents_future_events_communications_consistency/
+  );
 });
 
 test("participant public code migration adds a short generated unique code", () => {
@@ -258,4 +293,23 @@ test("email campaigns migration versions templates and logs recipient outcomes",
   }
   assert.match(emailCampaignsMigration, /recipient_count integer[\s\S]+?between 0 and 100/);
   assert.match(emailCampaignsMigration, /delivery_kind in \('direct','delegated'\)/);
+});
+
+test("email campaign attachments use private storage and scoped metadata", () => {
+  assert.match(
+    emailCampaignAttachmentsMigration,
+    /create table public\.email_campaign_attachments/
+  );
+  assert.match(
+    emailCampaignAttachmentsMigration,
+    /email_campaign_attachments enable row level security/
+  );
+  assert.match(
+    emailCampaignAttachmentsMigration,
+    /'email-campaign-attachments'[\s\S]+?false[\s\S]+?5242880/
+  );
+  assert.match(
+    emailCampaignAttachmentsMigration,
+    /email campaign attachments manage managers/
+  );
 });

@@ -1720,6 +1720,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       privacy_version: PRIVACY_VERSION,
       privacy_accepted_at: new Date().toISOString(),
       data_processing_accepted: true,
+      future_events_communications_accepted: false,
       accepted_by_user_id: auth.user.id,
       accepted_by_name: `${parsed.value.firstName} ${parsed.value.lastName}`.trim(),
     }),
