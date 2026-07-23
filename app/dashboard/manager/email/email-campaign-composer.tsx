@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Search, Send, Trash2, Users, X } from "lucide-react";
+import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { MAX_CAMPAIGN_RECIPIENTS } from "@/lib/email/campaign-selection";
@@ -492,17 +492,14 @@ export function EmailCampaignComposer({
           />
           <label className="grid gap-1 text-sm font-semibold">
             Cerca persona
-            <span className="relative">
-              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--peace-muted)]" />
-              <input
-                type="search"
-                className="field pl-10 font-normal"
-                value={recipientSearch}
-                onChange={(event) => setRecipientSearch(event.target.value)}
-                placeholder="Nome o email"
-                autoComplete="off"
-              />
-            </span>
+            <input
+              type="search"
+              className="field font-normal"
+              value={recipientSearch}
+              onChange={(event) => setRecipientSearch(event.target.value)}
+              placeholder="Nome o email"
+              autoComplete="off"
+            />
           </label>
         </div>
         {recipientRows.length ? (
