@@ -239,6 +239,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   scegliere se aggiornare quel modello creando una nuova versione oppure
   salvare il contenuto come nuovo modello con un titolo interno diverso; in
   questo secondo caso il modello di partenza deve restare invariato.
+  Dal 2026-07-23 la selezione destinatari e' esclusivamente additiva ed
+  esplicita: all'apertura nessuna persona e' selezionata, le persone scelte
+  spariscono dall'elenco disponibile e compaiono nella sottosezione dedicata.
+  Il server non deve mai interpretare l'assenza della selezione come
+  "seleziona tutti"; il limite di 100 si applica ai destinatari scelti, non
+  all'intero catalogo raggiungibile.
   Dal 2026-07-23 il riquadro `Campi personalizzati` del passaggio di
   composizione non segue piu' lo scroll della pagina: su schermi ampi resta
   centrato verticalmente rispetto al form di oggetto e messaggio.

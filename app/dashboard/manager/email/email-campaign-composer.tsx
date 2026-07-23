@@ -3,6 +3,7 @@
 import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Search, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
+import { MAX_CAMPAIGN_RECIPIENTS } from "@/lib/email/campaign-selection";
 import { CAMPAIGN_TEMPLATE_FIELDS } from "@/lib/email/campaign-templates";
 import { CampaignRichTextEditor } from "./campaign-rich-text-editor";
 
@@ -87,9 +88,7 @@ export function EmailCampaignComposer({
   const [recipientSearch, setRecipientSearch] = useState("");
   const recipientRows = initialRecipients;
   const [preview, setPreview] = useState<Preview | null>(null);
-  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(
-    initialRecipients.map((recipient) => recipient.participantId)
-  );
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [confirmation, setConfirmation] = useState("");
   const [notice, setNotice] = useState("");
@@ -123,6 +122,12 @@ export function EmailCampaignComposer({
   const selectedRecipientRows = useMemo(
     () => recipientRows.filter((recipient) => selectedRecipientIdSet.has(recipient.participantId)),
     [recipientRows, selectedRecipientIdSet]
+  );
+  const availableRecipientRows = useMemo(
+    () => filteredRecipientRows.filter(
+      (recipient) => !selectedRecipientIdSet.has(recipient.participantId)
+    ),
+    [filteredRecipientRows, selectedRecipientIdSet]
   );
   const selectedDirectCount = useMemo(
     () => selectedRecipientRows.filter((recipient) => recipient.deliveryKind === "direct").length,
@@ -215,14 +220,27 @@ export function EmailCampaignComposer({
     }
   }
 
-  function toggleRecipient(participantId: string) {
-    setSelectedRecipientIds((current) => current.includes(participantId)
-      ? current.filter((id) => id !== participantId)
-      : [...current, participantId]
-    );
+  function addRecipient(participantId: string) {
+    if (selectedRecipientIdSet.has(participantId)) return;
+    if (selectedRecipientIds.length >= MAX_CAMPAIGN_RECIPIENTS) {
+      setError(
+        `Puoi selezionare al massimo ${MAX_CAMPAIGN_RECIPIENTS} destinatari.`
+      );
+      return;
+    }
+    setSelectedRecipientIds((current) => [...current, participantId]);
     setPreview(null);
     setConfirmation("");
     setNotice("");
+    setError("");
+  }
+
+  function removeRecipient(participantId: string) {
+    setSelectedRecipientIds((current) => current.filter((id) => id !== participantId));
+    setPreview(null);
+    setConfirmation("");
+    setNotice("");
+    setError("");
   }
 
   async function sendTest() {
@@ -439,8 +457,8 @@ export function EmailCampaignComposer({
               <h3 className="text-lg font-bold">Scegli i destinatari</h3>
             </div>
             <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Filtra l’elenco per trovare rapidamente le persone. Cambiare i
-              filtri non modifica i destinatari già scelti.
+              Cerca e aggiungi esplicitamente le persone da contattare. Cambiare
+              i filtri non modifica i destinatari già scelti.
             </p>
           </div>
           <span className="rounded-full border border-[var(--peace-border)] px-3 py-1 text-xs font-bold">
@@ -494,57 +512,59 @@ export function EmailCampaignComposer({
                 <div>
                   <p className="font-bold">Persone disponibili</p>
                   <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                    {filteredRecipientRows.length} risultati su {recipientRows.length}. Chi non ha un’email può ricevere il messaggio tramite il proprio referente.
+                    {availableRecipientRows.length} da aggiungere su {recipientRows.length - selectedRecipientIds.length} disponibili. Chi non ha un’email può ricevere il messaggio tramite il proprio referente.
                   </p>
                 </div>
               </div>
-              {filteredRecipientRows.length ? (
+              {availableRecipientRows.length ? (
                 <div className="mt-4 max-h-80 overflow-y-auto rounded-md border border-[var(--peace-border)]">
-                  {filteredRecipientRows.map((recipient) => {
-                    const isSelected = selectedRecipientIdSet.has(recipient.participantId);
-                    return (
-                      <div
-                        key={recipient.participantId}
-                        className="flex items-center gap-3 border-b border-[var(--peace-border)] px-3 py-3 last:border-0"
+                  {availableRecipientRows.map((recipient) => (
+                    <div
+                      key={recipient.participantId}
+                      className="flex items-center gap-3 border-b border-[var(--peace-border)] px-3 py-3 last:border-0"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold">{recipient.fullName}</span>
+                        <span className="block truncate text-xs text-[var(--peace-muted)]">
+                          {recipient.destinationEmail}
+                        </span>
+                      </span>
+                      <span className="hidden rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)] sm:inline-flex">
+                        {recipient.deliveryKind === "direct" ? "Diretta" : "Tramite referente"}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-primary inline-flex min-h-11 items-center gap-2 px-3 text-xs"
+                        onClick={() => addRecipient(recipient.participantId)}
+                        disabled={
+                          selectedRecipientIds.length >= MAX_CAMPAIGN_RECIPIENTS
+                        }
+                        aria-label={`Aggiungi ${recipient.fullName} ai destinatari`}
                       >
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold">{recipient.fullName}</span>
-                          <span className="block truncate text-xs text-[var(--peace-muted)]">
-                            {recipient.destinationEmail}
-                          </span>
-                        </span>
-                        <span className="hidden rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)] sm:inline-flex">
-                          {recipient.deliveryKind === "direct" ? "Diretta" : "Tramite referente"}
-                        </span>
-                        <button
-                          type="button"
-                          className={isSelected ? "btn-secondary inline-flex items-center gap-2 px-3 text-xs" : "btn-primary inline-flex min-h-11 items-center gap-2 px-3 text-xs"}
-                          onClick={() => toggleRecipient(recipient.participantId)}
-                          aria-label={`${isSelected ? "Rimuovi" : "Aggiungi"} ${recipient.fullName} ${isSelected ? "dai" : "ai"} destinatari`}
-                        >
-                          {isSelected ? <X aria-hidden="true" className="h-3.5 w-3.5" /> : <Plus aria-hidden="true" className="h-3.5 w-3.5" />}
-                          {isSelected ? "Rimuovi" : "Aggiungi"}
-                        </button>
-                      </div>
-                    );
-                  })}
+                        <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+                        Aggiungi
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="mt-4 rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
-                  Nessuna persona corrisponde ai filtri impostati.
+                  {selectedRecipientIds.length === recipientRows.length
+                    ? "Tutte le persone disponibili sono già state aggiunte."
+                    : "Nessuna persona da aggiungere corrisponde ai filtri impostati."}
                 </p>
               )}
             </div>
 
             <div className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
                   <p className="font-bold">Destinatari scelti</p>
-                <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                  {selectedRecipientIds.length} selezionati: {selectedDirectCount} diretti e {selectedDelegatedCount} tramite referente.
-                </p>
+                  <p className="mt-1 text-sm text-[var(--peace-muted)]">
+                    {selectedRecipientIds.length} selezionati: {selectedDirectCount} diretti e {selectedDelegatedCount} tramite referente.
+                  </p>
+                </div>
               </div>
-            </div>
               {selectedRecipientRows.length ? (
                 <div className="mt-4 grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
                   {selectedRecipientRows.map((recipient) => (
@@ -556,7 +576,7 @@ export function EmailCampaignComposer({
                       <button
                         type="button"
                         className="grid min-h-9 min-w-9 shrink-0 place-items-center rounded border border-[var(--peace-border)] hover:bg-[var(--peace-sky-100)]"
-                        onClick={() => toggleRecipient(recipient.participantId)}
+                        onClick={() => removeRecipient(recipient.participantId)}
                         aria-label={`Rimuovi ${recipient.fullName} dai destinatari`}
                         title="Rimuovi destinatario"
                       >
@@ -566,8 +586,8 @@ export function EmailCampaignComposer({
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 text-sm font-semibold text-[var(--peace-danger)]">
-                  Seleziona almeno un destinatario per continuare.
+                <p className="mt-3 text-sm text-[var(--peace-muted)]">
+                  Nessun destinatario selezionato. Aggiungi le persone dall’elenco qui sopra.
                 </p>
               )}
             </div>

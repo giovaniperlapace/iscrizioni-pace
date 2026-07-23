@@ -75,7 +75,7 @@ export async function ManagerEmailSection({
   });
   const initialRecipients = await loadCampaignRecipientPreviews(
     recipientCandidates,
-    new Set(recipientCandidates.map((recipient) => recipient.participantId))
+    new Set()
   );
 
   return (

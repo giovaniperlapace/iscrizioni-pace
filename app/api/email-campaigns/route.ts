@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth/session";
+import { resolveSelectedCampaignRecipientIds } from "@/lib/email/campaign-selection";
 import { renderCampaignTemplate, validateCampaignTemplate } from "@/lib/email/campaign-templates";
 import { campaignHtmlToText, renderSafeCampaignHtml } from "@/lib/email/campaign-html.server";
 import {
@@ -14,7 +15,6 @@ import { getCurrentOperationalEvent } from "@/lib/events/current";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
-const MAX_RECIPIENTS = 100;
 const SEND_CONCURRENCY = 3;
 const ATTACHMENTS_BUCKET = "email-campaign-attachments";
 const MAX_ATTACHMENTS = 5;
@@ -104,10 +104,7 @@ async function previewRecipients(body: Record<string, unknown>) {
   const filters = campaignFilters(body);
   const recipients = await resolveCampaignRecipients(event.id, filters);
   if (!recipients.length) throw new Error("I filtri non individuano destinatari raggiungibili.");
-  if (recipients.length > MAX_RECIPIENTS) {
-    throw new Error(`Il segmento contiene ${recipients.length} destinatari: il limite per campagna è ${MAX_RECIPIENTS}. Restringi i filtri.`);
-  }
-  const selectedIds = new Set(recipients.map((recipient) => recipient.participantId));
+  const selectedIds = new Set<string>();
   const recipientPreviews = await loadCampaignRecipientPreviews(recipients, selectedIds);
   return NextResponse.json({
     ...recipientSelectionSummary(recipientPreviews),
@@ -129,13 +126,11 @@ async function previewCampaign(userId: string, body: Record<string, unknown>, at
   const filters = campaignFilters(body);
   const recipients = await resolveCampaignRecipients(event.id, filters);
   if (!recipients.length) throw new Error("I filtri non individuano destinatari raggiungibili.");
-  if (recipients.length > MAX_RECIPIENTS) throw new Error(`Il segmento contiene ${recipients.length} destinatari: il limite per campagna è ${MAX_RECIPIENTS}. Restringi i filtri.`);
   const selectedValue = parseJsonStringArray(body.selectedParticipantIds);
-  const availableIds = new Set(recipients.map((recipient) => recipient.participantId));
-  const selectedIds = body.selectedParticipantIds !== undefined
-    ? new Set(selectedValue.filter((id) => availableIds.has(id)))
-    : availableIds;
-  if (!selectedIds.size) throw new Error("Seleziona almeno un destinatario.");
+  const selectedIds = resolveSelectedCampaignRecipientIds(
+    recipients.map((recipient) => recipient.participantId),
+    selectedValue
+  );
   const templateId = clean(body.templateId, 80) || null;
   let templateVersion: number | null = null;
   if (templateId) {
