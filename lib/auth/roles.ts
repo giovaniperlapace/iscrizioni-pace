@@ -78,11 +78,18 @@ export function isRoleAllowedForDashboard(
   requiredRole: DashboardRole,
   availableRoles: ReadonlySet<DashboardRole>
 ): boolean {
-  if (requiredRole === "partecipante") {
+  if (availableRoles.has("admin")) {
     return true;
   }
 
-  if (availableRoles.has("admin")) {
+  const hasManagerDashboard =
+    availableRoles.has("manager") || availableRoles.has("manager_viewer");
+
+  if (hasManagerDashboard) {
+    return requiredRole === "manager" || requiredRole === "manager_viewer";
+  }
+
+  if (requiredRole === "partecipante") {
     return true;
   }
 

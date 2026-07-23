@@ -18,7 +18,7 @@ test("pickDashboardRole gives priority to operational roles", () => {
 test("pickDashboardRole honors allowed requested roles", () => {
   assert.equal(
     pickDashboardRole(["manager", "capogruppo"], "capogruppo"),
-    "capogruppo"
+    "manager"
   );
   assert.equal(pickDashboardRole(["capogruppo"], "admin"), "capogruppo");
 });
@@ -32,7 +32,7 @@ test("admin can access every dashboard", () => {
   assert.equal(isRoleAllowedForDashboard("capogruppo", roles), true);
 });
 
-test("manager and manager viewer share the manager dashboard", () => {
+test("manager and manager viewer can access only the manager dashboard", () => {
   assert.equal(
     isRoleAllowedForDashboard(
       "manager",
@@ -47,17 +47,32 @@ test("manager and manager viewer share the manager dashboard", () => {
     ),
     false
   );
+  assert.equal(
+    isRoleAllowedForDashboard(
+      "capogruppo",
+      new Set<DashboardRole>(["manager", "capogruppo", "partecipante"])
+    ),
+    false
+  );
+  assert.equal(
+    isRoleAllowedForDashboard(
+      "partecipante",
+      new Set<DashboardRole>(["manager", "partecipante"])
+    ),
+    false
+  );
 });
 
-test("dashboard tabs dedupe manager and manager viewer", () => {
+test("dashboard tabs expose only the manager area to managers", () => {
   const tabs = getDashboardRoleTabs([
     { role: "manager", eventId: "event-1" },
     { role: "manager_viewer", eventId: "event-1" },
+    { role: "capogruppo", eventId: "event-1" },
   ]);
 
   assert.deepEqual(
     tabs.map((tab) => tab.key),
-    ["manager", "partecipante"]
+    ["manager"]
   );
 });
 

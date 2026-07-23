@@ -239,6 +239,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   scegliere se aggiornare quel modello creando una nuova versione oppure
   salvare il contenuto come nuovo modello con un titolo interno diverso; in
   questo secondo caso il modello di partenza deve restare invariato.
+- Dal 2026-07-23 l'accesso alle dashboard per `manager` e `manager_viewer` e'
+  esclusivo: dopo il login questi ruoli entrano sempre nella dashboard manager
+  e non vedono né possono aprire la dashboard capogruppo o l'area personale,
+  anche quando l'account possiede una membership capogruppo o una scheda
+  partecipante. Un eventuale ruolo `admin` mantiene invece l'accesso completo
+  alle aree delegate.
   Nodemailer e' stato aggiornato alla serie 9 per correggere la vulnerabilità
   segnalata dall'audit. Dal 2026-07-20 le campagne supportano fino a 5 file,
   massimo 5 MB ciascuno e 10 MB complessivi, conservati nel bucket Supabase
