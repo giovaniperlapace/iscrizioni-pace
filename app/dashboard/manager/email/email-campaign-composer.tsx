@@ -555,14 +555,19 @@ export function EmailCampaignComposer({
               )}
             </div>
 
-            <div className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+            <div className="rounded-md border-2 border-[var(--peace-sky-400)] bg-[var(--peace-sky-100)] p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-bold">Destinatari scelti</p>
+                  <p className="font-bold text-[var(--peace-blue-950)]">
+                    Destinatari scelti
+                  </p>
                   <p className="mt-1 text-sm text-[var(--peace-muted)]">
                     {selectedRecipientIds.length} selezionati: {selectedDirectCount} diretti e {selectedDelegatedCount} tramite referente.
                   </p>
                 </div>
+                <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[var(--peace-blue-800)] px-2.5 py-1 text-xs font-bold text-white">
+                  {selectedRecipientIds.length}
+                </span>
               </div>
               {selectedRecipientRows.length ? (
                 <div className="mt-4 grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">

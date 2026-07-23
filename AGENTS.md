@@ -244,6 +244,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   spariscono dall'elenco disponibile e compaiono nella sottosezione dedicata.
   Dopo l'aggiunta o la rimozione di una persona si azzera solo la ricerca
   testuale per nome/email; i filtri gruppo, tag e servizio restano attivi.
+  La sottosezione `Destinatari scelti` deve restare visivamente distinta
+  dall'elenco disponibile tramite sfondo azzurro, bordo accentato e badge con
+  il conteggio della selezione.
   Il server non deve mai interpretare l'assenza della selezione come
   "seleziona tutti"; il limite di 100 si applica ai destinatari scelti, non
   all'intero catalogo raggiungibile.
