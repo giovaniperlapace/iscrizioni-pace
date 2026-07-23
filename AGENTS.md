@@ -239,6 +239,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   scegliere se aggiornare quel modello creando una nuova versione oppure
   salvare il contenuto come nuovo modello con un titolo interno diverso; in
   questo secondo caso il modello di partenza deve restare invariato.
+  Dal 2026-07-23 il riquadro `Campi personalizzati` del passaggio di
+  composizione non segue piu' lo scroll della pagina: su schermi ampi resta
+  centrato verticalmente rispetto al form di oggetto e messaggio.
 - Dal 2026-07-23 l'accesso alle dashboard per `manager` e `manager_viewer` e'
   esclusivo: dopo il login questi ruoli entrano sempre nella dashboard manager
   e non vedono né possono aprire la dashboard capogruppo o l'area personale,

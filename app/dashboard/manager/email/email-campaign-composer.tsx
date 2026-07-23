@@ -407,7 +407,7 @@ export function EmailCampaignComposer({
           </div>
         </section>
 
-        <aside className="grid gap-6 xl:sticky xl:top-24">
+        <aside className="grid gap-6 xl:self-center">
           <section className="surface-card p-5">
             <h3 className="font-bold">Campi personalizzati</h3>
             <p className="mt-1 text-xs text-[var(--peace-muted)]">
