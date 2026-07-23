@@ -229,6 +229,7 @@ export function EmailCampaignComposer({
       return;
     }
     setSelectedRecipientIds((current) => [...current, participantId]);
+    setRecipientSearch("");
     setPreview(null);
     setConfirmation("");
     setNotice("");
@@ -237,6 +238,7 @@ export function EmailCampaignComposer({
 
   function removeRecipient(participantId: string) {
     setSelectedRecipientIds((current) => current.filter((id) => id !== participantId));
+    setRecipientSearch("");
     setPreview(null);
     setConfirmation("");
     setNotice("");

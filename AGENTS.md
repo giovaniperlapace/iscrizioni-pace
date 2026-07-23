@@ -242,6 +242,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   Dal 2026-07-23 la selezione destinatari e' esclusivamente additiva ed
   esplicita: all'apertura nessuna persona e' selezionata, le persone scelte
   spariscono dall'elenco disponibile e compaiono nella sottosezione dedicata.
+  Dopo l'aggiunta o la rimozione di una persona si azzera solo la ricerca
+  testuale per nome/email; i filtri gruppo, tag e servizio restano attivi.
   Il server non deve mai interpretare l'assenza della selezione come
   "seleziona tutti"; il limite di 100 si applica ai destinatari scelti, non
   all'intero catalogo raggiungibile.
