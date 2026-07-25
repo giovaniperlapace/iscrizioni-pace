@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         body.selectedParticipantIds
       );
     }
-    return await deliverCampaign(auth.userId!, auth.userEmail!, String(body.campaignId ?? ""), action, String(body.confirmation ?? ""));
+    return await deliverCampaign(auth.userId!, auth.userEmail!, String(body.campaignId ?? ""), action);
   } catch (cause) {
     return error(cause instanceof Error ? cause.message : "Operazione email non riuscita.", 400);
   }
@@ -163,7 +163,6 @@ async function previewCampaign(userId: string, body: Record<string, unknown>, at
   return NextResponse.json({
     campaignId: campaign.id,
     ...recipientSelectionSummary(recipientPreviews),
-    confirmation: confirmationPhrase(selectedIds.size),
     previewSubject: renderCampaignTemplate(subject, sample.templateData),
     previewHtml: renderSafeCampaignHtml(message, sample.templateData),
     recipients: recipientPreviews,
@@ -250,14 +249,13 @@ async function updateCampaignRecipients(userId: string, campaignId: string, sele
   return NextResponse.json({
     campaignId,
     ...recipientSelectionSummary(recipientPreviews),
-    confirmation: confirmationPhrase(selectedIds.size),
     previewSubject: renderCampaignTemplate(campaign.subject_template, sample.templateData),
     previewHtml: renderSafeCampaignHtml(campaign.body_template, sample.templateData),
     recipients: recipientPreviews,
   });
 }
 
-async function deliverCampaign(userId: string, testEmail: string, campaignId: string, action: "test" | "send", confirmation: string) {
+async function deliverCampaign(userId: string, testEmail: string, campaignId: string, action: "test" | "send") {
   const service = createSupabaseServiceClient();
   const { data: campaign } = await service.from("email_campaigns").select("*").eq("id", campaignId).maybeSingle();
   if (!campaign || !["draft", "ready", "partial"].includes(campaign.status)) throw new Error("Campagna non disponibile o già inviata.");
@@ -284,7 +282,6 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
     return NextResponse.json({ ok: true, messageId: result.messageId });
   }
   if (!campaign.test_sent_at) throw new Error("Prima dell'invio definitivo è obbligatorio inviare il test.");
-  if (confirmation !== confirmationPhrase(campaign.recipient_count)) throw new Error(`Digita esattamente: ${confirmationPhrase(campaign.recipient_count)}`);
   const { data: claimed } = await service.from("email_campaigns").update({ status: "sending" }).eq("id", campaignId).eq("status", campaign.status).select("id");
   if (!claimed?.length) throw new Error("La campagna è già stata presa in carico da un altro invio.");
   let sent = 0; let failed = 0;
@@ -494,7 +491,6 @@ function escapeHtmlAttribute(value: string) {
 
 async function audit(service: ReturnType<typeof createSupabaseServiceClient>, eventId: string, userId: string, campaignId: string, action: string, metadata: Record<string, unknown>) { await service.from("audit_logs").insert({ event_id: eventId, actor_user_id: userId, action, entity_table: "email_campaigns", entity_id: campaignId, metadata }); }
 async function runWithConcurrency<T>(items: T[], concurrency: number, worker: (item: T) => Promise<void>) { let index = 0; await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => { while (index < items.length) { const item = items[index++]; await worker(item); } })); }
-function confirmationPhrase(count: number) { return `INVIA ${count} EMAIL`; }
 function clean(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 function hashMessageId(value: string) { return createHash("sha256").update(value).digest("hex"); }
 function error(message: string, status: number) { return NextResponse.json({ error: message }, { status }); }

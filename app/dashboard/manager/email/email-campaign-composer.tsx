@@ -43,7 +43,6 @@ type Preview = {
   recipientCount: number;
   directCount: number;
   delegatedCount: number;
-  confirmation: string;
   previewSubject: string;
   previewHtml: string;
   recipients: RecipientRow[];
@@ -90,7 +89,8 @@ export function EmailCampaignComposer({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
-  const [confirmation, setConfirmation] = useState("");
+  const [testSent, setTestSent] = useState(false);
+  const [showSendConfirmation, setShowSendConfirmation] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -100,7 +100,11 @@ export function EmailCampaignComposer({
     [savedTemplates, templateId]
   );
 
-  const resetPreview = useCallback(() => setPreview(null), []);
+  const resetPreview = useCallback(() => {
+    setPreview(null);
+    setTestSent(false);
+    setShowSendConfirmation(false);
+  }, []);
   const clearPendingToken = useCallback(() => setTokenToInsert(null), []);
   const selectedRecipientIdSet = useMemo(
     () => new Set(selectedRecipientIds),
@@ -212,7 +216,8 @@ export function EmailCampaignComposer({
           .filter((recipient: RecipientRow) => recipient.selected)
           .map((recipient: RecipientRow) => recipient.participantId)
       );
-      setConfirmation("");
+      setTestSent(false);
+      setShowSendConfirmation(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Operazione non riuscita.");
     } finally {
@@ -231,7 +236,8 @@ export function EmailCampaignComposer({
     setSelectedRecipientIds((current) => [...current, participantId]);
     setRecipientSearch("");
     setPreview(null);
-    setConfirmation("");
+    setTestSent(false);
+    setShowSendConfirmation(false);
     setNotice("");
     setError("");
   }
@@ -240,7 +246,8 @@ export function EmailCampaignComposer({
     setSelectedRecipientIds((current) => current.filter((id) => id !== participantId));
     setRecipientSearch("");
     setPreview(null);
-    setConfirmation("");
+    setTestSent(false);
+    setShowSendConfirmation(false);
     setNotice("");
     setError("");
   }
@@ -249,6 +256,7 @@ export function EmailCampaignComposer({
     if (!preview) return;
     const data = await callCampaign({ action: "test", campaignId: preview.campaignId });
     if (data) {
+      setTestSent(true);
       setNotice("Email test inviata al tuo indirizzo. Controllala prima di procedere.");
     }
   }
@@ -258,9 +266,9 @@ export function EmailCampaignComposer({
     const data = await callCampaign({
       action: "send",
       campaignId: preview.campaignId,
-      confirmation,
     });
     if (data) {
+      setShowSendConfirmation(false);
       setNotice(`Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`);
       resetPreview();
     }
@@ -923,16 +931,72 @@ export function EmailCampaignComposer({
                 <Send aria-hidden="true" className="h-4 w-4" />
                 1. Invia l’email di prova al mio indirizzo
               </button>
-              <label className="grid max-w-md gap-1 text-sm font-semibold">
-                2. Dopo aver controllato il test, digita “{preview.confirmation}”
-                <input className="field font-normal" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="off" />
-              </label>
-              <button type="button" className="btn-primary justify-self-start" disabled={busy || confirmation !== preview.confirmation} onClick={sendCampaign}>
-                <Mail aria-hidden="true" className="h-4 w-4" />
-                3. Invia la campagna
-              </button>
+              <div className="justify-self-start">
+                <span
+                  className="group relative inline-flex"
+                  tabIndex={!testSent ? 0 : undefined}
+                  aria-describedby={!testSent ? "campaign-send-disabled-help" : undefined}
+                >
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={busy || !testSent}
+                    onClick={() => setShowSendConfirmation(true)}
+                  >
+                    <Mail aria-hidden="true" className="h-4 w-4" />
+                    2. Invia a {preview.recipientCount} destinatari
+                  </button>
+                  {!testSent ? (
+                    <span
+                      id="campaign-send-disabled-help"
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-max max-w-64 -translate-x-1/2 rounded bg-[#072c49] px-3 py-2 text-center text-xs font-semibold text-white shadow-lg group-hover:block group-focus:block"
+                    >
+                      Prima di inviare la campagna devi effettuare l’email di prova.
+                    </span>
+                  ) : null}
+                </span>
+              </div>
             </div>
           </section>
+          {showSendConfirmation ? (
+            <div className="fixed inset-0 z-[60] grid place-items-center bg-[#072c49]/65 p-4">
+              <section
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="campaign-send-confirmation-title"
+                aria-describedby="campaign-send-confirmation-description"
+                className="w-full max-w-lg rounded-[var(--radius-lg)] bg-white p-5 shadow-2xl sm:p-6"
+              >
+                <h3 id="campaign-send-confirmation-title" className="text-xl font-bold">
+                  Confermi l’invio della campagna?
+                </h3>
+                <p id="campaign-send-confirmation-description" className="mt-3 text-sm text-[var(--peace-muted)]">
+                  Stai per inviare “{preview.previewSubject}” a {preview.recipientCount} destinatari.
+                  L’invio non può essere annullato dopo la conferma.
+                </p>
+                {preview.attachments.length ? (
+                  <p className="mt-2 text-sm text-[var(--peace-muted)]">
+                    La campagna include {preview.attachments.length} file.
+                  </p>
+                ) : null}
+                <div className="mt-6 flex flex-wrap justify-end gap-3">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={busy}
+                    onClick={() => setShowSendConfirmation(false)}
+                  >
+                    Annulla
+                  </button>
+                  <button type="button" className="btn-primary" disabled={busy} onClick={sendCampaign}>
+                    <Mail aria-hidden="true" className="h-4 w-4" />
+                    {busy ? "Invio in corso…" : `Conferma invio a ${preview.recipientCount}`}
+                  </button>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

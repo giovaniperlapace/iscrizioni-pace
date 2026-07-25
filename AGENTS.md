@@ -205,9 +205,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   I segmenti usano evento corrente, gruppo, tag operativo e stato iscrizione;
   per chi non ha email viene usato, quando disponibile, il contatto del
   capogruppo primario come consegna delegata. Il flusso obbligatorio e'
-  anteprima congelata, invio test all'operatore e frase di conferma contenente
-  il numero esatto di destinatari. Il limite iniziale e' 100 destinatari e
-  l'invio usa concorrenza 3. Gli indirizzi email e i corpi personalizzati non
+  anteprima congelata, invio test all'operatore e pulsante di invio finale con
+  dialogo di conferma che riepiloga oggetto e numero di destinatari. Il pulsante
+  finale resta disabilitato fino all'invio riuscito del test e, al passaggio del
+  mouse o al focus, spiega che prima e' necessario effettuare il test. Il
+  controllo del test resta obbligatorio anche lato server. Il limite iniziale
+  e' 100 destinatari e l'invio usa concorrenza 3. Gli indirizzi email e i corpi personalizzati non
   vengono copiati nei log campagna; il message id del provider viene salvato
   solo come hash. L'ambiente locale puo' usare `EMAIL_DELIVERY_MODE=log` per
   simulare gli invii. Dal 2026-07-12 la console campagne riprende il pattern
@@ -220,8 +223,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   lista nominale dei destinatari, l'indirizzo di consegna e il tipo di recapito,
   quindi includere o escludere singole persone. Le esclusioni usano lo stato
   `skipped` di `email_campaign_recipients`; ogni modifica aggiorna
-  `recipient_count`, la frase di conferma e invalida l'eventuale test gia'
-  inviato, che deve essere ripetuto prima dell'invio definitivo.
+  `recipient_count` mostrato nel dialogo finale e invalida l'eventuale test
+  gia' inviato, che deve essere ripetuto prima dell'invio definitivo.
   Dal 2026-07-22 l'elenco dei partecipanti raggiungibili e' gia' disponibile al
   primo rendering della console campagne. I filtri cercabili per gruppo, tag
   operativo e servizio, insieme alla ricerca per nome/email, modificano solo la
