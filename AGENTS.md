@@ -206,8 +206,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   per chi non ha email viene usato, quando disponibile, il contatto del
   capogruppo primario come consegna delegata. Il flusso obbligatorio e'
   anteprima congelata, invio test all'operatore e pulsante di invio finale con
-  dialogo di conferma che riepiloga oggetto e numero di destinatari. Il pulsante
-  finale resta disabilitato fino all'invio riuscito del test e, al passaggio del
+  dialogo di conferma che riepiloga oggetto e numero di destinatari. Nel dialogo
+  finale il pulsante di conferma deve mostrare soltanto l'etichetta `Conferma`,
+  senza ripetere il numero dei destinatari. Il pulsante di apertura del dialogo
+  resta disabilitato fino all'invio riuscito del test e, al passaggio del
   mouse o al focus, spiega che prima e' necessario effettuare il test. Il
   controllo del test resta obbligatorio anche lato server. Nell'anteprima deve
   essere sempre mostrato esplicitamente sia l'indirizzo dell'account manager a

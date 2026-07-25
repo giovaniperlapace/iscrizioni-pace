@@ -1012,9 +1012,14 @@ export function EmailCampaignComposer({
                   >
                     Annulla
                   </button>
-                  <button type="button" className="btn-primary" disabled={busy} onClick={sendCampaign}>
-                    <Mail aria-hidden="true" className="h-4 w-4" />
-                    {busy ? "Invio in corso…" : `Conferma invio a ${preview.recipientCount}`}
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={busy}
+                    aria-busy={busy}
+                    onClick={sendCampaign}
+                  >
+                    Conferma
                   </button>
                 </div>
               </section>
