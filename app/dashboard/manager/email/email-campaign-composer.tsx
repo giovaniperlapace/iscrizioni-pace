@@ -903,7 +903,17 @@ export function EmailCampaignComposer({
                 <X aria-hidden="true" className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-5 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+            <div className="mt-5 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 text-sm">
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">
+                Dati usati nella prova
+              </p>
+              <p className="mt-1 text-[var(--peace-muted)]">
+                I campi personalizzati saranno compilati con i dati di{" "}
+                <strong className="text-[var(--peace-ink)]">{preview.sampleRecipientName}</strong>.
+                Questa persona non riceverà l’email di prova.
+              </p>
+            </div>
+            <div className="mt-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">Oggetto</p>
               <p className="mt-1 font-bold">{preview.previewSubject}</p>
               <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">Messaggio</p>
@@ -935,14 +945,6 @@ export function EmailCampaignComposer({
                 </p>
                 <p className="mt-1 text-[var(--peace-muted)]">
                   È l’indirizzo associato all’account manager con cui hai effettuato l’accesso.
-                </p>
-                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">
-                  Dati usati nella prova
-                </p>
-                <p className="mt-1 text-[var(--peace-muted)]">
-                  I campi personalizzati saranno compilati con i dati di{" "}
-                  <strong className="text-[var(--peace-ink)]">{preview.sampleRecipientName}</strong>.
-                  Questa persona non riceverà l’email di prova.
                 </p>
               </div>
               <button type="button" className="btn-secondary justify-self-start" disabled={busy} onClick={sendTest}>
