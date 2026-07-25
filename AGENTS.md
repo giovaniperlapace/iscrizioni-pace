@@ -232,7 +232,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   simulare gli invii. Dal 2026-07-12 la console campagne riprende il pattern
   maturo dell'app modello: editor ricco TipTap con formattazione e link,
   template riutilizzabili, campi personalizzati inseribili al cursore,
-  destinatari separati, attività recente e anteprima in modale. L'HTML viene
+  destinatari separati, cronologia delle campagne inviate e anteprima in modale.
+  La cronologia deve mostrare solo campagne con invio definitivo concluso,
+  riconosciute da `email_campaigns.sent_at` valorizzato: non mostrare bozze,
+  anteprime congelate o campagne per cui e' stata inviata soltanto la prova.
+  Gli invii definitivi parziali o non riusciti restano visibili per tracciabilita'.
+  L'HTML viene
   sanificato lato server con `sanitize-html`, i valori partecipante vengono
   escapati prima dell'inserimento e viene sempre generato il fallback testo.
   Prima dell'anteprima congelata il manager puo' consultare nella pagina la

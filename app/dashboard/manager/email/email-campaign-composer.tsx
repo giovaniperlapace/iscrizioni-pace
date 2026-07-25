@@ -707,10 +707,10 @@ export function EmailCampaignComposer({
       <section className="surface-card p-5 sm:p-6">
         <div className="flex items-center gap-2">
           <History aria-hidden="true" className="h-5 w-5" />
-          <h3 className="text-lg font-bold">Attività recente</h3>
+          <h3 className="text-lg font-bold">Campagne inviate</h3>
         </div>
         {campaigns.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessuna campagna preparata.</p>
+          <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessuna campagna inviata.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[36rem] text-left text-sm">

@@ -64,7 +64,8 @@ export async function ManagerEmailSection({
       .from("email_campaigns")
       .select("id,name,status,recipient_count,sent_at,created_at")
       .eq("event_id", eventId)
-      .order("created_at", { ascending: false })
+      .not("sent_at", "is", null)
+      .order("sent_at", { ascending: false })
       .limit(8),
   ]);
   const recipientCandidates = await resolveCampaignRecipients(eventId, {
