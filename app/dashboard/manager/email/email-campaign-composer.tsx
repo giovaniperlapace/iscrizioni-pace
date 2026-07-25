@@ -43,6 +43,8 @@ type Preview = {
   recipientCount: number;
   directCount: number;
   delegatedCount: number;
+  testRecipientEmail: string;
+  sampleRecipientName: string;
   previewSubject: string;
   previewHtml: string;
   recipients: RecipientRow[];
@@ -924,12 +926,30 @@ export function EmailCampaignComposer({
               )}
             </div>
             <div className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] p-4">
-              <p className="text-sm text-[var(--peace-muted)]">
-                La prova usa i dati del primo destinatario per controllare campi personalizzati, immagini e allegati.
-              </p>
+              <div className="rounded-md bg-[#f7fbfe] p-4 text-sm">
+                <p className="text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">
+                  Destinatario dell’email di prova
+                </p>
+                <p className="mt-1 break-all font-bold text-[var(--peace-blue)]">
+                  {preview.testRecipientEmail}
+                </p>
+                <p className="mt-1 text-[var(--peace-muted)]">
+                  È l’indirizzo associato all’account manager con cui hai effettuato l’accesso.
+                </p>
+                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">
+                  Dati usati nella prova
+                </p>
+                <p className="mt-1 text-[var(--peace-muted)]">
+                  I campi personalizzati saranno compilati con i dati di{" "}
+                  <strong className="text-[var(--peace-ink)]">{preview.sampleRecipientName}</strong>.
+                  Questa persona non riceverà l’email di prova.
+                </p>
+              </div>
               <button type="button" className="btn-secondary justify-self-start" disabled={busy} onClick={sendTest}>
                 <Send aria-hidden="true" className="h-4 w-4" />
-                1. Invia l’email di prova al mio indirizzo
+                <span className="break-all text-left">
+                  1. Invia la prova a {preview.testRecipientEmail}
+                </span>
               </button>
               <div className="justify-self-start">
                 <span

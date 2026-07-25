@@ -209,8 +209,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   dialogo di conferma che riepiloga oggetto e numero di destinatari. Il pulsante
   finale resta disabilitato fino all'invio riuscito del test e, al passaggio del
   mouse o al focus, spiega che prima e' necessario effettuare il test. Il
-  controllo del test resta obbligatorio anche lato server. Il limite iniziale
-  e' 100 destinatari e l'invio usa concorrenza 3. Gli indirizzi email e i corpi personalizzati non
+  controllo del test resta obbligatorio anche lato server. Nell'anteprima deve
+  essere sempre mostrato esplicitamente sia l'indirizzo dell'account manager a
+  cui verra' inviata la prova, sia il nome del primo destinatario i cui dati
+  vengono usati soltanto per compilare i campi personalizzati; chiarire che
+  quest'ultimo non ricevera' la prova. Il limite iniziale e' 100 destinatari e
+  l'invio usa concorrenza 3. Gli indirizzi email e i corpi personalizzati non
   vengono copiati nei log campagna; il message id del provider viene salvato
   solo come hash. L'ambiente locale puo' usare `EMAIL_DELIVERY_MODE=log` per
   simulare gli invii. Dal 2026-07-12 la console campagne riprende il pattern

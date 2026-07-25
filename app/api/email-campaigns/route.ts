@@ -74,10 +74,13 @@ export async function POST(request: Request) {
   ) as CampaignAction;
   try {
     if (action === "recipients") return await previewRecipients(body);
-    if (action === "preview") return await previewCampaign(auth.userId!, body, attachments);
+    if (action === "preview") {
+      return await previewCampaign(auth.userId!, auth.userEmail!, body, attachments);
+    }
     if (action === "update_recipients") {
       return await updateCampaignRecipients(
         auth.userId!,
+        auth.userEmail!,
         String(body.campaignId ?? ""),
         body.selectedParticipantIds
       );
@@ -112,7 +115,12 @@ async function previewRecipients(body: Record<string, unknown>) {
   });
 }
 
-async function previewCampaign(userId: string, body: Record<string, unknown>, attachments: IncomingAttachment[]) {
+async function previewCampaign(
+  userId: string,
+  testEmail: string,
+  body: Record<string, unknown>,
+  attachments: IncomingAttachment[]
+) {
   const service = createSupabaseServiceClient();
   const event = await getCurrentOperationalEvent(service, "id,title");
   if (!event) throw new Error("Nessun evento corrente configurato.");
@@ -163,6 +171,8 @@ async function previewCampaign(userId: string, body: Record<string, unknown>, at
   return NextResponse.json({
     campaignId: campaign.id,
     ...recipientSelectionSummary(recipientPreviews),
+    testRecipientEmail: testEmail,
+    sampleRecipientName: `${sample.templateData.firstName} ${sample.templateData.lastName}`.trim(),
     previewSubject: renderCampaignTemplate(subject, sample.templateData),
     previewHtml: renderSafeCampaignHtml(message, sample.templateData),
     recipients: recipientPreviews,
@@ -175,7 +185,12 @@ async function previewCampaign(userId: string, body: Record<string, unknown>, at
   });
 }
 
-async function updateCampaignRecipients(userId: string, campaignId: string, selectedValue: unknown) {
+async function updateCampaignRecipients(
+  userId: string,
+  testEmail: string,
+  campaignId: string,
+  selectedValue: unknown
+) {
   const selectedParticipantIds = Array.isArray(selectedValue)
     ? [...new Set(selectedValue.filter((value): value is string => typeof value === "string" && value.length > 0))]
     : [];
@@ -249,6 +264,8 @@ async function updateCampaignRecipients(userId: string, campaignId: string, sele
   return NextResponse.json({
     campaignId,
     ...recipientSelectionSummary(recipientPreviews),
+    testRecipientEmail: testEmail,
+    sampleRecipientName: `${sample.templateData.firstName} ${sample.templateData.lastName}`.trim(),
     previewSubject: renderCampaignTemplate(campaign.subject_template, sample.templateData),
     previewHtml: renderSafeCampaignHtml(campaign.body_template, sample.templateData),
     recipients: recipientPreviews,
