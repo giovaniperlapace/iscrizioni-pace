@@ -213,10 +213,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   essere sempre mostrato esplicitamente sia l'indirizzo dell'account manager a
   cui verra' inviata la prova, sia il nome del primo destinatario i cui dati
   vengono usati soltanto per compilare i campi personalizzati; chiarire che
-  quest'ultimo non ricevera' la prova. L'indicazione sui dati personalizzati
-  deve comparire prima dell'anteprima di oggetto e messaggio, non nella sezione
-  dei pulsanti di invio. Il limite iniziale e' 100 destinatari e l'invio usa
-  concorrenza 3. Gli indirizzi email e i corpi personalizzati non
+  quest'ultimo non ricevera' la prova. Prima di oggetto e messaggio deve
+  comparire una breve introduzione che chiarisce che il contenuto sottostante e'
+  l'email di prova gia' compilata con i dati del partecipante campione; non
+  limitarsi all'etichetta generica "Dati usati nella prova". Questa indicazione
+  non deve stare nella sezione dei pulsanti di invio. Il limite iniziale e' 100
+  destinatari e l'invio usa concorrenza 3. Gli indirizzi email e i corpi personalizzati non
   vengono copiati nei log campagna; il message id del provider viene salvato
   solo come hash. L'ambiente locale puo' usare `EMAIL_DELIVERY_MODE=log` per
   simulare gli invii. Dal 2026-07-12 la console campagne riprende il pattern

@@ -905,12 +905,13 @@ export function EmailCampaignComposer({
             </div>
             <div className="mt-5 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 text-sm">
               <p className="text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">
-                Dati usati nella prova
+                Anteprima dell’email di prova
               </p>
               <p className="mt-1 text-[var(--peace-muted)]">
-                I campi personalizzati saranno compilati con i dati di{" "}
-                <strong className="text-[var(--peace-ink)]">{preview.sampleRecipientName}</strong>.
-                Questa persona non riceverà l’email di prova.
+                Quella mostrata qui sotto è l’email che riceverai come prova. I campi
+                personalizzati sono già compilati con i dati di{" "}
+                <strong className="text-[var(--peace-ink)]">{preview.sampleRecipientName}</strong>;{" "}
+                {preview.sampleRecipientName} non riceverà questa email.
               </p>
             </div>
             <div className="mt-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
