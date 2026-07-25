@@ -259,7 +259,6 @@ export function EmailCampaignComposer({
     const data = await callCampaign({ action: "test", campaignId: preview.campaignId });
     if (data) {
       setTestSent(true);
-      setNotice("Email test inviata al tuo indirizzo. Controllala prima di procedere.");
     }
   }
 
@@ -948,37 +947,69 @@ export function EmailCampaignComposer({
                   È l’indirizzo associato all’account manager con cui hai effettuato l’accesso.
                 </p>
               </div>
-              <button type="button" className="btn-secondary justify-self-start" disabled={busy} onClick={sendTest}>
-                <Send aria-hidden="true" className="h-4 w-4" />
-                <span className="break-all text-left">
-                  1. Invia la prova a {preview.testRecipientEmail}
-                </span>
-              </button>
+              {error ? (
+                <p role="alert" className="rounded-md border border-[#f0b8b1] bg-[#fff3f1] p-3 text-sm text-[var(--peace-danger)]">
+                  {error}
+                </p>
+              ) : null}
+              {!testSent ? (
+                <button type="button" className="btn-secondary justify-self-start" disabled={busy} aria-busy={busy} onClick={sendTest}>
+                  <Send aria-hidden="true" className="h-4 w-4" />
+                  <span className="break-all text-left">
+                    {busy
+                      ? "Invio dell’email di prova in corso…"
+                      : `1. Invia la prova a ${preview.testRecipientEmail}`}
+                  </span>
+                </button>
+              ) : null}
+              {testSent ? (
+                <div role="status" className="rounded-md border border-[#bde4ce] bg-[#edf9f2] p-4 text-sm text-[#16613d]">
+                  <p className="font-bold">Email di prova inviata</p>
+                  <p className="mt-1">
+                    La prova è stata inviata a{" "}
+                    <strong className="break-all">{preview.testRecipientEmail}</strong>.
+                    Apri quella casella e controlla che oggetto, testo, campi
+                    personalizzati, immagini e allegati siano corretti.
+                  </p>
+                  <p className="mt-2">
+                    Se è tutto a posto, procedi con l’invio della campagna. Se devi
+                    correggere qualcosa, torna alla composizione: dopo la nuova
+                    anteprima sarà necessario inviare un altro test.
+                  </p>
+                </div>
+              ) : null}
               <div className="justify-self-start">
-                <span
-                  className="group relative inline-flex"
-                  tabIndex={!testSent ? 0 : undefined}
-                  aria-describedby={!testSent ? "campaign-send-disabled-help" : undefined}
-                >
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={busy || !testSent}
-                    onClick={() => setShowSendConfirmation(true)}
-                  >
-                    <Mail aria-hidden="true" className="h-4 w-4" />
-                    2. Invia a {preview.recipientCount} destinatari
-                  </button>
-                  {!testSent ? (
-                    <span
-                      id="campaign-send-disabled-help"
-                      role="tooltip"
-                      className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-max max-w-64 -translate-x-1/2 rounded bg-[#072c49] px-3 py-2 text-center text-xs font-semibold text-white shadow-lg group-hover:block group-focus:block"
-                    >
-                      Prima di inviare la campagna devi effettuare l’email di prova.
-                    </span>
+                <div className="flex flex-wrap gap-3">
+                  {testSent ? (
+                    <button type="button" className="btn-secondary" disabled={busy} onClick={resetPreview}>
+                      Torna alla composizione
+                    </button>
                   ) : null}
-                </span>
+                  <span
+                    className="group relative inline-flex"
+                    tabIndex={!testSent ? 0 : undefined}
+                    aria-describedby={!testSent ? "campaign-send-disabled-help" : undefined}
+                  >
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={busy || !testSent}
+                      onClick={() => setShowSendConfirmation(true)}
+                    >
+                      <Mail aria-hidden="true" className="h-4 w-4" />
+                      2. Invia a {preview.recipientCount} destinatari
+                    </button>
+                    {!testSent ? (
+                      <span
+                        id="campaign-send-disabled-help"
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-max max-w-64 -translate-x-1/2 rounded bg-[#072c49] px-3 py-2 text-center text-xs font-semibold text-white shadow-lg group-hover:block group-focus:block"
+                      >
+                        Prima di inviare la campagna devi effettuare l’email di prova.
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
               </div>
             </div>
           </section>

@@ -211,7 +211,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   senza ripetere il numero dei destinatari. Il pulsante di apertura del dialogo
   resta disabilitato fino all'invio riuscito del test e, al passaggio del
   mouse o al focus, spiega che prima e' necessario effettuare il test. Il
-  controllo del test resta obbligatorio anche lato server. Nell'anteprima deve
+  controllo del test resta obbligatorio anche lato server. Durante l'invio del
+  test la modale deve mostrare uno stato di avanzamento; dopo il successo deve
+  mostrare al suo interno una conferma evidente con indirizzo di consegna,
+  istruzioni per controllare contenuto e allegati e due percorsi espliciti:
+  procedere all'invio definitivo oppure tornare alla composizione per
+  correggere. Eventuali errori del test devono essere visibili nella modale,
+  non soltanto nella pagina sottostante. Nell'anteprima deve
   essere sempre mostrato esplicitamente sia l'indirizzo dell'account manager a
   cui verra' inviata la prova, sia il nome del primo destinatario i cui dati
   vengono usati soltanto per compilare i campi personalizzati; chiarire che
