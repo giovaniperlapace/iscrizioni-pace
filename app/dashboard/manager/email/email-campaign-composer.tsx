@@ -477,6 +477,17 @@ export function EmailCampaignComposer({
           </span>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <label className="grid gap-1 text-sm font-semibold">
+            Cerca persona
+            <input
+              type="search"
+              className="field font-normal"
+              value={recipientSearch}
+              onChange={(event) => setRecipientSearch(event.target.value)}
+              placeholder="Nome o email"
+              autoComplete="off"
+            />
+          </label>
           <RecipientFilterInput
             id="campaign-recipient-group"
             label="Gruppo"
@@ -501,17 +512,6 @@ export function EmailCampaignComposer({
             value={serviceFilter}
             onChange={setServiceFilter}
           />
-          <label className="grid gap-1 text-sm font-semibold">
-            Cerca persona
-            <input
-              type="search"
-              className="field font-normal"
-              value={recipientSearch}
-              onChange={(event) => setRecipientSearch(event.target.value)}
-              placeholder="Nome o email"
-              autoComplete="off"
-            />
-          </label>
         </div>
         {recipientRows.length ? (
           <div className="grid gap-5">
