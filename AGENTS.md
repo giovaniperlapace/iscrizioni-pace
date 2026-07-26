@@ -282,7 +282,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   e non vedono né possono aprire la dashboard capogruppo o l'area personale,
   anche quando l'account possiede una membership capogruppo o una scheda
   partecipante. Un eventuale ruolo `admin` mantiene invece l'accesso completo
-  alle aree delegate.
+  alle aree delegate. Dal 2026-07-26 questa distinzione vale anche dentro la
+  dashboard manager: il navigatore tra dashboard viene mostrato quando
+  l'utente e' admin, cosi' puo' tornare ad admin, accoglienza, capogruppo o area
+  personale durante test e assistenza; per `manager` e `manager_viewer` resta
+  nascosto e la dashboard manager continua a essere l'unica area accessibile.
+- Dal 2026-07-26 la sessione autenticata viene ripristinata anche entrando da
+  home o login: l'utente viene riportato all'ultima dashboard e, per
+  admin/manager, all'ultima sezione stabile del menu consultata. Parametri
+  transitori di modali, filtri e schede non vengono memorizzati. L'attivita'
+  viene aggiornata durante l'uso delle dashboard e, dopo 24 ore complete senza
+  interazioni, la sessione viene chiusa automaticamente; il logout manuale
+  cancella anche lo stato di ripristino.
   Nodemailer e' stato aggiornato alla serie 9 per correggere la vulnerabilità
   segnalata dall'audit. Dal 2026-07-20 le campagne supportano fino a 5 file,
   massimo 5 MB ciascuno e 10 MB complessivi, conservati nel bucket Supabase

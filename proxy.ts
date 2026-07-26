@@ -8,6 +8,13 @@ import {
   ROLE_ROUTES,
   type DashboardRole,
 } from "@/lib/auth/roles";
+import {
+  hasSessionBeenInactive,
+  LAST_ACTIVITY_COOKIE,
+  LAST_DASHBOARD_COOKIE,
+  sanitizeLastDashboardPath,
+  SESSION_STATE_MAX_AGE_SECONDS,
+} from "@/lib/auth/session-persistence";
 
 type RoleRow = {
   role: string | null;
@@ -25,6 +32,16 @@ function clearSupabaseCookies(request: NextRequest, response: NextResponse) {
   }
 }
 
+function clearAppSessionCookies(response: NextResponse) {
+  for (const name of [
+    LAST_ACTIVITY_COOKIE,
+    LAST_DASHBOARD_COOKIE,
+    "iscrizioni_requested_role",
+  ]) {
+    response.cookies.set(name, "", { path: "/", maxAge: 0 });
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -33,7 +50,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request,
   });
 
@@ -57,11 +74,33 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
+    if (
+      request.nextUrl.pathname === "/" ||
+      request.nextUrl.pathname === "/login"
+    ) {
+      return response;
+    }
+
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirectedFrom", request.nextUrl.pathname);
-    response = NextResponse.redirect(loginUrl);
-    clearSupabaseCookies(request, response);
-    return response;
+    const loginResponse = redirectPreservingCookies(loginUrl, response);
+    clearSupabaseCookies(request, loginResponse);
+    clearAppSessionCookies(loginResponse);
+    return loginResponse;
+  }
+
+  if (
+    hasSessionBeenInactive(
+      request.cookies.get(LAST_ACTIVITY_COOKIE)?.value
+    )
+  ) {
+    await supabase.auth.signOut();
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", "inactive");
+    const loginResponse = redirectPreservingCookies(loginUrl, response);
+    clearSupabaseCookies(request, loginResponse);
+    clearAppSessionCookies(loginResponse);
+    return loginResponse;
   }
 
   const [{ data: eventRoles }, { data: groupMemberships }] = await Promise.all([
@@ -87,28 +126,89 @@ export async function proxy(request: NextRequest) {
   const requestedRole = isDashboardRole(requestedRoleCookie)
     ? requestedRoleCookie
     : null;
+  const defaultRole =
+    requestedRole && isRoleAllowedForDashboard(requestedRole, availableRoles)
+      ? requestedRole
+      : pickFirstAllowedDashboard(availableRoles);
+
+  if (
+    request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname === "/login"
+  ) {
+    const rememberedPath = sanitizeLastDashboardPath(
+      request.cookies.get(LAST_DASHBOARD_COOKIE)?.value
+    );
+    const rememberedRole = rememberedPath
+      ? dashboardRoleFromPath(new URL(rememberedPath, request.url).pathname)
+      : null;
+    const destination =
+      rememberedPath &&
+      rememberedRole &&
+      isRoleAllowedForDashboard(rememberedRole, availableRoles)
+        ? rememberedPath
+        : ROLE_ROUTES[defaultRole];
+    const redirectResponse = redirectPreservingCookies(
+      new URL(destination, request.url),
+      response
+    );
+    rememberActivity(redirectResponse, destination);
+    return redirectResponse;
+  }
 
   if (request.nextUrl.pathname === "/dashboard") {
-    const role =
-      requestedRole && isRoleAllowedForDashboard(requestedRole, availableRoles)
-        ? requestedRole
-        : pickFirstAllowedDashboard(availableRoles);
-
-    return NextResponse.redirect(new URL(ROLE_ROUTES[role], request.url));
+    const destination = ROLE_ROUTES[defaultRole];
+    const redirectResponse = redirectPreservingCookies(
+      new URL(destination, request.url),
+      response
+    );
+    rememberActivity(redirectResponse, destination);
+    return redirectResponse;
   }
 
   const requiredRole = dashboardRoleFromPath(request.nextUrl.pathname);
 
   if (requiredRole && !isRoleAllowedForDashboard(requiredRole, availableRoles)) {
-    const role =
-      requestedRole && isRoleAllowedForDashboard(requestedRole, availableRoles)
-        ? requestedRole
-        : pickFirstAllowedDashboard(availableRoles);
-
-    return NextResponse.redirect(new URL(ROLE_ROUTES[role], request.url));
+    const destination = ROLE_ROUTES[defaultRole];
+    const redirectResponse = redirectPreservingCookies(
+      new URL(destination, request.url),
+      response
+    );
+    rememberActivity(redirectResponse, destination);
+    return redirectResponse;
   }
 
+  rememberActivity(
+    response,
+    `${request.nextUrl.pathname}${request.nextUrl.search}`
+  );
   return response;
+}
+
+function redirectPreservingCookies(url: URL, source: NextResponse) {
+  const redirectResponse = NextResponse.redirect(url);
+
+  for (const cookie of source.cookies.getAll()) {
+    redirectResponse.cookies.set(cookie);
+  }
+
+  return redirectResponse;
+}
+
+function rememberActivity(response: NextResponse, rawPath: string) {
+  const path = sanitizeLastDashboardPath(rawPath);
+  const options = {
+    httpOnly: true,
+    maxAge: SESSION_STATE_MAX_AGE_SECONDS,
+    path: "/",
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  response.cookies.set(LAST_ACTIVITY_COOKIE, String(Date.now()), options);
+
+  if (path) {
+    response.cookies.set(LAST_DASHBOARD_COOKIE, path, options);
+  }
 }
 
 function pickFirstAllowedDashboard(
@@ -130,5 +230,5 @@ function pickFirstAllowedDashboard(
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/", "/login", "/dashboard/:path*"],
 };

@@ -112,6 +112,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         otp: "Il link di accesso non e' valido o e' scaduto.",
         profile: "Sessione creata, ma non e' stato possibile aggiornare il profilo.",
         session: "Non e' stato possibile creare una sessione valida.",
+        inactive: "La sessione e' terminata dopo 24 ore di inattivita'.",
       },
     },
     confirmation: {
@@ -183,6 +184,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         otp: "The access link is invalid or has expired.",
         profile: "The session was created, but the profile could not be updated.",
         session: "A valid session could not be created.",
+        inactive: "The session ended after 24 hours of inactivity.",
       },
     },
     confirmation: {
@@ -254,6 +256,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         otp: "Le lien d'accès n'est pas valide ou a expiré.",
         profile: "La session a été créée, mais le profil n'a pas pu être mis à jour.",
         session: "Impossible de créer une session valide.",
+        inactive: "La session a pris fin après 24 heures d'inactivité.",
       },
     },
     confirmation: {
@@ -325,6 +328,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         otp: "Der Zugangslink ist ungültig oder abgelaufen.",
         profile: "Die Sitzung wurde erstellt, aber das Profil konnte nicht aktualisiert werden.",
         session: "Es konnte keine gültige Sitzung erstellt werden.",
+        inactive: "Die Sitzung wurde nach 24 Stunden Inaktivität beendet.",
       },
     },
     confirmation: {
@@ -396,6 +400,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         otp: "El enlace de acceso no es válido o ha caducado.",
         profile: "La sesión se creó, pero no se pudo actualizar el perfil.",
         session: "No se pudo crear una sesión válida.",
+        inactive: "La sesión terminó después de 24 horas de inactividad.",
       },
     },
     confirmation: {
@@ -467,6 +472,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         otp: "De toegangslink is ongeldig of verlopen.",
         profile: "De sessie is aangemaakt, maar het profiel kon niet worden bijgewerkt.",
         session: "Er kon geen geldige sessie worden aangemaakt.",
+        inactive: "De sessie is beëindigd na 24 uur inactiviteit.",
       },
     },
     confirmation: {
@@ -538,6 +544,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         otp: "Посилання для доступу недійсне або минув термін його дії.",
         profile: "Сесію створено, але профіль не вдалося оновити.",
         session: "Не вдалося створити дійсну сесію.",
+        inactive: "Сеанс завершено після 24 годин бездіяльності.",
       },
     },
     confirmation: {

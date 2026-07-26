@@ -38,6 +38,7 @@ import { GroupLeaderModeTabs } from "@/app/dashboard/group-leader-mode-tabs";
 import { OperationalRoleFields } from "@/app/dashboard/operational-role-fields";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
+import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
@@ -386,6 +387,7 @@ export default async function ManagerDashboardPage({
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard manager</h1>
+          <DashboardRoleTabs activeRole="manager" eventRoles={auth.eventRoles} />
         </header>
 
         <div

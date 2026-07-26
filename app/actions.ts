@@ -7,6 +7,10 @@ import { redirect } from "next/navigation";
 
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import {
+  LAST_ACTIVITY_COOKIE,
+  LAST_DASHBOARD_COOKIE,
+} from "@/lib/auth/session-persistence";
+import {
   collectDescendantGroupIds,
   getEscalationTargetGroupId,
   normalizeLeaderInternalNote,
@@ -106,6 +110,10 @@ export async function setAppLocale(formData: FormData) {
 export async function logout() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
+  const cookieStore = await cookies();
+  cookieStore.delete(LAST_ACTIVITY_COOKIE);
+  cookieStore.delete(LAST_DASHBOARD_COOKIE);
+  cookieStore.delete("iscrizioni_requested_role");
 
   redirect("/");
 }
