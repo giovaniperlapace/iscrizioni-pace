@@ -342,6 +342,17 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   lista: restano disponibili solo al matching interno per ricondurre la persona
   al gruppo piu' probabile. Un link riservato continua a preselezionare il gruppo
   specifico collegato al token anche quando non appartiene al catalogo pubblico.
+- Dal 2026-07-26 chi dichiara di avere gia' partecipato ad attivita'
+  Sant'Egidio ma non seleziona esplicitamente un gruppo deve restare senza
+  assegnazione: sia la risposta "No" all'appartenenza a un gruppo sia
+  l'opzione "Non trovo il mio gruppo o referente" non autorizzano un matching
+  automatico verso il primo gruppo territoriale compatibile. Restano valide le
+  scelte esplicite, i link riservati, l'eventuale membership capogruppo e la
+  coda territoriale strutturata `newcomers` per chi non ha mai partecipato.
+  La migration `20260726120000_stop_unselected_group_auto_assignment.sql`
+  rende non correnti soltanto le precedenti assegnazioni automatiche ancora
+  probabili, conservandole come rifiutate e registrando l'audit; non modifica
+  assegnazioni gia' confermate da un referente.
 - Dal 2026-07-20 la sezione privacy del form pubblico include un consenso
   facoltativo, separato e non preselezionato per ricevere comunicazioni su
   eventi e iniziative future della Comunita' di Sant'Egidio. L'iscrizione deve
@@ -387,7 +398,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   inizio/fine dello scroll interno. Ogni overlay modale dashboard deve avere la
   classe `dashboard-modal`, che attiva il blocco scroll globale in
   `app/globals.css`; lo scroll deve restare confinato al contenuto della
-  modale finché l'utente chiude o salva.
+  modale finché l'utente chiude o salva. Dal 2026-07-26 lo stesso guardrail
+  assegna al pannello diretto una `max-height` basata su `100dvh` e
+  `overflow-y: auto`: tutte le modali che superano lo spazio disponibile
+  devono quindi essere interamente percorribili sia da desktop sia da mobile.
+  Non sovrascrivere questa regola con `overflow-hidden` su un pannello privo di
+  un contenitore interno realmente ridimensionabile e scrollabile.
 - Dal 2026-06-24 il multievento e' trattato come archivio storico, non come
   gestione di eventi contemporanei. La tabella `events` ha il flag
   `is_current`, unico tramite indice parziale, che identifica l'evento corrente

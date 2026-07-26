@@ -1,4 +1,4 @@
-export const GROUP_MATCHER_VERSION = "2026-06-16-group-tree-v1";
+export const GROUP_MATCHER_VERSION = "2026-07-26-explicit-group-selection-v2";
 
 export type GroupAgeBracket = "giovani" | "adulti" | "both" | "none";
 export type GroupCommunityKind = "santegidio" | "newcomers" | "territorial";
@@ -163,7 +163,6 @@ export function resolveGroupAssignmentForRegistration({
   criteria,
   selectedGroupId,
   hasPreviousSantegidioParticipation,
-  participatesWithGroup,
   cannotFindLeader,
 }: {
   groups: GroupMatchCandidate[];
@@ -192,25 +191,6 @@ export function resolveGroupAssignmentForRegistration({
           source: "rule",
           confidence: 0.7,
           reason: "newcomer_territorial_fallback",
-          matcherVersion: GROUP_MATCHER_VERSION,
-        }
-      : null;
-  }
-
-  if (
-    hasPreviousSantegidioParticipation === true &&
-    (participatesWithGroup === false || cannotFindLeader || !selectedGroupId)
-  ) {
-    const fallback = findTerritorialFallback(groups, criteria, "santegidio");
-
-    return fallback
-      ? {
-          groupId: fallback.id,
-          source: "rule",
-          confidence: cannotFindLeader ? 0.65 : 0.6,
-          reason: cannotFindLeader
-            ? "participant_cannot_find_leader"
-            : "santegidio_territorial_fallback",
           matcherVersion: GROUP_MATCHER_VERSION,
         }
       : null;

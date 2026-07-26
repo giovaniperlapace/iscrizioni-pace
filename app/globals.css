@@ -49,6 +49,22 @@ body:has(.dashboard-modal) {
 }
 
 .dashboard-modal {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  place-items: safe center;
+}
+
+.dashboard-modal > * {
+  max-height: calc(100dvh - 4rem);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.dashboard-modal [class*="overflow-y-auto"] {
+  min-height: 0;
   overscroll-behavior: contain;
 }
 

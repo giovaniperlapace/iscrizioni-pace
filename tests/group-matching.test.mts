@@ -190,24 +190,26 @@ test("new participants resolve to the closest territorial newcomers node", () =>
   assert.equal(assignment?.reason, "newcomer_territorial_fallback");
 });
 
-test("Sant'Egidio participants without a selected leader get a probable rule assignment", () => {
-  const assignment = resolveGroupAssignmentForRegistration({
-    groups,
-    criteria: {
-      countryId: ITALY,
-      cityId: ROME,
-      birthDate: "2000-01-01",
-      eventStartsOn: "2026-10-25",
-    },
-    selectedGroupId: null,
-    hasPreviousSantegidioParticipation: true,
-    participatesWithGroup: true,
-    cannotFindLeader: true,
-  });
+test("Sant'Egidio participants without an explicit group stay unassigned", () => {
+  for (const input of [
+    { participatesWithGroup: false, cannotFindLeader: false },
+    { participatesWithGroup: true, cannotFindLeader: true },
+  ]) {
+    const assignment = resolveGroupAssignmentForRegistration({
+      groups,
+      criteria: {
+        countryId: ITALY,
+        cityId: ROME,
+        birthDate: "2000-01-01",
+        eventStartsOn: "2026-10-25",
+      },
+      selectedGroupId: null,
+      hasPreviousSantegidioParticipation: true,
+      ...input,
+    });
 
-  assert.equal(assignment?.groupId, "roma-area");
-  assert.equal(assignment?.source, "rule");
-  assert.equal(assignment?.reason, "participant_cannot_find_leader");
+    assert.equal(assignment, null);
+  }
 });
 
 test("territorial fallback can climb from city to country", () => {

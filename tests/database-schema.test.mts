@@ -47,6 +47,10 @@ const emailCampaignAttachmentsMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260720190000_email_campaign_attachments.sql"
 );
+const explicitGroupSelectionMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260726120000_stop_unselected_group_auto_assignment.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -72,6 +76,10 @@ const futureEventsConsentMigration = readFileSync(
 );
 const emailCampaignAttachmentsMigration = readFileSync(
   emailCampaignAttachmentsMigrationPath,
+  "utf8"
+);
+const explicitGroupSelectionMigration = readFileSync(
+  explicitGroupSelectionMigrationPath,
   "utf8"
 );
 
@@ -171,6 +179,24 @@ test("group leader dashboard migration stores internal decision metadata", () =>
   assert.match(groupLeaderDashboardMigration, /leader_decision_at timestamptz/);
   assert.match(groupLeaderDashboardMigration, /leader_notification_read_at timestamptz/);
   assert.match(groupLeaderDashboardMigration, /participant_group_assignments_leader_review_idx/);
+});
+
+test("unselected group cleanup only deactivates unconfirmed automatic matches", () => {
+  assert.match(explicitGroupSelectionMigration, /assignments\.status = 'probable'/);
+  assert.match(explicitGroupSelectionMigration, /assignments\.source = 'rule'/);
+  assert.match(
+    explicitGroupSelectionMigration,
+    /'santegidio_territorial_fallback'/
+  );
+  assert.match(
+    explicitGroupSelectionMigration,
+    /'participant_cannot_find_leader'/
+  );
+  assert.match(explicitGroupSelectionMigration, /is_current = false/);
+  assert.match(
+    explicitGroupSelectionMigration,
+    /participant\.group_auto_assignment_removed/
+  );
 });
 
 test("model app group tree seed includes Roma areas and primary leaders", () => {
