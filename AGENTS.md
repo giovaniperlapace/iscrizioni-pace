@@ -277,6 +277,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   Dal 2026-07-23 il riquadro `Campi personalizzati` del passaggio di
   composizione non segue piu' lo scroll della pagina: su schermi ampi resta
   centrato verticalmente rispetto al form di oggetto e messaggio.
+  Dal 2026-07-26 il tipo di recapito nella scelta destinatari non e'
+  presentato come opzione modificabile: per l'invio normale all'indirizzo del
+  partecipante non compare alcun badge; solo il recapito delegato mostra
+  `Invio al referente`. I riepiloghi distinguono esplicitamente le email ai
+  partecipanti da quelle ai referenti.
 - Dal 2026-07-23 l'accesso alle dashboard per `manager` e `manager_viewer` e'
   esclusivo: dopo il login questi ruoli entrano sempre nella dashboard manager
   e non vedono né possono aprire la dashboard capogruppo o l'area personale,

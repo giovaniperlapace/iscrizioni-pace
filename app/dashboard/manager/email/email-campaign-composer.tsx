@@ -537,9 +537,11 @@ export function EmailCampaignComposer({
                           {recipient.destinationEmail}
                         </span>
                       </span>
-                      <span className="hidden rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)] sm:inline-flex">
-                        {recipient.deliveryKind === "direct" ? "Diretta" : "Tramite referente"}
-                      </span>
+                      {recipient.deliveryKind === "delegated" ? (
+                        <span className="inline-flex rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)]">
+                          Invio al referente
+                        </span>
+                      ) : null}
                       <button
                         type="button"
                         className="btn-primary inline-flex min-h-11 items-center gap-2 px-3 text-xs"
@@ -571,7 +573,7 @@ export function EmailCampaignComposer({
                     Destinatari scelti
                   </p>
                   <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                    {selectedRecipientIds.length} selezionati: {selectedDirectCount} diretti e {selectedDelegatedCount} tramite referente.
+                    {selectedRecipientIds.length} selezionati: {selectedDirectCount} email ai partecipanti e {selectedDelegatedCount} ai referenti.
                   </p>
                 </div>
                 <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[var(--peace-blue-800)] px-2.5 py-1 text-xs font-bold text-white">
@@ -895,7 +897,7 @@ export function EmailCampaignComposer({
               <div>
                 <h3 id="campaign-preview-title" className="text-xl font-bold">Anteprima prima dell’invio</h3>
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                  {preview.recipientCount} destinatari: {preview.directCount} diretti e {preview.delegatedCount} tramite referente.
+                  {preview.recipientCount} destinatari: {preview.directCount} email ai partecipanti e {preview.delegatedCount} ai referenti.
                 </p>
               </div>
               <button type="button" className="grid min-h-9 min-w-9 place-items-center rounded border border-[var(--peace-border)]" aria-label="Chiudi anteprima" onClick={resetPreview}>
