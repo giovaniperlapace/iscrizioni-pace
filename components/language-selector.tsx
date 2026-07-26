@@ -25,6 +25,9 @@ export function LanguageSelector({
   const [isChanging, setIsChanging] = useState(false);
   const [isPending, startTransition] = useTransition();
   const isBusy = isChanging || isPending;
+  const selectedOption =
+    LANGUAGE_OPTIONS.find((option) => option.value === selectedLocale) ??
+    LANGUAGE_OPTIONS[0];
 
   return (
     <form
@@ -43,57 +46,83 @@ export function LanguageSelector({
         value={selectedLocale}
       />
       <input ref={returnToRef} type="hidden" name="returnTo" value="/" />
-      <select
-        id="locale"
-        aria-label={label}
-        aria-describedby={isBusy ? "locale-pending-status" : undefined}
-        disabled={isBusy}
-        value={selectedLocale}
-        className="min-h-9 w-[4.35rem] rounded-[var(--radius-sm)] border border-[var(--peace-border-strong)] bg-white py-1 pl-2 pr-10 text-lg font-semibold text-[var(--peace-blue-800)] outline-none transition focus-visible:shadow-[var(--focus-ring)] disabled:cursor-wait disabled:opacity-75"
-        onChange={(event) => {
-          const nextLocale = event.currentTarget.value as SupportedLocale;
+      <div className="relative h-10 w-[4.75rem] shrink-0">
+        <select
+          id="locale"
+          aria-label={label}
+          aria-describedby={isBusy ? "locale-pending-status" : undefined}
+          disabled={isBusy}
+          value={selectedLocale}
+          className="peer absolute inset-0 z-10 h-full w-full cursor-pointer rounded-[var(--radius-sm)] opacity-0 disabled:cursor-wait"
+          onChange={(event) => {
+            const nextLocale = event.currentTarget.value as SupportedLocale;
 
-          if (nextLocale === currentLocale || isBusy) {
-            return;
-          }
+            if (nextLocale === currentLocale || isBusy) {
+              return;
+            }
 
-          setSelectedLocale(nextLocale);
-          setIsChanging(true);
+            setSelectedLocale(nextLocale);
+            setIsChanging(true);
 
-          if (localeRef.current) {
-            localeRef.current.value = nextLocale;
-          }
+            if (localeRef.current) {
+              localeRef.current.value = nextLocale;
+            }
 
-          if (returnToRef.current) {
-            returnToRef.current.value = `${window.location.pathname}${window.location.search}`;
-          }
+            if (returnToRef.current) {
+              returnToRef.current.value = `${window.location.pathname}${window.location.search}`;
+            }
 
-          startTransition(() => {
-            formRef.current?.requestSubmit();
-          });
-        }}
-      >
-        {LANGUAGE_OPTIONS.map((option) => (
-          <option
-            key={option.value}
-            value={option.value}
-            aria-label={option.nativeLabel}
-          >
-            {option.flag}
-          </option>
-        ))}
-      </select>
+            startTransition(() => {
+              formRef.current?.requestSubmit();
+            });
+          }}
+        >
+          {LANGUAGE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.flag} {option.nativeLabel}
+            </option>
+          ))}
+        </select>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none flex h-full w-full items-center justify-between rounded-[var(--radius-sm)] border border-[var(--peace-border-strong)] bg-white px-2.5 text-[var(--peace-blue-800)] transition peer-focus-visible:shadow-[var(--focus-ring)] peer-disabled:opacity-75"
+        >
+          <span className="inline-flex h-7 min-w-8 items-center justify-center overflow-visible text-[1.4rem] leading-none">
+            {selectedOption.flag}
+          </span>
+          {isBusy ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--peace-blue-200)] border-t-[var(--peace-blue-800)]" />
+          ) : (
+            <ChevronDownIcon />
+          )}
+        </span>
+      </div>
       {isBusy ? (
-        <>
           <span
-            aria-hidden="true"
-            className="pointer-events-none absolute right-5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--peace-blue-200)] border-t-[var(--peace-blue-800)]"
-          />
-          <span id="locale-pending-status" className="sr-only" role="status">
+            id="locale-pending-status"
+            className="sr-only"
+            role="status"
+          >
             {pendingLabel}
           </span>
-        </>
       ) : null}
     </form>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4 shrink-0"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
   );
 }
