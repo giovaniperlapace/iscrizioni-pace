@@ -402,6 +402,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   assegna al pannello diretto una `max-height` basata su `100dvh` e
   `overflow-y: auto`: tutte le modali che superano lo spazio disponibile
   devono quindi essere interamente percorribili sia da desktop sia da mobile.
+  Il pannello diretto e' il confine principale dello scroll e usa
+  `touch-action: pan-y` con inerzia WebKit; eventuali aree interne
+  `overflow-y-auto` devono lasciare `overscroll-behavior: auto`, cosi' il gesto
+  di trackpad o touch passa al pannello principale quando l'area interna non
+  puo' scorrere. Solo il pannello principale contiene l'overscroll per evitare
+  che raggiunga la pagina sottostante.
   Non sovrascrivere questa regola con `overflow-hidden` su un pannello privo di
   un contenitore interno realmente ridimensionabile e scrollabile.
 - Dal 2026-06-24 il multievento e' trattato come archivio storico, non come
