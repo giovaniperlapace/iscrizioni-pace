@@ -148,6 +148,48 @@ export function GroupPrimaryLeaderFields({
   );
 }
 
+export function GroupAgeBandFields({
+  ageBands,
+}: {
+  ageBands: string[] | null | undefined;
+}) {
+  const selectedBands = new Set(ageBands ?? []);
+
+  return (
+    <fieldset className="grid gap-3 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4 sm:col-span-2">
+      <legend className="px-1 text-sm font-semibold text-[var(--peace-ink)]">
+        Fasce di età
+      </legend>
+      <p className="text-sm leading-6 text-[var(--peace-muted)]">
+        Seleziona una o più fasce per proporre il gruppo soltanto alle persone
+        di quelle età. Se non selezioni nulla, il gruppo non avrà alcun filtro
+        di età.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { value: "giovani", label: "Giovani" },
+          { value: "adulti", label: "Adulti" },
+          { value: "anziani", label: "Anziani (oltre 65 anni)" },
+        ].map((option) => (
+          <label
+            key={option.value}
+            className="flex min-h-11 items-center gap-3 rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--peace-ink)]"
+          >
+            <input
+              type="checkbox"
+              name="ageBands"
+              value={option.value}
+              defaultChecked={selectedBands.has(option.value)}
+              className="size-4 accent-[var(--peace-blue-800)]"
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 function isSupportedPlacement(
   nodeType: string | null
 ): nodeType is "country" | "city" | "area" {

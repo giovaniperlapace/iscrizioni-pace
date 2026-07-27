@@ -84,7 +84,7 @@ type OperationsGroupRow = {
   id: string;
   event_id: string;
   community_kind: string | null;
-  age_bracket: string | null;
+  age_brackets: string[] | null;
   is_assignable: boolean | null;
   is_public_catalog: boolean | null;
   is_active: boolean | null;
@@ -2045,7 +2045,7 @@ export async function saveOperationsGroup(formData: FormData) {
     const { data: currentGroup, error: currentGroupError } = await serviceSupabase
       .from("groups")
       .select(
-        "id,event_id,community_kind,age_bracket,is_assignable,is_public_catalog,is_active,public_order"
+        "id,event_id,community_kind,age_brackets,is_assignable,is_public_catalog,is_active,public_order"
       )
       .eq("id", groupId)
       .maybeSingle();
@@ -2086,10 +2086,13 @@ export async function saveOperationsGroup(formData: FormData) {
     (nodeType === "country" || nodeType === "city" || nodeType === "area"
       ? "territorial"
       : "santegidio");
-  const ageBracket =
-    optionalText(formData.get("ageBracket")) ??
-    currentGroupRow?.age_bracket ??
-    "none";
+  const submittedAgeBands = formData
+    .getAll("ageBands")
+    .map((value) => String(value));
+  const hasInvalidAgeBand = submittedAgeBands.some(
+    (value) => !isValidGroupAgeBand(value)
+  );
+  const ageBands = Array.from(new Set(submittedAgeBands));
   const isAssignable = formData.has("isAssignable")
     ? formData.get("isAssignable") === "on"
     : currentGroupRow?.is_assignable ?? true;
@@ -2105,7 +2108,7 @@ export async function saveOperationsGroup(formData: FormData) {
 
   if (
     !isValidGroupCommunityKind(communityKind) ||
-    !isValidGroupAgeBracket(ageBracket)
+    hasInvalidAgeBand
   ) {
     redirect(`${dashboardPath}?groupError=invalid`);
   }
@@ -2116,7 +2119,7 @@ export async function saveOperationsGroup(formData: FormData) {
     parent_group_id: parentGroupId,
     node_type: nodeType,
     community_kind: communityKind,
-    age_bracket: ageBracket,
+    age_brackets: ageBands,
     is_assignable: isAssignable,
     is_public_catalog: isPublicCatalog,
     is_active: isActive,
@@ -3933,13 +3936,8 @@ function isValidGroupCommunityKind(value: string): boolean {
   );
 }
 
-function isValidGroupAgeBracket(value: string): boolean {
-  return (
-    value === "giovani" ||
-    value === "adulti" ||
-    value === "both" ||
-    value === "none"
-  );
+function isValidGroupAgeBand(value: string): value is "giovani" | "adulti" | "anziani" {
+  return value === "giovani" || value === "adulti" || value === "anziani";
 }
 
 function isAssignableOperationalRole(

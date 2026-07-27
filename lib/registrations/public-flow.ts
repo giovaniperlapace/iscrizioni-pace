@@ -8,7 +8,7 @@ import {
 import {
   normalizeMatchText,
   resolveGroupAssignmentForRegistration,
-  type GroupAgeBracket,
+  type GroupAgeBand,
   type GroupCommunityKind,
   type GroupMatchCandidate,
   type GroupNodeType,
@@ -83,7 +83,7 @@ type PublicGroupRow = {
   parent_group_id: string | null;
   node_type: string | null;
   community_kind: string | null;
-  age_bracket: string | null;
+  age_brackets: string[] | null;
   is_assignable: boolean | null;
   is_public_catalog: boolean | null;
   public_order: number | null;
@@ -115,7 +115,7 @@ export type PublicRegistrationOptions = {
     parentGroupId: string | null;
     nodeType: GroupNodeType;
     communityKind: GroupCommunityKind;
-    ageBracket: GroupAgeBracket;
+    ageBands: GroupAgeBand[];
     isAssignable: boolean;
     isPublicCatalog: boolean;
     publicOrder: number;
@@ -157,7 +157,7 @@ export async function getPublicRegistrationOptions(
       ? supabase
           .from("groups")
           .select(
-            "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
+            "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
           )
           .eq("event_id", event.id)
           .eq("is_active", true)
@@ -768,7 +768,7 @@ async function getEventGroupCandidates(
   const { data, error } = await supabase
     .from("groups")
     .select(
-      "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order"
+      "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
     )
     .eq("event_id", eventId)
     .eq("is_active", true);
@@ -791,7 +791,7 @@ function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
     parentGroupId: row.parent_group_id,
     nodeType: parseNodeType(row.node_type),
     communityKind: parseCommunityKind(row.community_kind),
-    ageBracket: parseAgeBracket(row.age_bracket),
+    ageBands: parseAgeBands(row.age_brackets),
     isAssignable: row.is_assignable ?? true,
     isPublicCatalog: row.is_public_catalog ?? true,
     publicOrder: row.public_order ?? 100,
@@ -823,7 +823,7 @@ async function resolveActiveGroupRegistrationLink(
   const { data, error } = await supabase
     .from("group_registration_links")
     .select(
-      "id,event_id,group_id,public_label,max_uses,use_count,expires_at,revoked_at,groups!inner(id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_bracket,is_assignable,is_public_catalog,public_order)"
+      "id,event_id,group_id,public_label,max_uses,use_count,expires_at,revoked_at,groups!inner(id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order)"
     )
     .eq("event_id", eventId)
     .eq("token_hash", hashGroupRegistrationLinkToken(token))
@@ -908,8 +908,9 @@ function parseCommunityKind(value: string | null): GroupCommunityKind {
     : "santegidio";
 }
 
-function parseAgeBracket(value: string | null): GroupAgeBracket {
-  return value === "giovani" || value === "adulti" || value === "both"
-    ? value
-    : "none";
+function parseAgeBands(value: string[] | null): GroupAgeBand[] {
+  return (value ?? []).filter(
+    (band): band is GroupAgeBand =>
+      band === "giovani" || band === "adulti" || band === "anziani"
+  );
 }

@@ -1,6 +1,6 @@
-export const GROUP_MATCHER_VERSION = "2026-07-26-explicit-group-selection-v2";
+export const GROUP_MATCHER_VERSION = "2026-07-27-multi-age-bands-v3";
 
-export type GroupAgeBracket = "giovani" | "adulti" | "both" | "none";
+export type GroupAgeBand = "giovani" | "adulti" | "anziani";
 export type GroupCommunityKind = "santegidio" | "newcomers" | "territorial";
 export type GroupNodeType = "country" | "city" | "area" | "group" | "newcomers";
 export type AssignmentSource = "participant_selected" | "rule";
@@ -15,7 +15,7 @@ export type GroupMatchCandidate = {
   parentGroupId: string | null;
   nodeType: GroupNodeType;
   communityKind: GroupCommunityKind;
-  ageBracket: GroupAgeBracket;
+  ageBands: GroupAgeBand[];
   isAssignable: boolean;
   isPublicCatalog: boolean;
   publicOrder: number;
@@ -66,9 +66,13 @@ export function calculateAgeAtDate(
   return age;
 }
 
-export function ageTracksForEvent(age: number | null): Set<"giovani" | "adulti"> {
+export function ageTracksForEvent(age: number | null): Set<GroupAgeBand> {
   if (age === null) {
-    return new Set(["giovani", "adulti"]);
+    return new Set(["giovani", "adulti", "anziani"]);
+  }
+
+  if (age > 65) {
+    return new Set(["anziani"]);
   }
 
   if (age >= 23 && age <= 30) {
@@ -114,7 +118,7 @@ export function findMatchingGroupCandidates(
         return false;
       }
 
-      if (!matchesAgeBracket(group.ageBracket, ageTracks)) {
+      if (!matchesAgeBands(group.ageBands, ageTracks)) {
         return false;
       }
 
@@ -216,15 +220,15 @@ export function normalizeMatchText(value: string): string {
     .toLowerCase();
 }
 
-function matchesAgeBracket(
-  bracket: GroupAgeBracket,
-  tracks: Set<"giovani" | "adulti">
+function matchesAgeBands(
+  bands: GroupAgeBand[],
+  tracks: Set<GroupAgeBand>
 ): boolean {
-  if (bracket === "both" || bracket === "none") {
+  if (bands.length === 0) {
     return true;
   }
 
-  return tracks.has(bracket);
+  return bands.some((band) => tracks.has(band));
 }
 
 function hasTerritorialMatch(
@@ -249,11 +253,11 @@ function hasTerritorialMatch(
 function scoreCandidate(
   group: GroupMatchCandidate,
   criteria: GroupMatchCriteria,
-  tracks: Set<"giovani" | "adulti">
+  tracks: Set<GroupAgeBand>
 ): number {
   return (
     scoreTerritory(group, criteria) +
-    (matchesAgeBracket(group.ageBracket, tracks) ? AGE_SCORE : 0) +
+    (matchesAgeBands(group.ageBands, tracks) ? AGE_SCORE : 0) +
     (group.isAssignable ? ASSIGNABLE_SCORE : 0) +
     nodeSpecificityScore(group.nodeType)
   );

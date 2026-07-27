@@ -361,6 +361,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   lista: restano disponibili solo al matching interno per ricondurre la persona
   al gruppo piu' probabile. Un link riservato continua a preselezionare il gruppo
   specifico collegato al token anche quando non appartiene al catalogo pubblico.
+- Dal 2026-07-27 il filtro anagrafico dei gruppi usa
+  `groups.age_brackets`, array composto da zero o piu' valori tra `giovani`,
+  `adulti` e `anziani`. Le modali admin/manager di creazione e modifica gruppo
+  mostrano tre checkbox indipendenti; array vuoto significa nessun filtro di
+  eta'. Il matching calcola l'eta' alla data iniziale dell'evento: giovani fino
+  ai 30 anni, adulti dai 23 ai 65 anni (con la sovrapposizione giovani/adulti
+  gia' prevista tra 23 e 30), anziani oltre i 65 anni. La migration
+  `20260727120000_group_age_bands.sql` conserva la copertura dei dati
+  precedenti trasformando `adulti` in `adulti + anziani`, `both` in tutte e tre
+  le fasce, `giovani` in solo giovani e `none` in array vuoto. Il precedente
+  `groups.age_bracket` resta solo come dato legacy e non deve essere usato dalle
+  nuove funzioni.
 - Dal 2026-07-26 chi dichiara di avere gia' partecipato ad attivita'
   Sant'Egidio ma non seleziona esplicitamente un gruppo deve restare senza
   assegnazione: sia la risposta "No" all'appartenenza a un gruppo sia

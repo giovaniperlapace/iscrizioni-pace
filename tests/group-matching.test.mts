@@ -38,7 +38,7 @@ const groups: GroupMatchCandidate[] = [
     countryId: ITALY,
     cityId: ROME,
     nodeType: "area",
-    ageBracket: "both",
+    ageBands: [],
     publicOrder: 10,
   }),
   group({
@@ -46,7 +46,7 @@ const groups: GroupMatchCandidate[] = [
     name: "Roma - Giovani per la Pace",
     countryId: ITALY,
     cityId: ROME,
-    ageBracket: "giovani",
+    ageBands: ["giovani"],
     publicOrder: 20,
   }),
   group({
@@ -54,15 +54,23 @@ const groups: GroupMatchCandidate[] = [
     name: "Roma adulti",
     countryId: ITALY,
     cityId: ROME,
-    ageBracket: "adulti",
+    ageBands: ["adulti", "anziani"],
     publicOrder: 30,
+  }),
+  group({
+    id: "roma-anziani",
+    name: "Roma anziani",
+    countryId: ITALY,
+    cityId: ROME,
+    ageBands: ["anziani"],
+    publicOrder: 35,
   }),
   group({
     id: "torino-giovani",
     name: "Torino - Giovani per la Pace",
     countryId: ITALY,
     cityId: TURIN,
-    ageBracket: "giovani",
+    ageBands: ["giovani"],
     publicOrder: 40,
   }),
   group({
@@ -71,7 +79,7 @@ const groups: GroupMatchCandidate[] = [
     countryId: AUSTRIA,
     cityId: null,
     nodeType: "country",
-    ageBracket: "both",
+    ageBands: [],
     publicOrder: 50,
   }),
   group({
@@ -101,11 +109,17 @@ test("calculateAgeAtDate uses the event date, not the current date", () => {
   assert.equal(calculateAgeAtDate("2000-10-25", "2026-10-25"), 26);
 });
 
-test("age tracks overlap from 23 through 30", () => {
+test("age tracks overlap from 23 through 30 and separate over-65s", () => {
   assert.deepEqual([...ageTracksForEvent(22)], ["giovani"]);
   assert.deepEqual([...ageTracksForEvent(23)], ["giovani", "adulti"]);
   assert.deepEqual([...ageTracksForEvent(30)], ["giovani", "adulti"]);
   assert.deepEqual([...ageTracksForEvent(31)], ["adulti"]);
+  assert.deepEqual([...ageTracksForEvent(65)], ["adulti"]);
+  assert.deepEqual([...ageTracksForEvent(66)], ["anziani"]);
+  assert.deepEqual(
+    [...ageTracksForEvent(null)],
+    ["giovani", "adulti", "anziani"]
+  );
 });
 
 test("matching uses country fallback when Austria has no city node", () => {
@@ -117,6 +131,28 @@ test("matching uses country fallback when Austria has no city node", () => {
   });
 
   assert.equal(candidates[0]?.id, "austria");
+});
+
+test("matching supports combined, exclusive and unrestricted age bands", () => {
+  const adultCandidates = findMatchingGroupCandidates(groups, {
+    countryId: ITALY,
+    cityId: ROME,
+    birthDate: "1986-01-01",
+    eventStartsOn: "2026-10-25",
+  });
+  assert.ok(adultCandidates.some((candidate) => candidate.id === "roma-adulti"));
+  assert.ok(!adultCandidates.some((candidate) => candidate.id === "roma-anziani"));
+  assert.ok(adultCandidates.some((candidate) => candidate.id === "roma-area"));
+
+  const elderlyCandidates = findMatchingGroupCandidates(groups, {
+    countryId: ITALY,
+    cityId: ROME,
+    birthDate: "1950-01-01",
+    eventStartsOn: "2026-10-25",
+  });
+  assert.ok(elderlyCandidates.some((candidate) => candidate.id === "roma-adulti"));
+  assert.ok(elderlyCandidates.some((candidate) => candidate.id === "roma-anziani"));
+  assert.ok(elderlyCandidates.some((candidate) => candidate.id === "roma-area"));
 });
 
 test("matching prefers the closest Roma area before broader city groups", () => {
@@ -139,7 +175,7 @@ test("public suggestions exclude territorial city and country nodes", () => {
     countryId: ITALY,
     cityId: ROME,
     nodeType: "city",
-    ageBracket: "both",
+    ageBands: [],
   });
   const publicCandidates = findMatchingGroupCandidates(
     [...groups, cityNode],
@@ -367,7 +403,7 @@ function group(
     parentGroupId: null,
     nodeType: "group",
     communityKind: "santegidio",
-    ageBracket: "none",
+    ageBands: [],
     isAssignable: true,
     isPublicCatalog: true,
     publicOrder: 100,

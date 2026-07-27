@@ -51,6 +51,10 @@ const explicitGroupSelectionMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260726120000_stop_unselected_group_auto_assignment.sql"
 );
+const groupAgeBandsMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260727120000_group_age_bands.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -82,6 +86,7 @@ const explicitGroupSelectionMigration = readFileSync(
   explicitGroupSelectionMigrationPath,
   "utf8"
 );
+const groupAgeBandsMigration = readFileSync(groupAgeBandsMigrationPath, "utf8");
 
 const createdTables = Array.from(
   migration.matchAll(/create table public\.([a-z_]+) \(/g),
@@ -171,6 +176,25 @@ test("group matching migration adds tree metadata and assignment rules", () => {
   assert.match(groupMatchingMigration, /alter table public\.group_assignment_rules enable row level security/);
   assert.match(groupMatchingMigration, /groups public read catalog/);
   assert.match(groupMatchingMigration, /participant_group_assignments_current_unique/);
+});
+
+test("group age bands support multiple selections and preserve existing adult coverage", () => {
+  assert.match(
+    groupAgeBandsMigration,
+    /add column if not exists age_brackets text\[\] not null default '\{\}'::text\[\]/
+  );
+  assert.match(
+    groupAgeBandsMigration,
+    /array\['giovani', 'adulti', 'anziani'\]::text\[\]/
+  );
+  assert.match(
+    groupAgeBandsMigration,
+    /when 'adulti' then array\['adulti', 'anziani'\]::text\[\]/
+  );
+  assert.match(
+    groupAgeBandsMigration,
+    /when 'both' then array\['giovani', 'adulti', 'anziani'\]::text\[\]/
+  );
 });
 
 test("group leader dashboard migration stores internal decision metadata", () => {

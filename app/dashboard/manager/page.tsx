@@ -28,6 +28,7 @@ import { EventServiceActiveSwitch } from "@/app/dashboard/event-service-active-s
 import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
 import { GroupPublicCatalogSwitch } from "@/app/dashboard/group-public-catalog-switch";
 import {
+  GroupAgeBandFields,
   type GroupEditLeaderRow,
   GroupPlacementFields,
   GroupPrimaryLeaderFields,
@@ -183,7 +184,7 @@ type ManagerGroupTreeRow = {
   parentName: string | null;
   nodeType: string | null;
   communityKind: string | null;
-  ageBracket: string | null;
+  ageBands: string[];
   isActive: boolean | null;
   isAssignable: boolean | null;
   isPublicCatalog: boolean | null;
@@ -1109,7 +1110,7 @@ async function getManagerOperationsSnapshot(
   const groupTreeQuery = supabase
     .from("groups")
     .select(
-      "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_bracket,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
+      "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
     )
     .eq("event_id", currentEventId)
     .eq("is_active", true)
@@ -1222,7 +1223,7 @@ async function getManagerOperationsSnapshot(
     parent_group_id: string | null;
     node_type: string | null;
     community_kind: string | null;
-    age_bracket: string | null;
+    age_brackets: string[] | null;
     is_active: boolean | null;
     is_assignable: boolean | null;
     is_public_catalog: boolean | null;
@@ -1316,7 +1317,7 @@ async function getManagerOperationsSnapshot(
         : null,
       nodeType: group.node_type,
       communityKind: group.community_kind,
-      ageBracket: group.age_bracket,
+      ageBands: group.age_brackets ?? [],
       isActive: group.is_active,
       isAssignable: group.is_assignable,
       isPublicCatalog: group.is_public_catalog,
@@ -1625,7 +1626,7 @@ function ManagerGroupTreeSection({
                     </p>
                   </td>
                   <td className="py-4 pr-4 text-[var(--peace-ink)]">
-                    {ageBracketLabel(group.ageBracket)}
+                    {ageBandsLabel(group.ageBands)}
                   </td>
                   <td className="py-4 pr-4 text-[var(--peace-ink)]">
                     {group.primaryLeaderName ?? "Da assegnare"}
@@ -1786,6 +1787,7 @@ function ManagerGroupEditOverlay({
               Nome gruppo
               <input name="name" defaultValue={group?.name ?? ""} className="field" required />
             </label>
+            <GroupAgeBandFields ageBands={group?.ageBands} />
             <GroupPrimaryLeaderFields
               group={group}
               leaders={operationalRowsForGroupEdit(leaders)}
@@ -3519,17 +3521,16 @@ function buildGroupLinkUrlFromEncryptedToken(encryptedToken: string | null): str
   return token ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token }) : null;
 }
 
-function ageBracketLabel(value: string | null): string {
-  switch (value) {
-    case "giovani":
-      return "Giovani";
-    case "adulti":
-      return "Adulti";
-    case "both":
-      return "Giovani e adulti";
-    case "none":
-      return "Non applicabile";
-    default:
-      return "Non indicata";
+function ageBandsLabel(values: string[]): string {
+  if (values.length === 0) {
+    return "Nessun filtro";
   }
+
+  const labels: Record<string, string> = {
+    giovani: "Giovani",
+    adulti: "Adulti",
+    anziani: "Anziani",
+  };
+
+  return values.map((value) => labels[value] ?? value).join(", ");
 }
