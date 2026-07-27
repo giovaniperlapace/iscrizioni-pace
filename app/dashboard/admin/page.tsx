@@ -337,16 +337,29 @@ export default async function AdminDashboardPage({
 
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
-  const currentEvent = await getCurrentOperationalEvent(serviceSupabase, "id,title");
+  const activeSection = resolveAdminSection(params);
+  const needsAdminOperations = activeSection !== "evento";
+  const currentEvent = needsAdminOperations
+    ? await getCurrentOperationalEvent(serviceSupabase, "id,title")
+    : null;
   const currentEventId = currentEvent?.id ?? null;
   const [snapshots, adminOperations] = await Promise.all([
-    getOpeningSnapshots(),
-    getAdminOperationsSnapshot(filters, currentEventId),
+    activeSection === "evento" ? getOpeningSnapshots() : Promise.resolve([]),
+    needsAdminOperations
+      ? getAdminOperationsSnapshot(filters, currentEventId)
+      : getAdminOperationsSnapshot(filters, null),
   ]);
-  const statistics = await getAdminStatisticsSnapshot(
-    adminOperations.groupTree,
-    currentEventId
-  );
+  const statistics =
+    activeSection === "dashboard"
+      ? await getAdminStatisticsSnapshot(
+          adminOperations.groupTree,
+          currentEventId
+        )
+      : buildEventStatisticsSnapshot({
+          participants: [],
+          groups: [],
+          attendanceChoices: [],
+        });
   const selectedAdminParticipant =
     adminOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
@@ -357,7 +370,6 @@ export default async function AdminDashboardPage({
   const selectedOperationalRole =
     adminOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
     null;
-  const activeSection = resolveAdminSection(params);
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (

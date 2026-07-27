@@ -331,15 +331,54 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
 
 async function loadDeliveryData(eventTitle: string, recipient: Recipient) {
   const service = createSupabaseServiceClient();
-  const { data: participant } = await service.from("participants").select("id,first_name,last_name,public_code").eq("id", recipient.participantId).single();
-  const { data: assignment } = await service.from("participant_group_assignments").select("groups(name)").eq("registration_id", recipient.registrationId).eq("is_current", true).maybeSingle();
+  const [{ data: participant }, { data: assignment }, email] = await Promise.all([
+    service
+      .from("participants")
+      .select("id,first_name,last_name,public_code")
+      .eq("id", recipient.participantId)
+      .single(),
+    service
+      .from("participant_group_assignments")
+      .select("groups(name)")
+      .eq("registration_id", recipient.registrationId)
+      .eq("is_current", true)
+      .maybeSingle(),
+    loadDeliveryEmail(service, recipient),
+  ]);
   const group = Array.isArray(assignment?.groups) ? assignment.groups[0] : assignment?.groups;
-  let email: string | null = null;
-  if (recipient.deliveryKind === "direct") { const { data } = await service.from("participant_contacts").select("email").eq("participant_id", recipient.participantId).not("email", "is", null).order("is_primary", { ascending: false }).limit(1).maybeSingle(); email = data?.email ?? null; }
-  else if (recipient.delegateUserId) { const { data } = await service.from("profiles").select("email").eq("id", recipient.delegateUserId).maybeSingle(); email = data?.email ?? null; }
   if (!participant || !email) throw new Error("Destinatario non più raggiungibile.");
   const person = participant as Person;
   return { email, templateData: { firstName: person.first_name, lastName: person.last_name, participantCode: person.public_code, groupName: group?.name ?? null, eventTitle } };
+}
+
+async function loadDeliveryEmail(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  recipient: Recipient
+): Promise<string | null> {
+  if (recipient.deliveryKind === "direct") {
+    const { data } = await service
+      .from("participant_contacts")
+      .select("email")
+      .eq("participant_id", recipient.participantId)
+      .not("email", "is", null)
+      .order("is_primary", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return data?.email ?? null;
+  }
+
+  if (!recipient.delegateUserId) {
+    return null;
+  }
+
+  const { data } = await service
+    .from("profiles")
+    .select("email")
+    .eq("id", recipient.delegateUserId)
+    .maybeSingle();
+
+  return data?.email ?? null;
 }
 
 function recipientSelectionSummary(recipients: RecipientPreview[]) {
@@ -462,23 +501,25 @@ async function loadCampaignAttachments(
     .eq("campaign_id", campaignId)
     .order("created_at", { ascending: true });
   if (rowsError) throw new Error(rowsError.message);
-  const attachments: CampaignAttachment[] = [];
-  for (const row of rows ?? []) {
-    const { data, error: downloadError } = await service.storage
-      .from(ATTACHMENTS_BUCKET)
-      .download(row.storage_path);
-    if (downloadError || !data) {
-      throw new Error(`Impossibile recuperare l'allegato ${row.file_name}.`);
-    }
-    attachments.push({
-      filename: row.file_name,
-      contentType: row.content_type,
-      content: Buffer.from(await data.arrayBuffer()),
-      cid: row.content_id ?? undefined,
-      inline: row.is_inline,
-    });
-  }
-  return attachments;
+  return Promise.all(
+    (rows ?? []).map(async (row): Promise<CampaignAttachment> => {
+      const { data, error: downloadError } = await service.storage
+        .from(ATTACHMENTS_BUCKET)
+        .download(row.storage_path);
+
+      if (downloadError || !data) {
+        throw new Error(`Impossibile recuperare l'allegato ${row.file_name}.`);
+      }
+
+      return {
+        filename: row.file_name,
+        contentType: row.content_type,
+        content: Buffer.from(await data.arrayBuffer()),
+        cid: row.content_id ?? undefined,
+        inline: row.is_inline,
+      };
+    })
+  );
 }
 
 function appendInlineImages(html: string, attachments: CampaignAttachment[]) {

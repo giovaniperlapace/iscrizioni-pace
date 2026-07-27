@@ -351,20 +351,31 @@ export default async function ManagerDashboardPage({
 
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
+  const activeSection = resolveManagerSection(params);
   const currentEvent = await getCurrentOperationalEvent(serviceSupabase, "id,title");
   const currentEventId = currentEvent?.id ?? null;
-  const managerOperations = await getManagerOperationsSnapshot(
-    serviceSupabase,
-    scope,
-    filters,
-    currentEventId
-  );
-  const statistics = await getManagerStatisticsSnapshot(
-    serviceSupabase,
-    scope,
-    managerOperations.groupTree,
-    currentEventId
-  );
+  const managerOperations =
+    activeSection === "email"
+      ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
+      : await getManagerOperationsSnapshot(
+          serviceSupabase,
+          scope,
+          filters,
+          currentEventId
+        );
+  const statistics =
+    activeSection === "dashboard"
+      ? await getManagerStatisticsSnapshot(
+          serviceSupabase,
+          scope,
+          managerOperations.groupTree,
+          currentEventId
+        )
+      : buildEventStatisticsSnapshot({
+          participants: [],
+          groups: [],
+          attendanceChoices: [],
+        });
   const selectedParticipant =
     managerOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
@@ -378,7 +389,6 @@ export default async function ManagerDashboardPage({
   const selectedOperationalRole =
     managerOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
     null;
-  const activeSection = resolveManagerSection(params);
   const navMode: ManagerNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (

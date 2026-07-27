@@ -1784,19 +1784,21 @@ export default async function CapogruppoDashboardPage({
     redirect("/login");
   }
 
-  const { data: memberships } = await serviceSupabase
-    .from("group_memberships")
-    .select("group_id")
-    .eq("user_id", auth.user.id);
+  const [{ data: memberships }, { data: groups }] = await Promise.all([
+    serviceSupabase
+      .from("group_memberships")
+      .select("group_id")
+      .eq("user_id", auth.user.id),
+    serviceSupabase
+      .from("groups")
+      .select(
+        "id,event_id,name,parent_group_id,node_type,is_assignable,is_public_catalog,is_active,public_label,primary_leader_name,events(title,starts_on,ends_on)"
+      )
+      .eq("event_id", currentEventId),
+  ]);
   const rootGroupIds = ((memberships ?? []) as GroupMembershipRow[])
     .map((membership) => membership.group_id)
     .filter((groupId): groupId is string => Boolean(groupId));
-  const { data: groups } = await serviceSupabase
-    .from("groups")
-    .select(
-      "id,event_id,name,parent_group_id,node_type,is_assignable,is_public_catalog,is_active,public_label,primary_leader_name,events(title,starts_on,ends_on)"
-    )
-    .eq("event_id", currentEventId);
   const groupRows = (groups ?? []) as GroupRow[];
   const activeGroupRows = groupRows.filter((group) => group.is_active ?? true);
   const groupNodes = activeGroupRows.map<GroupTreeNode>((group) => ({
@@ -1805,16 +1807,19 @@ export default async function CapogruppoDashboardPage({
   }));
   const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
 
-  const assignments = await getAssignments([...scopedGroupIds]);
-  const operationalTags = await getOperationalTags();
-  const eventServices = await getEventServices();
+  const [assignments, operationalTags, eventServices, groupLinks] =
+    await Promise.all([
+      getAssignments([...scopedGroupIds]),
+      getOperationalTags(),
+      getEventServices(),
+      getGroupLinks([...scopedGroupIds]),
+    ]);
   const assignedGroups = groupRows
     .filter((group) => rootGroupIds.includes(group.id))
     .map((group) => toScopedGroupView(group, copy));
   const scopedGroups = activeGroupRows
     .filter((group) => scopedGroupIds.has(group.id))
     .map((group) => toScopedGroupView(group, copy));
-  const groupLinks = await getGroupLinks([...scopedGroupIds]);
   const confirmedAssignments = assignments.filter(
     (assignment) => assignment.isCurrent && assignment.status === "confirmed"
   );

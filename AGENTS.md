@@ -299,6 +299,20 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   viene aggiornata durante l'uso delle dashboard e, dopo 24 ore complete senza
   interazioni, la sessione viene chiusa automaticamente; il logout manuale
   cancella anche lo stato di ripristino.
+- Il 2026-07-27 e' stato completato un audit prestazionale conservativo,
+  documentato in `docs/performance-optimization-2026-07-27.md`. Il client
+  Supabase service-role e il transporter SMTP sono lazy singleton per singola
+  istanza; il rate limiter in memoria elimina periodicamente soltanto i bucket
+  scaduti; le richieste indipendenti di dashboard capogruppo e campagne email
+  partono in parallelo; admin e manager non caricano piu' snapshot e
+  statistiche non usati dalla sezione attiva. Queste ottimizzazioni non
+  cambiano UI, route, API, RLS o schema dati. Il pool SMTP e' configurabile con
+  `SMTP_POOL`, `SMTP_MAX_CONNECTIONS` (1-10, default 5) e
+  `SMTP_MAX_MESSAGES` (1-1000, default 100). Il comando
+  `npm run performance:http` esegue un benchmark GET locale configurabile con
+  env `PERF_*`; non puntarlo alla produzione con concorrenza elevata senza
+  autorizzazione. Il rate limiter resta locale all'istanza e non va considerato
+  una protezione globale in ambiente serverless multiistanza.
   Nodemailer e' stato aggiornato alla serie 9 per correggere la vulnerabilità
   segnalata dall'audit. Dal 2026-07-20 le campagne supportano fino a 5 file,
   massimo 5 MB ciascuno e 10 MB complessivi, conservati nel bucket Supabase
@@ -476,6 +490,7 @@ Comandi disponibili:
 - `npm run typecheck`.
 - `npm test`.
 - `npm run build`.
+- `npm run performance:http`.
 - `npm run opening:verify`.
 - `npm run opening:verify:production`.
 
@@ -675,7 +690,8 @@ Decisioni:
   deve essere stampata o committata.
 - Variabili email supportate:
   `EMAIL_FROM`, `EMAIL_USER`, `EMAIL_PASSWORD`, `SMTP_HOST`, `SMTP_PORT`,
-  `SMTP_SECURE`; `GMAIL_APP_PASSWORD` resta alias locale supportato.
+  `SMTP_SECURE`, `SMTP_POOL`, `SMTP_MAX_CONNECTIONS`, `SMTP_MAX_MESSAGES`;
+  `GMAIL_APP_PASSWORD` resta alias locale supportato.
 - Dopo callback magic link, i partecipanti con contatto email corrispondente
   vengono collegati a `auth.users.id` tramite service role server-side.
 - Il QR code non contiene dati personali: contiene solo un token opaco.

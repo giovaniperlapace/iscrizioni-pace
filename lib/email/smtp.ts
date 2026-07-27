@@ -1,6 +1,6 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
-import { getEmailConfig } from "./config";
+import { getEmailConfig, type EmailConfig } from "./config";
 
 export type SendEmailInput = {
   to: string;
@@ -14,6 +14,9 @@ export type SendEmailInput = {
     cid?: string;
   }>;
 };
+
+let smtpTransporter: Transporter | null = null;
+let smtpTransporterConfig: EmailConfig | null = null;
 
 export async function sendTransactionalEmail(input: SendEmailInput) {
   const config = getEmailConfig();
@@ -37,15 +40,7 @@ export async function sendTransactionalEmail(input: SendEmailInput) {
     };
   }
 
-  const transporter = nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    auth: {
-      user: config.user,
-      pass: config.password,
-    },
-  });
+  const transporter = getSmtpTransporter(config);
 
   return transporter.sendMail({
     from: config.from,
@@ -55,4 +50,63 @@ export async function sendTransactionalEmail(input: SendEmailInput) {
     html: input.html,
     attachments: input.attachments,
   });
+}
+
+export function closeEmailTransport(): void {
+  smtpTransporter?.close();
+  smtpTransporter = null;
+  smtpTransporterConfig = null;
+}
+
+function getSmtpTransporter(config: EmailConfig): Transporter {
+  if (
+    smtpTransporter &&
+    smtpTransporterConfig &&
+    hasSameTransportConfiguration(smtpTransporterConfig, config)
+  ) {
+    return smtpTransporter;
+  }
+
+  closeEmailTransport();
+  smtpTransporter = config.pool
+    ? nodemailer.createTransport({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        pool: true,
+        maxConnections: config.maxConnections,
+        maxMessages: config.maxMessages,
+        auth: {
+          user: config.user,
+          pass: config.password,
+        },
+      })
+    : nodemailer.createTransport({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        auth: {
+          user: config.user,
+          pass: config.password,
+        },
+      });
+  smtpTransporterConfig = config;
+
+  return smtpTransporter;
+}
+
+function hasSameTransportConfiguration(
+  previous: EmailConfig,
+  current: EmailConfig
+): boolean {
+  return (
+    previous.host === current.host &&
+    previous.port === current.port &&
+    previous.secure === current.secure &&
+    previous.user === current.user &&
+    previous.password === current.password &&
+    previous.pool === current.pool &&
+    previous.maxConnections === current.maxConnections &&
+    previous.maxMessages === current.maxMessages
+  );
 }

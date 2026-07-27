@@ -8,6 +8,9 @@ export type EmailConfig = {
   password: string;
   from: string;
   deliveryMode: "smtp" | "log";
+  pool: boolean;
+  maxConnections: number;
+  maxMessages: number;
 };
 
 export function getEmailConfig(): EmailConfig {
@@ -36,5 +39,43 @@ export function getEmailConfig(): EmailConfig {
     password: password?.replace(/\s+/g, "") ?? "",
     from: process.env.EMAIL_FROM || user,
     deliveryMode,
+    pool: parseBoolean(process.env.SMTP_POOL, true),
+    maxConnections: parseBoundedInteger(
+      process.env.SMTP_MAX_CONNECTIONS,
+      5,
+      1,
+      10
+    ),
+    maxMessages: parseBoundedInteger(
+      process.env.SMTP_MAX_MESSAGES,
+      100,
+      1,
+      1_000
+    ),
   };
+}
+
+function parseBoolean(value: string | undefined, fallback: boolean): boolean {
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  return fallback;
+}
+
+function parseBoundedInteger(
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number
+): number {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : fallback;
 }
