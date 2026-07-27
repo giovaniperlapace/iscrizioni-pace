@@ -216,7 +216,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     externalGroupQuestion: "Fai parte di qualche gruppo o associazione? (opzionale)",
     externalGroupPlaceholder: "Scrivi il nome del gruppo o associazione, se vuoi",
     groupQuestion:
-      "Fai parte di un gruppo o una assemblea della Comunità di Sant'Egidio?",
+      "Parteciperai all'incontro con un gruppo della Comunità di Sant'Egidio?",
     groupLabel: "Gruppo o referente",
     groupPlaceholder: "Cerca per gruppo o referente",
     groupDisabledPlaceholder: "Indica prima paese, città e data di nascita",
