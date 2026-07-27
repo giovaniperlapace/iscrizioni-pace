@@ -49,8 +49,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   partecipante.
 - Milestone 9.1 ha aggiunto link riservati per gruppi nascosti ma iscrivibili:
   `groups.public_label`, tabella `group_registration_links`, generazione/revoca
-  da dashboard manager e capogruppo in scope, token opachi e form pubblico
-  precompilato tramite `?groupLink=...`.
+  da dashboard manager e capogruppo in scope e form pubblico precompilato
+  tramite `?groupLink=...`. I token generati dalla dashboard restano opachi;
+  per il catalogo operativo dei gruppi nascosti sono ammessi anche slug
+  amministrativi leggibili e univoci composti da lettere, numeri, trattini e
+  underscore, per esempio `pentecoste`, `sant_andrea` o `resurrezione_68`.
 - Milestone 10 ha aggiunto gestione partecipanti da dashboard capogruppo:
   tabella operativa dei partecipanti del gruppo, inserimento manuale in overlay,
   link riservati in overlay, source `capogruppo`, QR reale, consenso dichiarato
@@ -373,6 +376,34 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   le fasce, `giovani` in solo giovani e `none` in array vuoto. Il precedente
   `groups.age_bracket` resta solo come dato legacy e non deve essere usato dalle
   nuove funzioni.
+- Il 2026-07-27 il catalogo gruppi dell'evento corrente e' stato sostituito
+  integralmente a partire dal materiale operativo
+  `materiali-dati/Gruppi_iscrizioni.xlsx` (cartella ignorata da Git). Il
+  database contiene 105 gruppi assegnabili piu' i tre nodi territoriali di
+  supporto `Italia`, `Roma` e `Spagna`: 55 gruppi sono figli di Roma, 33 sono
+  figli diretti dell'Italia, Madrid e Barcellona sono figli della Spagna e gli
+  altri 15 gruppi esteri sono al livello radice. Nove gruppi sono attivi e
+  assegnabili ma nascosti dal catalogo pubblico; restano utilizzabili tramite
+  link riservato. Le fasce eta' dell'Excel sono state trasferite senza
+  approssimazioni in `groups.age_brackets`; le righe senza fascia hanno array
+  vuoto e quindi sono valide per ogni eta'.
+- Lo stesso import del 2026-07-27 ha creato o riutilizzato 98 identita'
+  referente e 118 associazioni in `group_memberships`. Tutti i referenti
+  elencati per uno stesso gruppo sono primari: la migration
+  `20260727195000_multiple_primary_group_leaders.sql` rimuove il precedente
+  indice univoco per gruppo e le azioni operative non retrocedono piu'
+  automaticamente gli altri primari quando ne viene aggiunto uno. Il campo
+  singolare `groups.primary_leader_name` resta un'etichetta rappresentativa e
+  contiene il primo referente indicato nel file; accessi e notifiche usano
+  invece tutte le membership. Il secondo foglio del file ha fornito 24 righe
+  telefoniche, consolidate in 21 contatti unici per email.
+- Durante la sostituzione del catalogo sono stati rimossi gli 85 gruppi
+  precedenti e, per cascata, 43 assegnazioni partecipante-gruppo, i vecchi link
+  riservati e le regole di matching collegate. Le 40 iscrizioni e i relativi
+  partecipanti sono stati conservati senza assegnazione di gruppo. Il backup
+  completo precedente all'operazione e' in
+  `materiali-dati/backups/iscrizioni-pace-pre-gruppi-20260727-1945.dump`
+  (ignorato da Git).
 - Dal 2026-07-26 chi dichiara di avere gia' partecipato ad attivita'
   Sant'Egidio ma non seleziona esplicitamente un gruppo deve restare senza
   assegnazione: sia la risposta "No" all'appartenenza a un gruppo sia

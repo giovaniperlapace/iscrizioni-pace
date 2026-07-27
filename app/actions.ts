@@ -2345,18 +2345,6 @@ export async function assignGroupLeader(formData: FormData) {
     redirect(`${dashboardPath}?groupError=${leader.error}`);
   }
 
-  if (isPrimaryLeader) {
-    const demoteError = await demoteOtherPrimaryGroupLeaders(
-      serviceSupabase,
-      groupRow.id,
-      leader.userId
-    );
-
-    if (demoteError) {
-      redirect(`${dashboardPath}?groupError=${encodeURIComponent(demoteError)}`);
-    }
-  }
-
   const membership = await serviceSupabase.from("group_memberships").upsert(
     {
       group_id: groupRow.id,
@@ -2510,18 +2498,6 @@ export async function assignOperationalUserRole(formData: FormData) {
   if (role === "capogruppo") {
     if (!roleGroupId) {
       redirect(`${dashboardPath}&roleError=missing-group`);
-    }
-
-    if (isPrimaryLeader) {
-      const demoteError = await demoteOtherPrimaryGroupLeaders(
-        serviceSupabase,
-        roleGroupId,
-        userId
-      );
-
-      if (demoteError) {
-        redirect(`${dashboardPath}&roleError=${encodeURIComponent(demoteError)}`);
-      }
     }
 
     const membership = await serviceSupabase.from("group_memberships").upsert(
@@ -2836,18 +2812,6 @@ export async function updateOperationalUserRole(formData: FormData) {
         selectedLeaderKindsByGroupId[selectedGroupId] ?? "secondary";
       const isSelectedPrimaryLeader = selectedLeaderKind === "primary";
 
-      if (isSelectedPrimaryLeader) {
-        const demoteError = await demoteOtherPrimaryGroupLeaders(
-          serviceSupabase,
-          selectedGroupId,
-          targetUserId
-        );
-
-        if (demoteError) {
-          redirect(`${dashboardPath}&roleError=${encodeURIComponent(demoteError)}`);
-        }
-      }
-
       const membership = await serviceSupabase.from("group_memberships").upsert(
         {
           group_id: selectedGroupId,
@@ -2945,18 +2909,6 @@ export async function updateOperationalUserRole(formData: FormData) {
   if (role === "capogruppo") {
     if (!nextTarget.groupId) {
       redirect(`${dashboardPath}&roleError=missing-group`);
-    }
-
-    if (isPrimaryLeader) {
-      const demoteError = await demoteOtherPrimaryGroupLeaders(
-        serviceSupabase,
-        nextTarget.groupId,
-        targetUserId
-      );
-
-      if (demoteError) {
-        redirect(`${dashboardPath}&roleError=${encodeURIComponent(demoteError)}`);
-      }
     }
 
     const membership = await serviceSupabase.from("group_memberships").upsert(
@@ -3453,16 +3405,6 @@ async function assignPrimaryGroupLeaderToGroup(
     leader: Extract<GroupLeaderTargetResult, { ok: true }>;
   }
 ): Promise<string | null> {
-  const demoteError = await demoteOtherPrimaryGroupLeaders(
-    supabase,
-    input.groupId,
-    input.leader.userId
-  );
-
-  if (demoteError) {
-    return demoteError;
-  }
-
   const membership = await supabase.from("group_memberships").upsert(
     {
       group_id: input.groupId,
@@ -3505,21 +3447,6 @@ async function assignPrimaryGroupLeaderToGroup(
   return null;
 }
 
-async function demoteOtherPrimaryGroupLeaders(
-  supabase: ReturnType<typeof createSupabaseServiceClient>,
-  groupId: string,
-  selectedUserId: string
-): Promise<string | null> {
-  const { error } = await supabase
-    .from("group_memberships")
-    .update({ is_primary: false })
-    .eq("group_id", groupId)
-    .eq("is_primary", true)
-    .neq("user_id", selectedUserId);
-
-  return error?.message ?? null;
-}
-
 async function syncGroupPrimaryLeaderName(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   groupId: string,
@@ -3539,6 +3466,8 @@ async function syncGroupPrimaryLeaderName(
     .select("user_id")
     .eq("group_id", groupId)
     .eq("is_primary", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (membershipError) {

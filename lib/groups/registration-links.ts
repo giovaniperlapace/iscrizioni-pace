@@ -2,7 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 
 export const GROUP_REGISTRATION_LINK_QUERY_PARAM = "groupLink";
 export const GROUP_REGISTRATION_LINK_TOKEN_BYTES = 24;
-export const GROUP_REGISTRATION_LINK_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,96}$/;
+export const GROUP_REGISTRATION_LINK_TOKEN_PATTERN =
+  /^[A-Za-z0-9][A-Za-z0-9_-]{2,95}$/;
 
 export type GroupRegistrationLinkStatus =
   | "active"

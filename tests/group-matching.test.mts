@@ -317,12 +317,16 @@ test("group leader internal notes are compacted and bounded", () => {
   assert.equal(normalizeLeaderInternalNote("a".repeat(900))?.length, 800);
 });
 
-test("reserved group registration links use opaque valid tokens", () => {
+test("reserved group registration links accept opaque tokens and readable slugs", () => {
   const token = createGroupRegistrationLinkToken();
 
   assert.equal(isValidGroupRegistrationLinkToken(token), true);
   assert.match(hashGroupRegistrationLinkToken(token), /^[a-f0-9]{64}$/);
-  assert.equal(isValidGroupRegistrationLinkToken("gruppo-sensibile"), false);
+  assert.equal(isValidGroupRegistrationLinkToken("pentecoste"), true);
+  assert.equal(isValidGroupRegistrationLinkToken("sant_andrea"), true);
+  assert.equal(isValidGroupRegistrationLinkToken("ab"), false);
+  assert.equal(isValidGroupRegistrationLinkToken("_gruppo"), false);
+  assert.equal(isValidGroupRegistrationLinkToken("gruppo sensibile"), false);
 });
 
 test("reserved group registration labels prefer link label over group label", () => {

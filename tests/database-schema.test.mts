@@ -55,6 +55,10 @@ const groupAgeBandsMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260727120000_group_age_bands.sql"
 );
+const multiplePrimaryGroupLeadersMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260727195000_multiple_primary_group_leaders.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -87,6 +91,10 @@ const explicitGroupSelectionMigration = readFileSync(
   "utf8"
 );
 const groupAgeBandsMigration = readFileSync(groupAgeBandsMigrationPath, "utf8");
+const multiplePrimaryGroupLeadersMigration = readFileSync(
+  multiplePrimaryGroupLeadersMigrationPath,
+  "utf8"
+);
 
 const createdTables = Array.from(
   migration.matchAll(/create table public\.([a-z_]+) \(/g),
@@ -240,6 +248,17 @@ test("model app group tree seed includes Roma areas and primary leaders", () => 
   );
   assert.match(groupTreeSeedMigration, /'Seminario', 'both'/);
   assert.match(groupTreeSeedMigration, /'Regola seed catalogo gruppi modello app.'/);
+});
+
+test("multiple primary group leaders are supported", () => {
+  assert.match(
+    multiplePrimaryGroupLeadersMigration,
+    /drop index if exists public\.group_memberships_one_primary_per_group_idx/
+  );
+  assert.match(
+    multiplePrimaryGroupLeadersMigration,
+    /Multiple primary leaders are allowed/
+  );
 });
 
 test("group registration links migration separates hidden groups from reserved access", () => {

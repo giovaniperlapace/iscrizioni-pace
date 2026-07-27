@@ -156,16 +156,6 @@ async function ensureProfile(id, email, fullName) {
 }
 
 async function ensurePrimaryMembership({ groupId, userId }) {
-  const { error: clearError } = await supabase
-    .from("group_memberships")
-    .update({ is_primary: false })
-    .eq("group_id", groupId)
-    .eq("is_primary", true);
-
-  if (clearError) {
-    fail(clearError.message);
-  }
-
   const { data: existing, error: selectError } = await supabase
     .from("group_memberships")
     .select("id")
