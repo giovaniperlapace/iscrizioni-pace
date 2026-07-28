@@ -318,10 +318,11 @@ test("group leader internal notes are compacted and bounded", () => {
 });
 
 test("reserved group registration links accept opaque tokens and readable slugs", () => {
-  const token = createGroupRegistrationLinkToken();
-
-  assert.equal(isValidGroupRegistrationLinkToken(token), true);
-  assert.match(hashGroupRegistrationLinkToken(token), /^[a-f0-9]{64}$/);
+  for (let index = 0; index < 128; index += 1) {
+    const token = createGroupRegistrationLinkToken();
+    assert.equal(isValidGroupRegistrationLinkToken(token), true);
+    assert.match(hashGroupRegistrationLinkToken(token), /^[a-f0-9]{64}$/);
+  }
   assert.equal(isValidGroupRegistrationLinkToken("pentecoste"), true);
   assert.equal(isValidGroupRegistrationLinkToken("sant_andrea"), true);
   assert.equal(isValidGroupRegistrationLinkToken("ab"), false);

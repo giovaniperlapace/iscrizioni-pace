@@ -439,13 +439,17 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   creazioni.
 - Dal 2026-07-28, dopo la creazione, la modale link deve caricare e mostrare
   sempre il link canonico anche se revocato: URL copiabile quando disponibile,
-  stato operativo, conteggio utilizzi e nome visualizzato modificabile senza
-  cambiare il token. Le query manager, admin e capogruppo filtrano
-  `is_canonical = true` ma non `revoked_at is null`; gli errori di caricamento
-  devono essere registrati lato server e non scambiati silenziosamente per una
-  lista vuota. La migration
+  stato operativo e conteggio utilizzi. Il nome del link coincide sempre con il
+  nome del gruppo e non e' modificabile; in fase di creazione non chiedere un
+  nome separato. Nella scheda del link, campo URL, `Copia link` e `Revoca`
+  devono stare sulla stessa riga quando lo spazio lo consente. Le query manager,
+  admin e capogruppo filtrano `is_canonical = true` ma non
+  `revoked_at is null`; gli errori di caricamento devono essere registrati lato
+  server e non scambiati silenziosamente per una lista vuota. La migration
   `20260728120000_single_group_registration_link.sql` e' stata applicata al
-  database remoto il 2026-07-28.
+  database remoto il 2026-07-28. I token opachi generati dall'app iniziano con
+  `g`, cosi' rispettano sempre il requisito del validatore che impone un primo
+  carattere alfanumerico.
 - Dal 2026-07-20 la sezione privacy del form pubblico include un consenso
   facoltativo, separato e non preselezionato per ricevere comunicazioni su
   eventi e iniziative future della Comunita' di Sant'Egidio. L'iscrizione deve

@@ -8,7 +8,6 @@ import {
   revokeGroupRegistrationLink,
   updateParticipantEventService,
   updateGroupLeaderAssignment,
-  updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
   updateParticipantOperationalTags,
 } from "@/app/actions";
@@ -473,7 +472,6 @@ type GroupLeaderCopy = {
   unlabeledLink: string;
   existingLinks: string;
   newLink: string;
-  saveLinkName: string;
   copyLink: string;
   uses: string;
   revoke: string;
@@ -652,7 +650,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   unlabeledLink: "Link senza etichetta",
   existingLinks: "Link del gruppo",
   newLink: "Genera link",
-  saveLinkName: "Salva nome",
   copyLink: "Copia link",
   uses: "usi",
   revoke: "Revoca",
@@ -845,7 +842,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   unlabeledLink: "Unlabelled link",
   existingLinks: "Group link",
   newLink: "Generate link",
-  saveLinkName: "Save name",
   copyLink: "Copy link",
   uses: "uses",
   revoke: "Revoke",
@@ -2307,28 +2303,9 @@ function GroupLeaderLinksSection({
                         key={link.id}
                         className="rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm"
                       >
-                        <form
-                          action={updateGroupRegistrationLink}
-                          className="grid gap-2"
-                          data-preserve-dashboard-scroll
-                        >
-                          <input type="hidden" name="sourceDashboard" value="capogruppo" />
-                          <input type="hidden" name="linkId" value={link.id} />
-                          <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
-                            {copy.publicLabel}
-                            <input
-                              name="displayName"
-                              className="field bg-white text-sm"
-                              defaultValue={
-                                link.publicLabel ?? group.publicLabel ?? group.name
-                              }
-                              required
-                            />
-                          </label>
-                          <PendingSubmitButton className="min-h-9 w-fit rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
-                            {copy.saveLinkName}
-                          </PendingSubmitButton>
-                        </form>
+                        <p className="font-medium text-[var(--peace-ink)]">
+                          {group.name}
+                        </p>
                         <p className="mt-1 text-xs text-[var(--peace-muted)]">
                           {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
                           {link.maxUses ? `/${link.maxUses}` : ""}
@@ -2386,15 +2363,9 @@ function GroupLeaderLinksSection({
                     <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
                       {copy.newLink}
                     </h4>
-                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                      {copy.publicLabel}
-                      <input
-                        name="displayName"
-                        className="field"
-                        defaultValue={group.publicLabel ?? group.name}
-                        required
-                      />
-                    </label>
+                    <p className="text-sm font-semibold text-[var(--peace-ink)]">
+                      {group.name}
+                    </p>
                     <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                       {copy.generateLink}
                     </PendingSubmitButton>

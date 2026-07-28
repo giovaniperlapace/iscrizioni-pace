@@ -1824,10 +1824,6 @@ export async function createGroupRegistrationLink(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
-  const publicLabel = normalizeGroupRegistrationPublicLabel(
-    formData.get("displayName")
-  );
-  const internalLabel = publicLabel;
 
   if (!groupId) {
     redirect(`${dashboardPath}?groupLinkError=invalid`);
@@ -1900,8 +1896,8 @@ export async function createGroupRegistrationLink(formData: FormData) {
       group_id: groupRow.id,
       token_hash: hashGroupRegistrationLinkToken(token),
       token_encrypted: encryptQrToken(token),
-      public_label: publicLabel,
-      internal_label: internalLabel,
+      public_label: groupRow.name,
+      internal_label: groupRow.name,
       created_by: auth.user.id,
     })
     .select("id")
@@ -1923,8 +1919,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
     entity_id: (link as { id: string }).id,
     metadata: {
       group_id: groupRow.id,
-      has_public_label: Boolean(publicLabel),
-      has_internal_label: Boolean(internalLabel),
+      label_source: "group_name",
     },
   });
 
@@ -1935,95 +1930,6 @@ export async function createGroupRegistrationLink(formData: FormData) {
     saved: true,
     token,
   }));
-}
-
-export async function updateGroupRegistrationLink(formData: FormData) {
-  const linkId = optionalText(formData.get("linkId"));
-  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
-  const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
-  const publicLabel = normalizeGroupRegistrationPublicLabel(
-    formData.get("displayName")
-  );
-
-  if (!linkId || !publicLabel) {
-    redirect(`${dashboardPath}?groupLinkError=invalid`);
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(
-    supabase,
-    getGroupManagementRequestedRole(sourceDashboard)
-  );
-
-  if (!auth) {
-    redirect("/login");
-  }
-
-  const serviceSupabase = createSupabaseServiceClient();
-  const { data: link, error: linkError } = await serviceSupabase
-    .from("group_registration_links")
-    .select("id,event_id,group_id,public_label")
-    .eq("id", linkId)
-    .eq("is_canonical", true)
-    .maybeSingle();
-  const linkRow = link as
-    | {
-        id: string;
-        event_id: string;
-        group_id: string;
-        public_label: string | null;
-      }
-    | null;
-
-  if (
-    linkError ||
-    !linkRow ||
-    !(await canManageGroupRegistrationLink(
-      serviceSupabase,
-      auth.user.id,
-      auth.eventRoles,
-      linkRow.group_id,
-      linkRow.event_id,
-      sourceDashboard
-    ))
-  ) {
-    redirect(`${dashboardPath}?groupLinkError=forbidden`);
-  }
-
-  const { error: updateError } = await serviceSupabase
-    .from("group_registration_links")
-    .update({
-      public_label: publicLabel,
-      internal_label: publicLabel,
-    })
-    .eq("id", linkRow.id);
-
-  if (updateError) {
-    redirect(
-      getGroupLinksModalPath(sourceDashboard, linkRow.group_id, {
-        error: "update",
-      })
-    );
-  }
-
-  await serviceSupabase.from("audit_logs").insert({
-    event_id: linkRow.event_id,
-    actor_user_id: auth.user.id,
-    action: "group_registration_link.updated",
-    entity_table: "group_registration_links",
-    entity_id: linkRow.id,
-    metadata: {
-      group_id: linkRow.group_id,
-      public_label_changed: linkRow.public_label !== publicLabel,
-    },
-  });
-
-  revalidatePath("/dashboard/manager");
-  revalidatePath("/dashboard/admin");
-  revalidatePath("/dashboard/capogruppo");
-  redirect(
-    getGroupLinksModalPath(sourceDashboard, linkRow.group_id, { saved: true })
-  );
 }
 
 export async function revokeGroupRegistrationLink(formData: FormData) {

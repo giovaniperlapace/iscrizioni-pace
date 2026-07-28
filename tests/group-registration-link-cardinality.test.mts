@@ -28,17 +28,15 @@ test("link creation is blocked when a group has any previous link", () => {
   assert.match(createAction, /error: "link-already-exists"/);
 });
 
-test("the canonical link display name can be updated without replacing its token", () => {
-  const updateAction = actions.slice(
-    actions.indexOf("export async function updateGroupRegistrationLink"),
+test("the reserved link always uses the group name and cannot be renamed", () => {
+  const createAction = actions.slice(
+    actions.indexOf("export async function createGroupRegistrationLink"),
     actions.indexOf("export async function revokeGroupRegistrationLink")
   );
 
-  assert.match(updateAction, /\.eq\("is_canonical", true\)/);
-  assert.match(updateAction, /public_label: publicLabel/);
-  assert.match(updateAction, /internal_label: publicLabel/);
-  assert.doesNotMatch(updateAction, /token_hash|token_encrypted/);
-  assert.match(updateAction, /group_registration_link\.updated/);
+  assert.match(createAction, /public_label: groupRow\.name/);
+  assert.match(createAction, /internal_label: groupRow\.name/);
+  assert.doesNotMatch(actions, /export async function updateGroupRegistrationLink/);
 });
 
 test("operational dashboards load the single canonical link including revoked links", () => {
@@ -69,12 +67,13 @@ test("link loading failures are logged instead of silently becoming an empty lis
   assert.match(groupLeaderDashboard, /\[capogruppo:group-registration-links\]/);
 });
 
-test("every operational link card exposes the display-name update action", () => {
+test("operational link cards do not expose display-name editing", () => {
   for (const dashboard of [
     managerDashboard,
     adminDashboard,
     groupLeaderDashboard,
   ]) {
-    assert.match(dashboard, /action=\{updateGroupRegistrationLink\}/);
+    assert.doesNotMatch(dashboard, /action=\{updateGroupRegistrationLink\}/);
+    assert.doesNotMatch(dashboard, /Salva nome|Save name/);
   }
 });

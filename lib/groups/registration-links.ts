@@ -20,7 +20,7 @@ export type GroupRegistrationLinkStateInput = {
 };
 
 export function createGroupRegistrationLinkToken(): string {
-  return randomBytes(GROUP_REGISTRATION_LINK_TOKEN_BYTES).toString("base64url");
+  return `g${randomBytes(GROUP_REGISTRATION_LINK_TOKEN_BYTES).toString("base64url")}`;
 }
 
 export function hashGroupRegistrationLinkToken(token: string): string {
