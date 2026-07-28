@@ -1802,6 +1802,15 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       }),
       visibility_summary: getQuestionnaireVisibilitySummary(),
     }),
+    ...(parsed.value.children.length > 0
+      ? [
+          serviceSupabase
+            .from("registration_children")
+            .insert(
+              toRegistrationChildRows(registrationId, parsed.value.children)
+            ),
+        ]
+      : []),
     serviceSupabase.from("qr_tokens").insert({
       registration_id: registrationId,
       token_hash: qrToken.tokenHash,
@@ -1839,6 +1848,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
         source: "capogruppo",
         has_email: Boolean(parsed.value.email),
         has_phone: Boolean(parsed.value.phone),
+        accompanying_children_count: parsed.value.children.length,
         participant_public_code: participantRow.public_code,
       },
     }),

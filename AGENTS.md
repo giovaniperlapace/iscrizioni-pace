@@ -454,8 +454,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   carattere alfanumerico. La migration
   `20260728150000_prevent_canonical_group_link_revocation.sql` impone anche nel
   database che il link canonico non possa essere revocato.
-- Dal 2026-07-28 il form pubblico e la dashboard personale supportano la
-  partecipazione con un massimo di 10 figli. I figli sono salvati in
+- Dal 2026-07-28 il form pubblico, l'inserimento manuale del capogruppo e la
+  dashboard personale supportano la partecipazione con un massimo di 10 figli.
+  Nel modulo capogruppo la domanda e' proposta prima dell'accessibilita', parte
+  da `No` e usa la stessa validazione server del form pubblico. I figli sono salvati in
   `registration_children` con nome, cognome, data di nascita e posizione,
   collegati alla singola iscrizione del genitore. Non hanno account, contatto,
   consenso, assegnazione gruppo o QR autonomi: ereditano evento, stato,

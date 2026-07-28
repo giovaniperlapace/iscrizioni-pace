@@ -21,6 +21,7 @@ import { CopyLinkButton } from "@/app/dashboard/group-link-copy-tools";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
 import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
+import { ManualChildrenFields } from "@/app/dashboard/capogruppo/manual-children-fields";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
@@ -683,7 +684,8 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   phone: "Telefono",
   birthDate: "Data di nascita",
   internalNote: "Nota interna",
-  consent: "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione.",
+  consent:
+    "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione. Se inserisco uno o più figli, confermo che la persona mi ha dichiarato di esercitare la responsabilità genitoriale o di essere autorizzata a comunicarne i dati.",
   filters: {
     search: "Nome o codice",
     searchPlaceholder: "Nome o codice",
@@ -874,7 +876,8 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   phone: "Phone",
   birthDate: "Date of birth",
   internalNote: "Internal note",
-  consent: "I have the registered person's consent to process data for this registration.",
+  consent:
+    "I have the registered person's consent to process data for this registration. If I add one or more children, I confirm that the person has stated that they have parental responsibility or are authorised to provide their data.",
   filters: {
     search: "Name or code",
     searchPlaceholder: "Name or code",
@@ -1061,7 +1064,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     phone: "Téléphone",
     birthDate: "Date de naissance",
     internalNote: "Note interne",
-    consent: "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription.",
+    consent:
+      "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription. Si j'ajoute un ou plusieurs enfants, je confirme que la personne a déclaré exercer la responsabilité parentale ou être autorisée à communiquer leurs données.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Nom ou code",
@@ -1213,7 +1217,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     phone: "Telefon",
     birthDate: "Geburtsdatum",
     internalNote: "Interne Notiz",
-    consent: "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung.",
+    consent:
+      "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung. Wenn ich ein oder mehrere Kinder hinzufüge, bestätige ich, dass die Person die elterliche Verantwortung ausübt oder zur Angabe ihrer Daten berechtigt ist.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Name oder Code",
@@ -1365,7 +1370,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     phone: "Teléfono",
     birthDate: "Fecha de nacimiento",
     internalNote: "Nota interna",
-    consent: "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción.",
+    consent:
+      "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción. Si añado uno o más hijos, confirmo que la persona ha declarado ejercer la responsabilidad parental o estar autorizada para comunicar sus datos.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Nombre o código",
@@ -1517,7 +1523,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     phone: "Telefoon",
     birthDate: "Geboortedatum",
     internalNote: "Interne notitie",
-    consent: "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken.",
+    consent:
+      "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken. Als ik een of meer kinderen toevoeg, bevestig ik dat de persoon het ouderlijk gezag uitoefent of gemachtigd is hun gegevens door te geven.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Naam of code",
@@ -1669,7 +1676,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     phone: "Телефон",
     birthDate: "Дата народження",
     internalNote: "Внутрішня нотатка",
-    consent: "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації.",
+    consent:
+      "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації. Якщо я додаю одну або кількох дітей, я підтверджую, що ця особа має батьківську відповідальність або уповноважена надати їхні дані.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Ім'я або код",
@@ -2464,6 +2472,7 @@ function ManualRegistrationSection({
             <input name="birthDate" type="date" className="field" />
           </label>
           <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} />
+          <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields
             locale={locale}
             copy={copy.accessibility}

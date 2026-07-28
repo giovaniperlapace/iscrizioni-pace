@@ -14,6 +14,11 @@ import {
   parseAttendanceSlot,
   type AttendanceSlot,
 } from "./attendance-slots.ts";
+import {
+  parseAccompanyingChildren,
+  validateAccompanyingChildren,
+  type RegistrationChildInput,
+} from "./registration-children.ts";
 
 export type ManualRegistrationInput = {
   groupId: string;
@@ -23,6 +28,8 @@ export type ManualRegistrationInput = {
   phone: string | null;
   birthDate: string | null;
   preferredLocale: SupportedLocale;
+  participatesWithChildren: boolean;
+  children: RegistrationChildInput[];
   availabilitySlots: AttendanceSlot[];
   availabilityUnknown: boolean;
   hasAccessibilityNeeds: boolean | null;
@@ -39,6 +46,8 @@ export function parseManualRegistrationForm(
   formData: FormData
 ): ValidationResult<ManualRegistrationInput> {
   const email = normalizeEmail(formData.get("email"));
+  const participatesWithChildren =
+    formData.get("participatesWithChildren") === "yes";
   const value: ManualRegistrationInput = {
     groupId: optionalUuid(formData.get("groupId")) ?? "",
     firstName: optionalText(formData.get("firstName")) ?? "",
@@ -47,6 +56,8 @@ export function parseManualRegistrationForm(
     phone: normalizePhone(formData.get("phone")),
     birthDate: optionalDate(formData.get("birthDate")),
     preferredLocale: DEFAULT_LOCALE,
+    participatesWithChildren,
+    children: parseAccompanyingChildren(formData, participatesWithChildren),
     availabilityUnknown: formData.get("availabilityUnknown") === "on",
     availabilitySlots: parseAvailabilitySlots(formData),
     hasAccessibilityNeeds: parseBooleanChoice(formData.get("hasAccessibilityNeeds")),
@@ -96,6 +107,13 @@ export function validateManualRegistrationInput(
     errors.push("Conferma di avere il consenso della persona iscritta.");
   }
 
+  errors.push(
+    ...validateAccompanyingChildren({
+      participatesWithChildren: input.participatesWithChildren,
+      children: input.children,
+    })
+  );
+
   return errors;
 }
 
@@ -126,6 +144,12 @@ export function buildManualRegistrationQuestionnaireAnswers(
       availabilityUnknown: input.availabilityUnknown,
       availabilitySlots: input.availabilitySlots,
       availabilityDays: [...new Set(input.availabilitySlots.map((slot) => slot.day))],
+    },
+    accompanyingChildren: {
+      participatesWithChildren: input.participatesWithChildren,
+      count: input.children.length,
+      children: input.children,
+      enteredByGroupLeader: true,
     },
     accessibility: {
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,

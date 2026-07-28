@@ -347,6 +347,8 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
     assert.equal(parsed.value.email, null);
     assert.equal(parsed.value.phone, "+393331234567");
     assert.equal(parsed.value.preferredLocale, "en");
+    assert.equal(parsed.value.participatesWithChildren, false);
+    assert.deepEqual(parsed.value.children, []);
     assert.equal(parsed.value.availabilityUnknown, false);
     assert.deepEqual(parsed.value.availabilitySlots, [
       { day: "2026-10-25", part: "morning" },
@@ -361,6 +363,55 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
     assert.equal(parsed.value.needsOperationalSupport, true);
     assert.equal(parsed.value.accessibilityNotes, "Serve posto vicino all'ingresso.");
     assert.equal(parsed.value.leaderNote, "Arriva con il gruppo di Roma.");
+  }
+});
+
+test("parseManualRegistrationForm validates accompanying children", () => {
+  const formData = new FormData();
+  formData.set("groupId", "11111111-1111-4111-8111-111111111111");
+  formData.set("firstName", "Paolo");
+  formData.set("lastName", "Bianchi");
+  formData.set("email", "paolo@example.org");
+  formData.set("availabilityUnknown", "on");
+  formData.set("participatesWithChildren", "yes");
+  formData.set("childrenCount", "2");
+  formData.set("child_0_firstName", "Anna");
+  formData.set("child_0_lastName", "Bianchi");
+  formData.set("child_0_birthDate", "2017-03-12");
+  formData.set("child_1_firstName", "Luca");
+  formData.set("child_1_lastName", "Bianchi");
+  formData.set("child_1_birthDate", "2020-09-04");
+  formData.set("consentConfirmed", "on");
+
+  const parsed = parseManualRegistrationForm(formData);
+
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.value.participatesWithChildren, true);
+    assert.deepEqual(parsed.value.children, [
+      {
+        firstName: "Anna",
+        lastName: "Bianchi",
+        birthDate: "2017-03-12",
+      },
+      {
+        firstName: "Luca",
+        lastName: "Bianchi",
+        birthDate: "2020-09-04",
+      },
+    ]);
+  }
+
+  formData.set("child_1_birthDate", "");
+  const incomplete = parseManualRegistrationForm(formData);
+
+  assert.equal(incomplete.ok, false);
+  if (!incomplete.ok) {
+    assert.ok(
+      incomplete.errors.includes(
+        "Inserisci una data di nascita valida per il figlio 2."
+      )
+    );
   }
 });
 
@@ -393,6 +444,11 @@ test("manual registration questionnaire snapshot marks group leader source", () 
   formData.set("hasAccessibilityNeeds", "yes");
   formData.set("accessibility_walkingOrSteps", "on");
   formData.set("accessibilityNotes", "Da richiamare prima della partenza.");
+  formData.set("participatesWithChildren", "yes");
+  formData.set("childrenCount", "1");
+  formData.set("child_0_firstName", "Anna");
+  formData.set("child_0_lastName", "Bianchi");
+  formData.set("child_0_birthDate", "2017-03-12");
   formData.set("consentConfirmed", "on");
 
   const parsed = parseManualRegistrationForm(formData);
@@ -407,6 +463,15 @@ test("manual registration questionnaire snapshot marks group leader source", () 
     assert.equal(answers.source, "capogruppo_manual");
     assert.equal(answers.contact.hasEmail, true);
     assert.equal(answers.groupParticipation.enteredByGroupLeader, true);
+    assert.equal(answers.accompanyingChildren.count, 1);
+    assert.equal(answers.accompanyingChildren.enteredByGroupLeader, true);
+    assert.deepEqual(answers.accompanyingChildren.children, [
+      {
+        firstName: "Anna",
+        lastName: "Bianchi",
+        birthDate: "2017-03-12",
+      },
+    ]);
     assert.equal(answers.accessibility.hasAccessibilityNeeds, true);
     assert.deepEqual(answers.accessibility.washingtonGroupAnswers, {
       walkingOrSteps: true,
