@@ -94,14 +94,6 @@ type MomentChoiceRow = {
   choice: "yes" | "no" | "unknown";
 };
 
-type GroupAssignmentRow = {
-  status: string;
-  groups: Related<{
-    name: string;
-    primary_leader_name: string | null;
-  }>;
-};
-
 type QuestionnaireRow = {
   questionnaire_version: string;
   answers: {
@@ -131,9 +123,6 @@ type ParticipantDashboardCopy = {
   area: string;
   fallbackTitle: string;
   verifiedAccess: (email: string) => string;
-  group: string;
-  leader: string;
-  noGroup: string;
   saved: string;
   noRegistrationTitle: string;
   noRegistrationBody: string;
@@ -197,9 +186,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     area: "Area partecipante",
     fallbackTitle: "Dashboard partecipante",
     verifiedAccess: (email) => `Accesso verificato per ${email}.`,
-    group: "Gruppo",
-    leader: "Referente",
-    noGroup: "Nessun gruppo collegato a questa iscrizione.",
     saved: "Modifiche salvate.",
     noRegistrationTitle: "Nessuna iscrizione collegata",
     noRegistrationBody:
@@ -270,9 +256,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     area: "Participant area",
     fallbackTitle: "Participant dashboard",
     verifiedAccess: (email) => `Access verified for ${email}.`,
-    group: "Group",
-    leader: "Contact person",
-    noGroup: "No group is linked to this registration.",
     saved: "Changes saved.",
     noRegistrationTitle: "No linked registration",
     noRegistrationBody:
@@ -343,9 +326,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     area: "Espace participant",
     fallbackTitle: "Dashboard participant",
     verifiedAccess: (email) => `Accès vérifié pour ${email}.`,
-    group: "Groupe",
-    leader: "Référent",
-    noGroup: "Aucun groupe n'est lié à cette inscription.",
     saved: "Modifications enregistrées.",
     noRegistrationTitle: "Aucune inscription liée",
     noRegistrationBody:
@@ -416,9 +396,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     area: "Teilnehmendenbereich",
     fallbackTitle: "Teilnehmenden-Dashboard",
     verifiedAccess: (email) => `Zugang bestätigt für ${email}.`,
-    group: "Gruppe",
-    leader: "Kontaktperson",
-    noGroup: "Mit dieser Anmeldung ist keine Gruppe verbunden.",
     saved: "Änderungen gespeichert.",
     noRegistrationTitle: "Keine verknüpfte Anmeldung",
     noRegistrationBody:
@@ -489,9 +466,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     area: "Área participante",
     fallbackTitle: "Panel participante",
     verifiedAccess: (email) => `Acceso verificado para ${email}.`,
-    group: "Grupo",
-    leader: "Referente",
-    noGroup: "No hay ningún grupo vinculado a esta inscripción.",
     saved: "Cambios guardados.",
     noRegistrationTitle: "No hay inscripción vinculada",
     noRegistrationBody:
@@ -562,9 +536,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     area: "Deelnemersomgeving",
     fallbackTitle: "Deelnemersdashboard",
     verifiedAccess: (email) => `Toegang bevestigd voor ${email}.`,
-    group: "Groep",
-    leader: "Contactpersoon",
-    noGroup: "Er is geen groep aan deze inschrijving gekoppeld.",
     saved: "Wijzigingen opgeslagen.",
     noRegistrationTitle: "Geen gekoppelde inschrijving",
     noRegistrationBody:
@@ -635,9 +606,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     area: "Зона учасника",
     fallbackTitle: "Панель учасника",
     verifiedAccess: (email) => `Доступ підтверджено для ${email}.`,
-    group: "Група",
-    leader: "Контактна особа",
-    noGroup: "До цієї реєстрації не прив'язано жодної групи.",
     saved: "Зміни збережено.",
     noRegistrationTitle: "Немає пов'язаної реєстрації",
     noRegistrationBody:
@@ -747,7 +715,6 @@ export default async function PartecipanteDashboardPage({
     attendanceResult,
     momentsResult,
     momentChoicesResult,
-    groupAssignmentsResult,
     questionnaireResult,
     qrStatusResult,
     participantServiceResult,
@@ -779,10 +746,6 @@ export default async function PartecipanteDashboardPage({
           .select("moment_id,choice")
           .eq("registration_id", registrationId),
         supabase
-          .from("participant_group_assignments")
-          .select("status,groups(name,primary_leader_name)")
-          .eq("registration_id", registrationId),
-        supabase
           .from("registration_questionnaire_answers")
           .select("questionnaire_version,answers")
           .eq("registration_id", registrationId)
@@ -805,7 +768,6 @@ export default async function PartecipanteDashboardPage({
         { data: [] },
         { data: [] },
         { data: [] },
-        { data: [] },
         { data: null },
         { data: null },
       ];
@@ -816,8 +778,6 @@ export default async function PartecipanteDashboardPage({
   const attendanceChoices = (attendanceResult.data ?? []) as AttendanceRow[];
   const moments = (momentsResult.data ?? []) as MomentRow[];
   const momentChoices = (momentChoicesResult.data ?? []) as MomentChoiceRow[];
-  const groupAssignments = (groupAssignmentsResult.data ??
-    []) as GroupAssignmentRow[];
   const questionnaire =
     ((questionnaireResult.data ?? []) as QuestionnaireRow[])[0] ?? null;
   const qrStatus = qrStatusResult.data as QrStatusRow | null;
@@ -875,7 +835,6 @@ export default async function PartecipanteDashboardPage({
   const supportSummary = hasAccessibilityRequest
     ? copy.supportRequested
     : copy.supportNotRequested;
-  const groupSummary = getGroupSummary(groupAssignments);
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -894,23 +853,6 @@ export default async function PartecipanteDashboardPage({
               {!event ? (
                 <p className="mt-3 max-w-3xl text-[var(--peace-muted)]">
                   {copy.verifiedAccess(auth.user.email ?? "")}
-                </p>
-              ) : null}
-              {participant && event && groupSummary ? (
-                <p className="mt-2 flex flex-wrap gap-x-10 gap-y-1 text-sm leading-6 text-[#6f7f91]">
-                  <span>
-                    {copy.group}: <span>{groupSummary.name}</span>
-                  </span>
-                  {" "}
-                  {groupSummary.leaderName ? (
-                    <span>
-                      {copy.leader}: <span>{groupSummary.leaderName}</span>
-                    </span>
-                  ) : null}
-                </p>
-              ) : participant && event ? (
-                <p className="mt-2 text-sm leading-6 text-[#6f7f91]">
-                  {copy.noGroup}
                 </p>
               ) : null}
             </div>
@@ -971,9 +913,7 @@ export default async function PartecipanteDashboardPage({
                   questionnaire={questionnaire}
                   attendanceSummary={attendanceSummary}
                   supportSummary={supportSummary}
-                  groupSummary={groupSummary}
                   serviceLabel={participantServiceLabel}
-                  selectedPanels={selectedPanels}
                   active={activeOverlay === "iscrizione"}
                   locale={locale}
                 />
@@ -1596,9 +1536,7 @@ function RegistrationSummaryCard({
   questionnaire,
   attendanceSummary,
   supportSummary,
-  groupSummary,
   serviceLabel,
-  selectedPanels,
   active,
   locale,
 }: {
@@ -1608,17 +1546,10 @@ function RegistrationSummaryCard({
   questionnaire: QuestionnaireRow | null;
   attendanceSummary: string;
   supportSummary: string;
-  groupSummary: { name: string; leaderName: string | null } | null;
   serviceLabel: string | null;
-  selectedPanels: MomentRow[];
   active: boolean;
   locale: SupportedLocale;
 }) {
-  const panelSummary =
-    selectedPanels.length > 0
-      ? selectedPanels.map((panel) => panel.title).join(", ")
-      : copy.notProvided;
-
   return (
     <details
       open
@@ -1668,19 +1599,9 @@ function RegistrationSummaryCard({
           />
           <SummaryInfo label={copy.expectedPresence} value={attendanceSummary} />
           <SummaryInfo label={copy.accessibilitySupport} value={supportSummary} />
-          <SummaryInfo
-            label={copy.group}
-            value={groupSummary?.name ?? copy.notAssigned}
-          />
-          <SummaryInfo
-            label={copy.leader}
-            value={groupSummary?.leaderName ?? copy.notAssigned}
-          />
-          <SummaryInfo
-            label={copy.eventService}
-            value={serviceLabel ?? copy.notAssigned}
-          />
-          <SummaryInfo label={copy.panelsTitle} value={panelSummary} />
+          {serviceLabel ? (
+            <SummaryInfo label={copy.eventService} value={serviceLabel} />
+          ) : null}
         </div>
         <div className="mt-3 flex justify-start">
           <Link
@@ -2032,22 +1953,6 @@ function qrStatusLabel(
   }
 
   return qrStatus.status;
-}
-
-function getGroupSummary(
-  groupAssignments: GroupAssignmentRow[]
-): { name: string; leaderName: string | null } | null {
-  const assignment = groupAssignments[0];
-  const group = assignment ? relatedOne(assignment.groups) : null;
-
-  if (!assignment || !group) {
-    return null;
-  }
-
-  return {
-    name: group.name,
-    leaderName: group.primary_leader_name,
-  };
 }
 
 function dashboardErrorMessage(

@@ -390,7 +390,7 @@ export default async function ManagerDashboardPage({
   const selectedOperationalRole =
     managerOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
     null;
-  const navMode: ManagerNavMode = params.nav === "mini" ? "mini" : "full";
+  const navMode: ManagerNavMode = params.nav === "full" ? "full" : "mini";
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -540,42 +540,42 @@ function ManagerSidebar({
   }> = [
     {
       key: "dashboard",
-      href: `/dashboard/manager?section=dashboard&nav=${navMode}`,
+      href: "/dashboard/manager?section=dashboard&nav=mini",
       Icon: BarChart3,
       label: "Statistiche",
       help: "Evento e partecipanti",
     },
     {
       key: "iscritti",
-      href: `/dashboard/manager?section=iscritti&nav=${navMode}`,
+      href: "/dashboard/manager?section=iscritti&nav=mini",
       Icon: Users,
       label: "Gestione iscritti",
       help: "Elenco e modifiche",
     },
     {
       key: "servizi",
-      href: `/dashboard/manager?section=servizi&nav=${navMode}`,
+      href: "/dashboard/manager?section=servizi&nav=mini",
       Icon: ClipboardList,
       label: "Servizi",
       help: "Lista e assegnazioni",
     },
     {
       key: "email",
-      href: `/dashboard/manager?section=email&nav=${navMode}`,
+      href: "/dashboard/manager?section=email&nav=mini",
       Icon: Mail,
       label: "Comunicazioni",
       help: "Template e campagne email",
     },
     {
       key: "ruoli",
-      href: `/dashboard/manager?section=ruoli&nav=${navMode}`,
+      href: "/dashboard/manager?section=ruoli&nav=mini",
       Icon: ShieldCheck,
       label: "Gestione ruoli",
       help: "Accessi operativi",
     },
     {
       key: "gruppi",
-      href: `/dashboard/manager?section=gruppi&nav=${navMode}`,
+      href: "/dashboard/manager?section=gruppi&nav=mini",
       Icon: Network,
       label: "Gestione gruppi",
       help: "Territori, gruppi e link",
@@ -1123,7 +1123,7 @@ async function getManagerOperationsSnapshot(
       "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
     )
     .eq("event_id", currentEventId)
-    .is("revoked_at", null)
+    .eq("is_canonical", true)
     .order("created_at", { ascending: false });
   const operationalTagsQuery = supabase
     .from("operational_tags")
@@ -1840,7 +1840,7 @@ function ManagerGroupLinksOverlay({
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
           <AutoCopyLinkNotice url={createdUrl} />
 
-          {canManage ? (
+          {canManage && links.length === 0 ? (
             <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
               <input type="hidden" name="sourceDashboard" value="manager" />
               <input type="hidden" name="groupId" value={group.id} />
@@ -1857,11 +1857,11 @@ function ManagerGroupLinksOverlay({
                 Genera link
               </PendingSubmitButton>
             </form>
-          ) : (
+          ) : !canManage ? (
             <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
               Consultazione senza permessi di modifica.
             </p>
-          )}
+          ) : null}
 
           <div className="grid gap-2">
             {links.map((link) => (
@@ -1888,7 +1888,7 @@ function ManagerGroupLinksOverlay({
                 </div>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
                   {link.url ? <CopyLinkButton url={link.url} /> : null}
-                  {canManage ? (
+                  {canManage && !link.revokedAt ? (
                     <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
                       <input type="hidden" name="sourceDashboard" value="manager" />
                       <input type="hidden" name="linkId" value={link.id} />
@@ -2981,6 +2981,7 @@ function StatusMessage({
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
     "duplicate-tag": "Esiste già un tag con questo nome per l'evento corrente.",
     "duplicate-service": "Esiste già un servizio con questo nome per l'evento corrente.",
+    "link-already-exists": "Questo gruppo ha già il proprio link. Non è possibile crearne un altro.",
     "service-label-too-long": "Il nome del servizio non può superare 40 caratteri.",
     "service-description-too-long": "La descrizione del servizio non può superare 160 caratteri.",
   };

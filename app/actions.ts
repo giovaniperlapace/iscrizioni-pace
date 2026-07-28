@@ -1870,6 +1870,28 @@ export async function createGroupRegistrationLink(formData: FormData) {
     redirect(`${dashboardPath}?groupLinkError=forbidden`);
   }
 
+  const { data: existingLink, error: existingLinkError } = await serviceSupabase
+    .from("group_registration_links")
+    .select("id")
+    .eq("event_id", groupRow.event_id)
+    .eq("group_id", groupRow.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingLinkError) {
+    redirect(
+      getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" })
+    );
+  }
+
+  if (existingLink) {
+    redirect(
+      getGroupLinksModalPath(sourceDashboard, groupRow.id, {
+        error: "link-already-exists",
+      })
+    );
+  }
+
   const token = createGroupRegistrationLinkToken();
   const { data: link, error: linkError } = await serviceSupabase
     .from("group_registration_links")
@@ -1887,9 +1909,9 @@ export async function createGroupRegistrationLink(formData: FormData) {
 
   if (linkError || !link) {
     redirect(
-      `${dashboardPath}?groupLinkError=${encodeURIComponent(
-        linkError?.message ?? "create"
-      )}`
+      getGroupLinksModalPath(sourceDashboard, groupRow.id, {
+        error: linkError?.code === "23505" ? "link-already-exists" : "create",
+      })
     );
   }
 
@@ -3731,15 +3753,21 @@ function getGroupManagementListPath(
 function getGroupLinksModalPath(
   sourceDashboard: string | null,
   groupId: string,
-  options: { saved?: boolean; token?: string } = {}
+  options: { saved?: boolean; token?: string; error?: string } = {}
 ): string {
-  const basePath =
-    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
-  const params = new URLSearchParams({
-    section: "gruppi",
-    groupTool: "links",
-    groupId,
-  });
+  const isGroupLeader = sourceDashboard === "capogruppo";
+  const basePath = isGroupLeader
+    ? "/dashboard/capogruppo"
+    : sourceDashboard === "admin"
+      ? "/dashboard/admin"
+      : "/dashboard/manager";
+  const params = isGroupLeader
+    ? new URLSearchParams({ tool: "link", groupId })
+    : new URLSearchParams({
+        section: "gruppi",
+        groupTool: "links",
+        groupId,
+      });
 
   if (options.saved) {
     params.set("groupLinkSaved", "1");
@@ -3748,6 +3776,10 @@ function getGroupLinksModalPath(
 
   if (options.token) {
     params.set("groupLinkToken", options.token);
+  }
+
+  if (options.error) {
+    params.set("groupLinkError", options.error);
   }
 
   return `${basePath}?${params.toString()}`;

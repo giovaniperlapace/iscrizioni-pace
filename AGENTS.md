@@ -415,6 +415,28 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   rende non correnti soltanto le precedenti assegnazioni automatiche ancora
   probabili, conservandole come rifiutate e registrando l'audit; non modifica
   assegnazioni gia' confermate da un referente.
+- Dal 2026-07-28 gruppo attribuito e referente sono informazioni esclusivamente
+  operative e non devono essere mostrati nella dashboard partecipante, ne'
+  sotto il nome ne' nel riepilogo dell'iscrizione. Nel riepilogo personale il
+  servizio compare soltanto quando esiste un'assegnazione con stato `assigned`;
+  in assenza di assegnazione non mostrare il campo. I panel scelti non vanno
+  duplicati nel riepilogo: devono comparire soltanto nella sezione dedicata
+  `Panel a cui sei iscritto`.
+- Dal 2026-07-28 la sidebar della dashboard manager parte sempre in modalita'
+  compatta: soltanto `nav=full` la espande esplicitamente. Il pulsante della
+  sidebar puo' espanderla nella sezione corrente, ma ogni voce di navigazione
+  verso una sezione manager deve impostare `nav=mini`, cosi' il nuovo menu si
+  apre con la barra nuovamente chiusa. Filtri, modali e azioni interne alla
+  stessa sezione continuano invece a preservare la modalita' corrente.
+- Dal 2026-07-28 ogni gruppo puo' avere un solo link riservato complessivo, non
+  un solo link attivo alla volta. Dopo la prima creazione il comando di
+  generazione non deve piu' comparire e il server deve rifiutare ulteriori
+  creazioni anche se il link e' stato revocato, scaduto o ha esaurito gli usi.
+  La revoca e' definitiva: non abilita la creazione di un sostituto. La
+  migration `20260728120000_single_group_registration_link.sql` conserva come
+  canonico un solo link per gruppo, revoca eventuali duplicati preesistenti
+  mantenendoli come storico non canonico e impone l'unicita' per le nuove
+  creazioni.
 - Dal 2026-07-20 la sezione privacy del form pubblico include un consenso
   facoltativo, separato e non preselezionato per ricevere comunicazioni su
   eventi e iniziative future della Comunita' di Sant'Egidio. L'iscrizione deve

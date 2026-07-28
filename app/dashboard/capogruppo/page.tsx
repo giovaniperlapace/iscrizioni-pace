@@ -440,6 +440,7 @@ type GroupLeaderCopy = {
   areaDescription: string;
   saved: string;
   errorPrefix: string;
+  linkAlreadyExists: string;
   yourGroups: string;
   yourGroupsHelp: string;
   registrableCount: (count: number) => string;
@@ -613,6 +614,8 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     "In questa area puoi verificare le assegnazioni dei tuoi gruppi, confermare i partecipanti o rimandarli al livello superiore.",
   saved: "Aggiornamento salvato.",
   errorPrefix: "Operazione non completata",
+  linkAlreadyExists:
+    "Questo gruppo ha già il proprio link. Non è possibile crearne un altro.",
   yourGroups: "I tuoi gruppi",
   yourGroupsHelp: "Questi sono i gruppi collegati al tuo account capogruppo.",
   registrableCount: (count) => `${count} iscrivibili`,
@@ -633,7 +636,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     "Qui trovi le persone collegate ai gruppi che gestisci. Le decisioni sul gruppo sono interne e non inviano comunicazioni automatiche al partecipante.",
   linkTitle: "Link iscrizione gruppo",
   linkHelp:
-    "Puoi generare link riservati solo per i gruppi che gestisci. I link non rendono il gruppo visibile nel menu pubblico.",
+    "Puoi creare un solo link riservato per ogni gruppo che gestisci. Anche dopo la revoca non sarà possibile crearne un altro. Il link non rende il gruppo visibile nel menu pubblico.",
   visibleInForm: "Visibile nel form",
   hidden: "Nascosto",
   leaderMissing: "da assegnare",
@@ -645,8 +648,8 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   notProvided: "Non indicata",
   justCreatedLink: "Link appena generato",
   unlabeledLink: "Link senza etichetta",
-  existingLinks: "Link già esistenti",
-  newLink: "Genera un nuovo link",
+  existingLinks: "Link del gruppo",
+  newLink: "Genera link",
   copyLink: "Copia link",
   uses: "usi",
   revoke: "Revoca",
@@ -803,6 +806,8 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     "In this area you can review the assignments for your groups, confirm participants or send them back to the higher level.",
   saved: "Update saved.",
   errorPrefix: "Operation not completed",
+  linkAlreadyExists:
+    "This group already has its link. Another one cannot be created.",
   yourGroups: "Your groups",
   yourGroupsHelp: "These are the groups linked to your group leader account.",
   registrableCount: (count) => `${count} can receive registrations`,
@@ -823,7 +828,7 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     "Here you can find the people linked to the groups you manage. Group decisions are internal and do not send automatic messages to the participant.",
   linkTitle: "Group registration link",
   linkHelp:
-    "You can generate reserved links only for the groups you manage. These links do not make the group visible in the public menu.",
+    "You can create only one reserved link for each group you manage. A new one cannot be created after revocation. The link does not make the group visible in the public menu.",
   visibleInForm: "Visible in the form",
   hidden: "Hidden",
   leaderMissing: "to be assigned",
@@ -835,8 +840,8 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   notProvided: "Not provided",
   justCreatedLink: "Newly generated link",
   unlabeledLink: "Unlabelled link",
-  existingLinks: "Existing links",
-  newLink: "Generate a new link",
+  existingLinks: "Group link",
+  newLink: "Generate link",
   copyLink: "Copy link",
   uses: "uses",
   revoke: "Revoke",
@@ -2001,7 +2006,7 @@ export default async function CapogruppoDashboardPage({
       )
       .in("group_id", groupIds)
       .eq("event_id", currentEventId)
-      .is("revoked_at", null)
+      .eq("is_canonical", true)
       .order("created_at", { ascending: false });
 
     return ((data ?? []) as GroupLinkRow[]).map((link) => ({
@@ -2252,7 +2257,12 @@ function GroupLeaderLinksSection({
               key={group.id}
               className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
             >
-              <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+              <div
+                className={[
+                  "grid gap-4",
+                  groupLinks.length === 0 ? "lg:grid-cols-[1fr_340px]" : "",
+                ].join(" ")}
+              >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold text-[var(--peace-ink)]">{group.name}</h3>
@@ -2308,20 +2318,22 @@ function GroupLeaderLinksSection({
                                 url={link.url}
                               />
                             ) : null}
-                            <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
-                              <input type="hidden" name="sourceDashboard" value="capogruppo" />
-                              <input type="hidden" name="linkId" value={link.id} />
-                              <PendingSubmitButton
-                                aria-label={`${copy.revoke}: ${
-                                  link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink
-                                }`}
-                                className="inline-flex size-9 items-center justify-center rounded-md border border-[#d1a7a0] p-0 text-[#8a3f35] transition hover:bg-[#fff0ee]"
-                                title={copy.revoke}
-                              >
-                                <Trash2 className="size-4" aria-hidden="true" />
-                                <span className="sr-only">{copy.revoke}</span>
-                              </PendingSubmitButton>
-                            </form>
+                            {!link.revokedAt ? (
+                              <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
+                                <input type="hidden" name="sourceDashboard" value="capogruppo" />
+                                <input type="hidden" name="linkId" value={link.id} />
+                                <PendingSubmitButton
+                                  aria-label={`${copy.revoke}: ${
+                                    link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink
+                                  }`}
+                                  className="inline-flex size-9 items-center justify-center rounded-md border border-[#d1a7a0] p-0 text-[#8a3f35] transition hover:bg-[#fff0ee]"
+                                  title={copy.revoke}
+                                >
+                                  <Trash2 className="size-4" aria-hidden="true" />
+                                  <span className="sr-only">{copy.revoke}</span>
+                                </PendingSubmitButton>
+                              </form>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -2332,29 +2344,31 @@ function GroupLeaderLinksSection({
                   </div>
                 </div>
 
-                <form
-                  action={createGroupRegistrationLink}
-                  className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4"
-                  data-preserve-dashboard-scroll
-                >
-                  <input type="hidden" name="sourceDashboard" value="capogruppo" />
-                  <input type="hidden" name="groupId" value={group.id} />
-                  <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
-                    {copy.newLink}
-                  </h4>
-                  <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                    {copy.publicLabel}
-                    <input
-                      name="displayName"
-                      className="field"
-                      defaultValue={group.publicLabel ?? group.name}
-                      required
-                    />
-                  </label>
-                  <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                    {copy.generateLink}
-                  </PendingSubmitButton>
-                </form>
+                {groupLinks.length === 0 ? (
+                  <form
+                    action={createGroupRegistrationLink}
+                    className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4"
+                    data-preserve-dashboard-scroll
+                  >
+                    <input type="hidden" name="sourceDashboard" value="capogruppo" />
+                    <input type="hidden" name="groupId" value={group.id} />
+                    <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
+                      {copy.newLink}
+                    </h4>
+                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                      {copy.publicLabel}
+                      <input
+                        name="displayName"
+                        className="field"
+                        defaultValue={group.publicLabel ?? group.name}
+                        required
+                      />
+                    </label>
+                    <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                      {copy.generateLink}
+                    </PendingSubmitButton>
+                  </form>
+                ) : null}
               </div>
             </article>
           );
@@ -3275,7 +3289,9 @@ function StatusMessage({
 
   return (
     <div className="rounded-lg border border-[#e0b6af] bg-[#fff0ee] p-4 text-sm text-[#8a3f35]">
-      {copy.errorPrefix}: {error}.
+      {error === "link-already-exists"
+        ? copy.linkAlreadyExists
+        : `${copy.errorPrefix}: ${error}.`}
     </div>
   );
 }

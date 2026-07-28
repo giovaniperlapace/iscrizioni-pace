@@ -59,6 +59,10 @@ const multiplePrimaryGroupLeadersMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260727195000_multiple_primary_group_leaders.sql"
 );
+const singleGroupRegistrationLinkMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260728120000_single_group_registration_link.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -93,6 +97,10 @@ const explicitGroupSelectionMigration = readFileSync(
 const groupAgeBandsMigration = readFileSync(groupAgeBandsMigrationPath, "utf8");
 const multiplePrimaryGroupLeadersMigration = readFileSync(
   multiplePrimaryGroupLeadersMigrationPath,
+  "utf8"
+);
+const singleGroupRegistrationLinkMigration = readFileSync(
+  singleGroupRegistrationLinkMigrationPath,
   "utf8"
 );
 
@@ -275,6 +283,33 @@ test("group registration links migration separates hidden groups from reserved a
   );
   assert.match(groupRegistrationLinksMigration, /group registration links read operational/);
   assert.match(groupRegistrationLinksMigration, /group registration links manage direct leaders/);
+});
+
+test("each group keeps one reserved registration link even after revocation", () => {
+  assert.match(
+    singleGroupRegistrationLinkMigration,
+    /add column if not exists is_canonical boolean not null default true/
+  );
+  assert.match(
+    singleGroupRegistrationLinkMigration,
+    /partition by event_id, group_id/
+  );
+  assert.match(
+    singleGroupRegistrationLinkMigration,
+    /create unique index if not exists group_registration_links_one_per_group_idx/
+  );
+  assert.match(
+    singleGroupRegistrationLinkMigration,
+    /where is_canonical/
+  );
+  assert.match(
+    singleGroupRegistrationLinkMigration,
+    /new\.is_canonical := true/
+  );
+  assert.doesNotMatch(
+    singleGroupRegistrationLinkMigration,
+    /where revoked_at is null/
+  );
 });
 
 test("operational tags migration scopes manager-created tags to event participants", () => {

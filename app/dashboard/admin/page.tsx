@@ -540,7 +540,7 @@ export default async function AdminDashboardPage({
           "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
         )
         .eq("event_id", currentEventId)
-        .is("revoked_at", null)
+        .eq("is_canonical", true)
         .order("created_at", { ascending: false }),
       serviceSupabase
         .from("event_user_roles")
@@ -2361,22 +2361,24 @@ function AdminGroupLinksOverlay({
         </div>
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
           <AutoCopyLinkNotice url={createdUrl} />
-          <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
-            <input type="hidden" name="sourceDashboard" value="admin" />
-            <input type="hidden" name="groupId" value={group.id} />
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Nome visualizzato del link
-              <input
-                name="displayName"
-                className="field"
-                defaultValue={group.publicLabel ?? group.name}
-                required
-              />
-            </label>
-            <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-              Genera link
-            </PendingSubmitButton>
-          </form>
+          {links.length === 0 ? (
+            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
+              <input type="hidden" name="sourceDashboard" value="admin" />
+              <input type="hidden" name="groupId" value={group.id} />
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Nome visualizzato del link
+                <input
+                  name="displayName"
+                  className="field"
+                  defaultValue={group.publicLabel ?? group.name}
+                  required
+                />
+              </label>
+              <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
+                Genera link
+              </PendingSubmitButton>
+            </form>
+          ) : null}
 
           <div className="grid gap-2">
             {links.map((link) => (
@@ -2403,13 +2405,15 @@ function AdminGroupLinksOverlay({
                 </div>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
                   {link.url ? <CopyLinkButton url={link.url} /> : null}
-                  <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
-                    <input type="hidden" name="sourceDashboard" value="admin" />
-                    <input type="hidden" name="linkId" value={link.id} />
-                    <PendingSubmitButton className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
-                      Revoca
-                    </PendingSubmitButton>
-                  </form>
+                  {!link.revokedAt ? (
+                    <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
+                      <input type="hidden" name="sourceDashboard" value="admin" />
+                      <input type="hidden" name="linkId" value={link.id} />
+                      <PendingSubmitButton className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
+                        Revoca
+                      </PendingSubmitButton>
+                    </form>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -2728,6 +2732,7 @@ function StatusMessage({
     "email-taken": "Questa email è già associata a un altro utente operativo.",
     "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
+    "link-already-exists": "Questo gruppo ha già il proprio link. Non è possibile crearne un altro.",
     forbidden: "Non hai permessi di modifica su questo evento.",
     "service-label-too-long": "Il nome del servizio non può superare 40 caratteri.",
     "service-description-too-long": "La descrizione del servizio non può superare 160 caratteri.",
