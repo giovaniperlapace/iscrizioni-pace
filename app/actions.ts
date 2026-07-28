@@ -1824,8 +1824,11 @@ export async function createGroupRegistrationLink(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
+  const publicLabel = normalizeGroupRegistrationPublicLabel(
+    formData.get("displayName")
+  );
 
-  if (!groupId) {
+  if (!groupId || !publicLabel) {
     redirect(`${dashboardPath}?groupLinkError=invalid`);
   }
 
@@ -1896,8 +1899,8 @@ export async function createGroupRegistrationLink(formData: FormData) {
       group_id: groupRow.id,
       token_hash: hashGroupRegistrationLinkToken(token),
       token_encrypted: encryptQrToken(token),
-      public_label: groupRow.name,
-      internal_label: groupRow.name,
+      public_label: publicLabel,
+      internal_label: publicLabel,
       created_by: auth.user.id,
     })
     .select("id")
@@ -1919,7 +1922,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
     entity_id: (link as { id: string }).id,
     metadata: {
       group_id: groupRow.id,
-      label_source: "group_name",
+      has_public_label: true,
     },
   });
 
@@ -1932,12 +1935,15 @@ export async function createGroupRegistrationLink(formData: FormData) {
   }));
 }
 
-export async function revokeGroupRegistrationLink(formData: FormData) {
+export async function updateGroupRegistrationLink(formData: FormData) {
   const linkId = optionalText(formData.get("linkId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
+  const publicLabel = normalizeGroupRegistrationPublicLabel(
+    formData.get("displayName")
+  );
 
-  if (!linkId) {
+  if (!linkId || !publicLabel) {
     redirect(`${dashboardPath}?groupLinkError=invalid`);
   }
 
@@ -1954,15 +1960,16 @@ export async function revokeGroupRegistrationLink(formData: FormData) {
   const serviceSupabase = createSupabaseServiceClient();
   const { data: link, error: linkError } = await serviceSupabase
     .from("group_registration_links")
-    .select("id,event_id,group_id,revoked_at")
+    .select("id,event_id,group_id,public_label")
     .eq("id", linkId)
+    .eq("is_canonical", true)
     .maybeSingle();
   const linkRow = link as
     | {
         id: string;
         event_id: string;
         group_id: string;
-        revoked_at: string | null;
+        public_label: string | null;
       }
     | null;
 
@@ -1974,34 +1981,40 @@ export async function revokeGroupRegistrationLink(formData: FormData) {
     redirect(`${dashboardPath}?groupLinkError=forbidden`);
   }
 
-  const now = new Date().toISOString();
   const { error: updateError } = await serviceSupabase
     .from("group_registration_links")
-    .update({ revoked_at: linkRow.revoked_at ?? now, revoked_by: auth.user.id })
+    .update({
+      public_label: publicLabel,
+      internal_label: publicLabel,
+    })
     .eq("id", linkRow.id);
 
   if (updateError) {
     redirect(
-      `${dashboardPath}?groupLinkError=${encodeURIComponent(updateError.message)}`
+      getGroupLinksModalPath(sourceDashboard, linkRow.group_id, {
+        error: "update",
+      })
     );
   }
 
   await serviceSupabase.from("audit_logs").insert({
     event_id: linkRow.event_id,
     actor_user_id: auth.user.id,
-    action: "group_registration_link.revoked",
+    action: "group_registration_link.updated",
     entity_table: "group_registration_links",
     entity_id: linkRow.id,
     metadata: {
       group_id: linkRow.group_id,
-      already_revoked: Boolean(linkRow.revoked_at),
+      public_label_changed: linkRow.public_label !== publicLabel,
     },
   });
 
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/capogruppo");
-  redirect(getGroupLinksModalPath(sourceDashboard, linkRow.group_id, { saved: true }));
+  redirect(
+    getGroupLinksModalPath(sourceDashboard, linkRow.group_id, { saved: true })
+  );
 }
 
 export async function saveOperationsGroup(formData: FormData) {

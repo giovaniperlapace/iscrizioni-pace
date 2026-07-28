@@ -431,25 +431,29 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Dal 2026-07-28 ogni gruppo puo' avere un solo link riservato complessivo, non
   un solo link attivo alla volta. Dopo la prima creazione il comando di
   generazione non deve piu' comparire e il server deve rifiutare ulteriori
-  creazioni anche se il link e' stato revocato, scaduto o ha esaurito gli usi.
-  La revoca e' definitiva: non abilita la creazione di un sostituto. La
+  creazioni. Il link non e' revocabile dalle dashboard o dalle Server Action,
+  per evitare che un errore operativo lasci il gruppo senza un link
+  utilizzabile e senza possibilita' di sostituzione. La
   migration `20260728120000_single_group_registration_link.sql` conserva come
   canonico un solo link per gruppo, revoca eventuali duplicati preesistenti
   mantenendoli come storico non canonico e impone l'unicita' per le nuove
   creazioni.
 - Dal 2026-07-28, dopo la creazione, la modale link deve caricare e mostrare
   sempre il link canonico anche se revocato: URL copiabile quando disponibile,
-  stato operativo e conteggio utilizzi. Il nome del link coincide sempre con il
-  nome del gruppo e non e' modificabile; in fase di creazione non chiedere un
-  nome separato. Nella scheda del link, campo URL, `Copia link` e `Revoca`
-  devono stare sulla stessa riga quando lo spazio lo consente. Le query manager,
-  admin e capogruppo filtrano `is_canonical = true` ma non
+  stato operativo e conteggio utilizzi. Il nome pubblico del link viene
+  proposto inizialmente dal nome o dalla label pubblica del gruppo, ma resta
+  modificabile senza cambiare token o URL. Nella scheda del link il campo URL e
+  `Copia link` devono stare sulla stessa riga quando lo spazio lo consente; non
+  mostrare `Revoca`. Le query manager, admin e capogruppo filtrano
+  `is_canonical = true` ma non
   `revoked_at is null`; gli errori di caricamento devono essere registrati lato
   server e non scambiati silenziosamente per una lista vuota. La migration
   `20260728120000_single_group_registration_link.sql` e' stata applicata al
   database remoto il 2026-07-28. I token opachi generati dall'app iniziano con
   `g`, cosi' rispettano sempre il requisito del validatore che impone un primo
-  carattere alfanumerico.
+  carattere alfanumerico. La migration
+  `20260728150000_prevent_canonical_group_link_revocation.sql` impone anche nel
+  database che il link canonico non possa essere revocato.
 - Dal 2026-07-20 la sezione privacy del form pubblico include un consenso
   facoltativo, separato e non preselezionato per ricevere comunicazioni su
   eventi e iniziative future della Comunita' di Sant'Egidio. L'iscrizione deve

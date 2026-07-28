@@ -20,7 +20,7 @@ const groupLeaderDashboard = readFileSync(
 test("link creation is blocked when a group has any previous link", () => {
   const createAction = actions.slice(
     actions.indexOf("export async function createGroupRegistrationLink"),
-    actions.indexOf("export async function revokeGroupRegistrationLink")
+    actions.indexOf("export async function updateGroupRegistrationLink")
   );
 
   assert.match(createAction, /\.eq\("group_id", groupRow\.id\)/);
@@ -28,15 +28,17 @@ test("link creation is blocked when a group has any previous link", () => {
   assert.match(createAction, /error: "link-already-exists"/);
 });
 
-test("the reserved link always uses the group name and cannot be renamed", () => {
-  const createAction = actions.slice(
-    actions.indexOf("export async function createGroupRegistrationLink"),
-    actions.indexOf("export async function revokeGroupRegistrationLink")
+test("the reserved link public name can be updated without replacing its token", () => {
+  const updateAction = actions.slice(
+    actions.indexOf("export async function updateGroupRegistrationLink"),
+    actions.indexOf("export async function saveOperationsGroup")
   );
 
-  assert.match(createAction, /public_label: groupRow\.name/);
-  assert.match(createAction, /internal_label: groupRow\.name/);
-  assert.doesNotMatch(actions, /export async function updateGroupRegistrationLink/);
+  assert.match(updateAction, /\.eq\("is_canonical", true\)/);
+  assert.match(updateAction, /public_label: publicLabel/);
+  assert.match(updateAction, /internal_label: publicLabel/);
+  assert.doesNotMatch(updateAction, /token_hash|token_encrypted/);
+  assert.match(updateAction, /group_registration_link\.updated/);
 });
 
 test("operational dashboards load the single canonical link including revoked links", () => {
@@ -67,13 +69,14 @@ test("link loading failures are logged instead of silently becoming an empty lis
   assert.match(groupLeaderDashboard, /\[capogruppo:group-registration-links\]/);
 });
 
-test("operational link cards do not expose display-name editing", () => {
+test("operational link cards expose public-name editing but no revocation", () => {
   for (const dashboard of [
     managerDashboard,
     adminDashboard,
     groupLeaderDashboard,
   ]) {
-    assert.doesNotMatch(dashboard, /action=\{updateGroupRegistrationLink\}/);
-    assert.doesNotMatch(dashboard, /Salva nome|Save name/);
+    assert.match(dashboard, /action=\{updateGroupRegistrationLink\}/);
+    assert.doesNotMatch(dashboard, /action=\{revokeGroupRegistrationLink\}/);
   }
+  assert.doesNotMatch(actions, /export async function revokeGroupRegistrationLink/);
 });

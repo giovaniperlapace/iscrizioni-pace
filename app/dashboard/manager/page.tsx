@@ -16,10 +16,10 @@ import {
   assignGroupLeader,
   createOperationalTag,
   createGroupRegistrationLink,
-  revokeGroupRegistrationLink,
   saveEventService,
   saveOperationsGroup,
   updateGroupPublicCatalogVisibility,
+  updateGroupRegistrationLink,
   updateParticipantOperationalTags,
   updateOperationalUserRole,
 } from "@/app/actions";
@@ -1851,9 +1851,15 @@ function ManagerGroupLinksOverlay({
             <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
               <input type="hidden" name="sourceDashboard" value="manager" />
               <input type="hidden" name="groupId" value={group.id} />
-              <p className="text-sm text-[var(--peace-muted)]">
-                Verrà creato il link riservato per <strong className="text-[var(--peace-ink)]">{group.name}</strong>.
-              </p>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                Nome pubblico del link
+                <input
+                  name="displayName"
+                  className="field"
+                  defaultValue={group.publicLabel ?? group.name}
+                  required
+                />
+              </label>
               <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                 Genera link
               </PendingSubmitButton>
@@ -1868,7 +1874,32 @@ function ManagerGroupLinksOverlay({
             {links.map((link) => (
               <div key={link.id} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm">
                 <div>
-                  <p className="font-medium text-[var(--peace-ink)]">{group.name}</p>
+                  {canManage ? (
+                    <form
+                      action={updateGroupRegistrationLink}
+                      className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+                      data-preserve-dashboard-scroll
+                    >
+                      <input type="hidden" name="sourceDashboard" value="manager" />
+                      <input type="hidden" name="linkId" value={link.id} />
+                      <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                        Nome pubblico del link
+                        <input
+                          name="displayName"
+                          className="field bg-white text-sm"
+                          defaultValue={link.publicLabel ?? group.publicLabel ?? group.name}
+                          required
+                        />
+                      </label>
+                      <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                        Salva nome
+                      </PendingSubmitButton>
+                    </form>
+                  ) : (
+                    <p className="font-medium text-[var(--peace-ink)]">
+                      {link.publicLabel ?? group.publicLabel ?? group.name}
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {groupLinkStatusLabel(link)} - usi {link.useCount}
                     {link.maxUses ? `/${link.maxUses}` : ""}
@@ -1881,18 +1912,7 @@ function ManagerGroupLinksOverlay({
                       className="field min-w-0 flex-1 bg-[#f7fbfe] font-mono text-xs"
                       value={link.url}
                     />
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      <CopyLinkButton url={link.url} />
-                      {canManage && !link.revokedAt ? (
-                        <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
-                          <input type="hidden" name="sourceDashboard" value="manager" />
-                          <input type="hidden" name="linkId" value={link.id} />
-                          <PendingSubmitButton className="min-h-9 rounded-md border border-[#d1a7a0] px-3 text-xs font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]">
-                            Revoca
-                          </PendingSubmitButton>
-                        </form>
-                      ) : null}
-                    </div>
+                    <CopyLinkButton url={link.url} />
                   </div>
                 ) : (
                   <p className="text-xs text-[var(--peace-muted)]">

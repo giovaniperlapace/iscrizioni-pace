@@ -63,6 +63,10 @@ const singleGroupRegistrationLinkMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260728120000_single_group_registration_link.sql"
 );
+const preventGroupLinkRevocationMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260728150000_prevent_canonical_group_link_revocation.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -101,6 +105,10 @@ const multiplePrimaryGroupLeadersMigration = readFileSync(
 );
 const singleGroupRegistrationLinkMigration = readFileSync(
   singleGroupRegistrationLinkMigrationPath,
+  "utf8"
+);
+const preventGroupLinkRevocationMigration = readFileSync(
+  preventGroupLinkRevocationMigrationPath,
   "utf8"
 );
 
@@ -309,6 +317,17 @@ test("each group keeps one reserved registration link even after revocation", ()
   assert.doesNotMatch(
     singleGroupRegistrationLinkMigration,
     /where revoked_at is null/
+  );
+});
+
+test("the canonical group registration link cannot be revoked", () => {
+  assert.match(
+    preventGroupLinkRevocationMigration,
+    /group_registration_links_canonical_not_revoked/
+  );
+  assert.match(
+    preventGroupLinkRevocationMigration,
+    /not is_canonical[\s\S]*revoked_at is null and revoked_by is null/
   );
 });
 

@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
 import {
   createGroupLeaderManualRegistration,
   createGroupRegistrationLink,
-  revokeGroupRegistrationLink,
   updateParticipantEventService,
   updateGroupLeaderAssignment,
+  updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
   updateParticipantOperationalTags,
 } from "@/app/actions";
@@ -51,7 +51,6 @@ import {
 } from "@/lib/registrations/attendance-slots";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { Trash2 } from "lucide-react";
 
 type CapogruppoPageProps = {
   searchParams: Promise<{
@@ -472,9 +471,9 @@ type GroupLeaderCopy = {
   unlabeledLink: string;
   existingLinks: string;
   newLink: string;
+  saveLinkName: string;
   copyLink: string;
   uses: string;
-  revoke: string;
   noActiveLinks: string;
   publicLabel: string;
   publicLabelHelp: string;
@@ -650,9 +649,9 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   unlabeledLink: "Link senza etichetta",
   existingLinks: "Link del gruppo",
   newLink: "Genera link",
+  saveLinkName: "Salva nome",
   copyLink: "Copia link",
   uses: "usi",
-  revoke: "Revoca",
   noActiveLinks: "Nessun link attivo.",
   publicLabel: "Nome visualizzato del link",
   publicLabelHelp:
@@ -842,9 +841,9 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   unlabeledLink: "Unlabelled link",
   existingLinks: "Group link",
   newLink: "Generate link",
+  saveLinkName: "Save name",
   copyLink: "Copy link",
   uses: "uses",
-  revoke: "Revoke",
   noActiveLinks: "No active link.",
   publicLabel: "Link display name",
   publicLabelHelp:
@@ -1035,7 +1034,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     justCreatedLink: "Lien tout juste généré",
     unlabeledLink: "Lien sans libellé",
     uses: "utilisations",
-    revoke: "Révoquer",
     noActiveLinks: "Aucun lien actif.",
     publicLabel: "Nom affiché à la personne qui s'inscrit",
     publicLabelHelp:
@@ -1188,7 +1186,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     justCreatedLink: "Gerade erstellter Link",
     unlabeledLink: "Link ohne Bezeichnung",
     uses: "Nutzungen",
-    revoke: "Widerrufen",
     noActiveLinks: "Kein aktiver Link.",
     publicLabel: "Name für die anmeldende Person",
     publicLabelHelp:
@@ -1341,7 +1338,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     justCreatedLink: "Enlace recién generado",
     unlabeledLink: "Enlace sin etiqueta",
     uses: "usos",
-    revoke: "Revocar",
     noActiveLinks: "Ningún enlace activo.",
     publicLabel: "Nombre mostrado a quien se inscribe",
     publicLabelHelp:
@@ -1494,7 +1490,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     justCreatedLink: "Zojuist gegenereerde link",
     unlabeledLink: "Link zonder label",
     uses: "gebruiken",
-    revoke: "Intrekken",
     noActiveLinks: "Geen actieve link.",
     publicLabel: "Naam getoond aan wie zich inschrijft",
     publicLabelHelp:
@@ -1647,7 +1642,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     justCreatedLink: "Щойно створене посилання",
     unlabeledLink: "Посилання без мітки",
     uses: "використань",
-    revoke: "Відкликати",
     noActiveLinks: "Немає активних посилань.",
     publicLabel: "Назва, показана тому, хто реєструється",
     publicLabelHelp:
@@ -2303,9 +2297,28 @@ function GroupLeaderLinksSection({
                         key={link.id}
                         className="rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm"
                       >
-                        <p className="font-medium text-[var(--peace-ink)]">
-                          {group.name}
-                        </p>
+                        <form
+                          action={updateGroupRegistrationLink}
+                          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+                          data-preserve-dashboard-scroll
+                        >
+                          <input type="hidden" name="sourceDashboard" value="capogruppo" />
+                          <input type="hidden" name="linkId" value={link.id} />
+                          <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                            {copy.publicLabel}
+                            <input
+                              name="displayName"
+                              className="field bg-white text-sm"
+                              defaultValue={
+                                link.publicLabel ?? group.publicLabel ?? group.name
+                              }
+                              required
+                            />
+                          </label>
+                          <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                            {copy.saveLinkName}
+                          </PendingSubmitButton>
+                        </form>
                         <p className="mt-1 text-xs text-[var(--peace-muted)]">
                           {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
                           {link.maxUses ? `/${link.maxUses}` : ""}
@@ -2318,31 +2331,13 @@ function GroupLeaderLinksSection({
                               value={link.url}
                             />
                           ) : null}
-                          <div className="flex gap-2 sm:shrink-0">
-                            {link.url ? (
-                              <CopyLinkButton
-                                iconOnly
-                                label={copy.copyLink}
-                                url={link.url}
-                              />
-                            ) : null}
-                            {!link.revokedAt ? (
-                              <form action={revokeGroupRegistrationLink} data-preserve-dashboard-scroll>
-                                <input type="hidden" name="sourceDashboard" value="capogruppo" />
-                                <input type="hidden" name="linkId" value={link.id} />
-                                <PendingSubmitButton
-                                  aria-label={`${copy.revoke}: ${
-                                    link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink
-                                  }`}
-                                  className="inline-flex size-9 items-center justify-center rounded-md border border-[#d1a7a0] p-0 text-[#8a3f35] transition hover:bg-[#fff0ee]"
-                                  title={copy.revoke}
-                                >
-                                  <Trash2 className="size-4" aria-hidden="true" />
-                                  <span className="sr-only">{copy.revoke}</span>
-                                </PendingSubmitButton>
-                              </form>
-                            ) : null}
-                          </div>
+                          {link.url ? (
+                            <CopyLinkButton
+                              iconOnly
+                              label={copy.copyLink}
+                              url={link.url}
+                            />
+                          ) : null}
                         </div>
                       </div>
                     ))}
@@ -2363,9 +2358,15 @@ function GroupLeaderLinksSection({
                     <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
                       {copy.newLink}
                     </h4>
-                    <p className="text-sm font-semibold text-[var(--peace-ink)]">
-                      {group.name}
-                    </p>
+                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                      {copy.publicLabel}
+                      <input
+                        name="displayName"
+                        className="field"
+                        defaultValue={group.publicLabel ?? group.name}
+                        required
+                      />
+                    </label>
                     <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                       {copy.generateLink}
                     </PendingSubmitButton>
