@@ -4,6 +4,12 @@ import {
   parseAttendanceSlot,
   type AttendanceSlot,
 } from "./attendance-slots.ts";
+import {
+  parseAccompanyingChildren,
+  sameRegistrationChildren,
+  validateAccompanyingChildren,
+  type RegistrationChildInput,
+} from "./registration-children.ts";
 
 export type ParticipantDashboardUpdate = {
   registrationId: string;
@@ -11,6 +17,8 @@ export type ParticipantDashboardUpdate = {
   availabilityUnknown: boolean;
   availabilitySlots: AttendanceSlot[];
   momentAttendanceChoices: Record<string, "yes" | "no" | "unknown">;
+  participatesWithChildren: boolean;
+  children: RegistrationChildInput[];
   accessibilityAnswers: Record<string, boolean>;
   needsOperationalSupport: boolean;
   accessibilityNotes: string | null;
@@ -31,6 +39,8 @@ export function parseParticipantDashboardUpdate(
   const phone = normalizePhone(formData.get("phone"));
   const availabilityUnknown = formData.get("availabilityUnknown") === "on";
   const hasAccessibilityNeeds = formData.get("hasAccessibilityNeeds") === "on";
+  const participatesWithChildren =
+    formData.get("participatesWithChildren") === "yes";
 
   const value: ParticipantDashboardUpdate = {
     registrationId,
@@ -38,6 +48,8 @@ export function parseParticipantDashboardUpdate(
     availabilityUnknown,
     availabilitySlots: availabilityUnknown ? [] : parseAvailabilitySlots(formData),
     momentAttendanceChoices: parseMomentAttendanceChoices(formData),
+    participatesWithChildren,
+    children: parseAccompanyingChildren(formData, participatesWithChildren),
     accessibilityAnswers: hasAccessibilityNeeds
       ? parseAccessibilityAnswers(formData)
       : {},
@@ -71,6 +83,13 @@ export function validateParticipantDashboardUpdate(
     );
   }
 
+  errors.push(
+    ...validateAccompanyingChildren({
+      participatesWithChildren: input.participatesWithChildren,
+      children: input.children,
+    })
+  );
+
   return errors;
 }
 
@@ -102,6 +121,7 @@ export function diffParticipantDashboardUpdate(
     availabilitySlots: AttendanceSlot[];
     availabilityUnknown: boolean;
     momentAttendanceChoices: Record<string, string>;
+    children: RegistrationChildInput[];
     accessibilityAnswers: Record<string, boolean>;
     needsOperationalSupport: boolean | null;
     accessibilityNotes: string | null;
@@ -129,6 +149,10 @@ export function diffParticipantDashboardUpdate(
 
   if (!sameChoiceMap(before.momentAttendanceChoices, after.momentAttendanceChoices)) {
     changed.push("moment_attendance_choices");
+  }
+
+  if (!sameRegistrationChildren(before.children, after.children)) {
+    changed.push("accompanying_children");
   }
 
   if (!sameBooleanMap(before.accessibilityAnswers, after.accessibilityAnswers)) {
@@ -164,6 +188,22 @@ export function preserveAccessibilityUnlessEdited(
     accessibilityAnswers: previous.accessibilityAnswers,
     needsOperationalSupport: Boolean(previous.needsOperationalSupport),
     accessibilityNotes: previous.accessibilityNotes,
+  };
+}
+
+export function preserveChildrenUnlessEdited(
+  input: ParticipantDashboardUpdate,
+  previousChildren: RegistrationChildInput[],
+  updatesChildren: boolean
+): ParticipantDashboardUpdate {
+  if (updatesChildren) {
+    return input;
+  }
+
+  return {
+    ...input,
+    participatesWithChildren: previousChildren.length > 0,
+    children: previousChildren,
   };
 }
 

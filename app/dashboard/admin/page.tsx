@@ -133,6 +133,7 @@ type RegistrationRow = {
   participant_id: string;
   status: string | null;
   submitted_at: string | null;
+  registration_children: RegistrationChildRelationRow[] | null;
 };
 
 type AssignmentRow = {
@@ -158,12 +159,21 @@ type ContactRow = {
   phone: string | null;
 };
 
+type RegistrationChildRelationRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  position: number;
+};
+
 type AdminRegistrationRow = {
   id: string;
   event_id: string;
   participant_id: string;
   status: string | null;
   submitted_at: string | null;
+  registration_children: RegistrationChildRelationRow[] | null;
   events:
     | { title: string | null }
     | Array<{ title: string | null }>
@@ -277,6 +287,8 @@ type AdminParticipantRow = {
   currentGroupId: string | null;
   currentGroupName: string | null;
   currentGroupStatus: string | null;
+  childrenCount: number;
+  children: RegistrationChildRelationRow[];
 };
 
 type AdminOperationsSnapshot = {
@@ -514,7 +526,7 @@ export default async function AdminDashboardPage({
       serviceSupabase
         .from("registrations")
         .select(
-          "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
+          "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
         )
         .eq("event_id", currentEventId)
         .order("submitted_at", { ascending: false })
@@ -618,6 +630,10 @@ export default async function AdminDashboardPage({
           currentGroupId: assignment?.group_id ?? null,
           currentGroupName: group?.name ?? null,
           currentGroupStatus: assignment?.status ?? null,
+          childrenCount: registration.registration_children?.length ?? 0,
+          children: [...(registration.registration_children ?? [])].sort(
+            (first, second) => first.position - second.position
+          ),
         };
       });
     const filteredParticipants = applyOperationsDashboardFilters(
@@ -722,7 +738,7 @@ export default async function AdminDashboardPage({
     const { data: registrations } = await serviceSupabase
       .from("registrations")
       .select(
-        "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other)"
+        "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
       )
       .eq("event_id", currentEventId)
       .order("submitted_at", { ascending: false })
@@ -779,6 +795,7 @@ export default async function AdminDashboardPage({
         currentGroupId: assignment?.group_id ?? null,
         currentGroupName: group?.name ?? null,
         currentGroupStatus: assignment?.status ?? null,
+        childrenCount: registration.registration_children?.length ?? 0,
       };
     });
 
@@ -803,7 +820,9 @@ export default async function AdminDashboardPage({
   async function getEventSnapshot(event: EventRow): Promise<EventSnapshot> {
     const { data: registrations } = await serviceSupabase
       .from("registrations")
-      .select("id,participant_id,status,submitted_at")
+      .select(
+        "id,participant_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position)"
+      )
       .eq("event_id", event.id)
       .order("submitted_at", { ascending: false });
     const registrationRows = (registrations ?? []) as RegistrationRow[];
@@ -889,6 +908,7 @@ export default async function AdminDashboardPage({
           hasQrToken: qrRegistrationIds.has(registration.id),
           needsOperationalSupport: supportRegistrationIds.has(registration.id),
           email: emailByParticipantId.get(registration.participant_id) ?? null,
+          childrenCount: registration.registration_children?.length ?? 0,
         };
       }
     );
@@ -2583,6 +2603,30 @@ function AdminParticipantEditOverlay({
               {participant.currentGroupName ?? "Nessun gruppo corrente"} -{" "}
               {groupStatusLabel(participant.currentGroupStatus)}
             </span>
+          </div>
+          <div className="grid gap-2 text-sm">
+            <span className="font-semibold text-[var(--peace-ink)]">
+              Figli partecipanti ({participant.childrenCount})
+            </span>
+            {participant.children.length > 0 ? (
+              participant.children.map((child) => (
+                <div
+                  key={child.id}
+                  className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-3 py-2"
+                >
+                  <p className="font-semibold">
+                    {child.first_name} {child.last_name}
+                  </p>
+                  <p className="mt-1 text-[var(--peace-muted)]">
+                    Data di nascita: {formatDate(child.birth_date)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <span className="text-[var(--peace-muted)]">
+                Nessun figlio associato all&apos;iscrizione.
+              </span>
+            )}
           </div>
 
           {isEditing ? (

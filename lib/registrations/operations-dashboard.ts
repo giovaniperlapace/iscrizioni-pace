@@ -13,6 +13,7 @@ export type OperationsParticipantForFilter = {
   tagIds?: string[];
   currentServiceId?: string | null;
   currentServiceStatus?: string | null;
+  childrenCount?: number;
 };
 
 export type OperationsDashboardFilters = {
@@ -76,23 +77,37 @@ export function summarizeOperationsDashboardParticipants(
   filteredParticipants: OperationsParticipantForFilter[]
 ): OperationsDashboardSummary {
   return {
-    total: allParticipants.length,
-    filtered: filteredParticipants.length,
-    withoutGroup: filteredParticipants.filter(
-      (participant) => !participant.currentGroupId
-    ).length,
-    probableGroup: filteredParticipants.filter(
-      (participant) => participant.currentGroupStatus === "probable"
-    ).length,
-    confirmedGroup: filteredParticipants.filter(
-      (participant) => participant.currentGroupStatus === "confirmed"
-    ).length,
+    total: countRegisteredPeople(allParticipants),
+    filtered: countRegisteredPeople(filteredParticipants),
+    withoutGroup: countRegisteredPeople(
+      filteredParticipants.filter((participant) => !participant.currentGroupId)
+    ),
+    probableGroup: countRegisteredPeople(
+      filteredParticipants.filter(
+        (participant) => participant.currentGroupStatus === "probable"
+      )
+    ),
+    confirmedGroup: countRegisteredPeople(
+      filteredParticipants.filter(
+        (participant) => participant.currentGroupStatus === "confirmed"
+      )
+    ),
     withoutEmail: filteredParticipants.filter((participant) => !participant.email)
       .length,
     withoutService: filteredParticipants.filter(
       (participant) => !participant.currentServiceId
     ).length,
   };
+}
+
+function countRegisteredPeople(
+  participants: OperationsParticipantForFilter[]
+): number {
+  return participants.reduce(
+    (total, participant) =>
+      total + 1 + Math.max(0, participant.childrenCount ?? 0),
+    0
+  );
 }
 
 export function hasActiveOperationsDashboardFilters(

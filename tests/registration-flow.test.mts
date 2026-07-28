@@ -22,6 +22,7 @@ import {
   diffParticipantDashboardUpdate,
   parseParticipantDashboardUpdate,
   preserveAccessibilityUnlessEdited,
+  preserveChildrenUnlessEdited,
 } from "../lib/registrations/participant-dashboard.ts";
 import { buildAppMagicLink } from "../lib/registrations/magic-link.ts";
 import {
@@ -94,6 +95,79 @@ test("registration questionnaire inventory classifies sensitive questions", () =
   assert.ok(
     sensitive.every((question) => !question.visibleTo.includes("accoglienza"))
   );
+});
+
+test("parseRegistrationForm validates and stores accompanying children", () => {
+  const formData = new FormData();
+  formData.set("email", "maria@example.org");
+  formData.set("firstName", "Maria");
+  formData.set("lastName", "Rossi");
+  formData.set("birthDate", "1990-01-02");
+  formData.set("birthPlace", "Italia, Roma");
+  formData.set("nationality", "Italian (Italy)");
+  formData.set("countryOther", "Italia");
+  formData.set("cityOther", "Roma");
+  formData.set("hasAccessibilityNeeds", "no");
+  formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.append("availabilityDays", "2026-10-25");
+  formData.set("privacyAccepted", "on");
+  formData.set("participatesWithChildren", "yes");
+  formData.set("childrenCount", "3");
+  formData.set("child_0_firstName", "Anna");
+  formData.set("child_0_lastName", "Rossi");
+  formData.set("child_0_birthDate", "2015-02-03");
+  formData.set("child_1_firstName", "Luca");
+  formData.set("child_1_lastName", "Rossi");
+  formData.set("child_1_birthDate", "2018-04-05");
+  formData.set("child_2_firstName", "Sara");
+  formData.set("child_2_lastName", "Rossi");
+  formData.set("child_2_birthDate", "2021-06-07");
+
+  const parsed = parseRegistrationForm(formData);
+
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.value.participatesWithChildren, true);
+    assert.equal(parsed.value.children.length, 3);
+    assert.deepEqual(parsed.value.children[1], {
+      firstName: "Luca",
+      lastName: "Rossi",
+      birthDate: "2018-04-05",
+    });
+    assert.equal(
+      buildRegistrationQuestionnaireAnswers(parsed.value).accompanyingChildren
+        .count,
+      3
+    );
+  }
+});
+
+test("parseRegistrationForm rejects incomplete or future child records", () => {
+  const formData = new FormData();
+  formData.set("email", "maria@example.org");
+  formData.set("firstName", "Maria");
+  formData.set("lastName", "Rossi");
+  formData.set("birthDate", "1990-01-02");
+  formData.set("birthPlace", "Italia, Roma");
+  formData.set("nationality", "Italian (Italy)");
+  formData.set("countryOther", "Italia");
+  formData.set("cityOther", "Roma");
+  formData.set("hasAccessibilityNeeds", "no");
+  formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.append("availabilityDays", "2026-10-25");
+  formData.set("privacyAccepted", "on");
+  formData.set("participatesWithChildren", "yes");
+  formData.set("childrenCount", "1");
+  formData.set("child_0_firstName", "Anna");
+  formData.set("child_0_birthDate", "2999-01-01");
+
+  const parsed = parseRegistrationForm(formData);
+
+  assert.equal(parsed.ok, false);
+  if (!parsed.ok) {
+    assert.ok(parsed.errors.some((error) => error.includes("cognome")));
+    assert.ok(parsed.errors.some((error) => error.includes("data di nascita")));
+  }
 });
 
 test("questionnaire answers snapshot keeps configurable answers together", () => {
@@ -621,6 +695,7 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
       momentAttendanceChoices: {
         "22222222-2222-4222-8222-222222222222": "unknown",
       },
+      children: [],
       accessibilityAnswers: {},
       needsOperationalSupport: false,
       accessibilityNotes: null,
@@ -636,6 +711,14 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
       momentAttendanceChoices: {
         "22222222-2222-4222-8222-222222222222": "yes",
       },
+      participatesWithChildren: true,
+      children: [
+        {
+          firstName: "Anna",
+          lastName: "Rossi",
+          birthDate: "2015-02-03",
+        },
+      ],
       accessibilityAnswers: {
         walkingOrSteps: true,
       },
@@ -647,8 +730,37 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
   assert.deepEqual(changed, [
     "availability_slots",
     "moment_attendance_choices",
+    "accompanying_children",
     "accessibility_answers",
     "needs_operational_support",
     "accessibility_notes",
   ]);
+});
+
+test("preserveChildrenUnlessEdited keeps children out of unrelated dashboard forms", () => {
+  const formData = new FormData();
+  formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
+  formData.append("availabilityDays", "2026-09-04");
+  const parsed = parseParticipantDashboardUpdate(formData);
+
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) {
+    return;
+  }
+
+  const children = [
+    {
+      firstName: "Anna",
+      lastName: "Rossi",
+      birthDate: "2015-02-03",
+    },
+  ];
+  const preserved = preserveChildrenUnlessEdited(parsed.value, children, false);
+
+  assert.equal(preserved.participatesWithChildren, true);
+  assert.deepEqual(preserved.children, children);
+  assert.deepEqual(
+    preserveChildrenUnlessEdited(parsed.value, children, true).children,
+    []
+  );
 });

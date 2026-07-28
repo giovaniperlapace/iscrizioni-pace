@@ -174,6 +174,20 @@ test("summarizeOperationsDashboardParticipants reports loaded and filtered rows"
   });
 });
 
+test("operations summary counts children as registered people", () => {
+  const family = participant({
+    name: "Famiglia Rossi",
+    childrenCount: 3,
+    currentGroupId: "roma",
+    currentGroupStatus: "confirmed",
+  });
+  const summary = summarizeOperationsDashboardParticipants([family], [family]);
+
+  assert.equal(summary.total, 4);
+  assert.equal(summary.filtered, 4);
+  assert.equal(summary.confirmedGroup, 4);
+});
+
 function participant(
   overrides: Partial<OperationsParticipantForFilter>
 ): OperationsParticipantForFilter {

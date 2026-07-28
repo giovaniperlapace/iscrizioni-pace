@@ -6,6 +6,7 @@ export type StatisticsParticipant = {
   currentGroupName: string | null;
   country: string | null;
   city: string | null;
+  childrenCount?: number;
 };
 
 export type StatisticsGroup = {
@@ -79,18 +80,19 @@ function buildParticipantBreakdown(
   const rowsByKey = new Map<string, ParticipantBreakdownRow>();
 
   for (const participant of participants) {
+    const peopleCount = getRegisteredPeopleCount(participant);
     const bucket = getParticipantBucket(participant, groupsById, level);
     const key = `${participant.eventId}:${bucket.id}`;
     const existing = rowsByKey.get(key);
 
     if (existing) {
-      existing.participantCount += 1;
+      existing.participantCount += peopleCount;
     } else {
       rowsByKey.set(key, {
         id: key,
         label: bucket.label,
         eventTitle: participant.eventTitle,
-        participantCount: 1,
+        participantCount: peopleCount,
       });
     }
   }
@@ -184,15 +186,16 @@ function buildAttendanceByDay(
 
     const key = `${participant.eventId}:${choice.day}`;
     const existing = dayRowsByKey.get(key);
+    const peopleCount = getRegisteredPeopleCount(participant);
 
     if (existing) {
-      existing.participantCount += 1;
+      existing.participantCount += peopleCount;
     } else {
       dayRowsByKey.set(key, {
         id: key,
         label: choice.day,
         eventTitle: participant.eventTitle,
-        participantCount: 1,
+        participantCount: peopleCount,
         kind: "day",
       });
     }
@@ -208,15 +211,16 @@ function buildAttendanceByDay(
     }
 
     const existing = missingRowsByEventId.get(participant.eventId);
+    const peopleCount = getRegisteredPeopleCount(participant);
 
     if (existing) {
-      existing.participantCount += 1;
+      existing.participantCount += peopleCount;
     } else {
       missingRowsByEventId.set(participant.eventId, {
         id: `${participant.eventId}:missing`,
         label: "Nessun giorno indicato",
         eventTitle: participant.eventTitle,
-        participantCount: 1,
+        participantCount: peopleCount,
         kind: "missing",
       });
     }
@@ -257,4 +261,10 @@ function normalizeBucketId(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function getRegisteredPeopleCount(
+  participant: StatisticsParticipant
+): number {
+  return 1 + Math.max(0, participant.childrenCount ?? 0);
 }

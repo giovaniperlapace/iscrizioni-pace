@@ -42,6 +42,7 @@ import {
   PRIVACY_VERSION,
   type RegistrationInput,
 } from "@/lib/registrations/validation";
+import { toRegistrationChildRows } from "@/lib/registrations/registration-children";
 
 type PublicEvent = {
   id: string;
@@ -501,6 +502,13 @@ export async function createPublicRegistration(
       answers: buildRegistrationQuestionnaireAnswers(input),
       visibility_summary: getQuestionnaireVisibilitySummary(),
     }),
+    ...(input.children.length > 0
+      ? [
+          supabase
+            .from("registration_children")
+            .insert(toRegistrationChildRows(registrationId, input.children)),
+        ]
+      : []),
     supabase.from("qr_tokens").insert({
       registration_id: registrationId,
       token_hash: qrToken.tokenHash,
@@ -516,6 +524,7 @@ export async function createPublicRegistration(
         privacy_version: PRIVACY_VERSION,
         future_events_communications_accepted:
           input.futureEventsCommunicationsAccepted,
+        accompanying_children_count: input.children.length,
         group_registration_link_id: groupLink?.id ?? null,
       },
     }),

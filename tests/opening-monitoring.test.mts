@@ -72,6 +72,7 @@ test("summarizeRegistrationMonitoring counts launch watch items", () => {
         hasQrToken: true,
         needsOperationalSupport: false,
         email: "one@example.org",
+        childrenCount: 2,
       },
       {
         submittedAt: "2026-06-15T11:00:00.000Z",
@@ -100,10 +101,10 @@ test("summarizeRegistrationMonitoring counts launch watch items", () => {
   );
 
   assert.deepEqual(summary, {
-    total: 3,
-    submitted: 2,
+    total: 5,
+    submitted: 4,
     cancelled: 1,
-    last24Hours: 1,
+    last24Hours: 3,
     withoutCurrentGroup: 1,
     probableGroup: 2,
     participantSelectedGroup: 1,

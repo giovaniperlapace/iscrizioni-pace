@@ -27,7 +27,9 @@ import {
   diffParticipantDashboardUpdate,
   parseParticipantDashboardUpdate,
   preserveAccessibilityUnlessEdited,
+  preserveChildrenUnlessEdited,
 } from "@/lib/registrations/participant-dashboard";
+import { toRegistrationChildRows } from "@/lib/registrations/registration-children";
 import {
   buildManualRegistrationQuestionnaireAnswers,
   parseManualRegistrationForm,
@@ -242,6 +244,7 @@ export async function submitPublicRegistration(formData: FormData) {
 export async function updateParticipantDashboard(formData: FormData) {
   const parsed = parseParticipantDashboardUpdate(formData);
   const updatesAccessibility = formData.get("updatesAccessibility") === "on";
+  const updatesChildren = formData.get("updatesChildren") === "on";
 
   if (!parsed.ok) {
     redirect(
@@ -322,6 +325,7 @@ export async function updateParticipantDashboard(formData: FormData) {
     { data: attendanceChoices },
     { data: momentChoices },
     { data: accessibility },
+    { data: children },
   ] = await Promise.all([
     supabase
       .from("participant_contacts")
@@ -342,6 +346,11 @@ export async function updateParticipantDashboard(formData: FormData) {
       .select("washington_group_answers,needs_operational_support,operational_notes")
       .eq("registration_id", registrationRow.id)
       .maybeSingle(),
+    supabase
+      .from("registration_children")
+      .select("first_name,last_name,birth_date,position")
+      .eq("registration_id", registrationRow.id)
+      .order("position"),
   ]);
 
   const primaryContact = contacts?.[0] as
@@ -377,14 +386,28 @@ export async function updateParticipantDashboard(formData: FormData) {
         operational_notes: string | null;
       }
     | null;
-  const dashboardUpdate = preserveAccessibilityUnlessEdited(
-    parsed.value,
-    {
-      accessibilityAnswers: previousAccessibility?.washington_group_answers ?? {},
-      needsOperationalSupport: previousAccessibility?.needs_operational_support ?? false,
-      accessibilityNotes: previousAccessibility?.operational_notes ?? null,
-    },
-    updatesAccessibility
+  const previousChildren = ((children ?? []) as Array<{
+    first_name: string;
+    last_name: string;
+    birth_date: string;
+  }>).map((child) => ({
+    firstName: child.first_name,
+    lastName: child.last_name,
+    birthDate: child.birth_date,
+  }));
+  const dashboardUpdate = preserveChildrenUnlessEdited(
+    preserveAccessibilityUnlessEdited(
+      parsed.value,
+      {
+        accessibilityAnswers: previousAccessibility?.washington_group_answers ?? {},
+        needsOperationalSupport:
+          previousAccessibility?.needs_operational_support ?? false,
+        accessibilityNotes: previousAccessibility?.operational_notes ?? null,
+      },
+      updatesAccessibility
+    ),
+    previousChildren,
+    updatesChildren
   );
   const changedFields = diffParticipantDashboardUpdate(
     {
@@ -392,6 +415,7 @@ export async function updateParticipantDashboard(formData: FormData) {
       availabilitySlots: previousAvailabilitySlots,
       availabilityUnknown: previousAvailabilityUnknown,
       momentAttendanceChoices: previousMomentChoices,
+      children: previousChildren,
       accessibilityAnswers: previousAccessibility?.washington_group_answers ?? {},
       needsOperationalSupport: previousAccessibility?.needs_operational_support ?? false,
       accessibilityNotes: previousAccessibility?.operational_notes ?? null,
@@ -438,6 +462,15 @@ export async function updateParticipantDashboard(formData: FormData) {
     );
   }
 
+  if (updatesChildren) {
+    writes.push(
+      supabase
+        .from("registration_children")
+        .delete()
+        .eq("registration_id", registrationRow.id)
+    );
+  }
+
   const writeResults = await Promise.all(writes);
   const failedWrite = writeResults.find((result) => result.error);
 
@@ -470,6 +503,16 @@ export async function updateParticipantDashboard(formData: FormData) {
       : Promise.resolve({ error: null }),
     momentRows.length > 0
       ? supabase.from("moment_attendance_choices").insert(momentRows)
+      : Promise.resolve({ error: null }),
+    updatesChildren && dashboardUpdate.children.length > 0
+      ? supabase
+          .from("registration_children")
+          .insert(
+            toRegistrationChildRows(
+              registrationRow.id,
+              dashboardUpdate.children
+            )
+          )
       : Promise.resolve({ error: null }),
   ]);
   const failedInsert = insertResults.find((result) => result.error);

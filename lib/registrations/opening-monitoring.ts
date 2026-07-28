@@ -20,6 +20,7 @@ export type RegistrationMonitoringInput = {
   hasQrToken: boolean;
   needsOperationalSupport: boolean;
   email: string | null;
+  childrenCount?: number;
 };
 
 export type RegistrationMonitoringSummary = {
@@ -78,17 +79,18 @@ export function summarizeRegistrationMonitoring(
   return rows.reduce<RegistrationMonitoringSummary>(
     (summary, row) => {
       const submittedAt = parseDate(row.submittedAt);
+      const peopleCount = 1 + Math.max(0, row.childrenCount ?? 0);
 
-      summary.total += 1;
+      summary.total += peopleCount;
 
       if (row.status === "cancelled") {
-        summary.cancelled += 1;
+        summary.cancelled += peopleCount;
       } else {
-        summary.submitted += 1;
+        summary.submitted += peopleCount;
       }
 
       if (submittedAt && submittedAt.getTime() >= last24Start) {
-        summary.last24Hours += 1;
+        summary.last24Hours += peopleCount;
       }
 
       if (!row.hasCurrentAssignment) {

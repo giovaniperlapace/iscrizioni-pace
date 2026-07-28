@@ -106,6 +106,8 @@ type StoredRegistrationForm = {
     phonePrefix: string;
     customPhonePrefix: string;
     phoneNumber: string;
+    participatesWithChildren: string;
+    childrenCount: number;
     selectedAttendanceSlots: string[];
     selectedEventDays?: string[];
     availabilityUnknown: boolean;
@@ -142,6 +144,12 @@ type RegistrationFormCopy = {
   phoneNumberPlaceholder: string;
   phonePrefixPlaceholder: string;
   phoneTitle: string;
+  childrenQuestion: string;
+  childrenCount: string;
+  childCard: (index: number) => string;
+  childFirstName: string;
+  childLastName: string;
+  childBirthDate: string;
   accessibilityQuestion: string;
   accessibilityTitle: string;
   accessibilityHelp: string;
@@ -205,6 +213,12 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Numero",
     phonePrefixPlaceholder: "Scrivi il prefisso, per esempio +234",
     phoneTitle: "Inserisci solo cifre, spazi, punti, parentesi o trattini.",
+    childrenQuestion: "Parteciperai all'evento con uno o più figli?",
+    childrenCount: "Con quanti figli parteciperai?",
+    childCard: (index) => `Figlio ${index}`,
+    childFirstName: "Nome",
+    childLastName: "Cognome",
+    childBirthDate: "Data di nascita",
     accessibilityQuestion:
       "Hai una disabilità, una condizione di salute o un bisogno di accessibilità che desideri segnalarci per organizzare meglio l'accoglienza?",
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
@@ -230,7 +244,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     privacyBody:
       "Confermo di aver letto l'informativa privacy dell'evento e autorizzo il trattamento dei dati inseriti per gestire l'iscrizione, l'identificazione del partecipante, le comunicazioni organizzative, l'accoglienza, gli eventuali bisogni di accessibilità e gli adempimenti di sicurezza e legge collegati all'evento. I dati saranno trattati secondo il Regolamento UE 2016/679 (GDPR), con misure adeguate di riservatezza, accesso limitato ai soli incaricati e conservazione per il tempo necessario alle finalità indicate. So che posso esercitare i diritti di accesso, rettifica, cancellazione, limitazione, opposizione e revoca del consenso, senza pregiudicare la liceità del trattamento già effettuato.",
     privacyConsent:
-      "Accetto l'informativa privacy e autorizzo il trattamento dei dati necessari alla gestione dell'iscrizione e dell'evento.",
+      "Accetto l'informativa privacy e autorizzo il trattamento dei dati necessari alla gestione dell'iscrizione e dell'evento. Se iscrivo uno o più figli, confermo di esercitare la responsabilità genitoriale o di essere autorizzato a comunicarne i dati.",
     sensitiveConsent:
       "Acconsento al trattamento delle informazioni su disabilità, salute o bisogni di accessibilità indicate, per predisporre misure di accoglienza e supporto durante l'evento.",
     futureEventsConsent:
@@ -275,6 +289,12 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Number",
     phonePrefixPlaceholder: "Write the prefix, for example +234",
     phoneTitle: "Use only digits, spaces, dots, brackets or hyphens.",
+    childrenQuestion: "Will you attend the event with one or more children?",
+    childrenCount: "How many children will attend with you?",
+    childCard: (index) => `Child ${index}`,
+    childFirstName: "First name",
+    childLastName: "Last name",
+    childBirthDate: "Date of birth",
     accessibilityQuestion:
       "Do you have a disability, health condition or accessibility need that you would like to tell us about so we can organise the welcome better?",
     accessibilityTitle: "Which aspects should we consider?",
@@ -299,7 +319,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     privacyBody:
       "I confirm that I have read the event privacy notice and authorise the processing of the data entered to manage the registration, identify the participant, send organisational communications, organise welcome arrangements, handle any accessibility needs and fulfil safety and legal requirements connected with the event. The data will be processed under EU Regulation 2016/679 (GDPR), with appropriate confidentiality measures, access limited to authorised staff and storage only for the time needed for the stated purposes. I know that I may exercise the rights of access, rectification, erasure, restriction, objection and withdrawal of consent, without affecting the lawfulness of processing already carried out.",
     privacyConsent:
-      "I accept the privacy notice and authorise the processing of the data needed to manage the registration and the event.",
+      "I accept the privacy notice and authorise the processing of the data needed to manage the registration and the event. If I register one or more children, I confirm that I have parental responsibility or am authorised to provide their data.",
     sensitiveConsent:
       "I consent to the processing of the information provided about disability, health or accessibility needs, so that welcome and support measures can be prepared during the event.",
     futureEventsConsent:
@@ -344,6 +364,12 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Numéro",
     phonePrefixPlaceholder: "Écris le préfixe, par exemple +234",
     phoneTitle: "Saisis uniquement des chiffres, espaces, points, parenthèses ou tirets.",
+    childrenQuestion: "Participeras-tu à l'événement avec un ou plusieurs enfants ?",
+    childrenCount: "Avec combien d'enfants participeras-tu ?",
+    childCard: (index) => `Enfant ${index}`,
+    childFirstName: "Prénom",
+    childLastName: "Nom",
+    childBirthDate: "Date de naissance",
     accessibilityQuestion:
       "As-tu un handicap, un problème de santé ou un besoin d'accessibilité que tu souhaites nous signaler pour mieux organiser l'accueil ?",
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
@@ -368,7 +394,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     privacyBody:
       "Je confirme avoir lu la notice de confidentialité de l'événement et j'autorise le traitement des données saisies pour gérer l'inscription, identifier le participant, envoyer les communications d'organisation, organiser l'accueil, gérer les éventuels besoins d'accessibilité et remplir les obligations de sécurité et légales liées à l'événement. Les données seront traitées conformément au Règlement UE 2016/679 (RGPD), avec des mesures appropriées de confidentialité, un accès limité aux personnes autorisées et une conservation limitée au temps nécessaire aux finalités indiquées. Je sais que je peux exercer mes droits d'accès, rectification, effacement, limitation, opposition et retrait du consentement, sans affecter la licéité du traitement déjà effectué.",
     privacyConsent:
-      "J'accepte la notice de confidentialité et j'autorise le traitement des données nécessaires à la gestion de l'inscription et de l'événement.",
+      "J'accepte la notice de confidentialité et j'autorise le traitement des données nécessaires à la gestion de l'inscription et de l'événement. Si j'inscris un ou plusieurs enfants, je confirme exercer l'autorité parentale ou être autorisé à communiquer leurs données.",
     sensitiveConsent:
       "Je consens au traitement des informations indiquées concernant un handicap, la santé ou des besoins d'accessibilité, afin de préparer des mesures d'accueil et de support pendant l'événement.",
     futureEventsConsent:
@@ -413,6 +439,12 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Nummer",
     phonePrefixPlaceholder: "Schreibe die Vorwahl, zum Beispiel +234",
     phoneTitle: "Gib nur Ziffern, Leerzeichen, Punkte, Klammern oder Bindestriche ein.",
+    childrenQuestion: "Nimmst du mit einem oder mehreren Kindern an der Veranstaltung teil?",
+    childrenCount: "Mit wie vielen Kindern nimmst du teil?",
+    childCard: (index) => `Kind ${index}`,
+    childFirstName: "Vorname",
+    childLastName: "Nachname",
+    childBirthDate: "Geburtsdatum",
     accessibilityQuestion:
       "Hast du eine Behinderung, gesundheitliche Situation oder einen Barrierefreiheitsbedarf, den du uns mitteilen möchtest, damit wir den Empfang besser organisieren können?",
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
@@ -437,7 +469,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     privacyBody:
       "Ich bestätige, dass ich die Datenschutzhinweise zur Veranstaltung gelesen habe, und erlaube die Verarbeitung der eingegebenen Daten zur Verwaltung der Anmeldung, Identifizierung der teilnehmenden Person, organisatorischen Kommunikation, Organisation des Empfangs, Bearbeitung eventueller Barrierefreiheitsbedarfe sowie zur Erfüllung von Sicherheits- und Rechtspflichten im Zusammenhang mit der Veranstaltung. Die Daten werden gemäß EU-Verordnung 2016/679 (DSGVO) verarbeitet, mit angemessenen Vertraulichkeitsmaßnahmen, Zugriff nur für autorisierte Personen und Speicherung nur für die für die genannten Zwecke erforderliche Zeit. Ich weiß, dass ich meine Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch und Widerruf der Einwilligung ausüben kann, ohne die Rechtmäßigkeit der bereits erfolgten Verarbeitung zu berühren.",
     privacyConsent:
-      "Ich akzeptiere die Datenschutzhinweise und erlaube die Verarbeitung der Daten, die für die Verwaltung der Anmeldung und der Veranstaltung erforderlich sind.",
+      "Ich akzeptiere die Datenschutzhinweise und erlaube die Verarbeitung der Daten, die für die Verwaltung der Anmeldung und der Veranstaltung erforderlich sind. Wenn ich ein oder mehrere Kinder anmelde, bestätige ich, sorgeberechtigt oder zur Angabe ihrer Daten befugt zu sein.",
     sensitiveConsent:
       "Ich stimme der Verarbeitung der angegebenen Informationen zu Behinderung, Gesundheit oder Barrierefreiheitsbedarf zu, damit Empfangs- und Unterstützungsmaßnahmen während der Veranstaltung vorbereitet werden können.",
     futureEventsConsent:
@@ -482,6 +514,12 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Número",
     phonePrefixPlaceholder: "Escribe el prefijo, por ejemplo +234",
     phoneTitle: "Introduce solo cifras, espacios, puntos, paréntesis o guiones.",
+    childrenQuestion: "¿Participarás en el evento con uno o más hijos?",
+    childrenCount: "¿Con cuántos hijos participarás?",
+    childCard: (index) => `Hijo ${index}`,
+    childFirstName: "Nombre",
+    childLastName: "Apellidos",
+    childBirthDate: "Fecha de nacimiento",
     accessibilityQuestion:
       "¿Tienes una discapacidad, condición de salud o necesidad de accesibilidad que quieras comunicarnos para organizar mejor la acogida?",
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
@@ -506,7 +544,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     privacyBody:
       "Confirmo que he leído la información de privacidad del evento y autorizo el tratamiento de los datos introducidos para gestionar la inscripción, identificar al participante, enviar comunicaciones organizativas, organizar la acogida, gestionar posibles necesidades de accesibilidad y cumplir obligaciones de seguridad y legales relacionadas con el evento. Los datos se tratarán conforme al Reglamento UE 2016/679 (RGPD), con medidas adecuadas de confidencialidad, acceso limitado al personal autorizado y conservación solo durante el tiempo necesario para las finalidades indicadas. Sé que puedo ejercer los derechos de acceso, rectificación, supresión, limitación, oposición y retirada del consentimiento, sin afectar a la licitud del tratamiento ya realizado.",
     privacyConsent:
-      "Acepto la información de privacidad y autorizo el tratamiento de los datos necesarios para gestionar la inscripción y el evento.",
+      "Acepto la información de privacidad y autorizo el tratamiento de los datos necesarios para gestionar la inscripción y el evento. Si inscribo a uno o más hijos, confirmo que ejerzo la responsabilidad parental o que estoy autorizado a comunicar sus datos.",
     sensitiveConsent:
       "Consiento el tratamiento de la información indicada sobre discapacidad, salud o necesidades de accesibilidad para preparar medidas de acogida y apoyo durante el evento.",
     futureEventsConsent:
@@ -551,6 +589,12 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Nummer",
     phonePrefixPlaceholder: "Schrijf het kengetal, bijvoorbeeld +234",
     phoneTitle: "Gebruik alleen cijfers, spaties, punten, haakjes of streepjes.",
+    childrenQuestion: "Neem je met een of meer kinderen deel aan het evenement?",
+    childrenCount: "Met hoeveel kinderen neem je deel?",
+    childCard: (index) => `Kind ${index}`,
+    childFirstName: "Voornaam",
+    childLastName: "Achternaam",
+    childBirthDate: "Geboortedatum",
     accessibilityQuestion:
       "Heb je een handicap, gezondheidssituatie of toegankelijkheidsbehoefte die je ons wilt melden zodat we de ontvangst beter kunnen organiseren?",
     accessibilityTitle: "Waar moeten we rekening mee houden?",
@@ -575,7 +619,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     privacyBody:
       "Ik bevestig dat ik de privacyverklaring van het evenement heb gelezen en geef toestemming voor de verwerking van de ingevoerde gegevens om de inschrijving te beheren, de deelnemer te identificeren, organisatorische communicatie te verzenden, de ontvangst te organiseren, eventuele toegankelijkheidsbehoeften te beheren en te voldoen aan veiligheids- en wettelijke verplichtingen rond het evenement. De gegevens worden verwerkt volgens EU-verordening 2016/679 (AVG), met passende vertrouwelijkheidsmaatregelen, toegang beperkt tot bevoegde medewerkers en bewaring alleen zolang nodig voor de genoemde doeleinden. Ik weet dat ik mijn rechten op toegang, rectificatie, verwijdering, beperking, bezwaar en intrekking van toestemming kan uitoefenen, zonder afbreuk te doen aan de rechtmatigheid van reeds uitgevoerde verwerking.",
     privacyConsent:
-      "Ik accepteer de privacyverklaring en geef toestemming voor de verwerking van de gegevens die nodig zijn om de inschrijving en het evenement te beheren.",
+      "Ik accepteer de privacyverklaring en geef toestemming voor de verwerking van de gegevens die nodig zijn om de inschrijving en het evenement te beheren. Als ik een of meer kinderen inschrijf, bevestig ik dat ik ouderlijk gezag heb of bevoegd ben hun gegevens door te geven.",
     sensitiveConsent:
       "Ik stem in met de verwerking van de verstrekte informatie over handicap, gezondheid of toegankelijkheidsbehoeften, zodat ontvangst- en ondersteuningsmaatregelen tijdens het evenement kunnen worden voorbereid.",
     futureEventsConsent:
@@ -620,6 +664,12 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Номер",
     phonePrefixPlaceholder: "Напишіть код, наприклад +234",
     phoneTitle: "Вводьте лише цифри, пробіли, крапки, дужки або дефіси.",
+    childrenQuestion: "Ви братимете участь у події з однією або кількома дітьми?",
+    childrenCount: "Зі скількома дітьми ви братимете участь?",
+    childCard: (index) => `Дитина ${index}`,
+    childFirstName: "Ім’я",
+    childLastName: "Прізвище",
+    childBirthDate: "Дата народження",
     accessibilityQuestion:
       "Чи маєте ви інвалідність, стан здоров'я або потребу в доступності, про які хочете повідомити нам, щоб ми краще організували прийом?",
     accessibilityTitle: "Що нам потрібно врахувати?",
@@ -644,7 +694,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     privacyBody:
       "Я підтверджую, що прочитав/прочитала повідомлення про конфіденційність події, і дозволяю обробку введених даних для управління реєстрацією, ідентифікації учасника, організаційних повідомлень, організації прийому, можливих потреб доступності та виконання вимог безпеки і закону, пов'язаних із подією. Дані оброблятимуться відповідно до Регламенту ЄС 2016/679 (GDPR), із належними заходами конфіденційності, доступом лише для уповноважених осіб і зберіганням лише протягом часу, необхідного для зазначених цілей. Я знаю, що можу здійснювати права доступу, виправлення, видалення, обмеження, заперечення та відкликання згоди, без шкоди для законності вже здійсненої обробки.",
     privacyConsent:
-      "Я приймаю повідомлення про конфіденційність і дозволяю обробку даних, необхідних для управління реєстрацією та подією.",
+      "Я приймаю повідомлення про конфіденційність і дозволяю обробку даних, необхідних для управління реєстрацією та подією. Якщо я реєструю одну або кількох дітей, я підтверджую, що маю батьківські права або уповноважений/уповноважена надати їхні дані.",
     sensitiveConsent:
       "Я погоджуюся на обробку вказаної інформації про інвалідність, здоров'я або потреби доступності, щоб підготувати заходи прийому та підтримки під час події.",
     futureEventsConsent:
@@ -700,6 +750,8 @@ export function RegistrationForm({
   const [phonePrefix, setPhonePrefix] = useState("+39");
   const [customPhonePrefix, setCustomPhonePrefix] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [participatesWithChildren, setParticipatesWithChildren] = useState("no");
+  const [childrenCount, setChildrenCount] = useState(1);
   const [selectedAttendanceSlots, setSelectedAttendanceSlots] = useState<string[]>([]);
   const [availabilityUnknown, setAvailabilityUnknown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -799,6 +851,8 @@ export function RegistrationForm({
       phonePrefix,
       customPhonePrefix,
       phoneNumber,
+      participatesWithChildren,
+      childrenCount,
       selectedAttendanceSlots,
       availabilityUnknown,
     });
@@ -822,6 +876,8 @@ export function RegistrationForm({
     phonePrefix,
     customPhonePrefix,
     phoneNumber,
+    participatesWithChildren,
+    childrenCount,
     selectedAttendanceSlots,
     availabilityUnknown,
   ]);
@@ -869,6 +925,16 @@ export function RegistrationForm({
       setPhonePrefix(stored.state.phonePrefix);
       setCustomPhonePrefix(stored.state.customPhonePrefix);
       setPhoneNumber(stored.state.phoneNumber);
+      setParticipatesWithChildren(
+        stored.state.participatesWithChildren === "yes" ? "yes" : "no"
+      );
+      setChildrenCount(
+        Number.isInteger(stored.state.childrenCount) &&
+          stored.state.childrenCount >= 1 &&
+          stored.state.childrenCount <= 10
+          ? stored.state.childrenCount
+          : 1
+      );
       setSelectedAttendanceSlots(
         stored.state.selectedAttendanceSlots ??
           stored.state.selectedEventDays?.flatMap((day) => [
@@ -1336,6 +1402,93 @@ export function RegistrationForm({
             />
           ) : null}
         </div>
+      </section>
+
+      <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
+          <span>{copy.childrenQuestion}</span>
+          <input
+            name="participatesWithChildren"
+            type="hidden"
+            value={participatesWithChildren}
+          />
+          <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
+            <ChoiceButton
+              active={participatesWithChildren === "yes"}
+              label={copy.yes}
+              dataField="participatesWithChildren"
+              onClick={() => setParticipatesWithChildren("yes")}
+            />
+            <ChoiceButton
+              active={participatesWithChildren === "no"}
+              label={copy.no}
+              dataField="participatesWithChildren"
+              onClick={() => setParticipatesWithChildren("no")}
+            />
+          </div>
+        </div>
+
+        {participatesWithChildren === "yes" ? (
+          <div className="grid gap-4">
+            <Field label={copy.childrenCount}>
+              <select
+                name="childrenCount"
+                className="field"
+                value={childrenCount}
+                onChange={(event) => setChildrenCount(Number(event.target.value))}
+              >
+                {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                  (count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  )
+                )}
+              </select>
+            </Field>
+
+            <div className="grid gap-4">
+              {Array.from({ length: childrenCount }, (_, index) => (
+                <fieldset
+                  key={index}
+                  className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 sm:grid-cols-2"
+                >
+                  <legend className="px-2 text-sm font-semibold text-[var(--peace-blue-900)]">
+                    {copy.childCard(index + 1)}
+                  </legend>
+                  <Field label={copy.childFirstName}>
+                    <input
+                      name={`child_${index}_firstName`}
+                      required
+                      className="field bg-white"
+                      autoComplete="off"
+                      data-field="children"
+                    />
+                  </Field>
+                  <Field label={copy.childLastName}>
+                    <input
+                      name={`child_${index}_lastName`}
+                      required
+                      className="field bg-white"
+                      autoComplete="off"
+                      data-field="children"
+                    />
+                  </Field>
+                  <Field label={copy.childBirthDate} className="sm:col-span-2">
+                    <input
+                      name={`child_${index}_birthDate`}
+                      type="date"
+                      required
+                      className="field bg-white"
+                      autoComplete="off"
+                      data-field="children"
+                    />
+                  </Field>
+                </fieldset>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">

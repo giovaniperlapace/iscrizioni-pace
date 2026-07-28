@@ -7,8 +7,13 @@ import {
   parseAttendanceSlot,
   type AttendanceSlot,
 } from "./attendance-slots.ts";
+import {
+  parseAccompanyingChildren,
+  validateAccompanyingChildren,
+  type RegistrationChildInput,
+} from "./registration-children.ts";
 
-export const PRIVACY_VERSION = "2026-07-20-gdpr-future-events";
+export const PRIVACY_VERSION = "2026-07-28-accompanying-children";
 export const FUTURE_EVENTS_COMMUNICATIONS_CONSENT_VERSION = "2026-07-20-v1";
 
 export type RegistrationInput = {
@@ -35,6 +40,8 @@ export type RegistrationInput = {
   availabilitySlots: AttendanceSlot[];
   availabilityUnknown: boolean;
   momentAttendanceChoices: Record<string, "yes" | "no" | "unknown">;
+  participatesWithChildren: boolean;
+  children: RegistrationChildInput[];
   hasAccessibilityNeeds: boolean | null;
   accessibilityAnswers: Record<string, boolean>;
   accessibilityNotes: string | null;
@@ -87,6 +94,8 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   const groupRegistrationLinkToken = optionalText(
     formData.get("groupRegistrationLinkToken")
   );
+  const participatesWithChildren =
+    formData.get("participatesWithChildren") === "yes";
   const hasAccessibilityNeeds = parseBooleanChoice(
     formData.get("hasAccessibilityNeeds")
   );
@@ -132,6 +141,8 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     availabilitySlots: availabilityUnknown ? [] : parseAvailabilitySlots(formData),
     availabilityUnknown,
     momentAttendanceChoices: parseMomentAttendanceChoices(formData),
+    participatesWithChildren,
+    children: parseAccompanyingChildren(formData, participatesWithChildren),
     hasAccessibilityNeeds,
     accessibilityAnswers,
     accessibilityNotes: optionalText(formData.get("accessibilityNotes")),
@@ -185,6 +196,13 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
   if (input.phone && !PHONE_PATTERN.test(input.phone)) {
     errors.push("Inserisci un numero di telefono valido con prefisso internazionale.");
   }
+
+  errors.push(
+    ...validateAccompanyingChildren({
+      participatesWithChildren: input.participatesWithChildren,
+      children: input.children,
+    })
+  );
 
   if (input.hasAccessibilityNeeds === null) {
     errors.push("Indica se hai disabilità o bisogni di accessibilità.");

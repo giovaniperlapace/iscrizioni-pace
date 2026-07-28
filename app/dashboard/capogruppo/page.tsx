@@ -139,6 +139,14 @@ type ScopedGroupView = {
   eventEndsOn: string | null;
 };
 
+type RegistrationChildRelationRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  position: number;
+};
+
 type AssignmentRow = {
   id: string;
   registration_id: string;
@@ -174,6 +182,7 @@ type AssignmentRow = {
         event_id: string;
         status: string | null;
         submitted_at: string | null;
+        registration_children: RegistrationChildRelationRow[] | null;
         participants:
           | {
               id: string;
@@ -276,6 +285,7 @@ type AssignmentRow = {
         event_id: string;
         status: string | null;
         submitted_at: string | null;
+        registration_children: RegistrationChildRelationRow[] | null;
         participants:
           | {
               id: string;
@@ -413,6 +423,7 @@ type AssignmentView = {
   service: ParticipantEventService | null;
   currentServiceId: string | null;
   currentServiceStatus: string | null;
+  children: RegistrationChildRelationRow[];
 };
 
 type ParticipantEventServiceRelationRow = {
@@ -1970,7 +1981,7 @@ export default async function CapogruppoDashboardPage({
     const { data, error } = await serviceSupabase
           .from("participant_group_assignments")
           .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
+        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
       )
       .in("group_id", groupIds)
       .eq("registrations.event_id", currentEventId)
@@ -2978,6 +2989,27 @@ function AssignmentDetailCard({
         <DetailBlock title={copy.detail.group}>
           <DetailLine label={copy.group}>{assignment.groupName}</DetailLine>
         </DetailBlock>
+
+        <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
+          {assignment.children.length > 0 ? (
+            <div className="grid gap-2">
+              {assignment.children.map((child) => (
+                <div key={child.id} className="text-sm">
+                  <p className="font-semibold">
+                    {child.first_name} {child.last_name}
+                  </p>
+                  <p className="text-[var(--peace-muted)]">
+                    Data di nascita: {child.birth_date}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--peace-muted)]">
+              Nessun figlio associato all&apos;iscrizione.
+            </p>
+          )}
+        </DetailBlock>
       </div>
 
       <DetailBlock title={copy.detail.notes}>
@@ -3366,6 +3398,9 @@ function toAssignmentView(
     service,
     currentServiceId: service?.serviceId ?? null,
     currentServiceStatus: service?.status ?? null,
+    children: [...(registration.registration_children ?? [])].sort(
+      (first, second) => first.position - second.position
+    ),
   };
 }
 

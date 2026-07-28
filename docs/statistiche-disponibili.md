@@ -40,6 +40,11 @@ Fonte principale: `summarizeRegistrationMonitoring` in
 - Errori email nelle ultime 24 ore, da `audit_logs`.
 - Stato apertura evento: non pubblicato, programmato, aperto, chiuso.
 
+Dal 2026-07-28 i conteggi totali, inviati, annullati e delle ultime 24 ore
+misurano persone: ogni iscrizione vale `1 + numero figli`. Gli indicatori di
+anomalia restano riferiti alla pratica di iscrizione, perche' QR, email e
+assegnazione gruppo sono condivisi dal nucleo.
+
 ### Dashboard manager/admin, iscritti
 
 Fonte principale: `summarizeOperationsDashboardParticipants` in
@@ -54,6 +59,10 @@ troppo generici:
 - Iscritti con gruppo da verificare.
 - Iscritti con ruoli operativi.
 - Iscritti senza email.
+
+I totali, le righe filtrate e i conteggi per stato gruppo misurano persone e
+includono i figli collegati. La tabella continua a mostrare una riga per
+iscrizione; i figli sono consultabili nella scheda della persona.
 
 ### Dashboard manager/admin, gruppi
 
@@ -111,6 +120,9 @@ Queste statistiche non richiedono nuove tabelle, ma vanno collocate con cura.
 - Scelte per momento/panel.
 - Capienza residua per momento, se `capacity` e scelte momento vengono usate.
 - Partecipanti senza scelte panel.
+
+I figli ereditano automaticamente le fasce di presenza e le scelte programma
+dell'iscrizione del genitore e sono inclusi nei relativi conteggi.
 
 ### QR e accoglienza
 

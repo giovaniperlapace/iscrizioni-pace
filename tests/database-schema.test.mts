@@ -67,6 +67,10 @@ const preventGroupLinkRevocationMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260728150000_prevent_canonical_group_link_revocation.sql"
 );
+const registrationChildrenMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260728180000_registration_children.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -109,6 +113,10 @@ const singleGroupRegistrationLinkMigration = readFileSync(
 );
 const preventGroupLinkRevocationMigration = readFileSync(
   preventGroupLinkRevocationMigrationPath,
+  "utf8"
+);
+const registrationChildrenMigration = readFileSync(
+  registrationChildrenMigrationPath,
   "utf8"
 );
 
@@ -169,6 +177,34 @@ test("future events consent migration records explicit optional acceptance", () 
   assert.match(
     futureEventsConsentMigration,
     /participant_consents_future_events_communications_consistency/
+  );
+});
+
+test("registration children are scoped, ordered and limited to ten per registration", () => {
+  assert.match(
+    registrationChildrenMigration,
+    /create table public\.registration_children/
+  );
+  assert.match(
+    registrationChildrenMigration,
+    /registration_id uuid not null references public\.registrations\(id\) on delete cascade/
+  );
+  assert.match(registrationChildrenMigration, /check \(position between 1 and 10\)/);
+  assert.match(
+    registrationChildrenMigration,
+    /unique \(registration_id, position\)/
+  );
+  assert.match(
+    registrationChildrenMigration,
+    /alter table public\.registration_children enable row level security/
+  );
+  assert.match(
+    registrationChildrenMigration,
+    /app\.can_read_registration\(registration_id\)/
+  );
+  assert.match(
+    registrationChildrenMigration,
+    /app\.owns_registration\(registration_id\)/
   );
 });
 

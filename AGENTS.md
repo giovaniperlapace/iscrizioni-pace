@@ -454,6 +454,22 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   carattere alfanumerico. La migration
   `20260728150000_prevent_canonical_group_link_revocation.sql` impone anche nel
   database che il link canonico non possa essere revocato.
+- Dal 2026-07-28 il form pubblico e la dashboard personale supportano la
+  partecipazione con un massimo di 10 figli. I figli sono salvati in
+  `registration_children` con nome, cognome, data di nascita e posizione,
+  collegati alla singola iscrizione del genitore. Non hanno account, contatto,
+  consenso, assegnazione gruppo o QR autonomi: ereditano evento, stato,
+  gruppo, fasce di presenza, panel e check-in dall'iscrizione collegata. Il QR
+  del genitore vale quindi per tutto il nucleo registrato. Nei conteggi di
+  persone per evento, paese, citta', gruppo e presenza ogni iscrizione vale
+  `1 + numero figli`; gli indicatori di anomalia operativa come QR mancante,
+  email mancante o assegnazione da verificare restano invece riferiti alla
+  singola iscrizione. Admin, manager e capogruppo vedono i figli nella scheda
+  dell'iscrizione; il partecipante puo' aggiungerli, modificarli o rimuoverli
+  finche' la finestra di modifica e' aperta. Migration:
+  `20260728180000_registration_children.sql`. La privacy version corrente e'
+  `2026-07-28-accompanying-children` e il consenso dichiara anche l'autorita' a
+  comunicare i dati dei figli.
 - Dal 2026-07-20 la sezione privacy del form pubblico include un consenso
   facoltativo, separato e non preselezionato per ricevere comunicazioni su
   eventi e iniziative future della Comunita' di Sant'Egidio. L'iscrizione deve

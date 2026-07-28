@@ -125,12 +125,21 @@ type ContactRow = {
   phone?: string | null;
 };
 
+type RegistrationChildRelationRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  position: number;
+};
+
 type ManagerRegistrationRow = {
   id: string;
   event_id: string;
   participant_id: string;
   status: string | null;
   submitted_at: string | null;
+  registration_children: RegistrationChildRelationRow[] | null;
   events:
     | { title: string | null }
     | Array<{ title: string | null }>
@@ -254,6 +263,8 @@ type ManagerParticipantRow = {
   service: ParticipantEventService | null;
   tagIds: string[];
   tags: ParticipantOperationalTag[];
+  childrenCount: number;
+  children: RegistrationChildRelationRow[];
 };
 
 type ManagerOperationsSnapshot = {
@@ -1094,7 +1105,7 @@ async function getManagerOperationsSnapshot(
   const registrationsQuery = supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other)"
+      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
     )
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
@@ -1290,6 +1301,10 @@ async function getManagerOperationsSnapshot(
         currentServiceId: service?.serviceId ?? null,
         currentServiceStatus: service?.status ?? null,
         service,
+        childrenCount: registration.registration_children?.length ?? 0,
+        children: [...(registration.registration_children ?? [])].sort(
+          (first, second) => first.position - second.position
+        ),
         tagIds: (tagsByParticipantId.get(registration.participant_id) ?? []).map(
           (tag) => tag.id
         ),
@@ -1402,7 +1417,7 @@ async function getManagerStatisticsSnapshot(
   const registrationsQuery = supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other)"
+      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
     )
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
@@ -1464,6 +1479,7 @@ async function getManagerStatisticsSnapshot(
       currentGroupId: assignment?.group_id ?? null,
       currentGroupName: group?.name ?? null,
       currentGroupStatus: assignment?.status ?? null,
+      childrenCount: registration.registration_children?.length ?? 0,
       tagIds: [],
       tags: [],
     };
@@ -2842,6 +2858,33 @@ function ManagerParticipantEditOverlay({
               Salva
             </PendingSubmitButton>
           </form>
+
+          <section className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+            <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
+              Figli partecipanti ({participant.childrenCount})
+            </h4>
+            {participant.children.length > 0 ? (
+              <div className="grid gap-2">
+                {participant.children.map((child) => (
+                  <div
+                    key={child.id}
+                    className="rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-sm"
+                  >
+                    <p className="font-semibold">
+                      {child.first_name} {child.last_name}
+                    </p>
+                    <p className="mt-1 text-[var(--peace-muted)]">
+                      Data di nascita: {formatDate(child.birth_date)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--peace-muted)]">
+                Nessun figlio associato all&apos;iscrizione.
+              </p>
+            )}
+          </section>
 
           <form
             action="/dashboard/admin/participants/update"

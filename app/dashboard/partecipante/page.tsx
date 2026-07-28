@@ -4,6 +4,7 @@ import Link from "next/link";
 import { updateParticipantDashboard } from "@/app/actions";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { ParticipantChildrenEditor } from "@/app/dashboard/participant-children-editor";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -74,6 +75,13 @@ type AccessibilityRow = {
   washington_group_answers: Record<string, boolean> | null;
   needs_operational_support: boolean;
   operational_notes: string | null;
+};
+
+type RegistrationChildRow = {
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  position: number;
 };
 
 type AttendanceRow = {
@@ -674,11 +682,114 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
   },
 };
 
+const PARTICIPANT_CHILDREN_COPY: Record<
+  SupportedLocale,
+  {
+    section: string;
+    none: string;
+    question: string;
+    count: string;
+    child: string;
+    firstName: string;
+    lastName: string;
+    birthDate: string;
+    yes: string;
+    no: string;
+  }
+> = {
+  it: {
+    section: "Figli partecipanti",
+    none: "Nessun figlio partecipa con te",
+    question: "Parteciperai all'evento con uno o più figli?",
+    count: "Con quanti figli parteciperai?",
+    child: "Figlio",
+    firstName: "Nome",
+    lastName: "Cognome",
+    birthDate: "Data di nascita",
+    yes: "Sì",
+    no: "No",
+  },
+  en: {
+    section: "Children attending",
+    none: "No children are attending with you",
+    question: "Will you attend the event with one or more children?",
+    count: "How many children will attend with you?",
+    child: "Child",
+    firstName: "First name",
+    lastName: "Last name",
+    birthDate: "Date of birth",
+    yes: "Yes",
+    no: "No",
+  },
+  fr: {
+    section: "Enfants participants",
+    none: "Aucun enfant ne participe avec toi",
+    question: "Participeras-tu à l'événement avec un ou plusieurs enfants ?",
+    count: "Avec combien d'enfants participeras-tu ?",
+    child: "Enfant",
+    firstName: "Prénom",
+    lastName: "Nom",
+    birthDate: "Date de naissance",
+    yes: "Oui",
+    no: "Non",
+  },
+  de: {
+    section: "Teilnehmende Kinder",
+    none: "Keine Kinder nehmen mit dir teil",
+    question: "Nimmst du mit einem oder mehreren Kindern teil?",
+    count: "Mit wie vielen Kindern nimmst du teil?",
+    child: "Kind",
+    firstName: "Vorname",
+    lastName: "Nachname",
+    birthDate: "Geburtsdatum",
+    yes: "Ja",
+    no: "Nein",
+  },
+  es: {
+    section: "Hijos participantes",
+    none: "Ningún hijo participa contigo",
+    question: "¿Participarás con uno o más hijos?",
+    count: "¿Con cuántos hijos participarás?",
+    child: "Hijo",
+    firstName: "Nombre",
+    lastName: "Apellidos",
+    birthDate: "Fecha de nacimiento",
+    yes: "Sí",
+    no: "No",
+  },
+  nl: {
+    section: "Deelnemende kinderen",
+    none: "Er nemen geen kinderen met je deel",
+    question: "Neem je met een of meer kinderen deel?",
+    count: "Met hoeveel kinderen neem je deel?",
+    child: "Kind",
+    firstName: "Voornaam",
+    lastName: "Achternaam",
+    birthDate: "Geboortedatum",
+    yes: "Ja",
+    no: "Nee",
+  },
+  uk: {
+    section: "Діти-учасники",
+    none: "З вами не бере участі жодна дитина",
+    question: "Ви братимете участь з однією або кількома дітьми?",
+    count: "Зі скількома дітьми ви братимете участь?",
+    child: "Дитина",
+    firstName: "Ім’я",
+    lastName: "Прізвище",
+    birthDate: "Дата народження",
+    yes: "Так",
+    no: "Ні",
+  },
+};
+
 export default async function PartecipanteDashboardPage({
   searchParams,
 }: PageProps) {
   const locale = await getRequestLocale();
   const copy = PARTICIPANT_DASHBOARD_COPY[locale] ?? PARTICIPANT_DASHBOARD_COPY.en;
+  const childrenCopy =
+    PARTICIPANT_CHILDREN_COPY[locale] ?? PARTICIPANT_CHILDREN_COPY.en;
   const params = searchParams ? await searchParams : {};
   const activeOverlay = parseDashboardOverlay(firstParam(params.overlay));
   const supabase = await createSupabaseServerClient();
@@ -716,6 +827,7 @@ export default async function PartecipanteDashboardPage({
     momentsResult,
     momentChoicesResult,
     questionnaireResult,
+    childrenResult,
     qrStatusResult,
     participantServiceResult,
   ] = registrationId && participantId && eventId
@@ -751,6 +863,11 @@ export default async function PartecipanteDashboardPage({
           .eq("registration_id", registrationId)
           .order("created_at", { ascending: false })
           .limit(1),
+        supabase
+          .from("registration_children")
+          .select("first_name,last_name,birth_date,position")
+          .eq("registration_id", registrationId)
+          .order("position"),
         getQrStatus(registrationId),
         supabase
           .from("participant_event_services")
@@ -768,6 +885,7 @@ export default async function PartecipanteDashboardPage({
         { data: [] },
         { data: [] },
         { data: [] },
+        { data: [] },
         { data: null },
         { data: null },
       ];
@@ -780,6 +898,7 @@ export default async function PartecipanteDashboardPage({
   const momentChoices = (momentChoicesResult.data ?? []) as MomentChoiceRow[];
   const questionnaire =
     ((questionnaireResult.data ?? []) as QuestionnaireRow[])[0] ?? null;
+  const registrationChildren = (childrenResult.data ?? []) as RegistrationChildRow[];
   const qrStatus = qrStatusResult.data as QrStatusRow | null;
   const participantService = participantServiceResult.data as ParticipantServiceRow | null;
   const participantServiceLabel =
@@ -835,6 +954,12 @@ export default async function PartecipanteDashboardPage({
   const supportSummary = hasAccessibilityRequest
     ? copy.supportRequested
     : copy.supportNotRequested;
+  const childrenSummary =
+    registrationChildren.length > 0
+      ? registrationChildren
+          .map((child) => `${child.first_name} ${child.last_name}`.trim())
+          .join(", ")
+      : childrenCopy.none;
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -1050,6 +1175,43 @@ export default async function PartecipanteDashboardPage({
                           value={questionnaire?.answers?.nationality ?? copy.notProvided}
                         />
                       </div>
+
+                      <EditableInfo
+                        label={childrenCopy.section}
+                        value={childrenSummary}
+                        editable={Boolean(editable)}
+                        copy={copy}
+                      >
+                        <ParticipantChildrenEditor
+                          registrationId={selectedRegistration.id}
+                          initialChildren={registrationChildren.map((child) => ({
+                            firstName: child.first_name,
+                            lastName: child.last_name,
+                            birthDate: child.birth_date,
+                          }))}
+                          phone={primaryContact?.phone ?? null}
+                          availabilityUnknown={availabilityUnknown}
+                          selectedAttendanceSlots={selectedAttendanceSlots.map(
+                            encodeAttendanceSlot
+                          )}
+                          momentChoices={momentChoices.map((choice) => ({
+                            momentId: choice.moment_id,
+                            choice: choice.choice,
+                          }))}
+                          editable={Boolean(editable)}
+                          copy={{
+                            question: childrenCopy.question,
+                            count: childrenCopy.count,
+                            child: childrenCopy.child,
+                            firstName: childrenCopy.firstName,
+                            lastName: childrenCopy.lastName,
+                            birthDate: childrenCopy.birthDate,
+                            yes: childrenCopy.yes,
+                            no: childrenCopy.no,
+                            save: copy.save,
+                          }}
+                        />
+                      </EditableInfo>
 
                       <EditableInfo
                         label={copy.expectedPresence}

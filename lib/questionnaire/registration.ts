@@ -1,7 +1,7 @@
 import type { RegistrationInput } from "@/lib/registrations/validation";
 
 export const REGISTRATION_QUESTIONNAIRE_VERSION =
-  "2026-07-20-future-events-consent";
+  "2026-07-28-accompanying-children";
 
 export type QuestionnaireLocale = "it" | "en";
 export type QuestionDataClass = "personal" | "sensitive" | "operational" | "legal";
@@ -550,6 +550,19 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
     editableAfterSubmit: true,
   },
   {
+    id: "accompanying_children",
+    label: {
+      it: "Partecipazione con figli",
+      en: "Attendance with children",
+    },
+    required: false,
+    dataClass: "personal",
+    structuredStorage:
+      "registration_children.first_name,last_name,birth_date,position",
+    visibleTo: ["partecipante", "capogruppo", "manager", "manager_viewer", "admin"],
+    editableAfterSubmit: true,
+  },
+  {
     id: "washington_group_accessibility",
     label: { it: "Disabilità o bisogni di accessibilità", en: "Disability or accessibility needs" },
     required: true,
@@ -626,6 +639,11 @@ export function buildRegistrationQuestionnaireAnswers(input: RegistrationInput) 
       availabilityDays: [...new Set(input.availabilitySlots.map((slot) => slot.day))],
       availabilityUnknown: input.availabilityUnknown,
       moments: input.momentAttendanceChoices,
+    },
+    accompanyingChildren: {
+      participatesWithChildren: input.participatesWithChildren,
+      count: input.children.length,
+      children: input.children,
     },
     accessibility: {
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
