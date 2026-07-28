@@ -437,6 +437,15 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   canonico un solo link per gruppo, revoca eventuali duplicati preesistenti
   mantenendoli come storico non canonico e impone l'unicita' per le nuove
   creazioni.
+- Dal 2026-07-28, dopo la creazione, la modale link deve caricare e mostrare
+  sempre il link canonico anche se revocato: URL copiabile quando disponibile,
+  stato operativo, conteggio utilizzi e nome visualizzato modificabile senza
+  cambiare il token. Le query manager, admin e capogruppo filtrano
+  `is_canonical = true` ma non `revoked_at is null`; gli errori di caricamento
+  devono essere registrati lato server e non scambiati silenziosamente per una
+  lista vuota. La migration
+  `20260728120000_single_group_registration_link.sql` e' stata applicata al
+  database remoto il 2026-07-28.
 - Dal 2026-07-20 la sezione privacy del form pubblico include un consenso
   facoltativo, separato e non preselezionato per ricevere comunicazioni su
   eventi e iniziative future della Comunita' di Sant'Egidio. L'iscrizione deve

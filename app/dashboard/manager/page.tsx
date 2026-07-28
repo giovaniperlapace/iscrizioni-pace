@@ -20,6 +20,7 @@ import {
   saveEventService,
   saveOperationsGroup,
   updateGroupPublicCatalogVisibility,
+  updateGroupRegistrationLink,
   updateParticipantOperationalTags,
   updateOperationalUserRole,
 } from "@/app/actions";
@@ -1150,7 +1151,7 @@ async function getManagerOperationsSnapshot(
     { data: registrations },
     { data: groups },
     { data: groupTree },
-    { data: groupLinks },
+    { data: groupLinks, error: groupLinksError },
     { data: operationalTags },
     { data: eventServices },
     { data: eventRoles },
@@ -1165,6 +1166,13 @@ async function getManagerOperationsSnapshot(
     eventRolesQuery,
     groupMembershipsQuery,
   ]);
+
+  if (groupLinksError) {
+    console.error("[manager:group-registration-links]", {
+      code: groupLinksError.code,
+      message: groupLinksError.message,
+    });
+  }
   const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
   const registrationIds = registrationRows.map((row) => row.id);
   const participantIds = registrationRows.map((row) => row.participant_id);
@@ -1867,9 +1875,32 @@ function ManagerGroupLinksOverlay({
             {links.map((link) => (
               <div key={link.id} className="flex flex-col gap-2 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-[var(--peace-ink)]">
-                    {link.publicLabel ?? "Link senza nome"}
-                  </p>
+                  {canManage ? (
+                    <form
+                      action={updateGroupRegistrationLink}
+                      className="grid gap-2"
+                      data-preserve-dashboard-scroll
+                    >
+                      <input type="hidden" name="sourceDashboard" value="manager" />
+                      <input type="hidden" name="linkId" value={link.id} />
+                      <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                        Nome visualizzato del link
+                        <input
+                          name="displayName"
+                          className="field bg-white text-sm"
+                          defaultValue={link.publicLabel ?? group.publicLabel ?? group.name}
+                          required
+                        />
+                      </label>
+                      <PendingSubmitButton className="min-h-9 w-fit rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                        Salva nome
+                      </PendingSubmitButton>
+                    </form>
+                  ) : (
+                    <p className="font-medium text-[var(--peace-ink)]">
+                      {link.publicLabel ?? "Link senza nome"}
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {groupLinkStatusLabel(link)} - usi {link.useCount}
                     {link.maxUses ? `/${link.maxUses}` : ""}

@@ -8,6 +8,7 @@ import {
   revokeGroupRegistrationLink,
   updateParticipantEventService,
   updateGroupLeaderAssignment,
+  updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
   updateParticipantOperationalTags,
 } from "@/app/actions";
@@ -472,6 +473,7 @@ type GroupLeaderCopy = {
   unlabeledLink: string;
   existingLinks: string;
   newLink: string;
+  saveLinkName: string;
   copyLink: string;
   uses: string;
   revoke: string;
@@ -650,6 +652,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   unlabeledLink: "Link senza etichetta",
   existingLinks: "Link del gruppo",
   newLink: "Genera link",
+  saveLinkName: "Salva nome",
   copyLink: "Copia link",
   uses: "usi",
   revoke: "Revoca",
@@ -842,6 +845,7 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   unlabeledLink: "Unlabelled link",
   existingLinks: "Group link",
   newLink: "Generate link",
+  saveLinkName: "Save name",
   copyLink: "Copy link",
   uses: "uses",
   revoke: "Revoke",
@@ -1999,7 +2003,7 @@ export default async function CapogruppoDashboardPage({
       return [];
     }
 
-    const { data } = await serviceSupabase
+    const { data, error } = await serviceSupabase
       .from("group_registration_links")
       .select(
         "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
@@ -2008,6 +2012,14 @@ export default async function CapogruppoDashboardPage({
       .eq("event_id", currentEventId)
       .eq("is_canonical", true)
       .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[capogruppo:group-registration-links]", {
+        code: error.code,
+        message: error.message,
+      });
+      return [];
+    }
 
     return ((data ?? []) as GroupLinkRow[]).map((link) => ({
       id: link.id,
@@ -2295,9 +2307,28 @@ function GroupLeaderLinksSection({
                         key={link.id}
                         className="rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm"
                       >
-                        <p className="font-medium text-[var(--peace-ink)]">
-                          {link.internalLabel ?? link.publicLabel ?? copy.unlabeledLink}
-                        </p>
+                        <form
+                          action={updateGroupRegistrationLink}
+                          className="grid gap-2"
+                          data-preserve-dashboard-scroll
+                        >
+                          <input type="hidden" name="sourceDashboard" value="capogruppo" />
+                          <input type="hidden" name="linkId" value={link.id} />
+                          <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                            {copy.publicLabel}
+                            <input
+                              name="displayName"
+                              className="field bg-white text-sm"
+                              defaultValue={
+                                link.publicLabel ?? group.publicLabel ?? group.name
+                              }
+                              required
+                            />
+                          </label>
+                          <PendingSubmitButton className="min-h-9 w-fit rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                            {copy.saveLinkName}
+                          </PendingSubmitButton>
+                        </form>
                         <p className="mt-1 text-xs text-[var(--peace-muted)]">
                           {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
                           {link.maxUses ? `/${link.maxUses}` : ""}
