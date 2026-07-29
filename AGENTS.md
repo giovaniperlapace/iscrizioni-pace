@@ -452,6 +452,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   verso una sezione manager deve impostare `nav=mini`, cosi' il nuovo menu si
   apre con la barra nuovamente chiusa. Filtri, modali e azioni interne alla
   stessa sezione continuano invece a preservare la modalita' corrente.
+- Dal 2026-07-29 gli aggiornamenti dei filtri nella tabella gruppi di admin e
+  manager non disabilitano il form e non sovrappongono un overlay bloccante:
+  durante la navigazione la ricerca resta digitabile e puo' raccogliere subito
+  il filtro successivo. Resta il debounce generale di 450 ms per i campi
+  testuali; i filtri a scelta continuano ad applicarsi immediatamente.
 - Dal 2026-07-28 ogni gruppo puo' avere un solo link riservato complessivo, non
   un solo link attivo alla volta. Dopo la prima creazione il comando di
   generazione non deve piu' comparire e il server deve rifiutare ulteriori

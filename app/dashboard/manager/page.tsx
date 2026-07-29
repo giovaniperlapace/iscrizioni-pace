@@ -1556,6 +1556,7 @@ function ManagerGroupTreeSection({
       <div className="mt-5 overflow-x-auto">
         <AutoFilterForm
           action="/dashboard/manager"
+          blockWhilePending={false}
           defaults={{
             groupQ: "",
             groupType: "all",

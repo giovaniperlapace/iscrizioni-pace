@@ -2080,6 +2080,7 @@ function AdminGroupTreeSection({
       <div className="mt-5 overflow-x-auto">
         <AutoFilterForm
           action="/dashboard/admin"
+          blockWhilePending={false}
           defaults={{
             groupQ: "",
             groupType: "all",

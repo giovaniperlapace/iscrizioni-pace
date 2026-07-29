@@ -9,6 +9,7 @@ type AutoFilterFormProps = {
   className?: string;
   defaults?: Record<string, string>;
   debounceMs?: number;
+  blockWhilePending?: boolean;
 };
 
 const OVERLAY_PARAMS = [
@@ -26,6 +27,7 @@ export function AutoFilterForm({
   className,
   defaults = {},
   debounceMs = 450,
+  blockWhilePending = true,
 }: AutoFilterFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,16 +121,18 @@ export function AutoFilterForm({
         <fieldset
           className={[
             "m-0 min-w-0 border-0 p-0 transition disabled:cursor-wait",
-            isPending ? "pointer-events-none select-none blur-[1px]" : "",
+            isPending && blockWhilePending
+              ? "pointer-events-none select-none blur-[1px]"
+              : "",
           ]
             .filter(Boolean)
             .join(" ")}
-          disabled={isPending}
+          disabled={isPending && blockWhilePending}
           aria-busy={isPending}
         >
           {children}
         </fieldset>
-        {isPending ? (
+        {isPending && blockWhilePending ? (
           <div
             className="absolute inset-0 z-10 grid place-items-center rounded-md bg-white/55"
             aria-live="polite"
@@ -138,6 +142,10 @@ export function AutoFilterForm({
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--peace-blue-800)] border-t-transparent" />
             </span>
           </div>
+        ) : isPending ? (
+          <span className="sr-only" aria-live="polite">
+            Aggiornamento filtri in corso
+          </span>
         ) : null}
       </div>
     </form>
