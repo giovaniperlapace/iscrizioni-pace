@@ -1439,6 +1439,24 @@ sanitizzazione HTML server-side. Restano come evoluzioni successive eventuali
 allegati e una consultazione dettagliata dello storico; non sono necessari per
 l'accettazione iniziale.
 
+Aggiornamento del 2026-07-29: la scelta destinatari usa una tabella con
+checkbox per riga e selezione unica di tutte le righe filtrate. Le tab
+`Partecipanti` e `Capigruppo` sono separate; tra i partecipanti e' disponibile
+il filtro esplicito per le persone senza gruppo. Il limite applicativo di 100
+destinatari e' rimosso. Dopo la conferma, la campagna riserva una coda globale
+di massimo 300 tentativi al giorno: la prima tranche compatibile parte subito
+e le eccedenze sono elaborate nei giorni successivi dalla route Vercel Cron
+autenticata. La migration
+`20260729120000_email_campaign_audiences_and_daily_queue.sql` conserva tipo,
+chiave e giorno pianificato del destinatario senza salvare l'indirizzo email
+nel log.
+
+Evoluzione futura obbligatoria: quando la gestione programma/panel della
+Milestone 16 sara' implementata, aggiungere nella tabella destinatari campagne
+anche il filtro per partecipanti iscritti a uno specifico panel. Il filtro deve
+usare le tabelle canoniche di iscrizione ai momenti/panel, senza duplicare il
+dato nello snapshot della campagna.
+
 - Scopo: passare dalle sole email transazionali a comunicazioni controllate per
   gruppi o segmenti, dopo il completamento del flusso capogruppo e dei tag
   operativi.

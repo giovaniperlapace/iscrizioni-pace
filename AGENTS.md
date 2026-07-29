@@ -228,11 +228,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   comparire una breve introduzione che chiarisce che il contenuto sottostante e'
   l'email di prova gia' compilata con i dati del partecipante campione; non
   limitarsi all'etichetta generica "Dati usati nella prova". Questa indicazione
-  non deve stare nella sezione dei pulsanti di invio. Il limite iniziale e' 100
-  destinatari e l'invio usa concorrenza 3. Gli indirizzi email e i corpi personalizzati non
-  vengono copiati nei log campagna; il message id del provider viene salvato
-  solo come hash. L'ambiente locale puo' usare `EMAIL_DELIVERY_MODE=log` per
-  simulare gli invii. Dal 2026-07-12 la console campagne riprende il pattern
+  non deve stare nella sezione dei pulsanti di invio. Il limite iniziale era
+  100 destinatari; dal 2026-07-29 e' stato rimosso e sostituito dalla coda
+  globale di 300 tentativi al giorno. Ogni tranche usa concorrenza 3. Gli
+  indirizzi email e i corpi personalizzati non vengono copiati nei log
+  campagna; il message id del provider viene salvato solo come hash.
+  L'ambiente locale puo' usare `EMAIL_DELIVERY_MODE=log` per simulare gli
+  invii. Dal 2026-07-12 la console campagne riprende il pattern
   maturo dell'app modello: editor ricco TipTap con formattazione e link,
   template riutilizzabili, campi personalizzati inseribili al cursore,
   destinatari separati, cronologia delle campagne inviate e anteprima in modale.
@@ -252,10 +254,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   Dal 2026-07-22 l'elenco dei partecipanti raggiungibili e' gia' disponibile al
   primo rendering della console campagne. I filtri cercabili per gruppo, tag
   operativo e servizio, insieme alla ricerca per nome/email, modificano solo la
-  vista dell'elenco e non la selezione corrente. I destinatari scelti vivono in
-  una sottosezione separata e possono essere rimossi o riaggiunti uno alla
-  volta; l'anteprima usa sempre questa selezione esplicita, indipendentemente
-  dai filtri visivi attivi.
+  vista dell'elenco e non la selezione corrente. Dal 2026-07-29 la precedente
+  sottosezione separata dei destinatari scelti e' stata sostituita dalla
+  tabella unica con checkbox; l'anteprima usa sempre la selezione esplicita
+  delle chiavi destinatario, indipendentemente dai filtri visivi attivi.
   Sempre dal 2026-07-22 i modelli riutilizzabili si scelgono da una modale
   aperta nel passaggio 1; la selezione chiude la modale e carica oggetto e
   messaggio nell'editor, dove restano modificabili. L'azione `Salva come
@@ -266,17 +268,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   scegliere se aggiornare quel modello creando una nuova versione oppure
   salvare il contenuto come nuovo modello con un titolo interno diverso; in
   questo secondo caso il modello di partenza deve restare invariato.
-  Dal 2026-07-23 la selezione destinatari e' esclusivamente additiva ed
-  esplicita: all'apertura nessuna persona e' selezionata, le persone scelte
-  spariscono dall'elenco disponibile e compaiono nella sottosezione dedicata.
-  Dopo l'aggiunta o la rimozione di una persona si azzera solo la ricerca
-  testuale per nome/email; i filtri gruppo, tag e servizio restano attivi.
-  La sottosezione `Destinatari scelti` deve restare visivamente distinta
-  dall'elenco disponibile tramite sfondo azzurro, bordo accentato e badge con
-  il conteggio della selezione.
-  Il server non deve mai interpretare l'assenza della selezione come
-  "seleziona tutti"; il limite di 100 si applica ai destinatari scelti, non
-  all'intero catalogo raggiungibile.
+  La selezione parte sempre vuota. Dal 2026-07-29 le checkbox di riga
+  aggiungono o rimuovono destinatari senza azzerare ricerca o filtri; la
+  checkbox di intestazione trasforma tutte le righe filtrate in una lista
+  esplicita di chiavi selezionate. Il server non deve mai interpretare
+  l'assenza della selezione come "seleziona tutti" e non applica un limite
+  numerico alla lista esplicita.
   Dal 2026-07-23 il riquadro `Campi personalizzati` del passaggio di
   composizione non segue piu' lo scroll della pagina: su schermi ampi resta
   centrato verticalmente rispetto al form di oggetto e messaggio.
@@ -285,6 +282,33 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   partecipante non compare alcun badge; solo il recapito delegato mostra
   `Invio al referente`. I riepiloghi distinguono esplicitamente le email ai
   partecipanti da quelle ai referenti.
+- Dal 2026-07-29 la scelta destinatari delle campagne usa una tabella con
+  checkbox per riga e checkbox di intestazione che seleziona o deseleziona
+  tutte le righe corrispondenti ai filtri correnti. Le tab `Partecipanti` e
+  `Capigruppo` sono audience alternative e non vanno mescolate nella stessa
+  campagna; passando da una tab all'altra la selezione viene azzerata. La tab
+  partecipanti comprende anche chi non ha gruppo e offre il filtro
+  `Solo senza gruppo`; la tab capigruppo deduplica la persona anche quando ha
+  membership su piu' gruppi.
+- Dal 2026-07-29 non esiste piu' il limite applicativo o database di 100
+  destinatari scelti. L'invio definitivo riserva una coda globale, condivisa
+  tra campagne, di massimo 300 tentativi al giorno nel fuso `Europe/Rome`.
+  La prima tranche compatibile con la quota parte subito; le altre righe hanno
+  `email_campaign_recipients.scheduled_for` e vengono elaborate dalla route
+  autenticata `/api/cron/email-campaigns`, configurata ogni giorno in
+  `vercel.json`. La migration
+  `20260729120000_email_campaign_audiences_and_daily_queue.sql` aggiunge
+  `recipient_key`, audience partecipante/capogruppo, stati di coda e indici.
+  `CRON_SECRET` e' obbligatorio in produzione e non deve essere stampato o
+  committato. Al termine dell'implementazione locale del 2026-07-29 la
+  migration non risulta ancora applicata al Supabase remoto e `CRON_SECRET`
+  non risulta ancora configurato su Vercel: completarli insieme prima del
+  deploy della funzione.
+- Quando saranno implementati programma e iscrizioni ai panel, la tabella
+  destinatari delle campagne dovra' aggiungere un filtro per uno specifico
+  panel. Usare le tabelle canoniche delle iscrizioni ai momenti/panel; non
+  modellare i panel come tag operativi e non duplicarli nello snapshot della
+  campagna.
 - Dal 2026-07-23 l'accesso alle dashboard per `manager` e `manager_viewer` e'
   esclusivo: dopo il login questi ruoli entrano sempre nella dashboard manager
   e non vedono né possono aprire la dashboard capogruppo o l'area personale,
@@ -929,6 +953,7 @@ Variabili Vercel production richieste:
 - `SMTP_PORT`.
 - `SMTP_SECURE`.
 - `EMAIL_DELIVERY_MODE=smtp`.
+- `CRON_SECRET` per autenticare l'elaborazione giornaliera della coda campagne.
 
 Note operative Vercel:
 

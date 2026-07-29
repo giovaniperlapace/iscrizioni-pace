@@ -1,9 +1,18 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { resolveSelectedCampaignRecipientIds } from "@/lib/email/campaign-selection";
 import { renderCampaignTemplate, validateCampaignTemplate } from "@/lib/email/campaign-templates";
 import { campaignHtmlToText, renderSafeCampaignHtml } from "@/lib/email/campaign-html.server";
+import {
+  appendInlineImages,
+  campaignRecipientFromDatabaseRow,
+  emailAttachmentInput,
+  loadCampaignAttachments,
+  loadCampaignDeliveryData,
+  processDueCampaignDeliveries,
+  reserveCampaignDeliverySchedule,
+} from "@/lib/email/campaign-delivery.server";
 import {
   loadCampaignRecipientPreviews,
   resolveCampaignRecipients,
@@ -15,7 +24,6 @@ import { getCurrentOperationalEvent } from "@/lib/events/current";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
-const SEND_CONCURRENCY = 3;
 const ATTACHMENTS_BUCKET = "email-campaign-attachments";
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
@@ -36,15 +44,9 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 const INLINE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 type CampaignAction = "recipients" | "preview" | "update_recipients" | "test" | "send";
-type Person = { id: string; first_name: string; last_name: string; public_code: string | null };
 type IncomingAttachment = { file: File; inline: boolean };
-type CampaignAttachment = {
-  filename: string;
-  content: Buffer;
-  contentType: string;
-  cid?: string;
-  inline: boolean;
-};
+
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   const auth = await requireCampaignManager();
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
         auth.userId!,
         auth.userEmail!,
         String(body.campaignId ?? ""),
-        body.selectedParticipantIds
+        body.selectedRecipientKeys ?? body.selectedParticipantIds
       );
     }
     return await deliverCampaign(auth.userId!, auth.userEmail!, String(body.campaignId ?? ""), action);
@@ -108,7 +110,11 @@ async function previewRecipients(body: Record<string, unknown>) {
   const recipients = await resolveCampaignRecipients(event.id, filters);
   if (!recipients.length) throw new Error("I filtri non individuano destinatari raggiungibili.");
   const selectedIds = new Set<string>();
-  const recipientPreviews = await loadCampaignRecipientPreviews(recipients, selectedIds);
+  const recipientPreviews = await loadCampaignRecipientPreviews(
+    recipients,
+    selectedIds,
+    event.id
+  );
   return NextResponse.json({
     ...recipientSelectionSummary(recipientPreviews),
     recipients: recipientPreviews,
@@ -134,10 +140,15 @@ async function previewCampaign(
   const filters = campaignFilters(body);
   const recipients = await resolveCampaignRecipients(event.id, filters);
   if (!recipients.length) throw new Error("I filtri non individuano destinatari raggiungibili.");
-  const selectedValue = parseJsonStringArray(body.selectedParticipantIds);
+  const selectedValue = parseJsonStringArray(
+    body.selectedRecipientKeys ?? body.selectedParticipantIds
+  );
   const selectedIds = resolveSelectedCampaignRecipientIds(
-    recipients.map((recipient) => recipient.participantId),
+    recipients.map((recipient) => recipient.recipientKey),
     selectedValue
+  );
+  const selectionOrder = new Map(
+    [...selectedIds].map((recipientKey, index) => [recipientKey, index + 1])
   );
   const templateId = clean(body.templateId, 80) || null;
   let templateVersion: number | null = null;
@@ -151,11 +162,22 @@ async function previewCampaign(
     recipient_count: selectedIds.size, status: "draft", created_by: userId,
   }).select("id").single();
   if (campaignError || !campaign) throw new Error(campaignError?.message ?? "Impossibile creare l'anteprima.");
-  const { error: recipientsError } = await service.from("email_campaign_recipients").insert(recipients.map((recipient) => ({
-    campaign_id: campaign.id, participant_id: recipient.participantId, registration_id: recipient.registrationId,
-    delivery_kind: recipient.deliveryKind, delegate_user_id: recipient.delegateUserId,
-    status: selectedIds.has(recipient.participantId) ? "pending" : "skipped",
-  })));
+  const { error: recipientsError } = await service
+    .from("email_campaign_recipients")
+    .insert(
+      recipients.map((recipient) => ({
+        campaign_id: campaign.id,
+        recipient_key: recipient.recipientKey,
+        recipient_type: recipient.recipientType,
+        participant_id: recipient.participantId,
+        registration_id: recipient.registrationId,
+        recipient_user_id: recipient.recipientUserId,
+        delivery_kind: recipient.deliveryKind,
+        delivery_order: selectionOrder.get(recipient.recipientKey) ?? null,
+        delegate_user_id: recipient.delegateUserId,
+        status: selectedIds.has(recipient.recipientKey) ? "pending" : "skipped",
+      }))
+    );
   if (recipientsError) { await service.from("email_campaigns").delete().eq("id", campaign.id); throw new Error(recipientsError.message); }
   try {
     await persistCampaignAttachments(service, event.id, campaign.id, attachments);
@@ -163,10 +185,21 @@ async function previewCampaign(
     await service.from("email_campaigns").delete().eq("id", campaign.id);
     throw cause;
   }
-  const selectedSample = recipients.find((recipient) => selectedIds.has(recipient.participantId));
+  const selectedSample = recipients.find((recipient) =>
+    selectedIds.has(recipient.recipientKey)
+  );
   if (!selectedSample) throw new Error("Seleziona almeno un destinatario.");
-  const sample = await loadDeliveryData(event.title, selectedSample);
-  const recipientPreviews = await loadCampaignRecipientPreviews(recipients, selectedIds);
+  const sample = await loadCampaignDeliveryData(
+    service,
+    event.id,
+    event.title,
+    selectedSample
+  );
+  const recipientPreviews = await loadCampaignRecipientPreviews(
+    recipients,
+    selectedIds,
+    event.id
+  );
   await service.from("audit_logs").insert({ event_id: event.id, actor_user_id: userId, action: "email_campaign.preview_created", entity_table: "email_campaigns", entity_id: campaign.id, metadata: { recipient_count: selectedIds.size, filters, attachment_count: attachments.length } });
   return NextResponse.json({
     campaignId: campaign.id,
@@ -191,10 +224,10 @@ async function updateCampaignRecipients(
   campaignId: string,
   selectedValue: unknown
 ) {
-  const selectedParticipantIds = Array.isArray(selectedValue)
+  const selectedRecipientKeys = Array.isArray(selectedValue)
     ? [...new Set(selectedValue.filter((value): value is string => typeof value === "string" && value.length > 0))]
     : [];
-  if (!selectedParticipantIds.length) throw new Error("Seleziona almeno un destinatario.");
+  if (!selectedRecipientKeys.length) throw new Error("Seleziona almeno un destinatario.");
 
   const service = createSupabaseServiceClient();
   const event = await getCurrentOperationalEvent(service, "id,title");
@@ -211,18 +244,21 @@ async function updateCampaignRecipients(
 
   const { data: rows, error: rowsError } = await service
     .from("email_campaign_recipients")
-    .select("participant_id,registration_id,delivery_kind,delegate_user_id")
+    .select("recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id")
     .eq("campaign_id", campaignId);
   if (rowsError) throw new Error(rowsError.message);
 
   const recipients = (rows ?? []).map<Recipient>((row) => ({
+    recipientKey: row.recipient_key,
+    recipientType: row.recipient_type,
     participantId: row.participant_id,
     registrationId: row.registration_id,
-    deliveryKind: row.delivery_kind as "direct" | "delegated",
+    recipientUserId: row.recipient_user_id,
+    deliveryKind: row.delivery_kind as Recipient["deliveryKind"],
     delegateUserId: row.delegate_user_id,
   }));
-  const availableIds = new Set(recipients.map((recipient) => recipient.participantId));
-  const selectedIds = new Set(selectedParticipantIds.filter((id) => availableIds.has(id)));
+  const availableIds = new Set(recipients.map((recipient) => recipient.recipientKey));
+  const selectedIds = new Set(selectedRecipientKeys.filter((id) => availableIds.has(id)));
   if (!selectedIds.size) throw new Error("Seleziona almeno un destinatario valido.");
 
   const includedIds = [...selectedIds];
@@ -231,14 +267,14 @@ async function updateCampaignRecipients(
     .from("email_campaign_recipients")
     .update({ status: "pending", error_code: null })
     .eq("campaign_id", campaignId)
-    .in("participant_id", includedIds);
+    .in("recipient_key", includedIds);
   if (includedError) throw new Error(includedError.message);
   if (excludedIds.length) {
     const { error: excludedError } = await service
       .from("email_campaign_recipients")
       .update({ status: "skipped", error_code: null })
       .eq("campaign_id", campaignId)
-      .in("participant_id", excludedIds);
+      .in("recipient_key", excludedIds);
     if (excludedError) throw new Error(excludedError.message);
   }
 
@@ -253,10 +289,21 @@ async function updateCampaignRecipients(
     .eq("id", campaignId);
   if (campaignError) throw new Error(campaignError.message);
 
-  const recipientPreviews = await loadCampaignRecipientPreviews(recipients, selectedIds);
-  const selectedSample = recipients.find((recipient) => selectedIds.has(recipient.participantId));
+  const recipientPreviews = await loadCampaignRecipientPreviews(
+    recipients,
+    selectedIds,
+    event.id
+  );
+  const selectedSample = recipients.find((recipient) =>
+    selectedIds.has(recipient.recipientKey)
+  );
   if (!selectedSample) throw new Error("Seleziona almeno un destinatario valido.");
-  const sample = await loadDeliveryData(event.title, selectedSample);
+  const sample = await loadCampaignDeliveryData(
+    service,
+    event.id,
+    event.title,
+    selectedSample
+  );
   await audit(service, event.id, userId, campaignId, "email_campaign.recipients_updated", {
     recipient_count: selectedIds.size,
     excluded_count: excludedIds.length,
@@ -275,12 +322,35 @@ async function updateCampaignRecipients(
 async function deliverCampaign(userId: string, testEmail: string, campaignId: string, action: "test" | "send") {
   const service = createSupabaseServiceClient();
   const { data: campaign } = await service.from("email_campaigns").select("*").eq("id", campaignId).maybeSingle();
-  if (!campaign || !["draft", "ready", "partial"].includes(campaign.status)) throw new Error("Campagna non disponibile o già inviata.");
-  const { data: recipientRows } = await service.from("email_campaign_recipients").select("participant_id,registration_id,delivery_kind,delegate_user_id,status").eq("campaign_id", campaignId).eq("status", "pending");
-  const recipients = (recipientRows ?? []).map((row) => ({ participantId: row.participant_id, registrationId: row.registration_id, deliveryKind: row.delivery_kind as "direct" | "delegated", delegateUserId: row.delegate_user_id }));
+  if (!campaign || !["draft", "ready", "partial"].includes(campaign.status)) {
+    throw new Error("Campagna non disponibile o già inviata.");
+  }
+  const { data: recipientRows } = await service
+    .from("email_campaign_recipients")
+    .select(
+      "id,campaign_id,recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,status"
+    )
+    .eq("campaign_id", campaignId)
+    .eq("status", "pending");
+  const recipients = (recipientRows ?? []).map((row) =>
+    campaignRecipientFromDatabaseRow({
+      ...row,
+      recipient_type: row.recipient_type,
+      delivery_kind: row.delivery_kind,
+    })
+  );
   if (!recipients.length) throw new Error("Non ci sono destinatari in attesa.");
-  const { data: event } = await service.from("events").select("title").eq("id", campaign.event_id).single();
-  const sample = await loadDeliveryData(event?.title ?? "Evento", recipients[0]);
+  const { data: event } = await service
+    .from("events")
+    .select("id,title")
+    .eq("id", campaign.event_id)
+    .single();
+  const sample = await loadCampaignDeliveryData(
+    service,
+    campaign.event_id,
+    event?.title ?? "Evento",
+    recipients[0]
+  );
   const attachments = await loadCampaignAttachments(service, campaignId);
   if (action === "test") {
     const html = appendInlineImages(
@@ -299,86 +369,39 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
     return NextResponse.json({ ok: true, messageId: result.messageId });
   }
   if (!campaign.test_sent_at) throw new Error("Prima dell'invio definitivo è obbligatorio inviare il test.");
-  const { data: claimed } = await service.from("email_campaigns").update({ status: "sending" }).eq("id", campaignId).eq("status", campaign.status).select("id");
+  const { data: claimed } = await service
+    .from("email_campaigns")
+    .update({ status: "sending" })
+    .eq("id", campaignId)
+    .eq("status", campaign.status)
+    .select("id");
   if (!claimed?.length) throw new Error("La campagna è già stata presa in carico da un altro invio.");
-  let sent = 0; let failed = 0;
-  await runWithConcurrency(recipients, SEND_CONCURRENCY, async (recipient) => {
-    try {
-      const data = await loadDeliveryData(event?.title ?? "Evento", recipient);
-      const html = appendInlineImages(
-        renderSafeCampaignHtml(campaign.body_template, data.templateData),
-        attachments
-      );
-      const result = await sendTransactionalEmail({
-        to: data.email,
-        subject: renderCampaignTemplate(campaign.subject_template, data.templateData),
-        text: campaignHtmlToText(html),
-        html,
-        attachments: attachments.map(emailAttachmentInput),
-      });
-      await service.from("email_campaign_recipients").update({ status: "sent", provider_message_id: hashMessageId(result.messageId), sent_at: new Date().toISOString() }).eq("campaign_id", campaignId).eq("participant_id", recipient.participantId);
-      sent++;
-    } catch {
-      await service.from("email_campaign_recipients").update({ status: "failed", error_code: "delivery_failed" }).eq("campaign_id", campaignId).eq("participant_id", recipient.participantId);
-      failed++;
-    }
+  let reservation;
+  try {
+    reservation = await reserveCampaignDeliverySchedule(campaignId);
+  } catch (cause) {
+    await service
+      .from("email_campaigns")
+      .update({ status: campaign.status })
+      .eq("id", campaignId)
+      .eq("status", "sending");
+    throw cause;
+  }
+  const result = await processDueCampaignDeliveries({
+    campaignId,
+    actorUserId: userId,
   });
-  const status = failed === 0 ? "completed" : sent === 0 ? "failed" : "partial";
-  await service.from("email_campaigns").update({ status, sent_at: new Date().toISOString() }).eq("id", campaignId);
-  await audit(service, campaign.event_id, userId, campaignId, "email_campaign.sent", { sent, failed, recipient_count: campaign.recipient_count });
-  return NextResponse.json({ ok: true, sent, failed, status });
-}
-
-async function loadDeliveryData(eventTitle: string, recipient: Recipient) {
-  const service = createSupabaseServiceClient();
-  const [{ data: participant }, { data: assignment }, email] = await Promise.all([
-    service
-      .from("participants")
-      .select("id,first_name,last_name,public_code")
-      .eq("id", recipient.participantId)
-      .single(),
-    service
-      .from("participant_group_assignments")
-      .select("groups(name)")
-      .eq("registration_id", recipient.registrationId)
-      .eq("is_current", true)
-      .maybeSingle(),
-    loadDeliveryEmail(service, recipient),
-  ]);
-  const group = Array.isArray(assignment?.groups) ? assignment.groups[0] : assignment?.groups;
-  if (!participant || !email) throw new Error("Destinatario non più raggiungibile.");
-  const person = participant as Person;
-  return { email, templateData: { firstName: person.first_name, lastName: person.last_name, participantCode: person.public_code, groupName: group?.name ?? null, eventTitle } };
-}
-
-async function loadDeliveryEmail(
-  service: ReturnType<typeof createSupabaseServiceClient>,
-  recipient: Recipient
-): Promise<string | null> {
-  if (recipient.deliveryKind === "direct") {
-    const { data } = await service
-      .from("participant_contacts")
-      .select("email")
-      .eq("participant_id", recipient.participantId)
-      .not("email", "is", null)
-      .order("is_primary", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return data?.email ?? null;
-  }
-
-  if (!recipient.delegateUserId) {
-    return null;
-  }
-
-  const { data } = await service
-    .from("profiles")
-    .select("email")
-    .eq("id", recipient.delegateUserId)
-    .maybeSingle();
-
-  return data?.email ?? null;
+  await audit(service, campaign.event_id, userId, campaignId, "email_campaign.queued", {
+    recipient_count: campaign.recipient_count,
+    scheduled_today: reservation.scheduledToday,
+    scheduled_later: reservation.scheduledLater,
+    last_scheduled_for: reservation.lastScheduledFor,
+  });
+  return NextResponse.json({
+    ...result,
+    scheduledLater: reservation.scheduledLater,
+    lastScheduledFor: reservation.lastScheduledFor,
+  });
 }
 
 function recipientSelectionSummary(recipients: RecipientPreview[]) {
@@ -387,6 +410,7 @@ function recipientSelectionSummary(recipients: RecipientPreview[]) {
     recipientCount: selected.length,
     directCount: selected.filter((recipient) => recipient.deliveryKind === "direct").length,
     delegatedCount: selected.filter((recipient) => recipient.deliveryKind === "delegated").length,
+    leaderCount: selected.filter((recipient) => recipient.deliveryKind === "leader").length,
   };
 }
 
@@ -396,6 +420,7 @@ function campaignFilters(body: Record<string, unknown>) {
     tagId: clean(body.tagId, 80) || null,
     serviceId: clean(body.serviceId, 80) || null,
     status: clean(body.status, 30) || "active",
+    audience: body.audience === "group_leaders" ? "group_leaders" as const : "participants" as const,
   };
 }
 
@@ -491,64 +516,6 @@ async function persistCampaignAttachments(
   }
 }
 
-async function loadCampaignAttachments(
-  service: ReturnType<typeof createSupabaseServiceClient>,
-  campaignId: string
-) {
-  const { data: rows, error: rowsError } = await service
-    .from("email_campaign_attachments")
-    .select("file_name,content_type,storage_path,is_inline,content_id")
-    .eq("campaign_id", campaignId)
-    .order("created_at", { ascending: true });
-  if (rowsError) throw new Error(rowsError.message);
-  return Promise.all(
-    (rows ?? []).map(async (row): Promise<CampaignAttachment> => {
-      const { data, error: downloadError } = await service.storage
-        .from(ATTACHMENTS_BUCKET)
-        .download(row.storage_path);
-
-      if (downloadError || !data) {
-        throw new Error(`Impossibile recuperare l'allegato ${row.file_name}.`);
-      }
-
-      return {
-        filename: row.file_name,
-        contentType: row.content_type,
-        content: Buffer.from(await data.arrayBuffer()),
-        cid: row.content_id ?? undefined,
-        inline: row.is_inline,
-      };
-    })
-  );
-}
-
-function appendInlineImages(html: string, attachments: CampaignAttachment[]) {
-  const images = attachments.filter((attachment) => attachment.inline && attachment.cid);
-  if (!images.length) return html;
-  return `${html}<div style="margin-top:24px">${images.map((image) =>
-    `<p style="margin:16px 0"><img src="cid:${image.cid}" alt="${escapeHtmlAttribute(image.filename)}" style="display:block;max-width:100%;height:auto" /></p>`
-  ).join("")}</div>`;
-}
-
-function emailAttachmentInput(attachment: CampaignAttachment) {
-  return {
-    filename: attachment.filename,
-    content: attachment.content,
-    contentType: attachment.contentType,
-    cid: attachment.cid,
-  };
-}
-
-function escapeHtmlAttribute(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
 async function audit(service: ReturnType<typeof createSupabaseServiceClient>, eventId: string, userId: string, campaignId: string, action: string, metadata: Record<string, unknown>) { await service.from("audit_logs").insert({ event_id: eventId, actor_user_id: userId, action, entity_table: "email_campaigns", entity_id: campaignId, metadata }); }
-async function runWithConcurrency<T>(items: T[], concurrency: number, worker: (item: T) => Promise<void>) { let index = 0; await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => { while (index < items.length) { const item = items[index++]; await worker(item); } })); }
 function clean(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
-function hashMessageId(value: string) { return createHash("sha256").update(value).digest("hex"); }
 function error(message: string, status: number) { return NextResponse.json({ error: message }, { status }); }

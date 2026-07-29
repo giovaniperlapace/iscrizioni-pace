@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  MAX_CAMPAIGN_RECIPIENTS,
   resolveSelectedCampaignRecipientIds,
 } from "../lib/email/campaign-selection.ts";
 
@@ -25,14 +24,11 @@ test("campaign recipients include only explicitly requested available people", (
   );
 });
 
-test("campaign recipient selection enforces the limit on chosen people", () => {
-  const ids = Array.from(
-    { length: MAX_CAMPAIGN_RECIPIENTS + 1 },
-    (_, index) => `participant-${index}`
-  );
+test("campaign recipient selection has no application-level size limit", () => {
+  const ids = Array.from({ length: 750 }, (_, index) => `recipient-${index}`);
 
-  assert.throws(
-    () => resolveSelectedCampaignRecipientIds(ids, ids),
-    /al massimo 100 destinatari/
+  assert.equal(
+    resolveSelectedCampaignRecipientIds(ids, ids).size,
+    750
   );
 });

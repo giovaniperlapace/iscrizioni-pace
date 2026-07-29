@@ -68,15 +68,26 @@ export async function ManagerEmailSection({
       .order("sent_at", { ascending: false })
       .limit(8),
   ]);
-  const recipientCandidates = await resolveCampaignRecipients(eventId, {
-    groupId: null,
-    tagId: null,
-    serviceId: null,
-    status: "active",
-  });
+  const [participantCandidates, groupLeaderCandidates] = await Promise.all([
+    resolveCampaignRecipients(eventId, {
+      audience: "participants",
+      groupId: null,
+      tagId: null,
+      serviceId: null,
+      status: "active",
+    }),
+    resolveCampaignRecipients(eventId, {
+      audience: "group_leaders",
+      groupId: null,
+      tagId: null,
+      serviceId: null,
+      status: "active",
+    }),
+  ]);
   const initialRecipients = await loadCampaignRecipientPreviews(
-    recipientCandidates,
-    new Set()
+    [...participantCandidates, ...groupLeaderCandidates],
+    new Set(),
+    eventId
   );
 
   return (

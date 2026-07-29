@@ -1,9 +1,8 @@
 "use client";
 
 import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { MAX_CAMPAIGN_RECIPIENTS } from "@/lib/email/campaign-selection";
 import { CAMPAIGN_TEMPLATE_FIELDS } from "@/lib/email/campaign-templates";
 import { CampaignRichTextEditor } from "./campaign-rich-text-editor";
 
@@ -23,10 +22,11 @@ type CampaignSummary = {
   date: string;
 };
 type RecipientRow = {
-  participantId: string;
+  recipientKey: string;
+  recipientType: "participant" | "group_leader";
   fullName: string;
   destinationEmail: string;
-  deliveryKind: "direct" | "delegated";
+  deliveryKind: "direct" | "delegated" | "leader";
   selected: boolean;
   groupIds: string[];
   tagIds: string[];
@@ -43,6 +43,7 @@ type Preview = {
   recipientCount: number;
   directCount: number;
   delegatedCount: number;
+  leaderCount: number;
   testRecipientEmail: string;
   sampleRecipientName: string;
   previewSubject: string;
@@ -86,6 +87,12 @@ export function EmailCampaignComposer({
   const [groupFilter, setGroupFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
+  const [groupMembershipFilter, setGroupMembershipFilter] = useState<
+    "all" | "with_group" | "without_group"
+  >("all");
+  const [audience, setAudience] = useState<"participants" | "group_leaders">(
+    "participants"
+  );
   const [recipientSearch, setRecipientSearch] = useState("");
   const recipientRows = initialRecipients;
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -96,10 +103,15 @@ export function EmailCampaignComposer({
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const selectFilteredCheckboxRef = useRef<HTMLInputElement>(null);
 
   const selectedTemplate = useMemo(
     () => savedTemplates.find((item) => item.id === templateId),
     [savedTemplates, templateId]
+  );
+  const groupLabelById = useMemo(
+    () => new Map(groups.map((group) => [group.id, group.label])),
+    [groups]
   );
 
   const resetPreview = useCallback(() => {
@@ -119,27 +131,53 @@ export function EmailCampaignComposer({
     const search = normalizeRecipientSearch(recipientSearch);
 
     return recipientRows.filter((recipient) =>
+      (audience === "participants"
+        ? recipient.recipientType === "participant"
+        : recipient.recipientType === "group_leader") &&
       (!groupFilter || recipient.groupIds.some((id) => groupIds.has(id))) &&
-      (!tagFilter || recipient.tagIds.some((id) => tagIds.has(id))) &&
-      (!serviceFilter || recipient.serviceIds.some((id) => serviceIds.has(id))) &&
+      (audience === "group_leaders" ||
+        groupMembershipFilter === "all" ||
+        (groupMembershipFilter === "with_group" && recipient.groupIds.length > 0) ||
+        (groupMembershipFilter === "without_group" && recipient.groupIds.length === 0)) &&
+      (audience === "group_leaders" ||
+        !tagFilter ||
+        recipient.tagIds.some((id) => tagIds.has(id))) &&
+      (audience === "group_leaders" ||
+        !serviceFilter ||
+        recipient.serviceIds.some((id) => serviceIds.has(id))) &&
       (!search || normalizeRecipientSearch(`${recipient.fullName} ${recipient.destinationEmail}`).includes(search))
     );
-  }, [groupFilter, groups, recipientRows, recipientSearch, serviceFilter, services, tagFilter, tags]);
+  }, [audience, groupFilter, groupMembershipFilter, groups, recipientRows, recipientSearch, serviceFilter, services, tagFilter, tags]);
   const selectedRecipientRows = useMemo(
-    () => recipientRows.filter((recipient) => selectedRecipientIdSet.has(recipient.participantId)),
-    [recipientRows, selectedRecipientIdSet]
-  );
-  const availableRecipientRows = useMemo(
-    () => filteredRecipientRows.filter(
-      (recipient) => !selectedRecipientIdSet.has(recipient.participantId)
+    () => recipientRows.filter((recipient) =>
+      selectedRecipientIdSet.has(recipient.recipientKey)
     ),
-    [filteredRecipientRows, selectedRecipientIdSet]
+    [recipientRows, selectedRecipientIdSet]
   );
   const selectedDirectCount = useMemo(
     () => selectedRecipientRows.filter((recipient) => recipient.deliveryKind === "direct").length,
     [selectedRecipientRows]
   );
-  const selectedDelegatedCount = selectedRecipientIds.length - selectedDirectCount;
+  const selectedDelegatedCount = useMemo(
+    () =>
+      selectedRecipientRows.filter(
+        (recipient) => recipient.deliveryKind === "delegated"
+      ).length,
+    [selectedRecipientRows]
+  );
+  const filteredSelectedCount = filteredRecipientRows.filter((recipient) =>
+    selectedRecipientIdSet.has(recipient.recipientKey)
+  ).length;
+  const allFilteredSelected =
+    filteredRecipientRows.length > 0 &&
+    filteredSelectedCount === filteredRecipientRows.length;
+
+  useEffect(() => {
+    if (selectFilteredCheckboxRef.current) {
+      selectFilteredCheckboxRef.current.indeterminate =
+        filteredSelectedCount > 0 && !allFilteredSelected;
+    }
+  }, [allFilteredSelected, filteredSelectedCount]);
 
   function startNewTemplate() {
     setTemplateId("");
@@ -203,7 +241,8 @@ export function EmailCampaignComposer({
       formData.set("subject", subject);
       formData.set("message", message);
       formData.set("status", "active");
-      formData.set("selectedParticipantIds", JSON.stringify(selectedRecipientIds));
+      formData.set("audience", audience);
+      formData.set("selectedRecipientKeys", JSON.stringify(selectedRecipientIds));
       formData.set(
         "inlineAttachmentIndexes",
         JSON.stringify(attachments.flatMap((attachment, index) => attachment.inline ? [String(index)] : []))
@@ -216,7 +255,7 @@ export function EmailCampaignComposer({
       setSelectedRecipientIds(
         data.recipients
           .filter((recipient: RecipientRow) => recipient.selected)
-          .map((recipient: RecipientRow) => recipient.participantId)
+          .map((recipient: RecipientRow) => recipient.recipientKey)
       );
       setTestSent(false);
       setShowSendConfirmation(false);
@@ -227,16 +266,14 @@ export function EmailCampaignComposer({
     }
   }
 
-  function addRecipient(participantId: string) {
-    if (selectedRecipientIdSet.has(participantId)) return;
-    if (selectedRecipientIds.length >= MAX_CAMPAIGN_RECIPIENTS) {
-      setError(
-        `Puoi selezionare al massimo ${MAX_CAMPAIGN_RECIPIENTS} destinatari.`
-      );
-      return;
-    }
-    setSelectedRecipientIds((current) => [...current, participantId]);
-    setRecipientSearch("");
+  function setRecipientSelected(recipientKey: string, selected: boolean) {
+    setSelectedRecipientIds((current) =>
+      selected
+        ? current.includes(recipientKey)
+          ? current
+          : [...current, recipientKey]
+        : current.filter((key) => key !== recipientKey)
+    );
     setPreview(null);
     setTestSent(false);
     setShowSendConfirmation(false);
@@ -244,12 +281,32 @@ export function EmailCampaignComposer({
     setError("");
   }
 
-  function removeRecipient(participantId: string) {
-    setSelectedRecipientIds((current) => current.filter((id) => id !== participantId));
-    setRecipientSearch("");
+  function setAllFilteredRecipientsSelected(selected: boolean) {
+    const filteredKeys = new Set(
+      filteredRecipientRows.map((recipient) => recipient.recipientKey)
+    );
+    setSelectedRecipientIds((current) =>
+      selected
+        ? [...new Set([...current, ...filteredKeys])]
+        : current.filter((key) => !filteredKeys.has(key))
+    );
     setPreview(null);
     setTestSent(false);
     setShowSendConfirmation(false);
+    setNotice("");
+    setError("");
+  }
+
+  function changeAudience(nextAudience: "participants" | "group_leaders") {
+    if (nextAudience === audience) return;
+    setAudience(nextAudience);
+    setSelectedRecipientIds([]);
+    setRecipientSearch("");
+    setGroupFilter("");
+    setTagFilter("");
+    setServiceFilter("");
+    setGroupMembershipFilter("all");
+    resetPreview();
     setNotice("");
     setError("");
   }
@@ -270,7 +327,11 @@ export function EmailCampaignComposer({
     });
     if (data) {
       setShowSendConfirmation(false);
-      setNotice(`Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`);
+      setNotice(
+        data.scheduled > 0
+          ? `Prima tranche conclusa: ${data.sent} inviate, ${data.failed} non riuscite. ${data.scheduled} email sono programmate per i prossimi giorni, fino a 300 al giorno.`
+          : `Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`
+      );
       resetPreview();
     }
   }
@@ -468,17 +529,75 @@ export function EmailCampaignComposer({
               <h3 className="text-lg font-bold">Scegli i destinatari</h3>
             </div>
             <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Cerca e aggiungi esplicitamente le persone da contattare. Cambiare
-              i filtri non modifica i destinatari già scelti.
+              Seleziona le righe con le checkbox. La checkbox in testa alla
+              tabella seleziona o deseleziona tutte le persone mostrate dai
+              filtri correnti.
             </p>
           </div>
-          <span className="rounded-full border border-[var(--peace-border)] px-3 py-1 text-xs font-bold">
-            Massimo 100 destinatari
+          <span className="max-w-sm rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-3 py-2 text-xs font-semibold text-[var(--peace-muted)]">
+            Nessun limite di selezione. L’invio usa tranche automatiche fino a
+            300 email al giorno.
           </span>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div
+          role="tablist"
+          aria-label="Tipo di destinatari"
+          className="flex w-fit rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-1"
+        >
+          <button
+            type="button"
+            role="tab"
+            id="campaign-audience-participants-tab"
+            aria-controls="campaign-audience-panel"
+            aria-selected={audience === "participants"}
+            className={[
+              "rounded px-4 py-2 text-sm font-bold",
+              audience === "participants"
+                ? "bg-[var(--peace-blue-800)] text-white"
+                : "text-[var(--peace-blue-900)]",
+            ].join(" ")}
+            onClick={() => changeAudience("participants")}
+          >
+            Partecipanti
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="campaign-audience-leaders-tab"
+            aria-controls="campaign-audience-panel"
+            aria-selected={audience === "group_leaders"}
+            className={[
+              "rounded px-4 py-2 text-sm font-bold",
+              audience === "group_leaders"
+                ? "bg-[var(--peace-blue-800)] text-white"
+                : "text-[var(--peace-blue-900)]",
+            ].join(" ")}
+            onClick={() => changeAudience("group_leaders")}
+          >
+            Capigruppo
+          </button>
+        </div>
+        <div
+          id="campaign-audience-panel"
+          role="tabpanel"
+          aria-labelledby={
+            audience === "participants"
+              ? "campaign-audience-participants-tab"
+              : "campaign-audience-leaders-tab"
+          }
+          className="grid gap-5"
+        >
+          <p className="text-sm text-[var(--peace-muted)]">
+            {audience === "participants"
+              ? "Questa tabella contiene gli iscritti raggiungibili, comprese le persone senza gruppo."
+              : "Questa tabella contiene solo i capigruppo dell’evento. Ogni capogruppo compare una sola volta anche se segue più gruppi."}
+          </p>
+          <div className={[
+            "grid gap-4 md:grid-cols-2",
+            audience === "participants" ? "xl:grid-cols-5" : "xl:grid-cols-3",
+          ].join(" ")}>
           <label className="grid gap-1 text-sm font-semibold">
-            Cerca persona
+            {audience === "participants" ? "Cerca partecipante" : "Cerca capogruppo"}
             <input
               type="search"
               className="field font-normal"
@@ -496,122 +615,170 @@ export function EmailCampaignComposer({
             value={groupFilter}
             onChange={setGroupFilter}
           />
-          <RecipientFilterInput
-            id="campaign-recipient-tag"
-            label="Tag operativo"
-            options={tags}
-            placeholder="Tutti i tag"
-            value={tagFilter}
-            onChange={setTagFilter}
-          />
-          <RecipientFilterInput
-            id="campaign-recipient-service"
-            label="Servizio"
-            options={services}
-            placeholder="Tutti i servizi"
-            value={serviceFilter}
-            onChange={setServiceFilter}
-          />
-        </div>
-        {recipientRows.length ? (
+          {audience === "participants" ? (
+            <>
+              <label
+                className="grid gap-1 text-sm font-semibold"
+                htmlFor="campaign-group-membership"
+              >
+                Appartenenza a un gruppo
+                <select
+                  id="campaign-group-membership"
+                  className="field font-normal"
+                  value={groupMembershipFilter}
+                  onChange={(event) => {
+                    const value = event.target.value as typeof groupMembershipFilter;
+                    setGroupMembershipFilter(value);
+                    if (value === "without_group") setGroupFilter("");
+                  }}
+                >
+                  <option value="all">Con o senza gruppo</option>
+                  <option value="with_group">Solo con gruppo</option>
+                  <option value="without_group">Solo senza gruppo</option>
+                </select>
+              </label>
+              <RecipientFilterInput
+                id="campaign-recipient-tag"
+                label="Tag operativo"
+                options={tags}
+                placeholder="Tutti i tag"
+                value={tagFilter}
+                onChange={setTagFilter}
+              />
+              <RecipientFilterInput
+                id="campaign-recipient-service"
+                label="Servizio"
+                options={services}
+                placeholder="Tutti i servizi"
+                value={serviceFilter}
+                onChange={setServiceFilter}
+              />
+            </>
+          ) : null}
+          </div>
+        {recipientRows.some((recipient) =>
+          audience === "participants"
+            ? recipient.recipientType === "participant"
+            : recipient.recipientType === "group_leader"
+        ) ? (
           <div className="grid gap-5">
-            <div className="rounded-md border border-[var(--peace-border)] p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">Persone disponibili</p>
-                  <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                    {availableRecipientRows.length} da aggiungere su {recipientRows.length - selectedRecipientIds.length} disponibili. Chi non ha un’email può ricevere il messaggio tramite il proprio referente.
-                  </p>
-                </div>
-              </div>
-              {availableRecipientRows.length ? (
-                <div className="mt-4 max-h-80 overflow-y-auto rounded-md border border-[var(--peace-border)]">
-                  {availableRecipientRows.map((recipient) => (
-                    <div
-                      key={recipient.participantId}
-                      className="flex items-center gap-3 border-b border-[var(--peace-border)] px-3 py-3 last:border-0"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold">{recipient.fullName}</span>
-                        <span className="block truncate text-xs text-[var(--peace-muted)]">
-                          {recipient.destinationEmail}
-                        </span>
-                      </span>
-                      {recipient.deliveryKind === "delegated" ? (
-                        <span className="inline-flex rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)]">
-                          Invio al referente
-                        </span>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="btn-primary inline-flex min-h-11 items-center gap-2 px-3 text-xs"
-                        onClick={() => addRecipient(recipient.participantId)}
-                        disabled={
-                          selectedRecipientIds.length >= MAX_CAMPAIGN_RECIPIENTS
-                        }
-                        aria-label={`Aggiungi ${recipient.fullName} ai destinatari`}
-                      >
-                        <Plus aria-hidden="true" className="h-3.5 w-3.5" />
-                        Aggiungi
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-4 rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
-                  {selectedRecipientIds.length === recipientRows.length
-                    ? "Tutte le persone disponibili sono già state aggiunte."
-                    : "Nessuna persona da aggiungere corrisponde ai filtri impostati."}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--peace-sky-400)] bg-[var(--peace-sky-100)] p-4 shadow-sm">
+              <div>
+                <p className="font-bold text-[var(--peace-blue-950)]">
+                  Destinatari selezionati: {selectedRecipientIds.length}
                 </p>
-              )}
+                <p className="mt-1 text-sm text-[var(--peace-muted)]">
+                  {audience === "participants"
+                    ? `${selectedDirectCount} email ai partecipanti e ${selectedDelegatedCount} invii delegati ai referenti.`
+                    : `${selectedRecipientIds.length} email ai capigruppo.`}
+                </p>
+              </div>
+              {selectedRecipientIds.length ? (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 text-xs"
+                  onClick={() => {
+                    setSelectedRecipientIds([]);
+                    resetPreview();
+                  }}
+                >
+                  Deseleziona tutti
+                </button>
+              ) : null}
             </div>
 
-            <div className="rounded-md border-2 border-[var(--peace-sky-400)] bg-[var(--peace-sky-100)] p-4 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold text-[var(--peace-blue-950)]">
-                    Destinatari scelti
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                    {selectedRecipientIds.length} selezionati: {selectedDirectCount} email ai partecipanti e {selectedDelegatedCount} ai referenti.
-                  </p>
-                </div>
-                <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[var(--peace-blue-800)] px-2.5 py-1 text-xs font-bold text-white">
-                  {selectedRecipientIds.length}
-                </span>
-              </div>
-              {selectedRecipientRows.length ? (
-                <div className="mt-4 grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
-                  {selectedRecipientRows.map((recipient) => (
-                    <div key={recipient.participantId} className="flex min-w-0 items-center gap-2 rounded-md border border-[var(--peace-border)] bg-white px-3 py-2">
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{recipient.fullName}</span>
-                        <span className="block truncate text-xs text-[var(--peace-muted)]">{recipient.destinationEmail}</span>
-                      </span>
-                      <button
-                        type="button"
-                        className="grid min-h-9 min-w-9 shrink-0 place-items-center rounded border border-[var(--peace-border)] hover:bg-[var(--peace-sky-100)]"
-                        onClick={() => removeRecipient(recipient.participantId)}
-                        aria-label={`Rimuovi ${recipient.fullName} dai destinatari`}
-                        title="Rimuovi destinatario"
+            <div className="overflow-hidden rounded-md border border-[var(--peace-border)]">
+              <div className="max-h-[30rem] overflow-auto">
+                <table className="w-full min-w-[42rem] text-left text-sm">
+                  <thead className="sticky top-0 z-10 border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[var(--peace-muted)]">
+                    <tr>
+                      <th className="w-14 px-4 py-3 text-center">
+                        <input
+                          ref={selectFilteredCheckboxRef}
+                          type="checkbox"
+                          checked={allFilteredSelected}
+                          disabled={filteredRecipientRows.length === 0}
+                          onChange={(event) =>
+                            setAllFilteredRecipientsSelected(event.target.checked)
+                          }
+                          aria-label={`Seleziona tutte le ${filteredRecipientRows.length} persone filtrate`}
+                        />
+                      </th>
+                      <th className="px-3 py-3">Persona</th>
+                      <th className="px-3 py-3">Email</th>
+                      <th className="px-3 py-3">
+                        {audience === "participants" ? "Recapito" : "Gruppi"}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRecipientRows.map((recipient) => (
+                      <tr
+                        key={recipient.recipientKey}
+                        className={[
+                          "border-b border-[var(--peace-border)] last:border-0",
+                          selectedRecipientIdSet.has(recipient.recipientKey)
+                            ? "bg-[var(--peace-sky-100)]"
+                            : "bg-white",
+                        ].join(" ")}
                       >
-                        <X aria-hidden="true" className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-[var(--peace-muted)]">
-                  Nessun destinatario selezionato. Aggiungi le persone dall’elenco qui sopra.
-                </p>
-              )}
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedRecipientIdSet.has(recipient.recipientKey)}
+                            onChange={(event) =>
+                              setRecipientSelected(
+                                recipient.recipientKey,
+                                event.target.checked
+                              )
+                            }
+                            aria-label={`Seleziona ${recipient.fullName}`}
+                          />
+                        </td>
+                        <td className="px-3 py-3 font-semibold">{recipient.fullName}</td>
+                        <td className="px-3 py-3 text-[var(--peace-muted)]">
+                          {recipient.destinationEmail}
+                        </td>
+                        <td className="px-3 py-3">
+                          {audience === "group_leaders" ? (
+                            groupLabels(recipient.groupIds, groupLabelById)
+                          ) : recipient.deliveryKind === "delegated" ? (
+                            <span className="inline-flex rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)]">
+                              Invio al referente
+                            </span>
+                          ) : recipient.groupIds.length === 0 ? (
+                            <span className="text-xs font-semibold text-[var(--peace-muted)]">
+                              Senza gruppo
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--peace-muted)]">
+                              Email partecipante
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="border-t border-[var(--peace-border)] bg-[#f7fbfe] px-4 py-3 text-xs font-semibold text-[var(--peace-muted)]">
+                {filteredRecipientRows.length} righe mostrate · {filteredSelectedCount} selezionate nei filtri correnti
+              </div>
             </div>
+            {filteredRecipientRows.length === 0 ? (
+              <p className="rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
+                Nessuna persona corrisponde ai filtri impostati.
+              </p>
+            ) : null}
           </div>
         ) : (
           <p className="rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
-            Non ci sono partecipanti raggiungibili per l’evento corrente.
+            {audience === "participants"
+              ? "Non ci sono partecipanti raggiungibili per l’evento corrente."
+              : "Non ci sono capigruppo raggiungibili per l’evento corrente."}
           </p>
         )}
+        </div>
       </section>
 
       <section className="surface-card grid gap-5 p-5 sm:p-6">
@@ -897,8 +1064,17 @@ export function EmailCampaignComposer({
               <div>
                 <h3 id="campaign-preview-title" className="text-xl font-bold">Anteprima prima dell’invio</h3>
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                  {preview.recipientCount} destinatari: {preview.directCount} email ai partecipanti e {preview.delegatedCount} ai referenti.
+                  {preview.leaderCount > 0
+                    ? `${preview.recipientCount} email ai capigruppo.`
+                    : `${preview.recipientCount} destinatari: ${preview.directCount} email ai partecipanti e ${preview.delegatedCount} ai referenti.`}
                 </p>
+                {preview.recipientCount > 300 ? (
+                  <p className="mt-2 text-sm font-semibold text-[var(--peace-blue-800)]">
+                    Le prime 300 email compatibili con la quota giornaliera
+                    partiranno oggi; le altre saranno programmate
+                    automaticamente nei giorni successivi, fino a 300 al giorno.
+                  </p>
+                ) : null}
               </div>
               <button type="button" className="grid min-h-9 min-w-9 place-items-center rounded border border-[var(--peace-border)]" aria-label="Chiudi anteprima" onClick={resetPreview}>
                 <X aria-hidden="true" className="h-4 w-4" />
@@ -1029,8 +1205,14 @@ export function EmailCampaignComposer({
                 </h3>
                 <p id="campaign-send-confirmation-description" className="mt-3 text-sm text-[var(--peace-muted)]">
                   Stai per inviare “{preview.previewSubject}” a {preview.recipientCount} destinatari.
-                  L’invio non può essere annullato dopo la conferma.
+                  L’invio e la pianificazione delle tranche successive non possono
+                  essere annullati dopo la conferma.
                 </p>
+                {preview.recipientCount > 300 ? (
+                  <p className="mt-2 text-sm font-semibold text-[var(--peace-blue-800)]">
+                    Saranno accodate tranche fino a 300 email al giorno.
+                  </p>
+                ) : null}
                 {preview.attachments.length ? (
                   <p className="mt-2 text-sm text-[var(--peace-muted)]">
                     La campagna include {preview.attachments.length} file.
@@ -1120,11 +1302,20 @@ function normalizeRecipientSearch(value: string) {
     .trim();
 }
 
+function groupLabels(groupIds: string[], groupLabelById: ReadonlyMap<string, string>) {
+  const labels = groupIds.flatMap((groupId) => {
+    const label = groupLabelById.get(groupId);
+    return label ? [label] : [];
+  });
+  return labels.join(", ") || "Gruppo non disponibile";
+}
+
 function campaignStatusLabel(status: string) {
   switch (status) {
     case "completed": return "Completata";
     case "partial": return "Parziale";
     case "failed": return "Non riuscita";
+    case "scheduled": return "Programmata";
     case "sending": return "In invio";
     case "ready": return "Test inviato";
     default: return "Bozza";
