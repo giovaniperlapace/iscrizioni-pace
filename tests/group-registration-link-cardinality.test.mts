@@ -28,6 +28,20 @@ test("link creation is blocked when a group has any previous link", () => {
   assert.match(createAction, /error: "link-already-exists"/);
 });
 
+test("new reserved links use a readable public-name slug and avoid collisions", () => {
+  const createAction = actions.slice(
+    actions.indexOf("export async function createGroupRegistrationLink"),
+    actions.indexOf("export async function updateGroupRegistrationLink")
+  );
+
+  assert.match(
+    createAction,
+    /createGroupRegistrationLinkToken\(publicLabel, index \+ 1\)/
+  );
+  assert.match(createAction, /\.in\("token_hash", \[\.\.\.tokenHashes\.values\(\)\]\)/);
+  assert.match(createAction, /token_format: "readable_slug"/);
+});
+
 test("the reserved link public name can be updated without replacing its token", () => {
   const updateAction = actions.slice(
     actions.indexOf("export async function updateGroupRegistrationLink"),

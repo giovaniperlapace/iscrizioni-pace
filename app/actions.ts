@@ -1944,7 +1944,42 @@ export async function createGroupRegistrationLink(formData: FormData) {
     );
   }
 
-  const token = createGroupRegistrationLinkToken();
+  const tokenCandidates = Array.from({ length: 50 }, (_, index) =>
+    createGroupRegistrationLinkToken(publicLabel, index + 1)
+  );
+  const tokenHashes = new Map(
+    tokenCandidates.map((candidate) => [
+      candidate,
+      hashGroupRegistrationLinkToken(candidate),
+    ])
+  );
+  const { data: tokenCollisions, error: tokenCollisionError } =
+    await serviceSupabase
+      .from("group_registration_links")
+      .select("token_hash")
+      .in("token_hash", [...tokenHashes.values()]);
+
+  if (tokenCollisionError) {
+    redirect(
+      getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" })
+    );
+  }
+
+  const usedTokenHashes = new Set(
+    ((tokenCollisions ?? []) as { token_hash: string }[]).map(
+      (row) => row.token_hash
+    )
+  );
+  const token = tokenCandidates.find(
+    (candidate) => !usedTokenHashes.has(tokenHashes.get(candidate)!)
+  );
+
+  if (!token) {
+    redirect(
+      getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" })
+    );
+  }
+
   const { data: link, error: linkError } = await serviceSupabase
     .from("group_registration_links")
     .insert({
@@ -1976,6 +2011,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
     metadata: {
       group_id: groupRow.id,
       has_public_label: true,
+      token_format: "readable_slug",
     },
   });
 

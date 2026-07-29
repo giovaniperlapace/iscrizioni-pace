@@ -24,6 +24,7 @@ import {
   hashGroupRegistrationLinkToken,
   isValidGroupRegistrationLinkToken,
   normalizeGroupRegistrationPublicLabel,
+  normalizeGroupRegistrationLinkTokenSlug,
 } from "../lib/groups/registration-links.ts";
 
 const ITALY = "11111111-1111-4111-8111-111111111111";
@@ -317,12 +318,28 @@ test("group leader internal notes are compacted and bounded", () => {
   assert.equal(normalizeLeaderInternalNote("a".repeat(900))?.length, 800);
 });
 
-test("reserved group registration links accept opaque tokens and readable slugs", () => {
-  for (let index = 0; index < 128; index += 1) {
-    const token = createGroupRegistrationLinkToken();
-    assert.equal(isValidGroupRegistrationLinkToken(token), true);
-    assert.match(hashGroupRegistrationLinkToken(token), /^[a-f0-9]{64}$/);
-  }
+test("reserved group registration links generate readable slugs", () => {
+  const token = createGroupRegistrationLinkToken("Sant'Andrea");
+
+  assert.equal(token, "sant_andrea");
+  assert.equal(isValidGroupRegistrationLinkToken(token), true);
+  assert.match(hashGroupRegistrationLinkToken(token), /^[a-f0-9]{64}$/);
+  assert.equal(
+    createGroupRegistrationLinkToken("Sant'Andrea", 2),
+    "sant_andrea_2"
+  );
+  assert.equal(
+    normalizeGroupRegistrationLinkTokenSlug("Résurrection 68"),
+    "resurrection_68"
+  );
+  assert.equal(
+    normalizeGroupRegistrationLinkTokenSlug("Łódź – Straße"),
+    "lodz_strasse"
+  );
+  assert.equal(
+    createGroupRegistrationLinkToken("A".repeat(120)).length,
+    96
+  );
   assert.equal(isValidGroupRegistrationLinkToken("pentecoste"), true);
   assert.equal(isValidGroupRegistrationLinkToken("sant_andrea"), true);
   assert.equal(isValidGroupRegistrationLinkToken("ab"), false);

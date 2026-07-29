@@ -24,7 +24,7 @@ Stato locale aggiornato al 2026-06-17:
   manager.
 - Milestone 9.1 e' completata: link riservati per gruppi nascosti ma
   iscrivibili, con label pubblica separata dal nome operativo, generazione e
-  revoca da dashboard manager/capogruppo, token opachi e audit.
+  gestione da dashboard manager/capogruppo, slug leggibili e audit.
 - Milestone 10 e' completata: dashboard capogruppo con tabella
   partecipanti del gruppo, inserimento manuale in overlay, link riservati in
   overlay e form pubblico da link gruppo con valori gruppo impliciti.
@@ -960,7 +960,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     interno;
   - tabella `group_registration_links` con token hash, label pubblica,
     etichetta interna, revoca, scadenza/limite usi opzionali e conteggio usi;
-  - helper server-side per token opachi, URL e stato link;
+  - helper server-side per slug leggibili, URL e stato link;
   - form pubblico con supporto a `/registrazione?groupLink=<token>`, label
     discreta "Gruppo indicato dal referente" e assegnazione al gruppo anche se
     nascosto nel catalogo;

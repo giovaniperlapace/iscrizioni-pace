@@ -1,7 +1,7 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 
 export const GROUP_REGISTRATION_LINK_QUERY_PARAM = "groupLink";
-export const GROUP_REGISTRATION_LINK_TOKEN_BYTES = 24;
+export const GROUP_REGISTRATION_LINK_TOKEN_MAX_LENGTH = 96;
 export const GROUP_REGISTRATION_LINK_TOKEN_PATTERN =
   /^[A-Za-z0-9][A-Za-z0-9_-]{2,95}$/;
 
@@ -19,8 +19,41 @@ export type GroupRegistrationLinkStateInput = {
   now?: Date;
 };
 
-export function createGroupRegistrationLinkToken(): string {
-  return `g${randomBytes(GROUP_REGISTRATION_LINK_TOKEN_BYTES).toString("base64url")}`;
+export function normalizeGroupRegistrationLinkTokenSlug(value: string): string {
+  const asciiValue = value
+    .replace(/ß/g, "ss")
+    .replace(/æ/g, "ae")
+    .replace(/œ/g, "oe")
+    .replace(/[łŁ]/g, "l")
+    .replace(/[đĐðÐ]/g, "d")
+    .replace(/[þÞ]/g, "th")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const slug = asciiValue
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, GROUP_REGISTRATION_LINK_TOKEN_MAX_LENGTH)
+    .replace(/_+$/g, "");
+
+  if (slug.length >= 3) {
+    return slug;
+  }
+
+  return slug ? `gruppo_${slug}` : "gruppo";
+}
+
+export function createGroupRegistrationLinkToken(
+  publicLabel: string,
+  sequence = 1
+): string {
+  const normalizedSequence = Math.max(1, Math.trunc(sequence));
+  const suffix = normalizedSequence > 1 ? `_${normalizedSequence}` : "";
+  const base = normalizeGroupRegistrationLinkTokenSlug(publicLabel)
+    .slice(0, GROUP_REGISTRATION_LINK_TOKEN_MAX_LENGTH - suffix.length)
+    .replace(/_+$/g, "");
+
+  return `${base}${suffix}`;
 }
 
 export function hashGroupRegistrationLinkToken(token: string): string {

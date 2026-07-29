@@ -50,10 +50,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Milestone 9.1 ha aggiunto link riservati per gruppi nascosti ma iscrivibili:
   `groups.public_label`, tabella `group_registration_links`, generazione/revoca
   da dashboard manager e capogruppo in scope e form pubblico precompilato
-  tramite `?groupLink=...`. I token generati dalla dashboard restano opachi;
-  per il catalogo operativo dei gruppi nascosti sono ammessi anche slug
-  amministrativi leggibili e univoci composti da lettere, numeri, trattini e
-  underscore, per esempio `pentecoste`, `sant_andrea` o `resurrezione_68`.
+  tramite `?groupLink=...`. I token sono slug amministrativi leggibili e
+  univoci, derivati dal nome pubblico del link e composti da lettere, numeri,
+  trattini e underscore, per esempio `pentecoste`, `sant_andrea` o
+  `resurrezione_68`; in caso di omonimia l'app aggiunge un suffisso numerico.
 - Milestone 10 ha aggiunto gestione partecipanti da dashboard capogruppo:
   tabella operativa dei partecipanti del gruppo, inserimento manuale in overlay,
   link riservati in overlay, source `capogruppo`, QR reale, consenso dichiarato
@@ -449,9 +449,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `revoked_at is null`; gli errori di caricamento devono essere registrati lato
   server e non scambiati silenziosamente per una lista vuota. La migration
   `20260728120000_single_group_registration_link.sql` e' stata applicata al
-  database remoto il 2026-07-28. I token opachi generati dall'app iniziano con
-  `g`, cosi' rispettano sempre il requisito del validatore che impone un primo
-  carattere alfanumerico. La migration
+  database remoto il 2026-07-28. Dal 2026-07-29 i nuovi token generati
+  dall'app sono slug leggibili derivati dal nome pubblico del link, allineati
+  a quelli creati durante l'importazione gruppi; eventuali omonimie ricevono
+  un suffisso numerico. La migration
   `20260728150000_prevent_canonical_group_link_revocation.sql` impone anche nel
   database che il link canonico non possa essere revocato.
 - Dal 2026-07-28 il form pubblico, l'inserimento manuale del capogruppo e la
@@ -1322,8 +1323,9 @@ Deliverable:
 - Nuova tabella `group_registration_links` con `token_hash`, `public_label`,
   `internal_label`, `use_count`, `max_uses`, `expires_at`, `revoked_at`,
   `created_by` e `revoked_by`.
-- Helper server-side in `lib/groups/registration-links.ts` per generare token
-  opachi, hash SHA-256, URL pubblici, label partecipante e stato link.
+- Helper server-side in `lib/groups/registration-links.ts` per generare slug
+  leggibili univoci, hash SHA-256, URL pubblici, label partecipante e stato
+  link.
 - Form pubblico `/registrazione?groupLink=<token>`: il token valido aggiunge un
   contesto "Gruppo indicato dal referente", usa la label pubblica e assegna il
   gruppo anche se `is_public_catalog = false`.
@@ -1347,9 +1349,10 @@ Decisioni:
   `is_public_catalog = true` indica che compare nel suggerimento pubblico;
   `is_assignable = true` e `is_public_catalog = false` indica gruppo nascosto
   ma iscrivibile solo tramite link riservato o gestione operativa.
-- Il token del link e' opaco e non contiene ID gruppo, nomi o dati personali.
-  In database si conserva solo `token_hash`; il link completo viene mostrato
-  solo subito dopo la creazione.
+- Il token del link e' uno slug leggibile derivato dal nome pubblico scelto
+  dall'operatore; non contiene ID gruppo o dati personali. In database resta
+  disponibile sia l'hash per la risoluzione pubblica sia la copia cifrata
+  necessaria a mostrare e copiare il link canonico dalle dashboard.
 - La label pubblica del link prevale su `groups.public_label`; se entrambe sono
   assenti, il form mostra "Gruppo indicato dal tuo referente".
 - Il link riservato non forza le risposte personali del questionario: la persona
