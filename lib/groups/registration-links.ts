@@ -4,6 +4,13 @@ export const GROUP_REGISTRATION_LINK_QUERY_PARAM = "groupLink";
 export const GROUP_REGISTRATION_LINK_TOKEN_MAX_LENGTH = 96;
 export const GROUP_REGISTRATION_LINK_TOKEN_PATTERN =
   /^[A-Za-z0-9][A-Za-z0-9_-]{2,95}$/;
+export const GROUP_REGISTRATION_LINK_RESERVED_TOKENS = new Set([
+  "api",
+  "auth",
+  "dashboard",
+  "login",
+  "registrazione",
+]);
 
 export type GroupRegistrationLinkStatus =
   | "active"
@@ -99,14 +106,41 @@ export function buildGroupRegistrationUrl({
   token: string;
   email?: string | null;
 }): string {
-  const url = new URL("/registrazione", appUrl.replace(/\/$/, ""));
-  url.searchParams.set(GROUP_REGISTRATION_LINK_QUERY_PARAM, token);
-
-  if (email) {
-    url.searchParams.set("email", email);
-  }
+  const url = new URL(
+    buildGroupRegistrationPath({ token, email }),
+    appUrl.replace(/\/$/, "")
+  );
 
   return url.toString();
+}
+
+export function buildGroupRegistrationPath({
+  token,
+  email,
+  error,
+}: {
+  token: string;
+  email?: string | null;
+  error?: string | null;
+}): string {
+  const path = `/${encodeURIComponent(token)}`;
+  const searchParams = new URLSearchParams();
+
+  if (email) {
+    searchParams.set("email", email);
+  }
+
+  if (error) {
+    searchParams.set("error", error);
+  }
+
+  const query = searchParams.toString();
+
+  return query ? `${path}?${query}` : path;
+}
+
+export function isReservedGroupRegistrationLinkToken(token: string): boolean {
+  return GROUP_REGISTRATION_LINK_RESERVED_TOKENS.has(token.toLowerCase());
 }
 
 export function getGroupRegistrationLinkStatus(

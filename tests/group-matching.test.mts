@@ -18,11 +18,13 @@ import {
 } from "../lib/groups/capogruppo-dashboard.ts";
 import {
   buildGroupRegistrationUrl,
+  buildGroupRegistrationPath,
   createGroupRegistrationLinkToken,
   getGroupRegistrationDisplayLabel,
   getGroupRegistrationLinkStatus,
   hashGroupRegistrationLinkToken,
   isValidGroupRegistrationLinkToken,
+  isReservedGroupRegistrationLinkToken,
   normalizeGroupRegistrationPublicLabel,
   normalizeGroupRegistrationLinkTokenSlug,
 } from "../lib/groups/registration-links.ts";
@@ -401,7 +403,7 @@ test("reserved group registration link status handles revocation and use limits"
   );
 });
 
-test("reserved group registration URL keeps the token in a query parameter", () => {
+test("reserved group registration URL uses the token as a short root path", () => {
   const url = buildGroupRegistrationUrl({
     appUrl: "https://registrationspeace.santegidio.org/",
     token: "abc_DEF-123",
@@ -410,8 +412,24 @@ test("reserved group registration URL keeps the token in a query parameter", () 
 
   assert.equal(
     url,
-    "https://registrationspeace.santegidio.org/registrazione?groupLink=abc_DEF-123&email=persona%40example.org"
+    "https://registrationspeace.santegidio.org/abc_DEF-123?email=persona%40example.org"
   );
+});
+
+test("reserved group registration paths preserve registration errors", () => {
+  assert.equal(
+    buildGroupRegistrationPath({
+      token: "sant_andrea",
+      error: "invalid",
+    }),
+    "/sant_andrea?error=invalid"
+  );
+});
+
+test("reserved group registration tokens cannot shadow application routes", () => {
+  assert.equal(isReservedGroupRegistrationLinkToken("login"), true);
+  assert.equal(isReservedGroupRegistrationLinkToken("LOGIN"), true);
+  assert.equal(isReservedGroupRegistrationLinkToken("sant_andrea"), false);
 });
 
 function group(

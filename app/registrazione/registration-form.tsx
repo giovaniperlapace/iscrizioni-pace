@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import { submitPublicRegistration } from "@/app/actions";
 import { EventIdentity } from "@/components/event-identity";
@@ -1068,12 +1069,12 @@ export function RegistrationForm({
               <p className="mt-2 leading-6 text-[var(--peace-muted)]">
                 {copy.groupLinkHelp}
               </p>
-              <a
+              <Link
                 href="/registrazione"
                 className="btn-secondary mt-3 inline-flex min-h-9 items-center px-3 text-sm"
               >
                 {copy.genericRegistration}
-              </a>
+              </Link>
             </div>
           ) : null}
         </div>

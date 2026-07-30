@@ -38,6 +38,10 @@ test("new reserved links use a readable public-name slug and avoid collisions", 
     createAction,
     /createGroupRegistrationLinkToken\(publicLabel, index \+ 1\)/
   );
+  assert.match(
+    createAction,
+    /!isReservedGroupRegistrationLinkToken\(candidate\)/
+  );
   assert.match(createAction, /\.in\("token_hash", \[\.\.\.tokenHashes\.values\(\)\]\)/);
   assert.match(createAction, /token_format: "readable_slug"/);
 });

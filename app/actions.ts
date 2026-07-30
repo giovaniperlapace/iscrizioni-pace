@@ -19,6 +19,7 @@ import {
 import {
   createGroupRegistrationLinkToken,
   hashGroupRegistrationLinkToken,
+  isReservedGroupRegistrationLinkToken,
   normalizeGroupRegistrationPublicLabel,
 } from "@/lib/groups/registration-links";
 import { notifyGroupLeadersForAssignment } from "@/lib/groups/leader-notifications";
@@ -1971,7 +1972,9 @@ export async function createGroupRegistrationLink(formData: FormData) {
     )
   );
   const token = tokenCandidates.find(
-    (candidate) => !usedTokenHashes.has(tokenHashes.get(candidate)!)
+    (candidate) =>
+      !isReservedGroupRegistrationLinkToken(candidate) &&
+      !usedTokenHashes.has(tokenHashes.get(candidate)!)
   );
 
   if (!token) {

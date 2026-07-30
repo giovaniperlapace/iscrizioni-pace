@@ -54,6 +54,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   univoci, derivati dal nome pubblico del link e composti da lettere, numeri,
   trattini e underscore, per esempio `pentecoste`, `sant_andrea` o
   `resurrezione_68`; in caso di omonimia l'app aggiunge un suffisso numerico.
+  Dal 2026-07-30 i link pubblici usano lo slug direttamente alla radice del
+  dominio, per esempio
+  `https://registrationspeace.santegidio.org/sant_andrea`; la route legacy
+  `/registrazione?groupLink=sant_andrea` resta compatibile e reindirizza in
+  modo permanente al formato breve. Le dashboard manager, admin e capogruppo
+  mostrano il formato breve anche per tutti i link già generati. Gli slug non
+  possono coincidere con le route applicative riservate.
 - Milestone 10 ha aggiunto gestione partecipanti da dashboard capogruppo:
   tabella operativa dei partecipanti del gruppo, inserimento manuale in overlay,
   link riservati in overlay, source `capogruppo`, QR reale, consenso dichiarato
@@ -1356,9 +1363,11 @@ Deliverable:
 - Helper server-side in `lib/groups/registration-links.ts` per generare slug
   leggibili univoci, hash SHA-256, URL pubblici, label partecipante e stato
   link.
-- Form pubblico `/registrazione?groupLink=<token>`: il token valido aggiunge un
-  contesto "Gruppo indicato dal referente", usa la label pubblica e assegna il
-  gruppo anche se `is_public_catalog = false`.
+- Form pubblico `/<token>`: il token valido aggiunge un contesto "Gruppo
+  indicato dal referente", usa la label pubblica e assegna il gruppo anche se
+  `is_public_catalog = false`. Il precedente formato
+  `/registrazione?groupLink=<token>` reindirizza permanentemente alla route
+  breve.
 - `createPublicRegistration` valida server-side il gruppo selezionato: senza
   token link valido accetta solo gruppi attivi, assegnabili e pubblici nel
   catalogo. Questo chiude la possibilità di forzare manualmente UUID di gruppi
