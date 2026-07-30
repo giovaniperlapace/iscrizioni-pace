@@ -61,6 +61,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   modo permanente al formato breve. Le dashboard manager, admin e capogruppo
   mostrano il formato breve anche per tutti i link già generati. Gli slug non
   possono coincidere con le route applicative riservate.
+  Il 2026-07-30 sono stati ruotati anche gli ultimi quattro token opachi
+  preesistenti: `Assemblea di Trastevere`, `Castelli`, `Guidonia - Tivoli` e
+  `W gli anziani - Monti/Esquilino` usano rispettivamente gli slug
+  `assemblea_di_trastevere`, `castelli`, `guidonia_tivoli` e
+  `w_gli_anziani_monti_esquilino`. La rotazione e' registrata in audit con
+  action `group_registration_link.token_rotated`; tutti i 13 link canonici
+  dell'evento hanno ora uno slug leggibile.
 - Milestone 10 ha aggiunto gestione partecipanti da dashboard capogruppo:
   tabella operativa dei partecipanti del gruppo, inserimento manuale in overlay,
   link riservati in overlay, source `capogruppo`, QR reale, consenso dichiarato
