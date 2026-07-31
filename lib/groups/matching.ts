@@ -207,9 +207,7 @@ export function formatGroupOptionLabel(group: {
   name: string;
   primaryLeaderName: string | null;
 }): string {
-  return group.primaryLeaderName
-    ? `${group.name} - referente ${group.primaryLeaderName}`
-    : group.name;
+  return group.name;
 }
 
 export function normalizeMatchText(value: string): string {
