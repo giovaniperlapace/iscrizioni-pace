@@ -1906,72 +1906,124 @@ function AttendanceSlotTable({
   const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${columns.length}, minmax(5.5rem, 1fr))`;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--peace-border)]">
-      <div
-        className="grid bg-[#f7fbfe] text-center text-xs font-semibold uppercase text-[var(--peace-muted)]"
-        style={{ gridTemplateColumns }}
-      >
-        <div className="border-r border-[var(--peace-border)] px-3 py-3 text-left">
-          Fascia
-        </div>
+    <>
+      <div className="grid grid-cols-2 gap-3 sm:hidden">
         {columns.map((column) => (
           <div
             key={column.day}
-            className="border-r border-[var(--peace-border)] px-3 py-3 last:border-r-0"
+            className="overflow-hidden rounded-lg border border-[var(--peace-border)]"
           >
-            {column.label}
+            <div className="bg-[#f7fbfe] px-2 py-3 text-center text-sm font-semibold text-[var(--peace-ink)]">
+              {column.label}
+            </div>
+            {ATTENDANCE_PARTS.map((part) => {
+              const slotAvailable = column.parts.includes(part.value);
+              const slotValue = encodeAttendanceSlot({
+                day: column.day,
+                part: part.value as AttendancePart,
+              });
+              const partLabel = part.label[locale] ?? part.label.en;
+
+              return (
+                <label
+                  key={`${column.day}-${part.value}`}
+                  className={`flex min-h-12 items-center justify-between gap-2 border-t border-[var(--peace-border)] px-2 py-2 text-xs ${
+                    slotAvailable
+                      ? disabled
+                        ? "bg-[#eef5fa] text-[#718196]"
+                        : "bg-white text-[var(--peace-ink)]"
+                      : "bg-[#f3f6f9] text-[#9aa8b8]"
+                  }`}
+                >
+                  <span className="font-medium">{partLabel}</span>
+                  {slotAvailable ? (
+                    <input
+                      name="availabilitySlots"
+                      type="checkbox"
+                      value={slotValue}
+                      checked={selected.has(slotValue)}
+                      disabled={disabled}
+                      className="h-5 w-5 accent-[var(--peace-blue-800)]"
+                      data-field="availabilityDays"
+                      aria-label={`${partLabel} ${column.label}`}
+                      onChange={(event) => onToggle(slotValue, event.target.checked)}
+                    />
+                  ) : (
+                    <span aria-hidden="true">-</span>
+                  )}
+                </label>
+              );
+            })}
           </div>
         ))}
       </div>
-      {ATTENDANCE_PARTS.map((part) => (
+
+      <div className="hidden overflow-hidden rounded-lg border border-[var(--peace-border)] sm:block">
         <div
-          key={part.value}
-          className="grid border-t border-[var(--peace-border)]"
+          className="grid bg-[#f7fbfe] text-center text-xs font-semibold uppercase text-[var(--peace-muted)]"
           style={{ gridTemplateColumns }}
         >
-          <div className="border-r border-[var(--peace-border)] bg-[#fbfdff] px-3 py-3 text-sm font-medium text-[var(--peace-ink)]">
-            {part.label[locale] ?? part.label.en}
+          <div className="border-r border-[var(--peace-border)] px-3 py-3 text-left">
+            Fascia
           </div>
-          {columns.map((column) => {
-            const slotAvailable = column.parts.includes(part.value);
-            const slotValue = encodeAttendanceSlot({
-              day: column.day,
-              part: part.value as AttendancePart,
-            });
-            const partLabel = part.label[locale] ?? part.label.en;
-
-            return (
-              <label
-                key={`${column.day}-${part.value}`}
-                className={`flex min-h-14 items-center justify-center border-r border-[var(--peace-border)] px-3 py-2 last:border-r-0 ${
-                  slotAvailable
-                    ? disabled
-                      ? "bg-[#eef5fa] text-[#718196]"
-                      : "bg-white text-[var(--peace-ink)]"
-                    : "bg-[#f3f6f9] text-[#9aa8b8]"
-                }`}
-              >
-                {slotAvailable ? (
-                  <input
-                    name="availabilitySlots"
-                    type="checkbox"
-                    value={slotValue}
-                    checked={selected.has(slotValue)}
-                    disabled={disabled}
-                    className="h-4 w-4 accent-[var(--peace-blue-800)]"
-                    data-field="availabilityDays"
-                    aria-label={`${partLabel} ${column.label}`}
-                    onChange={(event) => onToggle(slotValue, event.target.checked)}
-                  />
-                ) : (
-                  <span aria-hidden="true">-</span>
-                )}
-              </label>
-            );
-          })}
+          {columns.map((column) => (
+            <div
+              key={column.day}
+              className="border-r border-[var(--peace-border)] px-3 py-3 last:border-r-0"
+            >
+              {column.label}
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+        {ATTENDANCE_PARTS.map((part) => (
+          <div
+            key={part.value}
+            className="grid border-t border-[var(--peace-border)]"
+            style={{ gridTemplateColumns }}
+          >
+            <div className="border-r border-[var(--peace-border)] bg-[#fbfdff] px-3 py-3 text-sm font-medium text-[var(--peace-ink)]">
+              {part.label[locale] ?? part.label.en}
+            </div>
+            {columns.map((column) => {
+              const slotAvailable = column.parts.includes(part.value);
+              const slotValue = encodeAttendanceSlot({
+                day: column.day,
+                part: part.value as AttendancePart,
+              });
+              const partLabel = part.label[locale] ?? part.label.en;
+
+              return (
+                <label
+                  key={`${column.day}-${part.value}`}
+                  className={`flex min-h-14 items-center justify-center border-r border-[var(--peace-border)] px-3 py-2 last:border-r-0 ${
+                    slotAvailable
+                      ? disabled
+                        ? "bg-[#eef5fa] text-[#718196]"
+                        : "bg-white text-[var(--peace-ink)]"
+                      : "bg-[#f3f6f9] text-[#9aa8b8]"
+                  }`}
+                >
+                  {slotAvailable ? (
+                    <input
+                      type="checkbox"
+                      value={slotValue}
+                      checked={selected.has(slotValue)}
+                      disabled={disabled}
+                      className="h-4 w-4 accent-[var(--peace-blue-800)]"
+                      data-field="availabilityDays"
+                      aria-label={`${partLabel} ${column.label}`}
+                      onChange={(event) => onToggle(slotValue, event.target.checked)}
+                    />
+                  ) : (
+                    <span aria-hidden="true">-</span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
