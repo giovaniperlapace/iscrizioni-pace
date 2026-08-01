@@ -265,7 +265,7 @@ export async function updateParticipantDashboard(formData: FormData) {
   const { data: registration, error: registrationError } = await supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,events(starts_on,ends_on,registration_closes_at),participants!inner(auth_user_id)"
+      "id,event_id,participant_id,status,events(starts_on,ends_on,registration_closes_at),participants!inner(auth_user_id,first_name,last_name)"
     )
     .eq("id", parsed.value.registrationId)
     .maybeSingle();
@@ -287,7 +287,11 @@ export async function updateParticipantDashboard(formData: FormData) {
         }>
       | null;
     participants:
-      | Array<{ auth_user_id: string | null }>
+      | Array<{
+          auth_user_id: string | null;
+          first_name: string;
+          last_name: string;
+        }>
       | null;
   };
   const registrationRow = {
@@ -412,6 +416,8 @@ export async function updateParticipantDashboard(formData: FormData) {
   );
   const changedFields = diffParticipantDashboardUpdate(
     {
+      firstName: registrationRow.participants?.first_name ?? "",
+      lastName: registrationRow.participants?.last_name ?? "",
       phone: primaryContact?.phone ?? null,
       availabilitySlots: previousAvailabilitySlots,
       availabilityUnknown: previousAvailabilityUnknown,
@@ -445,6 +451,18 @@ export async function updateParticipantDashboard(formData: FormData) {
       .delete()
       .eq("registration_id", registrationRow.id),
   ];
+
+  if (dashboardUpdate.updatesIdentity) {
+    writes.push(
+      supabase
+        .from("participants")
+        .update({
+          first_name: dashboardUpdate.firstName,
+          last_name: dashboardUpdate.lastName,
+        })
+        .eq("id", registrationRow.participant_id)
+    );
+  }
 
   if (primaryContact) {
     writes.push(
@@ -1141,13 +1159,18 @@ export async function createOperationalTag(formData: FormData) {
     optionalText(formData.get("eventId")) ??
     (await getCurrentOperationalEventId(createSupabaseServiceClient()));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const sourceDashboard =
+    optionalText(formData.get("sourceDashboard")) === "admin" ? "admin" : "manager";
+  const dashboardPath = `/dashboard/${sourceDashboard}?section=iscritti&nav=${nav}`;
+  const errorParam = sourceDashboard === "admin" ? "adminError" : "managerError";
+  const savedParam = sourceDashboard === "admin" ? "adminSaved" : "managerSaved";
 
   if (!label || !eventId) {
-    redirect(`/dashboard/manager?section=iscritti&nav=${nav}&managerError=invalid`);
+    redirect(`${dashboardPath}&${errorParam}=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(supabase, "manager");
+  const auth = await getCurrentAuthContext(supabase, sourceDashboard);
 
   if (!auth) {
     redirect("/login");
@@ -1160,7 +1183,7 @@ export async function createOperationalTag(formData: FormData) {
   );
 
   if (!canManageEvent) {
-    redirect(`/dashboard/manager?section=iscritti&nav=${nav}&managerError=forbidden`);
+    redirect(`${dashboardPath}&${errorParam}=forbidden`);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -1177,7 +1200,7 @@ export async function createOperationalTag(formData: FormData) {
 
   if (error || !tag) {
     redirect(
-      `/dashboard/manager?section=iscritti&nav=${nav}&managerError=${encodeURIComponent(
+      `${dashboardPath}&${errorParam}=${encodeURIComponent(
         error?.code === "23505" ? "duplicate-tag" : error?.message ?? "tag"
       )}`
     );
@@ -1193,7 +1216,8 @@ export async function createOperationalTag(formData: FormData) {
   });
 
   revalidatePath("/dashboard/manager");
-  redirect(`/dashboard/manager?section=iscritti&nav=${nav}&managerSaved=tag`);
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&${savedParam}=tag`);
 }
 
 export async function updateParticipantOperationalTags(formData: FormData) {
@@ -1212,18 +1236,20 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     )
   );
   const isCapogruppo = sourceDashboard === "capogruppo";
+  const isAdmin = sourceDashboard === "admin";
   const dashboardPath = isCapogruppo
     ? "/dashboard/capogruppo"
-    : `/dashboard/manager?section=iscritti&nav=${nav}`;
+    : `/dashboard/${isAdmin ? "admin" : "manager"}?section=iscritti&nav=${nav}`;
+  const operationsErrorParam = isAdmin ? "adminError" : "managerError";
 
   if (!participantId || !eventId) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=invalid`);
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(
     supabase,
-    isCapogruppo ? "capogruppo" : "manager"
+    isCapogruppo ? "capogruppo" : isAdmin ? "admin" : "manager"
   );
 
   if (!auth) {
@@ -1246,7 +1272,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
       );
 
   if (!canUpdate) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=forbidden`);
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
   }
 
   const { data: tags, error: tagsError } = await serviceSupabase
@@ -1255,14 +1281,14 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     .eq("event_id", eventId);
 
   if (tagsError) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=${encodeURIComponent(tagsError.message)}`);
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(tagsError.message)}`);
   }
 
   const eventTagIds = ((tags ?? []) as Array<{ id: string }>).map((tag) => tag.id);
   const eventTagIdSet = new Set(eventTagIds);
 
   if (selectedTagIds.some((tagId) => !eventTagIdSet.has(tagId))) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=invalid`);
+    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
   }
 
   if (eventTagIds.length > 0) {
@@ -1273,7 +1299,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
       .in("tag_id", eventTagIds);
 
     if (deleteError) {
-      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=${encodeURIComponent(deleteError.message)}`);
+      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(deleteError.message)}`);
     }
   }
 
@@ -1289,7 +1315,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
       );
 
     if (insertError) {
-      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : "managerError"}=${encodeURIComponent(insertError.message)}`);
+      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(insertError.message)}`);
     }
   }
 
@@ -1300,12 +1326,13 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     entity_table: "participants",
     entity_id: participantId,
     metadata: {
-      source_dashboard: isCapogruppo ? "capogruppo" : "manager",
+      source_dashboard: isCapogruppo ? "capogruppo" : isAdmin ? "admin" : "manager",
       tag_ids: selectedTagIds,
     },
   });
 
   revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/capogruppo");
 
   if (isCapogruppo) {
@@ -1316,17 +1343,17 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     );
   }
 
-  const managerRedirectParams = new URLSearchParams({
+  const operationsRedirectParams = new URLSearchParams({
     section: "iscritti",
     nav,
-    managerSaved: "tags",
+    [isAdmin ? "adminSaved" : "managerSaved"]: "tags",
   });
 
   if (registrationId) {
-    managerRedirectParams.set("edit", registrationId);
+    operationsRedirectParams.set("edit", registrationId);
   }
 
-  redirect(`/dashboard/manager?${managerRedirectParams.toString()}`);
+  redirect(`/dashboard/${isAdmin ? "admin" : "manager"}?${operationsRedirectParams.toString()}`);
 }
 
 export async function saveEventService(formData: FormData) {

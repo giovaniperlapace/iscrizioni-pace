@@ -633,6 +633,9 @@ test("rate limit blocks attempts after the configured threshold", () => {
 test("parseParticipantDashboardUpdate validates editable participant fields", () => {
   const formData = new FormData();
   formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
+  formData.set("updatesIdentity", "on");
+  formData.set("firstName", "  Maria  Luisa  ");
+  formData.set("lastName", "  Rossi ");
   formData.set("phone", "+39 06 000000");
   formData.append("availabilityDays", "2026-09-04");
   formData.set("moment_22222222-2222-4222-8222-222222222222", "yes");
@@ -644,6 +647,9 @@ test("parseParticipantDashboardUpdate validates editable participant fields", ()
 
   assert.equal(parsed.ok, true);
   if (parsed.ok) {
+    assert.equal(parsed.value.updatesIdentity, true);
+    assert.equal(parsed.value.firstName, "Maria Luisa");
+    assert.equal(parsed.value.lastName, "Rossi");
     assert.equal(parsed.value.phone, "+3906000000");
     assert.deepEqual(parsed.value.availabilitySlots, [
       { day: "2026-09-04", part: "morning" },
@@ -656,6 +662,22 @@ test("parseParticipantDashboardUpdate validates editable participant fields", ()
       walkingOrSteps: true,
     });
     assert.equal(parsed.value.needsOperationalSupport, true);
+  }
+});
+
+test("parseParticipantDashboardUpdate requires both participant names when editing identity", () => {
+  const formData = new FormData();
+  formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
+  formData.set("updatesIdentity", "on");
+  formData.set("firstName", "M");
+  formData.append("availabilityDays", "2026-09-04");
+
+  const parsed = parseParticipantDashboardUpdate(formData);
+
+  assert.equal(parsed.ok, false);
+  if (!parsed.ok) {
+    assert.ok(parsed.errors.includes("Inserisci il nome."));
+    assert.ok(parsed.errors.includes("Inserisci il cognome."));
   }
 });
 
@@ -751,6 +773,8 @@ test("canParticipantEditRegistration closes cancelled and late registrations", (
 test("diffParticipantDashboardUpdate returns changed field names for audit", () => {
   const changed = diffParticipantDashboardUpdate(
     {
+      firstName: "Maria",
+      lastName: "Rossi",
       phone: "+3906000000",
       availabilitySlots: [
         { day: "2026-09-04", part: "morning" },
@@ -767,6 +791,9 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
     },
     {
       registrationId: "11111111-1111-4111-8111-111111111111",
+      updatesIdentity: true,
+      firstName: "Maria Luisa",
+      lastName: "Bianchi",
       phone: "+3906000000",
       availabilitySlots: [
         { day: "2026-09-05", part: "morning" },
@@ -793,6 +820,8 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
   );
 
   assert.deepEqual(changed, [
+    "first_name",
+    "last_name",
     "availability_slots",
     "moment_attendance_choices",
     "accompanying_children",

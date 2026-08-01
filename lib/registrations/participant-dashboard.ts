@@ -13,6 +13,9 @@ import {
 
 export type ParticipantDashboardUpdate = {
   registrationId: string;
+  updatesIdentity: boolean;
+  firstName: string | null;
+  lastName: string | null;
   phone: string | null;
   availabilityUnknown: boolean;
   availabilitySlots: AttendanceSlot[];
@@ -36,6 +39,7 @@ export function parseParticipantDashboardUpdate(
   formData: FormData
 ): ParticipantDashboardValidation {
   const registrationId = optionalText(formData.get("registrationId")) ?? "";
+  const updatesIdentity = formData.get("updatesIdentity") === "on";
   const phone = normalizePhone(formData.get("phone"));
   const availabilityUnknown = formData.get("availabilityUnknown") === "on";
   const hasAccessibilityNeeds = formData.get("hasAccessibilityNeeds") === "on";
@@ -44,6 +48,9 @@ export function parseParticipantDashboardUpdate(
 
   const value: ParticipantDashboardUpdate = {
     registrationId,
+    updatesIdentity,
+    firstName: updatesIdentity ? normalizeName(formData.get("firstName")) : null,
+    lastName: updatesIdentity ? normalizeName(formData.get("lastName")) : null,
     phone,
     availabilityUnknown,
     availabilitySlots: availabilityUnknown ? [] : parseAvailabilitySlots(formData),
@@ -71,6 +78,20 @@ export function validateParticipantDashboardUpdate(
 
   if (!UUID_PATTERN.test(input.registrationId)) {
     errors.push("Iscrizione non valida.");
+  }
+
+  if (input.updatesIdentity) {
+    if (!input.firstName || input.firstName.length < 2) {
+      errors.push("Inserisci il nome.");
+    } else if (input.firstName.length > 120) {
+      errors.push("Il nome non può superare 120 caratteri.");
+    }
+
+    if (!input.lastName || input.lastName.length < 2) {
+      errors.push("Inserisci il cognome.");
+    } else if (input.lastName.length > 120) {
+      errors.push("Il cognome non può superare 120 caratteri.");
+    }
   }
 
   if (input.phone && !PHONE_PATTERN.test(input.phone)) {
@@ -117,6 +138,8 @@ export function canParticipantEditRegistration(
 
 export function diffParticipantDashboardUpdate(
   before: {
+    firstName: string;
+    lastName: string;
     phone: string | null;
     availabilitySlots: AttendanceSlot[];
     availabilityUnknown: boolean;
@@ -129,6 +152,14 @@ export function diffParticipantDashboardUpdate(
   after: ParticipantDashboardUpdate
 ): string[] {
   const changed: string[] = [];
+
+  if (after.updatesIdentity && before.firstName !== after.firstName) {
+    changed.push("first_name");
+  }
+
+  if (after.updatesIdentity && before.lastName !== after.lastName) {
+    changed.push("last_name");
+  }
 
   if ((before.phone ?? "") !== (after.phone ?? "")) {
     changed.push("phone");
@@ -230,6 +261,12 @@ function parseAvailabilitySlots(formData: FormData): AttendanceSlot[] {
   }
 
   return [...slots.values()];
+}
+
+function normalizeName(value: FormDataEntryValue | null): string | null {
+  const text = optionalText(value);
+
+  return text ? text.replace(/\s+/g, " ") : null;
 }
 
 function parseMomentAttendanceChoices(

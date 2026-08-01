@@ -1120,6 +1120,53 @@ export default async function PartecipanteDashboardPage({
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
+                        <EditableInfo
+                          label={`${childrenCopy.firstName} / ${childrenCopy.lastName}`}
+                          value={`${participant.first_name} ${participant.last_name}`.trim()}
+                          editable={Boolean(editable)}
+                          copy={copy}
+                        >
+                          <form
+                            action={updateParticipantDashboard}
+                            className="grid gap-3"
+                          >
+                            <BaseDashboardFields
+                              registrationId={selectedRegistration.id}
+                            />
+                            <input type="hidden" name="updatesIdentity" value="on" />
+                            <PreservePhone value={primaryContact?.phone ?? null} />
+                            <PreserveAttendance
+                              availabilityUnknown={availabilityUnknown}
+                              selectedSlots={selectedAttendanceSlots}
+                            />
+                            <PreserveMoments momentChoices={momentChoices} />
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <Field label={childrenCopy.firstName}>
+                                <input
+                                  name="firstName"
+                                  className="field"
+                                  defaultValue={participant.first_name}
+                                  minLength={2}
+                                  maxLength={120}
+                                  autoComplete="given-name"
+                                  required
+                                />
+                              </Field>
+                              <Field label={childrenCopy.lastName}>
+                                <input
+                                  name="lastName"
+                                  className="field"
+                                  defaultValue={participant.last_name}
+                                  minLength={2}
+                                  maxLength={120}
+                                  autoComplete="family-name"
+                                  required
+                                />
+                              </Field>
+                            </div>
+                            <SaveInlineButton editable={Boolean(editable)} copy={copy} />
+                          </form>
+                        </EditableInfo>
                         <Info
                           label={copy.submittedAt}
                           value={formatDateTime(selectedRegistration.submitted_at, locale, copy)}

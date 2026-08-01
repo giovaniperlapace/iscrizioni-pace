@@ -1590,6 +1590,84 @@ dato nello snapshot della campagna.
 - Accettazione: policy documentata e strumenti controllati.
 - Non fare: cancellare dati reali senza approvazione esplicita.
 
+### Milestone 19.1: iscrizioni scuole e gruppi di studenti
+
+- Scopo: aggiungere un flusso dedicato alle scuole nel quale un docente o
+  referente scolastico possa iscrivere una classe o un gruppo di studenti a
+  uno o piu' momenti dell'evento, mantenendo una gestione unitaria del gruppo
+  ma generando un'iscrizione e un QR code distinti per ogni studente.
+- Contesto:
+  - il flusso deve essere separato e riconoscibile rispetto all'iscrizione
+    individuale e alle iscrizioni gestite dai capigruppo territoriali;
+  - i momenti disponibili possono avere capienze massime diverse e la loro
+    disponibilita' deve essere verificata anche durante il salvataggio, non
+    soltanto mostrata nell'interfaccia;
+  - i dati possono riguardare minori e richiedono minimizzazione, informative,
+    consensi e permessi piu' restrittivi.
+- Deliverable:
+  - sezione pubblica o autenticata dedicata alle scuole, con identificazione
+    del docente referente e dati essenziali dell'istituto;
+  - creazione di un gruppo scolastico con classe, numero previsto di studenti
+    e accompagnatori, senza confonderlo con i gruppi territoriali esistenti;
+  - inserimento multiplo degli studenti tramite tabella guidata e, se utile,
+    import da modello CSV/XLSX validato, con revisione prima del salvataggio;
+  - scelta condivisa di uno o piu' momenti dell'evento per tutto il gruppo,
+    con possibilita' di gestire eccezioni individuali quando necessarie;
+  - controllo della capienza residua per ogni momento e prenotazione atomica
+    dei posti, evitando sovraprenotazioni in caso di richieste concorrenti;
+  - comportamento esplicito quando i posti non bastano: nessun salvataggio
+    parziale involontario, proposta di ridurre il gruppo o scegliere altri
+    momenti; eventuale lista d'attesa solo se approvata come requisito;
+  - una registrazione individuale e un QR token opaco distinto per ogni
+    studente e accompagnatore, riusando il sistema QR esistente;
+  - riepilogo del gruppo per il docente, con stato delle iscrizioni e strumenti
+    per scaricare o stampare i QR individuali senza esporre dati non necessari;
+  - vista manager per cercare gruppi scolastici, docente, istituto, momenti
+    scelti, posti occupati e anomalie, con audit delle modifiche;
+  - email di conferma al docente referente con riepilogo operativo e accesso
+    sicuro alla gestione del gruppo; nessun invio agli studenti se non previsto
+    e autorizzato dal modello privacy adottato.
+- Modello dati da progettare:
+  - istituti/referenti scolastici e gruppi scolastici collegati all'evento;
+  - relazione fra gruppo scolastico, studenti/accompagnatori e registrazioni
+    individuali esistenti;
+  - capienza massima e posti prenotati per ciascun momento, con vincoli e
+    funzione transazionale server-side;
+  - stato della prenotazione di gruppo e audit delle variazioni.
+- File/cartelle indicative: `app/scuole/*`, `lib/schools/*`,
+  `lib/qrcode/*`, dashboard manager/admin, template email, migration Supabase,
+  test mirati in `tests/*`.
+- Migration: nuove tabelle e policy RLS per scuole e gruppi scolastici;
+  estensione dei momenti con capienza se non gia' disponibile; funzioni SQL
+  transazionali per riservare, aggiornare e liberare posti senza race condition.
+- Permessi e privacy:
+  - il docente vede e gestisce soltanto i gruppi scolastici di cui e' referente;
+  - manager e admin vedono i dati necessari alla gestione dell'evento;
+  - accoglienza legge soltanto i dati minimi restituiti dalla verifica QR;
+  - definire prima dell'implementazione quali dati anagrafici degli studenti
+    siano davvero indispensabili e come documentare consenso, responsabilita'
+    del docente, retention ed eventuale trattamento di dati di minori.
+- Verifiche:
+  - creazione e modifica di gruppi con uno o piu' momenti;
+  - import con righe valide, duplicate o errate e revisione prima del commit;
+  - concorrenza sull'ultimo posto disponibile e impossibilita' di superare la
+    capienza massima;
+  - rilascio corretto dei posti quando uno studente, un gruppo o un momento
+    vengono rimossi;
+  - unicita', revoca e verifica dei QR individuali;
+  - permessi RLS del docente e minimizzazione dati nella vista accoglienza;
+  - gestione di gruppi numerosi, responsive e accessibilita' del flusso.
+- Rischi: sovraprenotazione, salvataggi parziali, duplicazione studenti,
+  esposizione di dati di minori, QR associati alla persona sbagliata, modifica
+  delle capienze dopo prenotazioni gia' confermate.
+- Accettazione: un docente puo' iscrivere in un unico flusso il proprio gruppo
+  ai momenti con posti disponibili; il sistema riserva correttamente i posti,
+  crea registrazioni e QR individuali e consente a docente e manager di gestire
+  il gruppo entro i rispettivi permessi.
+- Non fare: usare un unico QR per tutta la classe, affidare il controllo
+  capienza al solo frontend, raccogliere dati degli studenti non necessari,
+  riutilizzare impropriamente i gruppi territoriali per rappresentare scuole.
+
 ### Milestone 20: hardening finale, QA e runbook
 
 - Scopo: consolidare l'app prima dell'uso intensivo vicino all'evento, dopo che

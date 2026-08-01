@@ -82,6 +82,14 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   nome/cognome/email collegata a un utente auth e a `group_memberships`.
   Le tabelle operative caricano fino a 200 iscrizioni recenti e includono anche
   le iscrizioni annullate quando filtrate.
+- Dal 2026-08-01 la sezione `Gestione iscritti` di admin e manager usa lo
+  stesso componente condiviso per tabella, filtri e scheda partecipante. Le due
+  dashboard devono mantenere le stesse funzioni di consultazione e modifica di
+  identità, contatti, gruppo e tag, oltre alle stesse colonne per servizio e
+  tag. Anche l'eliminazione dell'iscrizione è disponibile a entrambi: l'admin
+  può operare globalmente, mentre il manager soltanto sugli eventi assegnati.
+  Le modifiche future alla gestione iscritti non vanno duplicate nelle due
+  pagine, ma applicate al componente condiviso.
 - Dopo revisione della Milestone 11, la gestione gruppi admin/manager e' stata
   spostata su una tabella gruppi filtrabile con azioni per riga. La creazione e
   modifica gruppi si apre in overlay; la generazione/revoca dei link riservati
@@ -159,6 +167,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   gruppo dalla scheda partecipante e il manager li usa come filtri nella
   tabella iscritti. Email personalizzate, programma, check-in e settori
   slittano dopo questi blocchi.
+- Il 2026-07-03 e' stata inserita prima della Milestone 20 la Milestone 19.1,
+  dedicata alle iscrizioni scolastiche: un docente referente gestisce
+  l'iscrizione di una classe o di un gruppo a specifici momenti dell'evento,
+  con controllo transazionale delle capienze, registrazioni e QR individuali
+  per studenti e accompagnatori, permessi dedicati e particolare attenzione
+  alla minimizzazione e protezione dei dati dei minori. I gruppi scolastici
+  devono restare distinti dai gruppi territoriali esistenti.
 - Il 2026-06-25 e' stata implementata la prima tranche della Milestone 14.1:
   notifica email applicativa ai capigruppo quando nasce una nuova assegnazione
   probabile da verificare, sia da iscrizione pubblica sia da rifiuto con
@@ -471,6 +486,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   durante la navigazione la ricerca resta digitabile e puo' raccogliere subito
   il filtro successivo. Resta il debounce generale di 450 ms per i campi
   testuali; i filtri a scelta continuano ad applicarsi immediatamente.
+- Dal 2026-08-01 anche la tabella condivisa `Gestione iscritti` di admin e
+  manager mantiene campi e tabella interattivi durante l'aggiornamento dei
+  risultati, senza overlay opaco o fieldset disabilitato. Per i campi testuali
+  usa un debounce dedicato di 900 ms, così la ricerca parte soltanto dopo una
+  pausa reale nella digitazione; i menu a scelta restano immediati.
 - Dal 2026-07-28 ogni gruppo puo' avere un solo link riservato complessivo, non
   un solo link attivo alla volta. Dopo la prima creazione il comando di
   generazione non deve piu' comparire e il server deve rifiutare ulteriori

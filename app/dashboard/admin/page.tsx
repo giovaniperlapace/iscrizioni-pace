@@ -39,6 +39,10 @@ import { AutoCopyLinkNotice, CopyLinkButton } from "@/app/dashboard/group-link-c
 import { GroupLeaderKindField } from "@/app/dashboard/group-leader-kind-field";
 import { GroupLeaderModeTabs } from "@/app/dashboard/group-leader-mode-tabs";
 import { OperationalRoleFields } from "@/app/dashboard/operational-role-fields";
+import {
+  OperationsParticipantsSection,
+  type OperationsParticipantRow,
+} from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -57,12 +61,19 @@ import {
 } from "@/lib/groups/registration-links";
 import {
   applyOperationsDashboardFilters,
-  hasActiveOperationsDashboardFilters,
   parseOperationsDashboardFilters,
   summarizeOperationsDashboardParticipants,
   type OperationsDashboardFilters,
   type OperationsDashboardSummary,
 } from "@/lib/registrations/operations-dashboard";
+import type {
+  OperationalTagOption,
+  ParticipantOperationalTag,
+} from "@/lib/registrations/operational-tags";
+import type {
+  EventServiceOption,
+  ParticipantEventService,
+} from "@/lib/registrations/event-services";
 import {
   buildEventStatisticsSnapshot,
   type EventStatisticsSnapshot,
@@ -82,7 +93,6 @@ type AdminPageProps = {
     openingSaved?: string;
     adminError?: string;
     adminSaved?: string;
-    editMode?: string;
     eventTool?: string;
     edit?: string;
     event?: string;
@@ -106,6 +116,8 @@ type AdminPageProps = {
     roleGroupId?: string;
     group?: string;
     contact?: string;
+    service?: string;
+    tag?: string;
     q?: string;
     nav?: string;
     section?: string;
@@ -184,6 +196,7 @@ type AdminRegistrationRow = {
         auth_user_id: string | null;
         first_name: string | null;
         last_name: string | null;
+        birth_date: string | null;
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
@@ -193,6 +206,7 @@ type AdminRegistrationRow = {
         auth_user_id: string | null;
         first_name: string | null;
         last_name: string | null;
+        birth_date: string | null;
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
@@ -207,6 +221,32 @@ type AdminCurrentAssignmentRow = {
   groups:
     | { name: string | null }
     | Array<{ name: string | null }>
+    | null;
+};
+
+type ParticipantOperationalTagRow = {
+  participant_id: string;
+  assigned_at: string | null;
+  operational_tags:
+    | { id: string; event_id: string; label: string; color: string }
+    | Array<{ id: string; event_id: string; label: string; color: string }>
+    | null;
+};
+
+type ParticipantEventServiceRelationRow = {
+  id: string;
+  event_id: string;
+  registration_id: string;
+  participant_id: string;
+  service_id: string;
+  status: string | null;
+  source: string | null;
+  participant_note: string | null;
+  operator_note: string | null;
+  updated_at: string | null;
+  event_services:
+    | { label: string | null }
+    | Array<{ label: string | null }>
     | null;
 };
 
@@ -269,27 +309,7 @@ type GroupTableFilters = {
   visibility: string;
 };
 
-type AdminParticipantRow = {
-  registrationId: string;
-  eventId: string;
-  eventTitle: string;
-  participantId: string;
-  authUserId: string | null;
-  name: string;
-  publicCode: string | null;
-  country: string | null;
-  city: string | null;
-  place: string;
-  email: string | null;
-  phone: string | null;
-  registrationStatus: string | null;
-  submittedAt: string | null;
-  currentGroupId: string | null;
-  currentGroupName: string | null;
-  currentGroupStatus: string | null;
-  childrenCount: number;
-  children: RegistrationChildRelationRow[];
-};
+type AdminParticipantRow = OperationsParticipantRow;
 
 type AdminOperationsSnapshot = {
   participants: AdminParticipantRow[];
@@ -297,6 +317,8 @@ type AdminOperationsSnapshot = {
   groupOptions: AdminGroupOption[];
   groupTree: AdminGroupTreeRow[];
   groupLinks: AdminGroupRegistrationLink[];
+  operationalTags: OperationalTagOption[];
+  eventServices: EventServiceOption[];
   roleUsers: OperationalUserRoleRow[];
   filters: OperationsDashboardFilters;
   summary: OperationsDashboardSummary;
@@ -438,11 +460,13 @@ export default async function AdminDashboardPage({
             ) : null}
 
             {activeSection === "iscritti" ? (
-              <AdminParticipantsSection
+              <OperationsParticipantsSection
                 snapshot={adminOperations}
                 selectedParticipant={selectedAdminParticipant}
-                isEditingParticipant={params.editMode === "1"}
+                canManageEvent={() => true}
+                dashboard="admin"
                 navMode={navMode}
+                canDeleteRegistration
               />
             ) : null}
 
@@ -509,6 +533,8 @@ export default async function AdminDashboardPage({
         groupOptions: [],
         groupTree: [],
         groupLinks: [],
+        operationalTags: [],
+        eventServices: [],
         roleUsers: [],
         filters,
         summary: summarizeOperationsDashboardParticipants([], []),
@@ -520,13 +546,15 @@ export default async function AdminDashboardPage({
       { data: groups },
       { data: groupTree },
       { data: groupLinks, error: groupLinksError },
+      { data: operationalTags },
+      { data: eventServices },
       { data: eventRoles },
       { data: groupMemberships },
     ] = await Promise.all([
       serviceSupabase
         .from("registrations")
         .select(
-          "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+          "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
         )
         .eq("event_id", currentEventId)
         .order("submitted_at", { ascending: false })
@@ -555,6 +583,17 @@ export default async function AdminDashboardPage({
         .eq("is_canonical", true)
         .order("created_at", { ascending: false }),
       serviceSupabase
+        .from("operational_tags")
+        .select("id,event_id,label,color")
+        .eq("event_id", currentEventId)
+        .order("label", { ascending: true }),
+      serviceSupabase
+        .from("event_services")
+        .select("id,event_id,label,description,is_active,public_order")
+        .eq("event_id", currentEventId)
+        .order("public_order", { ascending: true })
+        .order("label", { ascending: true }),
+      serviceSupabase
         .from("event_user_roles")
         .select("user_id,role,event_id,events(title)")
         .or(`event_id.is.null,event_id.eq.${currentEventId}`),
@@ -574,7 +613,12 @@ export default async function AdminDashboardPage({
     const registrationIds = registrationRows.map((row) => row.id);
     const participantIds = registrationRows.map((row) => row.participant_id);
     const emptyResult = { data: [] };
-    const [{ data: contacts }, { data: assignments }] = await Promise.all([
+    const [
+      { data: contacts },
+      { data: assignments },
+      { data: participantTags },
+      { data: participantServices },
+    ] = await Promise.all([
         participantIds.length > 0
           ? serviceSupabase
               .from("participant_contacts")
@@ -591,6 +635,21 @@ export default async function AdminDashboardPage({
               .in("registration_id", registrationIds)
               .eq("is_current", true)
           : Promise.resolve(emptyResult),
+        participantIds.length > 0
+          ? serviceSupabase
+              .from("participant_operational_tags")
+              .select("participant_id,assigned_at,operational_tags(id,event_id,label,color)")
+              .in("participant_id", participantIds)
+          : Promise.resolve(emptyResult),
+        participantIds.length > 0
+          ? serviceSupabase
+              .from("participant_event_services")
+              .select(
+                "id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)"
+              )
+              .in("participant_id", participantIds)
+              .eq("event_id", currentEventId)
+          : Promise.resolve(emptyResult),
       ]);
     const contactByParticipantId = new Map(
       ((contacts ?? []) as ContactRow[]).map((row) => [row.participant_id, row])
@@ -601,6 +660,8 @@ export default async function AdminDashboardPage({
         row,
       ])
     );
+    const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
+    const serviceByParticipantId = mapParticipantEventServices(participantServices);
     const participantRows = registrationRows.map((registration) => {
         const participant = relatedOne(registration.participants);
         const event = relatedOne(registration.events);
@@ -608,6 +669,7 @@ export default async function AdminDashboardPage({
         const assignment = assignmentByRegistrationId.get(registration.id);
         const group = relatedOne(assignment?.groups ?? null);
         const authUserId = participant?.auth_user_id ?? null;
+        const service = serviceByParticipantId.get(registration.participant_id) ?? null;
 
         return {
           registrationId: registration.id,
@@ -615,11 +677,14 @@ export default async function AdminDashboardPage({
           eventTitle: event?.title ?? "Evento",
           participantId: registration.participant_id,
           authUserId,
+          firstName: participant?.first_name ?? null,
+          lastName: participant?.last_name ?? null,
           name: formatParticipantName(
             participant?.first_name ?? null,
             participant?.last_name ?? null
           ),
           publicCode: participant?.public_code ?? null,
+          birthDate: participant?.birth_date ?? null,
           country: participant?.country_other ?? null,
           city: participant?.city_other ?? null,
           place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
@@ -630,6 +695,13 @@ export default async function AdminDashboardPage({
           currentGroupId: assignment?.group_id ?? null,
           currentGroupName: group?.name ?? null,
           currentGroupStatus: assignment?.status ?? null,
+          currentServiceId: service?.serviceId ?? null,
+          currentServiceStatus: service?.status ?? null,
+          service,
+          tagIds: (tagsByParticipantId.get(registration.participant_id) ?? []).map(
+            (tag) => tag.id
+          ),
+          tags: tagsByParticipantId.get(registration.participant_id) ?? [],
           childrenCount: registration.registration_children?.length ?? 0,
           children: [...(registration.registration_children ?? [])].sort(
             (first, second) => first.position - second.position
@@ -714,6 +786,32 @@ export default async function AdminDashboardPage({
           revokedAt: link.revoked_at,
         })
       ),
+      operationalTags: ((operationalTags ?? []) as Array<{
+        id: string;
+        event_id: string;
+        label: string;
+        color: string;
+      }>).map((tag) => ({
+        id: tag.id,
+        eventId: tag.event_id,
+        label: tag.label,
+        color: tag.color,
+      })),
+      eventServices: ((eventServices ?? []) as Array<{
+        id: string;
+        event_id: string;
+        label: string | null;
+        description: string | null;
+        is_active: boolean | null;
+        public_order: number | null;
+      }>).map((service) => ({
+        id: service.id,
+        eventId: service.event_id,
+        label: service.label ?? "Servizio senza nome",
+        description: service.description,
+        isActive: service.is_active ?? true,
+        publicOrder: service.public_order ?? 100,
+      })),
       roleUsers,
       filters,
       summary: summarizeOperationsDashboardParticipants(
@@ -738,7 +836,7 @@ export default async function AdminDashboardPage({
     const { data: registrations } = await serviceSupabase
       .from("registrations")
       .select(
-        "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+          "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
       )
       .eq("event_id", currentEventId)
       .order("submitted_at", { ascending: false })
@@ -1602,174 +1700,6 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
   );
 }
 
-function AdminParticipantsSection({
-  snapshot,
-  selectedParticipant,
-  isEditingParticipant,
-  navMode,
-}: {
-  snapshot: AdminOperationsSnapshot;
-  selectedParticipant: AdminParticipantRow | null;
-  isEditingParticipant: boolean;
-  navMode: AdminNavMode;
-}) {
-  const currentGroupOptions = getCurrentGroupFilterOptions(snapshot.allParticipants);
-
-  return (
-    <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
-      <div>
-        <h2 className="text-lg font-semibold">Gestione iscritti</h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
-          Ultime iscrizioni, fino a 200 risultati recenti.
-        </p>
-      </div>
-
-      <div className="mt-5 overflow-x-auto">
-        <AutoFilterForm
-          action="/dashboard/admin"
-          defaults={{ q: "", contact: "", group: "all", status: "all" }}
-        >
-          <input type="hidden" name="section" value="iscritti" />
-          <input type="hidden" name="nav" value={navMode} />
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="py-3 pr-4 font-semibold">Iscrizione</th>
-                <th className="py-3 pr-4 font-semibold">Contatti</th>
-                <th className="py-3 pr-4 font-semibold">Gruppo</th>
-                <th className="py-3 text-right font-semibold">Azioni</th>
-              </tr>
-              <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-participant-q">Cerca iscrizione</label>
-                  <input
-                    id="admin-participant-q"
-                    name="q"
-                    defaultValue={snapshot.filters.q}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                    placeholder="Nome, codice, email"
-                  />
-                </th>
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-participant-contact">Cerca contatto</label>
-                  <input
-                    id="admin-participant-contact"
-                    name="contact"
-                    defaultValue={snapshot.filters.contact}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                    placeholder="Email, telefono"
-                  />
-                </th>
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-participant-group">Gruppo</label>
-                  <select
-                    id="admin-participant-group"
-                    name="group"
-                    defaultValue={snapshot.filters.group}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                  >
-                    <option value="all">Tutti i gruppi</option>
-                    <option value="none">Senza gruppo</option>
-                    {currentGroupOptions.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </select>
-                </th>
-                <th className="py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    <label className="sr-only" htmlFor="admin-participant-status">Stato</label>
-                    <select
-                      id="admin-participant-status"
-                      name="status"
-                      defaultValue={snapshot.filters.status}
-                      className="field min-h-10 max-w-36 bg-white text-sm font-normal"
-                    >
-                      <option value="all">Tutti</option>
-                      <option value="submitted">Inviata</option>
-                      <option value="confirmed">Confermata</option>
-                      <option value="cancelled">Annullata</option>
-                    </select>
-                    {hasActiveOperationsDashboardFilters(snapshot.filters) ? (
-                      <Link
-                        href={adminPath("iscritti", navMode)}
-                        className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"
-                      >
-                        Reset
-                      </Link>
-                    ) : null}
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.participants.map((participant) => (
-                <tr
-                  key={participant.registrationId}
-                  className="border-b border-[var(--peace-border)] align-top last:border-b-0"
-                >
-                  <td className="py-4 pr-4">
-                    <p className="font-semibold text-[var(--peace-ink)]">{participant.name}</p>
-                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                      {participant.publicCode ?? "Senza codice"} -{" "}
-                      {statusLabel(participant.registrationStatus)}
-                    </p>
-                  </td>
-                  <td className="py-4 pr-4 text-[var(--peace-ink)]">
-                    <p>{participant.email ?? "Email non indicata"}</p>
-                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                      {participant.phone ?? "Telefono non indicato"}
-                    </p>
-                  </td>
-                  <td className="py-4 pr-4">
-                    <p className="font-medium">
-                      {participant.currentGroupName ?? "Nessun gruppo corrente"}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--peace-muted)]">
-                      {groupStatusLabel(participant.currentGroupStatus)}
-                    </p>
-                  </td>
-                  <td className="py-4 text-right">
-                    <Link
-                      href={adminPath(
-                        "iscritti",
-                        navMode,
-                        `edit=${encodeURIComponent(participant.registrationId)}`
-                      )}
-                      scroll={false}
-                      className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-                    >
-                      Dettagli
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </AutoFilterForm>
-      </div>
-
-      {snapshot.participants.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          Nessuna iscrizione corrisponde ai filtri correnti.
-        </p>
-      ) : null}
-
-      {selectedParticipant ? (
-        <AdminParticipantEditOverlay
-          participant={selectedParticipant}
-          groupOptions={snapshot.groupOptions.filter(
-            (group) => group.eventId === selectedParticipant.eventId
-          )}
-          isEditing={isEditingParticipant}
-          navMode={navMode}
-        />
-      ) : null}
-    </section>
-  );
-}
-
 function AdminOperationalUsersSection({
   roles,
   eventOptions,
@@ -2547,149 +2477,6 @@ function AdminGroupLeaderOverlay({
   );
 }
 
-function AdminParticipantEditOverlay({
-  participant,
-  groupOptions,
-  isEditing,
-  navMode,
-}: {
-  participant: AdminParticipantRow;
-  groupOptions: AdminGroupOption[];
-  isEditing: boolean;
-  navMode: AdminNavMode;
-}) {
-  const includesCurrentGroup =
-    !participant.currentGroupId ||
-    groupOptions.some((group) => group.id === participant.currentGroupId);
-  const visibleGroupOptions: AdminGroupOption[] =
-    includesCurrentGroup ||
-    !participant.currentGroupId ||
-    !participant.currentGroupName
-      ? groupOptions
-      : [
-          {
-            id: participant.currentGroupId,
-            eventId: participant.eventId,
-            name: participant.currentGroupName,
-          },
-          ...groupOptions,
-        ];
-
-  return (
-    <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center bg-black/35 px-4 py-6">
-      <div className="grid max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
-        <div className="border-b border-[var(--peace-border)] px-5 py-4">
-          <div>
-            <h3 className="text-xl font-semibold">
-              {isEditing ? "Modifica iscritto" : "Dettagli iscritto"}
-            </h3>
-            <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              {participant.name}
-              {participant.publicCode ? ` - ${participant.publicCode}` : ""}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-5 overflow-y-auto px-5 py-5">
-          <div className="grid gap-1 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">Contatti</span>
-            <span className="text-[var(--peace-muted)]">{participant.email ?? "Email non indicata"}</span>
-            <span className="text-[var(--peace-muted)]">
-              {participant.phone ?? "Telefono non indicato"}
-            </span>
-          </div>
-          <div className="grid gap-1 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">Gruppo corrente</span>
-            <span className="text-[var(--peace-muted)]">
-              {participant.currentGroupName ?? "Nessun gruppo corrente"} -{" "}
-              {groupStatusLabel(participant.currentGroupStatus)}
-            </span>
-          </div>
-          <div className="grid gap-2 text-sm">
-            <span className="font-semibold text-[var(--peace-ink)]">
-              Figli partecipanti ({participant.childrenCount})
-            </span>
-            {participant.children.length > 0 ? (
-              participant.children.map((child) => (
-                <div
-                  key={child.id}
-                  className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-3 py-2"
-                >
-                  <p className="font-semibold">
-                    {child.first_name} {child.last_name}
-                  </p>
-                  <p className="mt-1 text-[var(--peace-muted)]">
-                    Data di nascita: {formatDate(child.birth_date)}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <span className="text-[var(--peace-muted)]">
-                Nessun figlio associato all&apos;iscrizione.
-              </span>
-            )}
-          </div>
-
-          {isEditing ? (
-            <form
-              action="/dashboard/admin/participants/update"
-              method="post"
-              className="grid gap-5"
-              data-preserve-dashboard-scroll
-            >
-              <input type="hidden" name="registrationId" value={participant.registrationId} />
-              <input type="hidden" name="participantId" value={participant.participantId} />
-              <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-                Gruppo
-                <select
-                  name="groupId"
-                  defaultValue={participant.currentGroupId ?? ""}
-                  className="min-h-11 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 font-normal text-[var(--peace-ink)]"
-                >
-                  {!participant.currentGroupId ? (
-                    <option value="">Nessun gruppo corrente</option>
-                  ) : null}
-                  {visibleGroupOptions.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                Salva gruppo
-              </PendingSubmitButton>
-            </form>
-          ) : null}
-        </div>
-
-        <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
-          <Link
-            href={adminPath("iscritti", navMode)}
-            scroll={false}
-            className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            Chiudi
-          </Link>
-          {!isEditing ? (
-            <Link
-              href={adminPath(
-                "iscritti",
-                navMode,
-                `edit=${encodeURIComponent(participant.registrationId)}&editMode=1`
-              )}
-              scroll={false}
-              className="inline-flex min-h-11 items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-            >
-              Modifica iscritto
-            </Link>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function DisabledAction({
   label,
   primary = false,
@@ -2767,6 +2554,8 @@ function StatusMessage({
             ? "Link gruppo aggiornato."
             : roleSaved
               ? "Utente operativo aggiornato."
+            : adminSaved === "deleted"
+              ? "Iscrizione eliminata. Il profilo partecipante e l'account di accesso sono stati conservati."
             : adminSaved
               ? "Gestione iscritti aggiornata."
               : saved === "created"
@@ -2792,8 +2581,10 @@ function StatusMessage({
     "email-taken": "Questa email è già associata a un altro utente operativo.",
     "invite-email": "Ruolo assegnato, ma non è stato possibile inviare l'email di invito.",
     "self-role": "Non puoi revocare o spostare il ruolo con cui stai operando.",
+    "duplicate-tag": "Esiste già un tag con questo nome per l'evento corrente.",
     "link-already-exists": "Questo gruppo ha già il proprio link. Non è possibile crearne un altro.",
     forbidden: "Non hai permessi di modifica su questo evento.",
+    "delete-failed": "Non è stato possibile eliminare l'iscrizione.",
     "service-label-too-long": "Il nome del servizio non può superare 40 caratteri.",
     "service-description-too-long": "La descrizione del servizio non può superare 160 caratteri.",
   };
@@ -2881,6 +2672,69 @@ function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
 
+function mapParticipantOperationalTags(
+  rows: unknown
+): Map<string, ParticipantOperationalTag[]> {
+  const tagsByParticipantId = new Map<string, ParticipantOperationalTag[]>();
+
+  for (const row of (rows ?? []) as ParticipantOperationalTagRow[]) {
+    const tag = relatedOne(row.operational_tags);
+
+    if (!tag) {
+      continue;
+    }
+
+    const participantTags = tagsByParticipantId.get(row.participant_id) ?? [];
+    participantTags.push({
+      id: tag.id,
+      eventId: tag.event_id,
+      label: tag.label,
+      color: tag.color,
+      assignedAt: row.assigned_at,
+    });
+    tagsByParticipantId.set(row.participant_id, participantTags);
+  }
+
+  return tagsByParticipantId;
+}
+
+function mapParticipantEventServices(
+  rows: unknown
+): Map<string, ParticipantEventService> {
+  const servicesByParticipantId = new Map<string, ParticipantEventService>();
+
+  for (const row of (rows ?? []) as ParticipantEventServiceRelationRow[]) {
+    const service = relatedOne(row.event_services);
+
+    servicesByParticipantId.set(row.participant_id, {
+      id: row.id,
+      eventId: row.event_id,
+      registrationId: row.registration_id,
+      participantId: row.participant_id,
+      serviceId: row.service_id,
+      serviceLabel: service?.label ?? "Servizio senza nome",
+      status:
+        row.status === "preference_pending" ||
+        row.status === "proposal_pending" ||
+        row.status === "assigned" ||
+        row.status === "declined"
+          ? row.status
+          : "assigned",
+      source:
+        row.source === "participant_preference" ||
+        row.source === "capogruppo" ||
+        row.source === "manager"
+          ? row.source
+          : "manager",
+      participantNote: row.participant_note,
+      operatorNote: row.operator_note,
+      updatedAt: row.updated_at,
+    });
+  }
+
+  return servicesByParticipantId;
+}
+
 function formatParticipantName(
   firstName: string | null,
   lastName: string | null
@@ -2894,22 +2748,6 @@ function formatPlace(city: string | null, country: string | null): string {
   const parts = [city, country].filter(Boolean);
 
   return parts.length > 0 ? parts.join(", ") : "Provenienza non indicata";
-}
-
-function getCurrentGroupFilterOptions(
-  participants: AdminParticipantRow[]
-): Array<{ id: string; name: string }> {
-  const groupsById = new Map<string, string>();
-
-  for (const participant of participants) {
-    if (participant.currentGroupId && participant.currentGroupName) {
-      groupsById.set(participant.currentGroupId, participant.currentGroupName);
-    }
-  }
-
-  return [...groupsById]
-    .map(([id, name]) => ({ id, name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function parseGroupTableFilters(input: {
@@ -3242,30 +3080,4 @@ function buildGroupLinkUrlFromEncryptedToken(encryptedToken: string | null): str
   const token = decryptQrToken(encryptedToken);
 
   return token ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token }) : null;
-}
-
-function statusLabel(status: string | null): string {
-  switch (status) {
-    case "submitted":
-      return "iscrizione inviata";
-    case "confirmed":
-      return "iscrizione confermata";
-    case "cancelled":
-      return "iscrizione annullata";
-    default:
-      return status ?? "stato non indicato";
-  }
-}
-
-function groupStatusLabel(status: string | null): string {
-  switch (status) {
-    case "confirmed":
-      return "gruppo confermato";
-    case "probable":
-      return "da verificare";
-    case "rejected":
-      return "rifiutato";
-    default:
-      return "stato gruppo non indicato";
-  }
 }

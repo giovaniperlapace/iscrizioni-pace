@@ -25,3 +25,11 @@ test("registration summary shows only assigned services and does not duplicate p
   );
   assert.doesNotMatch(registrationSummary, /copy\.panelsTitle|selectedPanels/);
 });
+
+test("participant registration overlay allows editing first and last name", () => {
+  assert.match(participantDashboard, /name="updatesIdentity" value="on"/);
+  assert.match(participantDashboard, /name="firstName"/);
+  assert.match(participantDashboard, /autoComplete="given-name"/);
+  assert.match(participantDashboard, /name="lastName"/);
+  assert.match(participantDashboard, /autoComplete="family-name"/);
+});

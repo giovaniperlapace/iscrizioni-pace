@@ -241,7 +241,7 @@ function dashboardRedirect(
     : `${prefix}Error=${encodeURIComponent(error ?? "invalid")}`;
 
   return NextResponse.redirect(
-    new URL(`/dashboard/${dashboard}?${query}`, request.url),
+    new URL(`/dashboard/${dashboard}?section=iscritti&${query}`, request.url),
     {
       status: 303,
     }
