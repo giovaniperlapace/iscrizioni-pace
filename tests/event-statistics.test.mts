@@ -62,4 +62,45 @@ test("event statistics count accompanying children in inherited groups and atten
       ?.participantCount,
     1
   );
+  assert.equal(snapshot.people.length, 5);
+});
+
+test("event statistics build non-overlapping requested age bands at event start", () => {
+  const birthDates = [
+    ["Age 14", "2012-10-25", "0-14"],
+    ["Age 15", "2011-10-25", "15-30"],
+    ["Age 30", "1996-10-25", "15-30"],
+    ["Age 31", "1995-10-25", "30-65"],
+    ["Age 64", "1962-10-25", "30-65"],
+    ["Age 65", "1961-10-25", "65+"],
+  ] as const;
+  const snapshot = buildEventStatisticsSnapshot({
+    participants: birthDates.map(([name, birthDate], index) => ({
+      registrationId: `registration-${index}`,
+      eventId: "event",
+      eventTitle: "Assisi 2026",
+      name,
+      birthDate,
+      currentGroupId: null,
+      currentGroupName: null,
+      country: "Italia",
+      city: "Roma",
+    })),
+    groups: [],
+    attendanceChoices: [],
+    eventStartsOn: "2026-10-25",
+    eventEndsOn: "2026-10-27",
+  });
+
+  const bandsByName = new Map(
+    snapshot.people.map((person) => [person.name, person.ageBand])
+  );
+
+  for (const [name, , expectedBand] of birthDates) {
+    assert.equal(bandsByName.get(name), expectedBand);
+  }
+
+  assert.equal(snapshot.attendanceSlots.length, 7);
+  assert.equal(snapshot.attendanceSlots[0]?.day, "2026-10-24");
+  assert.equal(snapshot.attendanceSlots[0]?.dayPart, "afternoon");
 });

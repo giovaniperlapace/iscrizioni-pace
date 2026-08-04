@@ -1,12 +1,28 @@
+import {
+  buildAttendanceDayColumns,
+  parseDateOnly,
+} from "./attendance-slots.ts";
+
 export type StatisticsParticipant = {
   registrationId: string;
   eventId: string;
   eventTitle: string;
+  name?: string | null;
+  birthDate?: string | null;
   currentGroupId: string | null;
   currentGroupName: string | null;
   country: string | null;
   city: string | null;
   childrenCount?: number;
+  children?: StatisticsChild[];
+};
+
+export type StatisticsChild = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  birthDate: string | null;
+  position: number;
 };
 
 export type StatisticsGroup = {
@@ -41,9 +57,41 @@ export type AttendanceDayRow = {
   kind: "day" | "missing";
 };
 
+export type StatisticsPersonKind = "participant" | "child";
+
+export type StatisticsAgeBand =
+  | "0-14"
+  | "15-30"
+  | "30-65"
+  | "65+"
+  | "unknown";
+
+export type StatisticsPersonRow = {
+  id: string;
+  registrationId: string;
+  name: string;
+  kind: StatisticsPersonKind;
+  country: string;
+  city: string;
+  group: string;
+  birthDate: string | null;
+  age: number | null;
+  ageBand: StatisticsAgeBand;
+  attendanceSlotKeys: string[];
+  attendanceUnknown: boolean;
+};
+
+export type StatisticsAttendanceSlot = {
+  key: string;
+  day: string;
+  dayPart: "morning" | "afternoon" | "day";
+};
+
 export type EventStatisticsSnapshot = {
   participantBreakdowns: Record<ParticipantBreakdownLevel, ParticipantBreakdownRow[]>;
   attendanceByDay: AttendanceDayRow[];
+  people: StatisticsPersonRow[];
+  attendanceSlots: StatisticsAttendanceSlot[];
 };
 
 type GroupNode = StatisticsGroup & {
@@ -54,11 +102,23 @@ export function buildEventStatisticsSnapshot({
   participants,
   groups,
   attendanceChoices,
+  eventStartsOn = null,
+  eventEndsOn = null,
 }: {
   participants: StatisticsParticipant[];
   groups: StatisticsGroup[];
   attendanceChoices: StatisticsAttendanceChoice[];
+  eventStartsOn?: string | null;
+  eventEndsOn?: string | null;
 }): EventStatisticsSnapshot {
+  const detail = buildPeopleDetail(
+    participants,
+    groups,
+    attendanceChoices,
+    eventStartsOn,
+    eventEndsOn
+  );
+
   return {
     participantBreakdowns: {
       country: buildParticipantBreakdown(participants, groups, "country"),
@@ -66,6 +126,8 @@ export function buildEventStatisticsSnapshot({
       group: buildParticipantBreakdown(participants, groups, "group"),
     },
     attendanceByDay: buildAttendanceByDay(participants, attendanceChoices),
+    people: detail.people,
+    attendanceSlots: detail.attendanceSlots,
   };
 }
 
@@ -131,6 +193,227 @@ function getParticipantBucket(
   return participant.city
     ? { id: `city:${normalizeBucketId(participant.city)}`, label: participant.city }
     : { id: "missing-city", label: "Città non indicata" };
+}
+
+function buildPeopleDetail(
+  participants: StatisticsParticipant[],
+  groups: StatisticsGroup[],
+  attendanceChoices: StatisticsAttendanceChoice[],
+  eventStartsOn: string | null,
+  eventEndsOn: string | null
+): {
+  people: StatisticsPersonRow[];
+  attendanceSlots: StatisticsAttendanceSlot[];
+} {
+  const groupsById = new Map<string, GroupNode>(
+    groups.map((group) => [group.id, { ...group, parentGroupId: group.parentGroupId }])
+  );
+  const attendanceByRegistrationId = new Map<
+    string,
+    { selected: Set<string>; unknown: boolean }
+  >();
+  const slotsByKey = new Map<string, StatisticsAttendanceSlot>();
+
+  for (const column of buildAttendanceDayColumns(eventStartsOn, eventEndsOn)) {
+    for (const part of column.parts) {
+      const key = attendanceDetailSlotKey(column.day, part);
+      slotsByKey.set(key, { key, day: column.day, dayPart: part });
+    }
+  }
+
+  for (const choice of attendanceChoices) {
+    const current = attendanceByRegistrationId.get(choice.registration_id) ?? {
+      selected: new Set<string>(),
+      unknown: false,
+    };
+
+    if (choice.choice === "unknown") {
+      current.unknown = true;
+    }
+
+    if (choice.choice === "yes" && choice.day) {
+      const dayPart =
+        choice.day_part === "morning" || choice.day_part === "afternoon"
+          ? choice.day_part
+          : "day";
+      const key = attendanceDetailSlotKey(choice.day, dayPart);
+      current.selected.add(key);
+      slotsByKey.set(key, { key, day: choice.day, dayPart });
+    }
+
+    attendanceByRegistrationId.set(choice.registration_id, current);
+  }
+
+  const people: StatisticsPersonRow[] = [];
+
+  for (const participant of participants) {
+    const country = getParticipantBucket(participant, groupsById, "country").label;
+    const city = getParticipantBucket(participant, groupsById, "city").label;
+    const group = getParticipantBucket(participant, groupsById, "group").label;
+    const attendance = attendanceByRegistrationId.get(participant.registrationId);
+    const common = {
+      registrationId: participant.registrationId,
+      country,
+      city,
+      group,
+      attendanceSlotKeys: [...(attendance?.selected ?? [])].sort(),
+      attendanceUnknown: attendance?.unknown ?? false,
+    };
+
+    people.push(
+      buildStatisticsPersonRow({
+        ...common,
+        id: `participant:${participant.registrationId}`,
+        name: participant.name?.trim() || "Partecipante senza nome",
+        kind: "participant",
+        birthDate: participant.birthDate ?? null,
+        ageReferenceDate: eventStartsOn,
+      })
+    );
+
+    const children = [...(participant.children ?? [])].sort(
+      (first, second) => first.position - second.position
+    );
+
+    children.forEach((child, index) => {
+      const name = [child.firstName, child.lastName]
+        .filter((value): value is string => Boolean(value?.trim()))
+        .join(" ");
+
+      people.push(
+        buildStatisticsPersonRow({
+          ...common,
+          id: `child:${child.id}`,
+          name: name || `Minore accompagnato ${index + 1}`,
+          kind: "child",
+          birthDate: child.birthDate,
+          ageReferenceDate: eventStartsOn,
+        })
+      );
+    });
+
+    const missingChildren = Math.max(
+      0,
+      (participant.childrenCount ?? children.length) - children.length
+    );
+
+    for (let index = 0; index < missingChildren; index += 1) {
+      people.push(
+        buildStatisticsPersonRow({
+          ...common,
+          id: `child:${participant.registrationId}:missing:${index}`,
+          name: `Minore accompagnato ${children.length + index + 1}`,
+          kind: "child",
+          birthDate: null,
+          ageReferenceDate: eventStartsOn,
+        })
+      );
+    }
+  }
+
+  return {
+    people: people.sort((first, second) =>
+      first.name.localeCompare(second.name, "it", { sensitivity: "base" })
+    ),
+    attendanceSlots: [...slotsByKey.values()].sort(compareAttendanceSlots),
+  };
+}
+
+function buildStatisticsPersonRow({
+  id,
+  registrationId,
+  name,
+  kind,
+  country,
+  city,
+  group,
+  birthDate,
+  ageReferenceDate,
+  attendanceSlotKeys,
+  attendanceUnknown,
+}: Omit<StatisticsPersonRow, "age" | "ageBand"> & {
+  ageReferenceDate: string | null;
+}): StatisticsPersonRow {
+  const age = calculateAge(birthDate, ageReferenceDate);
+
+  return {
+    id,
+    registrationId,
+    name,
+    kind,
+    country,
+    city,
+    group,
+    birthDate,
+    age,
+    ageBand: getStatisticsAgeBand(age),
+    attendanceSlotKeys,
+    attendanceUnknown,
+  };
+}
+
+function calculateAge(birthDate: string | null, referenceDate: string | null): number | null {
+  if (!birthDate || !referenceDate) {
+    return null;
+  }
+
+  const birth = parseDateOnly(birthDate);
+  const reference = parseDateOnly(referenceDate);
+
+  if (!birth || !reference || birth.getTime() > reference.getTime()) {
+    return null;
+  }
+
+  let age = reference.getUTCFullYear() - birth.getUTCFullYear();
+  const birthdayHasPassed =
+    reference.getUTCMonth() > birth.getUTCMonth() ||
+    (reference.getUTCMonth() === birth.getUTCMonth() &&
+      reference.getUTCDate() >= birth.getUTCDate());
+
+  if (!birthdayHasPassed) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+function getStatisticsAgeBand(age: number | null): StatisticsAgeBand {
+  if (age === null) {
+    return "unknown";
+  }
+
+  if (age <= 14) {
+    return "0-14";
+  }
+
+  if (age <= 30) {
+    return "15-30";
+  }
+
+  if (age < 65) {
+    return "30-65";
+  }
+
+  return "65+";
+}
+
+function attendanceDetailSlotKey(
+  day: string,
+  dayPart: "morning" | "afternoon" | "day"
+): string {
+  return `${day}__${dayPart}`;
+}
+
+function compareAttendanceSlots(
+  first: StatisticsAttendanceSlot,
+  second: StatisticsAttendanceSlot
+): number {
+  if (first.day !== second.day) {
+    return first.day.localeCompare(second.day);
+  }
+
+  const partOrder = { morning: 0, afternoon: 1, day: 2 };
+  return partOrder[first.dayPart] - partOrder[second.dayPart];
 }
 
 function findAncestorByType(
@@ -263,8 +546,6 @@ function normalizeBucketId(value: string): string {
     .replace(/^-|-$/g, "");
 }
 
-function getRegisteredPeopleCount(
-  participant: StatisticsParticipant
-): number {
+function getRegisteredPeopleCount(participant: StatisticsParticipant): number {
   return 1 + Math.max(0, participant.childrenCount ?? 0);
 }

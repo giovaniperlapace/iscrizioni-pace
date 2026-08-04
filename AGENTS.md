@@ -475,6 +475,24 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   in assenza di assegnazione non mostrare il campo. I panel scelti non vanno
   duplicati nel riepilogo: devono comparire soltanto nella sezione dedicata
   `Panel a cui sei iscritto`.
+- Dal 2026-08-04 la sezione `Statistiche` delle dashboard admin e manager usa
+  tabelle condivise, cercabili, filtrabili e rigorosamente read-only al posto
+  dei soli riepiloghi aggregati. Le tre viste separano territorio/gruppo,
+  presenze per fascia mattina-pomeriggio ed eta'; ogni riga rappresenta una
+  persona e i minori accompagnati sono righe distinte che ereditano i dati
+  dell'iscrizione familiare. L'eta' e' calcolata all'inizio dell'evento e usa
+  le fasce operative `0-14`, `15-30`, `30-65`, `65+`; per evitare duplicati ai
+  confini, 30 anni appartiene a `15-30` e 65 anni a `65+`.
+- Dal 2026-08-04 il riepilogo iscrizione della dashboard partecipante espone
+  l'azione `Messaggio agli organizzatori`. Il form invia al server soltanto il
+  testo scritto dal partecipante; destinatario, oggetto e riepilogo vengono
+  costruiti esclusivamente lato server dopo la verifica della sessione. Il
+  destinatario fisso e' `registrationspeace@santegidio.org`, l'oggetto e'
+  `Participant Message - Nome Cognome` e il corpo aggiunge nome, cognome,
+  gruppo operativo corrente, codice partecipante e mail. Il messaggio e'
+  limitato a 4.000 caratteri e protetto dal rate limiter. Gli audit
+  `email.participant_message_sent` e `email.participant_message_failed`
+  registrano solo metadati operativi e lunghezza, mai il testo del messaggio.
 - Dal 2026-07-28 la sidebar della dashboard manager parte sempre in modalita'
   compatta: soltanto `nav=full` la espande esplicitamente. Il pulsante della
   sidebar puo' espanderla nella sezione corrente, ma ogni voce di navigazione
@@ -2114,3 +2132,18 @@ Quando il piano verrà cancellato:
 - Non ricrearlo automaticamente.
 - Usare questo `AGENTS.md` come fonte primaria.
 - Per bugfix e funzioni accessorie, leggere il codice reale e aggiornare questo file se emerge una nuova regola operativa.
+
+## Piano panel, scuole e accoglienza QR
+
+- Il 2026-08-04 e' stato creato `PIANO_DI_LAVORO_PANEL.md`, nuovo piano
+  operativo per sviluppare in milestone piccole location, panel, sezioni di
+  capienza per tipo di pubblico, pubblicazione singola/multipla, iscrizioni
+  individuali, prenotazioni scuole, audience campagne per panel/professori,
+  statistiche panel, check-in QR e stampa di etichette per badge.
+- Per questo ambito il nuovo piano sostituisce le precedenti indicazioni
+  generiche delle Milestone 16-18 di `PIANO_DI_LAVORO.md`. Prima di ogni
+  milestone leggere il nuovo piano e fermarsi per verifica/revisione prima di
+  proseguire alla successiva.
+- Le decisioni contenute nel piano sono proposte progettuali finche' la
+  Milestone P0 non le conferma. Non creare o applicare migration panel/scuole
+  prima di quella verifica.

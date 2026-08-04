@@ -5,6 +5,10 @@ import { updateParticipantDashboard } from "@/app/actions";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ParticipantChildrenEditor } from "@/app/dashboard/participant-children-editor";
+import {
+  ParticipantMessageForm,
+  type ParticipantMessageFormCopy,
+} from "@/app/dashboard/partecipante/participant-message-form";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -27,7 +31,7 @@ type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type DashboardOverlay = "qr" | "iscrizione" | null;
+type DashboardOverlay = "qr" | "iscrizione" | "messaggio" | null;
 
 type RegistrationRow = {
   id: string;
@@ -682,6 +686,158 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
   },
 };
 
+type ParticipantOrganizerMessageCopy = ParticipantMessageFormCopy & {
+  action: string;
+  title: string;
+  body: string;
+};
+
+const PARTICIPANT_MESSAGE_COPY: Record<
+  SupportedLocale,
+  ParticipantOrganizerMessageCopy
+> = {
+  it: {
+    action: "Messaggio agli organizzatori",
+    title: "Invia un messaggio agli organizzatori",
+    body:
+      "Scrivi il tuo messaggio. Le informazioni necessarie per identificare la tua iscrizione saranno aggiunte automaticamente al momento dell'invio.",
+    label: "Messaggio",
+    placeholder: "Scrivi qui il tuo messaggio",
+    send: "Invia messaggio",
+    sending: "Invio in corso...",
+    sent: "Il messaggio è stato inviato agli organizzatori.",
+    maxLength: "Massimo 4.000 caratteri",
+    errors: {
+      empty: "Scrivi un messaggio prima di inviare.",
+      "too-long": "Il messaggio supera il limite di 4.000 caratteri.",
+      "rate-limit": "Hai inviato troppi messaggi. Riprova tra qualche minuto.",
+      "not-authenticated": "La sessione è scaduta. Accedi di nuovo e riprova.",
+      "not-found": "Non è stato possibile collegare il messaggio alla tua iscrizione.",
+      delivery: "Non è stato possibile inviare il messaggio. Riprova tra poco.",
+    },
+  },
+  en: {
+    action: "Message the organisers",
+    title: "Send a message to the organisers",
+    body:
+      "Write your message. The information needed to identify your registration will be added automatically when it is sent.",
+    label: "Message",
+    placeholder: "Write your message here",
+    send: "Send message",
+    sending: "Sending...",
+    sent: "Your message has been sent to the organisers.",
+    maxLength: "Maximum 4,000 characters",
+    errors: {
+      empty: "Write a message before sending.",
+      "too-long": "The message exceeds the 4,000 character limit.",
+      "rate-limit": "You have sent too many messages. Try again in a few minutes.",
+      "not-authenticated": "Your session has expired. Sign in again and retry.",
+      "not-found": "The message could not be linked to your registration.",
+      delivery: "The message could not be sent. Please try again shortly.",
+    },
+  },
+  fr: {
+    action: "Message aux organisateurs",
+    title: "Envoyer un message aux organisateurs",
+    body:
+      "Écris ton message. Les informations nécessaires pour identifier ton inscription seront ajoutées automatiquement lors de l'envoi.",
+    label: "Message",
+    placeholder: "Écris ton message ici",
+    send: "Envoyer le message",
+    sending: "Envoi en cours...",
+    sent: "Ton message a été envoyé aux organisateurs.",
+    maxLength: "4 000 caractères maximum",
+    errors: {
+      empty: "Écris un message avant de l'envoyer.",
+      "too-long": "Le message dépasse la limite de 4 000 caractères.",
+      "rate-limit": "Tu as envoyé trop de messages. Réessaie dans quelques minutes.",
+      "not-authenticated": "Ta session a expiré. Connecte-toi à nouveau.",
+      "not-found": "Le message n'a pas pu être associé à ton inscription.",
+      delivery: "Le message n'a pas pu être envoyé. Réessaie bientôt.",
+    },
+  },
+  de: {
+    action: "Nachricht an die Organisation",
+    title: "Nachricht an die Organisation senden",
+    body:
+      "Schreibe deine Nachricht. Die Angaben zur Identifizierung deiner Anmeldung werden beim Senden automatisch ergänzt.",
+    label: "Nachricht",
+    placeholder: "Schreibe deine Nachricht hier",
+    send: "Nachricht senden",
+    sending: "Wird gesendet...",
+    sent: "Deine Nachricht wurde an die Organisation gesendet.",
+    maxLength: "Maximal 4.000 Zeichen",
+    errors: {
+      empty: "Schreibe vor dem Senden eine Nachricht.",
+      "too-long": "Die Nachricht überschreitet 4.000 Zeichen.",
+      "rate-limit": "Du hast zu viele Nachrichten gesendet. Versuche es später erneut.",
+      "not-authenticated": "Deine Sitzung ist abgelaufen. Melde dich erneut an.",
+      "not-found": "Die Nachricht konnte deiner Anmeldung nicht zugeordnet werden.",
+      delivery: "Die Nachricht konnte nicht gesendet werden. Versuche es später erneut.",
+    },
+  },
+  es: {
+    action: "Mensaje a los organizadores",
+    title: "Enviar un mensaje a los organizadores",
+    body:
+      "Escribe tu mensaje. Los datos necesarios para identificar tu inscripción se añadirán automáticamente al enviarlo.",
+    label: "Mensaje",
+    placeholder: "Escribe aquí tu mensaje",
+    send: "Enviar mensaje",
+    sending: "Enviando...",
+    sent: "Tu mensaje ha sido enviado a los organizadores.",
+    maxLength: "Máximo 4.000 caracteres",
+    errors: {
+      empty: "Escribe un mensaje antes de enviarlo.",
+      "too-long": "El mensaje supera el límite de 4.000 caracteres.",
+      "rate-limit": "Has enviado demasiados mensajes. Inténtalo de nuevo más tarde.",
+      "not-authenticated": "Tu sesión ha caducado. Inicia sesión de nuevo.",
+      "not-found": "No se pudo vincular el mensaje a tu inscripción.",
+      delivery: "No se pudo enviar el mensaje. Inténtalo de nuevo en breve.",
+    },
+  },
+  nl: {
+    action: "Bericht aan de organisatie",
+    title: "Stuur een bericht aan de organisatie",
+    body:
+      "Schrijf je bericht. De gegevens om je inschrijving te herkennen worden bij het verzenden automatisch toegevoegd.",
+    label: "Bericht",
+    placeholder: "Schrijf hier je bericht",
+    send: "Bericht verzenden",
+    sending: "Wordt verzonden...",
+    sent: "Je bericht is naar de organisatie verzonden.",
+    maxLength: "Maximaal 4.000 tekens",
+    errors: {
+      empty: "Schrijf een bericht voordat je het verzendt.",
+      "too-long": "Het bericht is langer dan 4.000 tekens.",
+      "rate-limit": "Je hebt te veel berichten verzonden. Probeer het later opnieuw.",
+      "not-authenticated": "Je sessie is verlopen. Meld je opnieuw aan.",
+      "not-found": "Het bericht kon niet aan je inschrijving worden gekoppeld.",
+      delivery: "Het bericht kon niet worden verzonden. Probeer het later opnieuw.",
+    },
+  },
+  uk: {
+    action: "Повідомлення організаторам",
+    title: "Надіслати повідомлення організаторам",
+    body:
+      "Напишіть повідомлення. Дані для ідентифікації вашої реєстрації буде додано автоматично під час надсилання.",
+    label: "Повідомлення",
+    placeholder: "Напишіть повідомлення тут",
+    send: "Надіслати повідомлення",
+    sending: "Надсилання...",
+    sent: "Ваше повідомлення надіслано організаторам.",
+    maxLength: "Не більше 4 000 символів",
+    errors: {
+      empty: "Напишіть повідомлення перед надсиланням.",
+      "too-long": "Повідомлення перевищує 4 000 символів.",
+      "rate-limit": "Надіслано забагато повідомлень. Спробуйте пізніше.",
+      "not-authenticated": "Сеанс завершився. Увійдіть знову.",
+      "not-found": "Не вдалося пов’язати повідомлення з вашою реєстрацією.",
+      delivery: "Не вдалося надіслати повідомлення. Спробуйте ще раз пізніше.",
+    },
+  },
+};
+
 const PARTICIPANT_CHILDREN_COPY: Record<
   SupportedLocale,
   {
@@ -788,6 +944,8 @@ export default async function PartecipanteDashboardPage({
 }: PageProps) {
   const locale = await getRequestLocale();
   const copy = PARTICIPANT_DASHBOARD_COPY[locale] ?? PARTICIPANT_DASHBOARD_COPY.en;
+  const messageCopy =
+    PARTICIPANT_MESSAGE_COPY[locale] ?? PARTICIPANT_MESSAGE_COPY.en;
   const childrenCopy =
     PARTICIPANT_CHILDREN_COPY[locale] ?? PARTICIPANT_CHILDREN_COPY.en;
   const params = searchParams ? await searchParams : {};
@@ -1040,6 +1198,8 @@ export default async function PartecipanteDashboardPage({
                   supportSummary={supportSummary}
                   serviceLabel={participantServiceLabel}
                   active={activeOverlay === "iscrizione"}
+                  messageActive={activeOverlay === "messaggio"}
+                  messageCopy={messageCopy}
                   locale={locale}
                 />
               </div>
@@ -1397,6 +1557,20 @@ export default async function PartecipanteDashboardPage({
                     </section>
                   </section>
                 ) : null}
+
+                {activeOverlay === "messaggio" ? (
+                  <section className="grid gap-5">
+                    <div className="border-b border-[var(--peace-border)] pb-4">
+                      <h2 className="text-xl font-semibold">
+                        {messageCopy.title}
+                      </h2>
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--peace-muted)]">
+                        {messageCopy.body}
+                      </p>
+                    </div>
+                    <ParticipantMessageForm copy={messageCopy} />
+                  </section>
+                ) : null}
               </DashboardOverlay>
             ) : null}
           </>
@@ -1747,6 +1921,8 @@ function RegistrationSummaryCard({
   supportSummary,
   serviceLabel,
   active,
+  messageActive,
+  messageCopy,
   locale,
 }: {
   copy: ParticipantDashboardCopy;
@@ -1757,6 +1933,8 @@ function RegistrationSummaryCard({
   supportSummary: string;
   serviceLabel: string | null;
   active: boolean;
+  messageActive: boolean;
+  messageCopy: ParticipantOrganizerMessageCopy;
   locale: SupportedLocale;
 }) {
   return (
@@ -1812,7 +1990,7 @@ function RegistrationSummaryCard({
             <SummaryInfo label={copy.eventService} value={serviceLabel} />
           ) : null}
         </div>
-        <div className="mt-3 flex justify-start">
+        <div className="mt-3 flex flex-wrap justify-start gap-2">
           <Link
             href="/dashboard/partecipante?overlay=iscrizione"
             className={
@@ -1823,6 +2001,17 @@ function RegistrationSummaryCard({
           >
             <ActionIcon icon="form" active={active} />
             {copy.edit}
+          </Link>
+          <Link
+            href="/dashboard/partecipante?overlay=messaggio"
+            className={
+              messageActive
+                ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white"
+                : "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            }
+          >
+            <MessageIcon active={messageActive} />
+            {messageCopy.action}
           </Link>
         </div>
       </div>
@@ -1954,6 +2143,25 @@ function ActionIcon({
         className={active ? "h-0.5 w-3.5 bg-white" : "h-0.5 w-3.5 bg-[var(--peace-blue-800)]"}
       />
     </span>
+  );
+}
+
+function MessageIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    >
+      <path d="M4 5h16v12H8l-4 4V5Z" />
+      <path d="M8 9h8" className={active ? "stroke-white" : undefined} />
+      <path d="M8 13h5" className={active ? "stroke-white" : undefined} />
+    </svg>
   );
 }
 
@@ -2176,7 +2384,9 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 }
 
 function parseDashboardOverlay(value: string | undefined): DashboardOverlay {
-  return value === "qr" || value === "iscrizione" ? value : null;
+  return value === "qr" || value === "iscrizione" || value === "messaggio"
+    ? value
+    : null;
 }
 
 function buildQrPreviewCells(seed: string): boolean[] {
