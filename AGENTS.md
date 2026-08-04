@@ -482,7 +482,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   persona e i minori accompagnati sono righe distinte che ereditano i dati
   dell'iscrizione familiare. L'eta' e' calcolata all'inizio dell'evento e usa
   le fasce operative `0-14`, `15-30`, `30-65`, `65+`; per evitare duplicati ai
-  confini, 30 anni appartiene a `15-30` e 65 anni a `65+`.
+  confini, 30 anni appartiene a `15-30` e 65 anni a `65+`. Sopra le tabelle
+  resta disponibile anche una vista riassuntiva con persone complessive,
+  partecipanti, minori accompagnati, fasce d'eta', presenze e territori/gruppi
+  piu' rappresentati. I valori aggregati selezionabili applicano il filtro alla
+  tabella corrispondente, cosi' il manager puo' verificare subito le persone che
+  compongono ogni conteggio senza introdurre azioni sui dati.
 - Dal 2026-08-04 il riepilogo iscrizione della dashboard partecipante espone
   l'azione `Messaggio agli organizzatori`. Il form invia al server soltanto il
   testo scritto dal partecipante; destinatario, oggetto e riepilogo vengono

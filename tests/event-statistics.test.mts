@@ -63,6 +63,28 @@ test("event statistics count accompanying children in inherited groups and atten
     1
   );
   assert.equal(snapshot.people.length, 5);
+  assert.deepEqual(
+    {
+      totalPeople: snapshot.summary.totalPeople,
+      registeredParticipants: snapshot.summary.registeredParticipants,
+      accompanyingChildren: snapshot.summary.accompanyingChildren,
+      withoutAttendance: snapshot.summary.withoutAttendance,
+    },
+    {
+      totalPeople: 5,
+      registeredParticipants: 2,
+      accompanyingChildren: 3,
+      withoutAttendance: 1,
+    }
+  );
+  assert.equal(
+    snapshot.summary.attendanceSlotCounts["2026-10-25__morning"],
+    4
+  );
+  assert.equal(
+    snapshot.summary.attendanceSlotCounts["2026-10-25__afternoon"],
+    4
+  );
 });
 
 test("event statistics build non-overlapping requested age bands at event start", () => {
@@ -99,6 +121,14 @@ test("event statistics build non-overlapping requested age bands at event start"
   for (const [name, , expectedBand] of birthDates) {
     assert.equal(bandsByName.get(name), expectedBand);
   }
+
+  assert.deepEqual(snapshot.summary.ageBandCounts, {
+    "0-14": 1,
+    "15-30": 2,
+    "30-65": 2,
+    "65+": 1,
+    unknown: 0,
+  });
 
   assert.equal(snapshot.attendanceSlots.length, 7);
   assert.equal(snapshot.attendanceSlots[0]?.day, "2026-10-24");

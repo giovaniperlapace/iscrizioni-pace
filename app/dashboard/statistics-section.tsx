@@ -1,10 +1,18 @@
 "use client";
 
-import { Check, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  Baby,
+  Check,
+  Search,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import type {
   EventStatisticsSnapshot,
+  ParticipantBreakdownLevel,
   StatisticsAgeBand,
   StatisticsAttendanceSlot,
   StatisticsPersonRow,
@@ -14,8 +22,20 @@ type StatisticsSectionProps = {
   statistics: EventStatisticsSnapshot;
 };
 
+type SummaryBreakdownRow = {
+  label: string;
+  count: number;
+};
+
 const ALL_FILTER = "all";
 const NO_ATTENDANCE_FILTER = "none";
+const AGE_BANDS: StatisticsAgeBand[] = [
+  "0-14",
+  "15-30",
+  "30-65",
+  "65+",
+  "unknown",
+];
 
 export function StatisticsSection({ statistics }: StatisticsSectionProps) {
   const [territorySearch, setTerritorySearch] = useState("");
@@ -37,6 +57,14 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
   );
   const groups = useMemo(
     () => uniqueSorted(statistics.people.map((person) => person.group)),
+    [statistics.people]
+  );
+  const territorySummary = useMemo(
+    () => ({
+      country: summarizeLabels(statistics.people.map((person) => person.country)),
+      city: summarizeLabels(statistics.people.map((person) => person.city)),
+      group: summarizeLabels(statistics.people.map((person) => person.group)),
+    }),
     [statistics.people]
   );
 
@@ -110,6 +138,29 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
       );
   }, [statistics.people, ageSearch, ageBandFilter]);
 
+  function showTerritoryPeople(
+    level: ParticipantBreakdownLevel,
+    label: string
+  ) {
+    setTerritorySearch("");
+    setCountryFilter(level === "country" ? label : ALL_FILTER);
+    setCityFilter(level === "city" ? label : ALL_FILTER);
+    setGroupFilter(level === "group" ? label : ALL_FILTER);
+    scrollToDetailedTable("statistics-territory-table");
+  }
+
+  function showAttendancePeople(slotKey: string) {
+    setAttendanceSearch("");
+    setAttendanceFilter(slotKey);
+    scrollToDetailedTable("statistics-attendance-table");
+  }
+
+  function showAgeBandPeople(ageBand: StatisticsAgeBand) {
+    setAgeSearch("");
+    setAgeBandFilter(ageBand);
+    scrollToDetailedTable("statistics-age-table");
+  }
+
   return (
     <section className="grid min-w-0 gap-4">
       <div className="surface-panel p-5">
@@ -120,7 +171,23 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
         </p>
       </div>
 
-      <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <StatisticsSummary
+        statistics={statistics}
+        territorySummary={territorySummary}
+        countryFilter={countryFilter}
+        cityFilter={cityFilter}
+        groupFilter={groupFilter}
+        attendanceFilter={attendanceFilter}
+        ageBandFilter={ageBandFilter}
+        onTerritorySelect={showTerritoryPeople}
+        onAttendanceSelect={showAttendancePeople}
+        onAgeBandSelect={showAgeBandPeople}
+      />
+
+      <article
+        id="statistics-territory-table"
+        className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+      >
         <div>
           <h3 className="text-base font-semibold">Persone per territorio e gruppo</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -188,7 +255,10 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
         {territoryRows.length === 0 ? <EmptyTableMessage /> : null}
       </article>
 
-      <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <article
+        id="statistics-attendance-table"
+        className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+      >
         <div>
           <h3 className="text-base font-semibold">Presenze per giorno e fascia</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -296,7 +366,10 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
         ) : null}
       </article>
 
-      <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <article
+        id="statistics-age-table"
+        className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+      >
         <div>
           <h3 className="text-base font-semibold">Persone per età</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -320,13 +393,11 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
               className="min-h-11 w-full rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)]"
             >
               <option value={ALL_FILTER}>Tutte le fasce</option>
-              {(["0-14", "15-30", "30-65", "65+", "unknown"] as const).map(
-                (band) => (
-                  <option key={band} value={band}>
-                    {ageBandLabel(band)}
-                  </option>
-                )
-              )}
+              {AGE_BANDS.map((band) => (
+                <option key={band} value={band}>
+                  {ageBandLabel(band)}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -371,6 +442,227 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
       </article>
     </section>
   );
+}
+
+function StatisticsSummary({
+  statistics,
+  territorySummary,
+  countryFilter,
+  cityFilter,
+  groupFilter,
+  attendanceFilter,
+  ageBandFilter,
+  onTerritorySelect,
+  onAttendanceSelect,
+  onAgeBandSelect,
+}: {
+  statistics: EventStatisticsSnapshot;
+  territorySummary: Record<ParticipantBreakdownLevel, SummaryBreakdownRow[]>;
+  countryFilter: string;
+  cityFilter: string;
+  groupFilter: string;
+  attendanceFilter: string;
+  ageBandFilter: string;
+  onTerritorySelect: (
+    level: ParticipantBreakdownLevel,
+    label: string
+  ) => void;
+  onAttendanceSelect: (slotKey: string) => void;
+  onAgeBandSelect: (ageBand: StatisticsAgeBand) => void;
+}) {
+  return (
+    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <div>
+        <h3 className="text-base font-semibold">Statistiche riassuntive</h3>
+        <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+          Una lettura immediata dei dati. Seleziona un valore per vedere nella
+          tabella le persone che compongono quel totale.
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <SummaryKpi
+          icon={Users}
+          label="Persone complessive"
+          value={statistics.summary.totalPeople}
+        />
+        <SummaryKpi
+          icon={UserRound}
+          label="Partecipanti iscritti"
+          value={statistics.summary.registeredParticipants}
+        />
+        <SummaryKpi
+          icon={Baby}
+          label="Minori accompagnati"
+          value={statistics.summary.accompanyingChildren}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <SummaryPanel
+          title="Fasce di età"
+          description="Distribuzione calcolata all’inizio dell’evento."
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            {AGE_BANDS.map((ageBand) => (
+              <SummaryFilterButton
+                key={ageBand}
+                label={ageBandLabel(ageBand)}
+                count={statistics.summary.ageBandCounts[ageBand]}
+                active={ageBandFilter === ageBand}
+                onClick={() => onAgeBandSelect(ageBand)}
+              />
+            ))}
+          </div>
+        </SummaryPanel>
+
+        <SummaryPanel
+          title="Presenze previste"
+          description="Persone presenti per giorno e fascia oraria."
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            {statistics.attendanceSlots.map((slot) => (
+              <SummaryFilterButton
+                key={slot.key}
+                label={attendanceSlotLabel(slot)}
+                count={statistics.summary.attendanceSlotCounts[slot.key] ?? 0}
+                active={attendanceFilter === slot.key}
+                onClick={() => onAttendanceSelect(slot.key)}
+              />
+            ))}
+            <SummaryFilterButton
+              label="Nessuna fascia indicata"
+              count={statistics.summary.withoutAttendance}
+              active={attendanceFilter === NO_ATTENDANCE_FILTER}
+              onClick={() => onAttendanceSelect(NO_ATTENDANCE_FILTER)}
+            />
+          </div>
+        </SummaryPanel>
+      </div>
+
+      <div className="mt-4">
+        <SummaryPanel
+          title="Territori e gruppi più rappresentati"
+          description="Le prime cinque voci per numero di persone; tutte le altre restano disponibili nei filtri della tabella."
+        >
+          <div className="grid gap-4 lg:grid-cols-3">
+            {(
+              [
+                ["country", "Paesi", countryFilter],
+                ["city", "Città", cityFilter],
+                ["group", "Gruppi", groupFilter],
+              ] as const
+            ).map(([level, title, activeFilter]) => (
+              <div key={level}>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
+                  {title}
+                </h4>
+                <div className="grid gap-2">
+                  {territorySummary[level].slice(0, 5).map((row) => (
+                    <SummaryFilterButton
+                      key={row.label}
+                      label={row.label}
+                      count={row.count}
+                      active={activeFilter === row.label}
+                      onClick={() => onTerritorySelect(level, row.label)}
+                    />
+                  ))}
+                  {territorySummary[level].length === 0 ? (
+                    <p className="text-sm text-[var(--peace-muted)]">
+                      Nessun dato disponibile.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SummaryPanel>
+      </div>
+    </article>
+  );
+}
+
+function SummaryKpi({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--peace-blue-800)] shadow-sm">
+        <Icon aria-hidden="true" size={20} />
+      </span>
+      <span>
+        <span className="block text-2xl font-semibold text-[var(--peace-ink)]">
+          {value}
+        </span>
+        <span className="block text-sm text-[var(--peace-muted)]">{label}</span>
+      </span>
+    </div>
+  );
+}
+
+function SummaryPanel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="h-full rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+      <h4 className="font-semibold text-[var(--peace-ink)]">{title}</h4>
+      <p className="mt-1 text-sm leading-5 text-[var(--peace-muted)]">
+        {description}
+      </p>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function SummaryFilterButton({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] ${
+        active
+          ? "border-[var(--peace-blue-800)] bg-white text-[var(--peace-blue-900)] shadow-sm"
+          : "border-[var(--peace-border)] bg-white text-[var(--peace-ink)] hover:border-[var(--peace-border-strong)]"
+      }`}
+    >
+      <span className="min-w-0 truncate font-medium" title={label}>
+        {label}
+      </span>
+      <span className="shrink-0 text-base font-semibold tabular-nums">{count}</span>
+    </button>
+  );
+}
+
+function scrollToDetailedTable(id: string) {
+  window.requestAnimationFrame(() => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
 }
 
 function SearchField({
@@ -469,6 +761,22 @@ function uniqueSorted(values: string[]): string[] {
   return [...new Set(values)].sort((first, second) =>
     first.localeCompare(second, "it", { sensitivity: "base" })
   );
+}
+
+function summarizeLabels(values: string[]): SummaryBreakdownRow[] {
+  const countByLabel = new Map<string, number>();
+
+  for (const label of values) {
+    countByLabel.set(label, (countByLabel.get(label) ?? 0) + 1);
+  }
+
+  return [...countByLabel.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort(
+      (first, second) =>
+        second.count - first.count ||
+        first.label.localeCompare(second.label, "it", { sensitivity: "base" })
+    );
 }
 
 function matchesPersonSearch(

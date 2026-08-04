@@ -87,11 +87,21 @@ export type StatisticsAttendanceSlot = {
   dayPart: "morning" | "afternoon" | "day";
 };
 
+export type EventStatisticsSummary = {
+  totalPeople: number;
+  registeredParticipants: number;
+  accompanyingChildren: number;
+  ageBandCounts: Record<StatisticsAgeBand, number>;
+  attendanceSlotCounts: Record<string, number>;
+  withoutAttendance: number;
+};
+
 export type EventStatisticsSnapshot = {
   participantBreakdowns: Record<ParticipantBreakdownLevel, ParticipantBreakdownRow[]>;
   attendanceByDay: AttendanceDayRow[];
   people: StatisticsPersonRow[];
   attendanceSlots: StatisticsAttendanceSlot[];
+  summary: EventStatisticsSummary;
 };
 
 type GroupNode = StatisticsGroup & {
@@ -128,6 +138,51 @@ export function buildEventStatisticsSnapshot({
     attendanceByDay: buildAttendanceByDay(participants, attendanceChoices),
     people: detail.people,
     attendanceSlots: detail.attendanceSlots,
+    summary: buildEventStatisticsSummary(detail.people),
+  };
+}
+
+function buildEventStatisticsSummary(
+  people: StatisticsPersonRow[]
+): EventStatisticsSummary {
+  const ageBandCounts: Record<StatisticsAgeBand, number> = {
+    "0-14": 0,
+    "15-30": 0,
+    "30-65": 0,
+    "65+": 0,
+    unknown: 0,
+  };
+  const attendanceSlotCounts: Record<string, number> = {};
+  let registeredParticipants = 0;
+  let accompanyingChildren = 0;
+  let withoutAttendance = 0;
+
+  for (const person of people) {
+    if (person.kind === "child") {
+      accompanyingChildren += 1;
+    } else {
+      registeredParticipants += 1;
+    }
+
+    ageBandCounts[person.ageBand] += 1;
+
+    if (person.attendanceSlotKeys.length === 0) {
+      withoutAttendance += 1;
+    }
+
+    for (const slotKey of person.attendanceSlotKeys) {
+      attendanceSlotCounts[slotKey] =
+        (attendanceSlotCounts[slotKey] ?? 0) + 1;
+    }
+  }
+
+  return {
+    totalPeople: people.length,
+    registeredParticipants,
+    accompanyingChildren,
+    ageBandCounts,
+    attendanceSlotCounts,
+    withoutAttendance,
   };
 }
 
