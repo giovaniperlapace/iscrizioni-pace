@@ -1,5 +1,11 @@
 # Piano di lavoro
 
+> Aggiornamento 2026-08-04: per location, panel, sezioni di capienza,
+> iscrizioni individuali, prenotazioni scuole, campagne collegate ai panel,
+> statistiche panel, accoglienza QR e stampa badge usare
+> `PIANO_DI_LAVORO_PANEL.md`. In questo ambito il nuovo piano sostituisce le
+> precedenti indicazioni generiche delle Milestone 16-18 qui sotto.
+
 ## 1. Premessa e metodo di lavoro
 
 Questo documento e' il piano operativo iniziale per costruire una web app multi-evento per iscrizioni, gruppi, comunicazioni, QR code e check-in. Il lavoro successivo andrà svolto a milestone piccole, una per prompt, con diff brevi e verificabili.
