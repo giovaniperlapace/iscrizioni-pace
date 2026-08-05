@@ -162,7 +162,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
   }
 
   return (
-    <section className="grid min-w-0 gap-4">
+    <section className="grid min-w-0 gap-8">
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -171,7 +171,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
         </p>
       </div>
 
-      <section className="grid min-w-0 gap-4">
+      <ReportBlock name="territory" title="Territori e gruppi">
         <TerritoryStatisticsSummary
           statistics={statistics}
           territorySummary={territorySummary}
@@ -251,9 +251,9 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
           {territoryRows.length === 0 ? <EmptyTableMessage /> : null}
         </article>
-      </section>
+      </ReportBlock>
 
-      <section className="grid min-w-0 gap-4">
+      <ReportBlock name="attendance" title="Presenze previste">
         <AttendanceStatisticsSummary
           statistics={statistics}
           attendanceFilter={attendanceFilter}
@@ -370,9 +370,9 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
             <EmptyTableMessage />
           ) : null}
         </article>
-      </section>
+      </ReportBlock>
 
-      <section className="grid min-w-0 gap-4">
+      <ReportBlock name="age" title="Fasce di età">
         <AgeStatisticsSummary
           statistics={statistics}
           ageBandFilter={ageBandFilter}
@@ -453,7 +453,39 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
           {ageRows.length === 0 ? <EmptyTableMessage /> : null}
         </article>
-      </section>
+      </ReportBlock>
+    </section>
+  );
+}
+
+function ReportBlock({
+  name,
+  title,
+  children,
+}: {
+  name: "territory" | "attendance" | "age";
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      data-statistics-report={name}
+      aria-label={`Report: ${title}`}
+      className="relative grid min-w-0 gap-4 overflow-hidden rounded-2xl border-2 border-[#bfd8ea] bg-[#eef7fc] p-3 shadow-[0_14px_34px_rgba(23,72,112,0.10)] sm:p-5"
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-1.5 bg-[var(--peace-blue-800)]"
+      />
+      <header className="flex items-center gap-3 px-2 sm:px-1">
+        <span className="rounded-full bg-[var(--peace-blue-800)] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white">
+          Report
+        </span>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-900)]">
+          {title}
+        </h3>
+      </header>
+      {children}
     </section>
   );
 }

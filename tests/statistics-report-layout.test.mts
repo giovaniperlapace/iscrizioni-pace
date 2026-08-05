@@ -12,7 +12,7 @@ const firstSummaryPosition = statisticsSection.indexOf(
 );
 const renderedReports = statisticsSection.slice(
   statisticsSection.lastIndexOf(
-    '<section className="grid min-w-0 gap-4">',
+    '<ReportBlock name="territory"',
     firstSummaryPosition
   ),
   statisticsSection.indexOf("function TerritoryStatisticsSummary")
@@ -32,7 +32,9 @@ test("each statistics summary is immediately paired with its detail table", () =
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual(positions, [...positions].sort((first, second) => first - second));
   assert.equal(
-    renderedReports.match(/<section className="grid min-w-0 gap-4">/g)?.length,
+    renderedReports.match(/<ReportBlock name=/g)?.length,
     3
   );
+  assert.match(statisticsSection, /data-statistics-report=\{name\}/);
+  assert.match(statisticsSection, /border-2 border-\[#bfd8ea\]/);
 });

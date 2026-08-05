@@ -65,11 +65,41 @@ body:has(.dashboard-modal) {
   touch-action: pan-y;
 }
 
+.participant-dashboard-overlay {
+  opacity: 1;
+  transition: opacity 280ms ease;
+}
+
+.participant-dashboard-overlay > * {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 240ms ease,
+    transform 280ms ease;
+}
+
+.participant-dashboard-overlay.dashboard-modal-closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.participant-dashboard-overlay.dashboard-modal-closing > * {
+  opacity: 0;
+  transform: translateY(0.75rem) scale(0.985);
+}
+
 .dashboard-modal [class*="overflow-y-auto"] {
   -webkit-overflow-scrolling: touch;
   min-height: 0;
   overscroll-behavior: auto;
   touch-action: pan-y;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .participant-dashboard-overlay,
+  .participant-dashboard-overlay > * {
+    transition-duration: 1ms;
+  }
 }
 
 ::selection {

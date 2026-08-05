@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   sendParticipantOrganizerMessage,
   type ParticipantMessageActionState,
 } from "@/app/dashboard/partecipante/message-actions";
+import { useParticipantDashboardOverlay } from "@/app/dashboard/partecipante/participant-dashboard-overlay";
 import {
   PARTICIPANT_MESSAGE_MAX_LENGTH,
   type ParticipantMessageError,
@@ -27,6 +28,8 @@ const INITIAL_STATE: ParticipantMessageActionState = {
   error: null,
 };
 
+const SUCCESS_MESSAGE_DURATION_MS = 3_500;
+
 export function ParticipantMessageForm({
   copy,
 }: {
@@ -36,6 +39,15 @@ export function ParticipantMessageForm({
     sendParticipantOrganizerMessage,
     INITIAL_STATE
   );
+  const overlay = useParticipantDashboardOverlay();
+
+  useEffect(() => {
+    if (state.status !== "success" || !overlay) {
+      return;
+    }
+
+    return overlay.scheduleClose(SUCCESS_MESSAGE_DURATION_MS);
+  }, [overlay, state.status]);
 
   if (state.status === "success") {
     return (

@@ -492,7 +492,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   territorio/gruppo seguito dalla relativa tabella, riepilogo presenze seguito
   dalla tabella presenze e riepilogo eta' seguito dalla tabella eta'. Ogni nuovo
   report futuro deve mantenere lo stesso blocco autonomo `riepilogo + tabella`;
-  non raggruppare prima tutti i riepiloghi e poi tutte le tabelle.
+  non raggruppare prima tutti i riepiloghi e poi tutte le tabelle. Ogni coppia
+  usa il componente condiviso `ReportBlock`, con intestazione `Report`, bordo
+  rinforzato, barra laterale blu, fondo azzurro e spazio esterno maggiore, per
+  separare graficamente un report dal successivo senza allontanare riepilogo e
+  tabella che appartengono allo stesso insieme.
 - Dal 2026-08-04 il riepilogo iscrizione della dashboard partecipante espone
   l'azione `Messaggio agli organizzatori`. Il form invia al server soltanto il
   testo scritto dal partecipante; destinatario, oggetto e riepilogo vengono
@@ -503,6 +507,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   limitato a 4.000 caratteri e protetto dal rate limiter. Gli audit
   `email.participant_message_sent` e `email.participant_message_failed`
   registrano solo metadati operativi e lunghezza, mai il testo del messaggio.
+  Dopo un invio riuscito, la modale conferma che gli organizzatori hanno
+  ricevuto il messaggio e che risponderanno al piu' presto; resta leggibile per
+  3,5 secondi, poi scompare con una breve animazione e torna automaticamente
+  alla dashboard partecipante. La preferenza di riduzione del movimento deve
+  essere rispettata.
 - Dal 2026-07-28 la sidebar della dashboard manager parte sempre in modalita'
   compatta: soltanto `nav=full` la espande esplicitamente. Il pulsante della
   sidebar puo' espanderla nella sezione corrente, ma ogni voce di navigazione

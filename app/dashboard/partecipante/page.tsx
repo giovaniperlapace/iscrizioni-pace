@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { updateParticipantDashboard } from "@/app/actions";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
@@ -9,6 +9,7 @@ import {
   ParticipantMessageForm,
   type ParticipantMessageFormCopy,
 } from "@/app/dashboard/partecipante/participant-message-form";
+import { ParticipantDashboardOverlay } from "@/app/dashboard/partecipante/participant-dashboard-overlay";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -705,7 +706,8 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     placeholder: "Scrivi qui il tuo messaggio",
     send: "Invia messaggio",
     sending: "Invio in corso...",
-    sent: "Il messaggio è stato inviato agli organizzatori.",
+    sent:
+      "Il messaggio è stato correttamente inviato agli organizzatori. Riceverai una risposta al più presto possibile.",
     maxLength: "Massimo 4.000 caratteri",
     errors: {
       empty: "Scrivi un messaggio prima di inviare.",
@@ -725,7 +727,8 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     placeholder: "Write your message here",
     send: "Send message",
     sending: "Sending...",
-    sent: "Your message has been sent to the organisers.",
+    sent:
+      "Your message has been successfully sent to the organisers. You will receive a reply as soon as possible.",
     maxLength: "Maximum 4,000 characters",
     errors: {
       empty: "Write a message before sending.",
@@ -745,7 +748,8 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     placeholder: "Écris ton message ici",
     send: "Envoyer le message",
     sending: "Envoi en cours...",
-    sent: "Ton message a été envoyé aux organisateurs.",
+    sent:
+      "Ton message a bien été envoyé aux organisateurs. Tu recevras une réponse dans les meilleurs délais.",
     maxLength: "4 000 caractères maximum",
     errors: {
       empty: "Écris un message avant de l'envoyer.",
@@ -765,7 +769,8 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     placeholder: "Schreibe deine Nachricht hier",
     send: "Nachricht senden",
     sending: "Wird gesendet...",
-    sent: "Deine Nachricht wurde an die Organisation gesendet.",
+    sent:
+      "Deine Nachricht wurde erfolgreich an die Organisation gesendet. Du erhältst so bald wie möglich eine Antwort.",
     maxLength: "Maximal 4.000 Zeichen",
     errors: {
       empty: "Schreibe vor dem Senden eine Nachricht.",
@@ -785,7 +790,8 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     placeholder: "Escribe aquí tu mensaje",
     send: "Enviar mensaje",
     sending: "Enviando...",
-    sent: "Tu mensaje ha sido enviado a los organizadores.",
+    sent:
+      "Tu mensaje se ha enviado correctamente a los organizadores. Recibirás una respuesta lo antes posible.",
     maxLength: "Máximo 4.000 caracteres",
     errors: {
       empty: "Escribe un mensaje antes de enviarlo.",
@@ -805,7 +811,8 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     placeholder: "Schrijf hier je bericht",
     send: "Bericht verzenden",
     sending: "Wordt verzonden...",
-    sent: "Je bericht is naar de organisatie verzonden.",
+    sent:
+      "Je bericht is correct naar de organisatie verzonden. Je ontvangt zo snel mogelijk een antwoord.",
     maxLength: "Maximaal 4.000 tekens",
     errors: {
       empty: "Schrijf een bericht voordat je het verzendt.",
@@ -825,7 +832,8 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     placeholder: "Напишіть повідомлення тут",
     send: "Надіслати повідомлення",
     sending: "Надсилання...",
-    sent: "Ваше повідомлення надіслано організаторам.",
+    sent:
+      "Ваше повідомлення успішно надіслано організаторам. Ви отримаєте відповідь якнайшвидше.",
     maxLength: "Не більше 4 000 символів",
     errors: {
       empty: "Напишіть повідомлення перед надсиланням.",
@@ -1228,7 +1236,10 @@ export default async function PartecipanteDashboardPage({
             </section>
 
             {activeOverlay ? (
-              <DashboardOverlay closeHref="/dashboard/partecipante" copy={copy}>
+              <ParticipantDashboardOverlay
+                closeHref="/dashboard/partecipante"
+                closeLabel={copy.close}
+              >
                 {activeOverlay === "qr" ? (
                   <section className="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center">
                     <QrPreview
@@ -1571,7 +1582,7 @@ export default async function PartecipanteDashboardPage({
                     <ParticipantMessageForm copy={messageCopy} />
                   </section>
                 ) : null}
-              </DashboardOverlay>
+              </ParticipantDashboardOverlay>
             ) : null}
           </>
         )}
@@ -2162,36 +2173,6 @@ function MessageIcon({ active }: { active: boolean }) {
       <path d="M8 9h8" className={active ? "stroke-white" : undefined} />
       <path d="M8 13h5" className={active ? "stroke-white" : undefined} />
     </svg>
-  );
-}
-
-function DashboardOverlay({
-  closeHref,
-  copy,
-  children,
-}: {
-  closeHref: string;
-  copy: ParticipantDashboardCopy;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center modal-backdrop px-4 py-5 backdrop-blur-sm sm:px-6">
-      <section
-        role="dialog"
-        aria-modal="true"
-        className="relative mx-auto grid max-h-[calc(100vh-2.5rem)] w-full max-w-4xl gap-5 overflow-y-auto rounded-lg border border-[var(--peace-border)] bg-white p-5 shadow-2xl sm:p-6"
-      >
-        <Link
-          href={closeHref}
-          aria-label={copy.close}
-          title={copy.close}
-          className="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-[var(--peace-border-strong)] text-xl font-semibold text-[var(--peace-ink)] hover:bg-[var(--peace-sky-100)]"
-        >
-          ×
-        </Link>
-        <div className="pr-9">{children}</div>
-      </section>
-    </div>
   );
 }
 
