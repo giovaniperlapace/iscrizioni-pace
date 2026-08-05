@@ -2397,3 +2397,35 @@ Quando il piano verrà cancellato:
   migration, RLS, ultimo posto concorrente, doppio click e UI autenticata
   desktop/mobile devono essere collaudati esclusivamente sullo staging prima
   di considerare P6 conclusa. Production resta invariata.
+- Il 2026-08-05 e' stata avviata la Milestone panel P7 sul branch
+  `codex/panel-p0-p10`, senza applicazione remota, commit o push. La migration
+  locale `20260806160000_school_panel_bookings.sql` introduce entita' separate
+  per docenti (`school_booking_teachers`), prenotazioni di classe
+  (`school_bookings`), righe panel (`school_panel_reservations`) e QR opachi di
+  gruppo (`school_booking_qr_tokens`): non crea partecipanti o iscrizioni
+  individuali fittizie e non raccoglie identita' degli studenti. Il docente e'
+  deduplicato per evento ed email normalizzata; una sessione autenticata
+  possiede le prenotazioni che corrispondono all'email verificata del JWT,
+  mentre manager/admin gestiscono e `manager_viewer` legge soltanto.
+- Le RPC P7 `save_school_booking` e `cancel_school_booking` bloccano panel e
+  sezioni in ordine stabile, accettano esclusivamente sezioni col canale
+  `school_booking`, sostituiscono atomicamente le righe prenotate, bloccano
+  sovrapposizioni e overbooking, liberano i posti all'annullamento e revocano
+  il QR attivo. La capienza canonica di una sezione ora somma anche le
+  prenotazioni scuola, mantenendo compatibilita' con i controlli P6. Le azioni
+  producono audit aggregato senza email, telefono, nome scuola o nomi studenti.
+- Il backoffice condiviso admin/manager aggiunge la sottovista `Scuole` nella
+  sezione `Panel`, con ricerca, filtri per stato/panel, tabella scuola-docente-
+  panel-quantita', overlay di creazione/modifica/annullamento e vista read-only
+  per `manager_viewer`. La creazione manuale richiede che l'operatore dichiari
+  il consenso privacy del docente e genera un QR gruppo opaco. Prima di
+  considerare P7 conclusa restano obbligatori verifica RLS tramite API,
+  concorrenza reale sullo staging e collaudo browser desktop/mobile.
+- Il test SQL P7 e' `tests/sql/school-panel-bookings-rollback-check.sql`. Il
+  2026-08-05 e' stato eseguito sul database staging dopo aver caricato P2-P7
+  nella stessa transazione non persistente: ha confermato sovrapposizione
+  rifiutata, quota scuola piena, riuso dello stesso docente per piu' classi,
+  annullamento con rilascio posti, proprieta' tramite email verificata e rifiuto
+  dell'utente estraneo. La transazione e' terminata in rollback e nello staging
+  resta applicata soltanto P1; per il collaudo browser bisogna applicare
+  ordinatamente P2-P7 allo staging, mai alla production in questa fase.

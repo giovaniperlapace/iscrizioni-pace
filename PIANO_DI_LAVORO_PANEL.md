@@ -448,6 +448,12 @@ le proprie scelte reali.
 
 ### Milestone P7 - schema e backoffice delle prenotazioni scuole
 
+Stato: avviata e implementata localmente sul branch `codex/panel-p0-p10` il
+2026-08-05. Migration, backoffice e test applicativi sono presenti; migration
+e RPC hanno superato un test transazionale con rollback sullo staging, ma non
+sono ancora state applicate in modo persistente ne' collaudate nel browser
+autenticato. Nessuna modifica P7 e' stata applicata in production.
+
 Scopo: creare la base separata per classi e docenti senza raccogliere i nomi
 degli studenti.
 

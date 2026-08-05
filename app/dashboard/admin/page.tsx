@@ -47,6 +47,7 @@ import {
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
 import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
 import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
+import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -95,6 +96,10 @@ import {
   getPanelDraftCatalog,
   parsePanelDraftFilters,
 } from "@/lib/panels/panel-drafts";
+import {
+  getSchoolBookingCatalog,
+  parseSchoolBookingFilters,
+} from "@/lib/panels/school-bookings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -148,6 +153,13 @@ type AdminPageProps = {
     panelStatus?: string;
     panelTool?: string;
     panelView?: string;
+    schoolError?: string;
+    schoolId?: string;
+    schoolPanel?: string;
+    schoolQ?: string;
+    schoolSaved?: string;
+    schoolStatus?: string;
+    schoolTool?: string;
   }>;
 };
 
@@ -406,7 +418,7 @@ export default async function AdminDashboardPage({
       )
     : null;
   const currentEventId = currentEvent?.id ?? null;
-  const [snapshots, adminOperations, panelLocations, panelCatalog] = await Promise.all([
+  const [snapshots, adminOperations, panelLocations, panelCatalog, schoolCatalog] = await Promise.all([
     activeSection === "evento" ? getOpeningSnapshots() : Promise.resolve([]),
     needsAdminOperations
       ? getAdminOperationsSnapshot(filters, currentEventId)
@@ -417,6 +429,9 @@ export default async function AdminDashboardPage({
     activeSection === "panel" && currentEventId
       ? getPanelDraftCatalog(serviceSupabase, currentEventId)
       : Promise.resolve({ panels: [], audienceTypes: [] }),
+    activeSection === "panel" && currentEventId
+      ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
+      : Promise.resolve({ bookings: [], panelOptions: [] }),
   ]);
   const statistics =
     activeSection === "dashboard"
@@ -445,7 +460,9 @@ export default async function AdminDashboardPage({
     panelLocations.find((location) => location.id === params.locationId) ?? null;
   const selectedPanel =
     panelCatalog.panels.find((panel) => panel.id === params.panelId) ?? null;
-  const panelView = params.panelView === "locations" ? "locations" : "panels";
+  const selectedSchoolBooking =
+    schoolCatalog.bookings.find((booking) => booking.id === params.schoolId) ?? null;
+  const panelView = params.panelView === "locations" || params.panelView === "schools" ? params.panelView : "panels";
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
@@ -544,6 +561,22 @@ export default async function AdminDashboardPage({
                 filters={parsePanelDraftFilters(params)}
                 error={params.panelError}
                 saved={params.panelSaved}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "schools" ? (
+              <SchoolBookingsSection
+                dashboard="admin"
+                navMode={navMode}
+                event={currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}
+                bookings={schoolCatalog.bookings}
+                panelOptions={schoolCatalog.panelOptions}
+                selectedBooking={selectedSchoolBooking}
+                isCreating={params.schoolTool === "new"}
+                canManage
+                filters={parseSchoolBookingFilters(params)}
+                error={params.schoolError}
+                saved={params.schoolSaved}
               />
             ) : null}
 

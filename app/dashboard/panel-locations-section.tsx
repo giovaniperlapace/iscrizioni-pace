@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Pencil, Plus, Search, X } from "lucide-react";
+import { Pencil, Plus, Search, X } from "lucide-react";
 
 import { deleteEventLocation, saveEventLocation } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/app/dashboard/confirm-submit-button";
+import { PanelTabs } from "@/app/dashboard/school-bookings-section";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   EVENT_LOCATION_ADDRESS_MAX_LENGTH,
@@ -66,19 +67,7 @@ export function PanelLocationsSection({
           ) : null}
         </div>
 
-        <div className="mt-5 flex gap-1 border-b border-[var(--peace-border)]">
-          <Link
-            href={`/dashboard/${dashboard}?section=panel&panelView=panels&nav=${navMode}`}
-            className="inline-flex min-h-11 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-semibold text-[var(--peace-muted)] hover:text-[var(--peace-blue-800)]"
-          >
-            <CalendarDays className="size-4" aria-hidden="true" />
-            Panel
-          </Link>
-          <span className="inline-flex min-h-11 items-center gap-2 border-b-2 border-[var(--peace-blue-800)] px-3 text-sm font-semibold text-[var(--peace-blue-800)]">
-            <MapPin className="size-4" aria-hidden="true" />
-            Location
-          </span>
-        </div>
+        <PanelTabs dashboard={dashboard} navMode={navMode} active="locations" />
 
         <LocationStatus error={error} saved={saved} />
 

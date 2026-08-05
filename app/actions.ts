@@ -77,6 +77,11 @@ import {
   normalizePanelTitle,
   parsePanelCapacity,
 } from "@/lib/panels/panel-drafts";
+import {
+  SCHOOL_BOOKING_NOTES_MAX_LENGTH,
+  SCHOOL_BOOKING_PRIVACY_VERSION,
+  type SchoolBookingStatus,
+} from "@/lib/panels/school-bookings";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -1944,6 +1949,105 @@ export async function publishPanels(formData: FormData) {
           : "published"
     }&panelCount=${Math.max(0, publishedCount)}`
   );
+}
+
+export async function saveSchoolBooking(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const bookingId = optionalText(formData.get("bookingId"));
+  const teacherEmailValue = optionalText(formData.get("teacherEmail"));
+  const teacherEmail = teacherEmailValue ? normalizeEmail(teacherEmailValue) : null;
+  const teacherFirstName = optionalText(formData.get("teacherFirstName"));
+  const teacherLastName = optionalText(formData.get("teacherLastName"));
+  const teacherPhone = optionalText(formData.get("teacherPhone"));
+  const schoolName = optionalText(formData.get("schoolName"));
+  const schoolCity = optionalText(formData.get("schoolCity"));
+  const classDescription = optionalText(formData.get("classDescription"));
+  const studentCount = parsePositiveInteger(formData.get("studentCount"), 1000);
+  const companionCount = parsePositiveInteger(formData.get("companionCount"), 100);
+  const internalNotes = optionalText(formData.get("internalNotes"));
+  const statusValue = optionalText(formData.get("status"));
+  const status: SchoolBookingStatus = statusValue === "submitted" ? "submitted" : "confirmed";
+  const sectionIds = [...new Set(formData.getAll("sectionIds").map((value) => optionalText(value)).filter((value): value is string => Boolean(value)))];
+  const privacyAccepted = formData.get("privacyAccepted") === "yes";
+
+  if (
+    !eventId || !teacherEmail || !teacherFirstName || !teacherLastName ||
+    !teacherPhone || !schoolName || !schoolCity || !classDescription ||
+    studentCount === null || companionCount === null ||
+    (internalNotes?.length ?? 0) > SCHOOL_BOOKING_NOTES_MAX_LENGTH ||
+    sectionIds.length < 1 || sectionIds.length > 50 ||
+    (!bookingId && !privacyAccepted)
+  ) {
+    redirect(`${dashboardPath}&schoolError=invalid`);
+  }
+
+  const panelReservations = sectionIds.map((sectionId) => ({
+    section_id: sectionId,
+    panel_id: optionalText(formData.get(`panelId:${sectionId}`)),
+    student_count: parsePositiveInteger(formData.get(`students:${sectionId}`), studentCount),
+    companion_count: parsePositiveInteger(formData.get(`companions:${sectionId}`), companionCount),
+  }));
+  if (panelReservations.some((row) => !row.panel_id || row.student_count === null || row.companion_count === null)) {
+    redirect(`${dashboardPath}&schoolError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, sourceDashboard === "admin" ? "admin" : "manager");
+  if (!auth) redirect("/login");
+  const canManageEvent = auth.eventRoles.some((role) => role.role === "admin" || (role.role === "manager" && role.eventId === eventId));
+  if (!canManageEvent) redirect(`${dashboardPath}&schoolError=forbidden`);
+
+  const qrToken = bookingId ? null : createOpaqueQrToken();
+  const { error } = await supabase.rpc("save_school_booking", {
+    p_event_id: eventId,
+    p_booking_id: bookingId,
+    p_teacher_email: teacherEmail,
+    p_teacher_first_name: teacherFirstName,
+    p_teacher_last_name: teacherLastName,
+    p_teacher_phone: teacherPhone,
+    p_school_name: schoolName,
+    p_school_city: schoolCity,
+    p_class_description: classDescription,
+    p_student_count: studentCount,
+    p_companion_count: companionCount,
+    p_privacy_version: SCHOOL_BOOKING_PRIVACY_VERSION,
+    p_internal_notes: internalNotes,
+    p_status: status,
+    p_panel_reservations: panelReservations,
+    p_qr_token_hash: qrToken?.tokenHash ?? null,
+    p_qr_token_encrypted: qrToken ? encryptQrToken(qrToken.token) : null,
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    const code = error.code === "23P01" || message.includes("overlap")
+      ? "overlap"
+      : error.code === "P0001" || message.includes("capacity") || message.includes("full")
+        ? "capacity"
+        : error.code === "42501" ? "forbidden" : "invalid";
+    redirect(`${dashboardPath}&schoolError=${code}`);
+  }
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&schoolSaved=${bookingId ? "updated" : "created"}`);
+}
+
+export async function cancelSchoolBooking(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav);
+  const bookingId = optionalText(formData.get("bookingId"));
+  if (!bookingId) redirect(`${dashboardPath}&schoolError=invalid`);
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, sourceDashboard === "admin" ? "admin" : "manager");
+  if (!auth) redirect("/login");
+  const { error } = await supabase.rpc("cancel_school_booking", { p_booking_id: bookingId });
+  if (error) redirect(`${dashboardPath}&schoolError=${error.code === "42501" ? "forbidden" : "invalid"}`);
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&schoolSaved=cancelled`);
 }
 
 export async function updateParticipantEventService(formData: FormData) {
@@ -4324,6 +4428,18 @@ function parseIsoDateTime(value: FormDataEntryValue | null): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function parsePositiveInteger(
+  value: FormDataEntryValue | null,
+  maximum: number
+): number | null {
+  const text = optionalText(value);
+  if (!text || !/^\d+$/.test(text)) return null;
+  const parsed = Number(text);
+  return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= maximum
+    ? parsed
+    : null;
+}
+
 function parseGroupPlacement(value: FormDataEntryValue | null): {
   nodeType: string | null;
   parentGroupId: string | null;
@@ -4469,6 +4585,16 @@ function getPanelDraftsDashboardPath(
     params.set("nav", navMode);
   }
 
+  return `${basePath}?${params.toString()}`;
+}
+
+function getSchoolBookingsDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath = sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({ section: "panel", panelView: "schools" });
+  if (navMode === "mini" || navMode === "full") params.set("nav", navMode);
   return `${basePath}?${params.toString()}`;
 }
 

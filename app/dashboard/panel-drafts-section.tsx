@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Plus, Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 
 import { savePanelDraft } from "@/app/actions";
 import { PanelDraftFields } from "@/app/dashboard/panel-draft-fields";
 import { PanelPublicationTable } from "@/app/dashboard/panel-publication-table";
+import { PanelTabs } from "@/app/dashboard/school-bookings-section";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { EventLocationOption } from "@/lib/panels/event-locations";
 import {
@@ -76,19 +77,7 @@ export function PanelDraftsSection({
           ) : null}
         </div>
 
-        <div className="mt-5 flex gap-1 border-b border-[var(--peace-border)]">
-          <span className="inline-flex min-h-11 items-center gap-2 border-b-2 border-[var(--peace-blue-800)] px-3 text-sm font-semibold text-[var(--peace-blue-800)]">
-            <CalendarDays className="size-4" aria-hidden="true" />
-            Panel
-          </span>
-          <Link
-            href={`/dashboard/${dashboard}?section=panel&panelView=locations&nav=${navMode}`}
-            className="inline-flex min-h-11 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-semibold text-[var(--peace-muted)] hover:text-[var(--peace-blue-800)]"
-          >
-            <MapPin className="size-4" aria-hidden="true" />
-            Location
-          </Link>
-        </div>
+        <PanelTabs dashboard={dashboard} navMode={navMode} active="panels" />
 
         <PanelStatus error={error} saved={saved} />
 
