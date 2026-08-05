@@ -267,8 +267,8 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
         <div>
           <h3 className="text-base font-semibold">Presenze per giorno e fascia</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-            Vista incrociata delle persone con le fasce mattina e pomeriggio
-            indicate nell’iscrizione.
+            Ogni scheda mostra tutte le fasce mattina e pomeriggio indicate
+            nell’iscrizione, senza scorrimento orizzontale.
           </p>
         </div>
 
@@ -299,67 +299,63 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
         <ResultCount count={attendanceRows.length} total={statistics.people.length} />
 
-        <div className="mt-3 max-h-[34rem] overflow-auto rounded-md border border-[var(--peace-border)]">
-          <table className="w-full min-w-max border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
-              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="sticky left-0 z-20 min-w-60 bg-[#f7fbfe] px-4 py-3 font-semibold">
-                  Persona
-                </th>
-                {statistics.attendanceSlots.map((slot) => (
-                  <th
-                    key={slot.key}
-                    className="min-w-28 px-3 py-3 text-center font-semibold"
-                  >
-                    <span className="block">{formatShortDate(slot.day)}</span>
-                    <span className="mt-0.5 block normal-case tracking-normal">
-                      {attendancePartLabel(slot.dayPart)}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceRows.map((person) => (
-                <tr
-                  key={person.id}
-                  className="border-b border-[var(--peace-border)] last:border-b-0"
-                >
-                  <td className="sticky left-0 bg-white px-4 py-3">
-                    <PersonName person={person} />
-                    {person.attendanceSlotKeys.length === 0 ? (
-                      <span className="mt-1 block text-xs text-[var(--peace-muted)]">
-                        {person.attendanceUnknown
-                          ? "Presenza da indicare"
-                          : "Nessuna fascia indicata"}
-                      </span>
-                    ) : null}
-                  </td>
-                  {statistics.attendanceSlots.map((slot) => {
-                    const isPresent = person.attendanceSlotKeys.includes(slot.key);
+        <div className="mt-3 grid max-h-[34rem] min-w-0 gap-3 overflow-x-hidden overflow-y-auto rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3">
+          {attendanceRows.map((person) => (
+            <article
+              key={person.id}
+              data-attendance-person
+              className="min-w-0 rounded-md border border-[var(--peace-border)] bg-white p-4"
+            >
+              <div className="min-w-0">
+                <PersonName person={person} />
+                {person.attendanceSlotKeys.length === 0 ? (
+                  <span className="mt-1 block text-xs text-[var(--peace-muted)]">
+                    {person.attendanceUnknown
+                      ? "Presenza da indicare"
+                      : "Nessuna fascia indicata"}
+                  </span>
+                ) : null}
+              </div>
 
-                    return (
-                      <td key={slot.key} className="px-3 py-3 text-center">
-                        {isPresent ? (
-                          <span
-                            className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[#e7f5ed] px-2 text-[#167548]"
-                            aria-label={`Presente: ${attendanceSlotLabel(slot)}`}
-                            title="Presente"
-                          >
-                            <Check aria-hidden="true" size={16} strokeWidth={2.5} />
-                          </span>
-                        ) : (
-                          <span className="text-[#a1afbd]" aria-label="Non indicata">
-                            —
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              <div className="mt-3 grid min-w-0 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                {statistics.attendanceSlots.map((slot) => {
+                  const isPresent = person.attendanceSlotKeys.includes(slot.key);
+
+                  return (
+                    <div
+                      key={slot.key}
+                      className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-3 py-2"
+                    >
+                      <span className="min-w-0 text-xs font-semibold text-[#6f7f91]">
+                        <span className="block uppercase tracking-wide">
+                          {formatShortDate(slot.day)}
+                        </span>
+                        <span className="mt-0.5 block font-medium normal-case tracking-normal">
+                          {attendancePartLabel(slot.dayPart)}
+                        </span>
+                      </span>
+                      {isPresent ? (
+                        <span
+                          className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#e7f5ed] px-2 text-[#167548]"
+                          aria-label={`Presente: ${attendanceSlotLabel(slot)}`}
+                          title="Presente"
+                        >
+                          <Check aria-hidden="true" size={16} strokeWidth={2.5} />
+                        </span>
+                      ) : (
+                        <span
+                          className="shrink-0 text-[#a1afbd]"
+                          aria-label={`Non indicata: ${attendanceSlotLabel(slot)}`}
+                        >
+                          —
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+          ))}
         </div>
 
           {statistics.attendanceSlots.length === 0 ? (

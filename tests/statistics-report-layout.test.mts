@@ -49,3 +49,14 @@ test("statistics reports stay bounded and centered in the dashboard", () => {
     /className="relative mx-auto grid w-full min-w-0 max-w-full gap-4 overflow-hidden/
   );
 });
+
+test("attendance details show every day without horizontal scrolling", () => {
+  const attendanceReport = renderedReports.slice(
+    renderedReports.indexOf('<ReportBlock name="attendance"'),
+    renderedReports.indexOf('<ReportBlock name="age"')
+  );
+
+  assert.match(attendanceReport, /data-attendance-person/);
+  assert.match(attendanceReport, /overflow-x-hidden overflow-y-auto/);
+  assert.doesNotMatch(attendanceReport, /min-w-max|overflow-x-auto|overflow-auto/);
+});
