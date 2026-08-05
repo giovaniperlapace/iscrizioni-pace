@@ -3,6 +3,7 @@ import {
   BarChart3,
   ClipboardList,
   Mail,
+  MapPin,
   Network,
   Pencil,
   ShieldCheck,
@@ -40,6 +41,7 @@ import {
   type OperationsParticipantRow,
 } from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
@@ -76,6 +78,10 @@ import {
   splitFullName,
 } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
+import {
+  getEventLocations,
+  normalizeEventLocationSearch,
+} from "@/lib/panels/event-locations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -100,6 +106,11 @@ type ManagerPageProps = {
     serviceError?: string;
     serviceId?: string;
     serviceSaved?: string;
+    locationError?: string;
+    locationId?: string;
+    locationQ?: string;
+    locationSaved?: string;
+    locationTool?: string;
     roleError?: string;
     roleSaved?: string;
     roleUserId?: string;
@@ -313,7 +324,7 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type ManagerSection = "dashboard" | "iscritti" | "servizi" | "email" | "ruoli" | "gruppi";
+type ManagerSection = "dashboard" | "iscritti" | "servizi" | "panel" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -341,6 +352,13 @@ export default async function ManagerDashboardPage({
     "id,title,starts_on,ends_on"
   );
   const currentEventId = currentEvent?.id ?? null;
+  const canSeeCurrentEvent = Boolean(
+    currentEventId && (!scope.eventIds || scope.eventIds.has(currentEventId))
+  );
+  const panelLocations =
+    activeSection === "panel" && currentEventId && canSeeCurrentEvent
+      ? await getEventLocations(serviceSupabase, currentEventId)
+      : [];
   const managerOperations =
     activeSection === "email"
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
@@ -378,6 +396,8 @@ export default async function ManagerDashboardPage({
   const selectedOperationalRole =
     managerOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
     null;
+  const selectedLocation =
+    panelLocations.find((location) => location.id === params.locationId) ?? null;
   const navMode: ManagerNavMode = params.nav === "full" ? "full" : "mini";
 
   return (
@@ -449,6 +469,27 @@ export default async function ManagerDashboardPage({
               <ManagerEmailSection
                 eventId={currentEventId}
                 canManage={currentEventId ? scope.canManageEvent(currentEventId) : false}
+              />
+            ) : null}
+
+            {activeSection === "panel" ? (
+              <PanelLocationsSection
+                dashboard="manager"
+                navMode={navMode}
+                event={
+                  currentEvent && canSeeCurrentEvent
+                    ? { id: currentEvent.id, title: currentEvent.title }
+                    : null
+                }
+                locations={panelLocations}
+                selectedLocation={selectedLocation}
+                isCreating={params.locationTool === "new"}
+                canManage={Boolean(
+                  currentEventId && scope.canManageEvent(currentEventId)
+                )}
+                query={normalizeEventLocationSearch(params.locationQ)}
+                error={params.locationError}
+                saved={params.locationSaved}
               />
             ) : null}
 
@@ -543,6 +584,13 @@ function ManagerSidebar({
       Icon: ClipboardList,
       label: "Servizi",
       help: "Lista e assegnazioni",
+    },
+    {
+      key: "panel",
+      href: "/dashboard/manager?section=panel&nav=mini",
+      Icon: MapPin,
+      label: "Panel",
+      help: "Location e programma",
     },
     {
       key: "email",
@@ -826,6 +874,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.section === "dashboard" ||
     params.section === "iscritti" ||
     params.section === "servizi" ||
+    params.section === "panel" ||
     params.section === "email" ||
     params.section === "ruoli" ||
     params.section === "gruppi"

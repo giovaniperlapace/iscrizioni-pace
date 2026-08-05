@@ -4,6 +4,7 @@ import {
   BarChart3,
   CalendarDays,
   Mail,
+  MapPin,
   Network,
   Pencil,
   ShieldCheck,
@@ -44,6 +45,7 @@ import {
   type OperationsParticipantRow,
 } from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -84,6 +86,10 @@ import {
   splitFullName,
 } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
+import {
+  getEventLocations,
+  normalizeEventLocationSearch,
+} from "@/lib/panels/event-locations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -123,6 +129,11 @@ type AdminPageProps = {
     section?: string;
     stat?: string;
     status?: string;
+    locationError?: string;
+    locationId?: string;
+    locationQ?: string;
+    locationSaved?: string;
+    locationTool?: string;
   }>;
 };
 
@@ -356,7 +367,7 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type AdminSection = "evento" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
+type AdminSection = "evento" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi" | "panel";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
@@ -381,11 +392,14 @@ export default async function AdminDashboardPage({
       )
     : null;
   const currentEventId = currentEvent?.id ?? null;
-  const [snapshots, adminOperations] = await Promise.all([
+  const [snapshots, adminOperations, panelLocations] = await Promise.all([
     activeSection === "evento" ? getOpeningSnapshots() : Promise.resolve([]),
     needsAdminOperations
       ? getAdminOperationsSnapshot(filters, currentEventId)
       : getAdminOperationsSnapshot(filters, null),
+    activeSection === "panel" && currentEventId
+      ? getEventLocations(serviceSupabase, currentEventId)
+      : Promise.resolve([]),
   ]);
   const statistics =
     activeSection === "dashboard"
@@ -410,6 +424,8 @@ export default async function AdminDashboardPage({
   const selectedOperationalRole =
     adminOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
     null;
+  const selectedLocation =
+    panelLocations.find((location) => location.id === params.locationId) ?? null;
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
@@ -467,6 +483,21 @@ export default async function AdminDashboardPage({
                 dashboard="admin"
                 navMode={navMode}
                 canDeleteRegistration
+              />
+            ) : null}
+
+            {activeSection === "panel" ? (
+              <PanelLocationsSection
+                dashboard="admin"
+                navMode={navMode}
+                event={currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}
+                locations={panelLocations}
+                selectedLocation={selectedLocation}
+                isCreating={params.locationTool === "new"}
+                canManage
+                query={normalizeEventLocationSearch(params.locationQ)}
+                error={params.locationError}
+                saved={params.locationSaved}
               />
             ) : null}
 
@@ -1069,6 +1100,13 @@ function AdminSidebar({
       Icon: Users,
       label: "Gestione iscritti",
       help: "Elenco e modifiche",
+    },
+    {
+      key: "panel",
+      href: adminPath("panel", navMode),
+      Icon: MapPin,
+      label: "Panel",
+      help: "Location e programma",
     },
     {
       key: "email",
@@ -2632,6 +2670,7 @@ function resolveAdminSection(input: { section?: string }): AdminSection {
     input.section === "evento" ||
     input.section === "dashboard" ||
     input.section === "iscritti" ||
+    input.section === "panel" ||
     input.section === "ruoli" ||
     input.section === "gruppi"
   ) {

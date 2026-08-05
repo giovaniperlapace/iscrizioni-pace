@@ -41,6 +41,26 @@ Stato di partenza al 2026-08-04:
 
 ## 2. Metodo obbligatorio per ogni milestone
 
+### Strategia di integrazione P0-P10
+
+- Le milestone da P0 a P10 vengono sviluppate e collaudate su un unico branch
+  di lunga durata, `codex/panel-p0-p10`, collegato all'ambiente di staging.
+- Ogni milestone mantiene commit, verifiche e pausa di revisione distinti, ma
+  il branch panel non viene unito a `main` al termine delle singole milestone.
+- Codice e migration panel da P0 a P10 arrivano in production soltanto dopo il
+  completamento e il collaudo complessivo della Milestone P10.
+- Le migration panel vengono applicate durante lo sviluppo esclusivamente al
+  database di staging. Non devono essere applicate al database production
+  prima della procedura finale di rilascio P0-P10.
+- I bugfix urgenti delle funzioni iscrizioni continuano a essere sviluppati e
+  rilasciati da `main`; dopo ogni rilascio rilevante, `main` viene integrato nel
+  branch panel per evitare divergenza e scoprire presto eventuali conflitti.
+- Prima del merge finale sono obbligatori: riallineamento con `origin/main`,
+  regressione completa su iscrizioni, iscritti, gruppi, servizi, campagne e QR,
+  verifica RLS e concorrenza capienze, backup production e piano di rollback.
+- Le milestone P11 e successive iniziano un ciclo separato dopo il rilascio di
+  P0-P10 e non devono prolungare il branch di integrazione del modulo panel.
+
 Prima di iniziare:
 
 - verificare `pwd`, branch e `git status --short`;
@@ -237,6 +257,9 @@ solo nel browser:
 
 ### Milestone P0 - conferma regole e dati pilota
 
+Stato: completata il 2026-08-05. Decisioni registrate in
+`docs/panel-p0-decisions.md`.
+
 Scopo: chiudere le decisioni che cambiano schema o hardware prima di scrivere
 migration.
 
@@ -261,7 +284,13 @@ Verifica e revisione:
 Accettazione: non restano ambiguita' che richiederebbero di rifare chiavi,
 vincoli di capienza o formato delle prenotazioni.
 
+Documento di lavoro: `docs/panel-p0-decisions.md`.
+
 ### Milestone P1 - schema panel, location, sezioni e RLS
+
+Stato: completata sullo staging il 2026-08-05. Migration, seed sintetico,
+vincoli transazionali e RLS sono stati verificati prima con rollback e poi
+applicati in modo persistente soltanto allo staging. Production resta invariata.
 
 Scopo: costruire la base dati canonica senza ancora esporre form pubblici.
 
@@ -288,6 +317,10 @@ Pausa di revisione: riesaminare nomi, vincoli e migrazione prima di applicarla
 al database remoto.
 
 ### Milestone P2 - gestione manager delle location
+
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione funzionale e applicazione della migration P2 soltanto
+allo staging. Nessuna modifica P2 e' stata applicata in production.
 
 Scopo: aggiungere alla dashboard manager/admin una sezione `Panel` con la
 prima sottovista `Location`.
@@ -621,6 +654,11 @@ Accettazione: una prova completa con utenti di test e hardware reale termina
 senza overbooking, perdita di presenze o esposizione di dati fuori ruolo.
 
 ## 6. Dipendenze e ordine di rilascio
+
+Il primo rilascio production e il primo merge verso `main` avvengono soltanto
+dopo il completamento della P10. Le pause di revisione fra milestone restano
+obbligatorie e servono a validare progressivamente lo stesso ambiente di
+staging, non a produrre rilasci parziali.
 
 Ordine raccomandato:
 

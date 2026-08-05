@@ -62,6 +62,13 @@ import {
 } from "@/lib/registrations/event-services";
 import { syncOperationalIdentityByEmail } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
+import {
+  EVENT_LOCATION_ADDRESS_MAX_LENGTH,
+  EVENT_LOCATION_NAME_MAX_LENGTH,
+  normalizeEventLocationAddress,
+  normalizeEventLocationName,
+  parseEventLocationCapacity,
+} from "@/lib/panels/event-locations";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -1458,6 +1465,227 @@ export async function saveEventService(formData: FormData) {
 
   const savedParam = sourceDashboard === "admin" ? "adminSaved" : "serviceSaved";
   redirect(`${dashboardPath}&${savedParam}=service`);
+}
+
+export async function saveEventLocation(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelLocationsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const locationId = optionalText(formData.get("locationId"));
+  const name = normalizeEventLocationName(formData.get("name"));
+  const address = normalizeEventLocationAddress(formData.get("address"));
+  const maxCapacity = parseEventLocationCapacity(formData.get("maxCapacity"));
+
+  if (!eventId || !name || maxCapacity === null) {
+    redirect(`${dashboardPath}&locationError=invalid`);
+  }
+
+  if (name.length > EVENT_LOCATION_NAME_MAX_LENGTH) {
+    redirect(`${dashboardPath}&locationError=name-too-long`);
+  }
+
+  if (address && address.length > EVENT_LOCATION_ADDRESS_MAX_LENGTH) {
+    redirect(`${dashboardPath}&locationError=address-too-long`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&locationError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  type CurrentEventLocationRow = {
+    id: string;
+    event_id: string;
+    name: string;
+    max_capacity: number | null;
+    is_active: boolean | null;
+  };
+  let currentLocation: CurrentEventLocationRow | null = null;
+
+  if (locationId) {
+    const { data, error } = await serviceSupabase
+      .from("event_locations")
+      .select("id,event_id,name,max_capacity,is_active")
+      .eq("id", locationId)
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (error || !data) {
+      redirect(`${dashboardPath}&locationError=not-found`);
+    }
+
+    currentLocation = data as CurrentEventLocationRow;
+
+    if (currentLocation && currentLocation.max_capacity !== maxCapacity) {
+      const { count, error: panelCountError } = await serviceSupabase
+        .from("event_moments")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId)
+        .eq("location_id", locationId)
+        .eq("moment_type", "panel")
+        .eq("publication_status", "published");
+
+      if (panelCountError) {
+        redirect(`${dashboardPath}&locationError=conflict`);
+      }
+
+      if ((count ?? 0) > 0) {
+        redirect(`${dashboardPath}&locationError=published-capacity`);
+      }
+    }
+  }
+
+  const payload = {
+    event_id: eventId,
+    name,
+    address,
+    max_capacity: maxCapacity,
+    is_active: currentLocation?.is_active ?? true,
+  };
+  const result = locationId
+    ? await serviceSupabase
+        .from("event_locations")
+        .update(payload)
+        .eq("id", locationId)
+        .eq("event_id", eventId)
+        .select("id")
+        .maybeSingle()
+    : await serviceSupabase
+        .from("event_locations")
+        .insert(payload)
+        .select("id")
+        .single();
+
+  if (result.error || !result.data) {
+    const errorMessage = result.error?.message.toLowerCase() ?? "";
+    const errorCode =
+      errorMessage.includes("section capacity total") ||
+      errorMessage.includes("published panels require")
+        ? "published-capacity"
+        : "conflict";
+    redirect(`${dashboardPath}&locationError=${errorCode}`);
+  }
+
+  const savedLocationId = (result.data as { id: string }).id;
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: locationId ? "event_location.updated" : "event_location.created",
+    entity_table: "event_locations",
+    entity_id: savedLocationId,
+    metadata: {
+      name,
+      max_capacity: maxCapacity,
+      previous_max_capacity: currentLocation?.max_capacity ?? null,
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(
+    `${dashboardPath}&locationSaved=${locationId ? "updated" : "created"}`
+  );
+}
+
+export async function deleteEventLocation(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelLocationsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const locationId = optionalText(formData.get("locationId"));
+
+  if (!eventId || !locationId) {
+    redirect(`${dashboardPath}&locationError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&locationError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const [{ data: location, error: locationError }, { count, error: usageError }] =
+    await Promise.all([
+      serviceSupabase
+        .from("event_locations")
+        .select("id,event_id,name,max_capacity")
+        .eq("id", locationId)
+        .eq("event_id", eventId)
+        .maybeSingle(),
+      serviceSupabase
+        .from("event_moments")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId)
+        .eq("location_id", locationId),
+    ]);
+
+  if (locationError || !location) {
+    redirect(`${dashboardPath}&locationError=not-found`);
+  }
+
+  if (usageError || (count ?? 0) > 0) {
+    redirect(`${dashboardPath}&locationError=location-in-use`);
+  }
+
+  const { error: deleteError } = await serviceSupabase
+    .from("event_locations")
+    .delete()
+    .eq("id", locationId)
+    .eq("event_id", eventId);
+
+  if (deleteError) {
+    redirect(`${dashboardPath}&locationError=conflict`);
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: "event_location.deleted",
+    entity_table: "event_locations",
+    entity_id: locationId,
+    metadata: {
+      name: (location as { name: string }).name,
+      max_capacity: (location as { max_capacity: number | null }).max_capacity,
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&locationSaved=deleted`);
 }
 
 export async function updateParticipantEventService(formData: FormData) {
@@ -3934,6 +4162,21 @@ function getEventServicesDashboardPath(
   const basePath =
     sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
   const params = new URLSearchParams({ section: "servizi" });
+
+  if (navMode === "mini" || navMode === "full") {
+    params.set("nav", navMode);
+  }
+
+  return `${basePath}?${params.toString()}`;
+}
+
+function getPanelLocationsDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath =
+    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({ section: "panel" });
 
   if (navMode === "mini" || navMode === "full") {
     params.set("nav", navMode);

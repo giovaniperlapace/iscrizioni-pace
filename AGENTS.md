@@ -796,18 +796,30 @@ Applicazione su Hetzner/Coolify:
 - La CLI raggiunge il DB interno ma fallisce con TLS verso Postgres self-hosted; la migration e' stata applicata con `psql` dentro il container database.
 - La versione e' registrata in `supabase_migrations.schema_migrations` come `20260613120000:initial_schema_and_rls`.
 
-Procedura rapida per migration future su questo Supabase self-hosted:
+Procedura storica per migration su questo Supabase self-hosted:
 
 - Creare una nuova migration versionata in `supabase/migrations/<timestamp>_<nome>.sql`.
 - Verificare staticamente il diff SQL e non inserire segreti o dati personali.
 - Applicare la migration con:
 
+Dal 2026-08-05 lo script non accetta piu' un target implicito e non contiene
+fallback verso production:
+
 ```bash
-./scripts/apply-remote-migration.sh supabase/migrations/<timestamp>_<nome>.sql
+npm run db:migrate:staging -- supabase/migrations/<timestamp>_<nome>.sql
+npm run db:migrate:production -- supabase/migrations/<timestamp>_<nome>.sql \
+  --confirm-production <timestamp>
 ```
 
-- Lo script usa `.env.local` se presente, altrimenti i default operativi già noti: SSH `root@91.99.81.31`, chiave `~/.ssh/id_ed25519_hetzner_20260613`, container `supabase-db-ammnuajlmd83t94cfy3us6cw`.
-- Lo script copia il file SQL sul server, lo applica con `psql` dentro il container DB, registra la versione in `supabase_migrations.schema_migrations` e invia `notify pgrst, 'reload schema'`.
+- Staging legge soltanto `.env.staging.local`; production legge soltanto
+  `.env.production.local`.
+- Entrambi richiedono `DEPLOYMENT_ENVIRONMENT` coerente, host SSH, path chiave
+  assoluto, stack e container espliciti. Staging rifiuta il container
+  production noto.
+- Il comando production richiede inoltre la conferma con la versione esatta
+  della migration. Per P0-P10 non va eseguito prima del collaudo complessivo.
+- Lo script copia il file SQL sul server, lo applica con `psql` nel container
+  selezionato, registra la versione e invia `notify pgrst, 'reload schema'`.
 - Non usare `supabase db push` su questo ambiente finché la connessione CLI verso il Postgres interno continua a fallire con TLS.
 
 Verifiche eseguite dopo applicazione:
@@ -2172,3 +2184,100 @@ Quando il piano verrà cancellato:
 - Le decisioni contenute nel piano sono proposte progettuali finche' la
   Milestone P0 non le conferma. Non creare o applicare migration panel/scuole
   prima di quella verifica.
+- Decisione del 2026-08-05: le milestone panel P0-P10 vengono sviluppate su un
+  unico branch di lunga durata `codex/panel-p0-p10` collegato a staging. Ogni
+  milestone mantiene commit, test e revisione separati, ma nessun codice o
+  migration panel P0-P10 viene unito a `main` o applicato in production prima
+  del completamento e collaudo complessivo della P10. I bugfix iscrizioni
+  continuano su `main` e vanno integrati tempestivamente nel branch panel. Il
+  rilascio finale richiede regressione delle funzioni esistenti, verifica RLS e
+  concorrenza, backup production e piano di rollback. P11 e successive partono
+  in un ciclo separato dopo questo rilascio.
+- Durante il bootstrap staging del 2026-08-05 e' stato rimosso il file
+  ridondante `20260728120000_single_active_group_registration_link.sql`: aveva
+  lo stesso timestamp di `20260728120000_single_group_registration_link.sql`
+  ma ne conteneva soltanto un sottoinsieme. Production registra correttamente
+  la versione `20260728120000` col nome `single_group_registration_link`; il
+  file canonico e' quindi quello completo ancora presente nel repository.
+- Il 2026-08-05 e' stato creato in Coolify l'ambiente `staging` del progetto
+  `iscrizioni_pace_cool`, con stack Supabase indipendente
+  `jiio6ou5wzmma2xwas53cf1d` e API HTTPS
+  `https://supabase-staging-jiio6ou5wzmma2xwas53cf1d.91.99.81.31.sslip.io`.
+  Lo stack ha database, Auth, Storage e chiavi distinti dalla production; tutte
+  le migration canoniche fino alla P1 risultano applicate. Sono
+  presenti soltanto utenti sintetici con domini `.example.invalid` per i ruoli
+  admin, manager e partecipante. Non copiare dati personali dalla production.
+- Su Vercel sono state configurate per l'ambiente `Preview`, senza modificare
+  lo scope `Production`, le variabili Supabase staging, i segreti QR/cron e la
+  consegna email in modalita' `log`. Le tre URL applicative
+  `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` non vanno impostate con
+  localhost: verranno aggiunte dopo il primo deploy del branch usando il suo
+  URL Preview stabile. Nello stesso momento bisogna aggiungere quell'URL alla
+  site URL/allowlist redirect di Supabase Auth staging. Fino ad allora login e
+  callback Auth del deploy Preview non sono considerati collaudabili.
+- `npm run dev:staging` e `npm run build:staging` eseguono prima il readiness
+  check e poi avviano Next tramite `scripts/run-next-staging.mjs`. Non
+  sostituirli con `node --env-file=.env.staging.local ...`: Next crea worker
+  Node che rifiutano `--env-file` quando viene ereditato in `NODE_OPTIONS`.
+- La Milestone panel P0 e' stata approvata il 2026-08-05. I pubblici iniziali
+  sono `Iscritti`/`individual`, `Scuole`/`school_booking` e
+  `Ospiti`/`internal_assignment`; partecipante e minori collegati consumano
+  `1 + minori attivi` e condividono la scelta panel nella prima versione;
+  `Ospiti` e' assegnabile soltanto internamente. Un panel pubblicato richiede
+  location, intervallo valido, almeno una sezione e somma sezioni uguale alla
+  capienza fisica. Le traduzioni restano applicative. Un pubblico disattivato
+  resta nello storico e non e' aggiungibile a nuovi panel; questa possibilita'
+  e' una tutela tecnica, non un caso d'uso che richiede enfasi nella UI.
+- La Milestone P1 usa la migration
+  `20260805160000_panel_foundation.sql` e il seed esclusivamente sintetico
+  `supabase/seeds/panel-p1-staging.sql`. Estende le tabelle canoniche
+  `event_locations` ed `event_moments`, mantiene compatibilita' con
+  `is_public`, aggiunge `panel_audience_types` e `panel_seat_sections`, blocca
+  sovrapposizioni di location e valida le capienze con constraint trigger
+  differibili. Le bozze sono leggibili solo da admin/manager/manager_viewer;
+  il pubblico legge soltanto panel pubblicati. Pubblicazione e ritiro sono
+  auditati.
+- Il 2026-08-05 migration, vincoli e seed P1 sono stati prima eseguiti sul
+  database staging dentro transazioni terminate deliberatamente in rollback.
+  I test reali hanno accettato configurazione e fixture valide e rifiutato
+  totale errato, location sovrapposta e nuovo uso di un pubblico inattivo.
+  Dopo questa revisione la versione `20260805160000` e' stata applicata e
+  registrata soltanto nello staging, seguita dalla fixture sintetica: 2
+  location, 3 pubblici, 3 panel pubblicati e 9 sezioni, senza errori di
+  capienza. Un test RLS con rollback ha confermato che anon vede i tre panel
+  pubblicati ma non le bozze e che `manager_viewer` legge le bozze. Bozza e
+  ruolo temporanei non sono rimasti nel database. La REST API anon restituisce
+  esattamente i tre panel sintetici. Production non contiene la migration P1.
+- Il 2026-08-05 la Milestone panel P2 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  Admin, manager e manager viewer condividono la stessa sezione dashboard
+  `Panel`, inizialmente composta dalla sottovista `Location`. La sottovista
+  usa `event_locations` come fonte canonica, mostra nome, indirizzo, capienza
+  e tutti i panel `event_moments` di tipo `panel` associati, con stato bozza o
+  pubblicato; la ricerca copre anche i titoli dei panel. Su mobile le location
+  sono card, da `md` in poi tabella.
+- Creazione e modifica location usano le Server Actions
+  `saveEventLocation`/`deleteEventLocation` e il componente condiviso
+  `app/dashboard/panel-locations-section.tsx`. Nome e indirizzo sono limitati
+  rispettivamente a 100 e 240 caratteri; la capienza deve essere un intero
+  positivo. Le location legacy con `max_capacity` nullo restano visibili come
+  `Capienza da definire` e possono essere completate dall'overlay. Una
+  location e' eliminabile soltanto se nessun momento la usa. Il ruolo
+  `manager_viewer` vede location e associazioni ma non riceve controlli di
+  scrittura; le Server Actions verificano comunque admin globale o manager
+  dello stesso evento.
+- La capienza di una location collegata a panel pubblicati non puo' essere
+  cambiata isolatamente: l'overlay elenca i panel coinvolti, la Server Action
+  blocca il cambio con messaggio esplicito e il constraint trigger P1 resta
+  l'ultima protezione transazionale. La futura riconciliazione atomica delle
+  sezioni appartiene alla gestione panel successiva. Creazione, modifica ed
+  eliminazione location producono audit `event_location.created`,
+  `event_location.updated` ed `event_location.deleted` senza registrare
+  l'indirizzo nei metadata.
+- La migration P2 locale e'
+  `20260805200000_panel_location_management.sql`: aggiunge i constraint di
+  lunghezza/non-vuoto e la policy RLS di scrittura location per il solo ruolo
+  `manager`; `manager_viewer` conserva la sola lettura. Al termine del lavoro
+  locale del 2026-08-05 la migration non e' applicata ne' allo staging ne'
+  alla production. Prima della revisione remota applicarla esclusivamente allo
+  staging secondo `PIANO_DI_LAVORO_PANEL.md`.
