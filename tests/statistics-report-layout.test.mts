@@ -38,3 +38,14 @@ test("each statistics summary is immediately paired with its detail table", () =
   assert.match(statisticsSection, /data-statistics-report=\{name\}/);
   assert.match(statisticsSection, /border-2 border-\[#bfd8ea\]/);
 });
+
+test("statistics reports stay bounded and centered in the dashboard", () => {
+  assert.match(
+    statisticsSection,
+    /<section className="mx-auto grid w-full min-w-0 max-w-\[65rem\] gap-8">/
+  );
+  assert.match(
+    statisticsSection,
+    /className="relative mx-auto grid w-full min-w-0 max-w-full gap-4 overflow-hidden/
+  );
+});

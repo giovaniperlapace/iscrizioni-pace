@@ -162,7 +162,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
   }
 
   return (
-    <section className="grid min-w-0 gap-8">
+    <section className="mx-auto grid w-full min-w-0 max-w-[65rem] gap-8">
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -471,7 +471,7 @@ function ReportBlock({
     <section
       data-statistics-report={name}
       aria-label={`Report: ${title}`}
-      className="relative grid min-w-0 gap-4 overflow-hidden rounded-2xl border-2 border-[#bfd8ea] bg-[#eef7fc] p-3 shadow-[0_14px_34px_rgba(23,72,112,0.10)] sm:p-5"
+      className="relative mx-auto grid w-full min-w-0 max-w-full gap-4 overflow-hidden rounded-2xl border-2 border-[#bfd8ea] bg-[#eef7fc] p-3 shadow-[0_14px_34px_rgba(23,72,112,0.10)] sm:p-5"
     >
       <span
         aria-hidden="true"
