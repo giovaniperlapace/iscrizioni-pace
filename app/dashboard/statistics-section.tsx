@@ -171,23 +171,20 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
         </p>
       </div>
 
-      <StatisticsSummary
-        statistics={statistics}
-        territorySummary={territorySummary}
-        countryFilter={countryFilter}
-        cityFilter={cityFilter}
-        groupFilter={groupFilter}
-        attendanceFilter={attendanceFilter}
-        ageBandFilter={ageBandFilter}
-        onTerritorySelect={showTerritoryPeople}
-        onAttendanceSelect={showAttendancePeople}
-        onAgeBandSelect={showAgeBandPeople}
-      />
+      <section className="grid min-w-0 gap-4">
+        <TerritoryStatisticsSummary
+          statistics={statistics}
+          territorySummary={territorySummary}
+          countryFilter={countryFilter}
+          cityFilter={cityFilter}
+          groupFilter={groupFilter}
+          onTerritorySelect={showTerritoryPeople}
+        />
 
-      <article
-        id="statistics-territory-table"
-        className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
-      >
+        <article
+          id="statistics-territory-table"
+          className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+        >
         <div>
           <h3 className="text-base font-semibold">Persone per territorio e gruppo</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -252,13 +249,21 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
           </table>
         </div>
 
-        {territoryRows.length === 0 ? <EmptyTableMessage /> : null}
-      </article>
+          {territoryRows.length === 0 ? <EmptyTableMessage /> : null}
+        </article>
+      </section>
 
-      <article
-        id="statistics-attendance-table"
-        className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
-      >
+      <section className="grid min-w-0 gap-4">
+        <AttendanceStatisticsSummary
+          statistics={statistics}
+          attendanceFilter={attendanceFilter}
+          onAttendanceSelect={showAttendancePeople}
+        />
+
+        <article
+          id="statistics-attendance-table"
+          className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+        >
         <div>
           <h3 className="text-base font-semibold">Presenze per giorno e fascia</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -357,19 +362,27 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
           </table>
         </div>
 
-        {statistics.attendanceSlots.length === 0 ? (
-          <p className="mt-4 text-sm text-[var(--peace-muted)]">
-            Nessuna fascia di presenza configurata per l’evento.
-          </p>
-        ) : attendanceRows.length === 0 ? (
-          <EmptyTableMessage />
-        ) : null}
-      </article>
+          {statistics.attendanceSlots.length === 0 ? (
+            <p className="mt-4 text-sm text-[var(--peace-muted)]">
+              Nessuna fascia di presenza configurata per l’evento.
+            </p>
+          ) : attendanceRows.length === 0 ? (
+            <EmptyTableMessage />
+          ) : null}
+        </article>
+      </section>
 
-      <article
-        id="statistics-age-table"
-        className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
-      >
+      <section className="grid min-w-0 gap-4">
+        <AgeStatisticsSummary
+          statistics={statistics}
+          ageBandFilter={ageBandFilter}
+          onAgeBandSelect={showAgeBandPeople}
+        />
+
+        <article
+          id="statistics-age-table"
+          className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+        >
         <div>
           <h3 className="text-base font-semibold">Persone per età</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
@@ -438,45 +451,40 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
           </table>
         </div>
 
-        {ageRows.length === 0 ? <EmptyTableMessage /> : null}
-      </article>
+          {ageRows.length === 0 ? <EmptyTableMessage /> : null}
+        </article>
+      </section>
     </section>
   );
 }
 
-function StatisticsSummary({
+function TerritoryStatisticsSummary({
   statistics,
   territorySummary,
   countryFilter,
   cityFilter,
   groupFilter,
-  attendanceFilter,
-  ageBandFilter,
   onTerritorySelect,
-  onAttendanceSelect,
-  onAgeBandSelect,
 }: {
   statistics: EventStatisticsSnapshot;
   territorySummary: Record<ParticipantBreakdownLevel, SummaryBreakdownRow[]>;
   countryFilter: string;
   cityFilter: string;
   groupFilter: string;
-  attendanceFilter: string;
-  ageBandFilter: string;
   onTerritorySelect: (
     level: ParticipantBreakdownLevel,
     label: string
   ) => void;
-  onAttendanceSelect: (slotKey: string) => void;
-  onAgeBandSelect: (ageBand: StatisticsAgeBand) => void;
 }) {
   return (
     <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
-        <h3 className="text-base font-semibold">Statistiche riassuntive</h3>
+        <h3 className="text-base font-semibold">
+          Riepilogo persone, territori e gruppi
+        </h3>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Una lettura immediata dei dati. Seleziona un valore per vedere nella
-          tabella le persone che compongono quel totale.
+          Seleziona un territorio o un gruppo per vedere subito nella tabella
+          successiva le persone che compongono il totale.
         </p>
       </div>
 
@@ -496,48 +504,6 @@ function StatisticsSummary({
           label="Minori accompagnati"
           value={statistics.summary.accompanyingChildren}
         />
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <SummaryPanel
-          title="Fasce di età"
-          description="Distribuzione calcolata all’inizio dell’evento."
-        >
-          <div className="grid gap-2 sm:grid-cols-2">
-            {AGE_BANDS.map((ageBand) => (
-              <SummaryFilterButton
-                key={ageBand}
-                label={ageBandLabel(ageBand)}
-                count={statistics.summary.ageBandCounts[ageBand]}
-                active={ageBandFilter === ageBand}
-                onClick={() => onAgeBandSelect(ageBand)}
-              />
-            ))}
-          </div>
-        </SummaryPanel>
-
-        <SummaryPanel
-          title="Presenze previste"
-          description="Persone presenti per giorno e fascia oraria."
-        >
-          <div className="grid gap-2 sm:grid-cols-2">
-            {statistics.attendanceSlots.map((slot) => (
-              <SummaryFilterButton
-                key={slot.key}
-                label={attendanceSlotLabel(slot)}
-                count={statistics.summary.attendanceSlotCounts[slot.key] ?? 0}
-                active={attendanceFilter === slot.key}
-                onClick={() => onAttendanceSelect(slot.key)}
-              />
-            ))}
-            <SummaryFilterButton
-              label="Nessuna fascia indicata"
-              count={statistics.summary.withoutAttendance}
-              active={attendanceFilter === NO_ATTENDANCE_FILTER}
-              onClick={() => onAttendanceSelect(NO_ATTENDANCE_FILTER)}
-            />
-          </div>
-        </SummaryPanel>
       </div>
 
       <div className="mt-4">
@@ -577,6 +543,74 @@ function StatisticsSummary({
             ))}
           </div>
         </SummaryPanel>
+      </div>
+    </article>
+  );
+}
+
+function AttendanceStatisticsSummary({
+  statistics,
+  attendanceFilter,
+  onAttendanceSelect,
+}: {
+  statistics: EventStatisticsSnapshot;
+  attendanceFilter: string;
+  onAttendanceSelect: (slotKey: string) => void;
+}) {
+  return (
+    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <h3 className="text-base font-semibold">Riepilogo presenze previste</h3>
+      <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+        Seleziona un giorno e una fascia per vedere le persone corrispondenti
+        nella tabella successiva.
+      </p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {statistics.attendanceSlots.map((slot) => (
+          <SummaryFilterButton
+            key={slot.key}
+            label={attendanceSlotLabel(slot)}
+            count={statistics.summary.attendanceSlotCounts[slot.key] ?? 0}
+            active={attendanceFilter === slot.key}
+            onClick={() => onAttendanceSelect(slot.key)}
+          />
+        ))}
+        <SummaryFilterButton
+          label="Nessuna fascia indicata"
+          count={statistics.summary.withoutAttendance}
+          active={attendanceFilter === NO_ATTENDANCE_FILTER}
+          onClick={() => onAttendanceSelect(NO_ATTENDANCE_FILTER)}
+        />
+      </div>
+    </article>
+  );
+}
+
+function AgeStatisticsSummary({
+  statistics,
+  ageBandFilter,
+  onAgeBandSelect,
+}: {
+  statistics: EventStatisticsSnapshot;
+  ageBandFilter: string;
+  onAgeBandSelect: (ageBand: StatisticsAgeBand) => void;
+}) {
+  return (
+    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <h3 className="text-base font-semibold">Riepilogo fasce di età</h3>
+      <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+        Distribuzione calcolata all’inizio dell’evento. Seleziona una fascia
+        per vedere le persone corrispondenti nella tabella successiva.
+      </p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {AGE_BANDS.map((ageBand) => (
+          <SummaryFilterButton
+            key={ageBand}
+            label={ageBandLabel(ageBand)}
+            count={statistics.summary.ageBandCounts[ageBand]}
+            active={ageBandFilter === ageBand}
+            onClick={() => onAgeBandSelect(ageBand)}
+          />
+        ))}
       </div>
     </article>
   );

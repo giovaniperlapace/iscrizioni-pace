@@ -487,7 +487,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   partecipanti, minori accompagnati, fasce d'eta', presenze e territori/gruppi
   piu' rappresentati. I valori aggregati selezionabili applicano il filtro alla
   tabella corrispondente, cosi' il manager puo' verificare subito le persone che
-  compongono ogni conteggio senza introdurre azioni sui dati.
+  compongono ogni conteggio senza introdurre azioni sui dati. Dal 2026-08-05
+  riepiloghi e tabelle sono organizzati in coppie consecutive: riepilogo
+  territorio/gruppo seguito dalla relativa tabella, riepilogo presenze seguito
+  dalla tabella presenze e riepilogo eta' seguito dalla tabella eta'. Ogni nuovo
+  report futuro deve mantenere lo stesso blocco autonomo `riepilogo + tabella`;
+  non raggruppare prima tutti i riepiloghi e poi tutte le tabelle.
 - Dal 2026-08-04 il riepilogo iscrizione della dashboard partecipante espone
   l'azione `Messaggio agli organizzatori`. Il form invia al server soltanto il
   testo scritto dal partecipante; destinatario, oggetto e riepilogo vengono
