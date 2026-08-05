@@ -590,13 +590,13 @@ function AttendanceStatisticsSummary({
   onAttendanceSelect: (slotKey: string) => void;
 }) {
   return (
-    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+    <article className="@container min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <h3 className="text-base font-semibold">Riepilogo presenze previste</h3>
       <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
         Seleziona un giorno e una fascia per vedere le persone corrispondenti
         nella tabella successiva.
       </p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="mt-4 grid min-w-0 gap-2 @[32rem]:grid-cols-2 @[48rem]:grid-cols-3 @[64rem]:grid-cols-4">
         {statistics.attendanceSlots.map((slot) => (
           <SummaryFilterButton
             key={slot.key}
