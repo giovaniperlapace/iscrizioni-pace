@@ -82,6 +82,11 @@ import {
   SCHOOL_BOOKING_PRIVACY_VERSION,
   type SchoolBookingStatus,
 } from "@/lib/panels/school-bookings";
+import {
+  getPublicSchoolBookingOptions,
+  parsePublicSchoolBookingForm,
+} from "@/lib/panels/public-school-bookings";
+import { createPublicSchoolBooking } from "@/lib/panels/public-school-flow";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -101,6 +106,7 @@ import {
 
 const EMAIL_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
+const SCHOOL_BOOKING_RATE_LIMIT = { limit: 5, windowMs: 60 * 60 * 1000 };
 const MAGIC_LINK_SEND_COOLDOWN_MS = 60 * 1000;
 
 type OperationsGroupRow = {
@@ -2032,6 +2038,44 @@ export async function saveSchoolBooking(formData: FormData) {
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
   redirect(`${dashboardPath}&schoolSaved=${bookingId ? "updated" : "created"}`);
+}
+
+export async function submitPublicSchoolBooking(formData: FormData) {
+  const parsed = parsePublicSchoolBookingForm(formData);
+  const locale = normalizeLocale(String(formData.get("locale") ?? "")) ?? DEFAULT_LOCALE;
+  const errorPath = (code: string) => `/scuole?error=${encodeURIComponent(code)}`;
+  if (!parsed.ok) redirect(errorPath("invalid"));
+
+  const ipAddress = await getIpAddress();
+  if (!checkRateLimit(`school-booking:${ipAddress}:${parsed.value.teacherEmail}`, SCHOOL_BOOKING_RATE_LIMIT)) {
+    redirect(errorPath("rate"));
+  }
+
+  const supabase = createSupabaseServiceClient();
+  const options = await getPublicSchoolBookingOptions(supabase);
+  if (!options.event) redirect(errorPath("closed"));
+  const validSections = new Map(options.panels.map((panel) => [panel.sectionId, panel.panelId]));
+  if (parsed.value.reservations.some((row) => validSections.get(row.sectionId) !== row.panelId)) {
+    redirect(errorPath("invalid"));
+  }
+
+  try {
+    await createPublicSchoolBooking(
+      supabase,
+      parsed.value,
+      options.event,
+      options.panels,
+      getPublicSiteUrl()
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    const code = message.includes("overlap") ? "overlap" :
+      message.includes("capacity") || message.includes("full") ? "capacity" : "invalid";
+    redirect(errorPath(code));
+  }
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`/scuole/conferma?locale=${locale}`);
 }
 
 export async function cancelSchoolBooking(formData: FormData) {
