@@ -180,11 +180,11 @@ $$;
 revoke all on function public.create_public_school_booking(
   uuid, text, text, text, text, text, text, text, integer, integer,
   text, jsonb, text, text
-) from public;
+) from public, anon, authenticated;
 grant execute on function public.create_public_school_booking(
   uuid, text, text, text, text, text, text, text, integer, integer,
   text, jsonb, text, text
-) to anon, authenticated;
+) to service_role;
 
 create or replace function public.link_current_school_teacher_identity()
 returns integer

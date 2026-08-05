@@ -2059,23 +2059,109 @@ export async function submitPublicSchoolBooking(formData: FormData) {
     redirect(errorPath("invalid"));
   }
 
+  let emailSent = false;
   try {
-    await createPublicSchoolBooking(
+    const result = await createPublicSchoolBooking(
       supabase,
       parsed.value,
       options.event,
       options.panels,
       getPublicSiteUrl()
     );
+    emailSent = result.emailSent;
   } catch (error) {
-    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    const message = getUnknownErrorMessage(error).toLowerCase();
     const code = message.includes("overlap") ? "overlap" :
       message.includes("capacity") || message.includes("full") ? "capacity" : "invalid";
     redirect(errorPath(code));
   }
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
-  redirect(`/scuole/conferma?locale=${locale}`);
+  redirect(`/scuole/conferma?locale=${locale}&email=${emailSent ? "sent" : "failed"}`);
+}
+
+function getUnknownErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String(error.message);
+  }
+  return "";
+}
+
+export async function requestSchoolBookingAccess(formData: FormData) {
+  const email = normalizeEmail(formData.get("email"));
+  const ipAddress = await getIpAddress();
+  const sentPath = `/scuole/accesso?sent=1`;
+  if (!email || !email.includes("@")) redirect("/scuole/accesso?error=invalid");
+  if (!checkRateLimit(`school-access:${ipAddress}:${email}`, EMAIL_RATE_LIMIT)) redirect("/scuole/accesso?error=rate");
+  const supabase = createSupabaseServiceClient();
+  const { data: teacher } = await supabase.from("school_booking_teachers").select("id").eq("email", email).limit(1).maybeSingle();
+  if (!teacher) redirect(sentPath);
+  try {
+    await sendMagicLinkEmail(
+      supabase,
+      email,
+      `${getPublicSiteUrl()}/auth/callback?redirect_to=${encodeURIComponent("/dashboard/docente")}`
+    );
+  } catch {
+    redirect("/scuole/accesso?error=send");
+  }
+  redirect(sentPath);
+}
+
+export async function updateTeacherSchoolBooking(formData: FormData) {
+  const bookingId = optionalText(formData.get("bookingId"));
+  const eventId = optionalText(formData.get("eventId"));
+  const teacherEmail = optionalText(formData.get("teacherEmail"));
+  const teacherFirstName = optionalText(formData.get("teacherFirstName"));
+  const teacherLastName = optionalText(formData.get("teacherLastName"));
+  const teacherPhone = optionalText(formData.get("teacherPhone"));
+  const schoolName = optionalText(formData.get("schoolName"));
+  const schoolCity = optionalText(formData.get("schoolCity"));
+  const classDescription = optionalText(formData.get("classDescription"));
+  const studentCount = parsePositiveInteger(formData.get("studentCount"), 1000);
+  const companionCount = parsePositiveInteger(formData.get("companionCount"), 100);
+  const sectionIds = [...new Set(formData.getAll("sectionIds").map((value) => optionalText(value)).filter((value): value is string => Boolean(value)))];
+  if (!bookingId || !eventId || !teacherEmail || !teacherFirstName || !teacherLastName || !teacherPhone || !schoolName || !schoolCity || !classDescription || studentCount === null || companionCount === null || sectionIds.length < 1) {
+    redirect("/dashboard/docente?error=invalid");
+  }
+  const reservations = sectionIds.map((sectionId) => ({
+    section_id: sectionId,
+    panel_id: optionalText(formData.get(`panelId:${sectionId}`)),
+    student_count: parsePositiveInteger(formData.get(`students:${sectionId}`), studentCount),
+    companion_count: parsePositiveInteger(formData.get(`companions:${sectionId}`), companionCount),
+  }));
+  if (reservations.some((row) => !row.panel_id || row.student_count === null || row.companion_count === null)) redirect("/dashboard/docente?error=invalid");
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.email?.toLowerCase() !== teacherEmail.toLowerCase()) redirect("/login");
+  const { error } = await supabase.rpc("save_school_booking", {
+    p_event_id: eventId, p_booking_id: bookingId, p_teacher_email: teacherEmail,
+    p_teacher_first_name: teacherFirstName, p_teacher_last_name: teacherLastName,
+    p_teacher_phone: teacherPhone, p_school_name: schoolName, p_school_city: schoolCity,
+    p_class_description: classDescription, p_student_count: studentCount,
+    p_companion_count: companionCount, p_privacy_version: SCHOOL_BOOKING_PRIVACY_VERSION,
+    p_internal_notes: null, p_status: "submitted", p_panel_reservations: reservations,
+    p_qr_token_hash: null, p_qr_token_encrypted: null,
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    redirect(`/dashboard/docente?error=${message.includes("overlap") ? "overlap" : message.includes("capacity") ? "capacity" : "invalid"}`);
+  }
+  revalidatePath("/dashboard/docente");
+  redirect("/dashboard/docente?saved=1");
+}
+
+export async function cancelTeacherSchoolBooking(formData: FormData) {
+  const bookingId = optionalText(formData.get("bookingId"));
+  if (!bookingId) redirect("/dashboard/docente?error=invalid");
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { error } = await supabase.rpc("cancel_school_booking", { p_booking_id: bookingId });
+  if (error) redirect("/dashboard/docente?error=forbidden");
+  revalidatePath("/dashboard/docente");
+  redirect("/dashboard/docente?cancelled=1");
 }
 
 export async function cancelSchoolBooking(formData: FormData) {

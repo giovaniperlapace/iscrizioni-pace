@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { normalizeEmail } from "@/lib/registrations/validation";
+import { normalizeEmail } from "../registrations/validation.ts";
 
 export const PUBLIC_SCHOOL_BOOKING_PRIVACY_VERSION = "school-booking-v1";
 

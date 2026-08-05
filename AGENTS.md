@@ -2429,3 +2429,15 @@ Quando il piano verrà cancellato:
   dell'utente estraneo. La transazione e' terminata in rollback e nello staging
   resta applicata soltanto P1; per il collaudo browser bisogna applicare
   ordinatamente P2-P7 allo staging, mai alla production in questa fase.
+- Il 2026-08-06 e' stata avviata localmente la Milestone panel P8 sul branch
+  `codex/panel-p0-p10`. La migration
+  `20260806190000_public_school_booking_flow.sql` aggiunge la creazione
+  pubblica atomica delle prenotazioni sulla sola quota `school_booking` e il
+  collegamento dell'identita' docente dopo verifica email. La route `/scuole`
+  raccoglie una classe/gruppo per prenotazione senza dati degli studenti;
+  conferma, QR e magic link sono inviati come email transazionale. La route
+  `/dashboard/docente` consente alla stessa email verificata di consultare piu'
+  classi, correggere/ridurre posti, annullare e scaricare il QR. La prima
+  tranche non e' ancora stata applicata allo staging: prima della revisione
+  completare testi docente multilingua, test SQL con rollback e collaudo
+  browser mobile/accessibile. Nessuna modifica P8 e' in production.

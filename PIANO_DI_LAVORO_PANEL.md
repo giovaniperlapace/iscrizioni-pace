@@ -476,6 +476,14 @@ falsi partecipanti individuali.
 
 ### Milestone P8 - flusso pubblico scuole
 
+Stato: avviata localmente sul branch `codex/panel-p0-p10` il 2026-08-06.
+La prima tranche comprende route pubblica `Scuole`, creazione atomica sulla
+quota scuola, consenso versionato, email con QR e magic link, recupero accesso
+e pagina docente per consultare, modificare, ridurre o annullare. Restano da
+completare revisione UX/testi della pagina docente in tutte le lingue, test SQL
+transazionale sullo staging e collaudo browser mobile/accessibile. Nessuna
+modifica P8 e' stata applicata in production.
+
 Scopo: permettere al professore di prenotare biglietti per una o piu' classi.
 
 Deliverable:

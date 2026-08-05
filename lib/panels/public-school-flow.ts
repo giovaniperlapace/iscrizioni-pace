@@ -18,7 +18,7 @@ export async function createPublicSchoolBooking(
   event: { id: string; title: string },
   panels: PublicSchoolPanelOption[],
   appUrl: string
-) {
+): Promise<{ bookingId: string; emailSent: boolean }> {
   const qrToken = createOpaqueQrToken();
   const { data, error } = await supabase.rpc("create_public_school_booking", {
     p_event_id: event.id,
@@ -44,42 +44,24 @@ export async function createPublicSchoolBooking(
   if (error || !data) throw error ?? new Error("School booking was not created");
 
   const bookingId = String(data);
-  const callbackUrl = `${appUrl}/auth/callback?redirect_to=${encodeURIComponent("/dashboard/docente")}`;
-  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: "magiclink",
-    email: input.teacherEmail,
-    options: { redirectTo: callbackUrl },
-  });
-  const accessLink = buildAppMagicLink(callbackUrl, linkData.properties?.hashed_token ?? null) ?? linkData.properties?.action_link;
-  if (linkError || !accessLink) throw linkError ?? new Error("Magic link was not generated");
-
-  const optionById = new Map(panels.map((panel) => [panel.panelId, panel]));
-  const panelLines = input.reservations.map((reservation) => {
-    const panel = optionById.get(reservation.panelId);
-    return panel ? `${panel.title} — ${formatPanelDate(panel.startsAt)}` : reservation.panelId;
-  });
-  const qrContentId = `school-booking-${bookingId}@iscrizioni-pace`;
-  await sendTransactionalEmail({
-    to: input.teacherEmail,
-    ...renderSchoolBookingConfirmationEmail({
-      teacherFirstName: input.teacherFirstName,
-      eventTitle: event.title,
-      schoolName: input.schoolName,
-      classDescription: input.classDescription,
-      studentCount: input.studentCount,
-      companionCount: input.companionCount,
-      panelLines,
-      accessLink,
-      qrCodeContentId: qrContentId,
-    }),
-    attachments: [{
-      filename: `qr-scuola-${bookingId.slice(0, 8)}.png`,
-      content: await renderQrPngBuffer(qrToken.token),
-      contentType: "image/png",
-      cid: qrContentId,
-    }],
-  });
-  return bookingId;
+  try {
+    const callbackUrl = `${appUrl}/auth/callback?redirect_to=${encodeURIComponent("/dashboard/docente")}`;
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({ type: "magiclink", email: input.teacherEmail, options: { redirectTo: callbackUrl } });
+    const accessLink = buildAppMagicLink(callbackUrl, linkData.properties?.hashed_token ?? null) ?? linkData.properties?.action_link;
+    if (linkError || !accessLink) throw linkError ?? new Error("Magic link was not generated");
+    const optionById = new Map(panels.map((panel) => [panel.panelId, panel]));
+    const panelLines = input.reservations.map((reservation) => {
+      const panel = optionById.get(reservation.panelId);
+      return panel ? `${panel.title} — ${formatPanelDate(panel.startsAt)}` : reservation.panelId;
+    });
+    const qrContentId = `school-booking-${bookingId}@iscrizioni-pace`;
+    await sendTransactionalEmail({ to: input.teacherEmail, ...renderSchoolBookingConfirmationEmail({ teacherFirstName: input.teacherFirstName, eventTitle: event.title, schoolName: input.schoolName, classDescription: input.classDescription, studentCount: input.studentCount, companionCount: input.companionCount, panelLines, accessLink, qrCodeContentId: qrContentId }), attachments: [{ filename: `qr-scuola-${bookingId.slice(0, 8)}.png`, content: await renderQrPngBuffer(qrToken.token), contentType: "image/png", cid: qrContentId }] });
+    await supabase.from("audit_logs").insert({ event_id: event.id, action: "school_booking.confirmation_email_sent", entity_table: "school_bookings", entity_id: bookingId, metadata: {} });
+    return { bookingId, emailSent: true };
+  } catch {
+    await supabase.from("audit_logs").insert({ event_id: event.id, action: "school_booking.confirmation_email_failed", entity_table: "school_bookings", entity_id: bookingId, metadata: {} });
+    return { bookingId, emailSent: false };
+  }
 }
 
 function formatPanelDate(value: string) {

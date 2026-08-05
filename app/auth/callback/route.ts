@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
         user.id,
         user.email
       );
+      await supabase.rpc("link_current_school_teacher_identity");
     }
   } catch (error) {
     logAuthCallbackIssue(requestUrl, "profile", {
