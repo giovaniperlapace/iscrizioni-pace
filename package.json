@@ -5,18 +5,23 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:staging": "npm run staging:verify && node scripts/run-next-staging.mjs dev",
     "build": "next build",
+    "build:staging": "npm run staging:verify && node scripts/run-next-staging.mjs build",
     "start": "next start",
     "lint": "eslint",
     "test": "node --test tests/*.test.mts",
     "typecheck": "tsc --noEmit",
     "performance:http": "node scripts/benchmark-http.mjs",
-    "db:migrate:remote": "scripts/apply-remote-migration.sh",
+    "db:migrate:staging": "scripts/apply-remote-migration.sh staging",
+    "db:migrate:production": "scripts/apply-remote-migration.sh production",
     "bootstrap:test-users": "node scripts/bootstrap-test-users.mjs",
     "bootstrap:group-leaders": "node --env-file=.env.local scripts/bootstrap-group-leaders.mjs",
     "email:verify": "node --env-file=.env.local scripts/verify-email-config.mjs",
     "opening:verify": "node --env-file=.env.local scripts/verify-opening-readiness.mjs",
-    "opening:verify:production": "node --env-file=.env.production.local scripts/verify-opening-readiness.mjs --production"
+    "opening:verify:production": "node --env-file=.env.production.local scripts/verify-opening-readiness.mjs --production",
+    "staging:sync-env": "node --env-file=.env.local scripts/sync-staging-env.mjs",
+    "staging:verify": "node --env-file=.env.staging.local scripts/verify-staging-readiness.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

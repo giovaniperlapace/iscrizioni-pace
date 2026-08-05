@@ -28,20 +28,62 @@ Per il Supabase self-hosted attuale:
 
 La Supabase CLI `2.106.0` e' installata sul server in `/usr/local/bin/supabase`, ma verso il Postgres interno forza TLS e riceve `server refused TLS connection`. Finché questo resta vero, non usare `supabase db push` per questo ambiente.
 
-Usare invece lo script locale:
+Usare invece lo script locale indicando obbligatoriamente il target. Durante
+lo sviluppo P0-P10 il comando ordinario e':
 
 ```bash
-./scripts/apply-remote-migration.sh supabase/migrations/<timestamp>_<name>.sql
+npm run db:migrate:staging -- supabase/migrations/<timestamp>_<name>.sql
 ```
 
 Lo script:
 
-- legge `.env.local` se presente;
-- usa SSH verso `root@91.99.81.31` con `~/.ssh/id_ed25519_hetzner_20260613`;
-- copia la migration sul server;
-- applica SQL con `psql` dentro `supabase-db-ammnuajlmd83t94cfy3us6cw`;
-- registra la versione in `supabase_migrations.schema_migrations`;
+- legge esclusivamente `.env.staging.local` per staging oppure
+  `.env.production.local` per production;
+- non contiene fallback verso host, chiave SSH o container production;
+- rifiuta staging se viene indicato il container production noto;
+- copia la migration sul server e la applica con `psql` nel container scelto;
+- applicazione e registrazione in `supabase_migrations.schema_migrations`
+  avvengono nella stessa transazione;
 - invia `notify pgrst, 'reload schema'`.
+
+L'applicazione in production e' intenzionalmente piu' difficile e richiede sia
+il target sia la versione esatta della migration:
+
+```bash
+npm run db:migrate:production -- \
+  supabase/migrations/<timestamp>_<name>.sql \
+  --confirm-production <timestamp>
+```
+
+Non eseguire questo comando per P0-P10 prima del collaudo complessivo e della
+procedura finale di rilascio.
+
+## Ambiente staging
+
+- `.env.staging.example` documenta le variabili senza contenere segreti.
+- `.env.staging.local` contiene le credenziali reali staging ed e' ignorato da
+  Git.
+- `npm run staging:sync-env -- --stack-id <id> --ssh-key <path-assoluto>`
+  genera o aggiorna il file locale leggendo le chiavi dello stack via SSH,
+  senza stamparle; preserva i segreti QR e cron gia' generati.
+- `npm run staging:verify` blocca URL Supabase/application production ed email
+  reali.
+- `npm run dev:staging` avvia Next usando esplicitamente lo staging.
+- `npm run build:staging` verifica la build con la stessa configurazione.
+- I comandi Next staging passano le variabili al processo figlio tramite
+  `scripts/run-next-staging.mjs`; non usare direttamente `node --env-file` con
+  Next, perche' i worker della build rifiutano quell'opzione ereditata.
+- Lo staging usa Auth, database e Storage distinti e dati sintetici. Non
+  copiare dati personali production se non tramite un processo separato e
+  documentato di anonimizzazione.
+- Stack Coolify attuale: `jiio6ou5wzmma2xwas53cf1d`; endpoint API:
+  `https://supabase-staging-jiio6ou5wzmma2xwas53cf1d.91.99.81.31.sslip.io`.
+  I valori segreti restano esclusivamente in `.env.staging.local`, Coolify e
+  Vercel e non devono essere riportati nella documentazione o nei commit.
+- Vercel `Preview` usa le chiavi di questo stack e `EMAIL_DELIVERY_MODE=log`.
+  Dopo il primo deploy del branch impostare `NEXT_PUBLIC_APP_URL`, `APP_URL` e
+  `PUBLIC_SITE_URL` con l'URL Preview stabile e registrare lo stesso URL nella
+  configurazione redirect di Supabase Auth staging.
 
 Sotto il cofano, la parte applicativa equivalente e':
 
