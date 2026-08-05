@@ -359,7 +359,7 @@ export async function updateParticipantDashboard(formData: FormData) {
       .eq("registration_id", registrationRow.id),
     supabase
       .from("moment_attendance_choices")
-      .select("moment_id,choice")
+      .select("moment_id,choice,event_moments!inner(moment_type)")
       .eq("registration_id", registrationRow.id),
     supabase
       .from("accessibility_needs")
@@ -377,9 +377,20 @@ export async function updateParticipantDashboard(formData: FormData) {
     | { id: string; phone: string | null }
     | undefined;
   const previousMomentChoices = Object.fromEntries(
-    ((momentChoices ?? []) as Array<{ moment_id: string; choice: string }>).map(
-      (choice) => [choice.moment_id, choice.choice]
-    )
+    ((momentChoices ?? []) as Array<{
+      moment_id: string;
+      choice: string;
+      event_moments:
+        | { moment_type: "general" | "panel" }
+        | Array<{ moment_type: "general" | "panel" }>;
+    }>)
+      .filter((choice) => {
+        const moment = Array.isArray(choice.event_moments)
+          ? choice.event_moments[0]
+          : choice.event_moments;
+        return moment?.moment_type !== "panel";
+      })
+      .map((choice) => [choice.moment_id, choice.choice])
   );
   const previousAvailabilitySlots = ((attendanceChoices ?? []) as Array<{
     day: string | null;
@@ -496,15 +507,6 @@ export async function updateParticipantDashboard(formData: FormData) {
     );
   }
 
-  if (updatesChildren) {
-    writes.push(
-      supabase
-        .from("registration_children")
-        .delete()
-        .eq("registration_id", registrationRow.id)
-    );
-  }
-
   const writeResults = await Promise.all(writes);
   const failedWrite = writeResults.find((result) => result.error);
 
@@ -538,15 +540,19 @@ export async function updateParticipantDashboard(formData: FormData) {
     momentRows.length > 0
       ? supabase.from("moment_attendance_choices").insert(momentRows)
       : Promise.resolve({ error: null }),
-    updatesChildren && dashboardUpdate.children.length > 0
-      ? supabase
-          .from("registration_children")
-          .insert(
-            toRegistrationChildRows(
-              registrationRow.id,
-              dashboardUpdate.children
-            )
-          )
+    updatesChildren
+      ? supabase.rpc("replace_owned_registration_children", {
+          p_registration_id: registrationRow.id,
+          p_children: toRegistrationChildRows(
+            registrationRow.id,
+            dashboardUpdate.children
+          ).map(({ first_name, last_name, birth_date, position }) => ({
+            first_name,
+            last_name,
+            birth_date,
+            position,
+          })),
+        })
       : Promise.resolve({ error: null }),
   ]);
   const failedInsert = insertResults.find((result) => result.error);
@@ -576,6 +582,59 @@ export async function updateParticipantDashboard(formData: FormData) {
 
   revalidatePath("/dashboard/partecipante");
   redirect("/dashboard/partecipante?saved=1");
+}
+
+export async function setParticipantPanelBooking(formData: FormData) {
+  const registrationId = optionalText(formData.get("registrationId"));
+  const panelId = optionalText(formData.get("panelId"));
+  const sectionId = optionalText(formData.get("sectionId"));
+  const intent = optionalText(formData.get("intent"));
+
+  if (
+    !registrationId ||
+    !panelId ||
+    !sectionId ||
+    (intent !== "book" && intent !== "cancel")
+  ) {
+    redirect("/dashboard/partecipante?panelError=invalid");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "partecipante");
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const { error } = await supabase.rpc("set_individual_panel_booking", {
+    p_registration_id: registrationId,
+    p_panel_id: panelId,
+    p_section_id: sectionId,
+    p_booked: intent === "book",
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    const errorCode =
+      error.code === "23P01" || message.includes("overlap")
+        ? "overlap"
+        : message.includes("full") || message.includes("capacity exceeded")
+          ? "full"
+          : error.code === "42501" || message.includes("not found for this participant")
+            ? "forbidden"
+            : error.code === "P0002" || message.includes("not found")
+              ? "not-found"
+              : message.includes("not available")
+                ? "unavailable"
+                : "failed";
+    redirect(`/dashboard/partecipante?panelError=${errorCode}`);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/dashboard/partecipante");
+  redirect(
+    `/dashboard/partecipante?panelSaved=${intent === "book" ? "booked" : "cancelled"}`
+  );
 }
 
 export async function updateEventOpeningState(formData: FormData) {

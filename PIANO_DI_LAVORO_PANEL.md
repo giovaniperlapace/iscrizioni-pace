@@ -420,6 +420,11 @@ accesso senza vedere bozze o dati operativi.
 
 ### Milestone P6 - iscrizione individuale ai panel
 
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione SQL/RLS, applicazione della migration P6 esclusivamente
+allo staging e collaudo funzionale autenticato, inclusa la concorrenza
+sull'ultimo posto. Nessuna modifica P6 e' stata applicata in production.
+
 Scopo: attivare l'area panel gia' predisposta nella dashboard partecipante.
 
 Deliverable:

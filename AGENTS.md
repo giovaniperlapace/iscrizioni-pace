@@ -2367,3 +2367,33 @@ Quando il piano verrà cancellato:
   conclusa bisogna applicare la migration esclusivamente allo staging e
   collaudare card reali, bozze invisibili, stato completo e tutte le lingue.
   Production resta invariata.
+- Il 2026-08-05 la Milestone panel P6 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  La migration locale e'
+  `20260806120000_individual_panel_bookings.sql`: estende la tabella canonica
+  `moment_attendance_choices` con `seat_section_id`, senza creare una seconda
+  tabella prenotazioni, e aggiunge le RPC autenticate
+  `get_participant_panel_catalog` e `set_individual_panel_booking`. La scelta
+  self-service e la cancellazione sono idempotenti; la prenotazione blocca in
+  ordine registrazione, panel e sezioni, ricontrolla evento/panel/pubblico,
+  sezione `individual`, capienza e sovrapposizioni nella stessa transazione e
+  registra audit senza dati personali.
+- Ogni scelta individuale confermata occupa dinamicamente `1 + minori
+  collegati`. I constraint trigger P6 impediscono sia di ridurre una sezione
+  pubblicata sotto l'occupazione reale sia di aggiungere minori oltre la
+  capienza gia' prenotata. La dashboard partecipante sostituisce i minori con
+  la RPC transazionale `replace_owned_registration_children`, così una
+  modifica del nucleo non puo' lasciare una sostituzione parziale. Le scelte
+  dei panel non vengono piu' reinviate nei campi hidden dei form anagrafici:
+  quei form preservano soltanto le scelte dei momenti generali, mentre i panel
+  passano sempre dalla RPC atomica dedicata.
+- L'area partecipante mostra panel pubblicati e sezioni individuali, scelte
+  correnti, data/ora/location, numero di posti richiesti dal nucleo e stato
+  `Disponibile`, `Completo` o conflitto; i testi sono presenti in tutte le
+  sette lingue supportate. Il conteggio pubblico P5 e' stato sostituito con un
+  calcolo puntuale per sezione senza esporre capienza o occupazione. Test
+  applicativi, lint, typecheck e build sono verdi. Il test SQL con rollback
+  predisposto e' `tests/sql/individual-panel-bookings-rollback-check.sql`;
+  migration, RLS, ultimo posto concorrente, doppio click e UI autenticata
+  desktop/mobile devono essere collaudati esclusivamente sullo staging prima
+  di considerare P6 conclusa. Production resta invariata.
