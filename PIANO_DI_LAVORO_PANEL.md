@@ -367,6 +367,11 @@ capisce immediatamente cosa manca per pubblicarli.
 
 ### Milestone P4 - pubblicazione singola, multipla e modifica successiva
 
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione SQL/RLS, applicazione delle migration P2-P4 soltanto
+allo staging e collaudo funzionale autenticato. Nessuna modifica P4 e' stata
+applicata in production.
+
 Scopo: rendere sicuro il passaggio da bozza a programma pubblico.
 
 Deliverable:

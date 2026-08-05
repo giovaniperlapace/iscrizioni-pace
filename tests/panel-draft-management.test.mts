@@ -29,6 +29,10 @@ const fields = readFileSync(
   join(process.cwd(), "app/dashboard/panel-draft-fields.tsx"),
   "utf8"
 );
+const publicationTable = readFileSync(
+  join(process.cwd(), "app/dashboard/panel-publication-table.tsx"),
+  "utf8"
+);
 
 const panels: PanelDraftRow[] = [
   {
@@ -44,6 +48,7 @@ const panels: PanelDraftRow[] = [
     publicationStatus: "draft",
     publishedAt: null,
     updatedAt: null,
+    confirmedRegistrationCount: 0,
     sections: [],
     assignedCapacity: 100,
   },
@@ -60,6 +65,7 @@ const panels: PanelDraftRow[] = [
     publicationStatus: "published",
     publishedAt: "2026-08-05T12:00:00.000Z",
     updatedAt: null,
+    confirmedRegistrationCount: 0,
     sections: [],
     assignedCapacity: 80,
   },
@@ -134,14 +140,15 @@ test("P3 saves panel and sections atomically with database authorization and aud
 test("server action rejects invalid and duplicate sections and maps overlap errors", () => {
   assert.match(actions, /export async function savePanelDraft/);
   assert.match(actions, /new Set\(normalizedAudienceIds\)\.size/);
-  assert.match(actions, /supabase\.rpc\("save_panel_draft"/);
+  assert.match(actions, /"save_panel_draft"/);
+  assert.match(actions, /supabase\.rpc\(rpcName/);
   assert.match(actions, /error\.code === "23P01"/);
   assert.match(actions, /panelError=duplicate-audience/);
 });
 
 test("responsive overlay exposes live capacity, conflict and accessible section controls", () => {
-  assert.match(section, /md:hidden/);
-  assert.match(section, /hidden overflow-x-auto md:block/);
+  assert.match(publicationTable, /md:hidden/);
+  assert.match(publicationTable, /hidden overflow-x-auto md:block/);
   assert.match(section, /role="dialog"/);
   assert.match(section, /manager viewer/);
   assert.match(fields, /aria-live="polite"/);

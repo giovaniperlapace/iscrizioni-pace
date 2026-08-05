@@ -2305,3 +2305,39 @@ Quando il piano verrà cancellato:
   admin globale e manager dell'evento tramite `app.has_event_role`; non
   autorizza `manager_viewer`. Al termine del lavoro locale la migration non e'
   applicata ne' allo staging ne' alla production.
+- Il 2026-08-05 la Milestone panel P4 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  La tabella panel permette al manager/admin di pubblicare una singola bozza o
+  una selezione esplicita delle bozze filtrate; checkbox di riga e intestazione
+  ignorano i panel gia' pubblicati. Il dialogo riepiloga numero e titoli e
+  chiarisce che il batch e' atomico. Stato e data di pubblicazione sono
+  visibili sia nelle card mobile sia nella tabella desktop. Il
+  `manager_viewer` conserva la consultazione senza controlli di scrittura.
+- La migration P4 locale e'
+  `20260805230000_panel_publication_management.sql`. La RPC autenticata
+  `public.publish_panels` blocca panel e sezioni, verifica scope, intervallo,
+  location attiva, presenza delle sezioni e totale esatto per ogni elemento,
+  quindi pubblica tutto nella stessa transazione. I retry sono idempotenti;
+  oltre agli audit individuali `panel.published` gia' prodotti dalla P1, i
+  batch con piu' elementi registrano `panel.batch_published`.
+- I panel pubblicati sono modificabili con la RPC transazionale
+  `public.save_published_panel`, che sostituisce contenuti e sezioni soltanto
+  se la configurazione resta pubblicabile, impedisce che la capienza
+  individuale scenda sotto le scelte `moment_attendance_choices` confermate di
+  iscrizioni non annullate e registra `panel.published_updated`. L'audit
+  contiene solo indicatori di modifica, orari/location e numero aggregato
+  delle iscrizioni coinvolte, non dati personali. Prima della P6 le scelte
+  canoniche non identificano ancora la sezione: il controllo usa quindi la
+  somma delle sezioni col canale `individual`; la P6 dovra' rendere il vincolo
+  puntuale sulla sezione quando estendera' le prenotazioni atomiche.
+- L'overlay di modifica pubblicata mostra sempre quante iscrizioni confermate
+  risultano coinvolte e segnala che il collegamento a campagne filtrate per
+  panel verra' attivato dalla P9. Il salvataggio revalida anche la home per
+  rendere immediatamente visibile il catalogo pubblico alle future UI P5.
+  Test applicativi, lint, typecheck e build sono verdi; migration, RLS,
+  concorrenza e UI autenticata restano da collaudare esclusivamente sullo
+  staging prima di considerare conclusa P4. Il test transazionale predisposto
+  e' `tests/sql/panel-publication-rollback-check.sql`: verifica rollback totale
+  del batch invalido, batch valido, retry idempotente, modifica pubblicata,
+  audit e rifiuto del `manager_viewer`, terminando con errore deliberato per
+  annullare tutte le fixture. Production resta invariata.

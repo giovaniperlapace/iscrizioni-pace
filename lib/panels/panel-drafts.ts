@@ -35,6 +35,7 @@ export type PanelDraftRow = {
   publicationStatus: "draft" | "published";
   publishedAt: string | null;
   updatedAt: string | null;
+  confirmedRegistrationCount: number;
   sections: PanelSeatSection[];
   assignedCapacity: number;
 };
@@ -117,6 +118,32 @@ export async function getPanelDraftCatalog(
     }
   }
 
+  const panelRows = (panelsResult.data ?? []) as PanelRow[];
+  const panelIds = panelRows.map((row) => row.id);
+  const choicesResult = panelIds.length
+    ? await supabase
+        .from("moment_attendance_choices")
+        .select("moment_id,registration_id,registrations!inner(status)")
+        .in("moment_id", panelIds)
+        .eq("choice", "yes")
+        .neq("registrations.status", "cancelled")
+    : { data: [], error: null };
+
+  if (choicesResult.error) {
+    throw choicesResult.error;
+  }
+
+  const confirmedRegistrationsByPanel = new Map<string, Set<string>>();
+  for (const choice of (choicesResult.data ?? []) as Array<{
+    moment_id: string;
+    registration_id: string;
+  }>) {
+    const registrations =
+      confirmedRegistrationsByPanel.get(choice.moment_id) ?? new Set<string>();
+    registrations.add(choice.registration_id);
+    confirmedRegistrationsByPanel.set(choice.moment_id, registrations);
+  }
+
   const audienceRows = (audienceResult.data ?? []) as AudienceRow[];
   const audienceById = new Map(audienceRows.map((row) => [row.id, row]));
   const locationsById = new Map(
@@ -142,7 +169,7 @@ export async function getPanelDraftCatalog(
     sectionsByPanel.set(row.panel_id, sections);
   }
 
-  const panels = ((panelsResult.data ?? []) as PanelRow[]).map((row) => {
+  const panels = panelRows.map((row) => {
     const location = row.location_id ? locationsById.get(row.location_id) : null;
     const sections = sectionsByPanel.get(row.id) ?? [];
 
@@ -160,6 +187,8 @@ export async function getPanelDraftCatalog(
         row.publication_status === "published" ? "published" : "draft",
       publishedAt: row.published_at,
       updatedAt: row.updated_at,
+      confirmedRegistrationCount:
+        confirmedRegistrationsByPanel.get(row.id)?.size ?? 0,
       sections,
       assignedCapacity: sections.reduce((sum, section) => sum + section.capacity, 0),
     } satisfies PanelDraftRow;

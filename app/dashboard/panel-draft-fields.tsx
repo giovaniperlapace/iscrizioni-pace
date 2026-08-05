@@ -183,6 +183,9 @@ export function PanelDraftFields({
             <p className="text-xs leading-5 text-[var(--peace-muted)]">
               Ogni tipo di pubblico può comparire una sola volta. Una bozza può
               essere salvata anche con una distribuzione incompleta.
+              {panel?.publicationStatus === "published"
+                ? " Per un panel pubblico il totale deve sempre coincidere con la capienza."
+                : ""}
             </p>
           </div>
           <button
@@ -292,7 +295,9 @@ export function PanelDraftFields({
         {difference !== null ? (
           <p className="text-sm text-[var(--peace-muted)]">
             {difference === 0
-              ? "La distribuzione coincide con la capienza: il panel sarà pubblicabile dalla fase successiva."
+              ? panel?.publicationStatus === "published"
+                ? "La distribuzione coincide con la capienza e può essere salvata."
+                : "La distribuzione coincide con la capienza: il panel è pronto per la pubblicazione."
               : difference > 0
                 ? `Restano ${difference} posti da assegnare prima della pubblicazione.`
                 : `La distribuzione supera la capienza di ${Math.abs(difference)} posti.`}

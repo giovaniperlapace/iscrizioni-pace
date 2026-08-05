@@ -1702,6 +1702,10 @@ export async function savePanelDraft(formData: FormData) {
   const dashboardPath = getPanelDraftsDashboardPath(sourceDashboard, nav);
   const eventId = optionalText(formData.get("eventId"));
   const panelId = optionalText(formData.get("panelId"));
+  const publicationStatus =
+    optionalText(formData.get("publicationStatus")) === "published"
+      ? "published"
+      : "draft";
   const title = normalizePanelTitle(formData.get("title"));
   const description = normalizePanelDescription(formData.get("description"));
   const locationId = optionalText(formData.get("locationId"));
@@ -1756,7 +1760,11 @@ export async function savePanelDraft(formData: FormData) {
     redirect(`${dashboardPath}&panelError=forbidden`);
   }
 
-  const { error } = await supabase.rpc("save_panel_draft", {
+  const rpcName =
+    panelId && publicationStatus === "published"
+      ? "save_published_panel"
+      : "save_panel_draft";
+  const { error } = await supabase.rpc(rpcName, {
     p_event_id: eventId,
     p_panel_id: panelId,
     p_title: title,
@@ -1781,7 +1789,11 @@ export async function savePanelDraft(formData: FormData) {
             ? "forbidden"
             : error.code === "P0002" || message.includes("not found")
               ? "not-found"
-              : message.includes("inside the event")
+              : message.includes("confirmed registrations")
+                ? "booked-capacity"
+                : message.includes("capacity total")
+                  ? "capacity-total"
+                  : message.includes("inside the event")
                 ? "outside-event"
                 : "invalid";
     redirect(`${dashboardPath}&panelError=${errorCode}`);
@@ -1789,7 +1801,90 @@ export async function savePanelDraft(formData: FormData) {
 
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
-  redirect(`${dashboardPath}&panelSaved=${panelId ? "updated" : "created"}`);
+  redirect(
+    `${dashboardPath}&panelSaved=${
+      publicationStatus === "published"
+        ? "published-updated"
+        : panelId
+          ? "updated"
+          : "created"
+    }`
+  );
+}
+
+export async function publishPanels(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelDraftsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const panelIds = [
+    ...new Set(
+      formData
+        .getAll("panelIds")
+        .map((value) => optionalText(value))
+        .filter((value): value is string => Boolean(value))
+    ),
+  ];
+
+  if (!eventId || panelIds.length === 0 || panelIds.length > 200) {
+    redirect(`${dashboardPath}&panelError=publish-selection`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&panelError=forbidden`);
+  }
+
+  const { data, error } = await supabase.rpc("publish_panels", {
+    p_event_id: eventId,
+    p_panel_ids: panelIds,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    const errorCode =
+      error.code === "42501" || message.includes("forbidden")
+        ? "forbidden"
+        : error.code === "P0002" || message.includes("not found")
+          ? "not-found"
+          : error.code === "23514" || message.includes("incomplete")
+            ? "publish-invalid"
+            : "publish-failed";
+    redirect(`${dashboardPath}&panelError=${errorCode}`);
+  }
+
+  const publishedCount =
+    typeof data === "object" && data !== null && "published_count" in data
+      ? Number(data.published_count)
+      : panelIds.length;
+
+  revalidatePath("/");
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(
+    `${dashboardPath}&panelSaved=${
+      publishedCount === 0
+        ? "already-published"
+        : publishedCount > 1
+          ? "batch-published"
+          : "published"
+    }&panelCount=${Math.max(0, publishedCount)}`
+  );
 }
 
 export async function updateParticipantEventService(formData: FormData) {
