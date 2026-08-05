@@ -26,6 +26,22 @@ type PublicMessages = {
     eventTitle: string;
     noEvent: string;
   };
+  panelProgram: {
+    eyebrow: string;
+    title: string;
+    intro: string;
+    empty: string;
+    availability: {
+      available: string;
+      full: string;
+      unavailable: string;
+    };
+    locationLabel: string;
+    accessCta: string;
+    accessHint: string;
+    metadataTitle: string;
+    metadataDescription: string;
+  };
   emailAccess: {
     submit: string;
     pending: string;
@@ -88,6 +104,22 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         "Inserisci la tua email: se hai già un'iscrizione riceverai un magic link, altrimenti apriremo il form per una nuova iscrizione.",
       eventTitle: "Evento",
       noEvent: "Nessun evento pubblicato accetta iscrizioni in questo momento.",
+    },
+    panelProgram: {
+      eyebrow: "Programma",
+      title: "I panel dell'incontro",
+      intro: "Scopri gli incontri pubblicati, gli orari e le sale. La disponibilità indicata riguarda i posti riservati agli iscritti.",
+      empty: "Il programma dei panel è in aggiornamento. Torna presto per consultare gli incontri pubblicati.",
+      availability: {
+        available: "Disponibile",
+        full: "Completo",
+        unavailable: "Non prenotabile",
+      },
+      locationLabel: "Luogo",
+      accessCta: "Accedi e scegli i panel",
+      accessHint: "Usa l'email della tua iscrizione.",
+      metadataTitle: "Programma panel | Pace disarmata e disarmante",
+      metadataDescription: "Consulta giorni, orari, location e disponibilità dei panel pubblicati per l'incontro internazionale di pace ad Assisi.",
     },
     emailAccess: {
       submit: "Continua",
@@ -161,6 +193,22 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       eventTitle: "Event",
       noEvent: "No published event is accepting registrations at the moment.",
     },
+    panelProgram: {
+      eyebrow: "Programme",
+      title: "Meeting panels",
+      intro: "Explore the published sessions, times and venues. Availability refers only to places reserved for registered participants.",
+      empty: "The panel programme is being updated. Check back soon to see the published sessions.",
+      availability: {
+        available: "Available",
+        full: "Full",
+        unavailable: "Not bookable",
+      },
+      locationLabel: "Venue",
+      accessCta: "Access and choose panels",
+      accessHint: "Use the email address on your registration.",
+      metadataTitle: "Panel programme | Unharmed and Disarming Peace",
+      metadataDescription: "View dates, times, venues and availability for the published panels at the International Meeting for Peace in Assisi.",
+    },
     emailAccess: {
       submit: "Continue",
       pending: "Sending...",
@@ -232,6 +280,22 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         "Saisis ton email : si tu as déjà une inscription, tu recevras un magic link ; sinon nous ouvrirons le formulaire pour une nouvelle inscription.",
       eventTitle: "Événement",
       noEvent: "Aucun événement publié n'accepte d'inscriptions pour le moment.",
+    },
+    panelProgram: {
+      eyebrow: "Programme",
+      title: "Les panels de la rencontre",
+      intro: "Découvre les rencontres publiées, leurs horaires et leurs salles. La disponibilité concerne uniquement les places réservées aux personnes inscrites.",
+      empty: "Le programme des panels est en cours de mise à jour. Reviens bientôt pour consulter les rencontres publiées.",
+      availability: {
+        available: "Disponible",
+        full: "Complet",
+        unavailable: "Non réservable",
+      },
+      locationLabel: "Lieu",
+      accessCta: "Accéder et choisir les panels",
+      accessHint: "Utilise l'adresse email de ton inscription.",
+      metadataTitle: "Programme des panels | Paix désarmée et désarmante",
+      metadataDescription: "Consulte les jours, horaires, lieux et disponibilités des panels publiés pour la Rencontre internationale pour la paix à Assise.",
     },
     emailAccess: {
       submit: "Continuer",
@@ -305,6 +369,22 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       eventTitle: "Veranstaltung",
       noEvent: "Derzeit nimmt keine veröffentlichte Veranstaltung Anmeldungen entgegen.",
     },
+    panelProgram: {
+      eyebrow: "Programm",
+      title: "Die Panels des Treffens",
+      intro: "Entdecke die veröffentlichten Gespräche, Uhrzeiten und Räume. Die Verfügbarkeit bezieht sich nur auf Plätze für angemeldete Teilnehmende.",
+      empty: "Das Panelprogramm wird aktualisiert. Schau bald wieder vorbei, um die veröffentlichten Gespräche zu sehen.",
+      availability: {
+        available: "Verfügbar",
+        full: "Ausgebucht",
+        unavailable: "Nicht buchbar",
+      },
+      locationLabel: "Ort",
+      accessCta: "Anmelden und Panels wählen",
+      accessHint: "Verwende die E-Mail-Adresse deiner Anmeldung.",
+      metadataTitle: "Panelprogramm | Unbewaffneter und entwaffnender Friede",
+      metadataDescription: "Termine, Uhrzeiten, Orte und Verfügbarkeit der veröffentlichten Panels beim Internationalen Friedenstreffen in Assisi.",
+    },
     emailAccess: {
       submit: "Weiter",
       pending: "Wird gesendet...",
@@ -376,6 +456,22 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         "Introduce tu email: si ya tienes una inscripción, recibirás un magic link; si no, abriremos el formulario para una nueva inscripción.",
       eventTitle: "Evento",
       noEvent: "Ningún evento publicado acepta inscripciones en este momento.",
+    },
+    panelProgram: {
+      eyebrow: "Programa",
+      title: "Los paneles del encuentro",
+      intro: "Descubre los encuentros publicados, sus horarios y salas. La disponibilidad se refiere solo a las plazas reservadas para participantes inscritos.",
+      empty: "El programa de paneles se está actualizando. Vuelve pronto para consultar los encuentros publicados.",
+      availability: {
+        available: "Disponible",
+        full: "Completo",
+        unavailable: "No reservable",
+      },
+      locationLabel: "Lugar",
+      accessCta: "Accede y elige los paneles",
+      accessHint: "Usa el email de tu inscripción.",
+      metadataTitle: "Programa de paneles | Paz desarmada y desarmante",
+      metadataDescription: "Consulta días, horarios, lugares y disponibilidad de los paneles publicados para el Encuentro Internacional por la Paz en Asís.",
     },
     emailAccess: {
       submit: "Continuar",
@@ -449,6 +545,22 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       eventTitle: "Evenement",
       noEvent: "Er is momenteel geen gepubliceerd evenement waarvoor inschrijving open is.",
     },
+    panelProgram: {
+      eyebrow: "Programma",
+      title: "De panels van de bijeenkomst",
+      intro: "Bekijk de gepubliceerde bijeenkomsten, tijden en zalen. De beschikbaarheid geldt alleen voor plaatsen voor geregistreerde deelnemers.",
+      empty: "Het panelprogramma wordt bijgewerkt. Kom binnenkort terug om de gepubliceerde bijeenkomsten te bekijken.",
+      availability: {
+        available: "Beschikbaar",
+        full: "Vol",
+        unavailable: "Niet reserveerbaar",
+      },
+      locationLabel: "Locatie",
+      accessCta: "Toegang en panels kiezen",
+      accessHint: "Gebruik het e-mailadres van je inschrijving.",
+      metadataTitle: "Panelprogramma | Ontwapende en ontwapenende vrede",
+      metadataDescription: "Bekijk dagen, tijden, locaties en beschikbaarheid van de gepubliceerde panels voor de Internationale Ontmoeting voor Vrede in Assisi.",
+    },
     emailAccess: {
       submit: "Doorgaan",
       pending: "Verzenden...",
@@ -520,6 +632,22 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         "Введіть вашу електронну адресу: якщо ви вже зареєстровані, отримаєте magic link; інакше ми відкриємо форму нової реєстрації.",
       eventTitle: "Подія",
       noEvent: "Наразі немає опублікованої події з відкритою реєстрацією.",
+    },
+    panelProgram: {
+      eyebrow: "Програма",
+      title: "Панельні дискусії зустрічі",
+      intro: "Перегляньте опубліковані зустрічі, час і місця проведення. Наявність стосується лише місць для зареєстрованих учасників.",
+      empty: "Програма панельних дискусій оновлюється. Незабаром поверніться, щоб переглянути опубліковані зустрічі.",
+      availability: {
+        available: "Є місця",
+        full: "Місць немає",
+        unavailable: "Неможливо забронювати",
+      },
+      locationLabel: "Місце",
+      accessCta: "Увійти та обрати панелі",
+      accessHint: "Використайте електронну адресу, вказану під час реєстрації.",
+      metadataTitle: "Програма панелей | Беззбройний і роззброювальний мир",
+      metadataDescription: "Перегляньте дати, час, місця та наявність місць на опублікованих панелях Міжнародної зустрічі за мир в Ассізі.",
     },
     emailAccess: {
       submit: "Продовжити",

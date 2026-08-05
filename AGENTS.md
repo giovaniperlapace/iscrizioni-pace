@@ -2341,3 +2341,29 @@ Quando il piano verrà cancellato:
   del batch invalido, batch valido, retry idempotente, modifica pubblicata,
   audit e rifiuto del `manager_viewer`, terminando con errore deliberato per
   annullare tutte le fixture. Production resta invariata.
+- Il 2026-08-05 la Milestone panel P5 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  La home anonima contiene ora una sezione programma accessibile e responsive,
+  raggruppata per giorno nel fuso `Europe/Rome`, con titolo, descrizione,
+  orario, location, indirizzo, stato disponibilita' e CTA verso il form email
+  di accesso personale. La sezione e i metadata sono tradotti in italiano,
+  inglese, francese, tedesco, spagnolo, neerlandese e ucraino; lo stato vuoto
+  resta esplicito quando non esistono panel pubblicati.
+- La migration P5 locale e'
+  `20260806090000_public_panel_program.sql`. La funzione security-definer
+  `public.get_public_panel_program()` restituisce soltanto i panel pubblicati
+  dell'evento corrente e uno stato aggregato `available`, `full` o
+  `unavailable` riferito al solo canale individuale. Non espone capienze,
+  occupazione o quote scuola/ospiti. Nel calcolo provvisorio P5 ogni scelta
+  confermata vale `1 + minori collegati`; la P6 dovra' aggiornare la funzione
+  insieme alla nuova identificazione canonica della sezione. Se la RPC non e'
+  ancora installata durante un rollout migration-first, la home mostra il solo
+  stato programma in aggiornamento; errori diversi da `PGRST202` non vengono
+  nascosti.
+- Test applicativi, lint, typecheck, build e revisione browser dello stato
+  vuoto sono verdi, inclusi responsive mobile e cambio italiano/inglese. Il
+  test SQL staging predisposto e'
+  `tests/sql/public-panel-program-rollback-check.sql`. Prima di considerare P5
+  conclusa bisogna applicare la migration esclusivamente allo staging e
+  collaudare card reali, bozze invisibili, stato completo e tutte le lingue.
+  Production resta invariata.

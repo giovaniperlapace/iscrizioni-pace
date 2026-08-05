@@ -394,6 +394,11 @@ batch parzialmente pubblicato.
 
 ### Milestone P5 - programma panel nella home pubblica
 
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di applicazione della migration P5 esclusivamente allo staging e di
+revisione funzionale con panel pubblicati. Nessuna modifica P5 e' stata
+applicata in production.
+
 Scopo: mostrare sulla home le informazioni pubbliche dei panel.
 
 Deliverable:

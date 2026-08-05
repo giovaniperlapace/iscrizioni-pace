@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
+
 import { startPublicEmailFlow } from "@/app/actions";
 import { EmailAccessForm } from "@/app/email-access-form";
+import { PublicPanelProgram } from "@/app/public-panel-program";
 import { EventIdentity, PeaceLineMark } from "@/components/event-identity";
 import { getMessages } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
+import { getPublicPanelProgram } from "@/lib/panels/public-program";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type HomeProps = {
   searchParams: Promise<{
@@ -12,10 +17,24 @@ type HomeProps = {
   }>;
 };
 
-export default async function Home({ searchParams }: HomeProps) {
-  const params = await searchParams;
+export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
+  const copy = getMessages(locale).panelProgram;
+
+  return {
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+  };
+}
+
+export default async function Home({ searchParams }: HomeProps) {
+  const [params, locale, supabase] = await Promise.all([
+    searchParams,
+    getRequestLocale(),
+    createSupabaseServerClient(),
+  ]);
   const copy = getMessages(locale);
+  const panels = await getPublicPanelProgram(supabase);
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -29,7 +48,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 {copy.home.intro}
               </p>
             </div>
-            <div className="grid gap-5">
+            <div className="grid gap-5" id="personal-access">
               <EmailAccessForm
                 action={startPublicEmailFlow}
                 defaultEmail={params.email ?? ""}
@@ -41,6 +60,7 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
         </div>
       </section>
+      <PublicPanelProgram copy={copy.panelProgram} locale={locale} panels={panels} />
       <section className="app-container py-8">
         <div className="h-px bg-gradient-to-r from-transparent via-[var(--peace-sky-400)] to-transparent opacity-70" />
       </section>
