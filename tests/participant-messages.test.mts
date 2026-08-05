@@ -22,12 +22,37 @@ test("participant messages always use the fixed organizer recipient and subject"
 
   assert.equal(PARTICIPANT_MESSAGE_RECIPIENT, "registrationspeace@santegidio.org");
   assert.equal(email.subject, "Participant Message - Anna Bianchi");
-  assert.match(email.text, /Name: Anna/);
-  assert.match(email.text, /Surname: Bianchi/);
-  assert.match(email.text, /Group: Trastevere/);
-  assert.match(email.text, /ID: PACE-1234/);
-  assert.match(email.text, /Mail: anna@example\.org/);
+  assert.match(email.text, /Participant name: Anna/);
+  assert.match(email.text, /Participant surname: Bianchi/);
+  assert.match(email.text, /Participant group: Trastevere/);
+  assert.match(email.text, /Participant ID: PACE-1234/);
+  assert.match(email.text, /Participant email: anna@example\.org/);
   assert.match(email.text, /Message\nVorrei ricevere maggiori informazioni\./);
+});
+
+test("participant message details stay inline and emphasize important values", () => {
+  const email = renderParticipantOrganizerMessageEmail({
+    firstName: "Anna",
+    lastName: "Bianchi",
+    groupName: "Trastevere",
+    participantId: "PACE-1234",
+    email: "anna@example.org",
+    message: "Messaggio di prova",
+  });
+
+  assert.doesNotMatch(email.html, /<(?:dl|dt|dd)>/);
+  assert.match(
+    email.html,
+    /<strong>Participant name:<\/strong> Anna/
+  );
+  assert.match(
+    email.html,
+    /<strong>Participant surname:<\/strong> Bianchi/
+  );
+  assert.match(
+    email.html,
+    /<strong>Participant email:<\/strong> <a href="mailto:anna@example\.org"/
+  );
 });
 
 test("participant message HTML escapes participant data and message content", () => {

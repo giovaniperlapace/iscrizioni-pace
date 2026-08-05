@@ -10,6 +10,11 @@ const participantDashboard = readFileSync(
 
 const registrationSummary = participantDashboard.slice(
   participantDashboard.indexOf("function RegistrationSummaryCard"),
+  participantDashboard.indexOf("function ParticipantOrganizerContactCard")
+);
+
+const organizerContactCard = participantDashboard.slice(
+  participantDashboard.indexOf("function ParticipantOrganizerContactCard"),
   participantDashboard.indexOf("function SummaryInfo")
 );
 
@@ -32,4 +37,11 @@ test("participant registration overlay allows editing first and last name", () =
   assert.match(participantDashboard, /autoComplete="given-name"/);
   assert.match(participantDashboard, /name="lastName"/);
   assert.match(participantDashboard, /autoComplete="family-name"/);
+});
+
+test("organizer contact is a dedicated help card outside registration details", () => {
+  assert.doesNotMatch(registrationSummary, /overlay=messaggio/);
+  assert.match(organizerContactCard, /copy\.helpTitle/);
+  assert.match(organizerContactCard, /copy\.helpBody/);
+  assert.match(organizerContactCard, /overlay=messaggio/);
 });

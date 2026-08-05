@@ -689,6 +689,8 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
 
 type ParticipantOrganizerMessageCopy = ParticipantMessageFormCopy & {
   action: string;
+  helpTitle: string;
+  helpBody: string;
   title: string;
   body: string;
 };
@@ -698,7 +700,10 @@ const PARTICIPANT_MESSAGE_COPY: Record<
   ParticipantOrganizerMessageCopy
 > = {
   it: {
-    action: "Messaggio agli organizzatori",
+    action: "Contatta gli organizzatori",
+    helpTitle: "Hai bisogno di aiuto?",
+    helpBody:
+      "Per qualsiasi problema o dubbio sulla tua partecipazione, scrivi agli organizzatori.",
     title: "Invia un messaggio agli organizzatori",
     body:
       "Scrivi il tuo messaggio. Le informazioni necessarie per identificare la tua iscrizione saranno aggiunte automaticamente al momento dell'invio.",
@@ -719,7 +724,10 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     },
   },
   en: {
-    action: "Message the organisers",
+    action: "Contact the organisers",
+    helpTitle: "Need help?",
+    helpBody:
+      "If you have a problem or a question about your participation, write to the organisers.",
     title: "Send a message to the organisers",
     body:
       "Write your message. The information needed to identify your registration will be added automatically when it is sent.",
@@ -740,7 +748,10 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     },
   },
   fr: {
-    action: "Message aux organisateurs",
+    action: "Contacter les organisateurs",
+    helpTitle: "Besoin d’aide ?",
+    helpBody:
+      "Pour tout problème ou toute question concernant ta participation, écris aux organisateurs.",
     title: "Envoyer un message aux organisateurs",
     body:
       "Écris ton message. Les informations nécessaires pour identifier ton inscription seront ajoutées automatiquement lors de l'envoi.",
@@ -761,7 +772,10 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     },
   },
   de: {
-    action: "Nachricht an die Organisation",
+    action: "Organisation kontaktieren",
+    helpTitle: "Brauchst du Hilfe?",
+    helpBody:
+      "Wenn du ein Problem oder eine Frage zu deiner Teilnahme hast, schreibe der Organisation.",
     title: "Nachricht an die Organisation senden",
     body:
       "Schreibe deine Nachricht. Die Angaben zur Identifizierung deiner Anmeldung werden beim Senden automatisch ergänzt.",
@@ -782,7 +796,10 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     },
   },
   es: {
-    action: "Mensaje a los organizadores",
+    action: "Contactar con los organizadores",
+    helpTitle: "¿Necesitas ayuda?",
+    helpBody:
+      "Si tienes algún problema o duda sobre tu participación, escribe a los organizadores.",
     title: "Enviar un mensaje a los organizadores",
     body:
       "Escribe tu mensaje. Los datos necesarios para identificar tu inscripción se añadirán automáticamente al enviarlo.",
@@ -803,7 +820,10 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     },
   },
   nl: {
-    action: "Bericht aan de organisatie",
+    action: "Neem contact op met de organisatie",
+    helpTitle: "Hulp nodig?",
+    helpBody:
+      "Heb je een probleem of een vraag over je deelname? Stuur dan een bericht naar de organisatie.",
     title: "Stuur een bericht aan de organisatie",
     body:
       "Schrijf je bericht. De gegevens om je inschrijving te herkennen worden bij het verzenden automatisch toegevoegd.",
@@ -824,7 +844,10 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     },
   },
   uk: {
-    action: "Повідомлення організаторам",
+    action: "Зв’язатися з організаторами",
+    helpTitle: "Потрібна допомога?",
+    helpBody:
+      "Якщо у вас є проблема або запитання щодо участі, напишіть організаторам.",
     title: "Надіслати повідомлення організаторам",
     body:
       "Напишіть повідомлення. Дані для ідентифікації вашої реєстрації буде додано автоматично під час надсилання.",
@@ -1184,8 +1207,8 @@ export default async function PartecipanteDashboardPage({
           <>
             <section className="relative rounded-lg border border-[var(--peace-border)] bg-white p-5 pt-10 sm:p-6">
               <QrStatusIndicator active={qrStatus?.status === "active"} copy={copy} />
-              <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
-                <div className="mx-auto grid w-full max-w-56 gap-3 lg:mx-0">
+              <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
+                <div className="mx-auto grid w-full max-w-72 gap-3 lg:mx-0">
                   <QrPreview
                     participantCode={participant.public_code ?? ""}
                     qrDataUrl={qrDataUrl}
@@ -1195,6 +1218,10 @@ export default async function PartecipanteDashboardPage({
                     participantCode={participant.public_code}
                     qrDataUrl={qrDataUrl}
                     copy={copy}
+                  />
+                  <ParticipantOrganizerContactCard
+                    copy={messageCopy}
+                    active={activeOverlay === "messaggio"}
                   />
                 </div>
                 <RegistrationSummaryCard
@@ -1206,8 +1233,6 @@ export default async function PartecipanteDashboardPage({
                   supportSummary={supportSummary}
                   serviceLabel={participantServiceLabel}
                   active={activeOverlay === "iscrizione"}
-                  messageActive={activeOverlay === "messaggio"}
-                  messageCopy={messageCopy}
                   locale={locale}
                 />
               </div>
@@ -1932,8 +1957,6 @@ function RegistrationSummaryCard({
   supportSummary,
   serviceLabel,
   active,
-  messageActive,
-  messageCopy,
   locale,
 }: {
   copy: ParticipantDashboardCopy;
@@ -1944,8 +1967,6 @@ function RegistrationSummaryCard({
   supportSummary: string;
   serviceLabel: string | null;
   active: boolean;
-  messageActive: boolean;
-  messageCopy: ParticipantOrganizerMessageCopy;
   locale: SupportedLocale;
 }) {
   return (
@@ -2013,20 +2034,41 @@ function RegistrationSummaryCard({
             <ActionIcon icon="form" active={active} />
             {copy.edit}
           </Link>
-          <Link
-            href="/dashboard/partecipante?overlay=messaggio"
-            className={
-              messageActive
-                ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white"
-                : "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-            }
-          >
-            <MessageIcon active={messageActive} />
-            {messageCopy.action}
-          </Link>
         </div>
       </div>
     </details>
+  );
+}
+
+function ParticipantOrganizerContactCard({
+  copy,
+  active,
+}: {
+  copy: ParticipantOrganizerMessageCopy;
+  active: boolean;
+}) {
+  return (
+    <aside className="grid gap-3 rounded-lg border border-[var(--peace-border-strong)] bg-[var(--peace-sky-100)] p-4 shadow-sm">
+      <div className="grid gap-1">
+        <h2 className="text-base font-semibold text-[var(--peace-ink)]">
+          {copy.helpTitle}
+        </h2>
+        <p className="text-sm leading-5 text-[var(--peace-muted)]">
+          {copy.helpBody}
+        </p>
+      </div>
+      <Link
+        href="/dashboard/partecipante?overlay=messaggio"
+        className={
+          active
+            ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-center text-sm font-semibold text-white"
+            : "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-blue-800)] bg-white px-4 text-center text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-blue-800)] hover:text-white"
+        }
+      >
+        <MessageIcon active={active} />
+        {copy.action}
+      </Link>
+    </aside>
   );
 }
 

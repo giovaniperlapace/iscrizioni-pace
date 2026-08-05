@@ -497,8 +497,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   rinforzato, barra laterale blu, fondo azzurro e spazio esterno maggiore, per
   separare graficamente un report dal successivo senza allontanare riepilogo e
   tabella che appartengono allo stesso insieme.
-- Dal 2026-08-04 il riepilogo iscrizione della dashboard partecipante espone
-  l'azione `Messaggio agli organizzatori`. Il form invia al server soltanto il
+- Dal 2026-08-04 la dashboard partecipante espone l'azione per contattare gli
+  organizzatori in una card di assistenza autonoma sotto il QR, separata dal
+  riepilogo dell'iscrizione e introdotta da un breve testo di supporto. Il form
+  invia al server soltanto il
   testo scritto dal partecipante; destinatario, oggetto e riepilogo vengono
   costruiti esclusivamente lato server dopo la verifica della sessione. Il
   destinatario fisso e' `registrationspeace@santegidio.org`, l'oggetto e'
@@ -507,6 +509,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   limitato a 4.000 caratteri e protetto dal rate limiter. Gli audit
   `email.participant_message_sent` e `email.participant_message_failed`
   registrano solo metadati operativi e lunghezza, mai il testo del messaggio.
+  Nell'email ricevuta dall'organizzazione i cinque dati identificativi usano
+  righe compatte `etichetta: valore`, senza il rientro predefinito di `dl/dd`;
+  le etichette principali restano in grassetto e l'indirizzo email e'
+  cliccabile.
   Dopo un invio riuscito, la modale conferma che gli organizzatori hanno
   ricevuto il messaggio e che risponderanno al piu' presto; resta leggibile per
   3,5 secondi, poi scompare con una breve animazione e torna automaticamente

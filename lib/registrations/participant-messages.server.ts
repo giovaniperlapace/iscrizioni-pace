@@ -23,30 +23,50 @@ export function renderParticipantOrganizerMessageEmail(
     subject: `Participant Message - ${participantName}`,
     text: [
       "Participant details",
-      `Name: ${firstName}`,
-      `Surname: ${lastName || "Not provided"}`,
-      `Group: ${groupName}`,
-      `ID: ${input.participantId}`,
-      `Mail: ${participantEmail}`,
+      `Participant name: ${firstName}`,
+      `Participant surname: ${lastName || "Not provided"}`,
+      `Participant group: ${groupName}`,
+      `Participant ID: ${input.participantId}`,
+      `Participant email: ${participantEmail}`,
       "",
       "Message",
       input.message,
     ].join("\n"),
     html: [
-      "<h2>Participant details</h2>",
-      "<dl>",
-      `<dt><strong>Name</strong></dt><dd>${escapeHtml(firstName)}</dd>`,
-      `<dt><strong>Surname</strong></dt><dd>${escapeHtml(
-        lastName || "Not provided"
-      )}</dd>`,
-      `<dt><strong>Group</strong></dt><dd>${escapeHtml(groupName)}</dd>`,
-      `<dt><strong>ID</strong></dt><dd>${escapeHtml(input.participantId)}</dd>`,
-      `<dt><strong>Mail</strong></dt><dd>${escapeHtml(participantEmail)}</dd>`,
-      "</dl>",
-      "<h2>Message</h2>",
-      `<p>${escapeHtml(input.message).replaceAll("\n", "<br />")}</p>`,
+      '<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.45;color:#222222;">',
+      '<h2 style="margin:0 0 16px;font-size:22px;line-height:1.25;">Participant details</h2>',
+      renderDetailLine("Participant name", firstName),
+      renderDetailLine("Participant surname", lastName || "Not provided"),
+      renderDetailLine("Participant group", groupName),
+      renderDetailLine("Participant ID", input.participantId),
+      renderDetailLine(
+        "Participant email",
+        participantEmail,
+        input.email?.trim() ? `mailto:${participantEmail}` : null
+      ),
+      '<h2 style="margin:24px 0 8px;font-size:22px;line-height:1.25;">Message</h2>',
+      `<p style="margin:0;">${escapeHtml(input.message).replaceAll(
+        "\n",
+        "<br />"
+      )}</p>`,
+      "</div>",
     ].join(""),
   };
+}
+
+function renderDetailLine(
+  label: string,
+  value: string,
+  href: string | null = null
+): string {
+  const escapedValue = escapeHtml(value);
+  const renderedValue = href
+    ? `<a href="${escapeHtml(href)}" style="color:#0b57d0;text-decoration:underline;">${escapedValue}</a>`
+    : escapedValue;
+
+  return `<p style="margin:0 0 4px;"><strong>${escapeHtml(
+    label
+  )}:</strong> ${renderedValue}</p>`;
 }
 
 function normalizeHeaderValue(value: string): string {
