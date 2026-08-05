@@ -26,6 +26,8 @@ test("each statistics summary is immediately paired with its detail table", () =
     'id="statistics-attendance-table"',
     "<AgeStatisticsSummary",
     'id="statistics-age-table"',
+    '<ReportBlock name="combined"',
+    "Tutti i dati statistici",
   ];
   const positions = orderedMarkers.map((marker) => renderedReports.indexOf(marker));
 
@@ -33,30 +35,49 @@ test("each statistics summary is immediately paired with its detail table", () =
   assert.deepEqual(positions, [...positions].sort((first, second) => first - second));
   assert.equal(
     renderedReports.match(/<ReportBlock name=/g)?.length,
-    3
+    4
   );
   assert.match(statisticsSection, /data-statistics-report=\{name\}/);
   assert.match(statisticsSection, /border-2 border-\[#bfd8ea\]/);
 });
 
-test("statistics reports stay bounded and centered in the dashboard", () => {
+test("only the attendance report uses the centered bounded layout", () => {
   assert.match(
     statisticsSection,
-    /<section className="mx-auto grid w-full min-w-0 max-w-\[65rem\] gap-8">/
+    /<section className="grid w-full min-w-0 gap-8">/
   );
   assert.match(
     statisticsSection,
-    /className="relative mx-auto grid w-full min-w-0 max-w-full gap-4 overflow-hidden/
+    /name === "attendance" \? "mx-auto max-w-\[65rem\]" : "max-w-full"/
   );
 });
 
-test("attendance details show every day without horizontal scrolling", () => {
+test("attendance details keep the complete scrollable cross-table", () => {
   const attendanceReport = renderedReports.slice(
     renderedReports.indexOf('<ReportBlock name="attendance"'),
     renderedReports.indexOf('<ReportBlock name="age"')
   );
 
-  assert.match(attendanceReport, /data-attendance-person/);
-  assert.match(attendanceReport, /overflow-x-hidden overflow-y-auto/);
-  assert.doesNotMatch(attendanceReport, /min-w-max|overflow-x-auto|overflow-auto/);
+  assert.match(attendanceReport, /max-h-\[34rem\].*overflow-auto/);
+  assert.match(attendanceReport, /<table className="w-full min-w-max/);
+  assert.doesNotMatch(attendanceReport, /data-attendance-person/);
+});
+
+test("the final combined table crosses territory age and attendance", () => {
+  const combinedReport = renderedReports.slice(
+    renderedReports.indexOf('<ReportBlock name="combined"')
+  );
+
+  for (const marker of [
+    "Paese",
+    "Città",
+    "Gruppo",
+    "Nascita",
+    "Età",
+    "Fascia",
+    "statistics.attendanceSlots.map",
+  ]) {
+    assert.ok(combinedReport.includes(marker), `missing combined marker: ${marker}`);
+  }
+  assert.match(combinedReport, /max-h-\[42rem\].*overflow-auto/);
 });
