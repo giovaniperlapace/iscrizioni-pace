@@ -45,6 +45,7 @@ import {
   type OperationsParticipantRow,
 } from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
 import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
@@ -90,6 +91,10 @@ import {
   getEventLocations,
   normalizeEventLocationSearch,
 } from "@/lib/panels/event-locations";
+import {
+  getPanelDraftCatalog,
+  parsePanelDraftFilters,
+} from "@/lib/panels/panel-drafts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -134,6 +139,15 @@ type AdminPageProps = {
     locationQ?: string;
     locationSaved?: string;
     locationTool?: string;
+    panelDate?: string;
+    panelError?: string;
+    panelId?: string;
+    panelLocation?: string;
+    panelQ?: string;
+    panelSaved?: string;
+    panelStatus?: string;
+    panelTool?: string;
+    panelView?: string;
   }>;
 };
 
@@ -392,7 +406,7 @@ export default async function AdminDashboardPage({
       )
     : null;
   const currentEventId = currentEvent?.id ?? null;
-  const [snapshots, adminOperations, panelLocations] = await Promise.all([
+  const [snapshots, adminOperations, panelLocations, panelCatalog] = await Promise.all([
     activeSection === "evento" ? getOpeningSnapshots() : Promise.resolve([]),
     needsAdminOperations
       ? getAdminOperationsSnapshot(filters, currentEventId)
@@ -400,6 +414,9 @@ export default async function AdminDashboardPage({
     activeSection === "panel" && currentEventId
       ? getEventLocations(serviceSupabase, currentEventId)
       : Promise.resolve([]),
+    activeSection === "panel" && currentEventId
+      ? getPanelDraftCatalog(serviceSupabase, currentEventId)
+      : Promise.resolve({ panels: [], audienceTypes: [] }),
   ]);
   const statistics =
     activeSection === "dashboard"
@@ -426,6 +443,9 @@ export default async function AdminDashboardPage({
     null;
   const selectedLocation =
     panelLocations.find((location) => location.id === params.locationId) ?? null;
+  const selectedPanel =
+    panelCatalog.panels.find((panel) => panel.id === params.panelId) ?? null;
+  const panelView = params.panelView === "locations" ? "locations" : "panels";
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
@@ -486,7 +506,7 @@ export default async function AdminDashboardPage({
               />
             ) : null}
 
-            {activeSection === "panel" ? (
+            {activeSection === "panel" && panelView === "locations" ? (
               <PanelLocationsSection
                 dashboard="admin"
                 navMode={navMode}
@@ -498,6 +518,32 @@ export default async function AdminDashboardPage({
                 query={normalizeEventLocationSearch(params.locationQ)}
                 error={params.locationError}
                 saved={params.locationSaved}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "panels" ? (
+              <PanelDraftsSection
+                dashboard="admin"
+                navMode={navMode}
+                event={
+                  currentEvent
+                    ? {
+                        id: currentEvent.id,
+                        title: currentEvent.title,
+                        startsOn: currentEvent.starts_on ?? "",
+                        endsOn: currentEvent.ends_on ?? "",
+                      }
+                    : null
+                }
+                panels={panelCatalog.panels}
+                locations={panelLocations}
+                audienceTypes={panelCatalog.audienceTypes}
+                selectedPanel={selectedPanel}
+                isCreating={params.panelTool === "new"}
+                canManage
+                filters={parsePanelDraftFilters(params)}
+                error={params.panelError}
+                saved={params.panelSaved}
               />
             ) : null}
 

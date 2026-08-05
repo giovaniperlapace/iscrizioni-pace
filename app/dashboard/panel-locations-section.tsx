@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Pencil, Plus, Search, X } from "lucide-react";
+import { CalendarDays, MapPin, Pencil, Plus, Search, X } from "lucide-react";
 
 import { deleteEventLocation, saveEventLocation } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/app/dashboard/confirm-submit-button";
@@ -66,7 +66,14 @@ export function PanelLocationsSection({
           ) : null}
         </div>
 
-        <div className="mt-5 border-b border-[var(--peace-border)]">
+        <div className="mt-5 flex gap-1 border-b border-[var(--peace-border)]">
+          <Link
+            href={`/dashboard/${dashboard}?section=panel&panelView=panels&nav=${navMode}`}
+            className="inline-flex min-h-11 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-semibold text-[var(--peace-muted)] hover:text-[var(--peace-blue-800)]"
+          >
+            <CalendarDays className="size-4" aria-hidden="true" />
+            Panel
+          </Link>
           <span className="inline-flex min-h-11 items-center gap-2 border-b-2 border-[var(--peace-blue-800)] px-3 text-sm font-semibold text-[var(--peace-blue-800)]">
             <MapPin className="size-4" aria-hidden="true" />
             Location
@@ -90,6 +97,7 @@ export function PanelLocationsSection({
           >
             <input type="hidden" name="section" value="panel" />
             <input type="hidden" name="nav" value={navMode} />
+            <input type="hidden" name="panelView" value="locations" />
             <label className="grid flex-1 gap-1 text-sm font-semibold text-[var(--peace-ink)]">
               Cerca location
               <span className="relative">
@@ -479,7 +487,7 @@ function panelLocationsPath(
   dashboard: "admin" | "manager",
   navMode: "full" | "mini"
 ): string {
-  return `/dashboard/${dashboard}?section=panel&nav=${navMode}`;
+  return `/dashboard/${dashboard}?section=panel&panelView=locations&nav=${navMode}`;
 }
 
 function locationEditPath(

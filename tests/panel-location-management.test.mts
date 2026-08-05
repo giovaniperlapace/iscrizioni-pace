@@ -114,5 +114,5 @@ test("admin and manager share the Panel location section and preserve nav mode",
   assert.match(adminDashboard, /key: "panel"/);
   assert.match(managerDashboard, /<PanelLocationsSection/);
   assert.match(adminDashboard, /<PanelLocationsSection/);
-  assert.match(locationSection, /section=panel&nav=\$\{navMode\}/);
+  assert.match(locationSection, /section=panel&panelView=locations&nav=\$\{navMode\}/);
 });

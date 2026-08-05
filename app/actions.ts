@@ -69,6 +69,14 @@ import {
   normalizeEventLocationName,
   parseEventLocationCapacity,
 } from "@/lib/panels/event-locations";
+import {
+  PANEL_DESCRIPTION_MAX_LENGTH,
+  PANEL_MAX_SECTIONS,
+  PANEL_TITLE_MAX_LENGTH,
+  normalizePanelDescription,
+  normalizePanelTitle,
+  parsePanelCapacity,
+} from "@/lib/panels/panel-drafts";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -1686,6 +1694,102 @@ export async function deleteEventLocation(formData: FormData) {
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
   redirect(`${dashboardPath}&locationSaved=deleted`);
+}
+
+export async function savePanelDraft(formData: FormData) {
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelDraftsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const panelId = optionalText(formData.get("panelId"));
+  const title = normalizePanelTitle(formData.get("title"));
+  const description = normalizePanelDescription(formData.get("description"));
+  const locationId = optionalText(formData.get("locationId"));
+  const startsAt = parseIsoDateTime(formData.get("startsAt"));
+  const endsAt = parseIsoDateTime(formData.get("endsAt"));
+  const audienceTypeIds = formData
+    .getAll("audienceTypeIds")
+    .map((value) => optionalText(value));
+  const sectionCapacities = formData
+    .getAll("sectionCapacities")
+    .map((value) => parsePanelCapacity(value));
+
+  if (
+    !eventId ||
+    !title ||
+    title.length > PANEL_TITLE_MAX_LENGTH ||
+    (description?.length ?? 0) > PANEL_DESCRIPTION_MAX_LENGTH ||
+    !locationId ||
+    !startsAt ||
+    !endsAt ||
+    endsAt <= startsAt ||
+    audienceTypeIds.length !== sectionCapacities.length ||
+    audienceTypeIds.length > PANEL_MAX_SECTIONS ||
+    audienceTypeIds.some((value) => !value) ||
+    sectionCapacities.some((value) => value === null)
+  ) {
+    redirect(`${dashboardPath}&panelError=invalid`);
+  }
+
+  const normalizedAudienceIds = audienceTypeIds as string[];
+  if (new Set(normalizedAudienceIds).size !== normalizedAudienceIds.length) {
+    redirect(`${dashboardPath}&panelError=duplicate-audience`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&panelError=forbidden`);
+  }
+
+  const { error } = await supabase.rpc("save_panel_draft", {
+    p_event_id: eventId,
+    p_panel_id: panelId,
+    p_title: title,
+    p_description: description,
+    p_location_id: locationId,
+    p_starts_at: startsAt.toISOString(),
+    p_ends_at: endsAt.toISOString(),
+    p_sections: normalizedAudienceIds.map((audienceTypeId, index) => ({
+      audience_type_id: audienceTypeId,
+      capacity: sectionCapacities[index] as number,
+    })),
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    const errorCode =
+      error.code === "23P01" || message.includes("conflicting key value")
+        ? "overlap"
+        : error.code === "23505" || message.includes("duplicated")
+          ? "duplicate-audience"
+          : error.code === "42501" || message.includes("forbidden")
+            ? "forbidden"
+            : error.code === "P0002" || message.includes("not found")
+              ? "not-found"
+              : message.includes("inside the event")
+                ? "outside-event"
+                : "invalid";
+    redirect(`${dashboardPath}&panelError=${errorCode}`);
+  }
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&panelSaved=${panelId ? "updated" : "created"}`);
 }
 
 export async function updateParticipantEventService(formData: FormData) {
@@ -4055,6 +4159,17 @@ function optionalDateTimeLocal(value: FormDataEntryValue | null): string | null 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function parseIsoDateTime(value: FormDataEntryValue | null): Date | null {
+  const text = optionalText(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function parseGroupPlacement(value: FormDataEntryValue | null): {
   nodeType: string | null;
   parentGroupId: string | null;
@@ -4177,6 +4292,24 @@ function getPanelLocationsDashboardPath(
   const basePath =
     sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
   const params = new URLSearchParams({ section: "panel" });
+
+  if (navMode === "mini" || navMode === "full") {
+    params.set("nav", navMode);
+  }
+
+  return `${basePath}?${params.toString()}`;
+}
+
+function getPanelDraftsDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath =
+    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({
+    section: "panel",
+    panelView: "panels",
+  });
 
   if (navMode === "mini" || navMode === "full") {
     params.set("nav", navMode);

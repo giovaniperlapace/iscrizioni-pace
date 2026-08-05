@@ -41,6 +41,7 @@ import {
   type OperationsParticipantRow,
 } from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
 import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
@@ -82,6 +83,10 @@ import {
   getEventLocations,
   normalizeEventLocationSearch,
 } from "@/lib/panels/event-locations";
+import {
+  getPanelDraftCatalog,
+  parsePanelDraftFilters,
+} from "@/lib/panels/panel-drafts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -111,6 +116,15 @@ type ManagerPageProps = {
     locationQ?: string;
     locationSaved?: string;
     locationTool?: string;
+    panelDate?: string;
+    panelError?: string;
+    panelId?: string;
+    panelLocation?: string;
+    panelQ?: string;
+    panelSaved?: string;
+    panelStatus?: string;
+    panelTool?: string;
+    panelView?: string;
     roleError?: string;
     roleSaved?: string;
     roleUserId?: string;
@@ -355,10 +369,13 @@ export default async function ManagerDashboardPage({
   const canSeeCurrentEvent = Boolean(
     currentEventId && (!scope.eventIds || scope.eventIds.has(currentEventId))
   );
-  const panelLocations =
+  const [panelLocations, panelCatalog] =
     activeSection === "panel" && currentEventId && canSeeCurrentEvent
-      ? await getEventLocations(serviceSupabase, currentEventId)
-      : [];
+      ? await Promise.all([
+          getEventLocations(serviceSupabase, currentEventId),
+          getPanelDraftCatalog(serviceSupabase, currentEventId),
+        ])
+      : [[], { panels: [], audienceTypes: [] }];
   const managerOperations =
     activeSection === "email"
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
@@ -398,6 +415,9 @@ export default async function ManagerDashboardPage({
     null;
   const selectedLocation =
     panelLocations.find((location) => location.id === params.locationId) ?? null;
+  const selectedPanel =
+    panelCatalog.panels.find((panel) => panel.id === params.panelId) ?? null;
+  const panelView = params.panelView === "locations" ? "locations" : "panels";
   const navMode: ManagerNavMode = params.nav === "full" ? "full" : "mini";
 
   return (
@@ -472,7 +492,7 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
-            {activeSection === "panel" ? (
+            {activeSection === "panel" && panelView === "locations" ? (
               <PanelLocationsSection
                 dashboard="manager"
                 navMode={navMode}
@@ -490,6 +510,34 @@ export default async function ManagerDashboardPage({
                 query={normalizeEventLocationSearch(params.locationQ)}
                 error={params.locationError}
                 saved={params.locationSaved}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "panels" ? (
+              <PanelDraftsSection
+                dashboard="manager"
+                navMode={navMode}
+                event={
+                  currentEvent && canSeeCurrentEvent
+                    ? {
+                        id: currentEvent.id,
+                        title: currentEvent.title,
+                        startsOn: currentEvent.starts_on ?? "",
+                        endsOn: currentEvent.ends_on ?? "",
+                      }
+                    : null
+                }
+                panels={panelCatalog.panels}
+                locations={panelLocations}
+                audienceTypes={panelCatalog.audienceTypes}
+                selectedPanel={selectedPanel}
+                isCreating={params.panelTool === "new"}
+                canManage={Boolean(
+                  currentEventId && scope.canManageEvent(currentEventId)
+                )}
+                filters={parsePanelDraftFilters(params)}
+                error={params.panelError}
+                saved={params.panelSaved}
               />
             ) : null}
 
@@ -2474,14 +2522,6 @@ function EventValue({ label, value }: { label: string; value: number }) {
       <p className="mt-2 text-xl font-semibold">{value}</p>
     </div>
   );
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("it", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
 }
 
 function formatDateTime(value: string | null): string {

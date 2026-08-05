@@ -342,6 +342,11 @@ negative o incoerenti.
 
 ### Milestone P3 - bozze panel e sezioni di posti
 
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione funzionale e applicazione delle migration P2/P3
+esclusivamente allo staging. Nessuna modifica P3 e' stata applicata in
+production.
+
 Scopo: permettere la creazione completa di panel in bozza.
 
 Deliverable:

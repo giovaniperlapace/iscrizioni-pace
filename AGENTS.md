@@ -2281,3 +2281,27 @@ Quando il piano verrà cancellato:
   locale del 2026-08-05 la migration non e' applicata ne' allo staging ne'
   alla production. Prima della revisione remota applicarla esclusivamente allo
   staging secondo `PIANO_DI_LAVORO_PANEL.md`.
+- Il 2026-08-05 la Milestone P3 e' stata implementata localmente sul branch
+  `codex/panel-p0-p10`, senza commit, push, deploy o migration remota. La
+  sezione `Panel` usa ora due sottoviste condivise da admin e manager:
+  `Panel`, predefinita, e `Location`. La tabella panel e' filtrabile per testo,
+  stato, data e location; usa card su mobile e tabella da `md` in poi. Il ruolo
+  `manager_viewer` consulta panel e quote in sola lettura.
+- Le bozze panel si creano e modificano in overlay con titolo, descrizione,
+  orari nel fuso `Europe/Rome`, location e righe dinamiche di sezioni. Titolo e
+  descrizione sono limitati a 160 e 2000 caratteri; sono ammesse al massimo 20
+  sezioni, ciascun tipo pubblico puo' comparire una sola volta e la capienza di
+  sezione e' un intero non negativo. La bozza puo' essere salvata senza sezioni
+  o con somma incompleta/eccedente; la UI mostra in tempo reale assegnati,
+  capienza e differenza. Location e intervallo sono invece obbligatori e devono
+  rientrare nelle date evento. La UI segnala subito le sovrapposizioni note e
+  il vincolo exclusion P1 resta la protezione definitiva.
+- La migration P3 locale e'
+  `20260805220000_panel_draft_management.sql`. Aggiunge i constraint di
+  lunghezza per i panel e la RPC autenticata `public.save_panel_draft`, che in
+  una sola transazione crea o aggiorna esclusivamente una bozza, sostituisce le
+  sue `panel_seat_sections`, verifica scope evento/pubblici/location e registra
+  audit `panel.draft_created` o `panel.draft_updated`. La funzione autorizza
+  admin globale e manager dell'evento tramite `app.has_event_role`; non
+  autorizza `manager_viewer`. Al termine del lavoro locale la migration non e'
+  applicata ne' allo staging ne' alla production.
