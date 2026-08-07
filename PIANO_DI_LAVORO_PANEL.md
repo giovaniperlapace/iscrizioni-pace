@@ -61,6 +61,13 @@ Stato di partenza al 2026-08-04:
 - Le milestone P11 e successive iniziano un ciclo separato dopo il rilascio di
   P0-P10 e non devono prolungare il branch di integrazione del modulo panel.
 
+Stato integrazione al 2026-08-07: le migration P2-P9 sono applicate e
+registrate soltanto nel database staging. Home panel e modulo pubblico scuole
+sono stati verificati con la fixture sintetica P1. La Preview stabile del
+branch usa le variabili applicative dedicate e la allowlist Auth staging;
+production e `main` restano invariati. Restano il collaudo autenticato dei
+ruoli, i test SQL/RLS e concorrenza e la verifica decisionale del report P10.
+
 Prima di iniziare:
 
 - verificare `pwd`, branch e `git status --short`;

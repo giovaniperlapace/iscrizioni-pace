@@ -84,6 +84,12 @@ procedura finale di rilascio.
   Dopo il primo deploy del branch impostare `NEXT_PUBLIC_APP_URL`, `APP_URL` e
   `PUBLIC_SITE_URL` con l'URL Preview stabile e registrare lo stesso URL nella
   configurazione redirect di Supabase Auth staging.
+- Dal 2026-08-07 il branch `codex/panel-p0-p10` usa l'alias Preview stabile
+  `https://iscrizioni-pace-git-codex-pan-f98a13-giovaniperlapaces-projects.vercel.app`.
+  Le tre URL applicative sono configurate nello scope Preview limitato al
+  branch; GoTrue staging usa lo stesso URL come site URL e consente callback
+  da quell'alias e da `http://localhost:3000/**`. Non riutilizzare questo URL
+  o queste variabili nello scope Production.
 
 Sotto il cofano, la parte applicativa equivalente e':
 

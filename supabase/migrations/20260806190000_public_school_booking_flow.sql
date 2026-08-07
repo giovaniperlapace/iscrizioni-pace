@@ -274,7 +274,9 @@ $$;
 revoke all on function public.get_public_school_booking_options() from public;
 grant execute on function public.get_public_school_booking_options() to anon, authenticated;
 
-drop policy "panel seat sections published or operational read"
+drop policy if exists "panel seat sections published or operational read"
+  on public.panel_seat_sections;
+drop policy if exists "panel seat sections operational read"
   on public.panel_seat_sections;
 create policy "panel seat sections operational read"
   on public.panel_seat_sections for select

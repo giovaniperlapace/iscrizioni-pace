@@ -2512,6 +2512,19 @@ Quando il piano verrà cancellato:
   sintetiche e verifica browser autenticata per admin, manager e
   `manager_viewer`. Sono verdi 195 test, lint, typecheck, `staging:verify` e
   build production locale. Production resta invariata.
+- Il 2026-08-07 le migration panel P2-P9 sono state applicate e registrate in
+  ordine esclusivamente sul database staging. La migration P8 usa ora `drop
+  policy if exists` sia per la policy pubblica precedente sia per quella
+  operativa, cosi' il passaggio resta idempotente anche se la policy RLS e'
+  gia' stata aggiornata durante un tentativo precedente. Home e `/scuole`
+  mostrano i tre panel sintetici P1 senza errori console. Il branch
+  `codex/panel-p0-p10` usa l'alias Preview stabile
+  `https://iscrizioni-pace-git-codex-pan-f98a13-giovaniperlapaces-projects.vercel.app`:
+  `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` sono limitate a quel
+  branch nello scope Vercel Preview; GoTrue staging usa lo stesso site URL e
+  accetta callback dall'alias e da localhost. Production e `main` non sono
+  stati modificati. Restano da completare collaudo autenticato dei ruoli,
+  test SQL/RLS e concorrenza e verifica dei conteggi P10.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
