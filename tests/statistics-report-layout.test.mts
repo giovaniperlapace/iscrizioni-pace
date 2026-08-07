@@ -41,24 +41,27 @@ test("each statistics summary is immediately paired with its detail table", () =
   assert.match(statisticsSection, /border-2 border-\[#bfd8ea\]/);
 });
 
-test("only the attendance report uses the centered bounded layout", () => {
+test("report containers use all available width without clipping content", () => {
   assert.match(
     statisticsSection,
     /<section className="grid w-full min-w-0 gap-8">/
   );
   assert.match(
     statisticsSection,
-    /name === "attendance" \? "mx-auto max-w-\[65rem\]" : "max-w-full"/
+    /className="relative grid w-full min-w-0 max-w-full gap-4 overflow-visible/
   );
+  assert.doesNotMatch(statisticsSection, /max-w-\[65rem\]/);
+  assert.doesNotMatch(statisticsSection, /gap-4 overflow-hidden rounded-2xl/);
 });
 
-test("attendance details keep the complete scrollable cross-table", () => {
+test("attendance details keep the complete horizontally scrollable cross-table", () => {
   const attendanceReport = renderedReports.slice(
     renderedReports.indexOf('<ReportBlock name="attendance"'),
     renderedReports.indexOf('<ReportBlock name="age"')
   );
 
-  assert.match(attendanceReport, /max-h-\[34rem\].*overflow-auto/);
+  assert.match(attendanceReport, /overflow-x-auto overscroll-x-contain/);
+  assert.doesNotMatch(attendanceReport, /max-h-\[34rem\]|overflow-auto/);
   assert.match(attendanceReport, /<table className="w-full min-w-max/);
   assert.doesNotMatch(attendanceReport, /data-attendance-person/);
 });
@@ -79,5 +82,14 @@ test("the final combined table crosses territory age and attendance", () => {
   ]) {
     assert.ok(combinedReport.includes(marker), `missing combined marker: ${marker}`);
   }
-  assert.match(combinedReport, /max-h-\[42rem\].*overflow-auto/);
+  assert.match(combinedReport, /overflow-x-auto overscroll-x-contain/);
+  assert.doesNotMatch(combinedReport, /max-h-\[42rem\]|overflow-auto/);
+});
+
+test("all report tables grow vertically and confine horizontal overflow", () => {
+  assert.equal(
+    renderedReports.match(/overflow-x-auto overscroll-x-contain/g)?.length,
+    4
+  );
+  assert.doesNotMatch(renderedReports, /max-h-\[(?:34|42)rem\]/);
 });

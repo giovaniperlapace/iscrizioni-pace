@@ -206,7 +206,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
         <article
           id="statistics-territory-table"
-          className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+          className="min-w-0 max-w-full scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
         >
         <div>
           <h3 className="text-base font-semibold">Persone per territorio e gruppo</h3>
@@ -244,7 +244,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
         <ResultCount count={territoryRows.length} total={statistics.people.length} />
 
-        <div className="mt-3 max-h-[34rem] overflow-auto rounded-md border border-[var(--peace-border)]">
+        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
@@ -285,7 +285,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
         <article
           id="statistics-attendance-table"
-          className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+          className="min-w-0 max-w-full scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
         >
         <div>
           <h3 className="text-base font-semibold">Presenze per giorno e fascia</h3>
@@ -322,7 +322,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
         <ResultCount count={attendanceRows.length} total={statistics.people.length} />
 
-        <div className="mt-3 max-h-[34rem] min-w-0 max-w-full overflow-auto rounded-md border border-[var(--peace-border)]">
+        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
           <table className="w-full min-w-max border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
@@ -404,7 +404,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
         <article
           id="statistics-age-table"
-          className="scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+          className="min-w-0 max-w-full scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
         >
         <div>
           <h3 className="text-base font-semibold">Persone per età</h3>
@@ -440,7 +440,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
         <ResultCount count={ageRows.length} total={statistics.people.length} />
 
-        <div className="mt-3 max-h-[34rem] overflow-auto rounded-md border border-[var(--peace-border)]">
+        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
           <table className="w-full min-w-[680px] border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
@@ -479,13 +479,13 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
       </ReportBlock>
 
       <ReportBlock name="combined" title="Vista completa">
-        <article className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+        <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
           <div>
             <h3 className="text-base font-semibold">Tutti i dati statistici</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-              Vista unica di territorio, gruppo, età e presenze. La tabella può
-              scorrere orizzontalmente e verticalmente per mantenere tutti i dati
-              contemporaneamente disponibili.
+              Vista unica di territorio, gruppo, età e presenze. Se necessario,
+              la tabella può scorrere orizzontalmente per mantenere tutti i dati
+              leggibili.
             </p>
           </div>
 
@@ -500,7 +500,7 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
 
           <ResultCount count={combinedRows.length} total={statistics.people.length} />
 
-          <div className="mt-3 max-h-[42rem] min-w-0 max-w-full overflow-auto rounded-md border border-[var(--peace-border)]">
+          <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
             <table className="w-full min-w-max border-collapse text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
                 <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
@@ -592,10 +592,7 @@ function ReportBlock({
     <section
       data-statistics-report={name}
       aria-label={`Report: ${title}`}
-      className={[
-        "relative grid w-full min-w-0 gap-4 overflow-hidden rounded-2xl border-2 border-[#bfd8ea] bg-[#eef7fc] p-3 shadow-[0_14px_34px_rgba(23,72,112,0.10)] sm:p-5",
-        name === "attendance" ? "mx-auto max-w-[65rem]" : "max-w-full",
-      ].join(" ")}
+      className="relative grid w-full min-w-0 max-w-full gap-4 overflow-visible rounded-2xl border-2 border-[#bfd8ea] bg-[#eef7fc] p-3 shadow-[0_14px_34px_rgba(23,72,112,0.10)] sm:p-5"
     >
       <span
         aria-hidden="true"
@@ -633,7 +630,7 @@ function TerritoryStatisticsSummary({
   ) => void;
 }) {
   return (
-    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
         <h3 className="text-base font-semibold">
           Riepilogo persone, territori e gruppi
@@ -714,7 +711,7 @@ function AttendanceStatisticsSummary({
   onAttendanceSelect: (slotKey: string) => void;
 }) {
   return (
-    <article className="@container min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+    <article className="@container min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <h3 className="text-base font-semibold">Riepilogo presenze previste</h3>
       <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
         Seleziona un giorno e una fascia per vedere le persone corrispondenti
@@ -751,7 +748,7 @@ function AgeStatisticsSummary({
   onAgeBandSelect: (ageBand: StatisticsAgeBand) => void;
 }) {
   return (
-    <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <h3 className="text-base font-semibold">Riepilogo fasce di età</h3>
       <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
         Distribuzione calcolata all’inizio dell’evento. Seleziona una fascia
