@@ -201,11 +201,21 @@ test("capacity overflow disables saving with an accessible explanation", () => {
   assert.match(fields, /Il panel non potrà essere salvato/);
   assert.match(fields, /Il panel può essere salvato/);
   assert.match(section, /initialCapacityExceeded/);
-  assert.match(formState, /disabled=\{capacityExceeded\}/);
+  assert.match(formState, /disabled=\{saveBlocked\}/);
   assert.match(formState, /role="tooltip"/);
   assert.match(
     formState,
     /La somma dei posti delle sezioni supera la capienza della location/
+  );
+});
+
+test("schedule overlap disables saving with an accessible explanation", () => {
+  assert.match(fields, /setScheduleConflict\(hasScheduleConflict\)/);
+  assert.match(formState, /const saveBlocked = capacityExceeded \|\| scheduleConflict/);
+  assert.match(formState, /disabled=\{saveBlocked\}/);
+  assert.match(
+    formState,
+    /L'orario si sovrappone a un altro panel nella stessa location/
   );
 });
 

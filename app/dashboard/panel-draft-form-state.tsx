@@ -16,7 +16,9 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 
 type PanelDraftFormState = {
   capacityExceeded: boolean;
+  scheduleConflict: boolean;
   setCapacityExceeded: Dispatch<SetStateAction<boolean>>;
+  setScheduleConflict: Dispatch<SetStateAction<boolean>>;
 };
 
 const PanelDraftFormContext = createContext<PanelDraftFormState | null>(null);
@@ -31,9 +33,15 @@ export function PanelDraftFormProvider({
   const [capacityExceeded, setCapacityExceeded] = useState(
     initialCapacityExceeded
   );
+  const [scheduleConflict, setScheduleConflict] = useState(false);
   const value = useMemo(
-    () => ({ capacityExceeded, setCapacityExceeded }),
-    [capacityExceeded]
+    () => ({
+      capacityExceeded,
+      scheduleConflict,
+      setCapacityExceeded,
+      setScheduleConflict,
+    }),
+    [capacityExceeded, scheduleConflict]
   );
 
   return (
@@ -62,8 +70,14 @@ export function PanelDraftFormActions({
   closePath: string;
   submitLabel: string;
 }) {
-  const { capacityExceeded } = usePanelDraftFormState();
+  const { capacityExceeded, scheduleConflict } = usePanelDraftFormState();
   const tooltipId = useId();
+  const saveBlocked = capacityExceeded || scheduleConflict;
+  const blockerMessage = capacityExceeded
+    ? scheduleConflict
+      ? "La somma dei posti supera la capienza e l'orario si sovrappone a un altro panel. Correggi entrambi i problemi per salvare il panel."
+      : "La somma dei posti delle sezioni supera la capienza della location. Riduci i posti assegnati per salvare il panel."
+    : "L'orario si sovrappone a un altro panel nella stessa location. Modifica orario o location per salvare il panel.";
 
   return (
     <div className="flex flex-wrap justify-end gap-3 border-t border-[var(--peace-border)] px-5 py-4">
@@ -76,23 +90,22 @@ export function PanelDraftFormActions({
       </Link>
       <span
         className="group relative inline-flex"
-        tabIndex={capacityExceeded ? 0 : undefined}
-        aria-describedby={capacityExceeded ? tooltipId : undefined}
+        tabIndex={saveBlocked ? 0 : undefined}
+        aria-describedby={saveBlocked ? tooltipId : undefined}
       >
         <PendingSubmitButton
-          disabled={capacityExceeded}
+          disabled={saveBlocked}
           className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#7890a8]"
         >
           {submitLabel}
         </PendingSubmitButton>
-        {capacityExceeded ? (
+        {saveBlocked ? (
           <span
             id={tooltipId}
             role="tooltip"
             className="pointer-events-none invisible absolute bottom-full right-0 z-20 mb-2 w-72 rounded-md bg-[var(--peace-blue-950)] px-3 py-2 text-left text-xs font-normal leading-5 text-white opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100"
           >
-            La somma dei posti delle sezioni supera la capienza della location.
-            Riduci i posti assegnati per salvare il panel.
+            {blockerMessage}
           </span>
         ) : null}
       </span>

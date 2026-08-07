@@ -2296,7 +2296,8 @@ Quando il piano verrà cancellato:
   mostra in tempo reale assegnati, capienza e differenza e disabilita il
   salvataggio in caso di eccedenza. Location e intervallo sono invece obbligatori e devono
   rientrare nelle date evento. La UI segnala subito le sovrapposizioni note e
-  il vincolo exclusion P1 resta la protezione definitiva.
+  disabilita il salvataggio finche' orario o location non vengono corretti; il
+  vincolo exclusion P1 resta la protezione definitiva.
 - La migration P3 locale e'
   `20260805220000_panel_draft_management.sql`. Aggiunge i constraint di
   lunghezza per i panel e la RPC autenticata `public.save_panel_draft`, che in
@@ -2348,8 +2349,10 @@ Quando il piano verrà cancellato:
   bozza sia per panel pubblicati, mentre ogni eccedenza e' bloccata nella UI,
   nella Server Action e dai vincoli/RPC database. Le statistiche considerano
   incoerente soltanto il superamento della capienza, non una distribuzione
-  inferiore. La migration va applicata allo staging prima di collaudare il
-  comportamento sul deploy Preview; production resta invariata.
+  inferiore. La migration e' stata applicata e registrata sullo staging il
+  2026-08-07; il deploy Preview e' stato verificato con eccedenza bloccante e
+  distribuzione inferiore consentita, senza salvare modifiche ai panel
+  sintetici. Production resta invariata.
 - Il 2026-08-05 la Milestone panel P5 e' stata implementata localmente sul
   branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
   La home anonima contiene ora una sezione programma accessibile e responsive,

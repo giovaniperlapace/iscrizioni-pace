@@ -48,7 +48,7 @@ export function PanelDraftFields({
   eventEndsOn,
   conflictPanels,
 }: PanelDraftFieldsProps) {
-  const { setCapacityExceeded } = usePanelDraftFormState();
+  const { setCapacityExceeded, setScheduleConflict } = usePanelDraftFormState();
   const [locationId, setLocationId] = useState(panel?.locationId ?? "");
   const [startsAt, setStartsAt] = useState(initialStartsAt);
   const [endsAt, setEndsAt] = useState(initialEndsAt);
@@ -89,10 +89,15 @@ export function PanelDraftFields({
       conflictPanels
     );
   }, [conflictPanels, endsAt, locationId, panel?.id, startsAt]);
+  const hasScheduleConflict = Boolean(conflictingPanel);
 
   useEffect(() => {
     setCapacityExceeded(capacityExceeded);
   }, [capacityExceeded, setCapacityExceeded]);
+
+  useEffect(() => {
+    setScheduleConflict(hasScheduleConflict);
+  }, [hasScheduleConflict, setScheduleConflict]);
 
   return (
     <div className="grid gap-5">
