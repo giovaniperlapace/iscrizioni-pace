@@ -104,7 +104,7 @@ export function PanelDraftsSection({
                 <input
                   name="panelQ"
                   defaultValue={filters.query}
-                  className="field w-full pl-9 font-normal"
+                  className="field field-with-leading-icon w-full font-normal"
                   maxLength={PANEL_SEARCH_MAX_LENGTH}
                   placeholder="Titolo, descrizione o location"
                 />

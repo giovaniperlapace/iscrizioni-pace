@@ -123,6 +123,10 @@ body:has(.dashboard-modal) {
     background-color 160ms ease;
 }
 
+.field.field-with-leading-icon {
+  padding-left: 2.5rem;
+}
+
 .field:focus {
   border-color: var(--peace-sky-400);
   box-shadow: var(--focus-ring);

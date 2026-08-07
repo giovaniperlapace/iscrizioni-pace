@@ -33,6 +33,15 @@ const publicationTable = readFileSync(
   join(process.cwd(), "app/dashboard/panel-publication-table.tsx"),
   "utf8"
 );
+const schoolBookingsSection = readFileSync(
+  join(process.cwd(), "app/dashboard/school-bookings-section.tsx"),
+  "utf8"
+);
+const managerDashboard = readFileSync(
+  join(process.cwd(), "app/dashboard/manager/page.tsx"),
+  "utf8"
+);
+const globalStyles = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 const panels: PanelDraftRow[] = [
   {
@@ -156,4 +165,22 @@ test("responsive overlay exposes live capacity, conflict and accessible section 
   assert.match(fields, /Rimuovi sezione/);
   assert.match(fields, /duplicateAudience/);
   assert.match(fields, /conflictingPanel/);
+});
+
+test("panel workflow tabs suggest location, panel and school order while Panel stays the default", () => {
+  const locationTab = schoolBookingsSection.indexOf('{ key: "locations", label: "Location"');
+  const panelTab = schoolBookingsSection.indexOf('{ key: "panels", label: "Panel"');
+  const schoolTab = schoolBookingsSection.indexOf('{ key: "schools", label: "Scuole"');
+
+  assert.ok(locationTab >= 0 && locationTab < panelTab);
+  assert.ok(panelTab < schoolTab);
+  assert.match(
+    managerDashboard,
+    /params\.panelView === "locations" \|\| params\.panelView === "schools" \? params\.panelView : "panels"/
+  );
+});
+
+test("panel search fields reserve space for their leading icon", () => {
+  assert.match(section, /className="field field-with-leading-icon w-full font-normal"/);
+  assert.match(globalStyles, /\.field\.field-with-leading-icon\s*\{\s*padding-left: 2\.5rem;/);
 });

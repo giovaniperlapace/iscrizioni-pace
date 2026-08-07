@@ -94,7 +94,7 @@ export function PanelLocationsSection({
                 <input
                   name="locationQ"
                   defaultValue={query}
-                  className="field w-full pl-9 font-normal"
+                  className="field field-with-leading-icon w-full font-normal"
                   maxLength={EVENT_LOCATION_SEARCH_MAX_LENGTH}
                   placeholder="Nome, indirizzo o panel"
                 />

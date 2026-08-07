@@ -54,7 +54,7 @@ export function SchoolBookingsSection({ dashboard, navMode, event, bookings, pan
             <input type="hidden" name="section" value="panel" />
             <input type="hidden" name="panelView" value="schools" />
             <input type="hidden" name="nav" value={navMode} />
-            <label className="grid gap-1 text-sm font-semibold">Cerca<span className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--peace-muted)]" aria-hidden="true" /><input name="schoolQ" defaultValue={filters.query} maxLength={SCHOOL_BOOKING_SEARCH_MAX_LENGTH} className="field w-full pl-9 font-normal" placeholder="Scuola, città, docente o email" /></span></label>
+            <label className="grid gap-1 text-sm font-semibold">Cerca<span className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--peace-muted)]" aria-hidden="true" /><input name="schoolQ" defaultValue={filters.query} maxLength={SCHOOL_BOOKING_SEARCH_MAX_LENGTH} className="field field-with-leading-icon w-full font-normal" placeholder="Scuola, città, docente o email" /></span></label>
             <label className="grid gap-1 text-sm font-semibold">Stato<select name="schoolStatus" defaultValue={filters.status} className="field font-normal"><option value="all">Tutti</option><option value="submitted">Da verificare</option><option value="confirmed">Confermata</option><option value="cancelled">Annullata</option></select></label>
             <label className="grid gap-1 text-sm font-semibold">Panel<select name="schoolPanel" defaultValue={filters.panelId} className="field font-normal"><option value="all">Tutti</option>{uniquePanels(panelOptions).map((panel) => <option key={panel.panelId} value={panel.panelId}>{panel.title}</option>)}</select></label>
             <div className="flex gap-2"><PendingSubmitButton className="min-h-11 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)]">Filtra</PendingSubmitButton>{hasFilters(filters) ? <Link href={schoolPath(dashboard, navMode)} className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-[var(--peace-blue-800)]">Azzera</Link> : null}</div>
@@ -69,9 +69,9 @@ export function SchoolBookingsSection({ dashboard, navMode, event, bookings, pan
 
 export function PanelTabs({ dashboard, navMode, active }: { dashboard: "admin" | "manager"; navMode: "full" | "mini"; active: "panels" | "schools" | "locations" }) {
   const tabs = [
+    { key: "locations", label: "Location", Icon: MapPin },
     { key: "panels", label: "Panel", Icon: CalendarDays },
     { key: "schools", label: "Scuole", Icon: School },
-    { key: "locations", label: "Location", Icon: MapPin },
   ] as const;
   return <div className="mt-5 flex gap-1 overflow-x-auto border-b border-[var(--peace-border)]">{tabs.map(({ key, label, Icon }) => <Link key={key} href={`/dashboard/${dashboard}?section=panel&panelView=${key}&nav=${navMode}`} className={`inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-semibold ${active === key ? "border-[var(--peace-blue-800)] text-[var(--peace-blue-800)]" : "border-transparent text-[var(--peace-muted)] hover:text-[var(--peace-blue-800)]"}`}><Icon className="size-4" aria-hidden="true" />{label}</Link>)}</div>;
 }
