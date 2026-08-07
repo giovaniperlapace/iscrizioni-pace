@@ -479,10 +479,14 @@ falsi partecipanti individuali.
 Stato: avviata localmente sul branch `codex/panel-p0-p10` il 2026-08-06.
 La prima tranche comprende route pubblica `Scuole`, creazione atomica sulla
 quota scuola, consenso versionato, email con QR e magic link, recupero accesso
-e pagina docente per consultare, modificare, ridurre o annullare. Restano da
-completare revisione UX/testi della pagina docente in tutte le lingue, test SQL
-transazionale sullo staging e collaudo browser mobile/accessibile. Nessuna
-modifica P8 e' stata applicata in production.
+e pagina docente per consultare, modificare, ridurre o annullare. Il
+2026-08-07 i testi di accesso, conferma e dashboard docente sono stati
+completati nelle sette lingue supportate; il catalogo pubblico usa ora una RPC
+dedicata che restituisce gli identificativi necessari senza esporre le
+capienze delle quote scuola o consentire letture anonime dirette delle
+sezioni. Restano da completare test SQL transazionale sullo staging e collaudo
+browser autenticato mobile/accessibile. Nessuna modifica P8 e' stata applicata
+in production.
 
 Scopo: permettere al professore di prenotare biglietti per una o piu' classi.
 
@@ -505,6 +509,22 @@ Accettazione: un docente completa e recupera la prenotazione senza account
 manuale e senza inserire dati degli studenti.
 
 ### Milestone P9 - destinatari campagne per panel e professori
+
+Stato: avviata localmente sul branch `codex/panel-p0-p10` il 2026-08-06.
+La prima tranche completa il nucleo applicativo: filtro panel dei partecipanti
+basato su `moment_attendance_choices` confermate, audience alternativa
+`Professori` deduplicata per docente, filtri scuola/panel, selezione esplicita
+isolata tra tab, anteprima/test/invio tramite la coda globale e campi template
+`scuola`/`panel`. La migration locale e'
+`20260806200000_panel_campaign_audiences.sql`. Il 2026-08-07 sono stati
+aggiunti la scorciatoia da panel pubblicato alla console gia' prefiltrata, il
+controllo server del perimetro evento per tutte le operazioni campagna, label
+panel disambiguate per data/ora e caricamento parallelo dei dati iniziali.
+Test (192), lint, typecheck, build e collaudo browser delle route pubbliche
+modificate sono verdi. Restano obbligatori prima della chiusura: applicazione
+ordinata P2-P9 sullo staging, test SQL/RLS e collaudo end-to-end autenticato
+con cancellazione panel, docente multi-classe e invio in modalita' log. Nessuna
+modifica P9 e' in production.
 
 Scopo: estendere la console campagne senza alterare la selezione esplicita
 esistente.

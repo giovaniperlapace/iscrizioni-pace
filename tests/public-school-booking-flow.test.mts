@@ -9,6 +9,7 @@ import { parsePublicSchoolBookingForm } from "../lib/panels/public-school-bookin
 const migration = await readFile(join(process.cwd(), "supabase/migrations/20260806190000_public_school_booking_flow.sql"), "utf8");
 const publicPage = await readFile(join(process.cwd(), "app/scuole/page.tsx"), "utf8");
 const teacherPage = await readFile(join(process.cwd(), "app/dashboard/docente/page.tsx"), "utf8");
+const publicOptions = await readFile(join(process.cwd(), "lib/panels/public-school-bookings.ts"), "utf8");
 
 test("P8 public RPC reserves only published school sections in one transaction", () => {
   assert.match(migration, /create or replace function public\.create_public_school_booking/);
@@ -17,8 +18,24 @@ test("P8 public RPC reserves only published school sections in one transaction",
   assert.match(migration, /for update/);
   assert.match(migration, /app\.validate_panel_section_booking_capacity/);
   assert.match(migration, /to service_role/);
-  assert.doesNotMatch(migration, /to anon, authenticated/);
+  assert.match(
+    migration,
+    /revoke all on function public\.create_public_school_booking\([\s\S]*?\) from public, anon, authenticated;/
+  );
   assert.doesNotMatch(migration, /insert into public\.(participants|registrations)/);
+});
+
+test("P8 exposes public school options without leaking reserved capacities", () => {
+  assert.match(migration, /create or replace function public\.get_public_school_booking_options/);
+  assert.match(migration, /grant execute on function public\.get_public_school_booking_options\(\) to anon, authenticated/);
+  assert.match(migration, /revoke select on public\.panel_seat_sections from anon/);
+  assert.match(migration, /create policy "panel seat sections operational read"/);
+  assert.doesNotMatch(
+    migration,
+    /returns table \([\s\S]*section_id uuid,[\s\S]*capacity (integer|bigint)/
+  );
+  assert.match(publicOptions, /supabase\.rpc\("get_public_school_booking_options"\)/);
+  assert.doesNotMatch(publicOptions, /from\("panel_seat_sections"\)/);
 });
 
 test("P8 parser requires consent and explicit panel choices", () => {

@@ -621,6 +621,17 @@ begin
     raise exception 'registration not found for this participant' using errcode = '42501';
   end if;
 
+  -- Serialize family-size changes with set_individual_panel_booking, which
+  -- locks the same registration before calculating the occupied seats.
+  perform 1
+  from public.registrations registration
+  where registration.id = p_registration_id
+  for update;
+
+  if not found then
+    raise exception 'registration not found for this participant' using errcode = 'P0002';
+  end if;
+
   if p_children is null or jsonb_typeof(p_children) <> 'array' then
     raise exception 'children must be a JSON array' using errcode = '22023';
   end if;

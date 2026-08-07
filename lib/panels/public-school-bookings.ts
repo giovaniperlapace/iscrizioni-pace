@@ -37,6 +37,18 @@ export type PublicSchoolBookingInput = {
   }>;
 };
 
+type PublicSchoolBookingOptionRow = {
+  event_id: string;
+  event_title: string;
+  panel_id: string;
+  section_id: string;
+  title: string;
+  description: string | null;
+  starts_at: string;
+  ends_at: string;
+  location_name: string;
+};
+
 export function parsePublicSchoolBookingForm(
   formData: FormData
 ): { ok: true; value: PublicSchoolBookingInput } | { ok: false } {
@@ -89,48 +101,24 @@ export function parsePublicSchoolBookingForm(
 export async function getPublicSchoolBookingOptions(
   supabase: SupabaseClient
 ): Promise<PublicSchoolBookingOptions> {
-  const now = new Date().toISOString();
-  const { data: event } = await supabase
-    .from("events")
-    .select("id,title")
-    .eq("is_current", true)
-    .eq("status", "published")
-    .or(`registration_opens_at.is.null,registration_opens_at.lte.${now}`)
-    .or(`registration_closes_at.is.null,registration_closes_at.gte.${now}`)
-    .limit(1)
-    .maybeSingle();
-  if (!event) return { event: null, panels: [] };
+  const { data, error } = await supabase.rpc("get_public_school_booking_options");
+  if (error) throw error;
+  const rows = (data ?? []) as PublicSchoolBookingOptionRow[];
+  const first = rows[0];
+  if (!first) return { event: null, panels: [] };
 
-  const [panelsResult, sectionsResult, audiencesResult, locationsResult] = await Promise.all([
-    supabase.from("event_moments").select("id,title,description,starts_at,ends_at,location_id").eq("event_id", event.id).eq("moment_type", "panel").eq("publication_status", "published").eq("is_public", true).order("starts_at"),
-    supabase.from("panel_seat_sections").select("id,panel_id,audience_type_id").eq("event_id", event.id),
-    supabase.from("panel_audience_types").select("id").eq("event_id", event.id).eq("booking_channel", "school_booking").eq("is_active", true),
-    supabase.from("event_locations").select("id,name").eq("event_id", event.id),
-  ]);
-  for (const result of [panelsResult, sectionsResult, audiencesResult, locationsResult]) {
-    if (result.error) throw result.error;
-  }
-  const audienceIds = new Set((audiencesResult.data ?? []).map((row) => row.id));
-  const sections = new Map(
-    (sectionsResult.data ?? [])
-      .filter((row) => audienceIds.has(row.audience_type_id))
-      .map((row) => [row.panel_id, row.id])
-  );
-  const locations = new Map((locationsResult.data ?? []).map((row) => [row.id, row.name]));
-  const panels = (panelsResult.data ?? []).flatMap((panel): PublicSchoolPanelOption[] => {
-    const sectionId = sections.get(panel.id);
-    if (!sectionId || !panel.starts_at || !panel.ends_at) return [];
-    return [{
-      panelId: panel.id,
-      sectionId,
-      title: panel.title,
-      description: panel.description,
-      startsAt: panel.starts_at,
-      endsAt: panel.ends_at,
-      locationName: panel.location_id ? locations.get(panel.location_id) ?? "" : "",
-    }];
-  });
-  return { event, panels };
+  return {
+    event: { id: first.event_id, title: first.event_title },
+    panels: rows.map((row) => ({
+      panelId: row.panel_id,
+      sectionId: row.section_id,
+      title: row.title,
+      description: row.description,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      locationName: row.location_name,
+    })),
+  };
 }
 
 function clean(value: FormDataEntryValue | null, maxLength: number) {

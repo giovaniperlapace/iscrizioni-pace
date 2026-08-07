@@ -2441,3 +2441,58 @@ Quando il piano verrà cancellato:
   tranche non e' ancora stata applicata allo staging: prima della revisione
   completare testi docente multilingua, test SQL con rollback e collaudo
   browser mobile/accessibile. Nessuna modifica P8 e' in production.
+- Il 2026-08-06 e' stata avviata localmente la Milestone panel P9 sul branch
+  `codex/panel-p0-p10`. La console campagne ha ora il filtro cercabile `Panel`
+  nella tab partecipanti, derivato dalle sole scelte canoniche correnti
+  `moment_attendance_choices.choice = 'yes'` con sezione panel, senza usare tag
+  o snapshot. La nuova audience alternativa `Professori` deduplica per
+  `school_booking_teachers`, include soltanto docenti con prenotazioni
+  submitted/confirmed e riserve panel attive, mostra scuole e panel e offre i
+  relativi filtri. Cambiare audience azzera sempre la selezione; cambiare
+  filtri non la azzera e la checkbox di intestazione continua ad agire sulle
+  sole righe filtrate.
+- La migration P9 locale e'
+  `20260806200000_panel_campaign_audiences.sql`: aggiunge a
+  `email_campaign_recipients` il target tipizzato `teacher`, il riferimento
+  `school_teacher_id` e il delivery kind dedicato, preservando coda globale,
+  recipient key esplicite e log senza indirizzi/corpi in chiaro. I template
+  campagne supportano anche `{{scuola}}` e `{{panel}}`; per audience diverse i
+  valori non pertinenti restano vuoti. Test (192), lint, typecheck, build e
+  collaudo browser della console demo sono verdi. Prima di chiudere P9 restano
+  applicazione ordinata P2-P9 sullo staging, verifica SQL/RLS e collaudo
+  end-to-end autenticato in delivery mode `log`; production resta invariata.
+- Il 2026-08-07 e' stato eseguito un audit locale complessivo delle Milestone
+  panel P0-P9 rispetto a `PIANO_DI_LAVORO_PANEL.md`. La sostituzione dei minori
+  in P6 ora blocca prima la registrazione proprietaria, nello stesso ordine
+  della prenotazione individuale, così aggiornamento del nucleo e ultimo posto
+  non possono calcolare contemporaneamente dimensioni diverse. In P8 il form
+  pubblico riceve le opzioni scuola dalla RPC security-definer
+  `get_public_school_booking_options`, che non restituisce capienza o
+  occupazione; la lettura anonima diretta di `panel_seat_sections` e' revocata
+  e la policy SELECT resta soltanto operativa. Accesso, conferma e dashboard
+  docente usano testi completi per tutte le sette lingue supportate.
+- Nello stesso audit P9, tutte le operazioni della route campagne verificano
+  lato server che il manager sia assegnato all'evento della campagna; l'admin
+  conserva il perimetro globale. La console carica in parallelo cataloghi e
+  audience, propone soltanto panel pubblicati con label data/ora univoca e usa
+  mappe indicizzate per renderizzare i nomi. La modifica di un panel pubblico
+  con iscritti offre la scorciatoia alla console campagne con quel panel gia'
+  prefiltrato, mantenendo comunque vuota la selezione esplicita dei
+  destinatari.
+- L'audit dipendenze del 2026-08-07 ha aggiornato in modo coordinato Next.js ed
+  `eslint-config-next` a 16.3.0, React/React DOM a 19.2.8 e il plugin PostCSS di
+  Tailwind a 4.3.3. `npm audit` non segnala vulnerabilita'. Sono verdi 192 test,
+  lint, typecheck, `staging:verify`, build production e verifica browser locale
+  di home, accesso scuola italiano/inglese e conferma email fallita, senza
+  overlay o errori console. Le migration P2-P9 non sono state applicate
+  persistentemente allo staging o alla production durante questo audit.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

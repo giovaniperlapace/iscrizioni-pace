@@ -48,3 +48,139 @@ const translations: Record<SupportedLocale, Copy> = {
 export function getSchoolBookingCopy(locale: SupportedLocale): Copy {
   return translations[locale];
 }
+
+type TeacherFlowCopy = {
+  accessIntro: string;
+  accessSent: string;
+  accessError: string;
+  confirmationEmailFailed: string;
+  saved: string;
+  cancelled: string;
+  dashboardIntro: string;
+  empty: string;
+  bookingStatuses: Record<"draft" | "submitted" | "confirmed" | "cancelled", string>;
+  qrAlt: string;
+  downloadQr: string;
+  cancelBooking: string;
+  saveChanges: string;
+  locationUnavailable: string;
+};
+
+const teacherFlowTranslations: Record<SupportedLocale, TeacherFlowCopy> = {
+  it: {
+    accessIntro: "Inserisci l’email verificata del docente. Se esistono prenotazioni, riceverai un nuovo link personale.",
+    accessSent: "Controlla l’email: se l’indirizzo è associato a una prenotazione, abbiamo inviato un nuovo link.",
+    accessError: "Non è stato possibile inviare il link. Controlla l’indirizzo e riprova.",
+    confirmationEmailFailed: "La prenotazione e i posti sono salvati, ma l’email non è partita. Richiedi un nuovo link di accesso: non inviare di nuovo la prenotazione.",
+    saved: "Modifiche salvate.",
+    cancelled: "Prenotazione annullata e posti liberati.",
+    dashboardIntro: "Ogni scheda corrisponde a una classe o a un gruppo. Le prenotazioni annullate restano consultabili.",
+    empty: "Non risultano prenotazioni scuola collegate a questa email.",
+    bookingStatuses: { draft: "Bozza", submitted: "Ricevuta", confirmed: "Confermata", cancelled: "Annullata" },
+    qrAlt: "QR code della classe",
+    downloadQr: "Scarica QR",
+    cancelBooking: "Annulla prenotazione",
+    saveChanges: "Salva modifiche",
+    locationUnavailable: "Sede da definire",
+  },
+  en: {
+    accessIntro: "Enter the teacher’s verified email. If bookings exist, you will receive a new personal link.",
+    accessSent: "Check your email: if the address is linked to a booking, we sent a new access link.",
+    accessError: "We could not send the link. Check the address and try again.",
+    confirmationEmailFailed: "The booking and seats are saved, but the email was not sent. Request a new access link; do not submit the booking again.",
+    saved: "Changes saved.",
+    cancelled: "Booking cancelled and seats released.",
+    dashboardIntro: "Each card represents one class or group. Cancelled bookings remain available for reference.",
+    empty: "No school bookings are linked to this email.",
+    bookingStatuses: { draft: "Draft", submitted: "Received", confirmed: "Confirmed", cancelled: "Cancelled" },
+    qrAlt: "Class QR code",
+    downloadQr: "Download QR",
+    cancelBooking: "Cancel booking",
+    saveChanges: "Save changes",
+    locationUnavailable: "Location to be confirmed",
+  },
+  fr: {
+    accessIntro: "Saisissez l’e-mail vérifié du professeur. Si des réservations existent, vous recevrez un nouveau lien personnel.",
+    accessSent: "Consultez votre e-mail : si l’adresse est liée à une réservation, nous avons envoyé un nouveau lien.",
+    accessError: "Impossible d’envoyer le lien. Vérifiez l’adresse et réessayez.",
+    confirmationEmailFailed: "La réservation et les places sont enregistrées, mais l’e-mail n’a pas été envoyé. Demandez un nouveau lien sans refaire la réservation.",
+    saved: "Modifications enregistrées.",
+    cancelled: "Réservation annulée et places libérées.",
+    dashboardIntro: "Chaque fiche correspond à une classe ou à un groupe. Les réservations annulées restent consultables.",
+    empty: "Aucune réservation scolaire n’est liée à cet e-mail.",
+    bookingStatuses: { draft: "Brouillon", submitted: "Reçue", confirmed: "Confirmée", cancelled: "Annulée" },
+    qrAlt: "Code QR de la classe",
+    downloadQr: "Télécharger le QR",
+    cancelBooking: "Annuler la réservation",
+    saveChanges: "Enregistrer",
+    locationUnavailable: "Lieu à confirmer",
+  },
+  de: {
+    accessIntro: "Gib die bestätigte E-Mail-Adresse der Lehrkraft ein. Falls Buchungen bestehen, erhältst du einen neuen persönlichen Link.",
+    accessSent: "Prüfe deine E-Mails: Ist die Adresse mit einer Buchung verknüpft, wurde ein neuer Link gesendet.",
+    accessError: "Der Link konnte nicht gesendet werden. Prüfe die Adresse und versuche es erneut.",
+    confirmationEmailFailed: "Buchung und Plätze sind gespeichert, aber die E-Mail wurde nicht gesendet. Fordere einen neuen Link an und sende die Buchung nicht erneut.",
+    saved: "Änderungen gespeichert.",
+    cancelled: "Buchung storniert und Plätze freigegeben.",
+    dashboardIntro: "Jede Karte steht für eine Klasse oder Gruppe. Stornierte Buchungen bleiben einsehbar.",
+    empty: "Mit dieser E-Mail-Adresse sind keine Schulbuchungen verknüpft.",
+    bookingStatuses: { draft: "Entwurf", submitted: "Eingegangen", confirmed: "Bestätigt", cancelled: "Storniert" },
+    qrAlt: "QR-Code der Klasse",
+    downloadQr: "QR herunterladen",
+    cancelBooking: "Buchung stornieren",
+    saveChanges: "Änderungen speichern",
+    locationUnavailable: "Ort wird noch festgelegt",
+  },
+  es: {
+    accessIntro: "Introduce el correo verificado del docente. Si hay reservas, recibirás un nuevo enlace personal.",
+    accessSent: "Revisa el correo: si la dirección está asociada a una reserva, hemos enviado un nuevo enlace.",
+    accessError: "No se pudo enviar el enlace. Revisa la dirección e inténtalo de nuevo.",
+    confirmationEmailFailed: "La reserva y las plazas están guardadas, pero el correo no se envió. Solicita un nuevo enlace sin repetir la reserva.",
+    saved: "Cambios guardados.",
+    cancelled: "Reserva cancelada y plazas liberadas.",
+    dashboardIntro: "Cada ficha corresponde a una clase o grupo. Las reservas canceladas siguen disponibles para consulta.",
+    empty: "No hay reservas escolares vinculadas a este correo.",
+    bookingStatuses: { draft: "Borrador", submitted: "Recibida", confirmed: "Confirmada", cancelled: "Cancelada" },
+    qrAlt: "Código QR de la clase",
+    downloadQr: "Descargar QR",
+    cancelBooking: "Cancelar reserva",
+    saveChanges: "Guardar cambios",
+    locationUnavailable: "Lugar por confirmar",
+  },
+  nl: {
+    accessIntro: "Vul het geverifieerde e-mailadres van de leerkracht in. Als er boekingen zijn, ontvang je een nieuwe persoonlijke link.",
+    accessSent: "Controleer je e-mail: als het adres aan een boeking is gekoppeld, hebben we een nieuwe link gestuurd.",
+    accessError: "De link kon niet worden verzonden. Controleer het adres en probeer opnieuw.",
+    confirmationEmailFailed: "De boeking en plaatsen zijn opgeslagen, maar de e-mail is niet verzonden. Vraag een nieuwe link aan en boek niet opnieuw.",
+    saved: "Wijzigingen opgeslagen.",
+    cancelled: "Boeking geannuleerd en plaatsen vrijgegeven.",
+    dashboardIntro: "Elke kaart staat voor een klas of groep. Geannuleerde boekingen blijven zichtbaar.",
+    empty: "Er zijn geen schoolboekingen aan dit e-mailadres gekoppeld.",
+    bookingStatuses: { draft: "Concept", submitted: "Ontvangen", confirmed: "Bevestigd", cancelled: "Geannuleerd" },
+    qrAlt: "QR-code van de klas",
+    downloadQr: "QR downloaden",
+    cancelBooking: "Boeking annuleren",
+    saveChanges: "Wijzigingen opslaan",
+    locationUnavailable: "Locatie wordt bevestigd",
+  },
+  uk: {
+    accessIntro: "Введіть підтверджену електронну адресу вчителя. Якщо бронювання існують, ви отримаєте нове особисте посилання.",
+    accessSent: "Перевірте пошту: якщо адресу пов’язано з бронюванням, ми надіслали нове посилання.",
+    accessError: "Не вдалося надіслати посилання. Перевірте адресу та спробуйте ще раз.",
+    confirmationEmailFailed: "Бронювання та місця збережено, але лист не надіслано. Запросіть нове посилання й не надсилайте бронювання повторно.",
+    saved: "Зміни збережено.",
+    cancelled: "Бронювання скасовано, місця звільнено.",
+    dashboardIntro: "Кожна картка відповідає класу або групі. Скасовані бронювання залишаються доступними для перегляду.",
+    empty: "До цієї електронної адреси не прив’язано шкільних бронювань.",
+    bookingStatuses: { draft: "Чернетка", submitted: "Отримано", confirmed: "Підтверджено", cancelled: "Скасовано" },
+    qrAlt: "QR-код класу",
+    downloadQr: "Завантажити QR",
+    cancelBooking: "Скасувати бронювання",
+    saveChanges: "Зберегти зміни",
+    locationUnavailable: "Місце буде уточнено",
+  },
+};
+
+export function getTeacherFlowCopy(locale: SupportedLocale): TeacherFlowCopy {
+  return teacherFlowTranslations[locale];
+}

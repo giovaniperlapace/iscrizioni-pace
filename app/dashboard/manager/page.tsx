@@ -130,6 +130,7 @@ type ManagerPageProps = {
     panelStatus?: string;
     panelTool?: string;
     panelView?: string;
+    campaignPanel?: string;
     schoolError?: string;
     schoolId?: string;
     schoolPanel?: string;
@@ -504,6 +505,7 @@ export default async function ManagerDashboardPage({
               <ManagerEmailSection
                 eventId={currentEventId}
                 canManage={currentEventId ? scope.canManageEvent(currentEventId) : false}
+                initialPanelId={params.campaignPanel}
               />
             ) : null}
 

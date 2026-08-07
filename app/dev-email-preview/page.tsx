@@ -14,6 +14,7 @@ export default function DevEmailPreviewPage() {
         ]}
         tags={[{ id: "tag-1", label: "Volontari" }]}
         services={[{ id: "service-1", label: "Accoglienza" }]}
+        panels={[{ id: "panel-1", label: "La pace disarmata" }]}
         initialRecipients={[
           {
             recipientKey: "participant:1",
@@ -25,6 +26,8 @@ export default function DevEmailPreviewPage() {
             groupIds: ["group-roma"],
             tagIds: ["tag-1"],
             serviceIds: [],
+            panelIds: ["panel-1"],
+            schoolNames: [],
           },
           {
             recipientKey: "participant:2",
@@ -36,6 +39,8 @@ export default function DevEmailPreviewPage() {
             groupIds: [],
             tagIds: [],
             serviceIds: ["service-1"],
+            panelIds: [],
+            schoolNames: [],
           },
           {
             recipientKey: "participant:3",
@@ -47,6 +52,8 @@ export default function DevEmailPreviewPage() {
             groupIds: ["group-assisi"],
             tagIds: [],
             serviceIds: [],
+            panelIds: [],
+            schoolNames: [],
           },
           {
             recipientKey: "leader:1",
@@ -58,6 +65,8 @@ export default function DevEmailPreviewPage() {
             groupIds: ["group-roma", "group-assisi"],
             tagIds: [],
             serviceIds: [],
+            panelIds: [],
+            schoolNames: [],
           },
           {
             recipientKey: "leader:2",
@@ -69,6 +78,21 @@ export default function DevEmailPreviewPage() {
             groupIds: ["group-assisi"],
             tagIds: [],
             serviceIds: [],
+            panelIds: [],
+            schoolNames: [],
+          },
+          {
+            recipientKey: "teacher:1",
+            recipientType: "teacher",
+            fullName: "Franca Docente",
+            destinationEmail: "franca@example.org",
+            deliveryKind: "teacher",
+            selected: false,
+            groupIds: [],
+            tagIds: [],
+            serviceIds: [],
+            panelIds: ["panel-1"],
+            schoolNames: ["Liceo della Pace"],
           },
         ]}
         templates={[]}

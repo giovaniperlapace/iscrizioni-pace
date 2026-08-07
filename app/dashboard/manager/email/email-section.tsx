@@ -8,9 +8,11 @@ import { EmailCampaignComposer } from "./email-campaign-composer";
 export async function ManagerEmailSection({
   eventId,
   canManage,
+  initialPanelId,
 }: {
   eventId: string | null;
   canManage: boolean;
+  initialPanelId?: string | null;
 }) {
   if (!eventId) {
     return <section className="surface-card p-5">Nessun evento corrente.</section>;
@@ -33,8 +35,13 @@ export async function ManagerEmailSection({
     { data: groups },
     { data: tags },
     { data: eventServices },
+    { data: panels },
+    { data: locations },
     { data: templates },
     { data: campaigns },
+    participantCandidates,
+    groupLeaderCandidates,
+    teacherCandidates,
   ] = await Promise.all([
     service
       .from("groups")
@@ -55,6 +62,17 @@ export async function ManagerEmailSection({
       .order("public_order")
       .order("label"),
     service
+      .from("event_moments")
+      .select("id,title,starts_at,location_id")
+      .eq("event_id", eventId)
+      .eq("moment_type", "panel")
+      .eq("publication_status", "published")
+      .order("starts_at"),
+    service
+      .from("event_locations")
+      .select("id,name")
+      .eq("event_id", eventId),
+    service
       .from("email_templates")
       .select("id,name,subject,body_text,current_version")
       .eq("event_id", eventId)
@@ -67,8 +85,6 @@ export async function ManagerEmailSection({
       .not("sent_at", "is", null)
       .order("sent_at", { ascending: false })
       .limit(8),
-  ]);
-  const [participantCandidates, groupLeaderCandidates] = await Promise.all([
     resolveCampaignRecipients(eventId, {
       audience: "participants",
       groupId: null,
@@ -83,11 +99,21 @@ export async function ManagerEmailSection({
       serviceId: null,
       status: "active",
     }),
+    resolveCampaignRecipients(eventId, {
+      audience: "teachers",
+      groupId: null,
+      tagId: null,
+      serviceId: null,
+      status: "active",
+    }),
   ]);
   const initialRecipients = await loadCampaignRecipientPreviews(
-    [...participantCandidates, ...groupLeaderCandidates],
+    [...participantCandidates, ...groupLeaderCandidates, ...teacherCandidates],
     new Set(),
     eventId
+  );
+  const locationNameById = new Map(
+    (locations ?? []).map((location) => [location.id, location.name])
   );
 
   return (
@@ -95,6 +121,15 @@ export async function ManagerEmailSection({
       groups={(groups ?? []).map((row) => ({ id: row.id, label: row.name }))}
       tags={(tags ?? []).map((row) => ({ id: row.id, label: row.label }))}
       services={(eventServices ?? []).map((row) => ({ id: row.id, label: row.label }))}
+      panels={(panels ?? []).map((row) => ({
+        id: row.id,
+        label: [
+          row.title,
+          formatPanelSchedule(row.starts_at),
+          row.location_id ? locationNameById.get(row.location_id) : null,
+        ].filter(Boolean).join(" · "),
+      }))}
+      initialPanelId={initialPanelId}
       initialRecipients={initialRecipients}
       templates={(templates ?? []).map((row) => ({
         id: row.id,
@@ -112,4 +147,14 @@ export async function ManagerEmailSection({
       }))}
     />
   );
+}
+
+function formatPanelSchedule(value: string) {
+  return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }

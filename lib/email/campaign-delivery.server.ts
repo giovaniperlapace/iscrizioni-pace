@@ -48,6 +48,7 @@ type RecipientDatabaseRow = {
   recipient_user_id: string | null;
   delivery_kind: CampaignDeliveryKind;
   delegate_user_id: string | null;
+  school_teacher_id: string | null;
   status: string;
 };
 
@@ -200,6 +201,42 @@ export async function loadCampaignDeliveryData(
   eventTitle: string,
   recipient: CampaignRecipient
 ) {
+  if (recipient.recipientType === "teacher" && recipient.schoolTeacherId) {
+    const { data: teacher, error: teacherError } = await service
+      .from("school_booking_teachers")
+      .select("email,first_name,last_name,school_bookings!inner(school_name,status,school_panel_reservations(panel_id,status,event_moments(title)))")
+      .eq("id", recipient.schoolTeacherId)
+      .eq("event_id", eventId)
+      .in("school_bookings.status", ["submitted", "confirmed"])
+      .maybeSingle();
+    if (teacherError) throw new Error(teacherError.message);
+    if (!teacher?.email?.trim()) throw new Error("Docente non più raggiungibile.");
+    const bookings = Array.isArray(teacher.school_bookings)
+      ? teacher.school_bookings
+      : teacher.school_bookings ? [teacher.school_bookings] : [];
+    const schoolNames = [...new Set(bookings.map((booking) => booking.school_name).filter(Boolean))];
+    const panelNames = [...new Set(bookings.flatMap((booking) => {
+      const reservations = Array.isArray(booking.school_panel_reservations)
+        ? booking.school_panel_reservations
+        : booking.school_panel_reservations ? [booking.school_panel_reservations] : [];
+      return reservations.flatMap((reservation) => {
+        const moment = relatedOne(reservation.event_moments);
+        return reservation.status === "reserved" && moment?.title ? [moment.title] : [];
+      });
+    }))];
+    return {
+      email: teacher.email.trim(),
+      templateData: {
+        firstName: teacher.first_name,
+        lastName: teacher.last_name,
+        participantCode: null,
+        groupName: null,
+        schoolName: schoolNames.join(", ") || null,
+        panelNames: panelNames.join(", ") || null,
+        eventTitle,
+      },
+    };
+  }
   if (recipient.recipientType === "group_leader" && recipient.recipientUserId) {
     const identities = await getOperationalUserIdentities(service, [
       recipient.recipientUserId,
@@ -235,6 +272,8 @@ export async function loadCampaignDeliveryData(
         lastName: name.lastName,
         participantCode,
         groupName: groupNames.join(", ") || null,
+        schoolName: null,
+        panelNames: null,
         eventTitle,
       },
     };
@@ -243,7 +282,7 @@ export async function loadCampaignDeliveryData(
   if (!recipient.participantId || !recipient.registrationId) {
     throw new Error("Destinatario partecipante non valido.");
   }
-  const [{ data: participant }, { data: assignment }, email] = await Promise.all([
+  const [{ data: participant }, { data: assignment }, { data: panelChoices }, email] = await Promise.all([
     service
       .from("participants")
       .select("id,first_name,last_name,public_code")
@@ -255,6 +294,13 @@ export async function loadCampaignDeliveryData(
       .eq("registration_id", recipient.registrationId)
       .eq("is_current", true)
       .maybeSingle(),
+    service
+      .from("moment_attendance_choices")
+      .select("event_moments!inner(title,event_id)")
+      .eq("registration_id", recipient.registrationId)
+      .eq("choice", "yes")
+      .not("seat_section_id", "is", null)
+      .eq("event_moments.event_id", eventId),
     loadDeliveryEmail(service, recipient),
   ]);
   const group = relatedOne(assignment?.groups);
@@ -268,6 +314,11 @@ export async function loadCampaignDeliveryData(
       lastName: participant.last_name,
       participantCode: participant.public_code,
       groupName: group?.name ?? null,
+      schoolName: null,
+      panelNames: (panelChoices ?? []).flatMap((choice) => {
+        const panel = relatedOne(choice.event_moments);
+        return panel?.title ? [panel.title] : [];
+      }).join(", ") || null,
       eventTitle,
     },
   };
@@ -339,6 +390,7 @@ export function campaignRecipientFromDatabaseRow(
     recipientUserId: row.recipient_user_id,
     deliveryKind: row.delivery_kind,
     delegateUserId: row.delegate_user_id,
+    schoolTeacherId: row.school_teacher_id,
   };
 }
 

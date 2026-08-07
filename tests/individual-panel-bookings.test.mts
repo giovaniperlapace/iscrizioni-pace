@@ -47,6 +47,10 @@ test("family-size changes and published capacity reductions remain protected", (
   assert.match(migration, /create or replace function public\.replace_owned_registration_children/);
   assert.match(actions, /supabase\.rpc\("replace_owned_registration_children"/);
   assert.match(migration, /1 \+ count\(\*\)::integer[\s\S]*registration_children/);
+  assert.match(
+    migration,
+    /create or replace function public\.replace_owned_registration_children[\s\S]*from public\.registrations registration[\s\S]*for update[\s\S]*from public\.panel_seat_sections section[\s\S]*for update/
+  );
 });
 
 test("participant UI uses the atomic RPC and never resubmits panel choices as hidden registration fields", () => {

@@ -1,9 +1,9 @@
 import { getOperationalUserIdentities } from "@/lib/operational-users/identity";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
-export type CampaignRecipientAudience = "participants" | "group_leaders";
-export type CampaignRecipientType = "participant" | "group_leader";
-export type CampaignDeliveryKind = "direct" | "delegated" | "leader";
+export type CampaignRecipientAudience = "participants" | "group_leaders" | "teachers";
+export type CampaignRecipientType = "participant" | "group_leader" | "teacher";
+export type CampaignDeliveryKind = "direct" | "delegated" | "leader" | "teacher";
 
 export type CampaignRecipient = {
   recipientKey: string;
@@ -13,6 +13,7 @@ export type CampaignRecipient = {
   recipientUserId: string | null;
   deliveryKind: CampaignDeliveryKind;
   delegateUserId: string | null;
+  schoolTeacherId: string | null;
 };
 
 export type CampaignRecipientPreview = CampaignRecipient & {
@@ -22,6 +23,8 @@ export type CampaignRecipientPreview = CampaignRecipient & {
   groupIds: string[];
   tagIds: string[];
   serviceIds: string[];
+  panelIds: string[];
+  schoolNames: string[];
 };
 
 export type CampaignRecipientFilters = {
@@ -29,6 +32,8 @@ export type CampaignRecipientFilters = {
   groupId: string | null;
   tagId: string | null;
   serviceId: string | null;
+  panelId?: string | null;
+  schoolName?: string | null;
   status: string;
 };
 
@@ -47,6 +52,9 @@ export async function resolveCampaignRecipients(
 ) {
   if (filters.audience === "group_leaders") {
     return resolveGroupLeaderRecipients(eventId);
+  }
+  if (filters.audience === "teachers") {
+    return resolveTeacherRecipients(eventId);
   }
 
   return resolveParticipantRecipients(eventId, filters.status);
@@ -143,6 +151,7 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
             recipientUserId: null,
             deliveryKind: "direct",
             delegateUserId: null,
+            schoolTeacherId: null,
           },
         ]
       : delegates.has(row.participant_id)
@@ -155,6 +164,7 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
               recipientUserId: null,
               deliveryKind: "delegated",
               delegateUserId: delegates.get(row.participant_id)!,
+              schoolTeacherId: null,
             },
           ]
         : []
@@ -187,9 +197,57 @@ async function resolveGroupLeaderRecipients(eventId: string) {
         recipientUserId: userId,
         deliveryKind: "leader",
         delegateUserId: null,
+        schoolTeacherId: null,
       },
     ];
   });
+}
+
+async function resolveTeacherRecipients(eventId: string) {
+  const service = createSupabaseServiceClient();
+  const { data: bookings, error: bookingsError } = await service
+    .from("school_bookings")
+    .select("id,teacher_id")
+    .eq("event_id", eventId)
+    .in("status", ["submitted", "confirmed"]);
+  if (bookingsError) throw new Error(bookingsError.message);
+  const bookingIds = (bookings ?? []).map((row) => row.id);
+  if (!bookingIds.length) return [];
+  const reservations = await loadInChunks(bookingIds, async (ids) => {
+    const { data, error } = await service
+      .from("school_panel_reservations")
+      .select("booking_id")
+      .eq("status", "reserved")
+      .in("booking_id", ids);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+  const reservedBookings = new Set(reservations.map((row) => row.booking_id));
+  const teacherIds = [...new Set((bookings ?? [])
+    .filter((row) => reservedBookings.has(row.id))
+    .map((row) => row.teacher_id))];
+  if (!teacherIds.length) return [];
+  const teachers = await loadInChunks(teacherIds, async (ids) => {
+    const { data, error } = await service
+      .from("school_booking_teachers")
+      .select("id,email")
+      .eq("event_id", eventId)
+      .in("id", ids);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+  return teachers.flatMap<CampaignRecipient>((teacher) =>
+    teacher.email?.trim() ? [{
+      recipientKey: `teacher:${teacher.id}`,
+      recipientType: "teacher",
+      participantId: null,
+      registrationId: null,
+      recipientUserId: null,
+      deliveryKind: "teacher",
+      delegateUserId: null,
+      schoolTeacherId: teacher.id,
+    }] : []
+  );
 }
 
 export async function loadCampaignRecipientPreviews(
@@ -223,6 +281,9 @@ export async function loadCampaignRecipientPreviews(
       )
     ),
   ];
+  const schoolTeacherIds = [...new Set(recipients.flatMap((recipient) =>
+    recipient.schoolTeacherId ? [recipient.schoolTeacherId] : []
+  ))];
 
   const [
     participants,
@@ -233,6 +294,9 @@ export async function loadCampaignRecipientPreviews(
     leaderMemberships,
     participantTags,
     participantServices,
+    participantPanelChoices,
+    schoolTeachers,
+    schoolBookings,
   ] = await Promise.all([
     loadInChunks(participantIds, async (ids) => {
       const { data, error } = await service
@@ -288,6 +352,35 @@ export async function loadCampaignRecipientPreviews(
       if (error) throw new Error(error.message);
       return data ?? [];
     }),
+    loadInChunks(registrationIds, async (ids) => {
+      const { data, error } = await service
+        .from("moment_attendance_choices")
+        .select("registration_id,moment_id")
+        .eq("choice", "yes")
+        .not("seat_section_id", "is", null)
+        .in("registration_id", ids);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }),
+    loadInChunks(schoolTeacherIds, async (ids) => {
+      const { data, error } = await service
+        .from("school_booking_teachers")
+        .select("id,email,first_name,last_name")
+        .eq("event_id", eventId)
+        .in("id", ids);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }),
+    loadInChunks(schoolTeacherIds, async (ids) => {
+      const { data, error } = await service
+        .from("school_bookings")
+        .select("id,teacher_id,school_name,status,school_panel_reservations(panel_id,status)")
+        .eq("event_id", eventId)
+        .in("status", ["submitted", "confirmed"])
+        .in("teacher_id", ids);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }),
   ]);
 
   const participantById = new Map(
@@ -319,8 +412,44 @@ export async function loadCampaignRecipientPreviews(
     "participant_id",
     "service_id"
   );
+  const panelIdsByRegistration = collectRelationIds(
+    participantPanelChoices,
+    "registration_id",
+    "moment_id"
+  );
+  const schoolTeacherById = new Map(schoolTeachers.map((teacher) => [teacher.id, teacher]));
+  const schoolNamesByTeacher = new Map<string, string[]>();
+  const panelIdsByTeacher = new Map<string, string[]>();
+  for (const booking of schoolBookings) {
+    const schools = schoolNamesByTeacher.get(booking.teacher_id) ?? [];
+    if (!schools.includes(booking.school_name)) schools.push(booking.school_name);
+    schoolNamesByTeacher.set(booking.teacher_id, schools);
+    const panels = panelIdsByTeacher.get(booking.teacher_id) ?? [];
+    const reservations = Array.isArray(booking.school_panel_reservations)
+      ? booking.school_panel_reservations
+      : booking.school_panel_reservations ? [booking.school_panel_reservations] : [];
+    for (const reservation of reservations) {
+      if (reservation.status === "reserved" && !panels.includes(reservation.panel_id)) {
+        panels.push(reservation.panel_id);
+      }
+    }
+    panelIdsByTeacher.set(booking.teacher_id, panels);
+  }
 
   const previews = recipients.flatMap<CampaignRecipientPreview>((recipient) => {
+    if (recipient.recipientType === "teacher" && recipient.schoolTeacherId) {
+      const teacher = schoolTeacherById.get(recipient.schoolTeacherId);
+      if (!teacher?.email?.trim()) return [];
+      return [{
+        ...recipient,
+        fullName: `${teacher.first_name} ${teacher.last_name}`.trim(),
+        destinationEmail: teacher.email.trim(),
+        selected: selectedKeys.has(recipient.recipientKey),
+        groupIds: [], tagIds: [], serviceIds: [],
+        panelIds: panelIdsByTeacher.get(teacher.id) ?? [],
+        schoolNames: schoolNamesByTeacher.get(teacher.id) ?? [],
+      }];
+    }
     if (recipient.recipientType === "group_leader" && recipient.recipientUserId) {
       const identity = leaderIdentities.get(recipient.recipientUserId);
       if (!identity?.email?.trim()) return [];
@@ -333,6 +462,8 @@ export async function loadCampaignRecipientPreviews(
           groupIds: groupIdsByLeader.get(recipient.recipientUserId) ?? [],
           tagIds: [],
           serviceIds: [],
+          panelIds: [],
+          schoolNames: [],
         },
       ];
     }
@@ -360,6 +491,10 @@ export async function loadCampaignRecipientPreviews(
           : [],
         tagIds: tagIdsByParticipant.get(recipient.participantId) ?? [],
         serviceIds: serviceIdsByParticipant.get(recipient.participantId) ?? [],
+        panelIds: recipient.registrationId
+          ? panelIdsByRegistration.get(recipient.registrationId) ?? []
+          : [],
+        schoolNames: [],
       },
     ];
   });

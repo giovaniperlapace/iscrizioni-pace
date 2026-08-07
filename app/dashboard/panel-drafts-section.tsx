@@ -213,9 +213,12 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
                       : " Non risultano ancora persone iscritte a questo panel."}
                   </p>
                   {panel.confirmedRegistrationCount > 0 ? (
-                    <p className="text-xs font-semibold text-[var(--peace-blue-800)]">
-                      La scorciatoia verso campagne filtrate per panel sarà attivata con la Milestone P9.
-                    </p>
+                    <Link
+                      href={`/dashboard/manager?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`}
+                      className="w-fit text-xs font-semibold text-[var(--peace-blue-800)] underline decoration-1 underline-offset-4"
+                    >
+                      Prepara una comunicazione per le persone iscritte a questo panel
+                    </Link>
                   ) : null}
                 </div>
               ) : null}

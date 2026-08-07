@@ -214,3 +214,77 @@ comment on function public.create_public_school_booking(
   uuid, text, text, text, text, text, text, text, integer, integer,
   text, jsonb, text, text
 ) is 'Creates one public school booking and reserves its school quota atomically without student identities.';
+
+-- The public school form needs section identifiers but must not receive direct
+-- table access, which would also expose the capacities of reserved audiences.
+create or replace function public.get_public_school_booking_options()
+returns table (
+  event_id uuid,
+  event_title text,
+  panel_id uuid,
+  section_id uuid,
+  title text,
+  description text,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  location_name text
+)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select
+    event.id,
+    event.title,
+    panel.id,
+    section.id,
+    panel.title,
+    panel.description,
+    panel.starts_at,
+    panel.ends_at,
+    location.name
+  from public.events event
+  join public.event_moments panel
+    on panel.event_id = event.id
+   and panel.moment_type = 'panel'
+   and panel.publication_status = 'published'
+   and panel.is_public
+  join public.event_locations location
+    on location.id = panel.location_id
+   and location.event_id = event.id
+   and location.is_active
+  join public.panel_seat_sections section
+    on section.panel_id = panel.id
+   and section.event_id = event.id
+  join public.panel_audience_types audience
+    on audience.id = section.audience_type_id
+   and audience.event_id = event.id
+   and audience.booking_channel = 'school_booking'
+   and audience.is_active
+  where event.is_current
+    and event.status = 'published'
+    and (event.registration_opens_at is null or event.registration_opens_at <= now())
+    and (event.registration_closes_at is null or event.registration_closes_at >= now())
+    and panel.starts_at is not null
+    and panel.ends_at is not null
+  order by panel.starts_at, panel.title, section.id;
+$$;
+
+revoke all on function public.get_public_school_booking_options() from public;
+grant execute on function public.get_public_school_booking_options() to anon, authenticated;
+
+drop policy "panel seat sections published or operational read"
+  on public.panel_seat_sections;
+create policy "panel seat sections operational read"
+  on public.panel_seat_sections for select
+  using (
+    app.has_event_role(
+      event_id,
+      array['manager', 'manager_viewer']::public.app_role[]
+    )
+  );
+revoke select on public.panel_seat_sections from anon;
+
+comment on function public.get_public_school_booking_options() is
+  'Returns current published school-booking panel options without exposing section capacities.';
