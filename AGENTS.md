@@ -2486,6 +2486,32 @@ Quando il piano verrà cancellato:
   di home, accesso scuola italiano/inglese e conferma email fallita, senza
   overlay o errori console. Le migration P2-P9 non sono state applicate
   persistentemente allo staging o alla production durante questo audit.
+- Il 2026-08-07 e' stata avviata localmente la Milestone panel P10 sul branch
+  `codex/panel-p0-p10`, senza migration remota, commit, push o deploy. La
+  sezione `Statistiche` condivisa da admin e manager contiene ora per prima la
+  vista decisionale panel: capienza, prenotati e residui per panel, dettaglio
+  per sezione/pubblico e conteggi distinti di partecipanti individuali,
+  minori che ereditano la scelta, prenotazioni scuola e persone scuola. La
+  fonte resta canonica: `moment_attendance_choices` confermate con
+  `seat_section_id`, minori correnti di `registration_children` e riserve
+  `school_panel_reservations` attive; iscrizioni e prenotazioni annullate non
+  occupano posti. La lettura server e' paginata e il payload del report non
+  contiene identita' o contatti.
+- Gli stati P10 sono `Disponibile`, `Quasi pieno`, `Pieno`, `Non configurato`
+  e `Incoerente`; `Quasi pieno` parte dal 90% di occupazione e viene calcolato
+  soltanto con capienza positiva. Capienza zero non produce percentuali. I
+  filtri coprono giorno, location, panel, tipo pubblico e stato. Ogni riga
+  collega alla gestione panel; la campagna prefiltrata compare solo per panel
+  pubblicati e utenti con gestione evento. `manager_viewer` consulta lo stesso
+  report e il dettaglio panel in sola lettura, senza CTA campagna.
+- Il confronto P10 tra previsto, effettivo e no-show e' predisposto nel tipo
+  dati ma resta nullo finche' P11 non introduce il modello completo di
+  check-in per adulto, minori e scuole. Non usare i `check_ins` legacy per
+  mostrare un confronto parziale. Prima di chiudere P10 restano applicazione
+  ordinata P2-P9 esclusivamente allo staging, collaudo dei conteggi su fixture
+  sintetiche e verifica browser autenticata per admin, manager e
+  `manager_viewer`. Sono verdi 195 test, lint, typecheck, `staging:verify` e
+  build production locale. Production resta invariata.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

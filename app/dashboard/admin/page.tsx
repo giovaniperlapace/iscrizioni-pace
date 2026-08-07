@@ -97,6 +97,10 @@ import {
   parsePanelDraftFilters,
 } from "@/lib/panels/panel-drafts";
 import {
+  emptyPanelStatisticsSnapshot,
+  getPanelStatisticsSnapshot,
+} from "@/lib/panels/panel-statistics";
+import {
   getSchoolBookingCatalog,
   parseSchoolBookingFilters,
 } from "@/lib/panels/school-bookings";
@@ -418,7 +422,14 @@ export default async function AdminDashboardPage({
       )
     : null;
   const currentEventId = currentEvent?.id ?? null;
-  const [snapshots, adminOperations, panelLocations, panelCatalog, schoolCatalog] = await Promise.all([
+  const [
+    snapshots,
+    adminOperations,
+    panelLocations,
+    panelCatalog,
+    schoolCatalog,
+    panelStatistics,
+  ] = await Promise.all([
     activeSection === "evento" ? getOpeningSnapshots() : Promise.resolve([]),
     needsAdminOperations
       ? getAdminOperationsSnapshot(filters, currentEventId)
@@ -432,6 +443,9 @@ export default async function AdminDashboardPage({
     activeSection === "panel" && currentEventId
       ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
       : Promise.resolve({ bookings: [], panelOptions: [] }),
+    activeSection === "dashboard" && currentEventId
+      ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
+      : Promise.resolve(emptyPanelStatisticsSnapshot()),
   ]);
   const statistics =
     activeSection === "dashboard"
@@ -509,7 +523,13 @@ export default async function AdminDashboardPage({
             ) : null}
 
             {activeSection === "dashboard" ? (
-              <StatisticsSection statistics={statistics} />
+              <StatisticsSection
+                statistics={statistics}
+                panelStatistics={panelStatistics}
+                dashboard="admin"
+                navMode={navMode}
+                canManage
+              />
             ) : null}
 
             {activeSection === "iscritti" ? (

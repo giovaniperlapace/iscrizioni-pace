@@ -8,11 +8,11 @@ const statisticsSection = readFileSync(
   "utf8"
 );
 const firstSummaryPosition = statisticsSection.indexOf(
-  "      <TerritoryStatisticsSummary"
+  "        <PanelStatisticsReport"
 );
 const renderedReports = statisticsSection.slice(
   statisticsSection.lastIndexOf(
-    '<ReportBlock name="territory"',
+    '<ReportBlock name="panels"',
     firstSummaryPosition
   ),
   statisticsSection.indexOf("function TerritoryStatisticsSummary")
@@ -20,6 +20,7 @@ const renderedReports = statisticsSection.slice(
 
 test("each statistics summary is immediately paired with its detail table", () => {
   const orderedMarkers = [
+    "<PanelStatisticsReport",
     "<TerritoryStatisticsSummary",
     'id="statistics-territory-table"',
     "<AttendanceStatisticsSummary",
@@ -33,7 +34,7 @@ test("each statistics summary is immediately paired with its detail table", () =
   assert.deepEqual(positions, [...positions].sort((first, second) => first - second));
   assert.equal(
     renderedReports.match(/<ReportBlock name=/g)?.length,
-    3
+    4
   );
   assert.match(statisticsSection, /data-statistics-report=\{name\}/);
   assert.match(statisticsSection, /border-2 border-\[#bfd8ea\]/);

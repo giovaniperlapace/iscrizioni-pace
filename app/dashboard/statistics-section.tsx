@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 
+import { PanelStatisticsReport } from "@/app/dashboard/panel-statistics-report";
+import type { PanelStatisticsSnapshot } from "@/lib/panels/panel-statistics";
 import type {
   EventStatisticsSnapshot,
   ParticipantBreakdownLevel,
@@ -20,6 +22,10 @@ import type {
 
 type StatisticsSectionProps = {
   statistics: EventStatisticsSnapshot;
+  panelStatistics: PanelStatisticsSnapshot;
+  dashboard: "admin" | "manager";
+  navMode: "full" | "mini";
+  canManage: boolean;
 };
 
 type SummaryBreakdownRow = {
@@ -37,7 +43,13 @@ const AGE_BANDS: StatisticsAgeBand[] = [
   "unknown",
 ];
 
-export function StatisticsSection({ statistics }: StatisticsSectionProps) {
+export function StatisticsSection({
+  statistics,
+  panelStatistics,
+  dashboard,
+  navMode,
+  canManage,
+}: StatisticsSectionProps) {
   const [territorySearch, setTerritorySearch] = useState("");
   const [countryFilter, setCountryFilter] = useState(ALL_FILTER);
   const [cityFilter, setCityFilter] = useState(ALL_FILTER);
@@ -170,6 +182,15 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
           dati per leggere subito chi compone ogni insieme.
         </p>
       </div>
+
+      <ReportBlock name="panels" title="Panel">
+        <PanelStatisticsReport
+          statistics={panelStatistics}
+          dashboard={dashboard}
+          navMode={navMode}
+          canManage={canManage}
+        />
+      </ReportBlock>
 
       <ReportBlock name="territory" title="Territori e gruppi">
         <TerritoryStatisticsSummary
@@ -463,7 +484,7 @@ function ReportBlock({
   title,
   children,
 }: {
-  name: "territory" | "attendance" | "age";
+  name: "panels" | "territory" | "attendance" | "age";
   title: string;
   children: ReactNode;
 }) {

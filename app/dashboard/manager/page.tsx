@@ -89,6 +89,10 @@ import {
   parsePanelDraftFilters,
 } from "@/lib/panels/panel-drafts";
 import {
+  emptyPanelStatisticsSnapshot,
+  getPanelStatisticsSnapshot,
+} from "@/lib/panels/panel-statistics";
+import {
   getSchoolBookingCatalog,
   parseSchoolBookingFilters,
 } from "@/lib/panels/school-bookings";
@@ -390,6 +394,10 @@ export default async function ManagerDashboardPage({
           getSchoolBookingCatalog(serviceSupabase, currentEventId),
         ])
       : [[], { panels: [], audienceTypes: [] }, { bookings: [], panelOptions: [] }];
+  const panelStatisticsPromise =
+    activeSection === "dashboard" && currentEventId && canSeeCurrentEvent
+      ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
+      : Promise.resolve(emptyPanelStatisticsSnapshot());
   const managerOperations =
     activeSection === "email"
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
@@ -399,21 +407,27 @@ export default async function ManagerDashboardPage({
           filters,
           currentEventId
         );
-  const statistics =
+  const [statistics, panelStatistics] =
     activeSection === "dashboard"
-      ? await getManagerStatisticsSnapshot(
-          serviceSupabase,
-          scope,
-          managerOperations.groupTree,
-          currentEventId,
-          currentEvent?.starts_on ?? null,
-          currentEvent?.ends_on ?? null
-        )
-      : buildEventStatisticsSnapshot({
-          participants: [],
-          groups: [],
-          attendanceChoices: [],
-        });
+      ? await Promise.all([
+          getManagerStatisticsSnapshot(
+            serviceSupabase,
+            scope,
+            managerOperations.groupTree,
+            currentEventId,
+            currentEvent?.starts_on ?? null,
+            currentEvent?.ends_on ?? null
+          ),
+          panelStatisticsPromise,
+        ])
+      : [
+          buildEventStatisticsSnapshot({
+            participants: [],
+            groups: [],
+            attendanceChoices: [],
+          }),
+          emptyPanelStatisticsSnapshot(),
+        ];
   const selectedParticipant =
     managerOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
@@ -470,7 +484,15 @@ export default async function ManagerDashboardPage({
             />
 
             {activeSection === "dashboard" ? (
-              <StatisticsSection statistics={statistics} />
+              <StatisticsSection
+                statistics={statistics}
+                panelStatistics={panelStatistics}
+                dashboard="manager"
+                navMode={navMode}
+                canManage={Boolean(
+                  currentEventId && scope.canManageEvent(currentEventId)
+                )}
+              />
             ) : null}
 
             {activeSection === "iscritti" ? (

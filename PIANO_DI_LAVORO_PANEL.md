@@ -551,6 +551,24 @@ audience.
 
 ### Milestone P10 - report statistiche panel
 
+Stato: avviata localmente sul branch `codex/panel-p0-p10` il 2026-08-07.
+La prima tranche aggiunge il report panel condiviso nelle statistiche admin e
+manager, senza nuova migration: l'aggregazione server legge le tabelle
+canoniche P1-P8 e passa al client soltanto conteggi e metadati dei panel. Il
+report separa partecipanti individuali, minori ereditati, prenotazioni scuola
+e persone scuola, esclude iscrizioni/prenotazioni annullate, dettaglia ogni
+sezione e segnala panel pieni, quasi pieni (occupazione almeno al 90%), non
+configurati o incoerenti. Sono disponibili filtri per giorno, location, panel,
+tipo pubblico e stato, oltre ai collegamenti verso gestione panel e campagne
+prefiltrate; `manager_viewer` conserva la vista read-only e non vede la CTA
+campagna. Il confronto previsto/effettivo resta intenzionalmente disattivato:
+verra' collegato al modello completo di check-in individuale, minori e scuole
+della P11, senza usare i check-in legacy in modo parziale. Prima della chiusura
+restano il collaudo sui dati sintetici dello staging dopo l'applicazione
+ordinata P2-P9 e la verifica browser autenticata admin/manager/manager_viewer.
+Sono verdi 195 test, lint, typecheck, `staging:verify` e build production
+locale. Nessuna modifica P10 e' in production.
+
 Scopo: aggiungere alla sezione statistiche una vista decisionale sui panel.
 
 Deliverable:
