@@ -461,7 +461,7 @@ function LocationStatus({ error, saved }: { error?: string; saved?: string }) {
     forbidden: "Non hai permessi di modifica sulle location di questo evento.",
     "not-found": "La location non è stata trovata nell'evento corrente.",
     "location-in-use": "La location non può essere eliminata perché è associata a uno o più panel.",
-    "published-capacity": "La nuova capienza non coincide con le sezioni di un panel pubblicato. Modifica prima le sezioni del panel.",
+    "published-capacity": "La nuova capienza è inferiore alla somma dei posti delle sezioni di un panel pubblicato. Riduci prima i posti assegnati nel panel.",
     conflict: "La modifica renderebbe incoerente un panel pubblicato e non è stata salvata.",
   };
 

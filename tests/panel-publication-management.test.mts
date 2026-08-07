@@ -16,6 +16,13 @@ const section = readFileSync(
   join(process.cwd(), "app/dashboard/panel-drafts-section.tsx"),
   "utf8"
 );
+const capacityLimitMigration = readFileSync(
+  join(
+    process.cwd(),
+    "supabase/migrations/20260807120000_allow_underfilled_panel_sections.sql"
+  ),
+  "utf8"
+);
 
 test("P4 publishes a batch atomically after locking and validating every panel", () => {
   assert.match(migration, /create or replace function public\.publish_panels/);
@@ -34,6 +41,15 @@ test("P4 updates published panels atomically and protects confirmed seats", () =
   assert.match(migration, /v_individual_capacity < v_confirmed_count/);
   assert.match(migration, /'panel\.published_updated'/);
   assert.match(migration, /'affected_registration_count'/);
+  assert.match(capacityLimitMigration, /v_section_capacity > v_location_capacity/);
+});
+
+test("publication accepts unused physical capacity but rejects over-allocation", () => {
+  assert.match(capacityLimitMigration, /\) <= location\.max_capacity/);
+  assert.match(
+    capacityLimitMigration,
+    /capacity total exceeds location capacity limit/
+  );
 });
 
 test("server actions authorize publication and route published edits to the dedicated RPC", () => {

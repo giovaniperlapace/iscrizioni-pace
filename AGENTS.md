@@ -2224,8 +2224,9 @@ Quando il piano verrà cancellato:
   `Ospiti`/`internal_assignment`; partecipante e minori collegati consumano
   `1 + minori attivi` e condividono la scelta panel nella prima versione;
   `Ospiti` e' assegnabile soltanto internamente. Un panel pubblicato richiede
-  location, intervallo valido, almeno una sezione e somma sezioni uguale alla
-  capienza fisica. Le traduzioni restano applicative. Un pubblico disattivato
+  location, intervallo valido e almeno una sezione; la somma delle sezioni puo'
+  essere inferiore alla capienza fisica ma non puo' superarla. Le traduzioni
+  restano applicative. Un pubblico disattivato
   resta nello storico e non e' aggiungibile a nuovi panel; questa possibilita'
   e' una tutela tecnica, non un caso d'uso che richiede enfasi nella UI.
 - La Milestone P1 usa la migration
@@ -2266,11 +2267,10 @@ Quando il piano verrà cancellato:
   `manager_viewer` vede location e associazioni ma non riceve controlli di
   scrittura; le Server Actions verificano comunque admin globale o manager
   dello stesso evento.
-- La capienza di una location collegata a panel pubblicati non puo' essere
-  cambiata isolatamente: l'overlay elenca i panel coinvolti, la Server Action
-  blocca il cambio con messaggio esplicito e il constraint trigger P1 resta
-  l'ultima protezione transazionale. La futura riconciliazione atomica delle
-  sezioni appartiene alla gestione panel successiva. Creazione, modifica ed
+- La capienza di una location collegata a panel pubblicati puo' essere cambiata
+  soltanto se resta almeno pari alla somma dei posti delle sezioni di ogni panel
+  collegato; la Server Action mostra un messaggio esplicito e il constraint
+  trigger resta l'ultima protezione transazionale. Creazione, modifica ed
   eliminazione location producono audit `event_location.created`,
   `event_location.updated` ed `event_location.deleted` senza registrare
   l'indirizzo nei metadata.
@@ -2292,8 +2292,9 @@ Quando il piano verrà cancellato:
   descrizione sono limitati a 160 e 2000 caratteri; sono ammesse al massimo 20
   sezioni, ciascun tipo pubblico puo' comparire una sola volta e la capienza di
   sezione e' un intero non negativo. La bozza puo' essere salvata senza sezioni
-  o con somma incompleta/eccedente; la UI mostra in tempo reale assegnati,
-  capienza e differenza. Location e intervallo sono invece obbligatori e devono
+  o con somma inferiore alla capienza, ma mai con una somma superiore; la UI
+  mostra in tempo reale assegnati, capienza e differenza e disabilita il
+  salvataggio in caso di eccedenza. Location e intervallo sono invece obbligatori e devono
   rientrare nelle date evento. La UI segnala subito le sovrapposizioni note e
   il vincolo exclusion P1 resta la protezione definitiva.
 - La migration P3 locale e'
@@ -2316,8 +2317,8 @@ Quando il piano verrà cancellato:
 - La migration P4 locale e'
   `20260805230000_panel_publication_management.sql`. La RPC autenticata
   `public.publish_panels` blocca panel e sezioni, verifica scope, intervallo,
-  location attiva, presenza delle sezioni e totale esatto per ogni elemento,
-  quindi pubblica tutto nella stessa transazione. I retry sono idempotenti;
+  location attiva, presenza delle sezioni e totale non superiore alla capienza
+  per ogni elemento, quindi pubblica tutto nella stessa transazione. I retry sono idempotenti;
   oltre agli audit individuali `panel.published` gia' prodotti dalla P1, i
   batch con piu' elementi registrano `panel.batch_published`.
 - I panel pubblicati sono modificabili con la RPC transazionale
@@ -2341,6 +2342,14 @@ Quando il piano verrà cancellato:
   del batch invalido, batch valido, retry idempotente, modifica pubblicata,
   audit e rifiuto del `manager_viewer`, terminando con errore deliberato per
   annullare tutte le fixture. Production resta invariata.
+- Dal 2026-08-07 la migration
+  `20260807120000_allow_underfilled_panel_sections.sql` sostituisce la regola
+  iniziale di uguaglianza esatta: i posti non distribuiti sono ammessi sia in
+  bozza sia per panel pubblicati, mentre ogni eccedenza e' bloccata nella UI,
+  nella Server Action e dai vincoli/RPC database. Le statistiche considerano
+  incoerente soltanto il superamento della capienza, non una distribuzione
+  inferiore. La migration va applicata allo staging prima di collaudare il
+  comportamento sul deploy Preview; production resta invariata.
 - Il 2026-08-05 la Milestone panel P5 e' stata implementata localmente sul
   branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
   La home anonima contiene ora una sezione programma accessibile e responsive,

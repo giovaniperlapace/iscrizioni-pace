@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Plus, Search, X } from "lucide-react";
 
 import { savePanelDraft } from "@/app/actions";
+import {
+  PanelDraftFormActions,
+  PanelDraftFormProvider,
+} from "@/app/dashboard/panel-draft-form-state";
 import { PanelDraftFields } from "@/app/dashboard/panel-draft-fields";
 import { PanelPublicationTable } from "@/app/dashboard/panel-publication-table";
 import { PanelTabs } from "@/app/dashboard/school-bookings-section";
@@ -202,34 +206,46 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
             <input type="hidden" name="nav" value={navMode} />
             {panel ? <input type="hidden" name="panelId" value={panel.id} /> : null}
             {panel ? <input type="hidden" name="publicationStatus" value={panel.publicationStatus} /> : null}
-            <div className="px-5 py-5">
-              {panel?.publicationStatus === "published" ? (
-                <div className="mb-5 grid gap-2 rounded-md border border-[#c9d9e7] bg-[#f2f8fc] px-4 py-3 text-sm">
-                  <p className="font-semibold">Modifica di un panel già pubblico</p>
-                  <p className="text-[var(--peace-muted)]">
-                    Le modifiche sono subito visibili nel programma e vengono registrate in audit.
-                    {panel.confirmedRegistrationCount > 0
-                      ? ` Le persone già iscritte coinvolte sono ${panel.confirmedRegistrationCount}.`
-                      : " Non risultano ancora persone iscritte a questo panel."}
-                  </p>
-                  {panel.confirmedRegistrationCount > 0 ? (
-                    <Link
-                      href={`/dashboard/manager?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`}
-                      className="w-fit text-xs font-semibold text-[var(--peace-blue-800)] underline decoration-1 underline-offset-4"
-                    >
-                      Prepara una comunicazione per le persone iscritte a questo panel
-                    </Link>
-                  ) : null}
-                </div>
-              ) : null}
-              <PanelDraftFields panel={panel} locations={locations} audienceTypes={audienceTypes} startsAt={panelDateTimeLocalValue(panel?.startsAt ?? null)} endsAt={panelDateTimeLocalValue(panel?.endsAt ?? null)} eventStartsOn={event.startsOn} eventEndsOn={event.endsOn} conflictPanels={panels.map((candidate) => ({ id: candidate.id, title: candidate.title, locationId: candidate.locationId, startsAt: candidate.startsAt, endsAt: candidate.endsAt }))} />
-            </div>
-            <div className="flex flex-wrap justify-end gap-3 border-t border-[var(--peace-border)] px-5 py-4">
-              <Link href={closePath} scroll={false} className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold">Annulla</Link>
-              <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white">
-                {panel?.publicationStatus === "published" ? "Salva e aggiorna" : panel ? "Salva modifiche" : "Salva bozza"}
-              </PendingSubmitButton>
-            </div>
+            <PanelDraftFormProvider
+              initialCapacityExceeded={Boolean(
+                panel &&
+                  panel.locationCapacity !== null &&
+                  panel.assignedCapacity > panel.locationCapacity
+              )}
+            >
+              <div className="px-5 py-5">
+                {panel?.publicationStatus === "published" ? (
+                  <div className="mb-5 grid gap-2 rounded-md border border-[#c9d9e7] bg-[#f2f8fc] px-4 py-3 text-sm">
+                    <p className="font-semibold">Modifica di un panel già pubblico</p>
+                    <p className="text-[var(--peace-muted)]">
+                      Le modifiche sono subito visibili nel programma e vengono registrate in audit.
+                      {panel.confirmedRegistrationCount > 0
+                        ? ` Le persone già iscritte coinvolte sono ${panel.confirmedRegistrationCount}.`
+                        : " Non risultano ancora persone iscritte a questo panel."}
+                    </p>
+                    {panel.confirmedRegistrationCount > 0 ? (
+                      <Link
+                        href={`/dashboard/manager?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`}
+                        className="w-fit text-xs font-semibold text-[var(--peace-blue-800)] underline decoration-1 underline-offset-4"
+                      >
+                        Prepara una comunicazione per le persone iscritte a questo panel
+                      </Link>
+                    ) : null}
+                  </div>
+                ) : null}
+                <PanelDraftFields panel={panel} locations={locations} audienceTypes={audienceTypes} startsAt={panelDateTimeLocalValue(panel?.startsAt ?? null)} endsAt={panelDateTimeLocalValue(panel?.endsAt ?? null)} eventStartsOn={event.startsOn} eventEndsOn={event.endsOn} conflictPanels={panels.map((candidate) => ({ id: candidate.id, title: candidate.title, locationId: candidate.locationId, startsAt: candidate.startsAt, endsAt: candidate.endsAt }))} />
+              </div>
+              <PanelDraftFormActions
+                closePath={closePath}
+                submitLabel={
+                  panel?.publicationStatus === "published"
+                    ? "Salva e aggiorna"
+                    : panel
+                      ? "Salva modifiche"
+                      : "Salva bozza"
+                }
+              />
+            </PanelDraftFormProvider>
           </form>
         ) : (
           <div className="grid gap-4 overflow-y-auto px-5 py-5 text-sm">
@@ -285,7 +301,7 @@ function PanelStatus({ error, saved }: { error?: string; saved?: string }) {
     overlap: "La location è già occupata da un altro panel in questa fascia oraria.",
     "outside-event": "Gli orari devono rientrare nelle date dell'evento.",
     "booked-capacity": "La quota per gli iscritti non può scendere sotto le prenotazioni già confermate.",
-    "capacity-total": "Per un panel pubblico, il totale delle sezioni deve coincidere con la capienza della location.",
+    "capacity-total": "La somma dei posti delle sezioni non può superare la capienza della location.",
     "publish-selection": "Seleziona almeno una bozza da pubblicare.",
     "publish-invalid": "La selezione contiene un panel incompleto: nessun panel è stato pubblicato.",
     "publish-failed": "Non è stato possibile pubblicare i panel selezionati. Nessun panel è stato modificato.",

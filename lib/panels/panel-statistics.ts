@@ -432,18 +432,18 @@ export function buildPanelStatisticsSnapshot({
         issues.push("Sezioni di capienza da configurare");
       }
 
-      const hasCapacityMismatch = Boolean(
+      const exceedsLocationCapacity = Boolean(
         location?.maxCapacity &&
           panelSections.length > 0 &&
           totals.capacity > 0 &&
-          totals.capacity !== location.maxCapacity
+          totals.capacity > location.maxCapacity
       );
       const hasInconsistentSection = panelSections.some(
         (section) => section.isInconsistent
       );
 
-      if (hasCapacityMismatch) {
-        issues.push("Totale sezioni diverso dalla capienza della location");
+      if (exceedsLocationCapacity) {
+        issues.push("Totale sezioni superiore alla capienza della location");
       }
 
       if (hasInconsistentSection) {
@@ -466,7 +466,7 @@ export function buildPanelStatisticsSnapshot({
         totals.capacity === 0;
       const state = resolvePanelStatisticsState({
         isInconsistent:
-          hasCapacityMismatch || hasInconsistentSection || hasOrphanBookings,
+          exceedsLocationCapacity || hasInconsistentSection || hasOrphanBookings,
         isNotConfigured,
         capacity: totals.capacity,
         bookedPeople: totals.bookedPeople,

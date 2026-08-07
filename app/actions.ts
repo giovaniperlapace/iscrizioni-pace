@@ -1611,23 +1611,6 @@ export async function saveEventLocation(formData: FormData) {
 
     currentLocation = data as CurrentEventLocationRow;
 
-    if (currentLocation && currentLocation.max_capacity !== maxCapacity) {
-      const { count, error: panelCountError } = await serviceSupabase
-        .from("event_moments")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("location_id", locationId)
-        .eq("moment_type", "panel")
-        .eq("publication_status", "published");
-
-      if (panelCountError) {
-        redirect(`${dashboardPath}&locationError=conflict`);
-      }
-
-      if ((count ?? 0) > 0) {
-        redirect(`${dashboardPath}&locationError=published-capacity`);
-      }
-    }
   }
 
   const payload = {
@@ -1655,6 +1638,7 @@ export async function saveEventLocation(formData: FormData) {
     const errorMessage = result.error?.message.toLowerCase() ?? "";
     const errorCode =
       errorMessage.includes("section capacity total") ||
+      errorMessage.includes("capacity limit") ||
       errorMessage.includes("published panels require")
         ? "published-capacity"
         : "conflict";
@@ -1828,6 +1812,28 @@ export async function savePanelDraft(formData: FormData) {
 
   if (!canManageEvent) {
     redirect(`${dashboardPath}&panelError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: panelLocation, error: panelLocationError } =
+    await serviceSupabase
+      .from("event_locations")
+      .select("max_capacity")
+      .eq("id", locationId)
+      .eq("event_id", eventId)
+      .eq("is_active", true)
+      .maybeSingle();
+  const assignedCapacity = (sectionCapacities as number[]).reduce(
+    (total, capacity) => total + capacity,
+    0
+  );
+
+  if (
+    panelLocationError ||
+    !panelLocation?.max_capacity ||
+    assignedCapacity > panelLocation.max_capacity
+  ) {
+    redirect(`${dashboardPath}&panelError=capacity-total`);
   }
 
   const rpcName =

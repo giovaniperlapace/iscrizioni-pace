@@ -71,8 +71,8 @@ seed stabile.
 2. La sezione `Ospiti` non e' prenotabile dal partecipante e non e'
    prenotabile dal flusso scuole.
 3. Un panel pubblicabile deve avere esattamente una location, inizio, fine e
-   almeno una sezione; la somma delle sezioni deve coincidere con la capienza
-   della location.
+   almeno una sezione; dal riesame UX del 2026-08-07 la somma delle sezioni puo'
+   essere inferiore alla capienza della location ma non puo' superarla.
 4. Titolo e descrizione restano traducibili a livello applicativo; P1 non
    introduce ancora una seconda anagrafica di traduzioni.
 5. Un tipo pubblico disattivato resta leggibile nello storico ma non puo'

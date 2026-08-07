@@ -1,8 +1,9 @@
 "use client";
 
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { usePanelDraftFormState } from "@/app/dashboard/panel-draft-form-state";
 import type { EventLocationOption } from "@/lib/panels/event-locations";
 import {
   PANEL_DESCRIPTION_MAX_LENGTH,
@@ -47,6 +48,7 @@ export function PanelDraftFields({
   eventEndsOn,
   conflictPanels,
 }: PanelDraftFieldsProps) {
+  const { setCapacityExceeded } = usePanelDraftFormState();
   const [locationId, setLocationId] = useState(panel?.locationId ?? "");
   const [startsAt, setStartsAt] = useState(initialStartsAt);
   const [endsAt, setEndsAt] = useState(initialEndsAt);
@@ -68,6 +70,7 @@ export function PanelDraftFields({
   }, 0);
   const difference =
     locationCapacity === null ? null : locationCapacity - assignedCapacity;
+  const capacityExceeded = difference !== null && difference < 0;
   const duplicateAudience = sections.some(
     (section, index) =>
       section.audienceTypeId &&
@@ -86,6 +89,10 @@ export function PanelDraftFields({
       conflictPanels
     );
   }, [conflictPanels, endsAt, locationId, panel?.id, startsAt]);
+
+  useEffect(() => {
+    setCapacityExceeded(capacityExceeded);
+  }, [capacityExceeded, setCapacityExceeded]);
 
   return (
     <div className="grid gap-5">
@@ -181,11 +188,9 @@ export function PanelDraftFields({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs leading-5 text-[var(--peace-muted)]">
-              Ogni tipo di pubblico può comparire una sola volta. Una bozza può
-              essere salvata anche con una distribuzione incompleta.
-              {panel?.publicationStatus === "published"
-                ? " Per un panel pubblico il totale deve sempre coincidere con la capienza."
-                : ""}
+              Ogni tipo di pubblico può comparire una sola volta. La somma dei
+              posti può essere inferiore alla capienza della location, ma non può
+              superarla.
             </p>
           </div>
           <button
@@ -288,19 +293,17 @@ export function PanelDraftFields({
           <CapacityMetric
             label={difference !== null && difference < 0 ? "Eccedenza" : "Differenza"}
             value={difference === null ? null : Math.abs(difference)}
-            tone={difference === 0 ? "valid" : difference === null ? "neutral" : "warning"}
+            tone={difference === null ? "neutral" : difference < 0 ? "warning" : "valid"}
           />
         </div>
 
         {difference !== null ? (
           <p className="text-sm text-[var(--peace-muted)]">
             {difference === 0
-              ? panel?.publicationStatus === "published"
-                ? "La distribuzione coincide con la capienza e può essere salvata."
-                : "La distribuzione coincide con la capienza: il panel è pronto per la pubblicazione."
+              ? "La distribuzione coincide con la capienza e il panel può essere salvato."
               : difference > 0
-                ? `Restano ${difference} posti da assegnare prima della pubblicazione.`
-                : `La distribuzione supera la capienza di ${Math.abs(difference)} posti.`}
+                ? `Restano ${difference} ${difference === 1 ? "posto non distribuito" : "posti non distribuiti"}. Il panel può essere salvato.`
+                : `La distribuzione supera la capienza di ${Math.abs(difference)} ${Math.abs(difference) === 1 ? "posto" : "posti"}. Il panel non potrà essere salvato.`}
           </p>
         ) : null}
       </fieldset>

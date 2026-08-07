@@ -42,6 +42,17 @@ const managerDashboard = readFileSync(
   "utf8"
 );
 const globalStyles = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+const formState = readFileSync(
+  join(process.cwd(), "app/dashboard/panel-draft-form-state.tsx"),
+  "utf8"
+);
+const capacityLimitMigration = readFileSync(
+  join(
+    process.cwd(),
+    "supabase/migrations/20260807120000_allow_underfilled_panel_sections.sql"
+  ),
+  "utf8"
+);
 
 const panels: PanelDraftRow[] = [
   {
@@ -153,6 +164,7 @@ test("server action rejects invalid and duplicate sections and maps overlap erro
   assert.match(actions, /supabase\.rpc\(rpcName/);
   assert.match(actions, /error\.code === "23P01"/);
   assert.match(actions, /panelError=duplicate-audience/);
+  assert.match(actions, /assignedCapacity > panelLocation\.max_capacity/);
 });
 
 test("responsive overlay exposes live capacity, conflict and accessible section controls", () => {
@@ -183,4 +195,35 @@ test("panel workflow tabs suggest location, panel and school order while Panel s
 test("panel search fields reserve space for their leading icon", () => {
   assert.match(section, /className="field field-with-leading-icon w-full font-normal"/);
   assert.match(globalStyles, /\.field\.field-with-leading-icon\s*\{\s*padding-left: 2\.5rem;/);
+});
+
+test("capacity overflow disables saving with an accessible explanation", () => {
+  assert.match(fields, /Il panel non potrà essere salvato/);
+  assert.match(fields, /Il panel può essere salvato/);
+  assert.match(section, /initialCapacityExceeded/);
+  assert.match(formState, /disabled=\{capacityExceeded\}/);
+  assert.match(formState, /role="tooltip"/);
+  assert.match(
+    formState,
+    /La somma dei posti delle sezioni supera la capienza della location/
+  );
+});
+
+test("database capacity rule allows underfilled panels and rejects overflow", () => {
+  assert.match(
+    capacityLimitMigration,
+    /section_capacity > location_capacity/
+  );
+  assert.match(
+    capacityLimitMigration,
+    /\) <= location\.max_capacity/
+  );
+  assert.match(
+    capacityLimitMigration,
+    /v_section_capacity > v_location_capacity/
+  );
+  assert.doesNotMatch(
+    capacityLimitMigration,
+    /v_section_capacity <> v_location_capacity/
+  );
 });

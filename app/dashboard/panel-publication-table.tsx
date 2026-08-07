@@ -306,7 +306,7 @@ function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; com
   return (
     <p className={compact ? "tabular-nums" : "mt-2 text-sm tabular-nums text-[var(--peace-muted)]"}>
       {panel.assignedCapacity} / {panel.locationCapacity ?? "—"} posti
-      {difference === 0 ? <span className="ml-2 font-semibold text-[#255532]">Completa</span> : difference !== null ? <span className="ml-2 font-semibold text-[#8a5d16]">{difference > 0 ? `${difference} mancanti` : `${Math.abs(difference)} in eccesso`}</span> : null}
+      {difference === 0 ? <span className="ml-2 font-semibold text-[#255532]">Completa</span> : difference !== null ? <span className={`ml-2 font-semibold ${difference > 0 ? "text-[#536579]" : "text-[#8a5d16]"}`}>{difference > 0 ? `${difference} non assegnati` : `${Math.abs(difference)} in eccesso`}</span> : null}
     </p>
   );
 }

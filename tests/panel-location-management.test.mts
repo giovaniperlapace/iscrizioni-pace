@@ -34,6 +34,13 @@ const adminDashboard = readFileSync(
   join(process.cwd(), "app/dashboard/admin/page.tsx"),
   "utf8"
 );
+const capacityLimitMigration = readFileSync(
+  join(
+    process.cwd(),
+    "supabase/migrations/20260807120000_allow_underfilled_panel_sections.sql"
+  ),
+  "utf8"
+);
 
 test("location fields normalize whitespace and reject invalid capacities", () => {
   assert.equal(normalizeEventLocationName("  Sala   Blu  "), "Sala Blu");
@@ -84,16 +91,20 @@ test("P2 database guardrails allow managers but not manager viewers to write", (
   assert.doesNotMatch(migration, /array\['manager', 'manager_viewer'\].*manage/);
 });
 
-test("server actions enforce event scope and protect locations in use", () => {
+test("server actions enforce event scope and keep location capacity protected", () => {
   assert.match(actions, /export async function saveEventLocation/);
   assert.match(actions, /export async function deleteEventLocation/);
   assert.match(actions, /role\.role === "manager" && role\.eventId === eventId/);
-  assert.match(actions, /\.eq\("publication_status", "published"\)/);
-  assert.match(actions, /locationError=published-capacity/);
+  assert.match(actions, /errorMessage\.includes\("capacity limit"\)/);
+  assert.match(actions, /\? "published-capacity"/);
   assert.match(actions, /locationError=location-in-use/);
   assert.match(actions, /event_location\.created/);
   assert.match(actions, /event_location\.updated/);
   assert.match(actions, /event_location\.deleted/);
+  assert.match(
+    capacityLimitMigration,
+    /section_capacity > location_capacity/
+  );
 });
 
 test("shared responsive UI exposes overlays and read-only manager viewer state", () => {

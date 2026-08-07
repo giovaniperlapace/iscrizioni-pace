@@ -139,7 +139,7 @@ test("P10 reconciles adults, inherited children and school people by section", (
   assert.equal(panel.noShowPeople, null);
 });
 
-test("P10 flags full, nearly full, unconfigured and inconsistent panels without dividing by zero", () => {
+test("P10 flags full, nearly full and unconfigured panels while accepting unused capacity", () => {
   const statePanels: PanelStatisticsPanelInput[] = [
     ...["full", "near", "inconsistent", "zero"].map((id) => ({
       id,
@@ -205,7 +205,11 @@ test("P10 flags full, nearly full, unconfigured and inconsistent panels without 
   assert.equal(stateById.get("near"), "nearly_full");
   assert.equal(stateById.get("empty"), "not_configured");
   assert.equal(stateById.get("zero"), "not_configured");
-  assert.equal(stateById.get("inconsistent"), "inconsistent");
+  assert.equal(stateById.get("inconsistent"), "available");
+  assert.doesNotMatch(
+    snapshot.panels.find((panel) => panel.id === "inconsistent")?.issues.join(" ") ?? "",
+    /capienza della location/
+  );
   assert.equal(
     snapshot.panels.find((panel) => panel.id === "zero")?.utilizationPercent,
     null
