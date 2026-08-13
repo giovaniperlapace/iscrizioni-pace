@@ -310,6 +310,30 @@ input[type="radio"] {
     animation: panel-scroll-cue 1.8s ease-in-out infinite;
   }
 
+  .panel-access-cue {
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .panel-access-cue:hover {
+    border-color: var(--peace-sky-400);
+    background: var(--peace-blue-950);
+    box-shadow: 0 16px 36px rgba(8, 47, 95, 0.24);
+    transform: translateY(-2px);
+  }
+
+  .panel-access-cue:focus-visible {
+    outline: 3px solid var(--peace-sky-400);
+    outline-offset: 4px;
+  }
+
+  .panel-access-cue__arrow {
+    animation: panel-access-cue 1.8s ease-in-out infinite;
+  }
+
   .modal-backdrop {
     background: rgba(16, 36, 60, 0.52);
   }
@@ -338,13 +362,26 @@ input[type="radio"] {
   }
 }
 
+@keyframes panel-access-cue {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-0.22rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
   .panel-scroll-cue,
-  .panel-scroll-cue__arrow {
+  .panel-scroll-cue__arrow,
+  .panel-access-cue,
+  .panel-access-cue__arrow {
     animation: none;
     transition-duration: 1ms;
   }

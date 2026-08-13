@@ -39,7 +39,6 @@ type PublicMessages = {
     };
     locationLabel: string;
     accessCta: string;
-    accessHint: string;
     metadataTitle: string;
     metadataDescription: string;
   };
@@ -119,7 +118,6 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Luogo",
       accessCta: "Registrati o accedi e scegli i panel a cui vuoi partecipare",
-      accessHint: "Inserisci la tua email per accedere o iniziare una nuova iscrizione.",
       metadataTitle: "Programma panel | Pace disarmata e disarmante",
       metadataDescription: "Consulta giorni, orari, location e disponibilità dei panel pubblicati per l'incontro internazionale di pace ad Assisi.",
     },
@@ -208,7 +206,6 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Venue",
       accessCta: "Register or access and choose the panels you want to attend",
-      accessHint: "Enter your email to access your account or start a new registration.",
       metadataTitle: "Panel programme | Unharmed and Disarming Peace",
       metadataDescription: "View dates, times, venues and availability for the published panels at the International Meeting for Peace in Assisi.",
     },
@@ -297,7 +294,6 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Lieu",
       accessCta: "S'inscrire ou accéder et choisir les panels auxquels participer",
-      accessHint: "Saisis ton email pour accéder ou commencer une nouvelle inscription.",
       metadataTitle: "Programme des panels | Paix désarmée et désarmante",
       metadataDescription: "Consulte les jours, horaires, lieux et disponibilités des panels publiés pour la Rencontre internationale pour la paix à Assise.",
     },
@@ -386,7 +382,6 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Ort",
       accessCta: "Registrieren oder anmelden und die gewünschten Panels auswählen",
-      accessHint: "Gib deine E-Mail ein, um dich anzumelden oder eine neue Anmeldung zu beginnen.",
       metadataTitle: "Panelprogramm | Unbewaffneter und entwaffnender Friede",
       metadataDescription: "Termine, Uhrzeiten, Orte und Verfügbarkeit der veröffentlichten Panels beim Internationalen Friedenstreffen in Assisi.",
     },
@@ -475,7 +470,6 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Lugar",
       accessCta: "Regístrate o accede y elige los paneles en los que quieres participar",
-      accessHint: "Introduce tu email para acceder o comenzar una nueva inscripción.",
       metadataTitle: "Programa de paneles | Paz desarmada y desarmante",
       metadataDescription: "Consulta días, horarios, lugares y disponibilidad de los paneles publicados para el Encuentro Internacional por la Paz en Asís.",
     },
@@ -564,7 +558,6 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Locatie",
       accessCta: "Registreer of log in en kies de panels die je wilt bijwonen",
-      accessHint: "Vul je e-mailadres in om in te loggen of een nieuwe inschrijving te starten.",
       metadataTitle: "Panelprogramma | Ontwapende en ontwapenende vrede",
       metadataDescription: "Bekijk dagen, tijden, locaties en beschikbaarheid van de gepubliceerde panels voor de Internationale Ontmoeting voor Vrede in Assisi.",
     },
@@ -653,7 +646,6 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Місце",
       accessCta: "Зареєструватися або увійти та обрати панелі",
-      accessHint: "Введіть електронну адресу, щоб увійти або розпочати нову реєстрацію.",
       metadataTitle: "Програма панелей | Беззбройний і роззброювальний мир",
       metadataDescription: "Перегляньте дати, час, місця та наявність місць на опублікованих панелях Міжнародної зустрічі за мир в Ассізі.",
     },

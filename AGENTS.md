@@ -164,7 +164,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   programma. La CTA inversa per registrarsi o accedere compare soltanto dopo
   l'intero elenco dei panel e punta a `#personal-access` sulla sezione hero,
   non direttamente all'input: in questo modo il ritorno animato ripristina la
-  prima schermata con il modulo email centrato nel layout.
+  prima schermata con il modulo email centrato nel layout. La CTA inversa
+  riprende la stessa pillola grafica, il `PeaceLineMark` e una freccia verso
+  l'alto; non mostrare sotto una descrizione dell'accesso, già presente nella
+  hero di destinazione.
 - Il 2026-06-22, dopo chiusura della Milestone 14, la roadmap e' stata
   aggiornata: prima della vecchia Milestone 15 sulle email personalizzate
   bisogna completare Milestone 14.1 e 14.2. Milestone 14.1 consolida il flusso
