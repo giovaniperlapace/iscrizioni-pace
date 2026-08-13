@@ -42,6 +42,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html:has(body .dashboard-modal),
 body:has(.dashboard-modal) {
   overflow: hidden;
@@ -335,6 +339,10 @@ input[type="radio"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .panel-scroll-cue,
   .panel-scroll-cue__arrow {
     animation: none;

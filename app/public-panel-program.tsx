@@ -41,21 +41,13 @@ export function PublicPanelProgram({ locale, panels, copy }: PublicPanelProgramP
     <section aria-labelledby="panel-program-title" className="app-container scroll-mt-20 py-12 sm:py-16 lg:py-20" id="panel-program">
       <div className="mx-auto max-w-5xl">
         <p className="event-kicker">{copy.eyebrow}</p>
-        <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_0.7fr] lg:items-end">
-          <div>
-            <h2 id="panel-program-title" className="text-3xl font-extrabold tracking-tight text-[var(--peace-blue-950)] sm:text-4xl">
-              {copy.title}
-            </h2>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--peace-muted)] sm:text-lg">
-              {copy.intro}
-            </p>
-          </div>
-          <div className="lg:text-right">
-            <a className="btn-primary inline-flex items-center justify-center px-5" href="#personal-access">
-              {copy.accessCta}
-            </a>
-            <p className="mt-2 text-sm text-[var(--peace-muted)]">{copy.accessHint}</p>
-          </div>
+        <div className="mt-3">
+          <h2 id="panel-program-title" className="text-3xl font-extrabold tracking-tight text-[var(--peace-blue-950)] sm:text-4xl">
+            {copy.title}
+          </h2>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--peace-muted)] sm:text-lg">
+            {copy.intro}
+          </p>
         </div>
 
         {groups.length === 0 ? (
@@ -111,6 +103,15 @@ export function PublicPanelProgram({ locale, panels, copy }: PublicPanelProgramP
             ))}
           </div>
         )}
+
+        <div className="mt-12 border-t border-[var(--peace-border)] pt-8 text-center sm:mt-16 sm:pt-10">
+          <a className="btn-primary inline-flex max-w-full items-center justify-center px-5 py-3 text-center" href="#personal-access">
+            {copy.accessCta}
+          </a>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[var(--peace-muted)]">
+            {copy.accessHint}
+          </p>
+        </div>
       </div>
     </section>
   );

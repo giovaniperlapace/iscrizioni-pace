@@ -158,8 +158,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Dal 2026-08-13 la prima schermata della home include in fondo un richiamo
   localizzato e accessibile al programma dei panel sottostante. Il richiamo
   riusa il motivo grafico `PeaceLineMark` e una freccia animata con fallback
-  `prefers-reduced-motion`; deve continuare a puntare all'ancora
-  `#panel-program` e restare visibile come ponte tra accesso e programma.
+  `prefers-reduced-motion`; il click scorre in modo fluido fino all'ancora
+  `#panel-program`, mentre con movimento ridotto torna allo spostamento
+  immediato. Il richiamo deve restare visibile come ponte tra accesso e
+  programma. La CTA inversa per registrarsi o accedere compare soltanto dopo
+  l'intero elenco dei panel e punta a `#personal-access` sulla sezione hero,
+  non direttamente all'input: in questo modo il ritorno animato ripristina la
+  prima schermata con il modulo email centrato nel layout.
 - Il 2026-06-22, dopo chiusura della Milestone 14, la roadmap e' stata
   aggiornata: prima della vecchia Milestone 15 sulle email personalizzate
   bisogna completare Milestone 14.1 e 14.2. Milestone 14.1 consolida il flusso

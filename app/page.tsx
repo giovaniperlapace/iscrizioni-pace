@@ -42,7 +42,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
-      <section className="event-gradient relative isolate overflow-hidden">
+      <section className="event-gradient relative isolate scroll-mt-[4.75rem] overflow-hidden" id="personal-access">
         <PeaceLineMark className="absolute left-[78%] top-24 -z-10 h-36 w-[38rem] -translate-x-1/2 text-white/55 opacity-[0.18] sm:left-[72%] sm:top-28 sm:h-52 sm:opacity-20 lg:left-[68%] lg:w-[58rem] lg:opacity-[0.45]" />
         <div className="app-container flex min-h-[calc(100vh-4.75rem)] flex-col py-10 sm:py-12 lg:py-14">
           <div className="grid flex-1 content-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
@@ -52,7 +52,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 {copy.home.intro}
               </p>
             </div>
-            <div className="grid gap-5" id="personal-access">
+            <div className="grid gap-5">
               <EmailAccessForm
                 action={startPublicEmailFlow}
                 defaultEmail={params.email ?? ""}
