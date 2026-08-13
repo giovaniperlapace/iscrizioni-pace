@@ -5,6 +5,10 @@ import { resolveSelectedCampaignRecipientIds } from "@/lib/email/campaign-select
 import { renderCampaignTemplate, validateCampaignTemplate } from "@/lib/email/campaign-templates";
 import { campaignHtmlToText, renderSafeCampaignHtml } from "@/lib/email/campaign-html.server";
 import {
+  publicCampaignError,
+  type CampaignEmailAction,
+} from "@/lib/email/public-errors";
+import {
   appendInlineImages,
   campaignRecipientFromDatabaseRow,
   emailAttachmentInput,
@@ -43,7 +47,7 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 ]);
 const INLINE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
-type CampaignAction = "recipients" | "preview" | "update_recipients" | "test" | "send";
+type CampaignAction = CampaignEmailAction;
 type IncomingAttachment = { file: File; inline: boolean };
 
 export const maxDuration = 300;
@@ -89,7 +93,11 @@ export async function POST(request: Request) {
     }
     return await deliverCampaign(auth.userId!, auth.userEmail!, String(body.campaignId ?? ""), action);
   } catch (cause) {
-    return error(cause instanceof Error ? cause.message : "Operazione email non riuscita.", 400);
+    const publicError = publicCampaignError(cause, action);
+    if (publicError.unexpected) {
+      console.error(`[email-campaigns:${action}]`, cause);
+    }
+    return error(publicError.message, publicError.status);
   }
 }
 

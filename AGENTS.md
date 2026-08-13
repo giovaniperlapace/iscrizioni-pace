@@ -329,10 +329,16 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `20260729120000_email_campaign_audiences_and_daily_queue.sql` aggiunge
   `recipient_key`, audience partecipante/capogruppo, stati di coda e indici.
   `CRON_SECRET` e' obbligatorio in produzione e non deve essere stampato o
-  committato. Al termine dell'implementazione locale del 2026-07-29 la
-  migration non risulta ancora applicata al Supabase remoto e `CRON_SECRET`
-  non risulta ancora configurato su Vercel: completarli insieme prima del
-  deploy della funzione.
+  committato. Dal 2026-08-13 la migration risulta applicata e registrata sul
+  Supabase remoto di produzione; colonne, funzioni di coda e cache PostgREST
+  sono state verificate. `CRON_SECRET` non risultava ancora configurato su
+  Vercel al termine dell'implementazione locale del 2026-07-29 e va verificato
+  separatamente prima di affidare gli invii differiti al cron.
+  Dal 2026-08-13 le API di campagne e modelli email non mostrano piu' agli
+  operatori i dettagli grezzi di Supabase, PostgreSQL o SMTP. Gli errori
+  infrastrutturali vengono registrati nei log server e restituiti con un testo
+  comprensibile e specifico per destinatari, anteprima, prova o invio finale;
+  i messaggi di validazione utili all'operatore restano invece espliciti.
 - Quando saranno implementati programma e iscrizioni ai panel, la tabella
   destinatari delle campagne dovra' aggiungere un filtro per uno specifico
   panel. Usare le tabelle canoniche delle iscrizioni ai momenti/panel; non
