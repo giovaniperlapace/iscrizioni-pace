@@ -457,6 +457,13 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   completo precedente all'operazione e' in
   `materiali-dati/backups/iscrizioni-pace-pre-gruppi-20260727-1945.dump`
   (ignorato da Git).
+- Dal 2026-08-13 i 17 gruppi anziani di Roma seguono il formato stabile
+  `Anziani - Quartiere`, senza il precedente prefisso `W gli anziani`.
+  `Movimento "Gli amici" - San Bartolomeo` e `Movimento "Gli amici" -
+  Sant'Egidio` sono stati rinominati rispettivamente `Amici San Bartolomeo` e
+  `Amici Sant'Egidio`. Il rinomino aggiorna anche `groups.public_label` e le
+  etichette dei link riservati attivi, ma non ruota gli slug gia' distribuiti;
+  ogni modifica e' registrata con audit action `group.renamed`.
 - Dal 2026-07-26 chi dichiara di avere gia' partecipato ad attivita'
   Sant'Egidio ma non seleziona esplicitamente un gruppo deve restare senza
   assegnazione: sia la risposta "No" all'appartenenza a un gruppo sia
