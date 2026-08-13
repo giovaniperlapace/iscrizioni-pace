@@ -38,7 +38,7 @@ export function PublicPanelProgram({ locale, panels, copy }: PublicPanelProgramP
   const groups = groupPublicPanelsByDay(panels);
 
   return (
-    <section aria-labelledby="panel-program-title" className="app-container py-12 sm:py-16 lg:py-20">
+    <section aria-labelledby="panel-program-title" className="app-container scroll-mt-20 py-12 sm:py-16 lg:py-20" id="panel-program">
       <div className="mx-auto max-w-5xl">
         <p className="event-kicker">{copy.eyebrow}</p>
         <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_0.7fr] lg:items-end">

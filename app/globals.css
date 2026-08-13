@@ -282,6 +282,30 @@ input[type="radio"] {
       linear-gradient(140deg, var(--peace-blue-950), var(--peace-blue-800));
   }
 
+  .panel-scroll-cue {
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .panel-scroll-cue:hover {
+    border-color: rgba(255, 255, 255, 0.44);
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 16px 36px rgba(3, 28, 58, 0.28);
+    transform: translateY(-2px);
+  }
+
+  .panel-scroll-cue:focus-visible {
+    outline: 3px solid var(--peace-sky-400);
+    outline-offset: 4px;
+  }
+
+  .panel-scroll-cue__arrow {
+    animation: panel-scroll-cue 1.8s ease-in-out infinite;
+  }
+
   .modal-backdrop {
     background: rgba(16, 36, 60, 0.52);
   }
@@ -296,5 +320,24 @@ input[type="radio"] {
     border-color: #f0b8b1;
     background: #fff3f1;
     color: var(--peace-danger);
+  }
+}
+
+@keyframes panel-scroll-cue {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(0.22rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-scroll-cue,
+  .panel-scroll-cue__arrow {
+    animation: none;
+    transition-duration: 1ms;
   }
 }

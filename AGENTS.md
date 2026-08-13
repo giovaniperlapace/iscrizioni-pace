@@ -155,6 +155,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - La Milestone 14 ha sostituito la favicon placeholder con `app/favicon.ico`:
   colomba bianca stilizzata su sfondo blu istituzionale, coerente con la
   locandina e leggibile nelle tab browser.
+- Dal 2026-08-13 la prima schermata della home include in fondo un richiamo
+  localizzato e accessibile al programma dei panel sottostante. Il richiamo
+  riusa il motivo grafico `PeaceLineMark` e una freccia animata con fallback
+  `prefers-reduced-motion`; deve continuare a puntare all'ancora
+  `#panel-program` e restare visibile come ponte tra accesso e programma.
 - Il 2026-06-22, dopo chiusura della Milestone 14, la roadmap e' stata
   aggiornata: prima della vecchia Milestone 15 sulle email personalizzate
   bisogna completare Milestone 14.1 e 14.2. Milestone 14.1 consolida il flusso

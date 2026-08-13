@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArrowDown } from "lucide-react";
 
 import { startPublicEmailFlow } from "@/app/actions";
 import { EmailAccessForm } from "@/app/email-access-form";
@@ -43,8 +44,8 @@ export default async function Home({ searchParams }: HomeProps) {
     <main className="app-page text-[var(--peace-ink)]">
       <section className="event-gradient relative isolate overflow-hidden">
         <PeaceLineMark className="absolute left-[78%] top-24 -z-10 h-36 w-[38rem] -translate-x-1/2 text-white/55 opacity-[0.18] sm:left-[72%] sm:top-28 sm:h-52 sm:opacity-20 lg:left-[68%] lg:w-[58rem] lg:opacity-[0.45]" />
-        <div className="app-container flex min-h-[calc(100vh-4.75rem)] flex-col justify-center gap-8 py-10 sm:py-14 lg:py-16">
-          <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
+        <div className="app-container flex min-h-[calc(100vh-4.75rem)] flex-col py-10 sm:py-12 lg:py-14">
+          <div className="grid flex-1 content-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
               <EventIdentity inverted />
               <p className="mt-7 max-w-2xl text-base leading-8 text-white/84 sm:text-lg">
@@ -61,6 +62,16 @@ export default async function Home({ searchParams }: HomeProps) {
               />
             </div>
           </div>
+          <a
+            className="panel-scroll-cue group relative mx-auto mt-9 flex min-h-14 items-center gap-3 overflow-hidden rounded-full border border-white/24 bg-white/10 py-2 pl-5 pr-2 text-sm font-bold text-white shadow-[0_12px_30px_rgba(3,28,58,0.22)] backdrop-blur-sm sm:mt-10 sm:text-base"
+            href="#panel-program"
+          >
+            <PeaceLineMark className="absolute -left-20 top-1/2 h-20 w-64 -translate-y-1/2 text-white opacity-[0.08] transition-opacity duration-200 group-hover:opacity-[0.16]" />
+            <span className="relative">{copy.home.panelDiscovery}</span>
+            <span className="panel-scroll-cue__arrow relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[var(--peace-blue-900)] shadow-sm">
+              <ArrowDown aria-hidden="true" className="h-5 w-5" strokeWidth={2.5} />
+            </span>
+          </a>
         </div>
       </section>
       <PublicPanelProgram copy={copy.panelProgram} locale={locale} panels={panels} />

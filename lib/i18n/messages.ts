@@ -23,6 +23,7 @@ type PublicMessages = {
     eyebrow: string;
     title: string;
     intro: string;
+    panelDiscovery: string;
     eventTitle: string;
     noEvent: string;
   };
@@ -102,6 +103,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Iscrizioni Pace",
       intro:
         "Inserisci la tua email: se hai già un'iscrizione riceverai un magic link, altrimenti apriremo il form per una nuova iscrizione.",
+      panelDiscovery: "Scopri il programma dei panel",
       eventTitle: "Evento",
       noEvent: "Nessun evento pubblicato accetta iscrizioni in questo momento.",
     },
@@ -190,6 +192,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Peace Registrations",
       intro:
         "Enter your email: if you already have a registration, you will receive a magic link; otherwise we will open the form for a new registration.",
+      panelDiscovery: "Explore the panel programme",
       eventTitle: "Event",
       noEvent: "No published event is accepting registrations at the moment.",
     },
@@ -278,6 +281,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Inscriptions Paix",
       intro:
         "Saisis ton email : si tu as déjà une inscription, tu recevras un magic link ; sinon nous ouvrirons le formulaire pour une nouvelle inscription.",
+      panelDiscovery: "Découvrir le programme des panels",
       eventTitle: "Événement",
       noEvent: "Aucun événement publié n'accepte d'inscriptions pour le moment.",
     },
@@ -366,6 +370,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Friedensanmeldungen",
       intro:
         "Gib deine E-Mail ein: Wenn du bereits angemeldet bist, erhältst du einen Magic Link; andernfalls öffnen wir das Formular für eine neue Anmeldung.",
+      panelDiscovery: "Panelprogramm entdecken",
       eventTitle: "Veranstaltung",
       noEvent: "Derzeit nimmt keine veröffentlichte Veranstaltung Anmeldungen entgegen.",
     },
@@ -454,6 +459,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Inscripciones Paz",
       intro:
         "Introduce tu email: si ya tienes una inscripción, recibirás un magic link; si no, abriremos el formulario para una nueva inscripción.",
+      panelDiscovery: "Descubre el programa de paneles",
       eventTitle: "Evento",
       noEvent: "Ningún evento publicado acepta inscripciones en este momento.",
     },
@@ -542,6 +548,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Vredesinschrijvingen",
       intro:
         "Vul je e-mail in: als je al een inschrijving hebt, ontvang je een magic link; anders openen we het formulier voor een nieuwe inschrijving.",
+      panelDiscovery: "Bekijk het panelprogramma",
       eventTitle: "Evenement",
       noEvent: "Er is momenteel geen gepubliceerd evenement waarvoor inschrijving open is.",
     },
@@ -630,6 +637,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Реєстрація миру",
       intro:
         "Введіть вашу електронну адресу: якщо ви вже зареєстровані, отримаєте magic link; інакше ми відкриємо форму нової реєстрації.",
+      panelDiscovery: "Переглянути програму панелей",
       eventTitle: "Подія",
       noEvent: "Наразі немає опублікованої події з відкритою реєстрацією.",
     },
