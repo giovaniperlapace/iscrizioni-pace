@@ -6,7 +6,9 @@ Milestone 1 ha inizializzato la base tecnica nella cartella corrente.
 
 E' stata scelta la strada più semplice: inizializzare questa cartella come repository Git locale.
 
-- Branch di lavoro ordinario: `main`.
+- Strategia iniziale: lavoro su `main`. Dal 2026-08-22 il workflow corrente usa
+  branch brevi `codex/*` e pull request; vedere
+  `docs/lavorare-da-piu-computer.md`.
 - Remote GitHub configurato dopo la milestone 1:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Nessun commit o push eseguito.

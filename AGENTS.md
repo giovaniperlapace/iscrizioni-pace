@@ -49,6 +49,25 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Dopo il merge della pull request, eliminare il branch breve e il relativo
   worktree. Le modifiche successive partono da un nuovo branch creato dal
   nuovo `main`.
+- Automazione multi-postazione disponibile:
+  - `.codex/hooks.json` esegue un fetch e un fast-forward sicuro all'avvio di
+    una sessione Codex; se rileva una cartella cloud, modifiche locali o un
+    errore Git deve avvisare e non forzare l'allineamento;
+  - `npm run work:start -- nome-lavoro` aggiorna `main` e crea un branch breve;
+  - `npm run work:resume -- codex/nome-lavoro` riprende in sicurezza un branch
+    pubblicato da un'altra postazione;
+  - `npm run work:status` controlla lo stato locale e remoto;
+  - `npm run work:finish -- "Messaggio"` esegue lint, typecheck e test, quindi
+    commit e push solo su branch `codex/*`; la variante `work:finish:full`
+    include la build;
+  - gli script devono fermarsi, senza risolvere automaticamente, quando
+    rilevano divergenze, modifiche concorrenti o possibili segreti.
+- La frase utente `Chiudi e sincronizza` autorizza esplicitamente Codex a
+  controllare il diff, eseguire verifiche, integrare `origin/main` se serve,
+  committare e fare push del branch. Non autorizza il merge della pull request,
+  che resta un passaggio separato salvo richiesta esplicita.
+- Guida operativa e messaggio per nuove postazioni:
+  `docs/lavorare-da-piu-computer.md`.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
@@ -693,7 +712,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   in bozza, non correnti, con dati minimi di identita' e finestre iscrizioni.
   Nelle tabelle operative non mostrare colonne evento ridondanti. Migration:
   `20260624100000_current_operational_event.sql`.
-- Branch di lavoro ordinario: `main`.
+- Branch di lavoro ordinario: branch breve `codex/*` creato dall'ultimo
+  `origin/main`; `main` resta pulito e aggiornato.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Per verificare l'ultimo commit/push noto su `main`, usare
@@ -1943,8 +1963,10 @@ Prima di concludere:
 
 ## Strategia Git
 
-- Lavorare normalmente su `main`.
-- Le prove si fanno in locale; quando tutto funziona e l'utente chiede commit/push, fare commit e push direttamente su `main`.
+- Lavorare normalmente su un branch breve `codex/*` creato da `origin/main`.
+- Le prove si fanno sul branch; quando tutto funziona e l'utente chiede
+  commit/push, pubblicare il branch e aprire o aggiornare la pull request verso
+  `main`.
 - Non creare branch staging/produzione o branch milestone salvo richiesta esplicita.
 - Preparare diff leggibili per review umana.
 - Non fare commit/push senza richiesta.

@@ -258,7 +258,8 @@ Se si inizializza questa cartella, aggiungere subito almeno:
 - remote `origin`;
 - branch di lavoro secondo la strategia Git corrente del progetto.
 
-Nota successiva: la strategia Git e' stata aggiornata. Il lavoro ordinario avviene su `main`; branch dedicati si creano solo su richiesta esplicita.
+Nota successiva: dal 2026-08-22 il lavoro ordinario avviene su branch brevi
+`codex/*` creati da `origin/main`, con pull request verso `main`.
 
 File locali da valutare prima del primo commit:
 

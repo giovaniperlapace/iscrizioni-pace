@@ -1,0 +1,28 @@
+{
+  "description": "Mantiene sicuro e aggiornato il workflow Git multi-postazione di iscrizioni-pace.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/work-session.sh\" hook-start",
+            "statusMessage": "Sincronizzazione sicura con GitHub"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/work-session.sh\" hook-end",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

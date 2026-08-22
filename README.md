@@ -37,4 +37,6 @@ Non committare segreti.
 
 ## Workflow
 
-Il ciclo operativo per milestone, lavoro su `main`, verifiche e documentazione e' in `docs/workflow.md`.
+Il ciclo operativo, i branch brevi e le verifiche sono descritti in
+`docs/workflow.md`. La guida passo-passo per lavorare da più computer è in
+`docs/lavorare-da-piu-computer.md`.

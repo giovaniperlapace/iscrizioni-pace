@@ -119,11 +119,13 @@ Metodo da seguire per ogni milestone:
 
 - Verificare sempre cartella corrente, branch corrente e `git status --short` prima di iniziare.
 - Se la working tree e' sporca, capire se le modifiche sono pertinenti alla milestone; non sovrascrivere lavoro non compreso.
-- Lavorare normalmente su `main`; creare branch dedicati solo se richiesto esplicitamente.
+- Lavorare su branch brevi `codex/*` creati dall'ultimo `origin/main`; mantenere
+  `main` pulito e aggiornato.
 - Non fare commit o push senza richiesta esplicita.
 - Prima di concludere ogni blocco, verificare `git diff`, file modificati, lint/typecheck/test/build quando disponibili.
 - Ogni milestone deve avere criteri di done chiari: deliverable presenti, test/verifiche passate o limiti esplicitati, nessun segreto committato, nessuna modifica fuori scope.
-- Sincronizzare con GitHub solo quando la repository locale e `main` sono chiari; fare commit/push su `main` solo su richiesta esplicita.
+- Sincronizzare con GitHub solo quando repository e branch sono chiari; fare
+  commit/push del branch e aprire una pull request solo su richiesta esplicita.
 - Documentare decisioni tecniche e assunzioni in `AGENTS.md`, `docs/decisioni.md` o documenti equivalenti quando verranno creati.
 
 Guardrail permanenti:
@@ -1737,11 +1739,12 @@ Se mancano accessi, chiedere esplicitamente:
 
 Stato Git attuale:
 
-- Repository locale gia' configurata su branch ordinario `main`.
+- Repository locale configurata con `main` come base stabile.
 - Remote `origin` gia' impostato su `https://github.com/giovaniperlapace/iscrizioni-pace`.
-- Lavorare su `main`, salvo richiesta esplicita di branch dedicato.
+- Lavorare su branch brevi `codex/*` creati da `origin/main`.
 - Usare commit piccoli e tematici solo su richiesta.
-- Preparare diff locali per review umana; fare push diretto su `main` quando richiesto.
+- Preparare diff locali per review umana; pubblicare il branch e usare una pull
+  request verso `main` quando richiesto.
 
 Regole anti-perdita lavoro:
 

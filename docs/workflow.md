@@ -4,6 +4,20 @@ Questa guida fissa il ciclo minimo da usare per ogni milestone finché non esist
 
 ## Prima di iniziare
 
+Per il lavoro da più postazioni seguire prima
+`docs/lavorare-da-piu-computer.md`. Il repository attivo deve essere un clone
+locale fuori da OneDrive, Dropbox o iCloud; GitHub è l'unico canale di
+sincronizzazione del codice.
+
+Nell'app Codex l'hook di progetto esegue automaticamente fetch e fast-forward
+sicuro all'avvio. Da terminale sono disponibili:
+
+```bash
+npm run work:start -- nome-lavoro
+npm run work:resume -- codex/nome-lavoro
+npm run work:status
+```
+
 Eseguire sempre:
 
 ```bash
@@ -18,15 +32,20 @@ Se la working tree e' sporca, leggere il diff prima di modificare file. Le modif
 
 ## Branch
 
-Il lavoro ordinario avviene su `main`:
+`main` resta pulito e aggiornato. Il lavoro ordinario avviene su branch brevi
+`codex/*`, creati dall'ultimo `origin/main`:
 
 ```bash
 git switch main
+git pull --ff-only
+git switch -c codex/nome-lavoro origin/main
 ```
 
-Le prove si fanno in locale. Quando tutto funziona e l'utente chiede commit/push, fare commit e push direttamente su `main`.
+Le prove si fanno sul branch. Quando tutto funziona e l'utente autorizza commit
+e push, pubblicare il branch e aprire una pull request verso `main`.
 
-Non creare branch staging/produzione o branch milestone salvo richiesta esplicita.
+Non fare push diretto su `main`. Non creare branch staging/produzione o branch
+milestone salvo richiesta esplicita.
 
 ## Qualità
 
@@ -79,6 +98,16 @@ git diff
 ```
 
 La risposta finale deve indicare file modificati, verifiche eseguite, eventuali verifiche non eseguite e rischi residui.
+
+Per una chiusura assistita e sincronizzata del branch:
+
+```bash
+npm run work:finish -- "Descrizione chiara della modifica"
+```
+
+Usare `npm run work:finish:full -- "Descrizione"` quando serve includere anche
+la build. I comandi si fermano se rilevano divergenze, posizione cloud, branch
+non conforme o file potenzialmente segreti.
 
 ## Apertura iscrizioni pubbliche
 
