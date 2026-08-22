@@ -51,6 +51,17 @@ possono creare ref duplicate, lock e oggetti corrotti.
 > verifica che non restino modifiche locali e dammi il link della pull
 > request. Non fare il merge senza conferma.”
 >
+> Usa questa formulazione completa la prima volta, così Codex riceve tutte le
+> istruzioni del nuovo workflow. Dalle sessioni successive ti basta scrivere:
+>
+> **“Chiudi e sincronizza”**
+>
+> Nel progetto questa frase breve è già registrata come autorizzazione a
+> controllare il diff, eseguire i test pertinenti, integrare `origin/main` se
+> necessario, fare commit e push e verificare che il lavoro locale sia pulito.
+> Non autorizza il merge della pull request, che resta sempre separato finché
+> non lo chiedi esplicitamente.
+>
 > Dopo il push puoi continuare dallo stesso branch su un altro computer, ma non
 > lavorare sullo stesso branch contemporaneamente da due dispositivi. File
 > `.env.local`, password e chiavi non passano da GitHub e non vanno mai inviati
