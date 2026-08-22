@@ -9,8 +9,22 @@ Per il lavoro da più postazioni seguire prima
 locale fuori da OneDrive, Dropbox o iCloud; GitHub è l'unico canale di
 sincronizzazione del codice.
 
-Nell'app Codex l'hook di progetto esegue automaticamente fetch e fast-forward
-sicuro all'avvio. Da terminale sono disponibili:
+Nell'app Codex ogni attività che deve modificare file va aperta in modalità
+**Worktree**, basata su `main`. Se un'attività è stata aperta come **Local**,
+usare **Hand off → Worktree** prima di iniziare le modifiche. L'hook di progetto
+esegue automaticamente fetch e fast-forward sicuro all'avvio e segnala le
+attività Local.
+
+Prima della prima modifica Codex deve eseguire:
+
+```bash
+npm run work:guard
+```
+
+Il comando riesce soltanto in un worktree Git separato. Nel checkout Local si
+ferma, mentre analisi e controlli di sola lettura restano consentiti.
+
+Da terminale sono inoltre disponibili:
 
 ```bash
 npm run work:start -- nome-lavoro

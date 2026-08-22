@@ -31,9 +31,16 @@ possono creare ref duplicate, lock e oggetti corrotti.
 > fagli prima mettere al sicuro quelle modifiche su un branch. Se invece la
 > copia è pulita, Codex la aggiornerà da GitHub.
 >
-> Per ogni nuovo intervento apri una nuova attività Codex in modalità
-> **Worktree**, basata su `main`. Il lavoro deve stare su un branch breve
-> `codex/...`, non direttamente su `main`.
+> Per ogni nuovo intervento crea una nuova attività Codex. Sotto il campo in cui
+> scrivi il prompt, cambia **Local** in **Worktree**, poi scegli `main` come
+> branch di partenza e invia la richiesta. Quando Codex ha iniziato il lavoro,
+> usa **Create branch here** e assegna un nome breve `codex/...` al branch.
+>
+> Se per errore chiedi una modifica in un'attività aperta come **Local**, Codex
+> deve fermarsi. In quel caso usa **Hand off → Worktree** nell'intestazione
+> dell'attività, oppure aprine una nuova in modalità Worktree. Le richieste di
+> sola lettura, come controllare lo stato o spiegare il codice, possono invece
+> essere eseguite anche in Local.
 >
 > Anche quando lavori normalmente da un solo computer, alla fine di ogni
 > sessione devi sempre chiedere a Codex di chiudere e sincronizzare. Non lasciare
@@ -69,14 +76,28 @@ possono creare ref duplicate, lock e oggetti corrotti.
 Il percorso consigliato non richiede comandi Terminale:
 
 1. Apri il progetto locale in Codex.
-2. Crea una nuova attività in modalità **Worktree**, scegliendo `main` come
-   base.
-3. Descrivi la modifica. All'avvio, l'hook esegue automaticamente il fetch da
-   GitHub e aggiorna il worktree quando può farlo con un fast-forward sicuro.
-4. Se Codex segnala modifiche locali, divergenze o un problema di fetch, non
+2. Crea una nuova attività e, sotto il campo del prompt, seleziona
+   **Worktree** al posto di **Local**.
+3. Scegli `main` come branch di partenza e invia la richiesta.
+4. Codex esegue `npm run work:guard` prima della prima modifica. Il controllo
+   conferma che l'attività si trovi in un worktree Git separato.
+5. Quando il lavoro è iniziato, usa **Create branch here** nell'intestazione e
+   crea un branch breve `codex/nome-del-lavoro`.
+6. Se Codex segnala modifiche locali, divergenze o un problema di fetch, non
    procedere: chiedigli di diagnosticare e mettere al sicuro il lavoro.
 
-Se serve lavorare senza il worktree dell'app, Codex può usare:
+Codex crea normalmente il worktree in stato `detached HEAD`: è previsto. Il
+pulsante **Create branch here** collega poi il lavoro al branch breve che sarà
+committato e pubblicato.
+
+Se hai già aperto l'attività come **Local** e non hai ancora modificato file:
+
+1. seleziona **Hand off** nell'intestazione dell'attività;
+2. scegli **Worktree**;
+3. attendi il completamento del passaggio e ripeti la richiesta di modifica.
+
+Il comando seguente resta disponibile per preparare un branch quando si lavora
+manualmente da Terminale, ma non sostituisce il worktree per un'attività Codex:
 
 ```bash
 npm run work:start -- nome-breve-del-lavoro
@@ -84,7 +105,8 @@ npm run work:start -- nome-breve-del-lavoro
 
 Il comando aggiorna `main` da GitHub e crea un branch
 `codex/nome-breve-del-lavoro`. Si interrompe senza modificare nulla se la copia
-non è pulita, non è su `main` o si trova dentro una cartella cloud.
+non è pulita, non è su `main` o si trova dentro una cartella cloud. Un'attività
+Codex aperta come Local continuerà comunque a non superare `npm run work:guard`.
 
 ### Per finire e sincronizzare
 
@@ -135,12 +157,17 @@ momento.
 ### Cosa viene automatizzato e cosa no
 
 - Automatico all'apertura Codex: controllo percorso, fetch da GitHub e
-  fast-forward sicuro di `main` o del worktree appena creato.
+  fast-forward sicuro di `main` o del worktree appena creato; se l'attività è
+  Local, l'hook mostra subito il guardrail.
+- Automatico prima della prima modifica: Codex deve eseguire
+  `npm run work:guard`. Nel checkout Local il comando si ferma e indica di usare
+  **Hand off → Worktree**; le attività di sola lettura restano consentite.
 - Automatico con “Chiudi e sincronizza”: review guidata da Codex, test, commit,
   push e verifica finale.
-- Non automatico: merge della pull request, risoluzione di conflitti e
-  pubblicazione di segreti. Sono intenzionalmente separati perché richiedono
-  una decisione umana.
+- Non automatico: il passaggio dell'attività da Local a Worktree, il merge
+  della pull request, la risoluzione di conflitti e la pubblicazione di
+  segreti. Il passaggio si esegue con **Hand off** perché cambia l'ambiente di
+  lavoro dell'attività; le altre operazioni richiedono una decisione umana.
 - OneDrive: sincronizza soltanto materiali esterni. Non è richiesta né
   desiderabile una copia automatica del repository locale su OneDrive.
 

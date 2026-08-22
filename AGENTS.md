@@ -31,6 +31,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Nell'app Codex avviare di norma ogni nuovo lavoro in un worktree basato su
   `main`. Una chat o un'attivita' corrisponde a un worktree e a un solo branch;
   non riutilizzare indefinitamente branch di milestone gia' concluse.
+- Prima della prima modifica a file di progetto in ogni attivita' Codex,
+  eseguire `npm run work:guard`. Il controllo deve riuscire soltanto in un
+  worktree Git separato. Se segnala che l'attivita' e' `Local`, sono consentite
+  solo operazioni di lettura: usare `Hand off > Worktree` nell'app oppure aprire
+  una nuova attivita' in modalita' Worktree basata su `main`. Non aggirare il
+  controllo creando semplicemente un branch nel checkout locale.
 - Prima di iniziare un lavoro: verificare `git status`, eseguire
   `git fetch origin`, aggiornare `main` con `git pull --ff-only` e solo dopo
   creare branch o worktree.
@@ -51,8 +57,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   nuovo `main`.
 - Automazione multi-postazione disponibile:
   - `.codex/hooks.json` esegue un fetch e un fast-forward sicuro all'avvio di
-    una sessione Codex; se rileva una cartella cloud, modifiche locali o un
-    errore Git deve avvisare e non forzare l'allineamento;
+    una sessione Codex e avvisa quando l'attivita' usa il checkout `Local`; se
+    rileva una cartella cloud, modifiche locali o un errore Git deve avvisare e
+    non forzare l'allineamento;
+  - `npm run work:guard` deve precedere la prima modifica e si ferma nel
+    checkout `Local`, lasciando comunque disponibili analisi e controlli di
+    sola lettura;
   - `npm run work:start -- nome-lavoro` aggiorna `main` e crea un branch breve;
   - `npm run work:resume -- codex/nome-lavoro` riprende in sicurezza un branch
     pubblicato da un'altra postazione;
@@ -68,6 +78,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   che resta un passaggio separato salvo richiesta esplicita.
 - Guida operativa e messaggio per nuove postazioni:
   `docs/lavorare-da-piu-computer.md`.
+- Dal 2026-08-22 il workflow Codex applica un guardrail worktree esplicito:
+  l'hook segnala le attivita' aperte in `Local` e `npm run work:guard` impedisce
+  di iniziare modifiche finche' l'attivita' non viene spostata o aperta in un
+  worktree Git separato.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,

@@ -11,6 +11,7 @@
     "test": "node --test tests/*.test.mts",
     "typecheck": "tsc --noEmit",
     "performance:http": "node scripts/benchmark-http.mjs",
+    "work:guard": "bash scripts/work-session.sh guard",
     "work:start": "bash scripts/work-session.sh start",
     "work:resume": "bash scripts/work-session.sh resume",
     "work:status": "bash scripts/work-session.sh status",

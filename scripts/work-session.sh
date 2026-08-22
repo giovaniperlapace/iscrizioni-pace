@@ -46,6 +46,24 @@ current_branch() {
   git branch --show-current
 }
 
+is_linked_worktree() {
+  local git_dir common_dir
+  git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" || return 1
+  common_dir="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || return 1
+  [[ "$git_dir" != "$common_dir" ]]
+}
+
+guard_worktree() {
+  require_safe_location
+
+  if is_linked_worktree; then
+    info "OK: questa attivita' usa un worktree Git separato ($REPO_ROOT). Le modifiche sono consentite."
+    return
+  fi
+
+  die "questa attivita' usa il checkout Local ($REPO_ROOT). Le operazioni di sola lettura sono consentite, ma prima di modificare file usa nell'app Codex Hand off > Worktree oppure apri una nuova attivita' Worktree basata su main."
+}
+
 fetch_origin() {
   info "Aggiorno le informazioni da GitHub..."
   git fetch --prune "$REMOTE_NAME"
@@ -212,6 +230,10 @@ show_status() {
 }
 
 hook_start() {
+  if ! is_linked_worktree; then
+    info "GUARDRAIL PER CODEX: questa attivita' usa il checkout Local. Sono consentite analisi e controlli di sola lettura; prima di modificare file eseguire 'npm run work:guard' e, quando il controllo si ferma, usare Hand off > Worktree o aprire una nuova attivita' Worktree basata su main."
+  fi
+
   if is_cloud_path "$REPO_ROOT"; then
     info "ATTENZIONE PER CODEX: il repository e' dentro una cartella cloud. Non modificare file; chiedere di usare il clone locale fuori da OneDrive/Dropbox/iCloud."
     return
@@ -276,6 +298,7 @@ hook_end() {
 usage() {
   cat <<'EOF'
 Uso:
+  scripts/work-session.sh guard
   scripts/work-session.sh start [nome-lavoro]
   scripts/work-session.sh resume codex/nome-lavoro
   scripts/work-session.sh finish "Messaggio di commit"
@@ -292,6 +315,7 @@ command="${1:-}"
 [[ $# -eq 0 ]] || shift
 
 case "$command" in
+  guard) guard_worktree ;;
   start) start_work "$@" ;;
   resume) resume_work "$@" ;;
   finish) finish_work "$@" ;;
