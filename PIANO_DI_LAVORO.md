@@ -79,7 +79,7 @@ Stato locale aggiornato al 2026-06-17:
   della dashboard partecipante e della dashboard capogruppo. Manager/admin
   restano prioritariamente italiani, con parti comuni e fallback inglese.
 - Milestone 14 e' conclusa: la rifinitura estetica ispirata alla
-  locandina ufficiale `UNHARMED AND DISARMING PEACE / PACE DISARMATA E
+  locandina ufficiale `UNARMED AND DISARMING PEACE / PACE DISARMATA E
   DISARMANTE` e' stata implementata sui flussi pubblici e sulle dashboard con
   token CSS centralizzati, titolo evento ufficiale, header valorizzato, motivo
   SVG astratto a linea continua, palette blu/azzurra/bianco/grigi freddi,
@@ -1281,7 +1281,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
   prodotto.
 - Deliverable estetica completati:
   - applicazione delle guideline visive ricavate dalla locandina ufficiale
-    `UNHARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`;
+    `UNARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`;
   - design system leggero in `app/globals.css` con token centralizzati per
     blu istituzionale, blu medio, azzurro luminoso, sfondi, testo, bordi,
     raggi, ombre leggere, focus state e stati success/error;
@@ -1289,7 +1289,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     sottotitolo italiano, dicitura `International Meeting for Peace` e data
     `Assisi, 25–26–27 ottobre 2026`;
   - record evento Assisi 2026 riallineato al titolo ufficiale della locandina:
-    `UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`; lo slug
+    `UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`; lo slug
     tecnico storico `assisi-2026-test` resta solo per compatibilita' interna e
     non deve comparire come testo operativo;
   - home pubblica ridisegnata con hero blu, logo Sant'Egidio originale, form

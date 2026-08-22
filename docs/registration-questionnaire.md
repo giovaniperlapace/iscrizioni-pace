@@ -122,7 +122,7 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 Le migration iniziali creano dati bootstrap per Assisi 2026:
 
 - evento pubblicato con titolo visibile
-  `UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`;
+  `UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`;
 - slug tecnico storico `assisi-2026-test`, da non mostrare nella UI;
 - paesi `IT`, `GB`, `US`, più `AT` nella migration 6.3;
 - città `Roma`, `Assisi`, `London`, `New York`, più `Torino` e `Vienna` nella

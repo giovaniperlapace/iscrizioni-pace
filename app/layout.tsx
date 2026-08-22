@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UNHARMED AND DISARMING PEACE - Iscrizioni",
+  title: "UNARMED AND DISARMING PEACE - Iscrizioni",
   description:
-    "Iscrizioni per UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE, International Meeting for Peace, Assisi 25-26-27 ottobre 2026.",
+    "Iscrizioni per UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE, International Meeting for Peace, Assisi 25-26-27 ottobre 2026.",
 };
 
 export default async function RootLayout({

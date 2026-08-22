@@ -173,12 +173,17 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   manuale capogruppo; resta solo la lingua dell'interfaccia tramite cookie.
 - Milestone 14 e' stata avviata il 2026-06-17 con un restyling esclusivamente
   grafico ispirato alla locandina ufficiale
-  `UNHARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`: token CSS
+  `UNARMED AND DISARMING PEACE / PACE DISARMATA E DISARMANTE`: token CSS
   centralizzati in blu istituzionale, azzurro luminoso, bianco e grigi freddi;
   titolo ufficiale evidente in home, registrazione, conferma e login; header
   con logo Sant'Egidio originale valorizzato; motivo SVG astratto a linea
   continua ispirato alla colomba senza copiare la locandina. Non sono state
   modificate logica applicativa, route, validazioni, API, schema dati o policy.
+- Dal 2026-08-22 la traduzione inglese ufficiale del titolo e'
+  `UNARMED AND DISARMING PEACE`. La precedente forma inglese era errata e non
+  deve ricomparire in UI, metadata, documentazione o dati evento. La
+  migration `20260822100000_correct_assisi_2026_english_title.sql` corregge gli
+  ambienti in cui l'identita' evento era gia' stata applicata.
 - Sempre nella Milestone 14, le dashboard manager e admin sono state divise in
   tre sezioni accessibili da sidebar: `Evento`, `Gestione iscritti`, `Gruppi`.
   Le route restano `/dashboard/manager` e `/dashboard/admin` con query
@@ -1023,7 +1028,7 @@ Decisioni:
   non deve avere placeholder/suggerimenti nel box.
 - Assisi 2026 e' l'evento operativo prossimo in preparazione. Il titolo
   visibile deve essere quello della locandina:
-  `UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`.
+  `UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`.
   Lo slug tecnico storico `assisi-2026-test` resta per compatibilita' con
   migration, seed e script gia' applicati; non deve comparire nella UI o nei
   testi rivolti agli operatori come se l'evento fosse di prova.
