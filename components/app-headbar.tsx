@@ -33,7 +33,7 @@ export async function AppHeadbar() {
           />
           <div className="hidden min-w-0 border-l border-[var(--peace-border)] pl-4 md:block">
             <p className="truncate text-xs font-extrabold leading-4 text-[var(--peace-blue-900)]">
-              UNHARMED AND DISARMING PEACE
+              UNARMED AND DISARMING PEACE
             </p>
             <p className="truncate text-xs font-medium leading-4 text-[var(--peace-muted)]">
               Assisi, 25–26–27 ottobre 2026

@@ -23,7 +23,7 @@ export function EventIdentity({
   return (
     <div className={`flex flex-col ${alignment} ${className}`}>
       <h1 className={`${titleSize} ${titleTone} max-w-4xl`}>
-        UNHARMED AND
+        UNARMED AND
         <br />
         DISARMING PEACE
       </h1>

@@ -4,7 +4,7 @@
 
 update public.events
 set
-  title = 'UNHARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE',
+  title = 'UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE',
   city = 'Assisi',
   country = 'Italia'
 where slug = 'assisi-2026-test';
