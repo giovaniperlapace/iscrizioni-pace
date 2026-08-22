@@ -9,11 +9,46 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Nome progetto/repository: `iscrizioni-pace`.
 - Repository GitHub: `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Cartelle locali note per le postazioni di sviluppo:
+  - Giovani per la Pace: `/Users/giovaniperlapace/Developer/iscrizioni-pace`.
   - Stefano: `/Users/stefanolaptop/Documents/codex_new/iscrizioni-pace`.
   - Altre postazioni: verificare sempre con `pwd`; non assumere che il path
     locale sia uguale.
 - La fonte condivisa da riallineare prima di ogni milestone e' sempre
   `origin/main` su GitHub.
+
+## Workflow Git e postazioni multiple
+
+- Non lavorare dentro cartelle sincronizzate da OneDrive, Dropbox, iCloud o
+  servizi analoghi: la sincronizzazione della directory `.git` puo' creare
+  lock, ref duplicati e worktree corrotti. Ogni postazione deve avere un clone
+  locale indipendente fuori dalle cartelle cloud.
+- GitHub e' l'unico canale di sincronizzazione del codice tra computer e
+  persone. OneDrive puo' contenere materiali di progetto e snapshot
+  immutabili `.bundle` o `.tar.gz`, ma non una working copy Git attiva.
+- `main` deve restare pulito, aggiornato e utilizzabile. Non sviluppare
+  direttamente su `main`: ogni intervento usa un branch breve `codex/<tema>`
+  creato da `origin/main` aggiornato.
+- Nell'app Codex avviare di norma ogni nuovo lavoro in un worktree basato su
+  `main`. Una chat o un'attivita' corrisponde a un worktree e a un solo branch;
+  non riutilizzare indefinitamente branch di milestone gia' concluse.
+- Prima di iniziare un lavoro: verificare `git status`, eseguire
+  `git fetch origin`, aggiornare `main` con `git pull --ff-only` e solo dopo
+  creare branch o worktree.
+- Se `main` cambia mentre un branch e' ancora aperto, integrare
+  `origin/main` nel branch con un merge prima delle verifiche finali e della
+  pull request. Non fare rebase di branch gia' pubblicati o condivisi.
+- Prima di terminare una sessione: eseguire i controlli proporzionati alla
+  modifica, committare, fare push, verificare che il branch coincida con il
+  remoto e lasciare la working tree pulita. Se il lavoro non e' pronto, usare
+  un commit chiaramente identificato sul branch; non lasciare file anonimi
+  non committati per una chat futura.
+- Per cambiare computer: concludere e fare push dalla prima postazione; sulla
+  seconda eseguire fetch e aprire lo stesso branch remoto oppure creare un
+  nuovo branch da `origin/main`. Non modificare contemporaneamente lo stesso
+  branch da due dispositivi senza prima coordinare e sincronizzare.
+- Dopo il merge della pull request, eliminare il branch breve e il relativo
+  worktree. Le modifiche successive partono da un nuovo branch creato dal
+  nuovo `main`.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
