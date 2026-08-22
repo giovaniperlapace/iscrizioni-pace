@@ -22,14 +22,25 @@ export async function POST(request: Request) {
     const { data: existing } = await service.from("email_templates").select("current_version").eq("id", id).eq("event_id", event.id).single();
     const version = (existing?.current_version ?? 0) + 1;
     const { error } = await service.from("email_templates").update({ name, subject, body_text: message, current_version: version, updated_by: auth.user.id }).eq("id", id).eq("event_id", event.id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return templateStorageError("update", error);
     await service.from("email_template_versions").insert({ template_id: id, version, subject, body_text: message, created_by: auth.user.id });
     return NextResponse.json({ ok: true, id, version });
   }
   const { data: template, error } = await service.from("email_templates").insert({ event_id: event.id, name, subject, body_text: message, created_by: auth.user.id, updated_by: auth.user.id }).select("id,current_version").single();
-  if (error || !template) return NextResponse.json({ error: error?.message ?? "Salvataggio non riuscito." }, { status: 400 });
+  if (error || !template) return templateStorageError("create", error);
   await service.from("email_template_versions").insert({ template_id: template.id, version: template.current_version, subject, body_text: message, created_by: auth.user.id });
   return NextResponse.json({ ok: true, id: template.id, version: template.current_version });
 }
 
 function text(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
+
+function templateStorageError(operation: "create" | "update", cause: unknown) {
+  console.error(`[email-templates:${operation}]`, cause);
+  return NextResponse.json(
+    {
+      error:
+        "Non è stato possibile salvare il modello. Riprova tra qualche minuto.",
+    },
+    { status: 500 }
+  );
+}
