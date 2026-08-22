@@ -183,7 +183,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `UNARMED AND DISARMING PEACE`. La precedente forma inglese era errata e non
   deve ricomparire in UI, metadata, documentazione o dati evento. La
   migration `20260822100000_correct_assisi_2026_english_title.sql` corregge gli
-  ambienti in cui l'identita' evento era gia' stata applicata.
+  ambienti in cui l'identita' evento era gia' stata applicata. Il 2026-08-22
+  la migration e' stata applicata e registrata sul database production; il
+  titolo del record `assisi-2026-test` e' stato verificato dopo l'aggiornamento.
 - Sempre nella Milestone 14, le dashboard manager e admin sono state divise in
   tre sezioni accessibili da sidebar: `Evento`, `Gestione iscritti`, `Gruppi`.
   Le route restano `/dashboard/manager` e `/dashboard/admin` con query
