@@ -13,7 +13,7 @@ type Props = { searchParams: Promise<{ error?: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getSchoolBookingCopy(await getRequestLocale());
-  return { title: `${copy.homeTitle} - UNHARMED AND DISARMING PEACE`, description: copy.homeBody };
+  return { title: `${copy.homeTitle} - UNARMED AND DISARMING PEACE`, description: copy.homeBody };
 }
 
 export default async function SchoolBookingPage({ searchParams }: Props) {

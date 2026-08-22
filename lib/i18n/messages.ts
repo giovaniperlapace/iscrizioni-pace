@@ -206,7 +206,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       },
       locationLabel: "Venue",
       accessCta: "Register or access and choose the panels you want to attend",
-      metadataTitle: "Panel programme | Unharmed and Disarming Peace",
+      metadataTitle: "Panel programme | Unarmed and Disarming Peace",
       metadataDescription: "View dates, times, venues and availability for the published panels at the International Meeting for Peace in Assisi.",
     },
     emailAccess: {
