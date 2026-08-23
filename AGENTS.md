@@ -18,23 +18,26 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 
 ## Workflow Git e postazioni multiple
 
-- Non lavorare dentro cartelle sincronizzate da OneDrive, Dropbox, iCloud o
-  servizi analoghi: la sincronizzazione della directory `.git` puo' creare
-  lock, ref duplicati e worktree corrotti. Ogni postazione deve avere un clone
-  locale indipendente fuori dalle cartelle cloud.
+- Non lavorare dentro cartelle sincronizzate da servizi cloud: la
+  sincronizzazione della directory `.git` puo' creare lock, ref duplicati e
+  repository corrotti. Ogni postazione deve avere un clone locale indipendente
+  fuori dalle cartelle cloud.
 - GitHub e' l'unico canale di sincronizzazione del codice tra computer e
-  persone. OneDrive puo' contenere materiali di progetto e snapshot
-  immutabili `.bundle` o `.tar.gz`, ma non una working copy Git attiva.
-- `main` deve restare pulito, aggiornato e utilizzabile. Non sviluppare
-  direttamente su `main`: ogni intervento usa un branch breve `codex/<tema>`
-  creato da `origin/main` aggiornato.
-- Nell'app Codex avviare di norma ogni nuovo lavoro in un worktree basato su
-  `main`. Una chat o un'attivita' corrisponde a un worktree e a un solo branch;
-  non riutilizzare indefinitamente branch di milestone gia' concluse.
-- Prima di iniziare un lavoro: verificare `git status`, eseguire
-  `git fetch origin`, aggiornare `main` con `git pull --ff-only` e solo dopo
-  creare branch o worktree.
-- Se `main` cambia mentre un branch e' ancora aperto, integrare
+  persone. Non usare servizi di sincronizzazione file per condividere una
+  working copy Git attiva.
+- Lavorare direttamente nel normale checkout locale del repository, sul branch
+  attivo. Sono ammessi sia `main` sia branch dedicati allo staging di nuove
+  funzionalita', scelti in base al lavoro in corso.
+- All'inizio di ogni nuova attivita' verificare `pwd`, il branch corrente e lo
+  stato con `git status --short --branch`, quindi eseguire automaticamente
+  `git fetch origin` e `git pull --ff-only` sul branch attivo per controllare e
+  ripristinare l'allineamento con GitHub prima di modificare file.
+- Il pull automatico deve fermarsi e segnalare la situazione, senza forzare
+  modifiche, se la working tree non e' pulita, il branch non ha un upstream, i
+  commit locali e remoti sono divergenti oppure emergono conflitti. In questi
+  casi risolvere consapevolmente la sincronizzazione prima di iniziare il nuovo
+  lavoro.
+- Quando si lavora su un branch di staging e `main` cambia, integrare
   `origin/main` nel branch con un merge prima delle verifiche finali e della
   pull request. Non fare rebase di branch gia' pubblicati o condivisi.
 - Prima di terminare una sessione: eseguire i controlli proporzionati alla
@@ -43,12 +46,21 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   un commit chiaramente identificato sul branch; non lasciare file anonimi
   non committati per una chat futura.
 - Per cambiare computer: concludere e fare push dalla prima postazione; sulla
-  seconda eseguire fetch e aprire lo stesso branch remoto oppure creare un
-  nuovo branch da `origin/main`. Non modificare contemporaneamente lo stesso
-  branch da due dispositivi senza prima coordinare e sincronizzare.
-- Dopo il merge della pull request, eliminare il branch breve e il relativo
-  worktree. Le modifiche successive partono da un nuovo branch creato dal
-  nuovo `main`.
+  seconda eseguire il pull automatico iniziale e continuare sullo stesso branch
+  remoto, oppure scegliere esplicitamente il branch previsto per il nuovo
+  lavoro. Non modificare contemporaneamente lo stesso branch da due dispositivi
+  senza prima coordinare, fare push e sincronizzare.
+- Dopo il merge di una pull request, eliminare il branch di staging se non serve
+  piu'. Le modifiche successive possono proseguire su `main` aggiornato oppure
+  su un nuovo branch dedicato.
+- L'automazione multi-postazione deve limitarsi a verificare lo stato Git ed
+  eseguire un fetch e un fast-forward sicuro del branch attivo all'avvio della
+  nuova attivita'. Non deve imporre modalita' di checkout particolari o impedire
+  le modifiche nel checkout locale ordinario.
+- Dal 2026-08-23 il workflow multi-postazione usa checkout locali normali: si
+  lavora direttamente su `main` o sul branch di staging attivo e ogni nuova
+  attivita' inizia con il riallineamento automatico e non distruttivo da
+  GitHub. Le working copy non vengono condivise tramite servizi cloud.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
@@ -700,7 +712,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   in bozza, non correnti, con dati minimi di identita' e finestre iscrizioni.
   Nelle tabelle operative non mostrare colonne evento ridondanti. Migration:
   `20260624100000_current_operational_event.sql`.
-- Branch di lavoro ordinario: `main`.
+- Branch di lavoro ordinario: `main` oppure un branch dedicato allo staging
+  della funzionalita', sempre riallineato al proprio upstream prima delle
+  modifiche.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Per verificare l'ultimo commit/push noto su `main`, usare
@@ -1950,9 +1964,11 @@ Prima di concludere:
 
 ## Strategia Git
 
-- Lavorare normalmente su `main`.
-- Le prove si fanno in locale; quando tutto funziona e l'utente chiede commit/push, fare commit e push direttamente su `main`.
-- Non creare branch staging/produzione o branch milestone salvo richiesta esplicita.
+- Lavorare direttamente sul branch gia' scelto per l'attivita': `main` oppure
+  un branch di staging dedicato a una nuova funzionalita'.
+- Eseguire prove e verifiche sul branch attivo; quando tutto funziona e l'utente
+  chiede commit/push, committare e pubblicare quello stesso branch.
+- Non cambiare o creare branch senza una ragione collegata al lavoro richiesto.
 - Preparare diff leggibili per review umana.
 - Non fare commit/push senza richiesta.
 - Se compaiono modifiche non fatte da Codex, trattarle come lavoro dell'utente.
@@ -2055,9 +2071,9 @@ Non creare migration senza una milestone dedicata e un diff SQL revisionabile.
 
 ## App modello
 
-App modello locale:
-
-`/Users/stefanolaptop/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/modello_app`
+L'eventuale app modello deve trovarsi in un clone o in una cartella locale non
+sincronizzata da servizi cloud. Verificarne il percorso sulla postazione in uso
+prima di consultarla.
 
 Usarla come riferimento, non come sorgente da copiare automaticamente.
 
