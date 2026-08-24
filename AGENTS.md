@@ -1424,12 +1424,18 @@ Verifiche previste:
 
 - Il 2026-07-02 e' stato usato `capogruppo-test@example.org` come account test
   capogruppo per `Roma - Giovani per la Pace`.
-- Per testare la tabella capogruppo sono stati creati direttamente nel database
-  15 partecipanti fittizi nel gruppo `Roma - Giovani per la Pace`, riconoscibili
-  dai cognomi `fittizio1` ... `fittizio15` e dalle email
-  `fittizio1@example.test` ... `fittizio15@example.test`. Sono record di test,
-  con assegnazione gruppo corrente `confirmed`, source `capogruppo`, contatti,
-  consensi, presenze, QR token e audit coerenti. Non usarli come dati reali.
+- Per testare la tabella capogruppo erano stati creati direttamente nel database
+  15 partecipanti fittizi, riconoscibili dai cognomi `fittizio1` ...
+  `fittizio15` e dalle email `fittizio1@example.test` ...
+  `fittizio15@example.test`. Il 2026-08-24 i 15 partecipanti e tutte le
+  dipendenze collegate sono stati rimossi dal database production con una
+  transazione limitata a cognome ed email corrispondenti. Sono state eliminate
+  15 iscrizioni, 15 voci audit e 135 righe destinatario di campagne mai inviate
+  (`pending` o `skipped`); i conteggi di tre campagne sono stati riallineati.
+  Gli altri partecipanti di prova e gli account Auth test non sono stati
+  modificati. Il backup completo precedente alla rimozione e' in
+  `materiali-dati/backups/iscrizioni-pace-pre-rimozione-fittizi-20260824-1915.dump`
+  (ignorato da Git).
 
 ## Milestone 9 - dashboard capogruppo minima
 
