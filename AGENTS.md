@@ -25,9 +25,18 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - GitHub e' l'unico canale di sincronizzazione del codice tra computer e
   persone. Non usare servizi di sincronizzazione file per condividere una
   working copy Git attiva.
-- Lavorare direttamente nel normale checkout locale del repository, sul branch
-  attivo. Sono ammessi sia `main` sia branch dedicati allo staging di nuove
-  funzionalita', scelti in base al lavoro in corso.
+- Il flusso predefinito, quando le postazioni non stanno modificando il codice
+  contemporaneamente, e' lavorare direttamente su `main`: riallineare prima il
+  checkout, eseguire i controlli proporzionati, quindi fare commit e push. Il
+  push su `main` avvia il normale deployment production.
+- Branch dedicati e pull request non sono obbligatori per il lavoro ordinario.
+  Usarli quando la modifica e' lunga, rischiosa o parallela ad altro sviluppo,
+  oppure quando e' utile una review separata, un'anteprima Vercel o un punto di
+  integrazione esplicito. Le migration delicate, le modifiche a permessi/RLS e
+  gli interventi ampi restano buoni candidati per una pull request.
+- I worktree sono uno strumento facoltativo per isolare attivita' parallele:
+  non sono richiesti per lavorare su `main` e non implicano necessariamente
+  l'apertura di una pull request.
 - All'inizio di ogni nuova attivita' verificare `pwd`, il branch corrente e lo
   stato con `git status --short --branch`, quindi eseguire automaticamente
   `git fetch origin` e `git pull --ff-only` sul branch attivo per controllare e
@@ -38,8 +47,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   casi risolvere consapevolmente la sincronizzazione prima di iniziare il nuovo
   lavoro.
 - Quando si lavora su un branch di staging e `main` cambia, integrare
-  `origin/main` nel branch con un merge prima delle verifiche finali e della
-  pull request. Non fare rebase di branch gia' pubblicati o condivisi.
+  periodicamente `origin/main` nel branch con un merge e ripetere l'operazione
+  prima delle verifiche finali e dell'integrazione in `main`. Non fare rebase di
+  branch gia' pubblicati o condivisi. In particolare, il branch di sviluppo dei
+  panel deve ricevere regolarmente `origin/main` e venire ripubblicato dopo il
+  merge, cosi' le correzioni production non si accumulano fino al merge finale.
 - Prima di terminare una sessione: eseguire i controlli proporzionati alla
   modifica, committare, fare push, verificare che il branch coincida con il
   remoto e lasciare la working tree pulita. Se il lavoro non e' pronto, usare
@@ -50,9 +62,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   remoto, oppure scegliere esplicitamente il branch previsto per il nuovo
   lavoro. Non modificare contemporaneamente lo stesso branch da due dispositivi
   senza prima coordinare, fare push e sincronizzare.
-- Dopo il merge di una pull request, eliminare il branch di staging se non serve
-  piu'. Le modifiche successive possono proseguire su `main` aggiornato oppure
-  su un nuovo branch dedicato.
+- Dopo l'integrazione di un branch, con o senza pull request, eliminarlo se non
+  serve piu'. Le modifiche successive possono proseguire su `main` aggiornato
+  oppure su un nuovo branch dedicato.
 - L'automazione multi-postazione deve limitarsi a verificare lo stato Git ed
   eseguire un fetch e un fast-forward sicuro del branch attivo all'avvio della
   nuova attivita'. Non deve imporre modalita' di checkout particolari o impedire
@@ -61,6 +73,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   lavora direttamente su `main` o sul branch di staging attivo e ogni nuova
   attivita' inizia con il riallineamento automatico e non distruttivo da
   GitHub. Le working copy non vengono condivise tramite servizi cloud.
+- Dal 2026-08-24, poiche' le due postazioni di norma non modificano `main` in
+  contemporanea, commit e push diretti su `main` sono il percorso ordinario.
+  Branch, worktree e pull request restano guardrail selettivi per lavoro
+  parallelo o ad alto rischio, non passaggi obbligatori per ogni modifica.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
