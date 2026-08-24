@@ -568,6 +568,7 @@ type GroupLeaderCopy = {
     submit: string;
     currentAssignment: (participantName: string, currentGroupName: string) => string;
     reason: string;
+    alternative: string;
     rejectHelp: (currentGroupName: string, parentGroupName: string | null) => string;
   };
   detail: {
@@ -773,6 +774,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     currentAssignment: (participantName, currentGroupName) =>
       `${participantName} è stato assegnato al livello ${currentGroupName} dell'albero dei gruppi.`,
     reason: "Motivo dell'assegnazione",
+    alternative: "Oppure",
     rejectHelp: (currentGroupName, parentGroupName) =>
       parentGroupName
         ? `Se ${currentGroupName} non è il livello corretto, usa “Non riconosciuto”: la persona passerà al livello superiore ${parentGroupName}, dove potrà essere verificata e riassegnata.`
@@ -982,6 +984,7 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     currentAssignment: (participantName, currentGroupName) =>
       `${participantName} has been assigned to the ${currentGroupName} level of the group tree.`,
     reason: "Reason for the assignment",
+    alternative: "Or",
     rejectHelp: (currentGroupName, parentGroupName) =>
       parentGroupName
         ? `If ${currentGroupName} is not the correct level, use “Not recognised”: the person will move to the higher level ${parentGroupName}, where they can be reviewed and reassigned.`
@@ -1084,6 +1087,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       currentAssignment: (participantName, currentGroupName) =>
         `${participantName} a été affecté au niveau ${currentGroupName} de l'arbre des groupes.`,
       reason: "Motif de l'affectation",
+      alternative: "Ou",
       rejectHelp: (currentGroupName, parentGroupName) =>
         parentGroupName
           ? `Si ${currentGroupName} n'est pas le bon niveau, utilise « Non reconnu » : la personne passera au niveau supérieur ${parentGroupName}, où elle pourra être vérifiée et réaffectée.`
@@ -1258,6 +1262,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       currentAssignment: (participantName, currentGroupName) =>
         `${participantName} wurde der Ebene ${currentGroupName} im Gruppenbaum zugeordnet.`,
       reason: "Grund der Zuordnung",
+      alternative: "Oder",
       rejectHelp: (currentGroupName, parentGroupName) =>
         parentGroupName
           ? `Wenn ${currentGroupName} nicht die richtige Ebene ist, wähle „Nicht erkannt“: Die Person wechselt zur höheren Ebene ${parentGroupName} und kann dort geprüft und neu zugeordnet werden.`
@@ -1432,6 +1437,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       currentAssignment: (participantName, currentGroupName) =>
         `${participantName} ha sido asignado al nivel ${currentGroupName} del árbol de grupos.`,
       reason: "Motivo de la asignación",
+      alternative: "O bien",
       rejectHelp: (currentGroupName, parentGroupName) =>
         parentGroupName
           ? `Si ${currentGroupName} no es el nivel correcto, usa «No reconocido»: la persona pasará al nivel superior ${parentGroupName}, donde podrá ser revisada y reasignada.`
@@ -1606,6 +1612,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       currentAssignment: (participantName, currentGroupName) =>
         `${participantName} is toegewezen aan niveau ${currentGroupName} van de groepsboom.`,
       reason: "Reden voor de toewijzing",
+      alternative: "Of",
       rejectHelp: (currentGroupName, parentGroupName) =>
         parentGroupName
           ? `Als ${currentGroupName} niet het juiste niveau is, kies je “Niet herkend”: de persoon gaat naar het hogere niveau ${parentGroupName}, waar die kan worden gecontroleerd en opnieuw toegewezen.`
@@ -1780,6 +1787,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       currentAssignment: (participantName, currentGroupName) =>
         `${participantName} призначено до рівня ${currentGroupName} у дереві груп.`,
       reason: "Причина призначення",
+      alternative: "Або",
       rejectHelp: (currentGroupName, parentGroupName) =>
         parentGroupName
           ? `Якщо ${currentGroupName} — неправильний рівень, виберіть «Не розпізнано»: людина перейде на вищий рівень ${parentGroupName}, де її можна буде перевірити та перепризначити.`
@@ -2904,25 +2912,10 @@ function PendingAssignmentRow({
               </PendingSubmitButton>
             </form>
           ) : null}
-          <form action={updateGroupLeaderAssignment}>
-            <input type="hidden" name="assignmentId" value={assignment.id} />
-            <ConfirmSubmitButton
-              name="intent"
-              value="reject"
-              confirmMessage={copy.table.rejectWarning(
-                assignment.participantName,
-                assignment.groupName,
-                assignment.parentGroupName
-              )}
-              className="min-h-10 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
-            >
-              {copy.table.reject}
-            </ConfirmSubmitButton>
-          </form>
           <Link
             href={detailHref}
             scroll={false}
-            className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+            className="inline-flex min-h-10 items-center whitespace-nowrap rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
             {copy.pending.action}
           </Link>
@@ -3190,8 +3183,8 @@ function AssignmentDetailCard({
       </div>
 
       <DetailBlock title={copy.detail.assignment}>
-        <div className="grid gap-4">
-          <div className="grid gap-2 rounded-md border border-[#dfc46d] bg-[#fff8dc] p-4 text-sm leading-6 text-[var(--peace-ink)]">
+        <div className="overflow-hidden rounded-md border border-[#dfc46d]">
+          <div className="grid gap-2 bg-[#fff8dc] p-4 text-sm leading-6 text-[var(--peace-ink)]">
             <p className="font-semibold">
               {copy.reassignment.currentAssignment(
                 assignment.participantName,
@@ -3202,56 +3195,95 @@ function AssignmentDetailCard({
               <span className="font-semibold">{copy.reassignment.reason}:</span>{" "}
               {assignmentReasonLabel(assignment.assignmentReason, copy)}.
             </p>
-            {canDecide ? (
-              <p className="text-[var(--peace-muted)]">
-                {copy.reassignment.rejectHelp(
-                  assignment.groupName,
-                  assignment.parentGroupName
-                )}
-              </p>
-            ) : null}
           </div>
 
-          {canDecide && reassignmentGroups.length > 0 ? (
-            <form
-              action={updateGroupLeaderAssignment}
-              className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+          {canDecide ? (
+            <div
+              className={
+                reassignmentGroups.length > 0
+                  ? "grid border-t border-[#dfc46d] bg-[#f7fbfe] lg:grid-cols-[minmax(0,1.35fr)_auto_minmax(260px,0.65fr)]"
+                  : "border-t border-[#dfc46d] bg-[#fff7f5]"
+              }
             >
-              <input type="hidden" name="assignmentId" value={assignment.id} />
-              <div>
-                <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
-                  {copy.reassignment.title}
-                </h4>
-                <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-                  {copy.reassignment.help}
-                </p>
+              {reassignmentGroups.length > 0 ? (
+                <>
+                  <form
+                    action={updateGroupLeaderAssignment}
+                    className="grid content-start gap-3 p-4"
+                  >
+                    <input type="hidden" name="assignmentId" value={assignment.id} />
+                    <div>
+                      <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
+                        {copy.reassignment.title}
+                      </h4>
+                      <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+                        {copy.reassignment.help}
+                      </p>
+                    </div>
+                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                      {copy.reassignment.select}
+                      <select
+                        name="targetGroupId"
+                        required
+                        defaultValue=""
+                        className="field bg-white font-normal"
+                      >
+                        <option value="" disabled>
+                          {copy.reassignment.select}
+                        </option>
+                        {reassignmentGroups.map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <PendingSubmitButton
+                      name="intent"
+                      value="reassign"
+                      className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+                    >
+                      {copy.reassignment.submit}
+                    </PendingSubmitButton>
+                  </form>
+
+                  <div className="relative flex items-center justify-center border-y border-[#dfc46d] bg-white px-3 py-2 lg:border-x lg:border-y-0">
+                    <span className="rounded-full border border-[#dfc46d] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#6b5214]">
+                      {copy.reassignment.alternative}
+                    </span>
+                  </div>
+                </>
+              ) : null}
+
+              <div className="grid content-start gap-3 bg-[#fff7f5] p-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-[#8a3f35]">
+                    {copy.table.reject}
+                  </h4>
+                  <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+                    {copy.reassignment.rejectHelp(
+                      assignment.groupName,
+                      assignment.parentGroupName
+                    )}
+                  </p>
+                </div>
+                <form action={updateGroupLeaderAssignment}>
+                  <input type="hidden" name="assignmentId" value={assignment.id} />
+                  <ConfirmSubmitButton
+                    name="intent"
+                    value="reject"
+                    confirmMessage={copy.table.rejectWarning(
+                      assignment.participantName,
+                      assignment.groupName,
+                      assignment.parentGroupName
+                    )}
+                    className="min-h-10 rounded-md border border-[#d1a7a0] bg-white px-4 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
+                  >
+                    {copy.table.reject}
+                  </ConfirmSubmitButton>
+                </form>
               </div>
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                {copy.reassignment.select}
-                <select
-                  name="targetGroupId"
-                  required
-                  defaultValue=""
-                  className="field bg-white font-normal"
-                >
-                  <option value="" disabled>
-                    {copy.reassignment.select}
-                  </option>
-                  {reassignmentGroups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <PendingSubmitButton
-                name="intent"
-                value="reassign"
-                className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-              >
-                {copy.reassignment.submit}
-              </PendingSubmitButton>
-            </form>
+            </div>
           ) : null}
         </div>
       </DetailBlock>
@@ -3288,30 +3320,14 @@ function AssignmentDetailCard({
           >
             {copy.table.saveNote}
           </PendingSubmitButton>
-          {canDecide ? (
-            <>
-              {canConfirm ? (
-                <PendingSubmitButton
-                  name="intent"
-                  value="confirm"
-                  className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-                >
-                  {copy.table.confirm}
-                </PendingSubmitButton>
-              ) : null}
-              <ConfirmSubmitButton
-                name="intent"
-                value="reject"
-                confirmMessage={copy.table.rejectWarning(
-                  assignment.participantName,
-                  assignment.groupName,
-                  assignment.parentGroupName
-                )}
-                className="min-h-10 rounded-md border border-[#d1a7a0] px-4 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
-              >
-                {copy.table.reject}
-              </ConfirmSubmitButton>
-            </>
+          {canConfirm ? (
+            <PendingSubmitButton
+              name="intent"
+              value="confirm"
+              className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+            >
+              {copy.table.confirm}
+            </PendingSubmitButton>
           ) : null}
           {assignment.isCurrent && assignment.status === "confirmed" ? (
             <PendingSubmitButton

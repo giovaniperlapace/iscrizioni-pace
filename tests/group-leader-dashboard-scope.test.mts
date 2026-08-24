@@ -30,11 +30,29 @@ test("pending assignment details explain the tree routing next to the group sele
   assert.match(dashboardSource, /rejectHelp:/);
   assert.match(dashboardSource, /assignmentReasonLabel\(assignment\.assignmentReason, copy\)/);
 
+  const pendingRowStart = dashboardSource.indexOf("function PendingAssignmentRow");
+  const pendingRowEnd = dashboardSource.indexOf(
+    "function AssignmentsTable",
+    pendingRowStart
+  );
+  const pendingRowSource = dashboardSource.slice(pendingRowStart, pendingRowEnd);
+
+  assert.doesNotMatch(pendingRowSource, /value="reject"/);
+  assert.match(pendingRowSource, /whitespace-nowrap/);
+
   const assignmentDetailStart = dashboardSource.indexOf(
     "<DetailBlock title={copy.detail.assignment}>"
   );
   const reassignmentSelect = dashboardSource.indexOf(
     'name="targetGroupId"',
+    assignmentDetailStart
+  );
+  const alternativeLabel = dashboardSource.indexOf(
+    "copy.reassignment.alternative",
+    assignmentDetailStart
+  );
+  const rejectionAction = dashboardSource.indexOf(
+    'value="reject"',
     assignmentDetailStart
   );
   const notesStart = dashboardSource.indexOf(
@@ -44,5 +62,7 @@ test("pending assignment details explain the tree routing next to the group sele
 
   assert.ok(assignmentDetailStart >= 0);
   assert.ok(reassignmentSelect > assignmentDetailStart);
-  assert.ok(notesStart > reassignmentSelect);
+  assert.ok(alternativeLabel > reassignmentSelect);
+  assert.ok(rejectionAction > alternativeLabel);
+  assert.ok(notesStart > rejectionAction);
 });
