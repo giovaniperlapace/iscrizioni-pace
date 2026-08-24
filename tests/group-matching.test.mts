@@ -6,11 +6,14 @@ import {
   calculateAgeAtDate,
   findMatchingGroupCandidates,
   findTerritorialFallback,
+  findTerritorialReviewGroup,
   formatGroupOptionLabel,
   resolveGroupAssignmentForRegistration,
   type GroupMatchCandidate,
 } from "../lib/groups/matching.ts";
 import {
+  canGroupLeaderDecideProbableAssignment,
+  canGroupLeaderReassignProbableAssignment,
   collectDescendantGroupIds,
   getEscalationTargetGroupId,
   matchesGroupLeaderFilter,
@@ -95,6 +98,28 @@ const groups: GroupMatchCandidate[] = [
     nodeType: "country",
     ageBands: [],
     publicOrder: 50,
+  }),
+  group({
+    id: "territorial-italy",
+    name: "Italia",
+    countryId: ITALY,
+    cityId: null,
+    nodeType: "country",
+    communityKind: "territorial",
+    isAssignable: false,
+    isPublicCatalog: false,
+    publicOrder: 800,
+  }),
+  group({
+    id: "territorial-rome",
+    name: "Roma",
+    countryId: ITALY,
+    cityId: ROME,
+    nodeType: "city",
+    communityKind: "territorial",
+    isAssignable: false,
+    isPublicCatalog: false,
+    publicOrder: 810,
   }),
   group({
     id: "newcomers-italy",
@@ -220,7 +245,7 @@ test("public suggestions exclude territorial city and country nodes", () => {
   assert.equal(internalFallback?.id, "roma-city");
 });
 
-test("new participants resolve to the closest territorial newcomers node", () => {
+test("participants without a selected group enter the closest territorial review queue", () => {
   const assignment = resolveGroupAssignmentForRegistration({
     groups,
     criteria: {
@@ -235,12 +260,12 @@ test("new participants resolve to the closest territorial newcomers node", () =>
     cannotFindLeader: false,
   });
 
-  assert.equal(assignment?.groupId, "newcomers-rome");
+  assert.equal(assignment?.groupId, "territorial-rome");
   assert.equal(assignment?.source, "rule");
-  assert.equal(assignment?.reason, "newcomer_territorial_fallback");
+  assert.equal(assignment?.reason, "territorial_review_queue");
 });
 
-test("Sant'Egidio participants without an explicit group stay unassigned", () => {
+test("Sant'Egidio participants without an explicit group enter territorial review", () => {
   for (const input of [
     { participatesWithGroup: false, cannotFindLeader: false },
     { participatesWithGroup: true, cannotFindLeader: true },
@@ -258,8 +283,46 @@ test("Sant'Egidio participants without an explicit group stay unassigned", () =>
       ...input,
     });
 
-    assert.equal(assignment, null);
+    assert.equal(assignment?.groupId, "territorial-rome");
+    assert.equal(assignment?.reason, "territorial_review_queue");
   }
+});
+
+test("new participants retain the newcomers fallback when no territorial review node exists", () => {
+  const assignment = resolveGroupAssignmentForRegistration({
+    groups: groups.filter((candidate) => candidate.communityKind !== "territorial"),
+    criteria: {
+      countryId: ITALY,
+      cityId: ROME,
+      birthDate: "1998-01-01",
+      eventStartsOn: "2026-10-25",
+    },
+    selectedGroupId: null,
+    hasPreviousSantegidioParticipation: false,
+    participatesWithGroup: null,
+    cannotFindLeader: false,
+  });
+
+  assert.equal(assignment?.groupId, "newcomers-rome");
+  assert.equal(assignment?.reason, "newcomer_territorial_fallback");
+});
+
+test("territorial review prefers the city node and can fall back to the country", () => {
+  const romeReview = findTerritorialReviewGroup(groups, {
+    countryId: ITALY,
+    cityId: ROME,
+    birthDate: null,
+    eventStartsOn: "2026-10-25",
+  });
+  const countryReview = findTerritorialReviewGroup(groups, {
+    countryId: ITALY,
+    cityId: TURIN,
+    birthDate: null,
+    eventStartsOn: "2026-10-25",
+  });
+
+  assert.equal(romeReview?.id, "territorial-rome");
+  assert.equal(countryReview?.id, "territorial-italy");
 });
 
 test("territorial fallback can climb from city to country", () => {
@@ -299,6 +362,48 @@ test("group leader rejection escalates to the direct parent", () => {
 
   assert.equal(getEscalationTargetGroupId(groupsById, "rome"), "italy");
   assert.equal(getEscalationTargetGroupId(groupsById, "italy"), null);
+});
+
+test("higher-level leaders decide only probable assignments addressed to their direct groups", () => {
+  const directGroups = ["rome"];
+
+  assert.equal(
+    canGroupLeaderDecideProbableAssignment(
+      { groupId: "rome", status: "probable", isCurrent: true },
+      directGroups
+    ),
+    true
+  );
+  assert.equal(
+    canGroupLeaderDecideProbableAssignment(
+      { groupId: "sant-andrea", status: "probable", isCurrent: true },
+      directGroups
+    ),
+    false
+  );
+});
+
+test("higher-level leaders can route their probable assignments to assignable descendants", () => {
+  const assignment = { groupId: "rome", status: "probable", isCurrent: true };
+
+  assert.equal(
+    canGroupLeaderReassignProbableAssignment(
+      assignment,
+      { groupId: "sant-andrea", isActive: true, isAssignable: true },
+      ["rome"],
+      ["rome", "sant-andrea", "trastevere"]
+    ),
+    true
+  );
+  assert.equal(
+    canGroupLeaderReassignProbableAssignment(
+      assignment,
+      { groupId: "milan", isActive: true, isAssignable: true },
+      ["rome"],
+      ["rome", "sant-andrea", "trastevere"]
+    ),
+    false
+  );
 });
 
 test("group leader summary tracks assignments that need review", () => {

@@ -82,6 +82,44 @@ export function getEscalationTargetGroupId(
   return groupsById.get(groupId)?.parentGroupId ?? null;
 }
 
+export function canGroupLeaderDecideProbableAssignment(
+  assignment: {
+    groupId: string;
+    status: string | null;
+    isCurrent: boolean;
+  },
+  directGroupIds: Iterable<string>
+): boolean {
+  return (
+    assignment.isCurrent &&
+    assignment.status === "probable" &&
+    new Set(directGroupIds).has(assignment.groupId)
+  );
+}
+
+export function canGroupLeaderReassignProbableAssignment(
+  assignment: {
+    groupId: string;
+    status: string | null;
+    isCurrent: boolean;
+  },
+  target: {
+    groupId: string;
+    isActive: boolean;
+    isAssignable: boolean;
+  },
+  directGroupIds: Iterable<string>,
+  scopedGroupIds: Iterable<string>
+): boolean {
+  return (
+    canGroupLeaderDecideProbableAssignment(assignment, directGroupIds) &&
+    target.groupId !== assignment.groupId &&
+    target.isActive &&
+    target.isAssignable &&
+    new Set(scopedGroupIds).has(target.groupId)
+  );
+}
+
 export function summarizeGroupLeaderAssignments(
   assignments: GroupLeaderAssignmentSummaryInput[]
 ): GroupLeaderAssignmentSummary {

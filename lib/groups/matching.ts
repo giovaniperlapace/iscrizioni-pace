@@ -1,4 +1,4 @@
-export const GROUP_MATCHER_VERSION = "2026-07-27-multi-age-bands-v3";
+export const GROUP_MATCHER_VERSION = "2026-08-24-territorial-review-v4";
 
 export type GroupAgeBand = "giovani" | "adulti" | "anziani";
 export type GroupCommunityKind = "santegidio" | "newcomers" | "territorial";
@@ -162,6 +162,28 @@ export function findTerritorialFallback(
   );
 }
 
+export function findTerritorialReviewGroup(
+  groups: GroupMatchCandidate[],
+  criteria: GroupMatchCriteria
+): GroupMatchCandidate | null {
+  return (
+    groups
+      .filter(
+        (group) =>
+          group.communityKind === "territorial" &&
+          (group.nodeType === "city" || group.nodeType === "country") &&
+          hasTerritorialMatch(group, criteria)
+      )
+      .sort(
+        (left, right) =>
+          scoreTerritory(right, criteria) - scoreTerritory(left, criteria) ||
+          nodeSpecificityScore(right.nodeType) - nodeSpecificityScore(left.nodeType) ||
+          left.publicOrder - right.publicOrder ||
+          left.name.localeCompare(right.name)
+      )[0] ?? null
+  );
+}
+
 export function resolveGroupAssignmentForRegistration({
   groups,
   criteria,
@@ -182,6 +204,18 @@ export function resolveGroupAssignmentForRegistration({
       source: "participant_selected",
       confidence: 0.85,
       reason: "participant_selected_group",
+      matcherVersion: GROUP_MATCHER_VERSION,
+    };
+  }
+
+  const territorialReviewGroup = findTerritorialReviewGroup(groups, criteria);
+
+  if (territorialReviewGroup) {
+    return {
+      groupId: territorialReviewGroup.id,
+      source: "rule",
+      confidence: 0.5,
+      reason: "territorial_review_queue",
       matcherVersion: GROUP_MATCHER_VERSION,
     };
   }
