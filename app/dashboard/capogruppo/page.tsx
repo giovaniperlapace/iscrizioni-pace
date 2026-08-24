@@ -559,12 +559,16 @@ type GroupLeaderCopy = {
     title: string;
     help: string;
     empty: string;
+    action: string;
   };
   reassignment: {
     title: string;
     help: string;
     select: string;
     submit: string;
+    currentAssignment: (participantName: string, currentGroupName: string) => string;
+    reason: string;
+    rejectHelp: (currentGroupName: string, parentGroupName: string | null) => string;
   };
   detail: {
     title: string;
@@ -759,12 +763,20 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     title: "Da confermare",
     help: "Controlla prima queste persone: risultano collegate al tuo gruppo, ma attendono una conferma esplicita.",
     empty: "Non ci sono partecipanti in attesa di conferma.",
+    action: "Vedi dettagli e assegna",
   },
   reassignment: {
-    title: "Riassegna a un gruppo",
-    help: "Scegli uno dei gruppi sotto il tuo livello. La persona apparirà lì come da confermare.",
+    title: "Assegna al gruppo corretto",
+    help: "Se conosci il gruppo corretto, sceglilo tra i gruppi sotto questo livello. La persona vi apparirà come da confermare.",
     select: "Seleziona il nuovo gruppo",
     submit: "Invia al gruppo",
+    currentAssignment: (participantName, currentGroupName) =>
+      `${participantName} è stato assegnato al livello ${currentGroupName} dell'albero dei gruppi.`,
+    reason: "Motivo dell'assegnazione",
+    rejectHelp: (currentGroupName, parentGroupName) =>
+      parentGroupName
+        ? `Se ${currentGroupName} non è il livello corretto, usa “Non riconosciuto”: la persona passerà al livello superiore ${parentGroupName}, dove potrà essere verificata e riassegnata.`
+        : `Se ${currentGroupName} non è il livello corretto, usa “Non riconosciuto”: non essendoci un livello superiore, la persona passerà alla gestione manuale di manager/admin.`,
   },
   detail: {
     title: "Scheda partecipante",
@@ -820,7 +832,8 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     newcomerTerritorialFallback: "nuovo partecipante assegnato per territorio",
     participantCannotFindLeader: "referente non trovato nel form",
     santegidioTerritorialFallback: "assegnazione territoriale probabile",
-    territorialReviewQueue: "in attesa di smistamento territoriale",
+    territorialReviewQueue:
+      "i dati territoriali dell'iscrizione hanno ricondotto la persona a questo livello",
     groupLeaderRejectedEscalatedToParent: "rifiuto risalito al nodo superiore",
     groupLeaderReassignedToDescendant: "riassegnato dal livello superiore",
     groupLeaderManualEntry: "inserimento manuale del referente",
@@ -959,12 +972,20 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     title: "To confirm",
     help: "Start here: these people are linked to your group, but still need an explicit confirmation.",
     empty: "No participant is waiting for confirmation.",
+    action: "View details and assign",
   },
   reassignment: {
-    title: "Reassign to a group",
-    help: "Choose one of the groups below your level. The person will appear there for confirmation.",
+    title: "Assign to the correct group",
+    help: "If you know the correct group, choose it among the groups below this level. The person will appear there for confirmation.",
     select: "Select the new group",
     submit: "Send to group",
+    currentAssignment: (participantName, currentGroupName) =>
+      `${participantName} has been assigned to the ${currentGroupName} level of the group tree.`,
+    reason: "Reason for the assignment",
+    rejectHelp: (currentGroupName, parentGroupName) =>
+      parentGroupName
+        ? `If ${currentGroupName} is not the correct level, use “Not recognised”: the person will move to the higher level ${parentGroupName}, where they can be reviewed and reassigned.`
+        : `If ${currentGroupName} is not the correct level, use “Not recognised”: since there is no higher level, the person will move to manual manager/admin handling.`,
   },
   detail: {
     title: "Participant card",
@@ -1049,11 +1070,24 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participants du groupe",
     participantsHelp:
       "Tu trouves ici les personnes reliées aux groupes que tu gères. Les décisions sur le groupe sont internes et n'envoient pas de message automatique au participant.",
+    pending: {
+      title: "À confirmer",
+      help: "Commence ici : ces personnes sont reliées à ton groupe, mais attendent encore une confirmation explicite.",
+      empty: "Aucun participant n'attend de confirmation.",
+      action: "Voir les détails et affecter",
+    },
     reassignment: {
-      title: "Réaffecter à un groupe",
-      help: "Choisis un groupe sous ton niveau. La personne y apparaîtra comme à confirmer.",
+      title: "Affecter au bon groupe",
+      help: "Si tu connais le bon groupe, choisis-le parmi les groupes sous ce niveau. La personne y apparaîtra comme à confirmer.",
       select: "Sélectionner le nouveau groupe",
       submit: "Envoyer au groupe",
+      currentAssignment: (participantName, currentGroupName) =>
+        `${participantName} a été affecté au niveau ${currentGroupName} de l'arbre des groupes.`,
+      reason: "Motif de l'affectation",
+      rejectHelp: (currentGroupName, parentGroupName) =>
+        parentGroupName
+          ? `Si ${currentGroupName} n'est pas le bon niveau, utilise « Non reconnu » : la personne passera au niveau supérieur ${parentGroupName}, où elle pourra être vérifiée et réaffectée.`
+          : `Si ${currentGroupName} n'est pas le bon niveau, utilise « Non reconnu » : comme il n'existe aucun niveau supérieur, la personne passera à la gestion manuelle manager/admin.`,
     },
     generateLink: "Générer un lien",
     addParticipant: "Ajouter un participant",
@@ -1210,11 +1244,24 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Teilnehmende der Gruppe",
     participantsHelp:
       "Hier findest du die Personen, die mit den von dir verwalteten Gruppen verbunden sind. Gruppenentscheidungen sind intern und senden keine automatischen Nachrichten an die teilnehmende Person.",
+    pending: {
+      title: "Zu bestätigen",
+      help: "Beginne hier: Diese Personen sind deiner Gruppe zugeordnet, benötigen aber noch eine ausdrückliche Bestätigung.",
+      empty: "Keine Person wartet auf eine Bestätigung.",
+      action: "Details ansehen und zuordnen",
+    },
     reassignment: {
-      title: "Einer Gruppe neu zuordnen",
-      help: "Wähle eine Gruppe unterhalb deiner Ebene. Die Person erscheint dort zur Bestätigung.",
+      title: "Der richtigen Gruppe zuordnen",
+      help: "Wenn du die richtige Gruppe kennst, wähle sie unter den Gruppen unterhalb dieser Ebene aus. Die Person erscheint dort zur Bestätigung.",
       select: "Neue Gruppe auswählen",
       submit: "An Gruppe senden",
+      currentAssignment: (participantName, currentGroupName) =>
+        `${participantName} wurde der Ebene ${currentGroupName} im Gruppenbaum zugeordnet.`,
+      reason: "Grund der Zuordnung",
+      rejectHelp: (currentGroupName, parentGroupName) =>
+        parentGroupName
+          ? `Wenn ${currentGroupName} nicht die richtige Ebene ist, wähle „Nicht erkannt“: Die Person wechselt zur höheren Ebene ${parentGroupName} und kann dort geprüft und neu zugeordnet werden.`
+          : `Wenn ${currentGroupName} nicht die richtige Ebene ist, wähle „Nicht erkannt“: Da es keine höhere Ebene gibt, wird die Person manuell von Manager/Admin bearbeitet.`,
     },
     generateLink: "Link erstellen",
     addParticipant: "Teilnehmende Person hinzufügen",
@@ -1371,11 +1418,24 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participantes del grupo",
     participantsHelp:
       "Aquí encuentras las personas vinculadas a los grupos que gestionas. Las decisiones sobre el grupo son internas y no envían mensajes automáticos al participante.",
+    pending: {
+      title: "Por confirmar",
+      help: "Empieza aquí: estas personas están vinculadas a tu grupo, pero todavía necesitan una confirmación explícita.",
+      empty: "No hay participantes pendientes de confirmación.",
+      action: "Ver detalles y asignar",
+    },
     reassignment: {
-      title: "Reasignar a un grupo",
-      help: "Elige un grupo por debajo de tu nivel. La persona aparecerá allí pendiente de confirmación.",
+      title: "Asignar al grupo correcto",
+      help: "Si conoces el grupo correcto, elígelo entre los grupos bajo este nivel. La persona aparecerá allí pendiente de confirmación.",
       select: "Seleccionar el nuevo grupo",
       submit: "Enviar al grupo",
+      currentAssignment: (participantName, currentGroupName) =>
+        `${participantName} ha sido asignado al nivel ${currentGroupName} del árbol de grupos.`,
+      reason: "Motivo de la asignación",
+      rejectHelp: (currentGroupName, parentGroupName) =>
+        parentGroupName
+          ? `Si ${currentGroupName} no es el nivel correcto, usa «No reconocido»: la persona pasará al nivel superior ${parentGroupName}, donde podrá ser revisada y reasignada.`
+          : `Si ${currentGroupName} no es el nivel correcto, usa «No reconocido»: al no haber un nivel superior, la persona pasará a la gestión manual de manager/admin.`,
     },
     generateLink: "Generar enlace",
     addParticipant: "Añadir participante",
@@ -1532,11 +1592,24 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Deelnemers van de groep",
     participantsHelp:
       "Hier vind je de mensen die gekoppeld zijn aan de groepen die je beheert. Beslissingen over de groep zijn intern en sturen geen automatische berichten naar de deelnemer.",
+    pending: {
+      title: "Te bevestigen",
+      help: "Begin hier: deze personen zijn aan je groep gekoppeld, maar moeten nog expliciet worden bevestigd.",
+      empty: "Er wachten geen deelnemers op bevestiging.",
+      action: "Details bekijken en toewijzen",
+    },
     reassignment: {
-      title: "Opnieuw aan een groep toewijzen",
-      help: "Kies een groep onder jouw niveau. De persoon verschijnt daar ter bevestiging.",
+      title: "Aan de juiste groep toewijzen",
+      help: "Als je de juiste groep kent, kies die dan uit de groepen onder dit niveau. De persoon verschijnt daar ter bevestiging.",
       select: "Nieuwe groep selecteren",
       submit: "Naar groep sturen",
+      currentAssignment: (participantName, currentGroupName) =>
+        `${participantName} is toegewezen aan niveau ${currentGroupName} van de groepsboom.`,
+      reason: "Reden voor de toewijzing",
+      rejectHelp: (currentGroupName, parentGroupName) =>
+        parentGroupName
+          ? `Als ${currentGroupName} niet het juiste niveau is, kies je “Niet herkend”: de persoon gaat naar het hogere niveau ${parentGroupName}, waar die kan worden gecontroleerd en opnieuw toegewezen.`
+          : `Als ${currentGroupName} niet het juiste niveau is, kies je “Niet herkend”: omdat er geen hoger niveau is, gaat de persoon naar handmatige verwerking door manager/admin.`,
     },
     generateLink: "Link genereren",
     addParticipant: "Deelnemer toevoegen",
@@ -1693,11 +1766,24 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Учасники групи",
     participantsHelp:
       "Тут можна знайти людей, пов'язаних із групами, якими ви керуєте. Рішення щодо групи є внутрішніми і не надсилають автоматичних повідомлень учаснику.",
+    pending: {
+      title: "Потрібно підтвердити",
+      help: "Почніть тут: ці люди пов'язані з вашою групою, але ще потребують явного підтвердження.",
+      empty: "Немає учасників, які очікують підтвердження.",
+      action: "Переглянути деталі та призначити",
+    },
     reassignment: {
-      title: "Перепризначити до групи",
-      help: "Виберіть групу нижче вашого рівня. Людина з'явиться там для підтвердження.",
+      title: "Призначити до правильної групи",
+      help: "Якщо ви знаєте правильну групу, виберіть її серед груп нижче цього рівня. Людина з'явиться там для підтвердження.",
       select: "Виберіть нову групу",
       submit: "Надіслати до групи",
+      currentAssignment: (participantName, currentGroupName) =>
+        `${participantName} призначено до рівня ${currentGroupName} у дереві груп.`,
+      reason: "Причина призначення",
+      rejectHelp: (currentGroupName, parentGroupName) =>
+        parentGroupName
+          ? `Якщо ${currentGroupName} — неправильний рівень, виберіть «Не розпізнано»: людина перейде на вищий рівень ${parentGroupName}, де її можна буде перевірити та перепризначити.`
+          : `Якщо ${currentGroupName} — неправильний рівень, виберіть «Не розпізнано»: оскільки вищого рівня немає, людина перейде до ручної обробки manager/admin.`,
     },
     generateLink: "Створити посилання",
     addParticipant: "Додати учасника",
@@ -2838,7 +2924,7 @@ function PendingAssignmentRow({
             scroll={false}
             className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
           >
-            {copy.table.details}
+            {copy.pending.action}
           </Link>
         </div>
       </td>
@@ -3081,10 +3167,6 @@ function AssignmentDetailCard({
           </form>
         </DetailBlock>
 
-        <DetailBlock title={copy.detail.group}>
-          <DetailLine label={copy.group}>{assignment.groupName}</DetailLine>
-        </DetailBlock>
-
         <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
           {assignment.children.length > 0 ? (
             <div className="grid gap-2">
@@ -3106,6 +3188,73 @@ function AssignmentDetailCard({
           )}
         </DetailBlock>
       </div>
+
+      <DetailBlock title={copy.detail.assignment}>
+        <div className="grid gap-4">
+          <div className="grid gap-2 rounded-md border border-[#dfc46d] bg-[#fff8dc] p-4 text-sm leading-6 text-[var(--peace-ink)]">
+            <p className="font-semibold">
+              {copy.reassignment.currentAssignment(
+                assignment.participantName,
+                assignment.groupName
+              )}
+            </p>
+            <p>
+              <span className="font-semibold">{copy.reassignment.reason}:</span>{" "}
+              {assignmentReasonLabel(assignment.assignmentReason, copy)}.
+            </p>
+            {canDecide ? (
+              <p className="text-[var(--peace-muted)]">
+                {copy.reassignment.rejectHelp(
+                  assignment.groupName,
+                  assignment.parentGroupName
+                )}
+              </p>
+            ) : null}
+          </div>
+
+          {canDecide && reassignmentGroups.length > 0 ? (
+            <form
+              action={updateGroupLeaderAssignment}
+              className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+            >
+              <input type="hidden" name="assignmentId" value={assignment.id} />
+              <div>
+                <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
+                  {copy.reassignment.title}
+                </h4>
+                <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+                  {copy.reassignment.help}
+                </p>
+              </div>
+              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+                {copy.reassignment.select}
+                <select
+                  name="targetGroupId"
+                  required
+                  defaultValue=""
+                  className="field bg-white font-normal"
+                >
+                  <option value="" disabled>
+                    {copy.reassignment.select}
+                  </option>
+                  {reassignmentGroups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <PendingSubmitButton
+                name="intent"
+                value="reassign"
+                className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+              >
+                {copy.reassignment.submit}
+              </PendingSubmitButton>
+            </form>
+          ) : null}
+        </div>
+      </DetailBlock>
 
       <DetailBlock title={copy.detail.notes}>
         <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--peace-ink)]">
@@ -3175,48 +3324,6 @@ function AssignmentDetailCard({
           ) : null}
         </div>
       </form>
-
-      {canDecide && reassignmentGroups.length > 0 ? (
-        <form
-          action={updateGroupLeaderAssignment}
-          className="grid gap-3 rounded-md border border-[#dfc46d] bg-[#fff8dc] p-4"
-        >
-          <input type="hidden" name="assignmentId" value={assignment.id} />
-          <div>
-            <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
-              {copy.reassignment.title}
-            </h4>
-            <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-              {copy.reassignment.help}
-            </p>
-          </div>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.reassignment.select}
-            <select
-              name="targetGroupId"
-              required
-              defaultValue=""
-              className="field bg-white font-normal"
-            >
-              <option value="" disabled>
-                {copy.reassignment.select}
-              </option>
-              {reassignmentGroups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <PendingSubmitButton
-            name="intent"
-            value="reassign"
-            className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-          >
-            {copy.reassignment.submit}
-          </PendingSubmitButton>
-        </form>
-      ) : null}
 
       <form
         action={updateParticipantEventService}
@@ -3308,23 +3415,6 @@ function DetailBlock({
     <div className="rounded-md border border-[var(--peace-border)] bg-white p-4">
       <h4 className="text-sm font-semibold text-[var(--peace-ink)]">{title}</h4>
       <div className="mt-3 grid gap-2">{children}</div>
-    </div>
-  );
-}
-
-function DetailLine({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="grid gap-1 text-sm">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-        {label}
-      </dt>
-      <dd className="text-[var(--peace-ink)]">{children}</dd>
     </div>
   );
 }
@@ -3674,6 +3764,40 @@ function statusLabel(
   }
 
   return copy.statusLabels.probable;
+}
+
+function assignmentReasonLabel(
+  reason: string | null,
+  copy: GroupLeaderCopy
+): string {
+  switch (reason) {
+    case "participant_selected_group":
+      return copy.assignmentReasonLabels.participantSelectedGroup;
+    case "group_registration_link":
+      return copy.assignmentReasonLabels.groupRegistrationLink;
+    case "newcomer_territorial_fallback":
+      return copy.assignmentReasonLabels.newcomerTerritorialFallback;
+    case "participant_cannot_find_leader":
+      return copy.assignmentReasonLabels.participantCannotFindLeader;
+    case "santegidio_territorial_fallback":
+      return copy.assignmentReasonLabels.santegidioTerritorialFallback;
+    case "territorial_review_queue":
+      return copy.assignmentReasonLabels.territorialReviewQueue;
+    case "group_leader_rejected_escalated_to_parent":
+      return copy.assignmentReasonLabels.groupLeaderRejectedEscalatedToParent;
+    case "group_leader_reassigned_to_descendant":
+      return copy.assignmentReasonLabels.groupLeaderReassignedToDescendant;
+    case "group_leader_manual_entry":
+      return copy.assignmentReasonLabels.groupLeaderManualEntry;
+    case "admin_updated_group":
+      return copy.assignmentReasonLabels.adminUpdatedGroup;
+    case "manager_updated_group":
+      return copy.assignmentReasonLabels.managerUpdatedGroup;
+    case "capogruppo_updated_group":
+      return copy.assignmentReasonLabels.capogruppoUpdatedGroup;
+    default:
+      return copy.notProvided;
+  }
 }
 
 function groupLinkStatusLabel(

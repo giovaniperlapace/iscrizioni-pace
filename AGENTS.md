@@ -552,6 +552,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   sottoalbero, dove apparira' nuovamente come da confermare. I nodi territoriali
   non assegnabili non possono confermare una persona come appartenente al nodo:
   devono smistarla a un discendente oppure rifiutarla verso il livello superiore.
+  Nella sezione `Da confermare`, l'azione apre una scheda esplicitamente
+  orientata allo smistamento: mostra il motivo dell'assegnazione al livello
+  corrente, colloca subito accanto il selettore dei gruppi discendenti e indica
+  dinamicamente il nodo padre reale a cui la persona risalira' scegliendo
+  `Non riconosciuto`. I testi non devono codificare esempi come Roma/Italia:
+  devono usare i nomi dei nodi effettivi dell'albero.
   La migration `20260824193000_territorial_group_review_queue.sql` riallinea le
   iscrizioni esistenti che non hanno mai avuto alcuna assegnazione; la migration
   storica `20260726120000_stop_unselected_group_auto_assignment.sql` resta
