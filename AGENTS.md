@@ -524,17 +524,22 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `Amici Sant'Egidio`. Il rinomino aggiorna anche `groups.public_label` e le
   etichette dei link riservati attivi, ma non ruota gli slug gia' distribuiti;
   ogni modifica e' registrata con audit action `group.renamed`.
-- Dal 2026-07-26 chi dichiara di avere gia' partecipato ad attivita'
-  Sant'Egidio ma non seleziona esplicitamente un gruppo deve restare senza
-  assegnazione: sia la risposta "No" all'appartenenza a un gruppo sia
-  l'opzione "Non trovo il mio gruppo o referente" non autorizzano un matching
-  automatico verso il primo gruppo territoriale compatibile. Restano valide le
-  scelte esplicite, i link riservati, l'eventuale membership capogruppo e la
-  coda territoriale strutturata `newcomers` per chi non ha mai partecipato.
-  La migration `20260726120000_stop_unselected_group_auto_assignment.sql`
-  rende non correnti soltanto le precedenti assegnazioni automatiche ancora
-  probabili, conservandole come rifiutate e registrando l'audit; non modifica
-  assegnazioni gia' confermate da un referente.
+- La regola introdotta il 2026-07-26 per lasciare senza assegnazione chi non
+  selezionava esplicitamente un gruppo e' stata superata il 2026-08-24 dopo le
+  prime iscrizioni operative. Una scelta esplicita resta `probable` soltanto
+  nel gruppo scelto e non deve comparire nella coda da confermare dei nodi
+  superiori. Chi non seleziona un gruppo viene invece assegnato `probable` al
+  nodo territoriale `city` o `country` piu' vicino, con reason
+  `territorial_review_queue`; per Roma la coda e' il nodo `Roma`. Un rifiuto da
+  un gruppo continua a risalire al padre. Il referente del nodo territoriale
+  puo' riassegnare la persona a un gruppo attivo e assegnabile del proprio
+  sottoalbero, dove apparira' nuovamente come da confermare. I nodi territoriali
+  non assegnabili non possono confermare una persona come appartenente al nodo:
+  devono smistarla a un discendente oppure rifiutarla verso il livello superiore.
+  La migration `20260824193000_territorial_group_review_queue.sql` riallinea le
+  iscrizioni esistenti che non hanno mai avuto alcuna assegnazione; la migration
+  storica `20260726120000_stop_unselected_group_auto_assignment.sql` resta
+  versionata ma non descrive piu' il comportamento corrente.
 - Dal 2026-07-28 gruppo attribuito e referente sono informazioni esclusivamente
   operative e non devono essere mostrati nella dashboard partecipante, ne'
   sotto il nome ne' nel riepilogo dell'iscrizione. Nel riepilogo personale il
@@ -1396,11 +1401,11 @@ Decisioni:
 - Il matching usa `participants.country_id` e `participants.city_id` quando il
   paese/città digitato coincide con i cataloghi. I campi testuali restano
   comunque conservati come fallback e nello snapshot questionario.
-- Se la persona dichiara di non avere partecipazione precedente Sant'Egidio,
-  il sistema assegna il nodo `newcomers` più vicino per città o paese.
-- Se la persona ha partecipazione Sant'Egidio ma non trova il referente o non
-  partecipa con gruppo, il sistema assegna un gruppo/referente probabile con
-  `source = 'rule'` e `status = 'probable'`.
+- Se la persona non seleziona un gruppo, il sistema assegna prima il nodo
+  territoriale interno `city` o `country` piu' vicino con `source = 'rule'`,
+  `status = 'probable'` e reason `territorial_review_queue`. Solo negli eventi
+  o territori privi di questi nodi, chi non ha partecipazione precedente puo'
+  ancora usare come fallback il nodo `newcomers` piu' vicino.
 - Se il partecipante seleziona un gruppo, l'assegnazione resta `probable` con
   `source = 'participant_selected'`; la conferma esplicita del referente resta
   demandata alla dashboard capogruppo futura.
@@ -1450,7 +1455,7 @@ Deliverable:
   metriche, accesso "La mia iscrizione", filtri `Da verificare`, `Probabili`,
   `Confermati`, `Rifiutati` e schede assegnazione.
 - Server action `updateGroupLeaderAssignment` in `app/actions.ts` con intent
-  `note`, `read`, `confirm`, `unconfirm`, `reject`.
+  `note`, `read`, `confirm`, `unconfirm`, `reject`, `reassign`.
 - Server action `updateGroupLeaderParticipantContact` in `app/actions.ts` per
   modificare dalla scheda capogruppo identita' minima e contatti primari, dopo
   verifica dello scope del capogruppo.
@@ -1458,8 +1463,11 @@ Deliverable:
 Decisioni:
 
 - La dashboard capogruppo usa il service role lato server solo dopo aver
-  verificato sessione e membership del referente, così include anche i
-  discendenti dei nodi assegnati. Il service role non arriva mai al browser.
+  verificato sessione e membership del referente. Le persone confermate dei
+  discendenti restano consultabili nello scope gerarchico, mentre le assegnazioni
+  `probable` sono caricate soltanto per i gruppi collegati direttamente al
+  referente: un capogruppo di Roma non vede e non puo' decidere i pending di
+  Sant'Andrea. Il service role non arriva mai al browser.
 - La UI della tabella mostra dati personali minimi utili al lavoro del
   capogruppo: nome/cognome, telefono, email e conferma appartenenza. Il gruppo
   e' mostrato solo se nella vista corrente compaiono piu' gruppi. Accessibilità
@@ -1473,6 +1481,12 @@ Decisioni:
   assegnazione corrente `probable` sul padre con `source = 'capogruppo'`.
   Se non c'e' padre, la registrazione resta senza assegnazione corrente e
   finisce nella coda manager già monitorata come "senza gruppo corrente".
+- `reassign` e' disponibile su un'assegnazione `probable` del gruppo diretto:
+  rende non corrente l'assegnazione al nodo superiore e crea o riattiva una
+  nuova assegnazione `probable` su un gruppo attivo e assegnabile del
+  sottoalbero, con reason `group_leader_reassigned_to_descendant`. Il referente
+  del gruppo destinazione riceve la normale notifica operativa e deve ancora
+  confermare l'appartenenza.
 - Rifiuto, conferma, nota e lettura sono decisioni interne: non inviano email
   o notifiche al partecipante.
 - L'audit log salva action e metadati tecnici (`group_id`, stato precedente,

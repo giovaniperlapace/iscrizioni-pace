@@ -11,6 +11,8 @@ import {
   LAST_DASHBOARD_COOKIE,
 } from "@/lib/auth/session-persistence";
 import {
+  canGroupLeaderDecideProbableAssignment,
+  canGroupLeaderReassignProbableAssignment,
   collectDescendantGroupIds,
   getEscalationTargetGroupId,
   normalizeLeaderInternalNote,
@@ -777,6 +779,7 @@ export async function createFutureEvent(formData: FormData) {
 export async function updateGroupLeaderAssignment(formData: FormData) {
   const assignmentId = optionalText(formData.get("assignmentId"));
   const intent = optionalText(formData.get("intent"));
+  const targetGroupId = optionalText(formData.get("targetGroupId"));
   const hasLeaderInternalNote = formData.has("leaderInternalNote");
   const note = hasLeaderInternalNote
     ? normalizeLeaderInternalNote(formData.get("leaderInternalNote"))
@@ -808,7 +811,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     .filter((groupId): groupId is string => Boolean(groupId));
   const { data: groups, error: groupsError } = await serviceSupabase
     .from("groups")
-    .select("id,parent_group_id,event_id")
+    .select("id,parent_group_id,event_id,is_active,is_assignable")
     .eq("is_active", true);
 
   if (groupsError) {
@@ -824,6 +827,13 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }));
   const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
   const groupsById = new Map(groupNodes.map((group) => [group.id, group]));
+  const groupRows = (groups ?? []) as Array<{
+    id: string;
+    parent_group_id: string | null;
+    event_id: string;
+    is_active: boolean | null;
+    is_assignable: boolean | null;
+  }>;
 
   const { data: assignment, error: assignmentError } = await serviceSupabase
     .from("participant_group_assignments")
@@ -850,7 +860,139 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     redirect("/dashboard/capogruppo?error=not-found");
   }
 
+  if (
+    assignmentRow.status === "probable" &&
+    !canGroupLeaderDecideProbableAssignment(
+      {
+        groupId: assignmentRow.group_id,
+        status: assignmentRow.status,
+        isCurrent: assignmentRow.is_current ?? true,
+      },
+      rootGroupIds
+    )
+  ) {
+    redirect("/dashboard/capogruppo?error=not-found");
+  }
+
+  const assignmentGroup = groupRows.find(
+    (group) => group.id === assignmentRow.group_id
+  );
+
+  if (
+    intent === "confirm" &&
+    (!assignmentGroup || !(assignmentGroup.is_assignable ?? true))
+  ) {
+    redirect("/dashboard/capogruppo?error=group-not-assignable");
+  }
+
   const now = new Date().toISOString();
+
+  if (intent === "reassign") {
+    const targetGroup = targetGroupId
+      ? groupRows.find((group) => group.id === targetGroupId) ?? null
+      : null;
+    const canReassign =
+      targetGroup &&
+      assignmentGroup &&
+      targetGroup.event_id === assignmentGroup.event_id &&
+      canGroupLeaderReassignProbableAssignment(
+        {
+          groupId: assignmentRow.group_id,
+          status: assignmentRow.status,
+          isCurrent: assignmentRow.is_current ?? true,
+        },
+        {
+          groupId: targetGroup.id,
+          isActive: targetGroup.is_active ?? true,
+          isAssignable: targetGroup.is_assignable ?? true,
+        },
+        rootGroupIds,
+        scopedGroupIds
+      );
+
+    if (!targetGroup || !canReassign) {
+      redirect("/dashboard/capogruppo?error=invalid-target-group");
+    }
+
+    const { error: deactivateError } = await serviceSupabase
+      .from("participant_group_assignments")
+      .update({
+        status: "rejected",
+        is_current: false,
+        leader_decision_by: auth.user.id,
+        leader_decision_at: now,
+        leader_notification_read_at: now,
+      })
+      .eq("id", assignmentRow.id)
+      .eq("is_current", true);
+
+    if (deactivateError) {
+      redirect(
+        `/dashboard/capogruppo?error=${encodeURIComponent(deactivateError.message)}`
+      );
+    }
+
+    const { data: reassigned, error: reassignError } = await serviceSupabase
+      .from("participant_group_assignments")
+      .upsert(
+        {
+          registration_id: assignmentRow.registration_id,
+          group_id: targetGroup.id,
+          status: "probable",
+          source: "capogruppo",
+          confidence: 0.8,
+          is_current: true,
+          assignment_reason: "group_leader_reassigned_to_descendant",
+          escalated_from_group_id: assignmentRow.group_id,
+          escalation_depth: assignmentRow.escalation_depth ?? 0,
+          matcher_version: "group-leader-dashboard-v2",
+          confirmed_by: null,
+          confirmed_at: null,
+          leader_decision_by: null,
+          leader_decision_at: null,
+          leader_notification_read_at: null,
+        },
+        { onConflict: "registration_id,group_id" }
+      )
+      .select("id")
+      .maybeSingle();
+
+    if (reassignError || !reassigned) {
+      await serviceSupabase
+        .from("participant_group_assignments")
+        .update({
+          status: "probable",
+          is_current: true,
+          leader_decision_by: null,
+          leader_decision_at: null,
+          leader_notification_read_at: null,
+        })
+        .eq("id", assignmentRow.id);
+      redirect(
+        `/dashboard/capogruppo?error=${encodeURIComponent(
+          reassignError?.message ?? "reassign"
+        )}`
+      );
+    }
+
+    await notifyGroupLeadersForAssignment(serviceSupabase, {
+      assignmentId: (reassigned as { id: string }).id,
+      appUrl: getAppUrl(),
+      actorUserId: auth.user.id,
+    });
+    await auditGroupLeaderDecision(serviceSupabase, {
+      actorUserId: auth.user.id,
+      assignment: assignmentRow,
+      action: "group_leader.assignment_reassigned",
+      metadata: {
+        target_group_id: targetGroup.id,
+        target_assignment_id: (reassigned as { id: string }).id,
+      },
+    });
+
+    revalidatePath("/dashboard/capogruppo");
+    redirect("/dashboard/capogruppo?saved=reassigned");
+  }
 
   if (intent === "note" || intent === "read") {
     const updates: Record<string, string | null> = {

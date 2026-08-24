@@ -169,12 +169,14 @@ type AssignmentRow = {
         name: string | null;
         node_type: string | null;
         parent_group_id: string | null;
+        is_assignable: boolean | null;
       }
     | Array<{
         id: string;
         name: string | null;
         node_type: string | null;
         parent_group_id: string | null;
+        is_assignable: boolean | null;
       }>
     | null;
   registrations:
@@ -395,6 +397,7 @@ type AssignmentView = {
   groupId: string;
   groupName: string;
   groupNodeType: string | null;
+  groupIsAssignable: boolean;
   parentGroupId: string | null;
   parentGroupName: string | null;
   participantFirstName: string | null;
@@ -557,6 +560,12 @@ type GroupLeaderCopy = {
     help: string;
     empty: string;
   };
+  reassignment: {
+    title: string;
+    help: string;
+    select: string;
+    submit: string;
+  };
   detail: {
     title: string;
     identity: string;
@@ -611,7 +620,9 @@ type GroupLeaderCopy = {
     newcomerTerritorialFallback: string;
     participantCannotFindLeader: string;
     santegidioTerritorialFallback: string;
+    territorialReviewQueue: string;
     groupLeaderRejectedEscalatedToParent: string;
+    groupLeaderReassignedToDescendant: string;
     groupLeaderManualEntry: string;
     adminUpdatedGroup: string;
     managerUpdatedGroup: string;
@@ -749,6 +760,12 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     help: "Controlla prima queste persone: risultano collegate al tuo gruppo, ma attendono una conferma esplicita.",
     empty: "Non ci sono partecipanti in attesa di conferma.",
   },
+  reassignment: {
+    title: "Riassegna a un gruppo",
+    help: "Scegli uno dei gruppi sotto il tuo livello. La persona apparirà lì come da confermare.",
+    select: "Seleziona il nuovo gruppo",
+    submit: "Invia al gruppo",
+  },
   detail: {
     title: "Scheda partecipante",
     identity: "Identità",
@@ -803,7 +820,9 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     newcomerTerritorialFallback: "nuovo partecipante assegnato per territorio",
     participantCannotFindLeader: "referente non trovato nel form",
     santegidioTerritorialFallback: "assegnazione territoriale probabile",
+    territorialReviewQueue: "in attesa di smistamento territoriale",
     groupLeaderRejectedEscalatedToParent: "rifiuto risalito al nodo superiore",
+    groupLeaderReassignedToDescendant: "riassegnato dal livello superiore",
     groupLeaderManualEntry: "inserimento manuale del referente",
     adminUpdatedGroup: "assegnato da admin",
     managerUpdatedGroup: "assegnato da manager",
@@ -941,6 +960,12 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     help: "Start here: these people are linked to your group, but still need an explicit confirmation.",
     empty: "No participant is waiting for confirmation.",
   },
+  reassignment: {
+    title: "Reassign to a group",
+    help: "Choose one of the groups below your level. The person will appear there for confirmation.",
+    select: "Select the new group",
+    submit: "Send to group",
+  },
   detail: {
     title: "Participant card",
     identity: "Identity",
@@ -995,7 +1020,9 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     newcomerTerritorialFallback: "new participant assigned by territory",
     participantCannotFindLeader: "contact person not found in the form",
     santegidioTerritorialFallback: "probable territorial assignment",
+    territorialReviewQueue: "waiting for territorial routing",
     groupLeaderRejectedEscalatedToParent: "rejection escalated to the parent node",
+    groupLeaderReassignedToDescendant: "reassigned by the higher level",
     groupLeaderManualEntry: "manual entry by the group leader",
     adminUpdatedGroup: "assigned by admin",
     managerUpdatedGroup: "assigned by manager",
@@ -1022,6 +1049,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participants du groupe",
     participantsHelp:
       "Tu trouves ici les personnes reliées aux groupes que tu gères. Les décisions sur le groupe sont internes et n'envoient pas de message automatique au participant.",
+    reassignment: {
+      title: "Réaffecter à un groupe",
+      help: "Choisis un groupe sous ton niveau. La personne y apparaîtra comme à confirmer.",
+      select: "Sélectionner le nouveau groupe",
+      submit: "Envoyer au groupe",
+    },
     generateLink: "Générer un lien",
     addParticipant: "Ajouter un participant",
     inactiveGroupHelp:
@@ -1152,7 +1185,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       newcomerTerritorialFallback: "nouveau participant affecté par territoire",
       participantCannotFindLeader: "référent non trouvé dans le formulaire",
       santegidioTerritorialFallback: "affectation territoriale probable",
+      territorialReviewQueue: "en attente d'orientation territoriale",
       groupLeaderRejectedEscalatedToParent: "refus remonté au niveau supérieur",
+      groupLeaderReassignedToDescendant: "réaffecté par le niveau supérieur",
       groupLeaderManualEntry: "ajout manuel par le responsable",
       adminUpdatedGroup: "affecté par l'admin",
       managerUpdatedGroup: "affecté par le manager",
@@ -1175,6 +1210,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Teilnehmende der Gruppe",
     participantsHelp:
       "Hier findest du die Personen, die mit den von dir verwalteten Gruppen verbunden sind. Gruppenentscheidungen sind intern und senden keine automatischen Nachrichten an die teilnehmende Person.",
+    reassignment: {
+      title: "Einer Gruppe neu zuordnen",
+      help: "Wähle eine Gruppe unterhalb deiner Ebene. Die Person erscheint dort zur Bestätigung.",
+      select: "Neue Gruppe auswählen",
+      submit: "An Gruppe senden",
+    },
     generateLink: "Link erstellen",
     addParticipant: "Teilnehmende Person hinzufügen",
     inactiveGroupHelp:
@@ -1305,7 +1346,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       newcomerTerritorialFallback: "neue teilnehmende Person nach Gebiet zugeordnet",
       participantCannotFindLeader: "Kontaktperson im Formular nicht gefunden",
       santegidioTerritorialFallback: "wahrscheinliche territoriale Zuordnung",
+      territorialReviewQueue: "wartet auf territoriale Zuordnung",
       groupLeaderRejectedEscalatedToParent: "Ablehnung an die übergeordnete Ebene weitergegeben",
+      groupLeaderReassignedToDescendant: "von der höheren Ebene neu zugeordnet",
       groupLeaderManualEntry: "manuelle Eingabe durch die Gruppenleitung",
       adminUpdatedGroup: "vom Admin zugeordnet",
       managerUpdatedGroup: "vom Manager zugeordnet",
@@ -1328,6 +1371,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participantes del grupo",
     participantsHelp:
       "Aquí encuentras las personas vinculadas a los grupos que gestionas. Las decisiones sobre el grupo son internas y no envían mensajes automáticos al participante.",
+    reassignment: {
+      title: "Reasignar a un grupo",
+      help: "Elige un grupo por debajo de tu nivel. La persona aparecerá allí pendiente de confirmación.",
+      select: "Seleccionar el nuevo grupo",
+      submit: "Enviar al grupo",
+    },
     generateLink: "Generar enlace",
     addParticipant: "Añadir participante",
     inactiveGroupHelp:
@@ -1458,7 +1507,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       newcomerTerritorialFallback: "nuevo participante asignado por territorio",
       participantCannotFindLeader: "referente no encontrado en el formulario",
       santegidioTerritorialFallback: "asignación territorial probable",
+      territorialReviewQueue: "pendiente de asignación territorial",
       groupLeaderRejectedEscalatedToParent: "rechazo elevado al nivel superior",
+      groupLeaderReassignedToDescendant: "reasignado por el nivel superior",
       groupLeaderManualEntry: "entrada manual del responsable",
       adminUpdatedGroup: "asignado por admin",
       managerUpdatedGroup: "asignado por manager",
@@ -1481,6 +1532,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Deelnemers van de groep",
     participantsHelp:
       "Hier vind je de mensen die gekoppeld zijn aan de groepen die je beheert. Beslissingen over de groep zijn intern en sturen geen automatische berichten naar de deelnemer.",
+    reassignment: {
+      title: "Opnieuw aan een groep toewijzen",
+      help: "Kies een groep onder jouw niveau. De persoon verschijnt daar ter bevestiging.",
+      select: "Nieuwe groep selecteren",
+      submit: "Naar groep sturen",
+    },
     generateLink: "Link genereren",
     addParticipant: "Deelnemer toevoegen",
     inactiveGroupHelp:
@@ -1611,7 +1668,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       newcomerTerritorialFallback: "nieuwe deelnemer toegewezen op basis van gebied",
       participantCannotFindLeader: "contactpersoon niet gevonden in het formulier",
       santegidioTerritorialFallback: "waarschijnlijke territoriale toewijzing",
+      territorialReviewQueue: "wacht op territoriale routering",
       groupLeaderRejectedEscalatedToParent: "afwijzing doorgestuurd naar hoger niveau",
+      groupLeaderReassignedToDescendant: "opnieuw toegewezen door het hogere niveau",
       groupLeaderManualEntry: "handmatige invoer door de groepsleider",
       adminUpdatedGroup: "toegewezen door admin",
       managerUpdatedGroup: "toegewezen door manager",
@@ -1634,6 +1693,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Учасники групи",
     participantsHelp:
       "Тут можна знайти людей, пов'язаних із групами, якими ви керуєте. Рішення щодо групи є внутрішніми і не надсилають автоматичних повідомлень учаснику.",
+    reassignment: {
+      title: "Перепризначити до групи",
+      help: "Виберіть групу нижче вашого рівня. Людина з'явиться там для підтвердження.",
+      select: "Виберіть нову групу",
+      submit: "Надіслати до групи",
+    },
     generateLink: "Створити посилання",
     addParticipant: "Додати учасника",
     inactiveGroupHelp:
@@ -1764,7 +1829,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       newcomerTerritorialFallback: "нового учасника призначено за територією",
       participantCannotFindLeader: "відповідальну особу не знайдено у формі",
       santegidioTerritorialFallback: "ймовірне територіальне призначення",
+      territorialReviewQueue: "очікує територіального розподілу",
       groupLeaderRejectedEscalatedToParent: "відмову передано на вищий рівень",
+      groupLeaderReassignedToDescendant: "перепризначено вищим рівнем",
       groupLeaderManualEntry: "ручне додавання керівником групи",
       adminUpdatedGroup: "призначено admin",
       managerUpdatedGroup: "призначено manager",
@@ -1825,13 +1892,17 @@ export default async function CapogruppoDashboardPage({
   }));
   const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
 
-  const [assignments, operationalTags, eventServices, groupLinks] =
+  const [assignmentLists, operationalTags, eventServices, groupLinks] =
     await Promise.all([
-      getAssignments([...scopedGroupIds]),
+      Promise.all([
+        getAssignments([...scopedGroupIds], "confirmed"),
+        getAssignments(rootGroupIds, "probable"),
+      ]),
       getOperationalTags(),
       getEventServices(),
       getGroupLinks([...scopedGroupIds]),
     ]);
+  const assignments = assignmentLists.flat();
   const assignedGroups = groupRows
     .filter((group) => rootGroupIds.includes(group.id))
     .map((group) => toScopedGroupView(group, copy));
@@ -1970,6 +2041,12 @@ export default async function CapogruppoDashboardPage({
           <DashboardToolOverlay title={copy.detail.title} copy={copy}>
             <AssignmentDetailCard
               assignment={selectedAssignment}
+              reassignmentGroups={scopedGroups.filter(
+                (group) =>
+                  group.isActive &&
+                  group.isAssignable &&
+                  group.id !== selectedAssignment.groupId
+              )}
               tagOptions={operationalTags}
               serviceOptions={eventServices}
               copy={copy}
@@ -1981,7 +2058,10 @@ export default async function CapogruppoDashboardPage({
     </main>
   );
 
-  async function getAssignments(groupIds: string[]): Promise<AssignmentView[]> {
+  async function getAssignments(
+    groupIds: string[],
+    status: "probable" | "confirmed"
+  ): Promise<AssignmentView[]> {
     if (groupIds.length === 0) {
       return [];
     }
@@ -1989,11 +2069,12 @@ export default async function CapogruppoDashboardPage({
     const { data, error } = await serviceSupabase
           .from("participant_group_assignments")
           .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
+        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id,is_assignable),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
       )
       .in("group_id", groupIds)
       .eq("registrations.event_id", currentEventId)
       .eq("is_current", true)
+      .eq("status", status)
       .order("updated_at", { ascending: false })
       .limit(100);
 
@@ -2725,16 +2806,18 @@ function PendingAssignmentRow({
       </td>
       <td className="py-4 pr-4">
         <div className="flex justify-end gap-2">
-          <form action={updateGroupLeaderAssignment}>
-            <input type="hidden" name="assignmentId" value={assignment.id} />
-            <PendingSubmitButton
-              name="intent"
-              value="confirm"
-              className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-            >
-              {copy.table.confirm}
-            </PendingSubmitButton>
-          </form>
+          {assignment.groupIsAssignable ? (
+            <form action={updateGroupLeaderAssignment}>
+              <input type="hidden" name="assignmentId" value={assignment.id} />
+              <PendingSubmitButton
+                name="intent"
+                value="confirm"
+                className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+              >
+                {copy.table.confirm}
+              </PendingSubmitButton>
+            </form>
+          ) : null}
           <form action={updateGroupLeaderAssignment}>
             <input type="hidden" name="assignmentId" value={assignment.id} />
             <ConfirmSubmitButton
@@ -2881,16 +2964,19 @@ function AssignmentRowView({
 
 function AssignmentDetailCard({
   assignment,
+  reassignmentGroups,
   tagOptions,
   serviceOptions,
   copy,
 }: {
   assignment: AssignmentView;
+  reassignmentGroups: ScopedGroupView[];
   tagOptions: OperationalTagOption[];
   serviceOptions: EventServiceOption[];
   copy: GroupLeaderCopy;
 }) {
   const canDecide = assignment.isCurrent && assignment.status === "probable";
+  const canConfirm = canDecide && assignment.groupIsAssignable;
 
   return (
     <section className="grid gap-5">
@@ -3055,13 +3141,15 @@ function AssignmentDetailCard({
           </PendingSubmitButton>
           {canDecide ? (
             <>
-              <PendingSubmitButton
-                name="intent"
-                value="confirm"
-                className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-              >
-                {copy.table.confirm}
-              </PendingSubmitButton>
+              {canConfirm ? (
+                <PendingSubmitButton
+                  name="intent"
+                  value="confirm"
+                  className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+                >
+                  {copy.table.confirm}
+                </PendingSubmitButton>
+              ) : null}
               <ConfirmSubmitButton
                 name="intent"
                 value="reject"
@@ -3087,6 +3175,48 @@ function AssignmentDetailCard({
           ) : null}
         </div>
       </form>
+
+      {canDecide && reassignmentGroups.length > 0 ? (
+        <form
+          action={updateGroupLeaderAssignment}
+          className="grid gap-3 rounded-md border border-[#dfc46d] bg-[#fff8dc] p-4"
+        >
+          <input type="hidden" name="assignmentId" value={assignment.id} />
+          <div>
+            <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
+              {copy.reassignment.title}
+            </h4>
+            <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+              {copy.reassignment.help}
+            </p>
+          </div>
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+            {copy.reassignment.select}
+            <select
+              name="targetGroupId"
+              required
+              defaultValue=""
+              className="field bg-white font-normal"
+            >
+              <option value="" disabled>
+                {copy.reassignment.select}
+              </option>
+              {reassignmentGroups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <PendingSubmitButton
+            name="intent"
+            value="reassign"
+            className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+          >
+            {copy.reassignment.submit}
+          </PendingSubmitButton>
+        </form>
+      ) : null}
 
       <form
         action={updateParticipantEventService}
@@ -3370,6 +3500,7 @@ function toAssignmentView(
     groupId: row.group_id,
     groupName: group.name ?? copy.groupFallback,
     groupNodeType: group.node_type,
+    groupIsAssignable: group.is_assignable ?? true,
     parentGroupId: group.parent_group_id,
     parentGroupName: parentGroup?.name ?? null,
     participantFirstName: participant.first_name,

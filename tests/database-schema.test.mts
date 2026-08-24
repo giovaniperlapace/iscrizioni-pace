@@ -71,6 +71,10 @@ const registrationChildrenMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260728180000_registration_children.sql"
 );
+const territorialReviewQueueMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260824193000_territorial_group_review_queue.sql"
+);
 
 const migration = readFileSync(migrationPath, "utf8");
 const participantCodeMigration = readFileSync(participantCodeMigrationPath, "utf8");
@@ -117,6 +121,10 @@ const preventGroupLinkRevocationMigration = readFileSync(
 );
 const registrationChildrenMigration = readFileSync(
   registrationChildrenMigrationPath,
+  "utf8"
+);
+const territorialReviewQueueMigration = readFileSync(
+  territorialReviewQueueMigrationPath,
   "utf8"
 );
 
@@ -281,6 +289,17 @@ test("unselected group cleanup only deactivates unconfirmed automatic matches", 
     explicitGroupSelectionMigration,
     /participant\.group_auto_assignment_removed/
   );
+});
+
+test("territorial review backfill only assigns registrations that never had a group", () => {
+  assert.match(territorialReviewQueueMigration, /community_kind = 'territorial'/);
+  assert.match(territorialReviewQueueMigration, /groups\.node_type in \('city', 'country'\)/);
+  assert.match(
+    territorialReviewQueueMigration,
+    /where assignments\.registration_id = registrations\.id/
+  );
+  assert.match(territorialReviewQueueMigration, /'territorial_review_queue'/);
+  assert.match(territorialReviewQueueMigration, /'probable'/);
 });
 
 test("model app group tree seed includes Roma areas and primary leaders", () => {
