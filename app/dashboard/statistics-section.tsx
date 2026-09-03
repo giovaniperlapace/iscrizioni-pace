@@ -1,25 +1,33 @@
 "use client";
 
+import Link from "next/link";
 import {
   Baby,
-  Check,
-  Search,
+  ChevronDown,
+  ChevronRight,
   UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { Fragment, type ReactNode, useMemo, useState } from "react";
 
-import type {
-  EventStatisticsSnapshot,
-  ParticipantBreakdownLevel,
-  StatisticsAgeBand,
-  StatisticsAttendanceSlot,
-  StatisticsPersonRow,
+import {
+  serializeStatisticsDrilldown,
+  type EventStatisticsSnapshot,
+  type ParticipantBreakdownLevel,
+  type StatisticsAgeBand,
+  type StatisticsAttendanceSlot,
+  type StatisticsDrilldownFilter,
+  type StatisticsPersonRow,
 } from "@/lib/registrations/event-statistics";
+
+type StatisticsDashboard = "admin" | "manager";
+type StatisticsNavMode = "full" | "mini";
 
 type StatisticsSectionProps = {
   statistics: EventStatisticsSnapshot;
+  dashboard: StatisticsDashboard;
+  navMode: StatisticsNavMode;
 };
 
 type SummaryBreakdownRow = {
@@ -27,8 +35,17 @@ type SummaryBreakdownRow = {
   count: number;
 };
 
-const ALL_FILTER = "all";
-const NO_ATTENDANCE_FILTER = "none";
+type PivotLevel = "country" | "city" | "group";
+
+type TerritoryPivotRow = {
+  key: string;
+  level: PivotLevel;
+  label: string;
+  people: StatisticsPersonRow[];
+  filter: StatisticsDrilldownFilter;
+  children: TerritoryPivotRow[];
+};
+
 const AGE_BANDS: StatisticsAgeBand[] = [
   "0-14",
   "15-30",
@@ -37,29 +54,11 @@ const AGE_BANDS: StatisticsAgeBand[] = [
   "unknown",
 ];
 
-export function StatisticsSection({ statistics }: StatisticsSectionProps) {
-  const [territorySearch, setTerritorySearch] = useState("");
-  const [countryFilter, setCountryFilter] = useState(ALL_FILTER);
-  const [cityFilter, setCityFilter] = useState(ALL_FILTER);
-  const [groupFilter, setGroupFilter] = useState(ALL_FILTER);
-  const [attendanceSearch, setAttendanceSearch] = useState("");
-  const [attendanceFilter, setAttendanceFilter] = useState(ALL_FILTER);
-  const [ageSearch, setAgeSearch] = useState("");
-  const [ageBandFilter, setAgeBandFilter] = useState(ALL_FILTER);
-  const [combinedSearch, setCombinedSearch] = useState("");
-
-  const countries = useMemo(
-    () => uniqueSorted(statistics.people.map((person) => person.country)),
-    [statistics.people]
-  );
-  const cities = useMemo(
-    () => uniqueSorted(statistics.people.map((person) => person.city)),
-    [statistics.people]
-  );
-  const groups = useMemo(
-    () => uniqueSorted(statistics.people.map((person) => person.group)),
-    [statistics.people]
-  );
+export function StatisticsSection({
+  statistics,
+  dashboard,
+  navMode,
+}: StatisticsSectionProps) {
   const territorySummary = useMemo(
     () => ({
       country: summarizeLabels(statistics.people.map((person) => person.country)),
@@ -68,129 +67,16 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
     }),
     [statistics.people]
   );
-
-  const territoryRows = useMemo(() => {
-    const query = normalizeSearchValue(territorySearch);
-
-    return statistics.people
-      .filter(
-        (person) =>
-          matchesPersonSearch(person, query, [
-            person.country,
-            person.city,
-            person.group,
-          ]) &&
-          (countryFilter === ALL_FILTER || person.country === countryFilter) &&
-          (cityFilter === ALL_FILTER || person.city === cityFilter) &&
-          (groupFilter === ALL_FILTER || person.group === groupFilter)
-      )
-      .sort(
-        (first, second) =>
-          first.country.localeCompare(second.country, "it", { sensitivity: "base" }) ||
-          first.city.localeCompare(second.city, "it", { sensitivity: "base" }) ||
-          first.group.localeCompare(second.group, "it", { sensitivity: "base" }) ||
-          first.name.localeCompare(second.name, "it", { sensitivity: "base" })
-      );
-  }, [
-    statistics.people,
-    territorySearch,
-    countryFilter,
-    cityFilter,
-    groupFilter,
-  ]);
-
-  const attendanceRows = useMemo(() => {
-    const query = normalizeSearchValue(attendanceSearch);
-
-    return statistics.people.filter((person) => {
-      if (!matchesPersonSearch(person, query, [person.group])) {
-        return false;
-      }
-
-      if (attendanceFilter === ALL_FILTER) {
-        return true;
-      }
-
-      if (attendanceFilter === NO_ATTENDANCE_FILTER) {
-        return person.attendanceSlotKeys.length === 0;
-      }
-
-      return person.attendanceSlotKeys.includes(attendanceFilter);
-    });
-  }, [statistics.people, attendanceSearch, attendanceFilter]);
-
-  const ageRows = useMemo(() => {
-    const query = normalizeSearchValue(ageSearch);
-
-    return statistics.people
-      .filter(
-        (person) =>
-          matchesPersonSearch(person, query, [
-            person.birthDate ?? "",
-            person.age === null ? "" : String(person.age),
-            ageBandLabel(person.ageBand),
-          ]) &&
-          (ageBandFilter === ALL_FILTER || person.ageBand === ageBandFilter)
-      )
-      .sort(
-        (first, second) =>
-          compareNullableAge(first.age, second.age) ||
-          first.name.localeCompare(second.name, "it", { sensitivity: "base" })
-      );
-  }, [statistics.people, ageSearch, ageBandFilter]);
-
-  const combinedRows = useMemo(() => {
-    const query = normalizeSearchValue(combinedSearch);
-
-    return statistics.people
-      .filter((person) =>
-        matchesPersonSearch(person, query, [
-          person.country,
-          person.city,
-          person.group,
-          person.birthDate ?? "",
-          person.age === null ? "" : String(person.age),
-          ageBandLabel(person.ageBand),
-          ...statistics.attendanceSlots
-            .filter((slot) => person.attendanceSlotKeys.includes(slot.key))
-            .map(attendanceSlotLabel),
-        ])
-      )
-      .sort((first, second) =>
-        first.name.localeCompare(second.name, "it", { sensitivity: "base" })
-      );
-  }, [statistics.people, statistics.attendanceSlots, combinedSearch]);
-
-  function showTerritoryPeople(
-    level: ParticipantBreakdownLevel,
-    label: string
-  ) {
-    setTerritorySearch("");
-    setCountryFilter(level === "country" ? label : ALL_FILTER);
-    setCityFilter(level === "city" ? label : ALL_FILTER);
-    setGroupFilter(level === "group" ? label : ALL_FILTER);
-    scrollToDetailedTable("statistics-territory-table");
-  }
-
-  function showAttendancePeople(slotKey: string) {
-    setAttendanceSearch("");
-    setAttendanceFilter(slotKey);
-    scrollToDetailedTable("statistics-attendance-table");
-  }
-
-  function showAgeBandPeople(ageBand: StatisticsAgeBand) {
-    setAgeSearch("");
-    setAgeBandFilter(ageBand);
-    scrollToDetailedTable("statistics-age-table");
-  }
+  const participantHref = (filter: StatisticsDrilldownFilter) =>
+    buildParticipantsHref(dashboard, navMode, filter);
 
   return (
     <section className="grid w-full min-w-0 gap-8">
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Tabelle di consultazione in sola lettura. Cerca una persona o filtra i
-          dati per leggere subito chi compone ogni insieme.
+          Seleziona qualsiasi conteggio per aprire la gestione iscritti già
+          filtrata sulle persone che compongono quel dato.
         </p>
       </div>
 
@@ -198,382 +84,28 @@ export function StatisticsSection({ statistics }: StatisticsSectionProps) {
         <TerritoryStatisticsSummary
           statistics={statistics}
           territorySummary={territorySummary}
-          countryFilter={countryFilter}
-          cityFilter={cityFilter}
-          groupFilter={groupFilter}
-          onTerritorySelect={showTerritoryPeople}
+          participantHref={participantHref}
         />
 
-        <article
-          id="statistics-territory-table"
-          className="min-w-0 max-w-full scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
-        >
-        <div>
-          <h3 className="text-base font-semibold">Persone per territorio e gruppo</h3>
-          <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-            Una riga per ogni persona iscritta, compresi i minori accompagnati.
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(15rem,1.4fr)_repeat(3,minmax(10rem,1fr))]">
-          <SearchField
-            label="Cerca nella tabella territorio"
-            value={territorySearch}
-            onChange={setTerritorySearch}
-            placeholder="Cerca persona, paese, città o gruppo"
-          />
-          <FilterSelect
-            label="Paese"
-            value={countryFilter}
-            onChange={setCountryFilter}
-            options={countries}
-          />
-          <FilterSelect
-            label="Città"
-            value={cityFilter}
-            onChange={setCityFilter}
-            options={cities}
-          />
-          <FilterSelect
-            label="Gruppo"
-            value={groupFilter}
-            onChange={setGroupFilter}
-            options={groups}
-          />
-        </div>
-
-        <ResultCount count={territoryRows.length} total={statistics.people.length} />
-
-        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
-              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="px-4 py-3 font-semibold">Persona</th>
-                <th className="px-4 py-3 font-semibold">Paese</th>
-                <th className="px-4 py-3 font-semibold">Città</th>
-                <th className="px-4 py-3 font-semibold">Gruppo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {territoryRows.map((person) => (
-                <tr
-                  key={person.id}
-                  className="border-b border-[var(--peace-border)] last:border-b-0"
-                >
-                  <td className="px-4 py-3">
-                    <PersonName person={person} />
-                  </td>
-                  <td className="px-4 py-3">{person.country}</td>
-                  <td className="px-4 py-3">{person.city}</td>
-                  <td className="px-4 py-3 font-medium">{person.group}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-          {territoryRows.length === 0 ? <EmptyTableMessage /> : null}
-        </article>
+        <TerritoryAttendancePivot
+          people={statistics.people}
+          attendanceSlots={statistics.attendanceSlots}
+          participantHref={participantHref}
+        />
       </ReportBlock>
 
       <ReportBlock name="attendance" title="Presenze previste">
         <AttendanceStatisticsSummary
           statistics={statistics}
-          attendanceFilter={attendanceFilter}
-          onAttendanceSelect={showAttendancePeople}
+          participantHref={participantHref}
         />
-
-        <article
-          id="statistics-attendance-table"
-          className="min-w-0 max-w-full scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
-        >
-        <div>
-          <h3 className="text-base font-semibold">Presenze per giorno e fascia</h3>
-          <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-            Vista incrociata delle persone con le fasce mattina e pomeriggio
-            indicate nell’iscrizione.
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_minmax(14rem,0.8fr)]">
-          <SearchField
-            label="Cerca nella tabella presenze"
-            value={attendanceSearch}
-            onChange={setAttendanceSearch}
-            placeholder="Cerca persona o gruppo"
-          />
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-            Presenza
-            <select
-              value={attendanceFilter}
-              onChange={(event) => setAttendanceFilter(event.target.value)}
-              className="min-h-11 w-full rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)]"
-            >
-              <option value={ALL_FILTER}>Tutte le persone</option>
-              {statistics.attendanceSlots.map((slot) => (
-                <option key={slot.key} value={slot.key}>
-                  {attendanceSlotLabel(slot)}
-                </option>
-              ))}
-              <option value={NO_ATTENDANCE_FILTER}>Nessuna fascia indicata</option>
-            </select>
-          </label>
-        </div>
-
-        <ResultCount count={attendanceRows.length} total={statistics.people.length} />
-
-        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
-          <table className="w-full min-w-max border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
-              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="sticky left-0 z-20 min-w-60 bg-[#f7fbfe] px-4 py-3 font-semibold">
-                  Persona
-                </th>
-                {statistics.attendanceSlots.map((slot) => (
-                  <th
-                    key={slot.key}
-                    className="min-w-28 px-3 py-3 text-center font-semibold"
-                  >
-                    <span className="block">{formatShortDate(slot.day)}</span>
-                    <span className="mt-0.5 block normal-case tracking-normal">
-                      {attendancePartLabel(slot.dayPart)}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceRows.map((person) => (
-                <tr
-                  key={person.id}
-                  className="border-b border-[var(--peace-border)] last:border-b-0"
-                >
-                  <td className="sticky left-0 bg-white px-4 py-3">
-                    <PersonName person={person} />
-                    {person.attendanceSlotKeys.length === 0 ? (
-                      <span className="mt-1 block text-xs text-[var(--peace-muted)]">
-                        {person.attendanceUnknown
-                          ? "Presenza da indicare"
-                          : "Nessuna fascia indicata"}
-                      </span>
-                    ) : null}
-                  </td>
-                  {statistics.attendanceSlots.map((slot) => {
-                    const isPresent = person.attendanceSlotKeys.includes(slot.key);
-
-                    return (
-                      <td key={slot.key} className="px-3 py-3 text-center">
-                        {isPresent ? (
-                          <span
-                            className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[#e7f5ed] px-2 text-[#167548]"
-                            aria-label={`Presente: ${attendanceSlotLabel(slot)}`}
-                            title="Presente"
-                          >
-                            <Check aria-hidden="true" size={16} strokeWidth={2.5} />
-                          </span>
-                        ) : (
-                          <span className="text-[#a1afbd]" aria-label="Non indicata">
-                            —
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-          {statistics.attendanceSlots.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--peace-muted)]">
-              Nessuna fascia di presenza configurata per l’evento.
-            </p>
-          ) : attendanceRows.length === 0 ? (
-            <EmptyTableMessage />
-          ) : null}
-        </article>
       </ReportBlock>
 
       <ReportBlock name="age" title="Fasce di età">
         <AgeStatisticsSummary
           statistics={statistics}
-          ageBandFilter={ageBandFilter}
-          onAgeBandSelect={showAgeBandPeople}
+          participantHref={participantHref}
         />
-
-        <article
-          id="statistics-age-table"
-          className="min-w-0 max-w-full scroll-mt-5 rounded-lg border border-[var(--peace-border)] bg-white p-5"
-        >
-        <div>
-          <h3 className="text-base font-semibold">Persone per età</h3>
-          <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-            L’età è calcolata alla data iniziale dell’evento. Le fasce non
-            duplicano i confini: 30 anni rientra in 15–30 e 65 anni in 65+.
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_minmax(12rem,0.55fr)]">
-          <SearchField
-            label="Cerca nella tabella età"
-            value={ageSearch}
-            onChange={setAgeSearch}
-            placeholder="Cerca persona, età o fascia"
-          />
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-            Fascia di età
-            <select
-              value={ageBandFilter}
-              onChange={(event) => setAgeBandFilter(event.target.value)}
-              className="min-h-11 w-full rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)]"
-            >
-              <option value={ALL_FILTER}>Tutte le fasce</option>
-              {AGE_BANDS.map((band) => (
-                <option key={band} value={band}>
-                  {ageBandLabel(band)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <ResultCount count={ageRows.length} total={statistics.people.length} />
-
-        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
-          <table className="w-full min-w-[680px] border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
-              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="px-4 py-3 font-semibold">Persona</th>
-                <th className="px-4 py-3 font-semibold">Data di nascita</th>
-                <th className="px-4 py-3 text-right font-semibold">Età</th>
-                <th className="px-4 py-3 font-semibold">Fascia</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ageRows.map((person) => (
-                <tr
-                  key={person.id}
-                  className="border-b border-[var(--peace-border)] last:border-b-0"
-                >
-                  <td className="px-4 py-3">
-                    <PersonName person={person} />
-                  </td>
-                  <td className="px-4 py-3">
-                    {person.birthDate ? formatLongDate(person.birthDate) : "Non indicata"}
-                  </td>
-                  <td className="px-4 py-3 text-right text-base font-semibold">
-                    {person.age ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 font-medium">
-                    {ageBandLabel(person.ageBand)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-          {ageRows.length === 0 ? <EmptyTableMessage /> : null}
-        </article>
-      </ReportBlock>
-
-      <ReportBlock name="combined" title="Vista completa">
-        <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
-          <div>
-            <h3 className="text-base font-semibold">Tutti i dati statistici</h3>
-            <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-              Vista unica di territorio, gruppo, età e presenze. Se necessario,
-              la tabella può scorrere orizzontalmente per mantenere tutti i dati
-              leggibili.
-            </p>
-          </div>
-
-          <div className="mt-5 max-w-xl">
-            <SearchField
-              label="Cerca nella vista completa"
-              value={combinedSearch}
-              onChange={setCombinedSearch}
-              placeholder="Cerca persona, territorio, gruppo, età o presenza"
-            />
-          </div>
-
-          <ResultCount count={combinedRows.length} total={statistics.people.length} />
-
-          <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
-            <table className="w-full min-w-max border-collapse text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
-                <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                  <th className="sticky left-0 z-20 min-w-60 bg-[#f7fbfe] px-4 py-3 font-semibold">
-                    Persona
-                  </th>
-                  <th className="min-w-32 px-4 py-3 font-semibold">Paese</th>
-                  <th className="min-w-36 px-4 py-3 font-semibold">Città</th>
-                  <th className="min-w-52 px-4 py-3 font-semibold">Gruppo</th>
-                  <th className="min-w-32 px-4 py-3 font-semibold">Nascita</th>
-                  <th className="min-w-20 px-4 py-3 text-right font-semibold">Età</th>
-                  <th className="min-w-32 px-4 py-3 font-semibold">Fascia</th>
-                  {statistics.attendanceSlots.map((slot) => (
-                    <th
-                      key={slot.key}
-                      className="min-w-28 px-3 py-3 text-center font-semibold"
-                    >
-                      <span className="block">{formatShortDate(slot.day)}</span>
-                      <span className="mt-0.5 block normal-case tracking-normal">
-                        {attendancePartLabel(slot.dayPart)}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {combinedRows.map((person) => (
-                  <tr
-                    key={person.id}
-                    className="border-b border-[var(--peace-border)] last:border-b-0"
-                  >
-                    <td className="sticky left-0 bg-white px-4 py-3">
-                      <PersonName person={person} />
-                    </td>
-                    <td className="px-4 py-3">{person.country}</td>
-                    <td className="px-4 py-3">{person.city}</td>
-                    <td className="px-4 py-3 font-medium">{person.group}</td>
-                    <td className="px-4 py-3">
-                      {person.birthDate ? formatLongDate(person.birthDate) : "Non indicata"}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      {person.age ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">{ageBandLabel(person.ageBand)}</td>
-                    {statistics.attendanceSlots.map((slot) => {
-                      const isPresent = person.attendanceSlotKeys.includes(slot.key);
-
-                      return (
-                        <td key={slot.key} className="px-3 py-3 text-center">
-                          {isPresent ? (
-                            <span
-                              className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[#e7f5ed] px-2 text-[#167548]"
-                              aria-label={`Presente: ${attendanceSlotLabel(slot)}`}
-                              title="Presente"
-                            >
-                              <Check aria-hidden="true" size={16} strokeWidth={2.5} />
-                            </span>
-                          ) : (
-                            <span className="text-[#a1afbd]" aria-label="Non indicata">
-                              —
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {combinedRows.length === 0 ? <EmptyTableMessage /> : null}
-        </article>
       </ReportBlock>
     </section>
   );
@@ -584,7 +116,7 @@ function ReportBlock({
   title,
   children,
 }: {
-  name: "territory" | "attendance" | "age" | "combined";
+  name: "territory" | "attendance" | "age";
   title: string;
   children: ReactNode;
 }) {
@@ -614,20 +146,11 @@ function ReportBlock({
 function TerritoryStatisticsSummary({
   statistics,
   territorySummary,
-  countryFilter,
-  cityFilter,
-  groupFilter,
-  onTerritorySelect,
+  participantHref,
 }: {
   statistics: EventStatisticsSnapshot;
   territorySummary: Record<ParticipantBreakdownLevel, SummaryBreakdownRow[]>;
-  countryFilter: string;
-  cityFilter: string;
-  groupFilter: string;
-  onTerritorySelect: (
-    level: ParticipantBreakdownLevel,
-    label: string
-  ) => void;
+  participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
   return (
     <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -636,8 +159,7 @@ function TerritoryStatisticsSummary({
           Riepilogo persone, territori e gruppi
         </h3>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Seleziona un territorio o un gruppo per vedere subito nella tabella
-          successiva le persone che compongono il totale.
+          Ogni conteggio apre l’elenco delle iscrizioni corrispondenti.
         </p>
       </div>
 
@@ -646,44 +168,46 @@ function TerritoryStatisticsSummary({
           icon={Users}
           label="Persone complessive"
           value={statistics.summary.totalPeople}
+          href={participantHref({ personKind: "all" })}
         />
         <SummaryKpi
           icon={UserRound}
           label="Partecipanti iscritti"
           value={statistics.summary.registeredParticipants}
+          href={participantHref({ personKind: "participant" })}
         />
         <SummaryKpi
           icon={Baby}
           label="Minori accompagnati"
           value={statistics.summary.accompanyingChildren}
+          href={participantHref({ personKind: "child" })}
         />
       </div>
 
       <div className="mt-4">
         <SummaryPanel
           title="Territori e gruppi più rappresentati"
-          description="Le prime cinque voci per numero di persone; tutte le altre restano disponibili nei filtri della tabella."
+          description="Le prime cinque voci per numero di persone; il riepilogo completo è nella tabella pivot successiva."
         >
           <div className="grid gap-4 lg:grid-cols-3">
             {(
               [
-                ["country", "Paesi", countryFilter],
-                ["city", "Città", cityFilter],
-                ["group", "Gruppi", groupFilter],
+                ["country", "Paesi"],
+                ["city", "Città"],
+                ["group", "Gruppi"],
               ] as const
-            ).map(([level, title, activeFilter]) => (
+            ).map(([level, title]) => (
               <div key={level}>
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
                   {title}
                 </h4>
                 <div className="grid gap-2">
                   {territorySummary[level].slice(0, 5).map((row) => (
-                    <SummaryFilterButton
+                    <SummaryFilterLink
                       key={row.label}
                       label={row.label}
                       count={row.count}
-                      active={activeFilter === row.label}
-                      onClick={() => onTerritorySelect(level, row.label)}
+                      href={participantHref({ [level]: row.label })}
                     />
                   ))}
                   {territorySummary[level].length === 0 ? (
@@ -701,67 +225,278 @@ function TerritoryStatisticsSummary({
   );
 }
 
+function TerritoryAttendancePivot({
+  people,
+  attendanceSlots,
+  participantHref,
+}: {
+  people: StatisticsPersonRow[];
+  attendanceSlots: StatisticsAttendanceSlot[];
+  participantHref: (filter: StatisticsDrilldownFilter) => string;
+}) {
+  const rows = useMemo(() => buildTerritoryPivotRows(people), [people]);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
+
+  function toggleRow(key: string) {
+    setExpandedRows((current) => {
+      const next = new Set(current);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      return next;
+    });
+  }
+
+  return (
+    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <div>
+        <h3 className="text-base font-semibold">Persone per territorio e gruppo</h3>
+        <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
+          Espandi un paese per vedere le città. Le città con più gruppi possono
+          essere aperte a loro volta. Le colonne mostrano le presenze previste
+          per mattina e pomeriggio.
+        </p>
+      </div>
+
+      <div className="mt-5 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
+        <table className="w-full min-w-max border-collapse text-left text-sm">
+          <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
+            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+              <th className="sticky left-0 z-20 min-w-64 bg-[#f7fbfe] px-4 py-3 font-semibold">
+                Territorio o gruppo
+              </th>
+              <th className="min-w-24 px-3 py-3 text-center font-semibold">
+                Totale
+              </th>
+              {attendanceSlots.map((slot) => (
+                <th
+                  key={slot.key}
+                  className="min-w-28 px-3 py-3 text-center font-semibold"
+                >
+                  <span className="block normal-case tracking-normal">
+                    {attendancePartLabel(slot.dayPart)}
+                  </span>
+                  <span className="mt-0.5 block">{formatShortDate(slot.day)}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((country) => (
+              <Fragment key={country.key}>
+                <TerritoryPivotTableRow
+                  row={country}
+                  attendanceSlots={attendanceSlots}
+                  expanded={expandedRows.has(country.key)}
+                  onToggle={() => toggleRow(country.key)}
+                  participantHref={participantHref}
+                />
+                {expandedRows.has(country.key)
+                  ? country.children.map((city) => (
+                      <Fragment key={city.key}>
+                        <TerritoryPivotTableRow
+                          row={city}
+                          attendanceSlots={attendanceSlots}
+                          expanded={expandedRows.has(city.key)}
+                          onToggle={() => toggleRow(city.key)}
+                          participantHref={participantHref}
+                        />
+                        {expandedRows.has(city.key)
+                          ? city.children.map((group) => (
+                              <TerritoryPivotTableRow
+                                key={group.key}
+                                row={group}
+                                attendanceSlots={attendanceSlots}
+                                expanded={false}
+                                onToggle={() => undefined}
+                                participantHref={participantHref}
+                              />
+                            ))
+                          : null}
+                      </Fragment>
+                    ))
+                  : null}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
+          Nessun dato territoriale disponibile.
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function TerritoryPivotTableRow({
+  row,
+  attendanceSlots,
+  expanded,
+  onToggle,
+  participantHref,
+}: {
+  row: TerritoryPivotRow;
+  attendanceSlots: StatisticsAttendanceSlot[];
+  expanded: boolean;
+  onToggle: () => void;
+  participantHref: (filter: StatisticsDrilldownFilter) => string;
+}) {
+  const canExpand = row.children.length > 0;
+  const rowTone =
+    row.level === "country"
+      ? "bg-white font-semibold"
+      : row.level === "city"
+        ? "bg-[#fbfdff] font-medium"
+        : "bg-[#f7fbfe]";
+  const indent =
+    row.level === "country" ? "pl-4" : row.level === "city" ? "pl-10" : "pl-16";
+
+  return (
+    <tr className={`border-b border-[var(--peace-border)] last:border-b-0 ${rowTone}`}>
+      <th
+        scope="row"
+        className={`sticky left-0 z-[5] min-w-64 py-3 pr-4 text-left ${indent} ${rowTone}`}
+      >
+        {canExpand ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            className="-ml-1 flex min-h-8 items-center gap-2 rounded-md pr-2 text-left transition hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--peace-blue-800)]"
+          >
+            <span className="grid size-8 shrink-0 place-items-center text-[var(--peace-blue-800)]">
+              {expanded ? (
+                <ChevronDown aria-hidden="true" size={18} />
+              ) : (
+                <ChevronRight aria-hidden="true" size={18} />
+              )}
+            </span>
+            <span>{row.label}</span>
+          </button>
+        ) : (
+          <span className="flex min-h-8 items-center gap-2">
+            <span aria-hidden="true" className="size-8 shrink-0" />
+            <span>{row.label}</span>
+          </span>
+        )}
+      </th>
+      <td className="px-3 py-3 text-center">
+        <CountLink
+          count={row.people.length}
+          href={participantHref(row.filter)}
+          label={`Apri ${row.people.length} persone di ${row.label}`}
+        />
+      </td>
+      {attendanceSlots.map((slot) => {
+        const count = countPeopleForSlot(row.people, slot.key);
+
+        return (
+          <td key={slot.key} className="px-3 py-3 text-center">
+            <CountLink
+              count={count}
+              href={participantHref({
+                ...row.filter,
+                attendanceSlot: slot.key,
+              })}
+              label={`Apri ${count} persone di ${row.label}, ${attendanceSlotLabel(slot)}`}
+            />
+          </td>
+        );
+      })}
+    </tr>
+  );
+}
+
 function AttendanceStatisticsSummary({
   statistics,
-  attendanceFilter,
-  onAttendanceSelect,
+  participantHref,
 }: {
   statistics: EventStatisticsSnapshot;
-  attendanceFilter: string;
-  onAttendanceSelect: (slotKey: string) => void;
+  participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
+  const days = groupAttendanceSlotsByDay(statistics.attendanceSlots);
+
   return (
-    <article className="@container min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
+    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <h3 className="text-base font-semibold">Riepilogo presenze previste</h3>
       <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-        Seleziona un giorno e una fascia per vedere le persone corrispondenti
-        nella tabella successiva.
+        Mattina e pomeriggio sono raggruppati per data. Seleziona un conteggio
+        per vedere le iscrizioni corrispondenti.
       </p>
-      <div className="mt-4 grid min-w-0 gap-2 @[32rem]:grid-cols-2 @[48rem]:grid-cols-3 @[64rem]:grid-cols-4">
-        {statistics.attendanceSlots.map((slot) => (
-          <SummaryFilterButton
-            key={slot.key}
-            label={attendanceSlotLabel(slot)}
-            count={statistics.summary.attendanceSlotCounts[slot.key] ?? 0}
-            active={attendanceFilter === slot.key}
-            onClick={() => onAttendanceSelect(slot.key)}
-          />
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {days.map(({ day, slots }) => (
+          <section
+            key={day}
+            className="rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+          >
+            <h4 className="font-semibold text-[var(--peace-blue-900)]">
+              {formatLongDay(day)}
+            </h4>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {slots.map((slot) => (
+                <AttendanceCountLink
+                  key={slot.key}
+                  label={attendancePartLabel(slot.dayPart)}
+                  count={statistics.summary.attendanceSlotCounts[slot.key] ?? 0}
+                  href={participantHref({ attendanceSlot: slot.key })}
+                />
+              ))}
+            </div>
+          </section>
         ))}
-        <SummaryFilterButton
-          label="Nessuna fascia indicata"
-          count={statistics.summary.withoutAttendance}
-          active={attendanceFilter === NO_ATTENDANCE_FILTER}
-          onClick={() => onAttendanceSelect(NO_ATTENDANCE_FILTER)}
-        />
+
+        <section className="rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+          <h4 className="font-semibold text-[var(--peace-blue-900)]">
+            Presenza non specificata
+          </h4>
+          <div className="mt-3">
+            <AttendanceCountLink
+              label="Nessuna fascia indicata"
+              count={statistics.summary.withoutAttendance}
+              href={participantHref({ attendanceSlot: "none" })}
+            />
+          </div>
+        </section>
       </div>
+
+      {days.length === 0 ? (
+        <p className="mt-4 text-sm text-[var(--peace-muted)]">
+          Nessuna fascia di presenza configurata per l’evento.
+        </p>
+      ) : null}
     </article>
   );
 }
 
 function AgeStatisticsSummary({
   statistics,
-  ageBandFilter,
-  onAgeBandSelect,
+  participantHref,
 }: {
   statistics: EventStatisticsSnapshot;
-  ageBandFilter: string;
-  onAgeBandSelect: (ageBand: StatisticsAgeBand) => void;
+  participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
   return (
     <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <h3 className="text-base font-semibold">Riepilogo fasce di età</h3>
       <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-        Distribuzione calcolata all’inizio dell’evento. Seleziona una fascia
-        per vedere le persone corrispondenti nella tabella successiva.
+        Distribuzione calcolata all’inizio dell’evento. I confini non si
+        sovrappongono: 30 anni rientra in 15–30 e 65 anni in 65+.
       </p>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {AGE_BANDS.map((ageBand) => (
-          <SummaryFilterButton
+          <SummaryFilterLink
             key={ageBand}
             label={ageBandLabel(ageBand)}
             count={statistics.summary.ageBandCounts[ageBand]}
-            active={ageBandFilter === ageBand}
-            onClick={() => onAgeBandSelect(ageBand)}
+            href={participantHref({ ageBand })}
           />
         ))}
       </div>
@@ -773,23 +508,29 @@ function SummaryKpi({
   icon: Icon,
   label,
   value,
+  href,
 }: {
   icon: LucideIcon;
   label: string;
   value: number;
+  href: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+    <Link
+      href={href}
+      aria-label={`Apri ${value} ${label.toLocaleLowerCase("it")}`}
+      className="group flex items-center gap-3 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4 transition hover:border-[var(--peace-border-strong)] hover:bg-white hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
+    >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--peace-blue-800)] shadow-sm">
         <Icon aria-hidden="true" size={20} />
       </span>
       <span>
-        <span className="block text-2xl font-semibold text-[var(--peace-ink)]">
+        <span className="block text-2xl font-semibold text-[var(--peace-blue-800)] underline decoration-transparent underline-offset-4 transition group-hover:decoration-current">
           {value}
         </span>
         <span className="block text-sm text-[var(--peace-muted)]">{label}</span>
       </span>
-    </div>
+    </Link>
   );
 }
 
@@ -813,141 +554,186 @@ function SummaryPanel({
   );
 }
 
-function SummaryFilterButton({
+function SummaryFilterLink({
   label,
   count,
-  active,
-  onClick,
+  href,
 }: {
   label: string;
   count: number;
-  active: boolean;
-  onClick: () => void;
+  href: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] ${
-        active
-          ? "border-[var(--peace-blue-800)] bg-white text-[var(--peace-blue-900)] shadow-sm"
-          : "border-[var(--peace-border)] bg-white text-[var(--peace-ink)] hover:border-[var(--peace-border-strong)]"
-      }`}
+    <Link
+      href={href}
+      aria-label={`Apri ${count} persone: ${label}`}
+      className="group flex min-h-11 w-full items-center justify-between gap-3 rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-left text-sm text-[var(--peace-ink)] transition hover:border-[var(--peace-border-strong)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
     >
       <span className="min-w-0 truncate font-medium" title={label}>
         {label}
       </span>
-      <span className="shrink-0 text-base font-semibold tabular-nums">{count}</span>
-    </button>
+      <span className="shrink-0 text-base font-semibold tabular-nums text-[var(--peace-blue-800)] underline decoration-transparent underline-offset-4 transition group-hover:decoration-current">
+        {count}
+      </span>
+    </Link>
   );
 }
 
-function scrollToDetailedTable(id: string) {
-  window.requestAnimationFrame(() => {
-    document.getElementById(id)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+function AttendanceCountLink({
+  label,
+  count,
+  href,
+}: {
+  label: string;
+  count: number;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={`Apri ${count} persone: ${label}`}
+      className="group grid min-h-20 place-items-center rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-center transition hover:border-[var(--peace-border-strong)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
+    >
+      <span className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
+        {label}
+      </span>
+      <span className="text-2xl font-semibold tabular-nums text-[var(--peace-blue-800)] underline decoration-transparent underline-offset-4 transition group-hover:decoration-current">
+        {count}
+      </span>
+    </Link>
+  );
+}
+
+function CountLink({
+  count,
+  href,
+  label,
+}: {
+  count: number;
+  href: string;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-md px-2 font-semibold tabular-nums text-[var(--peace-blue-800)] underline decoration-[#9fc5dc] underline-offset-4 transition hover:bg-[var(--peace-sky-100)] hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--peace-blue-800)]"
+    >
+      {count}
+    </Link>
+  );
+}
+
+function buildParticipantsHref(
+  dashboard: StatisticsDashboard,
+  navMode: StatisticsNavMode,
+  filter: StatisticsDrilldownFilter
+): string {
+  const params = new URLSearchParams({
+    section: "iscritti",
+    nav: navMode,
+    stat: serializeStatisticsDrilldown(filter),
+  });
+
+  return `/dashboard/${dashboard}?${params.toString()}`;
+}
+
+function buildTerritoryPivotRows(
+  people: StatisticsPersonRow[]
+): TerritoryPivotRow[] {
+  const countries = groupPeopleByLabel(people, (person) => person.country);
+
+  return sortedGroupEntries(countries).map(([country, countryPeople]) => {
+    const cities = groupPeopleByLabel(countryPeople, (person) => person.city);
+    const cityRows = sortedGroupEntries(cities).map(([city, cityPeople]) => {
+      const groups = groupPeopleByLabel(cityPeople, (person) => person.group);
+      const groupRows =
+        groups.size > 1
+          ? sortedGroupEntries(groups).map(([group, groupPeople]) => ({
+              key: pivotRowKey("group", country, city, group),
+              level: "group" as const,
+              label: group,
+              people: groupPeople,
+              filter: { country, city, group },
+              children: [],
+            }))
+          : [];
+
+      return {
+        key: pivotRowKey("city", country, city),
+        level: "city" as const,
+        label: city,
+        people: cityPeople,
+        filter: { country, city },
+        children: groupRows,
+      };
     });
+
+    return {
+      key: pivotRowKey("country", country),
+      level: "country" as const,
+      label: country,
+      people: countryPeople,
+      filter: { country },
+      children: cityRows,
+    };
   });
 }
 
-function SearchField({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) {
-  return (
-    <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-      Cerca
-      <span className="relative block">
-        <Search
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6f7f91]"
-          size={17}
-        />
-        <input
-          type="search"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          aria-label={label}
-          className="min-h-11 w-full rounded-md border border-[var(--peace-border)] bg-white py-2 pl-10 pr-3 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)] placeholder:text-[#8291a2]"
-        />
-      </span>
-    </label>
-  );
+function groupPeopleByLabel(
+  people: StatisticsPersonRow[],
+  getLabel: (person: StatisticsPersonRow) => string
+): Map<string, StatisticsPersonRow[]> {
+  const grouped = new Map<string, StatisticsPersonRow[]>();
+
+  for (const person of people) {
+    const label = getLabel(person);
+    const current = grouped.get(label) ?? [];
+    current.push(person);
+    grouped.set(label, current);
+  }
+
+  return grouped;
 }
 
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-}) {
-  return (
-    <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-      {label}
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 w-full rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-normal normal-case tracking-normal text-[var(--peace-ink)]"
-      >
-        <option value={ALL_FILTER}>Tutti</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function PersonName({ person }: { person: StatisticsPersonRow }) {
-  return (
-    <span className="block">
-      <span className="block font-semibold text-[var(--peace-ink)]">{person.name}</span>
-      <span className="mt-0.5 block text-xs text-[var(--peace-muted)]">
-        {person.kind === "child" ? "Minore accompagnato" : "Partecipante"}
-      </span>
-    </span>
-  );
-}
-
-function ResultCount({ count, total }: { count: number; total: number }) {
-  return (
-    <p className="mt-4 text-sm text-[var(--peace-muted)]" aria-live="polite">
-      {count === total
-        ? `${count} ${count === 1 ? "persona" : "persone"}`
-        : `${count} di ${total} persone`}
-    </p>
-  );
-}
-
-function EmptyTableMessage() {
-  return (
-    <p className="mt-4 text-sm text-[var(--peace-muted)]">
-      Nessuna persona corrisponde ai filtri impostati.
-    </p>
-  );
-}
-
-function uniqueSorted(values: string[]): string[] {
-  return [...new Set(values)].sort((first, second) =>
+function sortedGroupEntries(
+  grouped: Map<string, StatisticsPersonRow[]>
+): Array<[string, StatisticsPersonRow[]]> {
+  return [...grouped.entries()].sort(([first], [second]) =>
     first.localeCompare(second, "it", { sensitivity: "base" })
   );
+}
+
+function pivotRowKey(level: PivotLevel, ...labels: string[]): string {
+  return `${level}:${labels.map((label) => encodeURIComponent(label)).join(":")}`;
+}
+
+function countPeopleForSlot(
+  people: StatisticsPersonRow[],
+  slotKey: string
+): number {
+  return people.filter((person) => person.attendanceSlotKeys.includes(slotKey))
+    .length;
+}
+
+function groupAttendanceSlotsByDay(
+  slots: StatisticsAttendanceSlot[]
+): Array<{ day: string; slots: StatisticsAttendanceSlot[] }> {
+  const slotsByDay = new Map<string, StatisticsAttendanceSlot[]>();
+
+  for (const slot of slots) {
+    const current = slotsByDay.get(slot.day) ?? [];
+    current.push(slot);
+    slotsByDay.set(slot.day, current);
+  }
+
+  return [...slotsByDay.entries()].map(([day, daySlots]) => ({
+    day,
+    slots: daySlots.sort(
+      (first, second) =>
+        attendancePartOrder(first.dayPart) - attendancePartOrder(second.dayPart)
+    ),
+  }));
 }
 
 function summarizeLabels(values: string[]): SummaryBreakdownRow[] {
@@ -966,67 +752,32 @@ function summarizeLabels(values: string[]): SummaryBreakdownRow[] {
     );
 }
 
-function matchesPersonSearch(
-  person: StatisticsPersonRow,
-  normalizedQuery: string,
-  extraValues: string[]
-): boolean {
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  return [person.name, ...extraValues].some((value) =>
-    normalizeSearchValue(value).includes(normalizedQuery)
-  );
-}
-
-function normalizeSearchValue(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("it")
-    .trim();
-}
-
-function compareNullableAge(first: number | null, second: number | null): number {
-  if (first === null) {
-    return second === null ? 0 : 1;
-  }
-
-  if (second === null) {
-    return -1;
-  }
-
-  return first - second;
-}
-
 function ageBandLabel(ageBand: StatisticsAgeBand): string {
   return ageBand === "unknown" ? "Età non indicata" : ageBand;
 }
 
 function attendanceSlotLabel(slot: StatisticsAttendanceSlot): string {
-  return `${formatShortDate(slot.day)} · ${attendancePartLabel(slot.dayPart)}`;
+  return `${attendancePartLabel(slot.dayPart)} ${formatLongDay(slot.day)}`;
 }
 
 function attendancePartLabel(
   dayPart: StatisticsAttendanceSlot["dayPart"]
 ): string {
-  switch (dayPart) {
-    case "morning":
-      return "Mattina";
-    case "afternoon":
-      return "Pomeriggio";
-    case "day":
-      return "Giornata";
-  }
+  return dayPart === "morning" ? "Mattina" : "Pomeriggio";
+}
+
+function attendancePartOrder(
+  dayPart: StatisticsAttendanceSlot["dayPart"]
+): number {
+  return dayPart === "morning" ? 0 : 1;
 }
 
 function formatShortDate(value: string): string {
   return formatDate(value, { day: "numeric", month: "short" });
 }
 
-function formatLongDate(value: string): string {
-  return formatDate(value, { day: "2-digit", month: "2-digit", year: "numeric" });
+function formatLongDay(value: string): string {
+  return formatDate(value, { weekday: "long", day: "numeric", month: "long" });
 }
 
 function formatDate(value: string, options: Intl.DateTimeFormatOptions): string {

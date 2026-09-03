@@ -7,38 +7,60 @@ const statisticsSection = readFileSync(
   join(process.cwd(), "app/dashboard/statistics-section.tsx"),
   "utf8"
 );
-const firstSummaryPosition = statisticsSection.indexOf(
-  "      <TerritoryStatisticsSummary"
-);
-const renderedReports = statisticsSection.slice(
-  statisticsSection.lastIndexOf(
-    '<ReportBlock name="territory"',
-    firstSummaryPosition
-  ),
-  statisticsSection.indexOf("function TerritoryStatisticsSummary")
+const operationsSection = readFileSync(
+  join(process.cwd(), "app/dashboard/operations-participants-section.tsx"),
+  "utf8"
 );
 
-test("each statistics summary is immediately paired with its detail table", () => {
-  const orderedMarkers = [
-    "<TerritoryStatisticsSummary",
-    'id="statistics-territory-table"',
-    "<AttendanceStatisticsSummary",
-    'id="statistics-attendance-table"',
-    "<AgeStatisticsSummary",
-    'id="statistics-age-table"',
-    '<ReportBlock name="combined"',
-    "Tutti i dati statistici",
-  ];
-  const positions = orderedMarkers.map((marker) => renderedReports.indexOf(marker));
+test("statistics keep three focused reports and remove person-detail tables", () => {
+  assert.equal(statisticsSection.match(/<ReportBlock name=/g)?.length, 3);
+  assert.match(statisticsSection, /name="territory"/);
+  assert.match(statisticsSection, /name="attendance"/);
+  assert.match(statisticsSection, /name="age"/);
+  assert.doesNotMatch(statisticsSection, /name="combined"/);
+  assert.doesNotMatch(statisticsSection, /Tutti i dati statistici/);
+  assert.doesNotMatch(statisticsSection, /Persone per età/);
+  assert.doesNotMatch(statisticsSection, /Cerca nella tabella/);
+});
 
-  assert.ok(positions.every((position) => position >= 0));
-  assert.deepEqual(positions, [...positions].sort((first, second) => first - second));
-  assert.equal(
-    renderedReports.match(/<ReportBlock name=/g)?.length,
-    4
+test("territory report uses an expandable country-city-group attendance pivot", () => {
+  for (const marker of [
+    "TerritoryAttendancePivot",
+    "buildTerritoryPivotRows",
+    'level: "country"',
+    'level: "city"',
+    'level: "group"',
+    "groups.size > 1",
+    "ChevronRight",
+    "ChevronDown",
+    "attendanceSlots.map",
+    "Totale",
+  ]) {
+    assert.ok(statisticsSection.includes(marker), `missing pivot marker: ${marker}`);
+  }
+
+  assert.match(
+    statisticsSection,
+    /overflow-x-auto overscroll-x-contain/
   );
-  assert.match(statisticsSection, /data-statistics-report=\{name\}/);
-  assert.match(statisticsSection, /border-2 border-\[#bfd8ea\]/);
+});
+
+test("attendance summary groups only morning and afternoon by date", () => {
+  assert.match(statisticsSection, /groupAttendanceSlotsByDay/);
+  assert.match(statisticsSection, /Mattina e pomeriggio sono raggruppati per data/);
+  assert.match(statisticsSection, /Nessuna fascia indicata/);
+  assert.doesNotMatch(statisticsSection, /Giornata/);
+});
+
+test("every statistics count links to the filtered participant page", () => {
+  assert.match(statisticsSection, /serializeStatisticsDrilldown/);
+  assert.match(statisticsSection, /section: "iscritti"/);
+  assert.match(statisticsSection, /function SummaryKpi/);
+  assert.match(statisticsSection, /function SummaryFilterLink/);
+  assert.match(statisticsSection, /function AttendanceCountLink/);
+  assert.match(statisticsSection, /function CountLink/);
+  assert.match(operationsSection, /Filtro dalle statistiche/);
+  assert.match(operationsSection, /Rimuovi filtro/);
 });
 
 test("report containers use all available width without clipping content", () => {
@@ -51,45 +73,4 @@ test("report containers use all available width without clipping content", () =>
     /className="relative grid w-full min-w-0 max-w-full gap-4 overflow-visible/
   );
   assert.doesNotMatch(statisticsSection, /max-w-\[65rem\]/);
-  assert.doesNotMatch(statisticsSection, /gap-4 overflow-hidden rounded-2xl/);
-});
-
-test("attendance details keep the complete horizontally scrollable cross-table", () => {
-  const attendanceReport = renderedReports.slice(
-    renderedReports.indexOf('<ReportBlock name="attendance"'),
-    renderedReports.indexOf('<ReportBlock name="age"')
-  );
-
-  assert.match(attendanceReport, /overflow-x-auto overscroll-x-contain/);
-  assert.doesNotMatch(attendanceReport, /max-h-\[34rem\]|overflow-auto/);
-  assert.match(attendanceReport, /<table className="w-full min-w-max/);
-  assert.doesNotMatch(attendanceReport, /data-attendance-person/);
-});
-
-test("the final combined table crosses territory age and attendance", () => {
-  const combinedReport = renderedReports.slice(
-    renderedReports.indexOf('<ReportBlock name="combined"')
-  );
-
-  for (const marker of [
-    "Paese",
-    "Città",
-    "Gruppo",
-    "Nascita",
-    "Età",
-    "Fascia",
-    "statistics.attendanceSlots.map",
-  ]) {
-    assert.ok(combinedReport.includes(marker), `missing combined marker: ${marker}`);
-  }
-  assert.match(combinedReport, /overflow-x-auto overscroll-x-contain/);
-  assert.doesNotMatch(combinedReport, /max-h-\[42rem\]|overflow-auto/);
-});
-
-test("all report tables grow vertically and confine horizontal overflow", () => {
-  assert.equal(
-    renderedReports.match(/overflow-x-auto overscroll-x-contain/g)?.length,
-    4
-  );
-  assert.doesNotMatch(renderedReports, /max-h-\[(?:34|42)rem\]/);
 });

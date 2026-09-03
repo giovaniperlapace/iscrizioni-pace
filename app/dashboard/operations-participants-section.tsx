@@ -10,6 +10,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   hasActiveOperationsDashboardFilters,
   type OperationsDashboardFilters,
+  type OperationsStatisticsFilterSummary,
 } from "@/lib/registrations/operations-dashboard";
 import {
   eventServiceStatusLabel,
@@ -72,6 +73,7 @@ export type OperationsParticipantsSnapshot = {
   operationalTags: OperationalTagOption[];
   eventServices: EventServiceOption[];
   filters: OperationsDashboardFilters;
+  statisticsFilter?: OperationsStatisticsFilterSummary | null;
 };
 
 type OperationsDashboard = "admin" | "manager";
@@ -140,6 +142,38 @@ export function OperationsParticipantsSection({
           </form>
         ) : null}
       </div>
+
+      {snapshot.statisticsFilter ? (
+        <div className="mt-5 flex flex-col gap-3 rounded-lg border border-[#9fc5dc] bg-[#eef7fc] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
+              Filtro dalle statistiche
+            </p>
+            <p className="mt-1 font-semibold text-[var(--peace-ink)]">
+              {snapshot.statisticsFilter.label}
+            </p>
+            <p className="mt-1 text-sm text-[var(--peace-muted)]">
+              {snapshot.statisticsFilter.peopleCount}{" "}
+              {snapshot.statisticsFilter.peopleCount === 1 ? "persona" : "persone"}
+              {" · "}
+              {snapshot.statisticsFilter.registrationCount}{" "}
+              {snapshot.statisticsFilter.registrationCount === 1
+                ? "iscrizione"
+                : "iscrizioni"}
+              {snapshot.statisticsFilter.visibleRegistrationCount <
+              snapshot.statisticsFilter.registrationCount
+                ? ` · ${snapshot.statisticsFilter.visibleRegistrationCount} mostrate tra le 200 più recenti`
+                : ""}
+            </p>
+          </div>
+          <Link
+            href={basePath}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+          >
+            Rimuovi filtro
+          </Link>
+        </div>
+      ) : null}
 
       <div className="mt-5 overflow-x-auto">
         <AutoFilterForm
@@ -247,7 +281,8 @@ export function OperationsParticipantsSection({
                       <option value="confirmed">Confermata</option>
                       <option value="cancelled">Annullata</option>
                     </select>
-                    {hasActiveOperationsDashboardFilters(snapshot.filters) ? (
+                    {hasActiveOperationsDashboardFilters(snapshot.filters) ||
+                    snapshot.statisticsFilter ? (
                       <Link
                         href={basePath}
                         className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"

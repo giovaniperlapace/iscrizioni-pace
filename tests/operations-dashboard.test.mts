@@ -3,11 +3,13 @@ import test from "node:test";
 
 import {
   applyOperationsDashboardFilters,
+  applyStatisticsDrilldownToOperations,
   hasActiveOperationsDashboardFilters,
   parseOperationsDashboardFilters,
   summarizeOperationsDashboardParticipants,
   type OperationsParticipantForFilter,
 } from "../lib/registrations/operations-dashboard.ts";
+import { buildEventStatisticsSnapshot } from "../lib/registrations/event-statistics.ts";
 
 const participants: OperationsParticipantForFilter[] = [
   participant({
@@ -186,6 +188,62 @@ test("operations summary counts children as registered people", () => {
   assert.equal(summary.total, 4);
   assert.equal(summary.filtered, 4);
   assert.equal(summary.confirmedGroup, 4);
+});
+
+test("statistics drilldown opens the registrations containing matching people", () => {
+  const operationsRows = [
+    { ...participant({ name: "Famiglia Rossi" }), registrationId: "registration-a" },
+    { ...participant({ name: "Luca Bianchi" }), registrationId: "registration-b" },
+  ];
+  const statistics = buildEventStatisticsSnapshot({
+    participants: [
+      {
+        registrationId: "registration-a",
+        eventId: "assisi",
+        eventTitle: "Assisi 2026",
+        name: "Famiglia Rossi",
+        currentGroupId: null,
+        currentGroupName: null,
+        country: "Italia",
+        city: "Roma",
+        childrenCount: 1,
+        children: [
+          {
+            id: "child-a",
+            firstName: "Anna",
+            lastName: "Rossi",
+            birthDate: "2016-01-01",
+            position: 0,
+          },
+        ],
+      },
+      {
+        registrationId: "registration-b",
+        eventId: "assisi",
+        eventTitle: "Assisi 2026",
+        name: "Luca Bianchi",
+        currentGroupId: null,
+        currentGroupName: null,
+        country: "Francia",
+        city: "Parigi",
+      },
+    ],
+    groups: [],
+    attendanceChoices: [],
+  });
+  const selection = applyStatisticsDrilldownToOperations(
+    operationsRows,
+    statistics,
+    { country: "Italia", personKind: "child" }
+  );
+
+  assert.deepEqual(
+    selection.participants.map((row) => row.registrationId),
+    ["registration-a"]
+  );
+  assert.equal(selection.summary.peopleCount, 1);
+  assert.equal(selection.summary.registrationCount, 1);
+  assert.equal(selection.summary.label, "Minori accompagnati · Paese: Italia");
 });
 
 function participant(

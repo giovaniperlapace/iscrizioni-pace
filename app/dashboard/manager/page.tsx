@@ -51,6 +51,7 @@ import {
   getGroupRegistrationLinkStatus,
 } from "@/lib/groups/registration-links";
 import {
+  applyStatisticsDrilldownToOperations,
   applyOperationsDashboardFilters,
   parseOperationsDashboardFilters,
   summarizeOperationsDashboardParticipants,
@@ -69,6 +70,7 @@ import {
 } from "@/lib/registrations/event-services";
 import {
   buildEventStatisticsSnapshot,
+  parseStatisticsDrilldown,
   type EventStatisticsSnapshot,
 } from "@/lib/registrations/event-statistics";
 import {
@@ -350,8 +352,10 @@ export default async function ManagerDashboardPage({
           filters,
           currentEventId
         );
+  const statisticsDrilldown =
+    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const statistics =
-    activeSection === "dashboard"
+    activeSection === "dashboard" || statisticsDrilldown
       ? await getManagerStatisticsSnapshot(
           serviceSupabase,
           scope,
@@ -365,6 +369,20 @@ export default async function ManagerDashboardPage({
           groups: [],
           attendanceChoices: [],
         });
+  const statisticsSelection = statisticsDrilldown
+    ? applyStatisticsDrilldownToOperations(
+        managerOperations.participants,
+        statistics,
+        statisticsDrilldown
+      )
+    : null;
+  const participantsSnapshot = statisticsSelection
+    ? {
+        ...managerOperations,
+        participants: statisticsSelection.participants,
+        statisticsFilter: statisticsSelection.summary,
+      }
+    : managerOperations;
   const selectedParticipant =
     managerOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
@@ -414,12 +432,16 @@ export default async function ManagerDashboardPage({
             />
 
             {activeSection === "dashboard" ? (
-              <StatisticsSection statistics={statistics} />
+              <StatisticsSection
+                statistics={statistics}
+                dashboard="manager"
+                navMode={navMode}
+              />
             ) : null}
 
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
-                snapshot={managerOperations}
+                snapshot={participantsSnapshot}
                 selectedParticipant={selectedCanManage ? selectedParticipant : null}
                 canManageEvent={scope.canManageEvent}
                 dashboard="manager"
@@ -870,6 +892,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.q ||
     params.event ||
     params.group ||
+    params.stat ||
     params.status ||
     params.managerError ||
     params.managerSaved
@@ -2425,14 +2448,6 @@ function EventValue({ label, value }: { label: string; value: number }) {
       <p className="mt-2 text-xl font-semibold">{value}</p>
     </div>
   );
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("it", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
 }
 
 function formatDateTime(value: string | null): string {

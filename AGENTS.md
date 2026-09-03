@@ -161,6 +161,17 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Le statistiche generiche sopra la tabella iscritti admin/manager sono state
   rimosse per ridurre rumore visivo. Inventario delle statistiche disponibili:
   `docs/statistiche-disponibili.md`.
+- Dal 2026-09-03 la pagina statistiche condivisa da admin e manager usa tre
+  report sintetici: riepilogo territori/gruppi, pivot geografica espandibile
+  paese > città > gruppo con colonne mattina/pomeriggio, riepilogo presenze e
+  fasce di età. La pivot mostra il livello gruppo soltanto per città con più
+  gruppi. Non esistono più le tabelle nominali per territorio, presenza o età,
+  né la vista completa finale. Tutti i conteggi sono link a `Gestione iscritti`
+  tramite il filtro compatto `stat`; il filtro deve continuare a includere i
+  minori accompagnati collegandoli alla relativa iscrizione familiare. Le
+  statistiche di presenza espongono solo mattina e pomeriggio dei giorni
+  dell'evento: eventuali scelte legacy `day` valgono per entrambe le fasce e
+  l'eventuale fascia di arrivo precedente all'inizio non compare nel report.
 - Il 2026-06-17 la roadmap futura e' stata rinumerata dalla prossima milestone
   in poi: Milestone 12 e' revisione guidata UX, navigazione e dati dashboard;
   Milestone 13 e' multilingua minima e testi localizzati; Milestone 14 e'

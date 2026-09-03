@@ -1,3 +1,10 @@
+import {
+  describeStatisticsDrilldown,
+  filterStatisticsPeople,
+  type EventStatisticsSnapshot,
+  type StatisticsDrilldownFilter,
+} from "./event-statistics.ts";
+
 export type OperationsParticipantForFilter = {
   eventId: string;
   eventTitle: string;
@@ -35,6 +42,13 @@ export type OperationsDashboardSummary = {
   withoutService: number;
 };
 
+export type OperationsStatisticsFilterSummary = {
+  label: string;
+  peopleCount: number;
+  registrationCount: number;
+  visibleRegistrationCount: number;
+};
+
 const DEFAULT_FILTERS: OperationsDashboardFilters = {
   q: "",
   contact: "",
@@ -70,6 +84,35 @@ export function applyOperationsDashboardFilters<
   return participants.filter((participant) =>
     matchesOperationsDashboardFilters(participant, filters)
   );
+}
+
+export function applyStatisticsDrilldownToOperations<
+  T extends { registrationId: string },
+>(
+  participants: T[],
+  statistics: EventStatisticsSnapshot,
+  filter: StatisticsDrilldownFilter
+): {
+  participants: T[];
+  summary: OperationsStatisticsFilterSummary;
+} {
+  const matchingPeople = filterStatisticsPeople(statistics.people, filter);
+  const matchingRegistrationIds = new Set(
+    matchingPeople.map((person) => person.registrationId)
+  );
+  const filteredParticipants = participants.filter((participant) =>
+    matchingRegistrationIds.has(participant.registrationId)
+  );
+
+  return {
+    participants: filteredParticipants,
+    summary: {
+      label: describeStatisticsDrilldown(filter, statistics.attendanceSlots),
+      peopleCount: matchingPeople.length,
+      registrationCount: matchingRegistrationIds.size,
+      visibleRegistrationCount: filteredParticipants.length,
+    },
+  };
 }
 
 export function summarizeOperationsDashboardParticipants(

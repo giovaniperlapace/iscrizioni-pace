@@ -61,6 +61,7 @@ import {
   getGroupRegistrationLinkStatus,
 } from "@/lib/groups/registration-links";
 import {
+  applyStatisticsDrilldownToOperations,
   applyOperationsDashboardFilters,
   parseOperationsDashboardFilters,
   summarizeOperationsDashboardParticipants,
@@ -77,6 +78,7 @@ import type {
 } from "@/lib/registrations/event-services";
 import {
   buildEventStatisticsSnapshot,
+  parseStatisticsDrilldown,
   type EventStatisticsSnapshot,
 } from "@/lib/registrations/event-statistics";
 import {
@@ -387,8 +389,10 @@ export default async function AdminDashboardPage({
       ? getAdminOperationsSnapshot(filters, currentEventId)
       : getAdminOperationsSnapshot(filters, null),
   ]);
+  const statisticsDrilldown =
+    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const statistics =
-    activeSection === "dashboard"
+    activeSection === "dashboard" || statisticsDrilldown
       ? await getAdminStatisticsSnapshot(
           adminOperations.groupTree,
           currentEventId,
@@ -400,6 +404,20 @@ export default async function AdminDashboardPage({
           groups: [],
           attendanceChoices: [],
         });
+  const statisticsSelection = statisticsDrilldown
+    ? applyStatisticsDrilldownToOperations(
+        adminOperations.participants,
+        statistics,
+        statisticsDrilldown
+      )
+    : null;
+  const participantsSnapshot = statisticsSelection
+    ? {
+        ...adminOperations,
+        participants: statisticsSelection.participants,
+        statisticsFilter: statisticsSelection.summary,
+      }
+    : adminOperations;
   const selectedAdminParticipant =
     adminOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
@@ -456,12 +474,16 @@ export default async function AdminDashboardPage({
             ) : null}
 
             {activeSection === "dashboard" ? (
-              <StatisticsSection statistics={statistics} />
+              <StatisticsSection
+                statistics={statistics}
+                dashboard="admin"
+                navMode={navMode}
+              />
             ) : null}
 
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
-                snapshot={adminOperations}
+                snapshot={participantsSnapshot}
                 selectedParticipant={selectedAdminParticipant}
                 canManageEvent={() => true}
                 dashboard="admin"
