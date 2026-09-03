@@ -92,7 +92,8 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
     emailAccess: {
       submit: "Continua",
       pending: "Invio...",
-      magicLinkSent: "Ti abbiamo inviato un link di accesso. Controlla la tua email.",
+      magicLinkSent:
+        "Ti abbiamo inviato un link di accesso. Controlla la tua email e anche la cartella spam.",
       errors: {
         email: "Inserisci un indirizzo email valido.",
         "rate-limit": "Troppi tentativi ravvicinati. Riprova tra qualche minuto.",
@@ -164,7 +165,8 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
     emailAccess: {
       submit: "Continue",
       pending: "Sending...",
-      magicLinkSent: "We sent you an access link. Please check your email.",
+      magicLinkSent:
+        "We sent you an access link. Please check your inbox and spam folder.",
       errors: {
         email: "Enter a valid email address.",
         "rate-limit": "Too many attempts in a short time. Try again in a few minutes.",
@@ -236,7 +238,8 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
     emailAccess: {
       submit: "Continuer",
       pending: "Envoi...",
-      magicLinkSent: "Nous t'avons envoyé un lien d'accès. Vérifie ton email.",
+      magicLinkSent:
+        "Nous t'avons envoyé un lien d'accès. Vérifie ta boîte de réception et le dossier spam.",
       errors: {
         email: "Saisis une adresse email valide.",
         "rate-limit": "Trop de tentatives rapprochées. Réessaie dans quelques minutes.",
@@ -308,7 +311,8 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
     emailAccess: {
       submit: "Weiter",
       pending: "Wird gesendet...",
-      magicLinkSent: "Wir haben dir einen Zugangslink gesendet. Bitte prüfe deine E-Mail.",
+      magicLinkSent:
+        "Wir haben dir einen Zugangslink gesendet. Bitte prüfe deinen Posteingang und den Spam-Ordner.",
       errors: {
         email: "Gib eine gültige E-Mail-Adresse ein.",
         "rate-limit": "Zu viele Versuche in kurzer Zeit. Bitte versuche es in einigen Minuten erneut.",
@@ -380,7 +384,8 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
     emailAccess: {
       submit: "Continuar",
       pending: "Enviando...",
-      magicLinkSent: "Te hemos enviado un enlace de acceso. Revisa tu email.",
+      magicLinkSent:
+        "Te hemos enviado un enlace de acceso. Revisa tu bandeja de entrada y la carpeta de spam.",
       errors: {
         email: "Introduce una dirección de email válida.",
         "rate-limit": "Demasiados intentos seguidos. Inténtalo de nuevo en unos minutos.",
@@ -452,7 +457,8 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
     emailAccess: {
       submit: "Doorgaan",
       pending: "Verzenden...",
-      magicLinkSent: "We hebben je een toegangslink gestuurd. Controleer je e-mail.",
+      magicLinkSent:
+        "We hebben je een toegangslink gestuurd. Controleer je inbox en spammap.",
       errors: {
         email: "Voer een geldig e-mailadres in.",
         "rate-limit": "Te veel pogingen kort na elkaar. Probeer het over enkele minuten opnieuw.",
@@ -524,7 +530,8 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
     emailAccess: {
       submit: "Продовжити",
       pending: "Надсилання...",
-      magicLinkSent: "Ми надіслали вам посилання для доступу. Перевірте електронну пошту.",
+      magicLinkSent:
+        "Ми надіслали вам посилання для доступу. Перевірте вхідні повідомлення та папку «Спам».",
       errors: {
         email: "Введіть дійсну електронну адресу.",
         "rate-limit": "Забагато спроб поспіль. Спробуйте ще раз за кілька хвилин.",
