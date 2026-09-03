@@ -1645,9 +1645,11 @@ Decisioni:
   ha già partecipato o se parteciperà con un gruppo: i valori sono impliciti e
   inviati come hidden (`hasPreviousSantegidioParticipation=yes`,
   `participatesWithGroup=yes`, `groupId=<gruppo>`).
-- Il riquadro del form pubblico da link riservato deve spiegare che il link
-  iscrive a quello specifico gruppo e offrire l'uscita verso `/registrazione`
-  per l'iscrizione generica se il gruppo non è corretto.
+- Il riquadro del form pubblico da link riservato deve indicare chiaramente il
+  gruppo vincolato nel formato italiano `Questo link iscrive al gruppo di
+  “Nome gruppo”`. Non deve offrire link o inviti verso `/registrazione` o verso
+  l'iscrizione generica, per evitare che la persona abbandoni per errore il
+  flusso specifico del gruppo.
 - Email e telefono sono alternativi: serve almeno un recapito.
 - Se l'email è presente, l'action blocca doppie iscrizioni allo stesso evento.
 - L'inserimento manuale non invia email automatiche al partecipante.

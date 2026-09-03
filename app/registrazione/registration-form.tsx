@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 
 import { submitPublicRegistration } from "@/app/actions";
 import { EventIdentity } from "@/components/event-identity";
@@ -120,8 +119,6 @@ type RegistrationFormCopy = {
   intro: string;
   groupLinkPrefix: string;
   groupLinkSuffix: string;
-  groupLinkHelp: string;
-  genericRegistration: string;
   firstName: string;
   lastName: string;
   country: string;
@@ -186,11 +183,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     newRegistration: "Nuova iscrizione",
     intro:
       "Questa è la prima iscrizione all'evento. Dopo l'invio potrai accedere alla tua dashboard, scaricare il QR code per l'ingresso e, quando sarà pubblicato il programma completo, scegliere i momenti a cui partecipare, come panel tematici ed eventi.",
-    groupLinkPrefix: "Questo link iscrive al gruppo",
+    groupLinkPrefix: "Questo link iscrive al gruppo di",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Se non pensi che questo sia il tuo gruppo, usa l'iscrizione generica per scegliere il gruppo o il referente corretto.",
-    genericRegistration: "Vai all'iscrizione generica",
     firstName: "Nome",
     lastName: "Cognome",
     country: "Paese in cui vivi abitualmente",
@@ -264,9 +258,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "This is your first registration for the event. After submitting it, you will be able to access your dashboard, download the QR code for entry and, when the full programme is published, choose the moments you want to attend, such as thematic panels and events.",
     groupLinkPrefix: "This link registers you with the group",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "If you do not think this is your group, use the general registration to choose the correct group or contact person.",
-    genericRegistration: "Go to general registration",
     firstName: "First name",
     lastName: "Last name",
     country: "Country where you usually live",
@@ -339,9 +330,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Il s'agit de ta première inscription à l'événement. Après l'envoi, tu pourras accéder à ton dashboard, télécharger le QR code pour l'entrée et, lorsque le programme complet sera publié, choisir les moments auxquels participer, comme les panels thématiques et les événements.",
     groupLinkPrefix: "Ce lien t'inscrit au groupe",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Si tu ne penses pas que ce soit ton groupe, utilise l'inscription générale pour choisir le bon groupe ou le bon référent.",
-    genericRegistration: "Aller à l'inscription générale",
     firstName: "Prénom",
     lastName: "Nom",
     country: "Pays où tu vis habituellement",
@@ -414,9 +402,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Dies ist deine erste Anmeldung für die Veranstaltung. Nach dem Absenden kannst du dein Dashboard öffnen, den QR-Code für den Einlass herunterladen und, sobald das vollständige Programm veröffentlicht ist, die Programmpunkte auswählen, an denen du teilnehmen möchtest.",
     groupLinkPrefix: "Dieser Link meldet dich für die Gruppe an",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Wenn du denkst, dass dies nicht deine Gruppe ist, nutze die allgemeine Anmeldung, um die richtige Gruppe oder Kontaktperson auszuwählen.",
-    genericRegistration: "Zur allgemeinen Anmeldung",
     firstName: "Vorname",
     lastName: "Nachname",
     country: "Land, in dem du normalerweise lebst",
@@ -489,9 +474,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Esta es tu primera inscripción al evento. Después de enviarla podrás acceder a tu panel, descargar el código QR para la entrada y, cuando se publique el programa completo, elegir los momentos en los que participar, como paneles temáticos y eventos.",
     groupLinkPrefix: "Este enlace te inscribe en el grupo",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Si no crees que este sea tu grupo, usa la inscripción general para elegir el grupo o referente correcto.",
-    genericRegistration: "Ir a la inscripción general",
     firstName: "Nombre",
     lastName: "Apellidos",
     country: "País en el que vives habitualmente",
@@ -564,9 +546,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Dit is je eerste inschrijving voor het evenement. Na verzending kun je je dashboard openen, de QR-code voor de toegang downloaden en, zodra het volledige programma is gepubliceerd, de momenten kiezen waaraan je wilt deelnemen.",
     groupLinkPrefix: "Deze link schrijft je in bij de groep",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Als je denkt dat dit niet je groep is, gebruik dan de algemene inschrijving om de juiste groep of contactpersoon te kiezen.",
-    genericRegistration: "Ga naar algemene inschrijving",
     firstName: "Voornaam",
     lastName: "Achternaam",
     country: "Land waar je gewoonlijk woont",
@@ -639,9 +618,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Це ваша перша реєстрація на подію. Після надсилання ви зможете відкрити свою панель, завантажити QR-код для входу і, коли буде опублікована повна програма, вибрати частини програми, у яких хочете взяти участь.",
     groupLinkPrefix: "Це посилання реєструє вас у групі",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Якщо ви вважаєте, що це не ваша група, скористайтеся загальною реєстрацією, щоб вибрати правильну групу або контактну особу.",
-    genericRegistration: "Перейти до загальної реєстрації",
     firstName: "Ім'я",
     lastName: "Прізвище",
     country: "Країна, де ви зазвичай живете",
@@ -1062,19 +1038,10 @@ export function RegistrationForm({
               <p className="font-semibold">
                 {copy.groupLinkPrefix}{" "}
                 <span className="text-[var(--peace-blue-900)]">
-                  {options.groupLink.displayLabel}
+                  “{options.groupLink.displayLabel}”
                 </span>
                 {copy.groupLinkSuffix}
               </p>
-              <p className="mt-2 leading-6 text-[var(--peace-muted)]">
-                {copy.groupLinkHelp}
-              </p>
-              <Link
-                href="/registrazione"
-                className="btn-secondary mt-3 inline-flex min-h-9 items-center px-3 text-sm"
-              >
-                {copy.genericRegistration}
-              </Link>
             </div>
           ) : null}
         </div>

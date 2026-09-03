@@ -16,3 +16,17 @@ test("public attendance choices use cards on mobile and a table on wider screens
   );
   assert.doesNotMatch(registrationForm, /overflow-x-auto overscroll-x-contain/);
 });
+
+test("reserved group links keep registration bound to the quoted group", () => {
+  assert.match(
+    registrationForm,
+    /groupLinkPrefix: "Questo link iscrive al gruppo di"/
+  );
+  assert.match(
+    registrationForm,
+    /“\{options\.groupLink\.displayLabel\}”/
+  );
+  assert.doesNotMatch(registrationForm, /href="\/registrazione"/);
+  assert.doesNotMatch(registrationForm, /genericRegistration/);
+  assert.doesNotMatch(registrationForm, /groupLinkHelp/);
+});
