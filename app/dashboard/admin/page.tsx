@@ -1,6 +1,7 @@
+import { Settings } from "lucide-react";
 
 import { ReliableForm } from "@/components/reliable-form";
-import { redirect } from "next/navigation";
+import { permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import {
   BarChart3,
@@ -17,7 +18,6 @@ import {
   assignOperationalUserRole,
   assignGroupLeader,
   createFutureEvent,
-  createGroupRegistrationLink,
   saveOperationsGroup,
   setCurrentOperationalEvent,
   updateGroupPublicCatalogVisibility,
@@ -285,6 +285,7 @@ type AdminGroupRegistrationLinkRow = {
   public_label: string | null;
   internal_label: string | null;
   token_encrypted: string | null;
+  slug: string | null;
   use_count: number | null;
   max_uses: number | null;
   created_at: string | null;
@@ -360,13 +361,18 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type AdminSection = "evento" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
+type AdminSection = "impostazioni" | "evento" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
   searchParams,
 }: AdminPageProps) {
   const params = await searchParams;
+  if (params.section === "servizi" || params.section === "impostazioni") {
+    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    legacy.set("section", "impostazioni");
+    permanentRedirect(`/dashboard/manager?${legacy}`);
+  }
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "admin");
 
@@ -601,7 +607,7 @@ export default async function AdminDashboardPage({
       serviceSupabase
         .from("group_registration_links")
         .select(
-          "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
+          "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
         )
         .eq("event_id", currentEventId)
         .eq("is_canonical", true)
@@ -802,7 +808,7 @@ export default async function AdminDashboardPage({
           groupId: link.group_id,
           publicLabel: link.public_label,
           internalLabel: link.internal_label,
-          url: buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
+          url: link.slug ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token: link.slug }) : buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
           useCount: link.use_count ?? 0,
           maxUses: link.max_uses,
           createdAt: link.created_at,
@@ -1093,6 +1099,13 @@ function AdminSidebar({
       Icon: Users,
       label: "Gestione iscritti",
       help: "Elenco e modifiche",
+    },
+    {
+      key: "impostazioni",
+      href: "/dashboard/manager?section=impostazioni&nav=mini",
+      Icon: Settings,
+      label: "Impostazioni",
+      help: "Catalogo servizi",
     },
     {
       key: "email",
@@ -2203,24 +2216,7 @@ function AdminGroupLinksOverlay({
         </div>
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
           <AutoCopyLinkNotice url={createdUrl} />
-          {links.length === 0 ? (
-            <ReliableForm action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
-              <input type="hidden" name="sourceDashboard" value="admin" />
-              <input type="hidden" name="groupId" value={group.id} />
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                Nome pubblico del link
-                <input
-                  name="displayName"
-                  className="field"
-                  defaultValue={group.publicLabel ?? group.name}
-                  required
-                />
-              </label>
-              <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                Genera link
-              </PendingSubmitButton>
-            </ReliableForm>
-          ) : null}
+
 
           <div className="grid gap-2">
             {links.map((link) => (
@@ -2242,8 +2238,13 @@ function AdminGroupLinksOverlay({
                         required
                       />
                     </label>
-                    <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
-                      Salva nome
+                    <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                        Slug (URL)
+                        <input name="slug" className="field bg-white text-sm" defaultValue={link.url ? decodeURIComponent(new URL(link.url).pathname.slice(1)) : ""} pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,95}" minLength={3} maxLength={96} required />
+                        <span className="font-normal">Modificando lo slug, il vecchio URL non sarà più valido.</span>
+                      </label>
+                      <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                      Salva link
                     </PendingSubmitButton>
                   </ReliableForm>
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">

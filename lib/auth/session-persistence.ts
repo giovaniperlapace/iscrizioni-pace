@@ -5,6 +5,8 @@ export const SESSION_STATE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 const ADMIN_SECTIONS = new Set([
   "evento",
+  "servizi",
+  "impostazioni",
   "dashboard",
   "iscritti",
   "ruoli",
@@ -14,6 +16,7 @@ const MANAGER_SECTIONS = new Set([
   "dashboard",
   "iscritti",
   "servizi",
+  "impostazioni",
   "email",
   "ruoli",
   "gruppi",

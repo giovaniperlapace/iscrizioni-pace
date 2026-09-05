@@ -7,7 +7,6 @@ import type { ReactNode } from "react";
 
 import {
   createGroupLeaderManualRegistration,
-  createGroupRegistrationLink,
   updateParticipantEventService,
   updateGroupLeaderAssignment,
   updateGroupRegistrationLink,
@@ -106,6 +105,7 @@ type GroupLinkRow = {
   public_label: string | null;
   internal_label: string | null;
   token_encrypted: string | null;
+  slug: string | null;
   use_count: number | null;
   max_uses: number | null;
   created_at: string | null;
@@ -477,7 +477,9 @@ type GroupLeaderCopy = {
   publicHidden: string;
   leader: string;
   manageLinks: string;
-  generateLink: string;
+  linkSlug: string;
+  linkSlugHelp: string;
+
   addParticipant: string;
   inactiveGroupHelp: string;
   noGroups: string;
@@ -498,7 +500,7 @@ type GroupLeaderCopy = {
   justCreatedLink: string;
   unlabeledLink: string;
   existingLinks: string;
-  newLink: string;
+
   saveLinkName: string;
   copyLink: string;
   uses: string;
@@ -622,7 +624,9 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   publicHidden: "Non visibile nel form pubblico",
   leader: "referente",
   manageLinks: "Gestisci link",
-  generateLink: "Genera link",
+  linkSlug: "Slug (indirizzo del link)",
+    linkSlugHelp: "Modificando lo slug, il vecchio URL non sarà più valido.",
+
   addParticipant: "Inserisci partecipante",
   inactiveGroupHelp:
     "Questo gruppo è collegato al tuo account, ma non è attivo nel catalogo operativo. Prima di usare link o inserimenti manuali serve un intervento di un manager/admin per riattivarlo o collegarti al gruppo corretto.",
@@ -646,8 +650,8 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   justCreatedLink: "Link appena generato",
   unlabeledLink: "Link senza etichetta",
   existingLinks: "Link del gruppo",
-  newLink: "Genera link",
-  saveLinkName: "Salva nome",
+
+  saveLinkName: "Salva link",
   copyLink: "Copia link",
   uses: "usi",
   noActiveLinks: "Nessun link attivo.",
@@ -780,7 +784,9 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   publicHidden: "Not visible in the public form",
   leader: "contact person",
   manageLinks: "Manage links",
-  generateLink: "Generate link",
+  linkSlug: "Slug (link address)",
+    linkSlugHelp: "Changing the slug makes the previous URL invalid.",
+
   addParticipant: "Add participant",
   inactiveGroupHelp:
     "This group is linked to your account, but it is not active in the operational catalogue. Before using links or manual entries, a manager/admin needs to reactivate it or connect you to the correct group.",
@@ -804,8 +810,8 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   justCreatedLink: "Newly generated link",
   unlabeledLink: "Unlabelled link",
   existingLinks: "Group link",
-  newLink: "Generate link",
-  saveLinkName: "Save name",
+
+  saveLinkName: "Save link",
   copyLink: "Copy link",
   uses: "uses",
   noActiveLinks: "No active link.",
@@ -938,7 +944,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participants du groupe",
     participantsHelp:
       "Tu trouves ici les personnes reliées aux groupes que tu gères. Les décisions sur le groupe sont internes et n'envoient pas de message automatique au participant.",
-    generateLink: "Générer un lien",
+    linkSlug: "Slug (adresse du lien)",
+    linkSlugHelp: "Si vous modifiez le slug, l’ancienne URL ne sera plus valide.",
+    saveLinkName: "Enregistrer le lien",
+
     addParticipant: "Ajouter un participant",
     inactiveGroupHelp:
       "Ce groupe est relié à ton compte, mais il n'est pas actif dans le catalogue opérationnel. Avant d'utiliser des liens ou des ajouts manuels, un manager/admin doit le réactiver ou te relier au bon groupe.",
@@ -1065,7 +1074,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Teilnehmende der Gruppe",
     participantsHelp:
       "Hier findest du die Personen, die mit den von dir verwalteten Gruppen verbunden sind. Gruppenentscheidungen sind intern und senden keine automatischen Nachrichten an die teilnehmende Person.",
-    generateLink: "Link erstellen",
+    linkSlug: "Slug (Linkadresse)",
+    linkSlugHelp: "Wenn Sie den Slug ändern, ist die bisherige URL nicht mehr gültig.",
+    saveLinkName: "Link speichern",
+
     addParticipant: "Teilnehmende Person hinzufügen",
     inactiveGroupHelp:
       "Diese Gruppe ist mit deinem Konto verbunden, aber im operativen Katalog nicht aktiv. Bevor Links oder manuelle Einträge verwendet werden, muss ein Manager/Admin sie reaktivieren oder dich mit der richtigen Gruppe verbinden.",
@@ -1192,7 +1204,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participantes del grupo",
     participantsHelp:
       "Aquí encuentras las personas vinculadas a los grupos que gestionas. Las decisiones sobre el grupo son internas y no envían mensajes automáticos al participante.",
-    generateLink: "Generar enlace",
+    linkSlug: "Slug (dirección del enlace)",
+    linkSlugHelp: "Al cambiar el slug, la URL anterior dejará de ser válida.",
+    saveLinkName: "Guardar enlace",
+
     addParticipant: "Añadir participante",
     inactiveGroupHelp:
       "Este grupo está vinculado a tu cuenta, pero no está activo en el catálogo operativo. Antes de usar enlaces o entradas manuales, un manager/admin debe reactivarlo o conectarte al grupo correcto.",
@@ -1319,7 +1334,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Deelnemers van de groep",
     participantsHelp:
       "Hier vind je de mensen die gekoppeld zijn aan de groepen die je beheert. Beslissingen over de groep zijn intern en sturen geen automatische berichten naar de deelnemer.",
-    generateLink: "Link genereren",
+    linkSlug: "Slug (linkadres)",
+    linkSlugHelp: "Als je de slug wijzigt, is de vorige URL niet meer geldig.",
+    saveLinkName: "Link opslaan",
+
     addParticipant: "Deelnemer toevoegen",
     inactiveGroupHelp:
       "Deze groep is gekoppeld aan je account, maar is niet actief in de operationele catalogus. Voordat je links of handmatige invoer gebruikt, moet een manager/admin de groep opnieuw activeren of je aan de juiste groep koppelen.",
@@ -1446,7 +1464,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Учасники групи",
     participantsHelp:
       "Тут можна знайти людей, пов'язаних із групами, якими ви керуєте. Рішення щодо групи є внутрішніми і не надсилають автоматичних повідомлень учаснику.",
-    generateLink: "Створити посилання",
+    linkSlug: "Slug (адреса посилання)",
+    linkSlugHelp: "Після зміни slug попередня URL-адреса більше не буде дійсною.",
+    saveLinkName: "Зберегти посилання",
+
     addParticipant: "Додати учасника",
     inactiveGroupHelp:
       "Ця група пов'язана з вашим обліковим записом, але не активна в робочому каталозі. Перед використанням посилань або ручного додавання manager/admin має повторно активувати її або прив'язати вас до правильної групи.",
@@ -1793,7 +1814,7 @@ export default async function CapogruppoDashboardPage({
     const { data, error } = await serviceSupabase
       .from("group_registration_links")
       .select(
-        "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
+        "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
       )
       .in("group_id", groupIds)
       .eq("event_id", currentEventId)
@@ -1814,7 +1835,7 @@ export default async function CapogruppoDashboardPage({
       groupId: link.group_id,
       publicLabel: link.public_label,
       internalLabel: link.internal_label,
-      url: buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
+      url: link.slug ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token: link.slug }) : buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
       useCount: link.use_count ?? 0,
       maxUses: link.max_uses,
       createdAt: link.created_at,
@@ -2112,7 +2133,12 @@ function GroupLeaderLinksSection({
                               required
                             />
                           </label>
-                          <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                          <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                        {copy.linkSlug}
+                        <input name="slug" className="field bg-white text-sm" defaultValue={link.url ? decodeURIComponent(new URL(link.url).pathname.slice(1)) : ""} pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,95}" minLength={3} maxLength={96} required />
+                        <span className="font-normal">{copy.linkSlugHelp}</span>
+                      </label>
+                      <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
                             {copy.saveLinkName}
                           </PendingSubmitButton>
                         </ReliableForm>
@@ -2144,31 +2170,7 @@ function GroupLeaderLinksSection({
                   </div>
                 </div>
 
-                {groupLinks.length === 0 ? (
-                  <ReliableForm
-                    action={createGroupRegistrationLink}
-                    className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4"
-                    data-preserve-dashboard-scroll
-                  >
-                    <input type="hidden" name="sourceDashboard" value="capogruppo" />
-                    <input type="hidden" name="groupId" value={group.id} />
-                    <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
-                      {copy.newLink}
-                    </h4>
-                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                      {copy.publicLabel}
-                      <input
-                        name="displayName"
-                        className="field"
-                        defaultValue={group.publicLabel ?? group.name}
-                        required
-                      />
-                    </label>
-                    <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                      {copy.generateLink}
-                    </PendingSubmitButton>
-                  </ReliableForm>
-                ) : null}
+
               </div>
             </article>
           );

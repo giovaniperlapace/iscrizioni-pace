@@ -3,7 +3,7 @@ import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 import {
   BarChart3,
-  ClipboardList,
+  Settings,
   Mail,
   Network,
   Pencil,
@@ -11,12 +11,11 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { redirect } from "next/navigation";
+import { permanentRedirect, redirect } from "next/navigation";
 
 import {
   assignOperationalUserRole,
   assignGroupLeader,
-  createGroupRegistrationLink,
   saveEventService,
   saveOperationsGroup,
   updateGroupPublicCatalogVisibility,
@@ -220,6 +219,7 @@ type ManagerGroupRegistrationLinkRow = {
   public_label: string | null;
   internal_label: string | null;
   token_encrypted: string | null;
+  slug: string | null;
   use_count: number | null;
   max_uses: number | null;
   created_at: string | null;
@@ -317,13 +317,18 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type ManagerSection = "dashboard" | "iscritti" | "servizi" | "email" | "ruoli" | "gruppi";
+type ManagerSection = "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
   searchParams,
 }: ManagerPageProps) {
   const params = await searchParams;
+  if (params.section === "servizi") {
+    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    legacy.set("section", "impostazioni");
+    permanentRedirect(`/dashboard/manager?${legacy}`);
+  }
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "manager");
 
@@ -452,7 +457,7 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
-            {activeSection === "servizi" ? (
+            {activeSection === "impostazioni" ? (
               <ManagerServicesSection
                 services={managerOperations.eventServices}
                 currentEventOption={
@@ -562,11 +567,11 @@ function ManagerSidebar({
       help: "Elenco e modifiche",
     },
     {
-      key: "servizi",
-      href: "/dashboard/manager?section=servizi&nav=mini",
-      Icon: ClipboardList,
-      label: "Servizi",
-      help: "Lista e assegnazioni",
+      key: "impostazioni",
+      href: "/dashboard/manager?section=impostazioni&nav=mini",
+      Icon: Settings,
+      label: "Impostazioni",
+      help: "Catalogo servizi",
     },
     {
       key: "email",
@@ -849,7 +854,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
   if (
     params.section === "dashboard" ||
     params.section === "iscritti" ||
-    params.section === "servizi" ||
+    params.section === "impostazioni" ||
     params.section === "email" ||
     params.section === "ruoli" ||
     params.section === "gruppi"
@@ -879,7 +884,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.serviceId ||
     params.serviceSaved
   ) {
-    return "servizi";
+    return "impostazioni";
   }
 
   if (
@@ -958,7 +963,7 @@ async function getManagerOperationsSnapshot(
   const groupLinksQuery = supabase
     .from("group_registration_links")
     .select(
-      "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
+      "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
     )
     .eq("event_id", currentEventId)
     .eq("is_canonical", true)
@@ -1181,7 +1186,7 @@ async function getManagerOperationsSnapshot(
         groupId: link.group_id,
         publicLabel: link.public_label,
         internalLabel: link.internal_label,
-        url: buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
+        url: link.slug ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token: link.slug }) : buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
         useCount: link.use_count ?? 0,
         maxUses: link.max_uses,
         createdAt: link.created_at,
@@ -1702,28 +1707,7 @@ function ManagerGroupLinksOverlay({
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
           <AutoCopyLinkNotice url={createdUrl} />
 
-          {canManage && links.length === 0 ? (
-            <ReliableForm action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
-              <input type="hidden" name="sourceDashboard" value="manager" />
-              <input type="hidden" name="groupId" value={group.id} />
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                Nome pubblico del link
-                <input
-                  name="displayName"
-                  className="field"
-                  defaultValue={group.publicLabel ?? group.name}
-                  required
-                />
-              </label>
-              <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                Genera link
-              </PendingSubmitButton>
-            </ReliableForm>
-          ) : !canManage ? (
-            <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
-              Consultazione senza permessi di modifica.
-            </p>
-          ) : null}
+
 
           <div className="grid gap-2">
             {links.map((link) => (
@@ -1746,8 +1730,13 @@ function ManagerGroupLinksOverlay({
                           required
                         />
                       </label>
+                      <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                        Slug (URL)
+                        <input name="slug" className="field bg-white text-sm" defaultValue={link.url ? decodeURIComponent(new URL(link.url).pathname.slice(1)) : ""} pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,95}" minLength={3} maxLength={96} required />
+                        <span className="font-normal">Modificando lo slug, il vecchio URL non sarà più valido.</span>
+                      </label>
                       <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
-                        Salva nome
+                        Salva link
                       </PendingSubmitButton>
                     </ReliableForm>
                   ) : (
@@ -1892,7 +1881,8 @@ function ManagerServicesSection({
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
-        <h2 className="text-lg font-semibold">Servizi</h2>
+        <h2 className="text-lg font-semibold">Impostazioni</h2>
+        <h3 className="mt-5 text-base font-semibold">Catalogo servizi</h3>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
           Lista dei servizi disponibili nell&apos;evento. I partecipanti non
           possono assegnarsi un servizio in autonomia: manager e capigruppo
@@ -2006,7 +1996,7 @@ function ManagerServicesSection({
                 </td>
                 <td className="py-4 pl-4 text-right">
                   <Link
-                    href={`${managerPath("servizi", navMode)}&serviceId=${service.id}`}
+                    href={`${managerPath("impostazioni", navMode)}&serviceId=${service.id}`}
                     scroll={false}
                     className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                   >
@@ -2052,7 +2042,7 @@ function ManagerServiceEditOverlay({
             </p>
           </div>
           <Link
-            href={managerPath("servizi", navMode)}
+            href={managerPath("impostazioni", navMode)}
             scroll={false}
             className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label="Chiudi modale modifica servizio"
@@ -2098,7 +2088,7 @@ function ManagerServiceEditOverlay({
           </div>
           <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
             <Link
-              href={managerPath("servizi", navMode)}
+              href={managerPath("impostazioni", navMode)}
               scroll={false}
               className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >

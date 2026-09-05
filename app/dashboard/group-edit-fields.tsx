@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { SearchableSelectField } from "@/app/dashboard/searchable-select-field";
 
 export type GroupEditTreeRow = {
@@ -6,6 +9,7 @@ export type GroupEditTreeRow = {
   name: string;
   parentGroupId: string | null;
   nodeType: string | null;
+  isAssignable?: boolean | null;
 };
 
 export type GroupEditLeaderRow = {
@@ -34,64 +38,67 @@ export function GroupPlacementFields({
   groups,
   eventId,
 }: GroupPlacementFieldsProps) {
-  const countryGroups = groups
-    .filter(
-      (candidate) =>
-        candidate.eventId === eventId &&
-        candidate.id !== group?.id &&
-        candidate.nodeType === "country"
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const cityGroups = groups
-    .filter(
-      (candidate) =>
-        candidate.eventId === eventId &&
-        candidate.id !== group?.id &&
-        candidate.nodeType === "city"
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const countryNameById = new Map(
-    countryGroups.map((candidate) => [candidate.id, candidate.name])
+  const [nodeType, setNodeType] = useState(group?.nodeType ?? "group");
+  const [assignable, setAssignable] = useState(group?.nodeType === "group" ? true : group?.isAssignable ?? true);
+  const excluded = new Set(group ? [group.id] : []);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const row of groups) {
+      if (row.parentGroupId && excluded.has(row.parentGroupId) && !excluded.has(row.id)) {
+        excluded.add(row.id);
+        changed = true;
+      }
+    }
+  }
+  const parents = groups.filter((row) => row.eventId === eventId && !excluded.has(row.id));
+  const allowedParents = parents.filter((row) =>
+    nodeType === "city" ? row.nodeType === "country" :
+    nodeType === "area" ? row.nodeType === "city" : true
   );
-  const currentPlacement =
-    group && isSupportedPlacement(group.nodeType)
-      ? placementValue(group.nodeType, group.parentGroupId)
-      : "";
-  const placementOptions = [
-    {
-      groupLabel: "Paesi",
-      label: "Crea un nuovo paese",
-      value: "country:",
-    },
-    ...countryGroups.map((country) => ({
-      groupLabel: "Città",
-      label: `Crea una nuova città in ${country.name}`,
-      value: placementValue("city", country.id),
-    })),
-    ...cityGroups.map((city) => {
-      const countryName = city.parentGroupId
-        ? countryNameById.get(city.parentGroupId)
-        : null;
-
-      return {
-        groupLabel: "Aree",
-        label: `Crea una nuova area in ${countryName ? `${countryName} / ` : ""}${city.name}`,
-        value: placementValue("area", city.id),
-      };
-    }),
-  ];
+  const names = new Map(parents.map((row) => [row.id, row.name]));
+  const options = allowedParents.map((row) => ({
+    label: `${row.parentGroupId && names.has(row.parentGroupId) ? `${names.get(row.parentGroupId)} / ` : ""}${row.name}`,
+    value: row.id,
+  }));
 
   return (
     <>
       <input type="hidden" name="eventId" value={eventId} />
-      <SearchableSelectField
-        label="Posizione del gruppo: a quale paese o città appartiene"
-        name="groupPlacement"
-        options={placementOptions}
-        placeholder="Cerca paese o città"
-        required
-        value={currentPlacement}
-      />
+      <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+        Tipo
+        <select name="groupNodeType" className="field" value={nodeType} onChange={(event) => {
+          setNodeType(event.target.value);
+          setAssignable(event.target.value === "group");
+        }}>
+          <option value="group">Gruppo effettivo</option>
+          <option value="country">Nodo territoriale: paese</option>
+          <option value="city">Nodo territoriale: città</option>
+          <option value="area">Nodo territoriale: area</option>
+          {group?.nodeType === "newcomers" ? <option value="newcomers">Nodo nuovi partecipanti (storico)</option> : null}
+        </select>
+      </label>
+      {nodeType !== "country" ? (
+        <SearchableSelectField
+          key={nodeType}
+          label="Appartiene a"
+          name="parentGroupId"
+          options={options}
+          placeholder={nodeType === "group" ? "Nessun nodo superiore (facoltativo)" : "Seleziona il territorio"}
+          required={nodeType === "city" || nodeType === "area"}
+          value={allowedParents.some((row) => row.id === group?.parentGroupId) ? group?.parentGroupId ?? "" : ""}
+        />
+      ) : <input type="hidden" name="parentGroupId" value="" />}
+      <div className="grid gap-2 sm:col-span-2">
+        <input type="hidden" name="isAssignable" value={assignable ? "on" : "off"} />
+        <label className="flex items-center gap-3 text-sm font-semibold">
+          <input type="checkbox" checked={assignable} disabled={nodeType === "group"} onChange={(event) => setAssignable(event.target.checked)} />
+          {nodeType === "group" ? "Gruppo iscrivibile e assegnabile" : "Questo nodo è anche un gruppo iscrivibile e assegnabile"}
+        </label>
+        <p className="text-sm text-[var(--peace-muted)]">
+          {assignable ? "Il link di iscrizione viene creato automaticamente. Puoi modificarlo da Gestisci link." : "Serve a organizzare l’albero: non riceve iscrizioni né un link."}
+        </p>
+      </div>
     </>
   );
 }
@@ -188,16 +195,6 @@ export function GroupAgeBandFields({
       </div>
     </fieldset>
   );
-}
-
-function isSupportedPlacement(
-  nodeType: string | null
-): nodeType is "country" | "city" | "area" {
-  return nodeType === "country" || nodeType === "city" || nodeType === "area";
-}
-
-function placementValue(nodeType: string | null, parentGroupId: string | null) {
-  return `${nodeType ?? "country"}:${parentGroupId ?? ""}`;
 }
 
 function deduplicateLeaders(leaders: GroupEditLeaderRow[]) {

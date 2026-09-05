@@ -18,7 +18,7 @@ import {
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
 import {
-  createGroupRegistrationLinkToken,
+  isValidGroupRegistrationLinkToken,
   hashGroupRegistrationLinkToken,
   isReservedGroupRegistrationLinkToken,
   normalizeGroupRegistrationPublicLabel,
@@ -1745,152 +1745,11 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   redirect("/dashboard/capogruppo?manualSaved=1");
 }
 
-export async function createGroupRegistrationLink(formData: FormData) {
-  const groupId = optionalText(formData.get("groupId"));
-  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
-  const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
-  const publicLabel = normalizeGroupRegistrationPublicLabel(
-    formData.get("displayName")
-  );
-
-  if (!publicLabel) return formFailure([{ field: "displayName", code: "required" }]);
-
-  if (!groupId) {
-    return formFailureFromRedirect(`${dashboardPath}?groupLinkError=invalid`);
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(
-    supabase,
-    getGroupManagementRequestedRole(sourceDashboard)
-  );
-
-  if (!auth) {
-    redirect("/login");
-  }
-
-  const serviceSupabase = createSupabaseServiceClient();
-  const { data: group, error: groupError } = await serviceSupabase
-    .from("groups")
-    .select("id,event_id,name,is_active,is_assignable")
-    .eq("id", groupId)
-    .maybeSingle();
-
-  const groupRow = group as
-    | {
-        id: string;
-        event_id: string;
-        name: string | null;
-        is_active: boolean | null;
-        is_assignable: boolean | null;
-      }
-    | null;
-
-  if (
-    groupError ||
-    !groupRow ||
-    !groupRow.is_active ||
-    !groupRow.is_assignable ||
-    !(await canManageGroupRegistrationLink(serviceSupabase, auth.user.id, auth.eventRoles, groupRow.id, groupRow.event_id, sourceDashboard))
-  ) {
-    return formFailureFromRedirect(`${dashboardPath}?groupLinkError=forbidden`);
-  }
-
-  const { data: existingLink, error: existingLinkError } = await serviceSupabase
-    .from("group_registration_links")
-    .select("id")
-    .eq("event_id", groupRow.event_id)
-    .eq("group_id", groupRow.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingLinkError) {
-    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" }));
-  }
-
-  if (existingLink) {
-    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, {
-        error: "link-already-exists",
-      }));
-  }
-
-  const tokenCandidates = Array.from({ length: 50 }, (_, index) =>
-    createGroupRegistrationLinkToken(publicLabel, index + 1)
-  );
-  const tokenHashes = new Map(
-    tokenCandidates.map((candidate) => [
-      candidate,
-      hashGroupRegistrationLinkToken(candidate),
-    ])
-  );
-  const { data: tokenCollisions, error: tokenCollisionError } =
-    await serviceSupabase
-      .from("group_registration_links")
-      .select("token_hash")
-      .in("token_hash", [...tokenHashes.values()]);
-
-  if (tokenCollisionError) {
-    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" }));
-  }
-
-  const usedTokenHashes = new Set(
-    ((tokenCollisions ?? []) as { token_hash: string }[]).map(
-      (row) => row.token_hash
-    )
-  );
-  const token = tokenCandidates.find(
-    (candidate) =>
-      !isReservedGroupRegistrationLinkToken(candidate) &&
-      !usedTokenHashes.has(tokenHashes.get(candidate)!)
-  );
-
-  if (!token) {
-    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" }));
-  }
-
-  const { data: link, error: linkError } = await serviceSupabase
-    .from("group_registration_links")
-    .insert({
-      event_id: groupRow.event_id,
-      group_id: groupRow.id,
-      token_hash: hashGroupRegistrationLinkToken(token),
-      token_encrypted: encryptQrToken(token),
-      public_label: publicLabel,
-      internal_label: publicLabel,
-      created_by: auth.user.id,
-    })
-    .select("id")
-    .single();
-
-  if (linkError || !link) {
-    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, {
-        error: linkError?.code === "23505" ? "link-already-exists" : "create",
-      }));
-  }
-
-  await serviceSupabase.from("audit_logs").insert({
-    event_id: groupRow.event_id,
-    actor_user_id: auth.user.id,
-    action: "group_registration_link.created",
-    entity_table: "group_registration_links",
-    entity_id: (link as { id: string }).id,
-    metadata: {
-      group_id: groupRow.id,
-      has_public_label: true,
-      token_format: "readable_slug",
-    },
-  });
-
-  revalidatePath("/dashboard/manager");
-  revalidatePath("/dashboard/admin");
-  revalidatePath("/dashboard/capogruppo");
-  redirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, {
-    saved: true,
-    token,
-  }));
-}
-
 export async function updateGroupRegistrationLink(formData: FormData) {
+  const slug = optionalText(formData.get("slug"));
+  if (slug && (!isValidGroupRegistrationLinkToken(slug) || isReservedGroupRegistrationLinkToken(slug))) {
+    return formFailure([{ field: "slug", code: "invalid" }]);
+  }
   const linkId = optionalText(formData.get("linkId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
@@ -1941,9 +1800,13 @@ export async function updateGroupRegistrationLink(formData: FormData) {
     .update({
       public_label: publicLabel,
       internal_label: publicLabel,
+      ...(slug ? { slug, token_hash: hashGroupRegistrationLinkToken(slug), token_encrypted: encryptQrToken(slug) } : {}),
     })
     .eq("id", linkRow.id);
 
+  if (updateError?.code === "23505") {
+    return formFailure([{ field: "slug", code: "duplicate" }]);
+  }
   if (updateError) {
     return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, linkRow.group_id, {
         error: "update",
@@ -1975,11 +1838,8 @@ export async function saveOperationsGroup(formData: FormData) {
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
   const groupId = optionalText(formData.get("groupId"));
   const name = optionalText(formData.get("name"));
-  const groupPlacement = parseGroupPlacement(formData.get("groupPlacement"));
-  const parentGroupId =
-    groupPlacement.parentGroupId ?? optionalText(formData.get("parentGroupId"));
-  const nodeType =
-    groupPlacement.nodeType ?? optionalText(formData.get("nodeType")) ?? "group";
+  const parentGroupId = optionalText(formData.get("parentGroupId"));
+  const nodeType = optionalText(formData.get("groupNodeType"));
   const primaryLeaderUserId = optionalText(formData.get("primaryLeaderUserId"));
   const primaryLeaderMode =
     primaryLeaderUserId === "__new__"
@@ -1990,7 +1850,7 @@ export async function saveOperationsGroup(formData: FormData) {
 
   if (!name) return formFailure([{ field: "name", code: "required" }]);
 
-  if (!isValidGroupNodeType(nodeType)) {
+  if (!nodeType || !isValidGroupNodeType(nodeType)) {
     return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
   }
 
@@ -2045,29 +1905,21 @@ export async function saveOperationsGroup(formData: FormData) {
     }
   }
 
-  if (parentGroupId) {
-    const { data: parentGroup, error: parentGroupError } = await serviceSupabase
-      .from("groups")
-      .select("id,event_id")
-      .eq("id", parentGroupId)
-      .maybeSingle();
-    const parentGroupRow = parentGroup as
-      | { id: string; event_id: string }
-      | null;
-
-    if (
-      parentGroupError ||
-      !parentGroupRow ||
-      parentGroupRow.event_id !== eventId ||
-      parentGroupRow.id === groupId
-    ) {
-      return formFailureFromRedirect(`${dashboardPath}?groupError=invalid-parent`);
-    }
+  const { data: tree, error: treeError } = await serviceSupabase
+    .from("groups").select("id,parent_group_id,node_type").eq("event_id", eventId);
+  const parent = tree?.find((row) => row.id === parentGroupId);
+  const descendants = collectDescendantGroupIds((tree ?? []).map((row) => ({
+    id: row.id, parentGroupId: row.parent_group_id,
+  })), groupId ? [groupId] : []);
+  if (treeError || (parentGroupId && (!parent || descendants.has(parentGroupId))) ||
+      (nodeType === "country" && parentGroupId) ||
+      (nodeType === "city" && parent?.node_type !== "country") ||
+      (nodeType === "area" && parent?.node_type !== "city")) {
+    return formFailure([{ field: "parentGroupId", code: "group" }]);
   }
 
   const communityKind =
     optionalText(formData.get("communityKind")) ??
-    currentGroupRow?.community_kind ??
     (nodeType === "country" || nodeType === "city" || nodeType === "area"
       ? "territorial"
       : "santegidio");
@@ -2078,12 +1930,12 @@ export async function saveOperationsGroup(formData: FormData) {
     (value) => !isValidGroupAgeBand(value)
   );
   const ageBands = Array.from(new Set(submittedAgeBands));
-  const isAssignable = formData.has("isAssignable")
+  const isAssignable = nodeType === "group" ? true : formData.has("isAssignable")
     ? formData.get("isAssignable") === "on"
-    : currentGroupRow?.is_assignable ?? true;
+    : currentGroupRow?.is_assignable ?? false;
   const isPublicCatalog = formData.has("isPublicCatalog")
     ? isAssignable && formData.get("isPublicCatalog") === "on"
-    : currentGroupRow?.is_public_catalog ?? true;
+    : isAssignable && (currentGroupRow?.is_public_catalog ?? true);
   const isActive = formData.has("isActive")
     ? formData.get("isActive") === "on"
     : currentGroupRow?.is_active ?? true;
@@ -2096,6 +1948,25 @@ export async function saveOperationsGroup(formData: FormData) {
     hasInvalidAgeBand
   ) {
     return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
+  }
+
+  let assignedLeader: GroupLeaderTargetResult | null = null;
+
+  if (primaryLeaderMode === "existing") {
+    assignedLeader = await getExistingGroupLeaderUserTarget(
+      serviceSupabase,
+      primaryLeaderUserId
+    );
+  } else if (primaryLeaderMode === "new") {
+    assignedLeader = await getNewGroupLeaderTarget(serviceSupabase, {
+      firstName: optionalText(formData.get("leaderFirstName")),
+      lastName: optionalText(formData.get("leaderLastName")),
+      email: normalizeEmail(formData.get("leaderEmail")),
+    });
+  }
+
+  if (assignedLeader && !assignedLeader.ok) {
+    return formFailureFromRedirect(`${dashboardPath}?groupError=${assignedLeader.error}`);
   }
 
   const values = {
@@ -2124,25 +1995,6 @@ export async function saveOperationsGroup(formData: FormData) {
 
   if (!savedGroupId) {
     return formFailureFromRedirect(`${dashboardPath}?groupError=create`);
-  }
-
-  let assignedLeader: GroupLeaderTargetResult | null = null;
-
-  if (primaryLeaderMode === "existing") {
-    assignedLeader = await getExistingGroupLeaderUserTarget(
-      serviceSupabase,
-      primaryLeaderUserId
-    );
-  } else if (primaryLeaderMode === "new") {
-    assignedLeader = await getNewGroupLeaderTarget(serviceSupabase, {
-      firstName: optionalText(formData.get("leaderFirstName")),
-      lastName: optionalText(formData.get("leaderLastName")),
-      email: normalizeEmail(formData.get("leaderEmail")),
-    });
-  }
-
-  if (assignedLeader && !assignedLeader.ok) {
-    return formFailureFromRedirect(`${dashboardPath}?groupError=${assignedLeader.error}`);
   }
 
   if (assignedLeader?.ok) {
@@ -3655,28 +3507,6 @@ function optionalDateTimeLocal(value: FormDataEntryValue | null): string | null 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function parseGroupPlacement(value: FormDataEntryValue | null): {
-  nodeType: string | null;
-  parentGroupId: string | null;
-} {
-  const text = optionalText(value);
-
-  if (!text) {
-    return { nodeType: null, parentGroupId: null };
-  }
-
-  const [nodeType, parentGroupId = ""] = text.split(":");
-
-  if (!isValidGroupNodeType(nodeType)) {
-    return { nodeType: null, parentGroupId: null };
-  }
-
-  return {
-    nodeType,
-    parentGroupId: parentGroupId || null,
-  };
-}
-
 function getGroupManagementDashboardPath(sourceDashboard: string | null): string {
   if (sourceDashboard === "capogruppo") {
     return "/dashboard/capogruppo";
@@ -3761,7 +3591,7 @@ function getEventServicesDashboardPath(
 ): string {
   const basePath =
     sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
-  const params = new URLSearchParams({ section: "servizi" });
+  const params = new URLSearchParams({ section: "impostazioni" });
 
   if (navMode === "mini" || navMode === "full") {
     params.set("nav", navMode);

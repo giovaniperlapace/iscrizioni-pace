@@ -4,6 +4,32 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Gruppi, Impostazioni e link automatici — 2026-09-05
+
+Queste regole sostituiscono le precedenti istruzioni sulla generazione manuale
+dei link e sul menu Servizi.
+
+- Il form condiviso admin/manager distingue tipo e posizione. Default:
+  `Gruppo effettivo`, assegnabile. Paese/città/area nascono strutturali e
+  diventano iscrivibili soltanto con la scelta esplicita. Validazioni server
+  su evento, parent coerente e assenza di cicli. Il campo HTML si chiama
+  `groupNodeType`, evitando il conflitto con la proprietà DOM `nodeType`.
+- `Impostazioni` contiene il catalogo servizi nella route condivisa
+  `/dashboard/manager?section=impostazioni`, anche per admin. I vecchi URL
+  `section=servizi` vengono reindirizzati conservando gli altri parametri.
+- Migration `20260905170000_automatic_group_links.sql`: trigger transazionale
+  di creazione link canonico e audit per ogni gruppo assegnabile, backfill
+  dei mancanti e colonna `slug` per gli URL amministrativi pubblici. I vecchi
+  token cifrati restano validi. Nessuna modifica RLS.
+- Il canonico non può essere revocato, cancellato, spostato, scadere o esaurirsi.
+  `Gestisci link` modifica nome pubblico/slug e mostra URL e copia. Non esiste
+  più `Genera link`. Collisioni gestite senza invalidare il link corrente;
+  cambiare slug rende inutilizzabile il vecchio URL, come spiegato nella UI.
+- Migration applicata in produzione: 93 link/audit creati; 107 gruppi
+  assegnabili con 107 canonici, zero mancanti e zero nuovi link strutturali.
+  I 14 record canonici preesistenti sono verificati invariati.
+- Dettagli, verifiche e rilascio: `docs/automatic-group-links.md`.
+
 ## Assegnazioni operative e questionario — 2026-09-05
 
 Queste regole sostituiscono le precedenti indicazioni su conferma ordinaria,

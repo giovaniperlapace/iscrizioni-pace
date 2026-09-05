@@ -17,46 +17,13 @@ const groupLeaderDashboard = readFileSync(
   "utf8"
 );
 
-test("link creation is blocked when a group has any previous link", () => {
-  const createAction = actions.slice(
-    actions.indexOf("export async function createGroupRegistrationLink"),
-    actions.indexOf("export async function updateGroupRegistrationLink")
-  );
-
-  assert.match(createAction, /\.eq\("group_id", groupRow\.id\)/);
-  assert.doesNotMatch(createAction, /\.is\("revoked_at", null\)/);
-  assert.match(createAction, /error: "link-already-exists"/);
-});
-
-test("new reserved links use a readable public-name slug and avoid collisions", () => {
-  const createAction = actions.slice(
-    actions.indexOf("export async function createGroupRegistrationLink"),
-    actions.indexOf("export async function updateGroupRegistrationLink")
-  );
-
-  assert.match(
-    createAction,
-    /createGroupRegistrationLinkToken\(publicLabel, index \+ 1\)/
-  );
-  assert.match(
-    createAction,
-    /!isReservedGroupRegistrationLinkToken\(candidate\)/
-  );
-  assert.match(createAction, /\.in\("token_hash", \[\.\.\.tokenHashes\.values\(\)\]\)/);
-  assert.match(createAction, /token_format: "readable_slug"/);
-});
-
-test("the reserved link public name can be updated without replacing its token", () => {
-  const updateAction = actions.slice(
-    actions.indexOf("export async function updateGroupRegistrationLink"),
-    actions.indexOf("export async function saveOperationsGroup")
-  );
-
-  assert.match(updateAction, /\.eq\("is_canonical", true\)/);
+test("canonical slug updates retain authorization and replace token atomically", () => {
+  const updateAction = actions.slice(actions.indexOf("export async function updateGroupRegistrationLink"), actions.indexOf("export async function saveOperationsGroup"));
+  assert.match(updateAction, /canManageGroupRegistrationLink/);
+  assert.match(updateAction, /isReservedGroupRegistrationLinkToken/);
+  assert.match(updateAction, /token_hash: hashGroupRegistrationLinkToken\(slug\)/);
   assert.match(updateAction, /public_label: publicLabel/);
-  assert.match(updateAction, /internal_label: publicLabel/);
-  assert.doesNotMatch(updateAction, /token_hash|token_encrypted/);
-  assert.match(updateAction, /group_registration_link\.updated/);
+  assert.doesNotMatch(updateAction, /\.delete\(/);
 });
 
 test("operational dashboards load the single canonical link including revoked links", () => {
@@ -69,16 +36,11 @@ test("operational dashboards load the single canonical link including revoked li
   }
 });
 
-test("link creation forms disappear once the group link exists", () => {
-  assert.match(
-    managerDashboard,
-    /canManage && links\.length === 0 \? \(/
-  );
-  assert.match(adminDashboard, /\{links\.length === 0 \? \(/);
-  assert.match(
-    groupLeaderDashboard,
-    /\{groupLinks\.length === 0 \? \(/
-  );
+test("all dashboards edit automatic links without manual generation", () => {
+  for (const dashboard of [managerDashboard, adminDashboard, groupLeaderDashboard]) {
+    assert.doesNotMatch(dashboard, /createGroupRegistrationLink|Genera link/);
+    assert.match(dashboard, /name="slug"/);
+  }
 });
 
 test("link loading failures are logged instead of silently becoming an empty list", () => {
