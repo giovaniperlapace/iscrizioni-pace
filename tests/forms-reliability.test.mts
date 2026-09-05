@@ -31,7 +31,7 @@ test("manual entry rejects impossible and future birth dates before writing", ()
     assert.equal(parseManualRegistrationForm(data).ok, false, date);
   }
   const source = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8").split("export async function createGroupLeaderManualRegistration")[1]!.split("export async function updateGroupRegistrationLink")[0]!;
-  assert.ok(source.indexOf('manualError=invalid-days') < source.indexOf('.from("participants")'));
+  assert.ok(source.indexOf('manualError=invalid-days') < source.indexOf('.rpc("create_managed_registration"'));
 });
 
 test("validation identifies nested child fields and safe localized server errors", () => {

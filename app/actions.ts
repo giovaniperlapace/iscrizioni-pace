@@ -915,7 +915,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
     formData.has("city") ||
     formData.has("country");
 
-  if (!assignmentId || !participantId || (!email && !phone && !hasIdentityUpdate)) {
+  if (!assignmentId || !participantId || (!formData.has("email") && !formData.has("phone") && !hasIdentityUpdate)) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
   }
 
@@ -926,80 +926,15 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
     redirect("/login");
   }
 
-  const serviceSupabase = createSupabaseServiceClient();
-  const canUpdate = await canGroupLeaderTagParticipant(
-    serviceSupabase,
-    auth.user.id,
-    participantId,
-    (await getCurrentOperationalEventId(serviceSupabase)) ?? "",
-    assignmentId
-  );
-
-  if (!canUpdate) {
-    return formFailureFromRedirect("/dashboard/capogruppo?error=forbidden");
-  }
-
-  if (hasIdentityUpdate) {
-    const { error: participantUpdateError } = await serviceSupabase
-      .from("participants")
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        birth_date: birthDate,
-        city_other: city,
-        country_other: country,
-      })
-      .eq("id", participantId);
-
-    if (participantUpdateError) {
-      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(participantUpdateError.message)}`);
-    }
-  }
-
-  if (formData.has("email") || formData.has("phone")) {
-    const { data: currentContacts, error: contactReadError } = await serviceSupabase
-      .from("participant_contacts")
-      .select("id")
-      .eq("participant_id", participantId)
-      .eq("is_primary", true)
-      .limit(1);
-
-    if (contactReadError) {
-      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(contactReadError.message)}`);
-    }
-
-    const primaryContactId =
-      ((currentContacts ?? []) as Array<{ id: string }>)[0]?.id ?? null;
-    const values = {
-      participant_id: participantId,
-      email: email || null,
-      phone,
-      is_primary: true,
-    };
-    const result = primaryContactId
-      ? await serviceSupabase
-          .from("participant_contacts")
-          .update({ email: values.email, phone: values.phone })
-          .eq("id", primaryContactId)
-      : await serviceSupabase.from("participant_contacts").insert(values);
-
-    if (result.error) {
-      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(result.error.message)}`);
-    }
-  }
-
-  await serviceSupabase.from("audit_logs").insert({
-    actor_user_id: auth.user.id,
-    action: "group_leader.participant_contact_updated",
-    entity_table: "participants",
-    entity_id: participantId,
-    metadata: {
-      assignment_id: assignmentId,
-      identity_updated: hasIdentityUpdate,
-      has_email: Boolean(email),
-      has_phone: Boolean(phone),
-    },
+  const { error } = await supabase.rpc("update_managed_participant", {
+    target_assignment_id: assignmentId,
+    target_participant_id: participantId,
+    payload: { identityUpdate: hasIdentityUpdate, contactUpdate: formData.has("email") || formData.has("phone"),
+      firstName, lastName, birthDate, city, country, email: email || null, phone },
   });
+  if (error) return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(
+    error.code === "42501" ? "forbidden" : error.message
+  )}`);
 
   revalidatePath("/dashboard/capogruppo");
   redirect(`/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignmentId)}&saved=contact`);
@@ -1596,150 +1531,23 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   }
 
 
-  const { data: participant, error: participantError } = await serviceSupabase
-    .from("participants")
-    .insert({
-      first_name: parsed.value.firstName,
-      last_name: parsed.value.lastName,
-      birth_date: parsed.value.birthDate,
-      preferred_locale: parsed.value.preferredLocale,
-      country_id: groupRow.country_id,
-      city_id: groupRow.city_id,
-      has_previous_santegidio_participation: true,
-      participates_with_group: true,
-    })
-    .select("id,public_code")
-    .single();
-
-  if (participantError || !participant) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
-        participantError?.message ?? "participant"
-      )}`);
-  }
-
-  const participantRow = participant as { id: string; public_code: string };
-  const { data: registration, error: registrationError } = await serviceSupabase
-    .from("registrations")
-    .insert({
-      event_id: groupRow.event_id,
-      participant_id: participantRow.id,
-      source: "capogruppo",
-      created_by: auth.user.id,
-    })
-    .select("id")
-    .single();
-
-  if (registrationError || !registration) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
-        registrationError?.message ?? "registration"
-      )}`);
-  }
-
-  const registrationId = (registration as { id: string }).id;
   const qrToken = createOpaqueQrToken();
-  const attendanceRows =
-    parsed.value.availabilityUnknown
-      ? [{ registration_id: registrationId, choice: "unknown" }]
-      : parsed.value.availabilitySlots.map((slot) => ({
-          registration_id: registrationId,
-          day: slot.day,
-          day_part: slot.part,
-          choice: "yes",
-        }));
-  const writes = [
-    serviceSupabase.from("participant_contacts").insert({
-      participant_id: participantRow.id,
-      email: parsed.value.email,
-      phone: parsed.value.phone,
-      is_primary: true,
-    }),
-    serviceSupabase.from("participant_consents").insert({
-      registration_id: registrationId,
-      privacy_version: PRIVACY_VERSION,
-      privacy_accepted_at: new Date().toISOString(),
-      data_processing_accepted: true,
-      future_events_communications_accepted: false,
-      accepted_by_user_id: auth.user.id,
-      accepted_by_name: `${parsed.value.firstName} ${parsed.value.lastName}`.trim(),
-    }),
-    serviceSupabase.from("accessibility_needs").insert({
-      registration_id: registrationId,
-      washington_group_answers: parsed.value.accessibilityAnswers,
-    }),
-    serviceSupabase.from("registration_questionnaire_answers").insert({
-      registration_id: registrationId,
-      event_id: groupRow.event_id,
-      questionnaire_version: REGISTRATION_QUESTIONNAIRE_VERSION,
-      answers: buildManualRegistrationQuestionnaireAnswers(parsed.value, {
-        id: groupRow.id,
-        name: groupRow.name,
-      }),
-      visibility_summary: getQuestionnaireVisibilitySummary(),
-    }),
-    ...(parsed.value.children.length > 0
-      ? [
-          serviceSupabase
-            .from("registration_children")
-            .insert(
-              toRegistrationChildRows(registrationId, parsed.value.children)
-            ),
-        ]
-      : []),
-    serviceSupabase.from("qr_tokens").insert({
-      registration_id: registrationId,
-      token_hash: qrToken.tokenHash,
-      token_encrypted: encryptQrToken(qrToken.token),
-      created_by: auth.user.id,
-    }),
-    serviceSupabase.from("participant_group_assignments").insert({
-      registration_id: registrationId,
-      group_id: groupRow.id,
-      status: "confirmed",
-      source: "capogruppo",
-      confidence: 1,
-      is_current: true,
-      assignment_reason: "group_leader_manual_entry",
-      matcher_version: "group-leader-manual-v1",
-      confirmed_by: auth.user.id,
-      confirmed_at: new Date().toISOString(),
-      leader_decision_by: auth.user.id,
-      leader_decision_at: new Date().toISOString(),
-
-      leader_internal_note: parsed.value.leaderNote,
-      leader_note_updated_by: parsed.value.leaderNote ? auth.user.id : null,
-      leader_note_updated_at: parsed.value.leaderNote
-        ? new Date().toISOString()
-        : null,
-    }),
-    serviceSupabase.from("audit_logs").insert({
-      event_id: groupRow.event_id,
-      actor_user_id: auth.user.id,
-      action: "registration.created_by_group_leader",
-      entity_table: "registrations",
-      entity_id: registrationId,
-      metadata: {
-        group_id: groupRow.id,
-        source: "capogruppo",
-        has_email: Boolean(parsed.value.email),
-        has_phone: Boolean(parsed.value.phone),
-        accompanying_children_count: parsed.value.children.length,
-        participant_public_code: participantRow.public_code,
-      },
-    }),
-  ];
-
-  if (attendanceRows.length > 0) {
-    writes.push(serviceSupabase.from("event_attendance_choices").insert(attendanceRows));
-  }
-
-  const results = await Promise.all(writes);
-  const failedWrite = results.find((result) => result.error);
-
-  if (failedWrite?.error) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
-        failedWrite.error.message
-      )}`);
-  }
+  const { error } = await serviceSupabase.rpc("create_managed_registration", {
+    actor: auth.user.id,
+    payload: {
+      ...parsed.value,
+      children: parsed.value.children.map((child, position) => ({ ...child, position: position + 1 })),
+      privacyVersion: PRIVACY_VERSION,
+      questionnaireVersion: REGISTRATION_QUESTIONNAIRE_VERSION,
+      answers: buildManualRegistrationQuestionnaireAnswers(parsed.value, groupRow),
+      visibilitySummary: getQuestionnaireVisibilitySummary(),
+      qrHash: qrToken.tokenHash,
+      qrEncrypted: encryptQrToken(qrToken.token),
+    },
+  });
+  if (error) return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
+    error.code === "23505" ? "duplicate-email" : error.code === "42501" ? "forbidden" : error.message
+  )}`);
 
   revalidatePath("/dashboard/capogruppo");
   redirect("/dashboard/capogruppo?manualSaved=1");
@@ -3059,6 +2867,7 @@ async function getNewGroupLeaderTarget(
     .from("participant_contacts")
     .select("participant_id")
     .eq("email", input.email)
+    .eq("is_delegate_contact", false)
     .limit(1);
   const existingParticipantId = (
     existingContacts as Array<{ participant_id: string }> | null

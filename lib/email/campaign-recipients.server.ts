@@ -52,113 +52,17 @@ export async function resolveCampaignRecipients(
   return resolveParticipantRecipients(eventId, filters.status);
 }
 
-async function resolveParticipantRecipients(eventId: string, status: string) {
-  const service = createSupabaseServiceClient();
+async function resolveParticipantRecipients(eventId: string, status: string): Promise<CampaignRecipient[]> {
   const registrations = await loadEventRegistrations(eventId, status);
   if (!registrations.length) return [];
 
-  const participantIds = registrations.map((row) => row.participant_id);
-  const contacts = await loadInChunks(participantIds, async (ids) => {
-    const { data, error } = await service
-      .from("participant_contacts")
-      .select("participant_id,email,is_primary")
-      .in("participant_id", ids)
-      .order("is_primary", { ascending: false });
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  });
-  const direct = new Set(
-    contacts
-      .filter((row) => Boolean(row.email?.trim()))
-      .map((row) => row.participant_id)
-  );
-  const missingRegistrations = registrations.filter(
-    (row) => !direct.has(row.participant_id)
-  );
-  const delegates = new Map<string, string>();
-
-  if (missingRegistrations.length) {
-    const assignments = await loadInChunks(
-      missingRegistrations.map((row) => row.id),
-      async (ids) => {
-        const { data, error } = await service
-          .from("participant_group_assignments")
-          .select("registration_id,group_id")
-          .eq("is_current", true)
-          .in("registration_id", ids);
-        if (error) throw new Error(error.message);
-        return data ?? [];
-      }
-    );
-    const memberships = await loadInChunks(
-      [...new Set(assignments.map((row) => row.group_id))],
-      async (ids) => {
-        const { data, error } = await service
-          .from("group_memberships")
-          .select("group_id,user_id,is_primary")
-          .eq("role", "capogruppo")
-          .in("group_id", ids)
-          .order("is_primary", { ascending: false });
-        if (error) throw new Error(error.message);
-        return data ?? [];
-      }
-    );
-    const userIds = [...new Set(memberships.map((row) => row.user_id))];
-    const { data: profiles, error: profilesError } = userIds.length
-      ? await service.from("profiles").select("id,email").in("id", userIds)
-      : { data: [], error: null };
-    if (profilesError) throw new Error(profilesError.message);
-    const validUsers = new Set(
-      (profiles ?? [])
-        .filter((row) => Boolean(row.email?.trim()))
-        .map((row) => row.id)
-    );
-    const leadersByGroup = new Map<string, string[]>();
-    for (const membership of memberships) {
-      if (!validUsers.has(membership.user_id)) continue;
-      const current = leadersByGroup.get(membership.group_id) ?? [];
-      if (!current.includes(membership.user_id)) current.push(membership.user_id);
-      leadersByGroup.set(membership.group_id, current);
-    }
-    const groupsByRegistration = collectRelationIds(
-      assignments,
-      "registration_id",
-      "group_id"
-    );
-    for (const registration of missingRegistrations) {
-      const delegate = (groupsByRegistration.get(registration.id) ?? [])
-        .flatMap((groupId) => leadersByGroup.get(groupId) ?? [])[0];
-      if (delegate) delegates.set(registration.participant_id, delegate);
-    }
-  }
-
-  return registrations.flatMap<CampaignRecipient>((row) =>
-    direct.has(row.participant_id)
-      ? [
-          {
-            recipientKey: `participant:${row.participant_id}`,
-            recipientType: "participant",
-            participantId: row.participant_id,
-            registrationId: row.id,
-            recipientUserId: null,
-            deliveryKind: "direct",
-            delegateUserId: null,
-          },
-        ]
-      : delegates.has(row.participant_id)
-        ? [
-            {
-              recipientKey: `participant:${row.participant_id}`,
-              recipientType: "participant",
-              participantId: row.participant_id,
-              registrationId: row.id,
-              recipientUserId: null,
-              deliveryKind: "delegated",
-              delegateUserId: delegates.get(row.participant_id)!,
-            },
-          ]
-        : []
-  );
+  const data = await loadRegistrationDeliveries(eventId);
+  const allowedRegistrations = new Set(registrations.map((row) => row.id));
+  return (data ?? []).filter((row: { registration_id: string }) => allowedRegistrations.has(row.registration_id))
+    .map((row: { registration_id: string; participant_id: string; delivery_kind: "direct" | "delegated"; delegate_user_id: string | null }): CampaignRecipient => ({
+      recipientKey: `participant:${row.participant_id}`, recipientType: "participant", participantId: row.participant_id,
+      registrationId: row.registration_id, recipientUserId: null, deliveryKind: row.delivery_kind, delegateUserId: row.delegate_user_id,
+    }));
 }
 
 async function resolveGroupLeaderRecipients(eventId: string) {
@@ -199,6 +103,17 @@ export async function loadCampaignRecipientPreviews(
 ) {
   if (!recipients.length) return [];
   const service = createSupabaseServiceClient();
+  if (recipients.some((recipient) => recipient.recipientType === "participant")) {
+    const deliveries = await loadRegistrationDeliveries(eventId);
+    const current = new Map<string, { delivery_kind: string; delegate_user_id: string | null }>(
+      (deliveries ?? []).map((row: { registration_id: string; delivery_kind: string; delegate_user_id: string | null }) => [row.registration_id, row])
+    );
+    recipients = recipients.filter((recipient) => {
+      if (recipient.recipientType === "group_leader") return true;
+      const route = current.get(recipient.registrationId ?? "");
+      return route?.delivery_kind === recipient.deliveryKind && route?.delegate_user_id === recipient.delegateUserId;
+    });
+  }
   const participantIds = [
     ...new Set(
       recipients.flatMap((recipient) =>
@@ -246,6 +161,7 @@ export async function loadCampaignRecipientPreviews(
       const { data, error } = await service
         .from("participant_contacts")
         .select("participant_id,email,is_primary")
+        .eq("is_delegate_contact", false)
         .in("participant_id", ids)
         .order("is_primary", { ascending: false });
       if (error) throw new Error(error.message);
@@ -418,4 +334,17 @@ function collectRelationIds<
     result.set(row[key], current);
   }
   return result;
+}
+
+type RegistrationDelivery = { registration_id: string; participant_id: string; delivery_kind: "direct" | "delegated"; delegate_user_id: string | null };
+async function loadRegistrationDeliveries(eventId: string): Promise<RegistrationDelivery[]> {
+  const service = createSupabaseServiceClient();
+  const result: RegistrationDelivery[] = [];
+  for (let from = 0; ; from += QUERY_PAGE_SIZE) {
+    const { data, error } = await service.rpc("resolve_registration_deliveries", { target_event_id: eventId })
+      .order("registration_id").range(from, from + QUERY_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    result.push(...((data ?? []) as RegistrationDelivery[]));
+    if ((data ?? []).length < QUERY_PAGE_SIZE) return result;
+  }
 }

@@ -37,6 +37,7 @@ export type ManualRegistrationInput = {
   accessibilityAnswers: Record<string, boolean>;
   leaderNote: string | null;
   consentConfirmed: boolean;
+  deliveryMode: "personal" | "delegated";
 };
 
 const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;
@@ -63,6 +64,7 @@ export function parseManualRegistrationForm(
     accessibilityAnswers: formData.get("hasAccessibilityNeeds") === "yes" ? parseAccessibilityAnswers(formData) : {},
     leaderNote: normalizeLeaderNote(formData.get("leaderNote")),
     consentConfirmed: formData.get("consentConfirmed") === "on",
+    deliveryMode: formData.get("deliveryMode") === "personal" ? "personal" : "delegated",
   };
   const errors = validateManualRegistrationInput(value);
   for (const issue of validateContactFields(formData)) {
@@ -90,8 +92,8 @@ export function validateManualRegistrationInput(
     errors.push("Inserisci il cognome.");
   }
 
-  if (!input.email && !input.phone) {
-    errors.push("Inserisci almeno email o telefono.");
+  if (input.deliveryMode === "personal" && !input.email) {
+    errors.push("Inserisci un indirizzo email personale per la consegna diretta.");
   }
 
   if (input.phone && !PHONE_PATTERN.test(input.phone)) {
@@ -132,9 +134,10 @@ export function buildManualRegistrationQuestionnaireAnswers(
     contact: {
       hasEmail: Boolean(input.email),
       hasPhone: Boolean(input.phone),
+      deliveryMode: input.deliveryMode,
     },
     groupParticipation: {
-      hasPreviousSantegidioParticipation: true,
+      hasPreviousSantegidioParticipation: null,
       participatesWithGroup: true,
       selectedGroupId: group.id,
       selectedGroupName: group.name,

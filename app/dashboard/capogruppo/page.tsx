@@ -1,3 +1,9 @@
+import { ParticipantCard, ParticipantQr, ParticipantFacts } from "@/app/dashboard/participant-card";
+import { DeliveryFields } from "./delivery-fields";
+import { updateRegistrationDelivery } from "./delivery-actions";
+import { MANAGED_PARTICIPANT_COPY } from "@/lib/registrations/managed-participant-copy";
+import { renderQrDataUrl } from "@/lib/qrcode/render";
+import { formatManagedAttendance, isRegistrationQrActive, type ManagedCardData } from "@/lib/registrations/managed-card";
 import { FORM_COPY } from "@/lib/forms/copy";
 
 import { ReliableForm } from "@/components/reliable-form";
@@ -192,6 +198,7 @@ type AssignmentRow = {
           | {
               id: string;
               first_name: string | null;
+              auth_user_id?: string | null;
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
@@ -202,6 +209,7 @@ type AssignmentRow = {
                     email: string | null;
                     phone: string | null;
                     is_primary: boolean | null;
+        is_delegate_contact?: boolean;
                   }>
                 | null;
               countries:
@@ -239,6 +247,7 @@ type AssignmentRow = {
           | Array<{
               id: string;
               first_name: string | null;
+              auth_user_id?: string | null;
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
@@ -249,6 +258,7 @@ type AssignmentRow = {
                     email: string | null;
                     phone: string | null;
                     is_primary: boolean | null;
+        is_delegate_contact?: boolean;
                   }>
                 | null;
               countries:
@@ -295,6 +305,7 @@ type AssignmentRow = {
           | {
               id: string;
               first_name: string | null;
+              auth_user_id?: string | null;
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
@@ -305,6 +316,7 @@ type AssignmentRow = {
                     email: string | null;
                     phone: string | null;
                     is_primary: boolean | null;
+        is_delegate_contact?: boolean;
                   }>
                 | null;
               countries:
@@ -342,6 +354,7 @@ type AssignmentRow = {
           | Array<{
               id: string;
               first_name: string | null;
+              auth_user_id?: string | null;
               last_name: string | null;
               public_code: string | null;
               birth_date: string | null;
@@ -352,6 +365,7 @@ type AssignmentRow = {
                     email: string | null;
                     phone: string | null;
                     is_primary: boolean | null;
+        is_delegate_contact?: boolean;
                   }>
                 | null;
               countries:
@@ -403,6 +417,7 @@ type AssignmentView = {
   parentGroupId: string | null;
   parentGroupName: string | null;
   participantFirstName: string | null;
+  participantHasAccount: boolean;
   participantLastName: string | null;
   participantName: string;
   participantCode: string | null;
@@ -1613,7 +1628,8 @@ export default async function CapogruppoDashboardPage({
     serviceSupabase
       .from("group_memberships")
       .select("group_id")
-      .eq("user_id", auth.user.id),
+      .eq("user_id", auth.user.id)
+      .eq("role", "capogruppo"),
     serviceSupabase
       .from("groups")
       .select(
@@ -1669,6 +1685,14 @@ export default async function CapogruppoDashboardPage({
     params.assignmentId
       ? assignments.find((assignment) => assignment.id === params.assignmentId) ?? null
       : null;
+
+  const cardResult = selectedAssignment ? await supabase.rpc("read_managed_registration_card", {
+    target_registration_id: selectedAssignment.registrationId,
+  }) : null;
+  if (cardResult?.error) throw new Error("Unable to load authorized participant card");
+  const cardData = cardResult?.data as ManagedCardData | null;
+  const token = decryptQrToken(cardData?.qr?.token_encrypted);
+  const cardQr = token ? await renderQrDataUrl(token) : null;
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -1767,6 +1791,9 @@ export default async function CapogruppoDashboardPage({
           <DashboardToolOverlay title={copy.detail.title} copy={copy}>
             <AssignmentDetailCard
               assignment={selectedAssignment}
+              locale={locale}
+              cardData={cardData}
+              qrDataUrl={cardQr}
               tagOptions={operationalTags}
               serviceOptions={eventServices}
               copy={copy}
@@ -1785,23 +1812,29 @@ export default async function CapogruppoDashboardPage({
       return [];
     }
 
-    const { data, error } = await serviceSupabase
-          .from("participant_group_assignments")
-          .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id,is_assignable),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
-      )
-      .in("group_id", groupIds)
-      .eq("registrations.event_id", currentEventId)
-      .eq("is_current", true)
-      .order("updated_at", { ascending: false })
-      .limit(100);
+    const rows: AssignmentRow[] = [];
+    for (let from = 0; ; from += 200) {
+      const { data, error } = await supabase
+        .from("participant_group_assignments")
+        .select(
+          "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id,is_assignable),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,auth_user_id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary,is_delegate_contact),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
+        )
+        .in("group_id", groupIds)
+        .eq("registrations.event_id", currentEventId)
+        .eq("is_current", true)
+        .order("updated_at", { ascending: false })
+        .order("id")
+        .range(from, from + 199);
 
-    if (error) {
-      console.error("[capogruppo:assignments]", error.message);
-      return [];
+      if (error) {
+        console.error("[capogruppo:assignments]", error.message);
+        throw new Error("Unable to load authorized group participants");
+      }
+      rows.push(...((data ?? []) as AssignmentRow[]));
+      if ((data ?? []).length < 200) break;
     }
 
-    return ((data ?? []) as AssignmentRow[])
+    return rows
       .map((row) => toAssignmentView(row, copy, groupRows))
       .filter((assignment): assignment is AssignmentView => Boolean(assignment));
   }
@@ -2210,7 +2243,7 @@ function ManualRegistrationSection({
       <div>
         <h2 className="text-lg font-semibold">{copy.manualTitle}</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-          {copy.manualHelp}
+          {MANAGED_PARTICIPANT_COPY[locale].help}
         </p>
       </div>
 
@@ -2242,7 +2275,7 @@ function ManualRegistrationSection({
             <input name="lastName" required minLength={2} className="field" />
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.email}
+            {MANAGED_PARTICIPANT_COPY[locale].personalEmail}
             <input name="email" type="email" className="field" />
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
@@ -2254,6 +2287,7 @@ function ManualRegistrationSection({
             {copy.birthDate}
             <input name="birthDate" type="date" className="field" />
           </label>
+          <DeliveryFields locale={locale} />
           <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} />
           <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields
@@ -2522,16 +2556,19 @@ function AssignmentRowView({
 
 function AssignmentDetailCard({
   assignment,
+  locale, cardData, qrDataUrl,
   tagOptions,
   serviceOptions,
   copy,
 }: {
   assignment: AssignmentView;
+  locale: SupportedLocale; cardData: ManagedCardData | null; qrDataUrl: string | null;
   tagOptions: OperationalTagOption[];
   serviceOptions: EventServiceOption[];
   copy: GroupLeaderCopy;
 }) {
 
+  const managedCopy = MANAGED_PARTICIPANT_COPY[locale];
   return (
     <section className="grid gap-5">
       <div className="flex flex-col gap-3 border-b border-[var(--peace-border)] pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -2548,10 +2585,35 @@ function AssignmentDetailCard({
         </div>
       </div>
 
+      <ParticipantCard
+        qr={<ParticipantQr code={assignment.participantCode} dataUrl={qrDataUrl} locale={locale}
+          active={isRegistrationQrActive(cardData?.qr ?? null, assignment.registrationStatus)} />}
+        details={<ParticipantFacts items={[
+          { label: managedCopy.status, value: managedCopy[assignment.registrationStatus as "submitted" | "cancelled" | "confirmed" | "draft"] ?? managedCopy.missing },
+          { label: managedCopy.group, value: assignment.groupName },
+          { label: managedCopy.attendance, value: formatManagedAttendance(cardData?.attendance ?? [], locale) },
+          { label: managedCopy.service, value: assignment.service?.serviceLabel ?? managedCopy.missing },
+        ]} />}
+      />
+      <DetailBlock title={managedCopy.delivery}>
+        {cardData?.responsibility ? <p className="break-words text-sm">
+          {managedCopy.responsible}: {cardData.responsibility.name ?? managedCopy.missing}
+          {cardData.responsibility.delivery_mode === "delegated" ? ` — ${cardData.responsibility.email ?? managedCopy.missing}` : null}
+        </p> : null}
+        {cardData?.responsibility && !cardData.responsibility.valid ? <p role="status">{managedCopy.invalidDelegate}</p> : null}
+        <ReliableForm action={updateRegistrationDelivery} locale={locale} className="grid gap-3">
+          <input type="hidden" name="registrationId" value={assignment.registrationId} />
+          <input type="hidden" name="assignmentId" value={assignment.id} />
+          <DeliveryFields locale={locale} defaultMode={cardData?.responsibility?.delivery_mode ?? (assignment.participantEmail ? "personal" : "delegated")} />
+          <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white">{managedCopy.save}</PendingSubmitButton>
+        </ReliableForm>
+      </DetailBlock>
+
       <div className="grid gap-4 md:grid-cols-2">
         <DetailBlock title={copy.detail.identity}>
           <ReliableForm
             action={updateGroupLeaderParticipantContact}
+            locale={locale}
             className="grid gap-3"
             data-preserve-dashboard-scroll
           >
@@ -2607,20 +2669,24 @@ function AssignmentDetailCard({
         <DetailBlock title={copy.detail.contacts}>
           <ReliableForm
             action={updateGroupLeaderParticipantContact}
+            locale={locale}
             className="grid gap-3"
             data-preserve-dashboard-scroll
           >
             <input type="hidden" name="assignmentId" value={assignment.id} />
             <input type="hidden" name="participantId" value={assignment.participantId} />
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              {copy.email}
+              {managedCopy.personalEmail}
               <input
                 name="email"
                 type="email"
                 defaultValue={assignment.participantEmail ?? ""}
+                readOnly={assignment.participantHasAccount}
+                aria-describedby={assignment.participantHasAccount ? "linked-email-help" : undefined}
                 className="field bg-white font-normal"
               />
             </label>
+            {assignment.participantHasAccount ? <p id="linked-email-help" className="text-xs text-[var(--peace-muted)]">{managedCopy.linkedEmail}</p> : null}
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
               {copy.phone}
               <input
@@ -2979,6 +3045,7 @@ function toAssignmentView(
     parentGroupId: group.parent_group_id,
     parentGroupName: parentGroup?.name ?? null,
     participantFirstName: participant.first_name,
+    participantHasAccount: Boolean(participant.auth_user_id),
     participantLastName: participant.last_name,
     participantName: formatParticipantName(
       participant.first_name,
@@ -3035,6 +3102,7 @@ function getPrimaryContact(
         email: string | null;
         phone: string | null;
         is_primary: boolean | null;
+        is_delegate_contact?: boolean;
       }>
     | null
 ): { email: string | null; phone: string | null } | null {
@@ -3042,7 +3110,8 @@ function getPrimaryContact(
     return null;
   }
 
-  return contacts.find((contact) => contact.is_primary) ?? contacts[0] ?? null;
+  const personal = contacts.filter((contact) => !contact.is_delegate_contact);
+  return personal.find((contact) => contact.is_primary) ?? personal[0] ?? null;
 }
 
 function mapParticipantOperationalTags(

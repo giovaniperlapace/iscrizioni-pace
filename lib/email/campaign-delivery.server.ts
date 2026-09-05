@@ -401,11 +401,20 @@ async function loadDeliveryEmail(
   service: ServiceClient,
   recipient: CampaignRecipient
 ): Promise<string | null> {
+  if (!recipient.registrationId || !recipient.participantId) return null;
+  const { data: registration } = await service.from("registrations").select("event_id,participant_id")
+    .eq("id", recipient.registrationId).maybeSingle();
+  if (!registration || registration.participant_id !== recipient.participantId) return null;
+  const { data: deliveries, error } = await service.rpc("resolve_registration_deliveries", { target_event_id: registration.event_id, target_registration_id: recipient.registrationId });
+  const delivery = !error && (deliveries ?? []).find((row: { registration_id: string }) => row.registration_id === recipient.registrationId);
+  // A frozen/tested campaign never silently switches delivery to another person.
+  if (!delivery || delivery.delivery_kind !== recipient.deliveryKind || delivery.delegate_user_id !== recipient.delegateUserId) return null;
   if (recipient.deliveryKind === "direct" && recipient.participantId) {
     const { data } = await service
       .from("participant_contacts")
       .select("email")
       .eq("participant_id", recipient.participantId)
+      .eq("is_delegate_contact", false)
       .not("email", "is", null)
       .order("is_primary", { ascending: false })
       .limit(1)

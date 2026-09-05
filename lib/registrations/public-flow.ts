@@ -202,6 +202,7 @@ export async function hasExistingRegistrationForEmail(
     .from("participant_contacts")
     .select("participant_id")
     .eq("email", email)
+    .eq("is_delegate_contact", false)
     .limit(25);
 
   if (contactError || !contacts?.length) {
@@ -236,6 +237,7 @@ export async function hasExistingAppAccessForEmail(
     .from("profiles")
     .select("id")
     .eq("email", email)
+    .eq("is_delegate_contact", false)
     .limit(1);
 
   if (profileError || !profiles?.length) {
@@ -652,6 +654,7 @@ export async function linkParticipantsToUserByEmail(
     .from("participant_contacts")
     .select("participant_id")
     .eq("email", email)
+    .eq("is_delegate_contact", false)
     .limit(50);
 
   if (error || !contacts?.length) {

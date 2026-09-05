@@ -747,11 +747,7 @@ export function EmailCampaignComposer({
                             groupLabels(recipient.groupIds, groupLabelById)
                           ) : recipient.deliveryKind === "delegated" ? (
                             <span className="inline-flex rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)]">
-                              Invio al referente
-                            </span>
-                          ) : recipient.groupIds.length === 0 ? (
-                            <span className="text-xs font-semibold text-[var(--peace-muted)]">
-                              Senza gruppo
+                              Consegna al capogruppo referente
                             </span>
                           ) : (
                             <span className="text-xs text-[var(--peace-muted)]">

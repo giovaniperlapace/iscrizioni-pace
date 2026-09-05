@@ -80,12 +80,14 @@ export async function getOperationalUserIdentities(
       ? supabase
           .from("participant_contacts")
           .select("participant_id,email,is_primary")
+    .eq("is_delegate_contact", false)
           .in("participant_id", linkedParticipantIds)
       : Promise.resolve({ data: [] }),
     profileEmails.length > 0
       ? supabase
           .from("participant_contacts")
           .select("participant_id,email,is_primary")
+    .eq("is_delegate_contact", false)
           .in("email", profileEmails)
       : Promise.resolve({ data: [] }),
   ]);
@@ -180,6 +182,7 @@ export async function getOperationalRegistrationSuggestion(
   const { data: contact } = await supabase
     .from("participant_contacts")
     .select("participant_id")
+    .eq("is_delegate_contact", false)
     .eq("email", normalizedEmail)
     .order("is_primary", { ascending: false })
     .limit(1);
@@ -253,6 +256,7 @@ export async function syncOperationalIdentityByEmail(
   const { data: contacts } = await supabase
     .from("participant_contacts")
     .select("participant_id")
+    .eq("is_delegate_contact", false)
     .eq("email", email);
 
   for (const contact of (contacts ?? []) as Array<{ participant_id: string }>) {
