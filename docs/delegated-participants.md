@@ -105,6 +105,16 @@ eseguire sull’ambiente di rilascio dopo l’applicazione della migration.
 
 ## Rilascio
 
+Tentativo del 5 settembre 2026: implementazione committata e pubblicata sul
+branch `codex/delegated-participants` (`f28b051`), PR #7. Build Vercel con
+ambiente production completata e pronta, ma non promossa al dominio pubblico:
+`https://iscrizioni-pace-o12puq4kl-giovaniperlapaces-projects.vercel.app`.
+Il controllo preliminare del database è riuscito (68 iscrizioni, nessuna email
+in coda); i successivi collegamenti SSH a `91.99.81.31:22` sono andati in
+timeout. La migration non è stata applicata, main non è stato integrato e il
+dominio pubblico conserva il deployment precedente. Riprendere dal controllo
+dell'accesso SSH e dello stato migration prima di promuovere il deployment.
+
 1. Applicare prima la migration all’ambiente concordato, conservando il codice
    attuale finché la transazione è completata. Il nuovo codice richiede le RPC.
 2. Distribuire il branch verificato. Coordinare una breve finestra senza
