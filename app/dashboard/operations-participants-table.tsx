@@ -105,6 +105,10 @@ export function OperationsParticipantsTable({
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  const [quickEditColumns, setQuickEditColumns] = useState({
+    group: false,
+    service: false,
+  });
   const busy = useRef(new Set<string>());
   const current = (row: Row) =>
     changes[row.registrationId]?.original === row
@@ -294,8 +298,13 @@ export function OperationsParticipantsTable({
     }
   }
 
-  function operationsControl(row: Row, field: "group" | "service" | "tags") {
-    const canEdit = editableEventIds.includes(row.eventId) && !row.deletedAt;
+  function operationsControl(
+    row: Row,
+    field: "group" | "service" | "tags",
+    editingEnabled = true,
+  ) {
+    const canEdit =
+      editingEnabled && editableEventIds.includes(row.eventId) && !row.deletedAt;
     const disabled = pending[row.registrationId];
     if (field === "tags")
       return canEdit ? (
@@ -363,7 +372,17 @@ export function OperationsParticipantsTable({
     const currentLabel =
       field === "group" ? row.currentGroupName : row.service?.serviceLabel;
     const emptyLabel = field === "group" ? "Senza gruppo" : "Senza servizio";
-    if (!canEdit) return <span>{currentLabel ?? emptyLabel}</span>;
+    if (!canEdit)
+      return (
+        <div className="grid gap-1">
+          <span>{currentLabel ?? emptyLabel}</span>
+          {field === "service" && row.service && (
+            <span className="text-xs text-[var(--peace-muted)]">
+              {eventServiceStatusLabel(row.service.status)}
+            </span>
+          )}
+        </div>
+      );
     return (
       <div className="grid min-w-44 gap-1">
         <select
@@ -483,8 +502,8 @@ export function OperationsParticipantsTable({
       </nav>
       {view === "without-group" && (
         <p className="mb-4 text-sm">
-          Assegna un gruppo dal selettore: la persona uscirà subito da questa
-          coda.
+          Attiva la modifica rapida nella colonna Gruppo e assegna un gruppo
+          dal selettore: la persona uscirà subito da questa coda.
         </p>
       )}
       {view === "deleted" && (
@@ -719,6 +738,26 @@ export function OperationsParticipantsTable({
                         <ArrowDown size={14} aria-hidden />
                       ))}
                   </button>
+                  {canManage &&
+                    view !== "deleted" &&
+                    (column === "group" || column === "service") && (
+                      <label className="flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap text-xs font-normal">
+                        <input
+                          type="checkbox"
+                          role="switch"
+                          aria-label={`Modifica rapida ${PARTICIPANT_COLUMNS[column]}`}
+                          checked={quickEditColumns[column]}
+                          onChange={(event) =>
+                            setQuickEditColumns((previous) => ({
+                              ...previous,
+                              [column]: event.target.checked,
+                            }))
+                          }
+                          className="size-4 accent-[var(--peace-blue-800)]"
+                        />
+                        Modifica rapida
+                      </label>
+                    )}
                 </th>
               ))}
             </tr>
@@ -762,7 +801,11 @@ export function OperationsParticipantsTable({
                     ) : column === "group" ||
                       column === "service" ||
                       column === "tags" ? (
-                      operationsControl(row, column)
+                      operationsControl(
+                        row,
+                        column,
+                        column === "tags" || quickEditColumns[column],
+                      )
                     ) : column === "submittedAt" ? (
                       formatDate(row.submittedAt)
                     ) : (

@@ -76,11 +76,25 @@ try {
     "preferences isolated per operator",
   );
   clickText("button", "Cambia operatore");
+  check(
+    '!document.querySelector("tbody select") && document.querySelectorAll("thead [role=switch]:not(:checked)").length === 2',
+    "group and service quick editing start disabled",
+  );
+  ab("check", '[aria-label="Modifica rapida Gruppo"]');
+  check(
+    'document.querySelectorAll("tbody select").length === 12 && !document.querySelector("tbody [aria-label=\\"Servizio di Anna Bianchi\\"]")',
+    "group switch enables the whole column independently",
+  );
   ab("select", '[aria-label="Gruppo di Anna Bianchi"]', "group2");
   ab("wait", "200");
   check(
     'document.querySelector("[aria-label=\\"Gruppo di Anna Bianchi\\"]").value === "group2"',
     "group saves inline",
+  );
+  ab("check", '[aria-label="Modifica rapida Servizio"]');
+  check(
+    'document.querySelectorAll("tbody select").length === 24',
+    "both columns can be editable together",
   );
   ab("select", '[aria-label="Servizio di Anna Bianchi"]', "service1");
   ab("wait", "200");
@@ -88,6 +102,25 @@ try {
     'document.querySelector("[aria-label=\\"Servizio di Anna Bianchi\\"]").value === "service1"',
     "service saves inline",
   );
+  ab("uncheck", '[aria-label="Modifica rapida Gruppo"]');
+  check(
+    'document.querySelectorAll("tbody select").length === 12 && !document.querySelector("tbody [aria-label=\\"Gruppo di Anna Bianchi\\"]") && document.querySelector("[data-registration-id=reg-0]").textContent.includes("Gruppo Parigi")',
+    "disabling group keeps its saved label and service editable",
+  );
+  ab("uncheck", '[aria-label="Modifica rapida Servizio"]');
+  check(
+    '!document.querySelector("tbody select") && document.querySelector("[data-registration-id=reg-0]").textContent.includes("Accoglienza")',
+    "disabling service restores labels for every row",
+  );
+  ab("screenshot", "/tmp/pace-column-edit-desktop.png");
+  clickText("a", "Anna Bianchi");
+  ab("wait", "dialog[open]");
+  check(
+    'document.querySelectorAll("dialog select").length >= 2 && !document.querySelector("tbody select")',
+    "sheet remains editable while table columns are disabled",
+  );
+  ab("press", "Escape");
+  ab("check", '[aria-label="Modifica rapida Gruppo"]');
   ab("click", '[aria-label="Tag di Anna Bianchi"]');
   ab("snapshot", "-i");
   evaluate(
@@ -112,7 +145,7 @@ try {
   clickText("a", "Senza gruppo");
   ab("snapshot", "-i");
   check(
-    'Array.from(document.querySelectorAll("th")).map(th=>th.textContent).join(",") === "Partecipante,Paese,Città,Età,Gruppo" && document.querySelectorAll("tbody tr").length === 3',
+    'Array.from(document.querySelectorAll("th > button")).map(th=>th.textContent).join(",") === "Partecipante,Paese,Città,Età,Gruppo" && document.querySelectorAll("tbody tr").length === 3',
     "without-group queue has focused columns",
   );
   ab("select", '[aria-label="Gruppo di Persona Prova 3"]', "group1");
@@ -122,8 +155,10 @@ try {
     "assigned row leaves queue immediately",
   );
   clickText("a", "Tutti gli iscritti");
+  ab("snapshot", "-i");
   evaluate('window.scrollTo(0,500); document.documentElement.dataset.previousScroll = String(window.scrollY)');
   clickText("a", "Persona Prova 11");
+  ab("wait", "dialog[open]");
   ab("fill", 'dialog [name="firstName"]', "Persona Controllo");
   clickText("button", "Salva dati"); ab("wait", "200");
   check('Math.abs(window.scrollY - Number(document.documentElement.dataset.previousScroll)) < 2', 'sheet save preserves background scroll position');
@@ -171,6 +206,7 @@ try {
   );
   clickText("a", "Iscrizioni eliminate");
   ab("snapshot", "-i");
+  check('!document.querySelector("thead [role=switch]")', "archive has no quick-edit switches");
   clickText("a", "Anna Maria Bianchi");
   ab("wait", "dialog[open]");
   check(
@@ -192,7 +228,7 @@ try {
   );
   clickText("button", "Modalità sola lettura");
   check(
-    '!document.querySelector("tbody select") && document.querySelector("tbody a")',
+    '!document.querySelector("tbody select") && !document.querySelector("thead [role=switch]") && document.querySelector("tbody a")',
     "viewer has details without quick edits",
   );
   check(

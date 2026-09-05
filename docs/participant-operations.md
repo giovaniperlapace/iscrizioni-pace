@@ -14,10 +14,18 @@ intestazione, scheda in modale. Nessun dominio alloggi o SQL dell'app modello
 
 Il confine server `operations-participants-section.tsx` trasforma lo scope in
 un elenco serializzabile di eventi modificabili. `operations-participants-table.tsx`
-è l'unica implementazione per admin/manager: nome cliccabile, selettori immediati,
+è l'unica implementazione per admin/manager: nome cliccabile, selettori rapidi,
 tag multipli, filtri e scheda con gli stessi controlli. `manager_viewer` consulta
 anche i dettagli ma non riceve controlli di modifica. I permessi sono comunque
 ricontrollati nelle RPC sul server.
+
+Le intestazioni Gruppo e Servizio offrono due interruttori indipendenti
+`Modifica rapida`, inizialmente disattivati. Ogni interruttore abilita o
+disabilita i selettori di tutte le righe modificabili della propria colonna;
+quando è spento restano visibili il valore e l'eventuale stato del servizio.
+La scelta è temporanea nella tabella, non viene salvata tra sessioni e non
+condiziona i controlli nella scheda. Gli interruttori non compaiono per chi
+ha accesso in sola lettura o nell'archivio delle iscrizioni eliminate.
 
 Le preferenze di colonne e ordinamento sono versionate in localStorage per
 ID dell'operatore: durano tra sessioni sullo stesso browser e sono comuni alle
@@ -26,7 +34,8 @@ anagrafico è salvato nelle preferenze. Il nome resta sempre visibile; gli altri
 campi significativi sono ordinabili, con `aria-sort`, ordinamento numerico per
 età e date cronologiche. Età riferita alla data di inizio evento.
 
-`view=without-group` mostra solo nome, paese, città, età e selettore gruppo.
+`view=without-group` mostra solo nome, paese, città, età e gruppo, con lo stesso
+interruttore di colonna per attivare il selettore.
 Una risposta riuscita aggiorna la riga e la toglie dalla coda; gli errori sono
 annunciati sulla riga, conservando il valore precedente. Il caricamento primario
 usa pagine da 500 e le relazioni blocchi da 300 ID, superando sia il vecchio

@@ -23,6 +23,12 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
   tramite la stessa RPC `update_registration_operation`; le modifiche sono
   serializzate per iscrizione e auditabili nella stessa transazione. Un
   selettore vuoto rimuove il gruppo/servizio; un servizio scelto è assegnato.
+- Le intestazioni Gruppo e Servizio hanno ciascuna un interruttore `Modifica
+  rapida`, inizialmente spento, che abilita i selettori per l'intera colonna.
+  Le due scelte sono indipendenti e temporanee, senza salvataggio nel browser;
+  valgono anche per la coda Senza gruppo. A interruttore spento si leggono i
+  valori correnti; la scheda resta modificabile secondo i permessi. Nessun
+  interruttore per `manager_viewer` o nell'archivio delle iscrizioni eliminate.
 - `view=without-group` è la coda dedicata con nome, paese, città, età e gruppo.
   L'assegnazione riuscita rimuove subito la riga; un errore mantiene i dati.
   I caricamenti sono paginati e le relazioni lette a blocchi: nessun taglio
