@@ -1,4 +1,5 @@
 import { FORM_COPY } from "@/lib/forms/copy";
+import { MANUAL_DUPLICATE_COPY } from "@/lib/data-quality/manual-copy";
 
 import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
@@ -2277,6 +2278,10 @@ function ManualRegistrationSection({
               className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
             />
             {copy.consent}
+          </label>
+          <label className="grid gap-1 text-sm lg:col-span-2">
+            {MANUAL_DUPLICATE_COPY[locale]}
+            <textarea name="duplicateReason" className="field" minLength={3} maxLength={500} />
           </label>
           <div className="lg:col-span-2">
             <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">

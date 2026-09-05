@@ -435,6 +435,10 @@ export function OperationsParticipantsTable({
           <p className="mt-1 text-sm text-[var(--peace-muted)]">
             {rows.length} iscrizioni · Apri la scheda dal nome del partecipante.
           </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <a download className={buttonClass} href={`/dashboard/participants/data-quality/api?${new URLSearchParams({ ...Object.fromEntries(searchParams), kind: "export" })}`}>Esporta Excel</a>
+            <Link className={buttonClass} href="/dashboard/participants/data-quality">Qualità dati e importazione</Link>
+          </div>
         </div>
         {canManage && eventId && view !== "deleted" && (
           <details>

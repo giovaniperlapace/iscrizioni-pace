@@ -1596,6 +1596,18 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   }
 
   const eventDates = relatedOne(groupRow.events);
+  const { compareIdentities, identityFingerprint } = await import("@/lib/data-quality/duplicates");
+  const { hashIdentityFingerprint } = await import("@/lib/data-quality/fingerprint.server");
+  const { loadQualityPeople } = await import("@/lib/data-quality/data.server");
+  const duplicateCandidates = (await loadQualityPeople(serviceSupabase, groupRow.event_id)).filter(person => compareIdentities({
+    id: "manual-entry", firstName: parsed.value.firstName, lastName: parsed.value.lastName,
+    birthDate: parsed.value.birthDate, email: parsed.value.email, phone: parsed.value.phone,
+    country: null, city: null,
+  }, person));
+  const duplicateReason = String(formData.get("duplicateReason") ?? "").trim();
+  if (duplicateCandidates.some(person => person.deletedAt)) return formFailure([{ field: null, code: "forbidden" }]);
+  if (duplicateCandidates.length && (duplicateReason.length < 3 || duplicateReason.length > 500))
+    return formFailure([{ field: "duplicateReason", code: "duplicate" }]);
   const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
     eventDates?.starts_on ?? null,
     eventDates?.ends_on ?? null
@@ -1739,12 +1751,29 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
         has_phone: Boolean(parsed.value.phone),
         accompanying_children_count: parsed.value.children.length,
         participant_public_code: participantRow.public_code,
+        duplicate_candidate_ids: duplicateCandidates.map(person => person.id),
+        duplicate_review_reason: duplicateCandidates.length ? duplicateReason : null,
       },
     }),
   ];
 
   if (attendanceRows.length > 0) {
     writes.push(serviceSupabase.from("event_attendance_choices").insert(attendanceRows));
+  }
+
+  if (duplicateCandidates.length) {
+    const fingerprint = hashIdentityFingerprint(identityFingerprint({ id: registrationId, firstName: parsed.value.firstName, lastName: parsed.value.lastName,
+      birthDate: parsed.value.birthDate, email: parsed.value.email, phone: parsed.value.phone, country: null, city: null }));
+    writes.push(serviceSupabase.from("duplicate_reviews").insert(duplicateCandidates.map(person => ({
+      event_id: groupRow.event_id, left_id: registrationId < person.id ? registrationId : person.id,
+      right_id: registrationId < person.id ? person.id : registrationId, decision: "not_duplicate",
+      left_fingerprint: registrationId < person.id ? fingerprint : hashIdentityFingerprint(identityFingerprint(person)),
+      right_fingerprint: registrationId < person.id ? hashIdentityFingerprint(identityFingerprint(person)) : fingerprint,
+      reason: duplicateReason, actor_user_id: auth.user.id,
+    }))));
+    writes.push(serviceSupabase.from("audit_logs").insert({ event_id: groupRow.event_id, actor_user_id: auth.user.id,
+      action: "duplicate.false_positive_manual", entity_table: "registrations", entity_id: registrationId,
+      metadata: { candidate_ids: duplicateCandidates.map(person => person.id), reason: duplicateReason } }));
   }
 
   const results = await Promise.all(writes);

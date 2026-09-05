@@ -4,6 +4,41 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Qualità dati, duplicati e scambio Excel — blocco 6, 2026-09-05
+
+- Console condivisa `/dashboard/participants/data-quality`, collegata alla
+  tabella iscritti; pagina istruzioni consultabile prima dell'upload e modello
+  `.xlsx` vuoto con fogli Esempi/Istruzioni/Cataloghi separati. Formato canonico
+  `pace-partecipanti-v1` in `lib/data-quality/format.ts`: date testo ISO,
+  telefono internazionale, gruppi/servizi/tag per UUID o nome univoco in evento,
+  stato servizio separato, consensi originali obbligatori. 2 MiB/500 righe.
+- Motore unico in `lib/data-quality/duplicates.ts`: nomi normalizzati e
+  Levenshtein corroborati da nascita, email, telefono, paese/città. Classi
+  esatta, molto probabile, possibile, falso positivo verificato. Nessuna
+  unione automatica. Usato da console, import e inserimento manuale capogruppo.
+- Preview solo in memoria/cifrata, legata a operatore, evento, scopo e scadenza
+  20 minuti. Nessuna scrittura prima della conferma esplicita; scarti e
+  persone distinte motivati. Commit SQL atomico e idempotente con UUID/hash,
+  controllo versione DB e lock brevi. Falsi positivi persistiti con fingerprint
+  SHA-256; cambiando i dati il caso si riapre. Archiviate da verificare con admin.
+- Merge consapevole: record da conservare scelto esplicitamente, dati presenti
+  prevalenti, completamento mancanti, tag/presenze riuniti; source archiviata
+  con `registrations.merged_into_id`, storico conservato e QR revocato.
+  Ripristino ordinario vietato. Account distinti, identità su altri eventi e
+  dipendenze delicate richiedono riconciliazione dedicata, senza merge parziali.
+- Export `.xlsx` con tutti i risultati dei filtri e RLS dell'operatore,
+  paginazione oltre 200/1000, filtro `stat` e minori tramite iscrizione familiare.
+  Fogli Minori/Presenze di sola consultazione. Celle stringa contro formule;
+  preflight ZIP con limite decompresso e rifiuto macro/link/formule/colonne inattese.
+- Migration `20260905210000_data_quality_excel.sql` applicata in produzione
+  il 2026-09-05, con conteggi/hash invariati su 10 tabelle (68 iscrizioni);
+  nessun import/merge su dati reali. Introduce `duplicate_reviews`,
+  `participant_imports`, `merged_into_id`, RPC servizio con controlli SQL,
+  RLS nuove tabelle e audit transazionale; nessuna policy esistente allargata.
+- Test: `tests/data-quality*.test.mts`, `tests/sql/data-quality.sql` su DB
+  temporaneo vuoto, `tests/browser/data-quality.mjs` su fixture locale.
+  Formato, limitazioni merge, sicurezza e rilascio: `docs/data-quality-excel.md`.
+
 ## Gestione iscritti e soft delete — blocco 5, 2026-09-05
 
 Queste regole sostituiscono la precedente tabella fissa con colonna Azioni e

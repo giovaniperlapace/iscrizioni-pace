@@ -25,13 +25,15 @@
     "@tiptap/extension-underline": "^3.27.3",
     "@tiptap/react": "^3.27.3",
     "@tiptap/starter-kit": "^3.27.3",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.20.0",
     "next": "16.2.9",
     "nodemailer": "^9.0.3",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sanitize-html": "^2.17.6"
+    "sanitize-html": "^2.17.6",
+    "yauzl": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -41,9 +43,15 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
+    "@types/yauzl": "^3.4.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }
