@@ -1,8 +1,7 @@
 # Blocco 5 — Gestione iscritti e operazioni rapide
 
-Stato: implementato e verificato localmente il 2026-09-05 sul branch
-`codex/participants-operations-soft-delete`. Le due migration non sono state
-applicate in produzione; il rilascio richiede SQL e codice coordinati.
+Stato: implementato e verificato il 2026-09-05. Le due migration sono applicate
+e registrate in produzione; rilascio del codice tramite PR #8.
 
 ## Riferimento e interfaccia
 
@@ -147,3 +146,16 @@ storico invariati, accesso admin/manager, coda Senza gruppo, filtri e salvataggi
 Se necessario ritirare il codice, mantenere le colonne additive e il blocco del
 hard delete; non cancellare marcature o audit già creati. Una versione precedente
 non gestisce l'archivio e non deve restare in servizio dopo l'uso del soft delete.
+
+## Verifiche database in produzione — 2026-09-05
+
+- Migration `20260905190000` e `20260905191000` applicate nell'ordine e registrate;
+  cache dello schema PostgREST ricaricata.
+- Tutte le 68 iscrizioni conservate, zero iscrizioni marcate eliminate.
+- Conteggi e hash delle righe invariati su 18 tabelle: iscrizioni, partecipanti,
+  account, contatti, gruppi assegnati, tag, servizi, figli, questionari, consensi,
+  accessibilità, presenze evento/momenti, QR, check-in, audit, campagne e destinatari.
+- Presenti 13 policy restrittive e 5 trigger abilitati. RPC eseguibili da
+  `service_role`, non da client anonimi/autenticati.
+- PostgREST restituisce HTTP 200 sulle nuove colonne; entrambe le RPC rifiutano
+  un identificativo inesistente con `P0002`, senza scrivere dati.

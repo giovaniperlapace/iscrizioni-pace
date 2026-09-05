@@ -7,9 +7,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 ## Gestione iscritti e soft delete — blocco 5, 2026-09-05
 
 Queste regole sostituiscono la precedente tabella fissa con colonna Azioni e
-l'eliminazione fisica dell'iscrizione. Implementazione sul branch
-`codex/participants-operations-soft-delete`; migration preparate e verificate
-localmente, **non ancora applicate in produzione**.
+l'eliminazione fisica dell'iscrizione. Migration applicate e registrate in
+produzione il 2026-09-05; rilascio del codice tramite PR #8. Verificate 68
+iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
+18 tabelle, 13 policy restrittive, 5 trigger e RPC/PostgREST con privilegi corretti.
 
 - Admin e manager usano `OperationsParticipantsSection` (confine server per i
   permessi) e `OperationsParticipantsTable` (unico client per tabella e scheda).
