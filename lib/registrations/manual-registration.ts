@@ -1,3 +1,4 @@
+import { validateContactFields } from "../forms/result.ts";
 import {
   DEFAULT_LOCALE,
   type SupportedLocale,
@@ -34,8 +35,6 @@ export type ManualRegistrationInput = {
   availabilityUnknown: boolean;
   hasAccessibilityNeeds: boolean | null;
   accessibilityAnswers: Record<string, boolean>;
-  accessibilityNotes: string | null;
-  needsOperationalSupport: boolean;
   leaderNote: string | null;
   consentConfirmed: boolean;
 };
@@ -61,13 +60,15 @@ export function parseManualRegistrationForm(
     availabilityUnknown: formData.get("availabilityUnknown") === "on",
     availabilitySlots: parseAvailabilitySlots(formData),
     hasAccessibilityNeeds: parseBooleanChoice(formData.get("hasAccessibilityNeeds")),
-    accessibilityAnswers: parseAccessibilityAnswers(formData),
-    accessibilityNotes: optionalText(formData.get("accessibilityNotes")),
-    needsOperationalSupport: formData.get("needsOperationalSupport") === "on",
+    accessibilityAnswers: formData.get("hasAccessibilityNeeds") === "yes" ? parseAccessibilityAnswers(formData) : {},
     leaderNote: normalizeLeaderNote(formData.get("leaderNote")),
     consentConfirmed: formData.get("consentConfirmed") === "on",
   };
   const errors = validateManualRegistrationInput(value);
+  for (const issue of validateContactFields(formData)) {
+    if (issue.field === "email") errors.push("Inserisci un indirizzo email valido.");
+    if (issue.field === "birthDate") errors.push("Inserisci una data di nascita valida.");
+  }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value };
 }
@@ -81,11 +82,11 @@ export function validateManualRegistrationInput(
     errors.push("Seleziona un gruppo.");
   }
 
-  if (input.firstName.length < 2) {
+  if (input.firstName.length < 2 || input.firstName.length > 120) {
     errors.push("Inserisci il nome.");
   }
 
-  if (input.lastName.length < 2) {
+  if (input.lastName.length < 2 || input.lastName.length > 120) {
     errors.push("Inserisci il cognome.");
   }
 
@@ -154,8 +155,6 @@ export function buildManualRegistrationQuestionnaireAnswers(
     accessibility: {
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
       washingtonGroupAnswers: input.accessibilityAnswers,
-      needsOperationalSupport: input.needsOperationalSupport,
-      operationalNotes: input.accessibilityNotes,
     },
     consents: {
       privacyAccepted: true,

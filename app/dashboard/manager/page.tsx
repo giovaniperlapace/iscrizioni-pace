@@ -1,3 +1,5 @@
+
+import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 import {
   BarChart3,
@@ -1553,7 +1555,7 @@ function ManagerGroupTreeSection({
           }
 
           return (
-            <form
+            <ReliableForm
               key={group.id}
               id={`manager-public-catalog-${group.id}`}
               action={updateGroupPublicCatalogVisibility}
@@ -1566,7 +1568,7 @@ function ManagerGroupTreeSection({
               {!isPublicCatalog ? (
                 <input type="hidden" name="isPublicCatalog" value="on" />
               ) : null}
-            </form>
+            </ReliableForm>
           );
         })}
       </div>
@@ -1634,7 +1636,7 @@ function ManagerGroupEditOverlay({
             {group ? "Modifica gruppo" : "Nuovo gruppo"}
           </h3>
         </div>
-        <form action={saveOperationsGroup} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
+        <ReliableForm action={saveOperationsGroup} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           {group ? <input type="hidden" name="groupId" value={group.id} /> : null}
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
@@ -1661,7 +1663,7 @@ function ManagerGroupEditOverlay({
               Salva gruppo
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
       </div>
     </div>
   );
@@ -1701,7 +1703,7 @@ function ManagerGroupLinksOverlay({
           <AutoCopyLinkNotice url={createdUrl} />
 
           {canManage && links.length === 0 ? (
-            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
+            <ReliableForm action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
               <input type="hidden" name="sourceDashboard" value="manager" />
               <input type="hidden" name="groupId" value={group.id} />
               <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
@@ -1716,7 +1718,7 @@ function ManagerGroupLinksOverlay({
               <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                 Genera link
               </PendingSubmitButton>
-            </form>
+            </ReliableForm>
           ) : !canManage ? (
             <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
               Consultazione senza permessi di modifica.
@@ -1728,7 +1730,7 @@ function ManagerGroupLinksOverlay({
               <div key={link.id} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm">
                 <div>
                   {canManage ? (
-                    <form
+                    <ReliableForm
                       action={updateGroupRegistrationLink}
                       className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                       data-preserve-dashboard-scroll
@@ -1747,7 +1749,7 @@ function ManagerGroupLinksOverlay({
                       <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
                         Salva nome
                       </PendingSubmitButton>
-                    </form>
+                    </ReliableForm>
                   ) : (
                     <p className="font-medium text-[var(--peace-ink)]">
                       {link.publicLabel ?? group.publicLabel ?? group.name}
@@ -1818,7 +1820,7 @@ function ManagerGroupLeaderOverlay({
           {canManage ? (
             <GroupLeaderModeTabs
               existingForm={
-              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
+              <ReliableForm action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
                   <input type="hidden" name="sourceDashboard" value="manager" />
                   <input type="hidden" name="groupId" value={group.id} />
                   <input type="hidden" name="mode" value="existing" />
@@ -1837,10 +1839,10 @@ function ManagerGroupLeaderOverlay({
                   <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                     Assegna capogruppo
                   </PendingSubmitButton>
-                </form>
+                </ReliableForm>
               }
               newForm={
-              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4" data-preserve-dashboard-scroll>
+              <ReliableForm action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4" data-preserve-dashboard-scroll>
                   <input type="hidden" name="sourceDashboard" value="manager" />
                   <input type="hidden" name="groupId" value={group.id} />
                   <input type="hidden" name="mode" value="new" />
@@ -1862,7 +1864,7 @@ function ManagerGroupLeaderOverlay({
                   <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
                     Crea utente e assegna
                   </PendingSubmitButton>
-                </form>
+                </ReliableForm>
               }
             />
           ) : (
@@ -1899,7 +1901,7 @@ function ManagerServicesSection({
       </div>
 
       {currentEventOption ? (
-        <form
+        <ReliableForm
           action={saveEventService}
           className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 md:grid-cols-[1fr_1.4fr_auto]"
           data-preserve-dashboard-scroll
@@ -1939,7 +1941,7 @@ function ManagerServicesSection({
           <PendingSubmitButton className="min-h-11 self-end rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Crea
           </PendingSubmitButton>
-        </form>
+        </ReliableForm>
       ) : null}
 
       <div className="mt-5 overflow-x-auto">
@@ -1975,7 +1977,7 @@ function ManagerServicesSection({
                   )}
                 </td>
                 <td className="py-4 pr-4">
-                  <form
+                  <ReliableForm
                     id={statusFormId}
                     action={saveEventService}
                     className="hidden"
@@ -1995,7 +1997,7 @@ function ManagerServicesSection({
                     {!service.isActive ? (
                       <input type="hidden" name="isActive" value="1" />
                     ) : null}
-                  </form>
+                  </ReliableForm>
                   <EventServiceActiveSwitch
                     formId={statusFormId}
                     isActive={service.isActive}
@@ -2058,7 +2060,7 @@ function ManagerServiceEditOverlay({
             <X className="size-5" aria-hidden="true" />
           </Link>
         </div>
-        <form action={saveEventService} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
+        <ReliableForm action={saveEventService} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="serviceId" value={service.id} />
           <input type="hidden" name="eventId" value={service.eventId} />
@@ -2106,7 +2108,7 @@ function ManagerServiceEditOverlay({
               Salva servizio
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
       </div>
     </div>
   );
@@ -2135,7 +2137,7 @@ function ManagerOperationalUsersSection({
           dashboard operativa; solo il capogruppo completa anche
           l&apos;iscrizione personale.
         </p>
-        <form action={assignOperationalUserRole} className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+        <ReliableForm action={assignOperationalUserRole} className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="nav" value={navMode} />
           <div className="grid gap-3 lg:grid-cols-3">
@@ -2170,7 +2172,7 @@ function ManagerOperationalUsersSection({
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Crea utente e assegna ruolo
           </PendingSubmitButton>
-        </form>
+        </ReliableForm>
       </div>
 
       <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -2271,7 +2273,7 @@ function ManagerOperationalRoleEditOverlay({
           </Link>
         </div>
 
-        <form action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
+        <ReliableForm action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="nav" value={navMode} />
           <input type="hidden" name="currentUserId" value={role.userId} />
@@ -2354,7 +2356,7 @@ function ManagerOperationalRoleEditOverlay({
               Salva modifiche
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
       </div>
     </div>
   );

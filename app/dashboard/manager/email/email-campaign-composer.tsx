@@ -77,6 +77,7 @@ export function EmailCampaignComposer({
   const [savedTemplates, setSavedTemplates] = useState(initialTemplates);
   const [templateId, setTemplateId] = useState("");
   const [templateName, setTemplateName] = useState("");
+  const templateNameRef = useRef<HTMLInputElement>(null);
   const [templateSaveError, setTemplateSaveError] = useState("");
   const [templateSaveMode, setTemplateSaveMode] = useState<TemplateSaveMode>("create");
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -340,6 +341,7 @@ export function EmailCampaignComposer({
     const cleanTemplateName = templateName.trim();
     if (!cleanTemplateName) {
       setTemplateSaveError("Inserisci un titolo interno per il modello.");
+      templateNameRef.current?.focus();
       return;
     }
     setBusy(true);
@@ -380,6 +382,7 @@ export function EmailCampaignComposer({
       setShowTemplateSave(false);
     } catch (cause) {
       setTemplateSaveError(cause instanceof Error ? cause.message : "Salvataggio non riuscito.");
+      templateNameRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -1012,6 +1015,9 @@ export function EmailCampaignComposer({
               Titolo interno del modello
               <input
                 className="field font-normal"
+                ref={templateNameRef}
+                aria-invalid={Boolean(templateSaveError)}
+                aria-describedby={templateSaveError ? "template-save-error" : undefined}
                 value={templateName}
                 onChange={(event) => {
                   setTemplateName(event.target.value);
@@ -1025,7 +1031,7 @@ export function EmailCampaignComposer({
               />
             </label>
             {templateSaveError ? (
-              <p className="status-error mt-3">{templateSaveError}</p>
+              <p id="template-save-error" role="alert" className="status-error mt-3">{templateSaveError}</p>
             ) : null}
             <div className="mt-5 flex flex-wrap justify-end gap-3">
               <button

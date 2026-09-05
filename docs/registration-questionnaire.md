@@ -1,6 +1,6 @@
 # Questionario iscrizione
 
-Versione applicativa corrente: `2026-07-20-future-events-consent`.
+Versione applicativa corrente: `2026-09-05-accessibility-minimization`.
 
 Questa versione copre l'evento Assisi 2026 e mantiene la prima iscrizione
 essenziale e condizionale: i dati stabili restano in colonne o tabelle strutturate, mentre
@@ -19,7 +19,7 @@ manutenzione futura, non per sostituire lo schema relazionale principale.
 | Nazionalità | Sì | personale | snapshot `registration_questionnaire_answers.answers.nationality` | partecipante, manager, manager_viewer, admin | Sì |
 | Paese europeo geografico e città | Sì | personale | `participants.country_id`, `city_id`, `country_other`, `city_other` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
 | Disabilità o bisogni di accessibilità | Sì | sensibile | `accessibility_needs.washington_group_answers` | partecipante, manager, admin | Sì |
-| Dettagli accessibilità | Solo se accessibilità = Sì | sensibile | `accessibility_needs` | partecipante, manager, admin | Sì |
+| Opzioni strutturate accessibilità | Solo se accessibilità = Sì | sensibile | `accessibility_needs` | partecipante, manager, admin | Sì |
 | Partecipazione precedente Sant'Egidio nella propria città | Sì | operativo | `participants.has_previous_santegidio_participation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
 | Gruppo o associazione esterna | No, solo se partecipazione precedente Sant'Egidio = No | operativo | snapshot `registration_questionnaire_answers.answers.externalGroupAssociation` | partecipante, manager, manager_viewer, admin | Sì |
 | Partecipazione con gruppo/referente | Solo se partecipazione precedente = Sì | operativo | `participants.participates_with_group`, `participant_group_assignments`, snapshot `groupParticipation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
@@ -45,9 +45,8 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 
 - Se accessibilità = No, non vengono mostrate domande ulteriori.
 - Se accessibilità = Sì, viene mostrata una lista multi-selezione ispirata
-  alle aree funzionali del Washington Group: vista, udito, cammino/gradini,
-  cura di sé, memoria/concentrazione, comunicazione, sedia a rotelle o ausilio
-  mobilità, assistenza durante l'evento.
+  alle aree funzionali del Washington Group: udito, cammino/gradini,
+  sedia a rotelle o ausilio per la mobilità.
 - Se partecipazione precedente Sant'Egidio = No, il form non mostra categorie
   interne e l'app assegna l'iscrizione al nodo territoriale dei nuovi
   partecipanti più vicino.
@@ -142,3 +141,13 @@ npm run bootstrap:test-users
 Lo script richiede `SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` e
 `SUPABASE_SERVICE_ROLE_KEY` nell'ambiente locale. Non stampa la service role e
 non crea dati personali reali.
+
+## Minimizzazione e versioni storiche
+
+Dal 5 settembre 2026 tutti i flussi raccolgono solo le opzioni strutturate di
+accessibilità. Il capogruppo non raccoglie una richiesta separata di ricontatto.
+La richiesta di supporto personale rimane disponibile nella dashboard partecipante.
+Gli snapshot manuali contengono solo la risposta generale e le opzioni selezionate.
+Gli identificativi delle versioni storiche non vengono riscritti: la migration
+ritira soltanto le proprietà non più conservabili. Procedura e verifica del
+remoto: [form e accessibilità](form-reliability-accessibility.md).

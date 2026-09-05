@@ -185,7 +185,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   interazione o submit tentato, consenso dati sensibili di accessibilità
   mostrato/richiesto solo quando l'utente segnala bisogni di accessibilità,
   login non autenticato senza path tecnico, riduzione temporanea delle domande
-  accessibilità e rimozione dei placeholder dai campi note accessibilità.
+  accessibilità.
 - Nella seconda tranche della Milestone 12 sono state riviste in localhost la
   dashboard partecipante con utente test non personale, dashboard capogruppo,
   manager, admin e accoglienza. Patch approvate: i dati accessibilità della
@@ -776,6 +776,46 @@ Prima di ogni feature verificare:
   gestire. Non iniziare nuove modifiche codice su una base non allineata senza
   averlo segnalato.
 
+
+## Form e minimizzazione accessibilità — 2026-09-05
+
+- I form operativi usano `components/reliable-form.tsx`: invio esplicito senza
+  reset React in caso di errore, valori mantenuti in memoria nella modale,
+  messaggi accanto ai campi con `aria-invalid`/`aria-describedby`, focus al
+  primo campo non valido nell'ordine del form e blocco del doppio invio.
+- Le azioni dashboard restituiscono `FormFailure` per errori di validazione o
+  salvataggio; i redirect restano per successo e autenticazione. L'adattatore
+  `lib/forms/result.ts` converte i codici storici in errori localizzati e non
+  espone dettagli infrastrutturali. Le route POST delle schede operative
+  supportano la stessa risposta quando il client richiede JSON.
+- Non introdurre nuovi form in overlay che reindirizzino in caso di errore.
+  Usare `ReliableForm` e restituire problemi con campo/codice; non salvare
+  bozze operative in localStorage, sessionStorage o URL.
+- Telefono facoltativo ma internazionale quando presente: `+` seguito da
+  7–15 cifre, con spazi e separatori normalizzati. L'inserimento capogruppo
+  richiede almeno email o telefono. Email, nomi e date sono verificati anche
+  sul server; le fasce dell'evento sono verificate prima di creare la persona.
+- Il capogruppo raccoglie solo le tre opzioni strutturate di accessibilità,
+  con follow-up condizionale. La richiesta separata di ricontatto non viene
+  più raccolta. Il partecipante conserva la propria richiesta di supporto.
+- Il testo libero relativo all'accessibilità non viene più raccolto,
+  visualizzato, inviato o salvato in alcun flusso. Le bozze pubbliche del
+  formato precedente vengono migrate nel browser eliminando soltanto il
+  valore ritirato e conservando gli altri campi.
+- Questionario corrente: `2026-09-05-accessibility-minimization`; le versioni
+  storiche conservano il loro identificativo ma devono essere ripulite.
+- Migration predisposta e verificata su PostgreSQL locale:
+  `20260905120000_minimize_accessibility_data.sql`. Rimuove la colonna ritirata,
+  pulisce ricorsivamente snapshot e audit, azzera il vecchio flag manuale e
+  impedisce nuovi snapshot con proprietà di accessibilità fuori contratto.
+  Non modifica RLS o le note interne di gruppi/servizi.
+- Stato remoto e procedura di rilascio: `docs/form-reliability-accessibility.md`.
+  La migration va applicata dopo il deploy del codice compatibile, su ambiente
+  concordato; la pulizia è irreversibile e non va sostituita da un backup di
+  dati sensibili nel repository.
+- Regressioni: `tests/forms-reliability.test.mts`,
+  `tests/browser/forms-reliability.mjs`, `tests/sql/accessibility-minimization.sql`.
+
 ## Milestone 0 - discovery
 
 Discovery repository e app modello completata in:
@@ -1073,7 +1113,7 @@ Decisioni:
   politica, includendo paesi transcontinentali come Russia e Turchia.
 - `registration_questionnaire_answers` conserva solo uno snapshot versionato
   delle risposte/configurazione per audit e manutenzione futura.
-- Le domande Washington Group e le note di supporto restano dati sensibili:
+- Le risposte strutturate alle domande di accessibilità restano dati sensibili:
   visibili a partecipante, manager e admin, non all'accoglienza diretta.
 - Nel testo visibile all'utente non va citato il Washington Group o la
   classificazione tecnica delle aree funzionali; la documentazione può restare
@@ -1082,8 +1122,7 @@ Decisioni:
   ora solo tre opzioni accessibilità: sentire, camminare/salire gradini, uso di
   sedia a rotelle o altro ausilio per la mobilità. Sono state rimosse
   temporaneamente le opzioni vedere, cura di sé, ricordare/concentrarsi,
-  comunicare e bisogno di assistenza durante l'evento. Il campo note pratiche
-  non deve avere placeholder/suggerimenti nel box.
+  comunicare e bisogno di assistenza durante l'evento.
 - Assisi 2026 e' l'evento operativo prossimo in preparazione. Il titolo
   visibile deve essere quello della locandina:
   `UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`.
@@ -1278,8 +1317,7 @@ Funzioni disponibili:
 - Codice partecipante `participants.public_code` visibile in dashboard come
   identificativo operativo semplice dentro l'area QR con etichetta "Il tuo
   codice"; non va duplicato nell'header.
-- Modifica controllata di telefono, giorni di presenza, richiesta di supporto e
-  note pratiche. La lingua preferita non e' modificabile/richiesta.
+- Modifica controllata di telefono, giorni di presenza e richiesta di supporto. La lingua preferita non e' modificabile/richiesta.
 - Le modifiche sono consentite solo se la registrazione non e' `cancelled` e
   se `events.registration_closes_at` non e' superato.
 - La dashboard filtra sempre le iscrizioni sul `participants.auth_user_id`
@@ -1299,7 +1337,7 @@ Decisioni:
 - Per leggere lo stato QR e scrivere audit server-side si usa service role solo
   dopo aver verificato la proprieta' della registrazione con sessione utente.
 - L'accessibilita' viene riepilogata senza mostrare tassonomie tecniche nella
-  UI; il partecipante puo' comunque vedere/modificare le proprie note operative.
+  UI; il partecipante può vedere/modificare le proprie scelte strutturate.
 - I momenti del programma/panel non vanno raccolti nel form pubblico di
   iscrizione e non sono un campo del riepilogo modificabile. Vanno trattati
   come esperienza separata della dashboard: al momento si mostra "Panel a cui

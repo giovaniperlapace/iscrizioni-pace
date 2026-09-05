@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -40,6 +40,11 @@ export function ParticipantMessageForm({
     INITIAL_STATE
   );
   const overlay = useParticipantDashboardOverlay();
+  const [message, setMessage] = useState("");
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (state.status === "error") messageRef.current?.focus();
+  }, [state]);
 
   useEffect(() => {
     if (state.status !== "success" || !overlay) {
@@ -65,6 +70,7 @@ export function ParticipantMessageForm({
       {state.error ? (
         <p
           role="alert"
+          id="participant-message-error"
           className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]"
         >
           {copy.errors[state.error]}
@@ -75,6 +81,11 @@ export function ParticipantMessageForm({
         <span>{copy.label}</span>
         <textarea
           name="message"
+          ref={messageRef}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          aria-invalid={state.status === "error"}
+          aria-describedby={state.error ? "participant-message-error" : undefined}
           required
           maxLength={PARTICIPANT_MESSAGE_MAX_LENGTH}
           rows={8}

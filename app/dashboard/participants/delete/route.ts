@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { formFailureFromRedirect } from "@/lib/forms/result";
+
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -113,6 +115,10 @@ function dashboardRedirect(
     ? `${dashboard}Saved=${saved}`
     : `${dashboard}Error=${encodeURIComponent(error ?? "invalid")}`;
 
+  if (request.headers.get("accept")?.includes("application/json")) {
+    const destination = `/dashboard/${dashboard}?section=iscritti&nav=${navMode}&${result}`;
+    return NextResponse.json(saved ? { redirect: destination } : formFailureFromRedirect(destination), { status: saved ? 200 : 422 });
+  }
   return NextResponse.redirect(
     new URL(
       `/dashboard/${dashboard}?section=iscritti&nav=${navMode}&${result}`,

@@ -1,3 +1,5 @@
+
+import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -79,7 +81,6 @@ type ContactRow = {
 type AccessibilityRow = {
   washington_group_answers: Record<string, boolean> | null;
   needs_operational_support: boolean;
-  operational_notes: string | null;
 };
 
 type RegistrationChildRow = {
@@ -166,7 +167,6 @@ type ParticipantDashboardCopy = {
   accessibilityRequest: string;
   accessibilityTitle: string;
   accessibilityHelp: string;
-  accessibilityNotes: string;
   editClosed: string;
   notProvided: string;
   notAssigned: string;
@@ -235,7 +235,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
     accessibilityHelp:
       "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
-    accessibilityNotes: "Indicazioni pratiche per l'organizzazione",
     editClosed: "La finestra di modifica non è attiva per questa iscrizione.",
     notProvided: "Non indicata",
     notAssigned: "Non assegnato",
@@ -305,7 +304,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Which aspects should we consider?",
     accessibilityHelp:
       "You can select one or more options that are useful for organising the welcome better.",
-    accessibilityNotes: "Practical notes for the organisation",
     editClosed: "The edit window is not active for this registration.",
     notProvided: "Not provided",
     notAssigned: "Not assigned",
@@ -375,7 +373,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
     accessibilityHelp:
       "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
-    accessibilityNotes: "Indications pratiques pour l'organisation",
     editClosed: "La fenêtre de modification n'est pas active pour cette inscription.",
     notProvided: "Non indiqué",
     notAssigned: "Non attribué",
@@ -445,7 +442,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
     accessibilityHelp:
       "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
-    accessibilityNotes: "Praktische Hinweise für die Organisation",
     editClosed: "Das Bearbeitungsfenster ist für diese Anmeldung nicht aktiv.",
     notProvided: "Nicht angegeben",
     notAssigned: "Nicht zugewiesen",
@@ -515,7 +511,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
     accessibilityHelp:
       "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
-    accessibilityNotes: "Indicaciones prácticas para la organización",
     editClosed: "La ventana de modificación no está activa para esta inscripción.",
     notProvided: "No indicado",
     notAssigned: "No asignado",
@@ -585,7 +580,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Waar moeten we rekening mee houden?",
     accessibilityHelp:
       "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
-    accessibilityNotes: "Praktische aanwijzingen voor de organisatie",
     editClosed: "Het wijzigingsvenster is niet actief voor deze inschrijving.",
     notProvided: "Niet aangegeven",
     notAssigned: "Niet toegewezen",
@@ -655,7 +649,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Що нам потрібно врахувати?",
     accessibilityHelp:
       "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
-    accessibilityNotes: "Практичні вказівки для організації",
     editClosed: "Вікно редагування для цієї реєстрації не активне.",
     notProvided: "Не вказано",
     notAssigned: "Не призначено",
@@ -1028,7 +1021,7 @@ export default async function PartecipanteDashboardPage({
           .order("is_primary", { ascending: false }),
         supabase
           .from("accessibility_needs")
-          .select("washington_group_answers,needs_operational_support,operational_notes")
+          .select("washington_group_answers,needs_operational_support")
           .eq("registration_id", registrationId)
           .maybeSingle(),
         supabase
@@ -1128,7 +1121,6 @@ export default async function PartecipanteDashboardPage({
   ).filter(Boolean).length;
   const hasAccessibilityRequest =
     Boolean(accessibility?.needs_operational_support) ||
-    Boolean(accessibility?.operational_notes) ||
     sensitiveNeedCount > 0;
   const attendanceSummary = availabilityUnknown
     ? copy.attendanceUnknownSummary
@@ -1322,7 +1314,7 @@ export default async function PartecipanteDashboardPage({
                           editable={Boolean(editable)}
                           copy={copy}
                         >
-                          <form
+                          <ReliableForm
                             action={updateParticipantDashboard}
                             className="grid gap-3"
                           >
@@ -1361,7 +1353,7 @@ export default async function PartecipanteDashboardPage({
                               </Field>
                             </div>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                          </form>
+                          </ReliableForm>
                         </EditableInfo>
                         <Info
                           label={copy.submittedAt}
@@ -1381,7 +1373,7 @@ export default async function PartecipanteDashboardPage({
                           editable={Boolean(editable)}
                           copy={copy}
                         >
-                          <form
+                          <ReliableForm
                             action={updateParticipantDashboard}
                             className="grid gap-3"
                           >
@@ -1403,7 +1395,7 @@ export default async function PartecipanteDashboardPage({
                               />
                             </Field>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                          </form>
+                          </ReliableForm>
                         </EditableInfo>
                         <Info
                           label={copy.birthDate}
@@ -1462,7 +1454,7 @@ export default async function PartecipanteDashboardPage({
                         editable={Boolean(editable)}
                         copy={copy}
                       >
-                        <form
+                        <ReliableForm
                           action={updateParticipantDashboard}
                           className="grid gap-3"
                         >
@@ -1493,20 +1485,16 @@ export default async function PartecipanteDashboardPage({
                             />
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                        </form>
+                        </ReliableForm>
                       </EditableInfo>
 
                       <EditableInfo
                         label={copy.accessibilitySupport}
-                        value={
-                          accessibility?.operational_notes
-                            ? `${supportSummary}: ${accessibility.operational_notes}`
-                            : supportSummary
-                        }
+                        value={supportSummary}
                         editable={Boolean(editable)}
                         copy={copy}
                       >
-                        <form
+                        <ReliableForm
                           action={updateParticipantDashboard}
                           className="grid gap-3"
                         >
@@ -1570,19 +1558,10 @@ export default async function PartecipanteDashboardPage({
                                   </label>
                                 ))}
                               </div>
-                              <Field label={copy.accessibilityNotes}>
-                                <textarea
-                                  name="accessibilityNotes"
-                                  className="field min-h-28"
-                                  defaultValue={
-                                    accessibility?.operational_notes ?? ""
-                                  }
-                                />
-                              </Field>
                             </div>
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                        </form>
+                        </ReliableForm>
                       </EditableInfo>
 
                       {!editable ? (

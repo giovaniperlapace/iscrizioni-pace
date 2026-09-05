@@ -1,7 +1,7 @@
 import type { RegistrationInput } from "@/lib/registrations/validation";
 
 export const REGISTRATION_QUESTIONNAIRE_VERSION =
-  "2026-07-28-accompanying-children";
+  "2026-09-05-accessibility-minimization";
 
 export type QuestionnaireLocale = "it" | "en";
 export type QuestionDataClass = "personal" | "sensitive" | "operational" | "legal";
@@ -574,12 +574,12 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   {
     id: "accessibility_support",
     label: {
-      it: "Richiesta di supporto operativo e note",
-      en: "Operational support request and notes",
+      it: "Richiesta di supporto operativo",
+      en: "Operational support request",
     },
     required: false,
     dataClass: "sensitive",
-    structuredStorage: "accessibility_needs.needs_operational_support,operational_notes",
+    structuredStorage: "accessibility_needs.needs_operational_support",
     visibleTo: ["partecipante", "manager", "admin"],
     editableAfterSubmit: true,
   },
@@ -649,7 +649,6 @@ export function buildRegistrationQuestionnaireAnswers(input: RegistrationInput) 
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
       washingtonGroupAnswers: input.accessibilityAnswers,
       needsOperationalSupport: input.needsOperationalSupport,
-      hasNotes: Boolean(input.accessibilityNotes),
     },
     consents: {
       privacyAccepted: input.privacyAccepted,

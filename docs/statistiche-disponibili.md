@@ -177,7 +177,6 @@ dell'iscrizione del genitore e sono inclusi nei relativi conteggi.
 Da usare solo in viste ristrette e aggregate, senza esporre dettagli sensibili.
 
 - Partecipanti che richiedono supporto operativo.
-- Partecipanti con note operative di accessibilita'.
 - Richieste supporto per gruppo o paese.
 
 ## Da progettare prima di mostrare

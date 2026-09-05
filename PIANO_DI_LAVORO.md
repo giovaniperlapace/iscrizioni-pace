@@ -63,8 +63,7 @@ Stato locale aggiornato al 2026-06-17:
   operativi tramite tab.
 - Milestone 12 e' avviata: prima tranche UX consolidata nel commit `3d4d00d`
   con messaggi form meno prematuri, consenso accessibilità condizionale,
-  login non tecnico, domande accessibilità ridotte e note accessibilità senza
-  placeholder. Restano da rivedere le dashboard operative una sezione alla
+  login non tecnico e domande accessibilità ridotte. Restano da rivedere le dashboard operative una sezione alla
   volta.
 - Seconda tranche Milestone 12 completata in localhost su dashboard
   partecipante con utente test non personale, capogruppo, manager, admin e
@@ -1168,7 +1167,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     solo se l'utente risponde "Sì" ai bisogni di accessibilità;
   - le domande accessibilità sono state ridotte temporaneamente a: sentire,
     camminare/salire gradini, sedia a rotelle o altro ausilio per la mobilità;
-  - il campo note accessibilità non mostra placeholder/suggerimenti;
+  - le domande di accessibilità usano soltanto opzioni strutturate;
   - il login non autenticato non mostra più il path tecnico della dashboard.
 - Seconda tranche completata:
   - dashboard partecipante con utente test non personale, dashboard

@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { formFailure, formFailureFromRedirect, validateContactFields } from "@/lib/forms/result";
+
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -11,6 +13,13 @@ export async function POST(request: NextRequest) {
   const groupId = optionalText(formData.get("groupId"));
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const redirectDashboard = sourceDashboard === "manager" ? "manager" : "admin";
+  const issues = validateContactFields(formData);
+  if (issues.length) {
+    if (request.headers.get("accept")?.includes("application/json")) {
+      return NextResponse.json(formFailure(issues), { status: 422 });
+    }
+    return dashboardRedirect(request, redirectDashboard, "invalid-participant");
+  }
   const hasIdentityUpdate =
     formData.has("firstName") ||
     formData.has("lastName") ||
@@ -240,8 +249,12 @@ function dashboardRedirect(
     ? `${prefix}Saved=1`
     : `${prefix}Error=${encodeURIComponent(error ?? "invalid")}`;
 
+  const destination = `/dashboard/${dashboard}?section=iscritti&${query}`;
+  if (request.headers.get("accept")?.includes("application/json")) {
+    return NextResponse.json(saved ? { redirect: destination } : formFailureFromRedirect(destination), { status: saved ? 200 : 422 });
+  }
   return NextResponse.redirect(
-    new URL(`/dashboard/${dashboard}?section=iscritti&${query}`, request.url),
+    new URL(destination, request.url),
     {
       status: 303,
     }

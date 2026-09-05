@@ -492,7 +492,6 @@ export async function createPublicRegistration(
     supabase.from("accessibility_needs").insert({
       registration_id: registrationId,
       washington_group_answers: input.accessibilityAnswers,
-      operational_notes: input.accessibilityNotes,
       needs_operational_support: input.needsOperationalSupport,
     }),
     supabase.from("registration_questionnaire_answers").insert({

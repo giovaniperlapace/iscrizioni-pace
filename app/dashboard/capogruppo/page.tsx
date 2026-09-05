@@ -1,3 +1,6 @@
+import { FORM_COPY } from "@/lib/forms/copy";
+
+import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -599,8 +602,6 @@ type GroupLeaderCopy = {
     unknown: string;
     no: string;
     yes: string;
-    needsSupport: string;
-    notes: string;
   };
   statusLabels: {
     confirmed: string;
@@ -808,8 +809,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     unknown: "Non so / da verificare",
     no: "No",
     yes: "Sì",
-    needsSupport: "Serve ricontattare la persona o organizzare un supporto pratico.",
-    notes: "Indicazioni pratiche",
   },
   statusLabels: {
     confirmed: "Confermato",
@@ -1018,8 +1017,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     unknown: "I do not know / to be checked",
     no: "No",
     yes: "Yes",
-    needsSupport: "The person should be contacted again or practical support should be organised.",
-    notes: "Practical notes",
   },
   statusLabels: {
     confirmed: "Confirmed",
@@ -1197,8 +1194,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Je ne sais pas / à vérifier",
       no: "Non",
       yes: "Oui",
-      needsSupport: "Il faut recontacter la personne ou organiser un support pratique.",
-      notes: "Indications pratiques",
     },
     statusLabels: {
       confirmed: "Confirmé",
@@ -1372,8 +1367,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Ich weiß es nicht / zu prüfen",
       no: "Nein",
       yes: "Ja",
-      needsSupport: "Die Person sollte erneut kontaktiert oder praktische Unterstützung organisiert werden.",
-      notes: "Praktische Hinweise",
     },
     statusLabels: {
       confirmed: "Bestätigt",
@@ -1547,8 +1540,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "No lo sé / por verificar",
       no: "No",
       yes: "Sí",
-      needsSupport: "Hay que volver a contactar a la persona u organizar apoyo práctico.",
-      notes: "Indicaciones prácticas",
     },
     statusLabels: {
       confirmed: "Confirmado",
@@ -1722,8 +1713,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Ik weet het niet / te controleren",
       no: "Nee",
       yes: "Ja",
-      needsSupport: "De persoon moet opnieuw worden gecontacteerd of praktische ondersteuning moet worden georganiseerd.",
-      notes: "Praktische aanwijzingen",
     },
     statusLabels: {
       confirmed: "Bevestigd",
@@ -1897,8 +1886,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Не знаю / потрібно перевірити",
       no: "Ні",
       yes: "Так",
-      needsSupport: "Потрібно повторно зв'язатися з особою або організувати практичну підтримку.",
-      notes: "Практичні вказівки",
     },
     statusLabels: {
       confirmed: "Підтверджено",
@@ -2491,7 +2478,7 @@ function GroupLeaderLinksSection({
                         key={link.id}
                         className="rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm"
                       >
-                        <form
+                        <ReliableForm
                           action={updateGroupRegistrationLink}
                           className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                           data-preserve-dashboard-scroll
@@ -2512,7 +2499,7 @@ function GroupLeaderLinksSection({
                           <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
                             {copy.saveLinkName}
                           </PendingSubmitButton>
-                        </form>
+                        </ReliableForm>
                         <p className="mt-1 text-xs text-[var(--peace-muted)]">
                           {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
                           {link.maxUses ? `/${link.maxUses}` : ""}
@@ -2542,7 +2529,7 @@ function GroupLeaderLinksSection({
                 </div>
 
                 {groupLinks.length === 0 ? (
-                  <form
+                  <ReliableForm
                     action={createGroupRegistrationLink}
                     className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4"
                     data-preserve-dashboard-scroll
@@ -2564,7 +2551,7 @@ function GroupLeaderLinksSection({
                     <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                       {copy.generateLink}
                     </PendingSubmitButton>
-                  </form>
+                  </ReliableForm>
                 ) : null}
               </div>
             </article>
@@ -2610,8 +2597,10 @@ function ManualRegistrationSection({
       </div>
 
       {assignableGroups.length > 0 ? (
-        <form
+        <ReliableForm
           action={createGroupLeaderManualRegistration}
+          validation="manualRegistration"
+          locale={locale}
           className="mt-5 grid gap-4 lg:grid-cols-2"
         >
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
@@ -2640,7 +2629,8 @@ function ManualRegistrationSection({
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.phone}
-            <input name="phone" className="field" placeholder="+393331234567" />
+            <input name="phone" type="tel" className="field" placeholder="+393331234567" aria-describedby="manual-phone-help" />
+            <span id="manual-phone-help" className="text-xs font-normal">{FORM_COPY[locale].phone}</span>
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.birthDate}
@@ -2674,7 +2664,7 @@ function ManualRegistrationSection({
               {copy.addParticipant}
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
       ) : (
         <p className="mt-4 text-sm text-[var(--peace-muted)]">
           {copy.noRegistrableGroups}
@@ -2901,7 +2891,7 @@ function PendingAssignmentRow({
       <td className="py-4 pr-4">
         <div className="flex justify-end gap-2">
           {assignment.groupIsAssignable ? (
-            <form action={updateGroupLeaderAssignment}>
+            <ReliableForm action={updateGroupLeaderAssignment}>
               <input type="hidden" name="assignmentId" value={assignment.id} />
               <PendingSubmitButton
                 name="intent"
@@ -2910,7 +2900,7 @@ function PendingAssignmentRow({
               >
                 {copy.table.confirm}
               </PendingSubmitButton>
-            </form>
+            </ReliableForm>
           ) : null}
           <Link
             href={detailHref}
@@ -3075,7 +3065,7 @@ function AssignmentDetailCard({
 
       <div className="grid gap-4 md:grid-cols-2">
         <DetailBlock title={copy.detail.identity}>
-          <form
+          <ReliableForm
             action={updateGroupLeaderParticipantContact}
             className="grid gap-3"
             data-preserve-dashboard-scroll
@@ -3126,11 +3116,11 @@ function AssignmentDetailCard({
             <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva
             </PendingSubmitButton>
-          </form>
+          </ReliableForm>
         </DetailBlock>
 
         <DetailBlock title={copy.detail.contacts}>
-          <form
+          <ReliableForm
             action={updateGroupLeaderParticipantContact}
             className="grid gap-3"
             data-preserve-dashboard-scroll
@@ -3157,7 +3147,7 @@ function AssignmentDetailCard({
             <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva
             </PendingSubmitButton>
-          </form>
+          </ReliableForm>
         </DetailBlock>
 
         <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
@@ -3207,7 +3197,7 @@ function AssignmentDetailCard({
             >
               {reassignmentGroups.length > 0 ? (
                 <>
-                  <form
+                  <ReliableForm
                     action={updateGroupLeaderAssignment}
                     className="grid content-start gap-3 p-4"
                   >
@@ -3245,7 +3235,7 @@ function AssignmentDetailCard({
                     >
                       {copy.reassignment.submit}
                     </PendingSubmitButton>
-                  </form>
+                  </ReliableForm>
 
                   <div className="relative flex items-center justify-center border-y border-[#dfc46d] bg-white px-3 py-2 lg:border-x lg:border-y-0">
                     <span className="rounded-full border border-[#dfc46d] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#6b5214]">
@@ -3267,7 +3257,7 @@ function AssignmentDetailCard({
                     )}
                   </p>
                 </div>
-                <form action={updateGroupLeaderAssignment}>
+                <ReliableForm action={updateGroupLeaderAssignment}>
                   <input type="hidden" name="assignmentId" value={assignment.id} />
                   <ConfirmSubmitButton
                     name="intent"
@@ -3281,7 +3271,7 @@ function AssignmentDetailCard({
                   >
                     {copy.table.reject}
                   </ConfirmSubmitButton>
-                </form>
+                </ReliableForm>
               </div>
             </div>
           ) : null}
@@ -3298,7 +3288,7 @@ function AssignmentDetailCard({
         <ParticipantServiceSummary service={assignment.service} />
       </DetailBlock>
 
-      <form
+      <ReliableForm
         action={updateGroupLeaderAssignment}
         className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
       >
@@ -3339,9 +3329,9 @@ function AssignmentDetailCard({
             </PendingSubmitButton>
           ) : null}
         </div>
-      </form>
+      </ReliableForm>
 
-      <form
+      <ReliableForm
         action={updateParticipantEventService}
         className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
       >
@@ -3391,9 +3381,9 @@ function AssignmentDetailCard({
         <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
           Salva servizio
         </PendingSubmitButton>
-      </form>
+      </ReliableForm>
 
-      <form
+      <ReliableForm
         action={updateParticipantOperationalTags}
         className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
       >
@@ -3415,7 +3405,7 @@ function AssignmentDetailCard({
         <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
           Salva
         </PendingSubmitButton>
-      </form>
+      </ReliableForm>
     </section>
   );
 }
