@@ -1,3 +1,4 @@
+import { loadAllRows } from "@/lib/supabase/all-rows";
 import { getOperationalUserIdentities } from "@/lib/operational-users/identity";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -67,6 +68,7 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+  const deletedUserIds = await loadDeletedUserIds(eventId);
   const direct = new Set(
     contacts
       .filter((row) => Boolean(row.email?.trim()))
@@ -115,7 +117,7 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
     );
     const leadersByGroup = new Map<string, string[]>();
     for (const membership of memberships) {
-      if (!validUsers.has(membership.user_id)) continue;
+      if (!validUsers.has(membership.user_id) || deletedUserIds.has(membership.user_id)) continue;
       const current = leadersByGroup.get(membership.group_id) ?? [];
       if (!current.includes(membership.user_id)) current.push(membership.user_id);
       leadersByGroup.set(membership.group_id, current);
@@ -172,7 +174,8 @@ async function resolveGroupLeaderRecipients(eventId: string) {
     .order("is_primary", { ascending: false });
   if (error) throw new Error(error.message);
 
-  const userIds = [...new Set((memberships ?? []).map((row) => row.user_id))];
+  const deletedUserIds = await loadDeletedUserIds(eventId);
+  const userIds = [...new Set((memberships ?? []).map((row) => row.user_id))].filter(id => !deletedUserIds.has(id));
   const identities = await getOperationalUserIdentities(service, userIds);
 
   return userIds.flatMap<CampaignRecipient>((userId) => {
@@ -377,6 +380,7 @@ async function loadEventRegistrations(eventId: string, status: string) {
     let query = service
       .from("registrations")
       .select("id,participant_id,status")
+      .is("deleted_at", null)
       .eq("event_id", eventId)
       .order("submitted_at", { ascending: true });
     if (status !== "all") {
@@ -418,4 +422,15 @@ function collectRelationIds<
     result.set(row[key], current);
   }
   return result;
+}
+
+async function loadDeletedUserIds(eventId: string): Promise<Set<string>> {
+  const service = createSupabaseServiceClient();
+  const { data } = await loadAllRows((from, to) => service.from("registrations")
+    .select("id,participants!inner(auth_user_id)").eq("event_id", eventId).not("deleted_at", "is", null)
+    .order("id").range(from, to));
+  return new Set(data.flatMap(row => {
+    const participant = Array.isArray(row.participants) ? row.participants[0] : row.participants;
+    return participant?.auth_user_id ? [participant.auth_user_id] : [];
+  }));
 }

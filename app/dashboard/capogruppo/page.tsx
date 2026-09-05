@@ -1792,6 +1792,7 @@ export default async function CapogruppoDashboardPage({
       )
       .in("group_id", groupIds)
       .eq("registrations.event_id", currentEventId)
+      .is("registrations.deleted_at", null)
       .eq("is_current", true)
       .order("updated_at", { ascending: false })
       .limit(100);

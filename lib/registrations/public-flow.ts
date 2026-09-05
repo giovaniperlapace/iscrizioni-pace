@@ -217,7 +217,7 @@ export async function hasExistingRegistrationForEmail(
     .select("id")
     .eq("event_id", eventId)
     .in("participant_id", participantIds)
-    .neq("status", "cancelled")
+    .or("status.neq.cancelled,deleted_at.not.is.null")
     .limit(1);
 
   return !registrationError && Boolean(registrations?.length);

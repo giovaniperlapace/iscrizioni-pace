@@ -8,7 +8,7 @@ const statisticsSection = readFileSync(
   "utf8"
 );
 const operationsSection = readFileSync(
-  join(process.cwd(), "app/dashboard/operations-participants-section.tsx"),
+  join(process.cwd(), "app/dashboard/operations-participants-table.tsx"),
   "utf8"
 );
 

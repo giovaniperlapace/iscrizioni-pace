@@ -110,13 +110,13 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
                 } else if (response.redirected) {
                   const failure = formFailureFromRedirect(response.url);
                   if ([...new URL(response.url).searchParams.keys()].some((key) => /error$/i.test(key))) result = failure;
-                  else { router.push(response.url); router.refresh(); return; }
+                  else { router.push(response.url, { scroll: !form.hasAttribute("data-preserve-dashboard-scroll") }); router.refresh(); return; }
                 } else throw new Error("Unexpected form response");
               } else result = await action(data);
               if (result && typeof result === "object" && "status" in result && result.status === "error") {
                 setIssues((result as FormFailure).issues);
               } else if (result && typeof result === "object" && "redirect" in result && typeof result.redirect === "string") {
-                router.push(result.redirect); router.refresh();
+                router.push(result.redirect, { scroll: !form.hasAttribute("data-preserve-dashboard-scroll") }); router.refresh();
               }
             } catch (error) {
               unstable_rethrow(error);
