@@ -1,7 +1,7 @@
 # Blocco 5 — Gestione iscritti e operazioni rapide
 
-Stato: implementato e verificato il 2026-09-05. Le due migration sono applicate
-e registrate in produzione; rilascio del codice tramite PR #8.
+Stato: rilasciato in produzione il 2026-09-05. Le due migration sono applicate
+e registrate; PR #8 integrata in `main` con commit `b0485c4`.
 
 ## Riferimento e interfaccia
 
@@ -159,3 +159,7 @@ non gestisce l'archivio e non deve restare in servizio dopo l'uso del soft delet
   `service_role`, non da client anonimi/autenticati.
 - PostgREST restituisce HTTP 200 sulle nuove colonne; entrambe le RPC rifiutano
   un identificativo inesistente con `P0002`, senza scrivere dati.
+- Deployment production `dpl_4P4U8mz6tCf75twJKFHreStCMYHV`, stato `Ready`,
+  associato a `https://registrationspeace.santegidio.org`.
+- Home e login HTTP 200; dashboard admin/manager e quick-update senza sessione
+  reindirizzano al login. Nessun errore runtime nel controllo dopo il rilascio.

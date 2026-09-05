@@ -8,7 +8,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 
 Queste regole sostituiscono la precedente tabella fissa con colonna Azioni e
 l'eliminazione fisica dell'iscrizione. Migration applicate e registrate in
-produzione il 2026-09-05; rilascio del codice tramite PR #8. Verificate 68
+produzione il 2026-09-05; codice rilasciato tramite PR #8 (`b0485c4`), deployment
+`dpl_4P4U8mz6tCf75twJKFHreStCMYHV` Ready sul dominio pubblico. Verificate 68
 iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
 18 tabelle, 13 policy restrittive, 5 trigger e RPC/PostgREST con privilegi corretti.
 
