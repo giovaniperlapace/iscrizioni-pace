@@ -20,7 +20,9 @@ anche i dettagli ma non riceve controlli di modifica. I permessi sono comunque
 ricontrollati nelle RPC sul server.
 
 Le intestazioni Gruppo e Servizio offrono due interruttori indipendenti
-`Modifica rapida`, inizialmente disattivati. Ogni interruttore abilita o
+a matita sulla stessa riga dei titoli, inizialmente disattivati, con tooltip
+che indica attivazione/disattivazione della modifica rapida e sfondo blu
+quando attivi. Ogni interruttore abilita o
 disabilita i selettori di tutte le righe modificabili della propria colonna;
 quando è spento restano visibili il valore e l'eventuale stato del servizio.
 La scelta è temporanea nella tabella, non viene salvata tra sessioni e non

@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { ArrowDown, ArrowUp, Columns3, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Pencil, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ReliableForm } from "@/components/reliable-form";
@@ -715,49 +715,51 @@ export function OperationsParticipantsTable({
                   }
                   className={`px-3 py-2 ${column === "name" ? "sticky left-0 z-10 bg-[var(--peace-sky-100)]" : ""}`}
                 >
-                  <button
-                    type="button"
-                    className="flex min-h-11 items-center gap-2 whitespace-nowrap font-semibold"
-                    onClick={() =>
-                      savePreferences({
-                        ...preferences,
-                        sort: column,
-                        direction:
-                          preferences.sort === column &&
-                          preferences.direction === "asc"
-                            ? "desc"
-                            : "asc",
-                      })
-                    }
-                  >
-                    {PARTICIPANT_COLUMNS[column]}
-                    {preferences.sort === column &&
-                      (preferences.direction === "asc" ? (
-                        <ArrowUp size={14} aria-hidden />
-                      ) : (
-                        <ArrowDown size={14} aria-hidden />
-                      ))}
-                  </button>
-                  {canManage &&
-                    view !== "deleted" &&
-                    (column === "group" || column === "service") && (
-                      <label className="flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap text-xs font-normal">
-                        <input
-                          type="checkbox"
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="flex min-h-11 items-center gap-2 whitespace-nowrap font-semibold"
+                      onClick={() =>
+                        savePreferences({
+                          ...preferences,
+                          sort: column,
+                          direction:
+                            preferences.sort === column &&
+                            preferences.direction === "asc"
+                              ? "desc"
+                              : "asc",
+                        })
+                      }
+                    >
+                      {PARTICIPANT_COLUMNS[column]}
+                      {preferences.sort === column &&
+                        (preferences.direction === "asc" ? (
+                          <ArrowUp size={14} aria-hidden />
+                        ) : (
+                          <ArrowDown size={14} aria-hidden />
+                        ))}
+                    </button>
+                    {canManage &&
+                      view !== "deleted" &&
+                      (column === "group" || column === "service") && (
+                        <button
+                          type="button"
                           role="switch"
                           aria-label={`Modifica rapida ${PARTICIPANT_COLUMNS[column]}`}
-                          checked={quickEditColumns[column]}
-                          onChange={(event) =>
+                          aria-checked={quickEditColumns[column]}
+                          title={`${quickEditColumns[column] ? "Disattiva" : "Attiva"} modifica rapida ${PARTICIPANT_COLUMNS[column]}`}
+                          onClick={() =>
                             setQuickEditColumns((previous) => ({
                               ...previous,
-                              [column]: event.target.checked,
+                              [column]: !previous[column],
                             }))
                           }
-                          className="size-4 accent-[var(--peace-blue-800)]"
-                        />
-                        Modifica rapida
-                      </label>
-                    )}
+                          className={`inline-flex size-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 ${quickEditColumns[column] ? "bg-[var(--peace-blue-800)] text-white hover:bg-[var(--peace-blue-900)]" : "text-[var(--peace-blue-800)] hover:bg-white"}`}
+                        >
+                          <Pencil size={16} aria-hidden />
+                        </button>
+                      )}
+                  </div>
                 </th>
               ))}
             </tr>

@@ -77,7 +77,7 @@ try {
   );
   clickText("button", "Cambia operatore");
   check(
-    '!document.querySelector("tbody select") && document.querySelectorAll("thead [role=switch]:not(:checked)").length === 2',
+    '!document.querySelector("tbody select") && document.querySelectorAll("thead [role=switch][aria-checked=false]").length === 2',
     "group and service quick editing start disabled",
   );
   ab("check", '[aria-label="Modifica rapida Gruppo"]');
@@ -145,7 +145,7 @@ try {
   clickText("a", "Senza gruppo");
   ab("snapshot", "-i");
   check(
-    'Array.from(document.querySelectorAll("th > button")).map(th=>th.textContent).join(",") === "Partecipante,Paese,Città,Età,Gruppo" && document.querySelectorAll("tbody tr").length === 3',
+    'Array.from(document.querySelectorAll("th > div > button:not([role=switch])")).map(th=>th.textContent).join(",") === "Partecipante,Paese,Città,Età,Gruppo" && document.querySelectorAll("tbody tr").length === 3',
     "without-group queue has focused columns",
   );
   ab("select", '[aria-label="Gruppo di Persona Prova 3"]', "group1");
