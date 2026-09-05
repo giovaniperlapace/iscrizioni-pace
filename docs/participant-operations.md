@@ -35,6 +35,9 @@ aree admin e manager; l'URL può imporre uno stato specifico. Nessun dato
 anagrafico è salvato nelle preferenze. Il nome resta sempre visibile; gli altri
 campi significativi sono ordinabili, con `aria-sort`, ordinamento numerico per
 età e date cronologiche. Età riferita alla data di inizio evento.
+Lo stato iscrizione è escluso dalle colonne selezionabili; le preferenze e gli
+URL precedenti che includono `status` come colonna lo ignorano. L'ordinamento
+su quella colonna torna al nome. Il filtro per stato resta disponibile.
 
 `view=without-group` mostra solo nome, paese, città, età e gruppo, con lo stesso
 interruttore di colonna per attivare il selettore.

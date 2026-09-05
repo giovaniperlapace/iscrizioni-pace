@@ -161,8 +161,6 @@ export function OperationsParticipantsTable({
           .map((tag) => tag.label)
           .sort()
           .join(", ");
-      case "status":
-        return statusLabel(row.registrationStatus);
       default:
         return row[column];
     }
@@ -1109,15 +1107,4 @@ function formatDate(value: string | null) {
         timeZone: "Europe/Rome",
       }).format(new Date(value))
     : "—";
-}
-function statusLabel(status: string | null) {
-  return (
-    (
-      {
-        submitted: "Inviata",
-        confirmed: "Confermata",
-        cancelled: "Annullata",
-      } as Record<string, string>
-    )[status ?? ""] ?? "—"
-  );
 }

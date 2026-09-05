@@ -8,7 +8,6 @@ export const PARTICIPANT_COLUMNS = {
   group: "Gruppo",
   service: "Servizio",
   tags: "Tag",
-  status: "Stato",
   submittedAt: "Data iscrizione",
 } as const;
 export type ParticipantColumn = keyof typeof PARTICIPANT_COLUMNS;

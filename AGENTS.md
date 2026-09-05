@@ -19,6 +19,8 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
 - Colonne facoltative e ordinamento sono salvati nel browser per ID operatore,
   condivisi tra area admin e manager. L'URL può prevalere sulle preferenze
   salvate. Il nome resta sempre visibile. Età calcolata all'inizio dell'evento.
+  Lo stato iscrizione non è una colonna selezionabile: le vecchie preferenze
+  e gli URL che lo includono lo ignorano, con ordinamento di ripiego sul nome.
 - Gruppo, servizio e tag si salvano direttamente dalla tabella e dalla scheda,
   tramite la stessa RPC `update_registration_operation`; le modifiche sono
   serializzate per iscrizione e auditabili nella stessa transazione. Un

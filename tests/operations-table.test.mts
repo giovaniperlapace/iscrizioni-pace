@@ -47,11 +47,15 @@ test("corrupt preferences have safe defaults and name is always visible", () => 
   assert.deepEqual(parseTablePreferences(null), DEFAULT_TABLE_PREFERENCES);
   assert.deepEqual(
     parseTablePreferences({
-      columns: ["age", "age", "unknown"],
+      columns: ["age", "age", "unknown", "status"],
       sort: "__proto__",
       direction: "bad",
     }),
     { columns: ["name", "age"], sort: "name", direction: "asc" },
+  );
+  assert.deepEqual(
+    parseTablePreferences({ columns: ["name", "status"], sort: "status" }),
+    { columns: ["name"], sort: "name", direction: "asc" },
   );
   assert.deepEqual(
     parseTablePreferences({ columns: [], sort: "age", direction: "desc" }),
