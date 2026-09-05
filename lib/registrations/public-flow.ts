@@ -19,7 +19,6 @@ import {
   hashGroupRegistrationLinkToken,
   isValidGroupRegistrationLinkToken,
 } from "@/lib/groups/registration-links";
-import { notifyGroupLeadersForAssignment } from "@/lib/groups/leader-notifications";
 import {
   buildRegistrationQuestionnaireAnswers,
   getQuestionnaireVisibilitySummary,
@@ -434,7 +433,9 @@ export async function createPublicRegistration(
     participatesWithGroup: input.participatesWithGroup,
     cannotFindLeader: input.cannotFindLeader,
   });
-  const resolvedGroupAssignment = leaderGroupAssignment
+  const resolvedGroupAssignment = input.participatesWithGroup !== true
+    ? null
+    : leaderGroupAssignment
     ? {
         groupId: leaderGroupAssignment.groupId,
         status: "confirmed" as const,
@@ -446,7 +447,7 @@ export async function createPublicRegistration(
     : groupLink
     ? {
         groupId: groupLink.group.id,
-        status: "probable" as const,
+        status: "confirmed" as const,
         source: "participant_selected" as const,
         confidence: 0.95,
         reason: "group_registration_link",
@@ -455,7 +456,7 @@ export async function createPublicRegistration(
     : groupAssignment
       ? {
           ...groupAssignment,
-          status: "probable" as const,
+          status: "confirmed" as const,
         }
       : null;
 
@@ -530,9 +531,6 @@ export async function createPublicRegistration(
   ];
 
   if (resolvedGroupAssignment) {
-    const confirmedAt =
-      resolvedGroupAssignment.status === "confirmed" ? new Date().toISOString() : null;
-
     writes.push(
       supabase.from("participant_group_assignments").insert({
         registration_id: registrationId,
@@ -542,13 +540,6 @@ export async function createPublicRegistration(
         confidence: resolvedGroupAssignment.confidence,
         assignment_reason: resolvedGroupAssignment.reason,
         matcher_version: resolvedGroupAssignment.matcherVersion,
-        confirmed_by:
-          resolvedGroupAssignment.status === "confirmed" ? authUserId : null,
-        confirmed_at: confirmedAt,
-        leader_decision_by:
-          resolvedGroupAssignment.status === "confirmed" ? authUserId : null,
-        leader_decision_at: confirmedAt,
-        leader_notification_read_at: confirmedAt,
       })
     );
   }
@@ -590,7 +581,7 @@ export async function createPublicRegistration(
     throw failedWrite.error;
   }
 
-  if (groupLink) {
+  if (groupLink && resolvedGroupAssignment?.groupId === groupLink.group.id) {
     await Promise.all([
       supabase
         .from("group_registration_links")
@@ -607,23 +598,6 @@ export async function createPublicRegistration(
         },
       }),
     ]);
-  }
-
-  if (resolvedGroupAssignment?.status === "probable") {
-    const { data: assignment } = await supabase
-      .from("participant_group_assignments")
-      .select("id")
-      .eq("registration_id", registrationId)
-      .eq("group_id", resolvedGroupAssignment.groupId)
-      .maybeSingle();
-    const assignmentId = (assignment as { id: string } | null)?.id ?? null;
-
-    if (assignmentId) {
-      await notifyGroupLeadersForAssignment(supabase, {
-        assignmentId,
-        appUrl: publicSiteUrl,
-      });
-    }
   }
 
   try {

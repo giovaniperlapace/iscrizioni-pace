@@ -1,5 +1,10 @@
 # Piano di lavoro
 
+Aggiornamento 2026-09-05: il blocco di semplificazione gruppi sostituisce
+conferme ordinarie, notifiche per iscrizione e risalite automatiche descritte
+nelle milestone storiche. Regole correnti e rilascio SQL/codice in
+`docs/operative-group-assignments.md` e `AGENTS.md`.
+
 > Aggiornamento 2026-08-04: per location, panel, sezioni di capienza,
 > iscrizioni individuali, prenotazioni scuole, campagne collegate ai panel,
 > statistiche panel, accoglienza QR e stampa badge usare

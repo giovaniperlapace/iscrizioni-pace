@@ -99,14 +99,11 @@ Fonte: dati `groups` e `group_registration_links`.
 
 ### Dashboard capogruppo
 
-Fonte principale: `summarizeGroupLeaderAssignments` in
-`lib/groups/capogruppo-dashboard.ts`.
-
-- Assegnazioni totali in scope.
-- Assegnazioni da leggere/verificare.
-- Assegnazioni probabili.
-- Assegnazioni confermate.
-- Assegnazioni rifiutate.
+Fonte: assegnazioni correnti in `participant_group_assignments`, nello scope
+attivo del capogruppo e dei discendenti. Dal 2026-09-05 non esistono più
+conteggi di conferma, probabilità o lettura: ogni assegnazione corrente è
+operativa. Le persone rifiutate sono visibili in `Senza gruppo` ad admin/manager;
+le decisioni precedenti restano nell'audit.
 
 ## Derivabili subito dallo schema
 
@@ -125,7 +122,7 @@ Queste statistiche non richiedono nuove tabelle, ma vanno collocate con cura.
 ### Gruppi e referenti
 
 - Iscritti per gruppo corrente.
-- Iscritti per stato assegnazione gruppo.
+- Iscritti con gruppo corrente o Senza gruppo.
 - Iscritti senza referente principale assegnato.
 - Gruppi senza referente principale.
 - Gruppi nascosti ma iscrivibili tramite link.

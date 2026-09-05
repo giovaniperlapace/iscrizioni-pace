@@ -125,7 +125,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     cityOther: optionalText(formData.get("cityOther")),
     hasPreviousSantegidioParticipation,
     externalGroupAssociation:
-      hasPreviousSantegidioParticipation === false
+      participatesWithGroup === false
         ? optionalText(formData.get("externalGroupAssociation"))
         : null,
     participatesWithGroup,
@@ -218,14 +218,12 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
   }
 
   if (
-    input.hasPreviousSantegidioParticipation === true &&
     input.participatesWithGroup === null
   ) {
     errors.push("Indica se parteciperai con un gruppo.");
   }
 
   if (
-    input.hasPreviousSantegidioParticipation === true &&
     input.participatesWithGroup === true &&
     !input.cannotFindLeader &&
     !input.groupId &&

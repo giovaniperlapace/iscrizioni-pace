@@ -1,4 +1,4 @@
-export const GROUP_MATCHER_VERSION = "2026-08-24-territorial-review-v4";
+export const GROUP_MATCHER_VERSION = "2026-09-05-operative-groups-v5";
 
 export type GroupAgeBand = "giovani" | "adulti" | "anziani";
 export type GroupCommunityKind = "santegidio" | "newcomers" | "territorial";
@@ -185,10 +185,8 @@ export function findTerritorialReviewGroup(
 }
 
 export function resolveGroupAssignmentForRegistration({
-  groups,
-  criteria,
   selectedGroupId,
-  hasPreviousSantegidioParticipation,
+  participatesWithGroup,
   cannotFindLeader,
 }: {
   groups: GroupMatchCandidate[];
@@ -198,43 +196,16 @@ export function resolveGroupAssignmentForRegistration({
   participatesWithGroup: boolean | null;
   cannotFindLeader: boolean;
 }): ResolvedGroupAssignment | null {
-  if (selectedGroupId && !cannotFindLeader) {
-    return {
-      groupId: selectedGroupId,
-      source: "participant_selected",
-      confidence: 0.85,
-      reason: "participant_selected_group",
-      matcherVersion: GROUP_MATCHER_VERSION,
-    };
+  if (participatesWithGroup !== true || !selectedGroupId || cannotFindLeader) {
+    return null;
   }
-
-  const territorialReviewGroup = findTerritorialReviewGroup(groups, criteria);
-
-  if (territorialReviewGroup) {
-    return {
-      groupId: territorialReviewGroup.id,
-      source: "rule",
-      confidence: 0.5,
-      reason: "territorial_review_queue",
-      matcherVersion: GROUP_MATCHER_VERSION,
-    };
-  }
-
-  if (hasPreviousSantegidioParticipation === false) {
-    const fallback = findTerritorialFallback(groups, criteria, "newcomers");
-
-    return fallback
-      ? {
-          groupId: fallback.id,
-          source: "rule",
-          confidence: 0.7,
-          reason: "newcomer_territorial_fallback",
-          matcherVersion: GROUP_MATCHER_VERSION,
-        }
-      : null;
-  }
-
-  return null;
+  return {
+    groupId: selectedGroupId,
+    source: "participant_selected",
+    confidence: 1,
+    reason: "participant_selected_group",
+    matcherVersion: GROUP_MATCHER_VERSION,
+  };
 }
 
 export function formatGroupOptionLabel(group: {

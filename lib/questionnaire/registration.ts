@@ -1,7 +1,7 @@
 import type { RegistrationInput } from "@/lib/registrations/validation";
 
 export const REGISTRATION_QUESTIONNAIRE_VERSION =
-  "2026-09-05-accessibility-minimization";
+  "2026-09-05-operative-groups";
 
 export type QuestionnaireLocale = "it" | "en";
 export type QuestionDataClass = "personal" | "sensitive" | "operational" | "legal";
@@ -15,7 +15,7 @@ export type RoleVisibility =
 
 export type RegistrationQuestion = {
   id: string;
-  label: Record<QuestionnaireLocale, string>;
+  label: Record<QuestionnaireLocale, string> & Partial<Record<"fr" | "de" | "es" | "nl" | "uk", string>>;
   required: boolean;
   dataClass: QuestionDataClass;
   structuredStorage: string;
@@ -515,11 +515,8 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   },
   {
     id: "previous_santegidio_participation",
-    label: {
-      it: "Hai già partecipato a eventi o iniziative Sant'Egidio?",
-      en: "Have you already joined Sant'Egidio events or initiatives?",
-    },
-    required: false,
+    label: {"it": "Hai partecipato ad altri eventi con la Comunità di Sant’Egidio?", "en": "Have you attended other events with the Community of Sant’Egidio?", "fr": "As-tu participé à d’autres événements avec la Communauté de Sant’Egidio ?", "de": "Hast du an anderen Veranstaltungen mit der Gemeinschaft Sant’Egidio teilgenommen?", "es": "¿Has participado en otros eventos con la Comunidad de Sant’Egidio?", "nl": "Heb je aan andere evenementen met de Gemeenschap van Sant’Egidio deelgenomen?", "uk": "Чи брали ви участь в інших заходах зі Спільнотою святого Егідія?"},
+    required: true,
     dataClass: "operational",
     structuredStorage: "participants.has_previous_santegidio_participation",
     visibleTo: ["partecipante", "capogruppo", "manager", "manager_viewer", "admin"],
@@ -527,15 +524,21 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   },
   {
     id: "group_participation",
-    label: {
-      it: "Parteciperai all'incontro con un gruppo della Comunità di Sant'Egidio?",
-      en: "Are you joining with a Sant'Egidio group?",
-    },
-    required: false,
+    label: {"it": "Parteciperai con un gruppo alla preghiera?", "en": "Will you attend the prayer with a group?", "fr": "Participeras-tu à la prière avec un groupe ?", "de": "Wirst du mit einer Gruppe am Gebet teilnehmen?", "es": "¿Participarás en la oración con un grupo?", "nl": "Zul je met een groep aan het gebed deelnemen?", "uk": "Чи братимете ви участь у молитві з групою?"},
+    required: true,
     dataClass: "operational",
     structuredStorage: "participants.participates_with_group,participant_group_assignments",
     visibleTo: ["partecipante", "capogruppo", "manager", "manager_viewer", "admin"],
     editableAfterSubmit: true,
+  },
+  {
+    id: "external_group_association",
+    label: {"it": "Fai parte di qualche associazione?", "en": "Are you a member of any association?", "fr": "Fais-tu partie d’une association ?", "de": "Gehörst du einem Verein an?", "es": "¿Formas parte de alguna asociación?", "nl": "Ben je lid van een vereniging?", "uk": "Чи належите ви до якоїсь асоціації?"},
+    required: false,
+    dataClass: "operational",
+    structuredStorage: "registration_questionnaire_answers.answers.externalGroupAssociation",
+    visibleTo: ["partecipante", "manager", "manager_viewer", "admin"],
+    editableAfterSubmit: false,
   },
   {
     id: "attendance",

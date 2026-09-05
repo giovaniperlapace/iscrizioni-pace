@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  renderGroupLeaderAssignmentNotificationEmail,
   renderMagicLinkEmail,
   renderRegistrationConfirmationEmail,
 } from "../lib/email/templates.ts";
@@ -48,6 +47,7 @@ test("parseRegistrationForm validates required public registration fields", () =
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.set("externalGroupAssociation", "Associazione Giovani del quartiere");
   formData.append("availabilityDays", "2026-10-25");
   formData.append("availabilityDays", "2026-10-27");
@@ -109,6 +109,7 @@ test("parseRegistrationForm validates and stores accompanying children", () => {
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("participatesWithChildren", "yes");
@@ -154,6 +155,7 @@ test("parseRegistrationForm rejects incomplete or future child records", () => {
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("participatesWithChildren", "yes");
@@ -224,6 +226,7 @@ test("parseRegistrationForm accepts structured accessibility answers", () => {
   formData.set("hasAccessibilityNeeds", "yes");
   formData.set("accessibility_hearing", "on");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
@@ -248,6 +251,7 @@ test("parseRegistrationForm requires sensitive consent only for accessibility ne
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
 
@@ -286,6 +290,7 @@ test("parseRegistrationForm keeps phone optional but validates it when present",
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
@@ -595,22 +600,6 @@ test("registration confirmation includes the short participant code", () => {
   assert.match(rendered.html, /A7K2/);
   assert.match(rendered.text, /QR code personale/);
   assert.match(rendered.html, /cid:registration-qr@example\.org/);
-});
-
-test("group leader assignment notification points to the review dashboard", () => {
-  const rendered = renderGroupLeaderAssignmentNotificationEmail({
-    leaderName: "Referente",
-    participantName: "Maria Rossi",
-    participantCode: "A7K2",
-    groupName: "Roma",
-    eventTitle: "Assisi 2026",
-    dashboardLink: "https://registrationspeace.santegidio.org/dashboard/capogruppo?filter=to-review",
-  });
-
-  assert.match(rendered.subject, /Nuova persona da verificare/);
-  assert.match(rendered.text, /Maria Rossi \(A7K2\)/);
-  assert.match(rendered.text, /filter=to-review/);
-  assert.match(rendered.html, /Apri la dashboard capogruppo/);
 });
 
 test("rate limit blocks attempts after the configured threshold", () => {

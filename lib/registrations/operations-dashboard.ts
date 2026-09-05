@@ -36,8 +36,7 @@ export type OperationsDashboardSummary = {
   total: number;
   filtered: number;
   withoutGroup: number;
-  probableGroup: number;
-  confirmedGroup: number;
+  assignedGroup: number;
   withoutEmail: number;
   withoutService: number;
 };
@@ -125,14 +124,9 @@ export function summarizeOperationsDashboardParticipants(
     withoutGroup: countRegisteredPeople(
       filteredParticipants.filter((participant) => !participant.currentGroupId)
     ),
-    probableGroup: countRegisteredPeople(
+    assignedGroup: countRegisteredPeople(
       filteredParticipants.filter(
-        (participant) => participant.currentGroupStatus === "probable"
-      )
-    ),
-    confirmedGroup: countRegisteredPeople(
-      filteredParticipants.filter(
-        (participant) => participant.currentGroupStatus === "confirmed"
+        (participant) => Boolean(participant.currentGroupId)
       )
     ),
     withoutEmail: filteredParticipants.filter((participant) => !participant.email)

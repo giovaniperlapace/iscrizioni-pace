@@ -1565,7 +1565,6 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <EventValue label="Iscrizioni" value={summary.total} />
         <EventValue label="Ultime 24 ore" value={summary.last24Hours} />
-        <EventValue label="Assegnazioni da verificare" value={summary.probableGroup} />
         <EventValue label="Supporto richiesto" value={summary.needsOperationalSupport} />
       </div>
 

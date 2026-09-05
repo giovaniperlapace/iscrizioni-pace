@@ -684,8 +684,8 @@ function statusLabel(status: string | null): string {
 
 function groupStatusLabel(status: string | null): string {
   switch (status) {
-    case "confirmed": return "gruppo confermato";
-    case "probable": return "da verificare";
+    case "confirmed": return "gruppo assegnato";
+    case "probable": return "gruppo assegnato";
     case "rejected": return "rifiutato";
     default: return "stato gruppo non indicato";
   }

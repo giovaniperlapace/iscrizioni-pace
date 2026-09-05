@@ -169,8 +169,7 @@ test("summarizeOperationsDashboardParticipants reports loaded and filtered rows"
     total: 3,
     filtered: 1,
     withoutGroup: 0,
-    probableGroup: 0,
-    confirmedGroup: 1,
+    assignedGroup: 1,
     withoutEmail: 0,
     withoutService: 0,
   });
@@ -187,7 +186,7 @@ test("operations summary counts children as registered people", () => {
 
   assert.equal(summary.total, 4);
   assert.equal(summary.filtered, 4);
-  assert.equal(summary.confirmedGroup, 4);
+  assert.equal(summary.assignedGroup, 4);
 });
 
 test("statistics drilldown opens the registrations containing matching people", () => {

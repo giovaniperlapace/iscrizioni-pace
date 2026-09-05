@@ -4,6 +4,41 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Assegnazioni operative e questionario — 2026-09-05
+
+Queste regole sostituiscono le precedenti indicazioni su conferma ordinaria,
+notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
+
+- Ogni assegnazione corrente è operativa; `confirmed` resta il valore tecnico,
+  senza richiedere una conferma successiva. UI e conteggi usano gruppo assegnato.
+- Il capogruppo vede tutte le persone correnti in scope e gestisce soltanto
+  l'eccezione `Non appartiene al mio gruppo`, oltre alle note e ai dati già
+  modificabili. Non esistono più Da confermare, conferma/non conferma,
+  smistamento ai discendenti o lettura della notifica.
+- Il rifiuto disattiva l'assegnazione e porta sempre in `Senza gruppo`, senza
+  risalita al padre. La RPC server `reject_group_assignment` verifica evento,
+  membership e scope; rimozione e audit sono transazionali. Solo admin/manager
+  possono assegnare nuovamente una persona senza gruppo.
+- Eliminati invio e template delle email per nuove assegnazioni ai capigruppo.
+  Le colonne storiche di conferma/lettura restano, ma la lettura non è più usata.
+- Questionario corrente: `2026-09-05-operative-groups`. Due domande obbligatorie
+  e indipendenti: `Hai partecipato ad altri eventi con la Comunità di Sant’Egidio?`
+  e `Parteciperai con un gruppo alla preghiera?`. Solo il secondo No mostra
+  `Fai parte di qualche associazione?`, facoltativa e salvata nello snapshot
+  `answers.externalGroupAssociation`. Tutte le sette lingue sono aggiornate.
+- No prevale anche su link riservato/membership. Senza scelta esplicita, o con
+  `Non trovo il mio referente`, non creare assegnazioni territoriali automatiche.
+  I link preselezionano il gruppo, senza assumere una precedente partecipazione.
+- Migration preparata e testata su PostgreSQL temporaneo, non applicata al remoto:
+  `20260905150000_operative_group_assignments.sql`. Conserva audit/snapshot
+  storici, rimuove code automatiche ancora probabili e assegnazioni incompatibili
+  con No (salvo override admin/manager), converte le restanti probabili senza
+  inventare una conferma umana. Trigger/default normalizzano i nuovi stati;
+  nessuna modifica alle policy RLS. Coordinare rilascio SQL/codice per la RPC.
+- Procedura e dettagli: `docs/operative-group-assignments.md`. Regressioni in
+  `tests/group-questionnaire.test.mts`, `tests/browser/group-questionnaire.mjs`
+  e `tests/sql/operative-group-assignments.sql`.
+
 ## Stato del progetto
 
 - Nome progetto/repository: `iscrizioni-pace`.
@@ -802,7 +837,7 @@ Prima di ogni feature verificare:
   visualizzato, inviato o salvato in alcun flusso. Le bozze pubbliche del
   formato precedente vengono migrate nel browser eliminando soltanto il
   valore ritirato e conservando gli altri campi.
-- Questionario corrente: `2026-09-05-accessibility-minimization`; le versioni
+- Versione della tranche accessibilità: `2026-09-05-accessibility-minimization`; le versioni
   storiche conservano il loro identificativo e sono state ripulite.
 - Migration verificata su PostgreSQL locale e applicata in produzione il
   2026-09-05 dopo il deployment del codice compatibile:
@@ -1992,14 +2027,11 @@ Decisione aggiornata il 2026-06-15:
 - Le opzioni gruppo nel form devono essere ricercabili sia per nome gruppo sia
   per referente principale, per esempio `Giovani per la Pace - referente
   Stefano Orlando`.
-- Deve esistere l'opzione "Non trovo il mio referente". In quel caso, oppure
-  se una persona ha già partecipato a Sant'Egidio ma dice di non partecipare
-  con un gruppo, il sistema assegna il gruppo più probabile in base a
-  territorio/età con stato `probable`.
-- Il referente vede le assegnazioni probabili in una coda interna e può
-  confermare o rifiutare. Dopo rifiuto si risale automaticamente al padre
-  dell'albero finché esiste un responsabile; se nessuno riconosce la persona,
-  l'assegnazione finisce in coda manager.
+- Deve esistere l'opzione "Non trovo il mio referente". In quel caso la
+  persona resta Senza gruppo, come chi dichiara di partecipare senza gruppo.
+- Una selezione esplicita è subito operativa. Il referente segnala soltanto
+  chi non appartiene al gruppo; il rifiuto porta direttamente a Senza gruppo,
+  disponibile per riassegnazione manuale di admin/manager.
 - Il partecipante non riceve notifiche di rifiuto, risalita o
   riclassificazione interna.
 - I referenti di qualunque livello dell'albero e i manager possono essere anche
@@ -2243,7 +2275,7 @@ Email previste:
 
 - Conferma iscrizione.
 - Magic link.
-- Notifica a capogruppo per nuova associazione.
+- Nessuna notifica automatica al capogruppo per nuova associazione.
 - Comunicazioni per persone senza email inviate al referente.
 - Campagne manager/admin filtrate.
 

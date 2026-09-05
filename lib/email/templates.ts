@@ -11,14 +11,6 @@ type RegistrationConfirmationInput = {
   qrCodeContentId?: string;
 };
 
-type GroupLeaderAssignmentNotificationInput = {
-  leaderName: string;
-  participantName: string;
-  participantCode: string | null;
-  groupName: string;
-  eventTitle: string;
-  dashboardLink: string;
-};
 
 export function renderMagicLinkEmail(input: MagicLinkTemplateInput) {
   return {
@@ -79,41 +71,6 @@ export function renderRegistrationConfirmationEmail(
         input.siteLink
       )}</a> e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.</p>`,
       "<p>Quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare.</p>",
-      "<p>Grazie.</p>",
-    ].join(""),
-  };
-}
-
-export function renderGroupLeaderAssignmentNotificationEmail(
-  input: GroupLeaderAssignmentNotificationInput
-) {
-  const participantCode = input.participantCode
-    ? ` (${input.participantCode})`
-    : "";
-
-  return {
-    subject: `Nuova persona da verificare - ${input.groupName}`,
-    text: [
-      `Ciao ${input.leaderName},`,
-      "",
-      `C'è una nuova persona da verificare per ${input.groupName}: ${input.participantName}${participantCode}.`,
-      `Evento: ${input.eventTitle}.`,
-      "",
-      "Apri la dashboard capogruppo per confermare l'appartenenza, aggiungere una nota interna o rimandarla al livello superiore.",
-      input.dashboardLink,
-      "",
-      "Grazie.",
-    ].join("\n"),
-    html: [
-      `<p>Ciao ${escapeHtml(input.leaderName)},</p>`,
-      `<p>C'è una nuova persona da verificare per <strong>${escapeHtml(
-        input.groupName
-      )}</strong>: <strong>${escapeHtml(
-        input.participantName
-      )}${escapeHtml(participantCode)}</strong>.</p>`,
-      `<p>Evento: <strong>${escapeHtml(input.eventTitle)}</strong>.</p>`,
-      "<p>Apri la dashboard capogruppo per confermare l'appartenenza, aggiungere una nota interna o rimandarla al livello superiore.</p>",
-      `<p><a href="${escapeHtml(input.dashboardLink)}">Apri la dashboard capogruppo</a></p>`,
       "<p>Grazie.</p>",
     ].join(""),
   };

@@ -1,6 +1,6 @@
 # Questionario iscrizione
 
-Versione applicativa corrente: `2026-09-05-accessibility-minimization`.
+Versione applicativa corrente: `2026-09-05-operative-groups`.
 
 Questa versione copre l'evento Assisi 2026 e mantiene la prima iscrizione
 essenziale e condizionale: i dati stabili restano in colonne o tabelle strutturate, mentre
@@ -20,9 +20,9 @@ manutenzione futura, non per sostituire lo schema relazionale principale.
 | Paese europeo geografico e città | Sì | personale | `participants.country_id`, `city_id`, `country_other`, `city_other` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
 | Disabilità o bisogni di accessibilità | Sì | sensibile | `accessibility_needs.washington_group_answers` | partecipante, manager, admin | Sì |
 | Opzioni strutturate accessibilità | Solo se accessibilità = Sì | sensibile | `accessibility_needs` | partecipante, manager, admin | Sì |
-| Partecipazione precedente Sant'Egidio nella propria città | Sì | operativo | `participants.has_previous_santegidio_participation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
-| Gruppo o associazione esterna | No, solo se partecipazione precedente Sant'Egidio = No | operativo | snapshot `registration_questionnaire_answers.answers.externalGroupAssociation` | partecipante, manager, manager_viewer, admin | Sì |
-| Partecipazione con gruppo/referente | Solo se partecipazione precedente = Sì | operativo | `participants.participates_with_group`, `participant_group_assignments`, snapshot `groupParticipation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
+| Hai partecipato ad altri eventi con la Comunità di Sant’Egidio? | Sì | operativo | `participants.has_previous_santegidio_participation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
+| Fai parte di qualche associazione? | No, solo se partecipazione con gruppo = No | operativo | snapshot `registration_questionnaire_answers.answers.externalGroupAssociation` | partecipante, manager, manager_viewer, admin | Sì |
+| Parteciperai con un gruppo alla preghiera? | Sì | operativo | `participants.participates_with_group`, `participant_group_assignments`, snapshot `groupParticipation` | partecipante, capogruppo, manager, manager_viewer, admin | Sì |
 | Fasce di presenza previste | Sì | operativo | `event_attendance_choices.day` + `day_part` e snapshot questionario | partecipante, capogruppo, manager, manager_viewer, admin, accoglienza | Sì |
 | Privacy e consenso trattamento dati | Sì | legale | `participant_consents` | partecipante, manager, admin | No |
 | Comunicazioni su eventi e iniziative future | No | legale | `participant_consents.future_events_communications_*` | partecipante, manager, admin | No |
@@ -34,7 +34,7 @@ richiesti in questa prima iscrizione e restano supportati per dashboard o
 passaggi successivi.
 
 Tutti i campi visibili della prima iscrizione sono obbligatori, tranne il
-telefono e il consenso separato per ricevere comunicazioni su eventi e
+telefono, l’associazione e il consenso separato per ricevere comunicazioni su eventi e
 iniziative future. Quest'ultimo non e' preselezionato e non blocca
 l'iscrizione. Se viene espresso, l'app registra esito positivo, data e versione
 del testo; in caso contrario salva l'esito negativo senza data o versione di
@@ -47,21 +47,15 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 - Se accessibilità = Sì, viene mostrata una lista multi-selezione ispirata
   alle aree funzionali del Washington Group: udito, cammino/gradini,
   sedia a rotelle o ausilio per la mobilità.
-- Se partecipazione precedente Sant'Egidio = No, il form non mostra categorie
-  interne e l'app assegna l'iscrizione al nodo territoriale dei nuovi
-  partecipanti più vicino.
-- Se partecipazione precedente Sant'Egidio = Sì, viene chiesto se la persona
-  parteciperà con un gruppo.
-- Se parteciperà con un gruppo = Sì, viene mostrata una lista filtrata e
-  ricercabile di gruppi/referenti affini per paese, città ed età alla data
-  dell'evento. L'età 23-30 rientra sia nel matching giovani sia nel matching
-  adulti.
-- Se la persona seleziona `Non trovo il mio referente`, l'iscrizione resta
-  completabile e viene assegnata con stato operativo `probable` al referente o
-  gruppo più vicino. Lo stato interno non viene mostrato al partecipante.
-- Se partecipazione precedente Sant'Egidio = Sì ma parteciperà senza gruppo,
-  l'app crea comunque un'assegnazione probabile a un nodo/referente coerente
-  con territorio ed età.
+- Le due domande sugli eventi precedenti e sulla partecipazione con un gruppo
+  sono indipendenti, sempre visibili e obbligatorie in tutte le lingue.
+- Se partecipazione con gruppo = No, compare l'associazione facoltativa,
+  salvata nello snapshot; la persona resta realmente Senza gruppo.
+- Se partecipazione con gruppo = Sì, compare la selezione cercabile per
+  territorio/età. La selezione esplicita è subito operativa.
+- `Non trovo il mio referente` consente l'iscrizione senza assegnazione.
+- I link riservati preselezionano il gruppo e la seconda risposta Sì, ma
+  consentono di cambiarla e non assumono partecipazioni precedenti.
 - Prima della privacy viene chiesto in quali fasce la persona sarà presente:
   pomeriggio del giorno precedente l'inizio evento, poi mattina e pomeriggio
   per ogni giorno compreso tra `events.starts_on` e `events.ends_on`. In
@@ -84,70 +78,10 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
   `participants.city_id`. I campi testuali restano nello snapshot e come
   fallback per valori non ancora presenti a catalogo.
 
-## Matching gruppi e nuovi partecipanti
+## Matching gruppi
 
-- La migration `20260616103000_group_tree_matching.sql` estende `groups` con
-  `parent_group_id`, `node_type`, `community_kind`, `age_bracket`,
-  `is_assignable`, `is_public_catalog` e `public_order`.
-- La migration `20260616110000_backfill_group_tree_test_seed.sql` riallinea i
-  dati test sui database dove la migration 6.3 era già stata registrata prima
-  della correzione del seed.
-- I nodi selezionabili nel form devono avere `is_public_catalog = true` ed
-  essere di tipo `area` o `group`. I nodi territoriali `country` e `city`
-  restano interni e servono solo al matching/fallback verso il gruppo piu'
-  probabile. Un link riservato di gruppo puo' invece preselezionare direttamente
-  il gruppo specifico a cui e' collegato.
-- `group_assignment_rules` modella regole di evento per paese, città, fascia
-  età e priorità. La prima logica applicativa usa anche i metadati di `groups`
-  per garantire fallback immediato.
-- `participant_group_assignments` conserva `is_current`,
-  `assignment_reason`, `escalated_from_group_id`, `escalation_depth` e
-  `matcher_version`. Le nuove iscrizioni ricevono un aggancio operativo quando
-  esiste almeno un nodo coerente.
-- La classificazione `newcomers` e formule come "esterni" sono interne: non
-  devono comparire nella UI partecipante o nelle email ordinarie.
-
-## Nazionalità
-
-- La nazionalità e' un campo cercabile basato su un elenco mondiale di 249
-  voci.
-- La lista locale deriva dal dataset pubblico `country-nationality-list`, basato
-  su codici ISO 3166-1 e demonym/nationality list.
-- Il valore e' salvato nello snapshot questionario, non normalizzato in una
-  tabella dedicata.
-
-## Dati bootstrap
-
-Le migration iniziali creano dati bootstrap per Assisi 2026:
-
-- evento pubblicato con titolo visibile
-  `UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`;
-- slug tecnico storico `assisi-2026-test`, da non mostrare nella UI;
-- paesi `IT`, `GB`, `US`, più `AT` nella migration 6.3;
-- città `Roma`, `Assisi`, `London`, `New York`, più `Torino` e `Vienna` nella
-  migration 6.3;
-- gruppi e nodi territoriali per Roma, Torino, Austria e nuovi partecipanti;
-- tre momenti pubblici di programma.
-
-Per creare utenti test dopo aver applicato la migration:
-
-```bash
-TEST_ADMIN_EMAIL=admin-test@example.org \
-TEST_MANAGER_EMAIL=manager-test@example.org \
-TEST_PARTICIPANT_EMAIL=partecipante-test@example.org \
-npm run bootstrap:test-users
-```
-
-Lo script richiede `SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` e
-`SUPABASE_SERVICE_ROLE_KEY` nell'ambiente locale. Non stampa la service role e
-non crea dati personali reali.
-
-## Minimizzazione e versioni storiche
-
-Dal 5 settembre 2026 tutti i flussi raccolgono solo le opzioni strutturate di
-accessibilità. Il capogruppo non raccoglie una richiesta separata di ricontatto.
-La richiesta di supporto personale rimane disponibile nella dashboard partecipante.
-Gli snapshot manuali contengono solo la risposta generale e le opzioni selezionate.
-Gli identificativi delle versioni storiche non vengono riscritti: la migration
-ritira soltanto le proprietà non più conservabili. Procedura e verifica del
-remoto: [form e accessibilità](form-reliability-accessibility.md).
+Il catalogo continua a usare territorio ed età per proporre gruppi pertinenti.
+Solo la selezione esplicita con risposta Sì crea un'assegnazione; nessun nodo
+territoriale o nuovi partecipanti viene assegnato automaticamente. Le versioni
+storiche restano immutate. Migrazione e backfill degli stati:
+`docs/operative-group-assignments.md`.
