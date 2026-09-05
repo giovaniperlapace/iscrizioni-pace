@@ -29,12 +29,15 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
 - No prevale anche su link riservato/membership. Senza scelta esplicita, o con
   `Non trovo il mio referente`, non creare assegnazioni territoriali automatiche.
   I link preselezionano il gruppo, senza assumere una precedente partecipazione.
-- Migration preparata e testata su PostgreSQL temporaneo, non applicata al remoto:
+- Migration testata su PostgreSQL temporaneo e applicata in produzione il 2026-09-05:
   `20260905150000_operative_group_assignments.sql`. Conserva audit/snapshot
   storici, rimuove code automatiche ancora probabili e assegnazioni incompatibili
   con No (salvo override admin/manager), converte le restanti probabili senza
   inventare una conferma umana. Trigger/default normalizzano i nuovi stati;
-  nessuna modifica alle policy RLS. Coordinare rilascio SQL/codice per la RPC.
+  nessuna modifica alle policy RLS. Rilascio SQL/codice completato: 36 probabili
+  rese operative, 23 assegnazioni rimosse, 44 correnti finali; 59 audit nuovi,
+  506 audit precedenti e 68 snapshot verificati invariati. RPC/PostgREST verificati
+  e iscrizioni riaperte con la finestra originale.
 - Procedura e dettagli: `docs/operative-group-assignments.md`. Regressioni in
   `tests/group-questionnaire.test.mts`, `tests/browser/group-questionnaire.mjs`
   e `tests/sql/operative-group-assignments.sql`.

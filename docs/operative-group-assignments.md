@@ -64,10 +64,10 @@ Coordinare codice e SQL nello stesso rilascio: la nuova azione di rifiuto
 richiede la RPC. Applicare la migration dopo aver sospeso brevemente le
 iscrizioni/azioni operative e prima di abilitare il nuovo codice; quindi
 verificare l'app e riaprire. Evitare una finestra in cui il vecchio codice
-possa rigenerare code territoriali. La migration è preparata e verificata
-localmente, **non applicata alla produzione in questo blocco**.
+possa rigenerare code territoriali. La migration è stata applicata e registrata in produzione il 2026-09-05;
+il deployment compatibile è stato promosso immediatamente dopo.
 
-Comando remoto quando si procederà al rilascio:
+Comando remoto eseguito:
 
 ```sh
 npm run db:migrate:remote -- supabase/migrations/20260905150000_operative_group_assignments.sql
@@ -98,3 +98,23 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/operative-group-assign
 
 Esito verificato: lint, TypeScript, 173 test automatici e build Next.js webpack
 superati; fixture SQL PostgreSQL e prove browser completate senza errori.
+
+## Rilascio production — 2026-09-05
+
+- Codice: `8428cd6`, integrato in `main`.
+- Deployment preparato con ambiente production e `--skip-domain`, poi promosso:
+  `dpl_A5yZJpMgSHN5rdbcd4qrJUQZze85`.
+- Dominio verificato: `https://registrationspeace.santegidio.org`.
+- Migration `20260905150000` applicata, registrata e cache PostgREST ricaricata.
+- Prima: 67 assegnazioni correnti (59 probabili, 8 confermate).
+- Dopo: 44 correnti operative; 36 convertite e 23 spostate in Senza gruppo.
+- Creati 59 audit di backfill. I 506 audit precedenti e i 68 snapshot sono
+  identici al checkpoint precedente, verificati anche mediante hash aggregati.
+  Nessuna iscrizione è stata eliminata (68 conservate).
+- Vincolo validato, trigger presente, RLS conservata. RPC riservata a
+  `service_role`, senza accesso diretto per `anon` o `authenticated`.
+- PostgREST: HTTP 200 per le 44 assegnazioni correnti; RPC disponibile e
+  richiesta sintetica con identificativo inesistente rifiutata senza mutazioni.
+- Pausa e ripristino delle nuove iscrizioni registrati nell'audit; evento
+  pubblicato e scadenza originaria `2026-10-24 23:59:59+00` ripristinata.
+- Il successivo push su `main` mantiene il normale deployment automatico GitHub.
