@@ -1,9 +1,10 @@
 # Form e minimizzazione accessibilità — 5 settembre 2026
 
-Implementazione preparata sul branch `codex/form-affidabili-accessibilita`.
-La migration è stata eseguita su PostgreSQL locale con dati sintetici; **non
-è stata applicata al database remoto**. Il codice va pubblicato prima della
-migration, perché la versione precedente legge ancora la colonna da eliminare.
+**Rilasciato in produzione il 5 settembre 2026.** PR #6 integrata in `main`
+con commit `638622c`. Deployment Vercel `dpl_2URWP9if7PknedVoVjPQHy12kk9B`
+attivo su `https://registrationspeace.santegidio.org`, seguito dall'applicazione
+e registrazione della migration `20260905120000` sul Supabase remoto.
+La verifica locale con dati sintetici ha preceduto il rilascio.
 
 ## Risultato applicativo
 
@@ -109,3 +110,16 @@ reali con dati sintetici: ordine del focus, prefisso telefonico, valori nativi
 e condizionali conservati, errore server, risposta HTTP 422 e retry riuscito.
 La fixture SQL è stata applicata e verificata su PostgreSQL 17.10 locale.
 Non è stato eseguito un inserimento reale nel database di produzione.
+
+## Verifica dopo il rilascio in produzione
+
+- Colonna ritirata: assente, quindi eliminata anche la nota storica valorizzata.
+- 68 record di accessibilità conservati, con una richiesta personale di supporto.
+- 68 snapshot conservati e ripuliti; zero proprietà ritirate negli snapshot o audit.
+- Vincolo di minimizzazione presente e validato; RLS attiva sulle due tabelle.
+- Migration registrata e cache PostgREST ricaricata; letture HTTP 200.
+- Home e form pubblico raggiungibili nel browser, senza errori rilevati.
+- Nessun log di errore restituito dalla scansione del nuovo deployment.
+
+I conteggi della sezione preliminare rappresentano la situazione precedente
+alla pulizia. Non è stato creato alcun partecipante di prova in produzione.

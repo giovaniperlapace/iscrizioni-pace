@@ -803,12 +803,15 @@ Prima di ogni feature verificare:
   formato precedente vengono migrate nel browser eliminando soltanto il
   valore ritirato e conservando gli altri campi.
 - Questionario corrente: `2026-09-05-accessibility-minimization`; le versioni
-  storiche conservano il loro identificativo ma devono essere ripulite.
-- Migration predisposta e verificata su PostgreSQL locale:
+  storiche conservano il loro identificativo e sono state ripulite.
+- Migration verificata su PostgreSQL locale e applicata in produzione il
+  2026-09-05 dopo il deployment del codice compatibile:
   `20260905120000_minimize_accessibility_data.sql`. Rimuove la colonna ritirata,
   pulisce ricorsivamente snapshot e audit, azzera il vecchio flag manuale e
   impedisce nuovi snapshot con proprietà di accessibilità fuori contratto.
-  Non modifica RLS o le note interne di gruppi/servizi.
+  Non modifica RLS o le note interne di gruppi/servizi. Verifica remota:
+  colonna ritirata assente, 68 snapshot ripuliti, nessuna proprietà ritirata
+  negli audit, richiesta personale di supporto conservata, PostgREST HTTP 200.
 - Stato remoto e procedura di rilascio: `docs/form-reliability-accessibility.md`.
   La migration va applicata dopo il deploy del codice compatibile, su ambiente
   concordato; la pulizia è irreversibile e non va sostituita da un backup di
