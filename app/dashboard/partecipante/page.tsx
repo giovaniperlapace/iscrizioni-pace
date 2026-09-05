@@ -986,6 +986,7 @@ export default async function PartecipanteDashboardPage({
     .select(
       "id,event_id,participant_id,status,submitted_at,events!inner(id,title,slug,city,country,starts_on,ends_on,registration_closes_at,is_current),participants!inner(auth_user_id,first_name,last_name,birth_date,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
     )
+    .is("deleted_at", null)
     .eq("events.is_current", true)
     .order("submitted_at", { ascending: false });
 
@@ -1613,7 +1614,8 @@ async function getQrStatus(registrationId: string): Promise<{ data: QrStatusRow 
 }
 
 async function getQrDataUrl(qrStatus: QrStatusRow | null): Promise<string | null> {
-  const token = decryptQrToken(qrStatus?.token_encrypted);
+  if (!qrStatus || qrStatus.status !== "active" || (qrStatus.expires_at && new Date(qrStatus.expires_at).getTime() <= Date.now())) return null;
+  const token = decryptQrToken(qrStatus.token_encrypted);
 
   if (!token) {
     return null;

@@ -1,3 +1,4 @@
+import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 
 import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
@@ -110,6 +111,7 @@ type ManagerPageProps = {
     roleEventId?: string;
     roleGroupId?: string;
     edit?: string;
+    view?: string;
     event?: string;
     group?: string;
     contact?: string;
@@ -137,6 +139,9 @@ type RegistrationChildRelationRow = {
 };
 
 type ManagerRegistrationRow = {
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deletion_reason: string | null;
   id: string;
   event_id: string;
   participant_id: string;
@@ -394,9 +399,6 @@ export default async function ManagerDashboardPage({
     managerOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
     ) ?? null;
-  const selectedCanManage = selectedParticipant
-    ? scope.canManageEvent(selectedParticipant.eventId)
-    : false;
   const selectedGroup =
     managerOperations.groupTree.find((group) => group.id === params.groupId) ??
     null;
@@ -449,7 +451,10 @@ export default async function ManagerDashboardPage({
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
                 snapshot={participantsSnapshot}
-                selectedParticipant={selectedCanManage ? selectedParticipant : null}
+                operatorId={auth.user.id}
+                eventId={currentEventId}
+                eventStartsOn={currentEvent?.starts_on ?? null}
+                selectedParticipant={selectedParticipant}
                 canManageEvent={scope.canManageEvent}
                 dashboard="manager"
                 navMode={navMode}
@@ -934,14 +939,15 @@ async function getManagerOperationsSnapshot(
     };
   }
 
-  const registrationsQuery = supabase
+  const registrationsQuery = loadAllRows((from, to) => supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+      "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
     )
+    .is("deleted_at", null)
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
-    .limit(200);
+    .order("id").range(from, to));
   const groupsQuery = supabase
     .from("groups")
     .select("id,event_id,name,is_assignable,is_active")
@@ -1026,35 +1032,36 @@ async function getManagerOperationsSnapshot(
     { data: participantServices },
   ] = await Promise.all([
     participantIds.length > 0
-      ? supabase
+      ? loadRowsForIds(participantIds, (ids, from, to) => supabase
           .from("participant_contacts")
           .select("participant_id,email,phone")
-          .in("participant_id", participantIds)
-          .eq("is_primary", true)
+          .in("participant_id", ids)
+          .eq("is_primary", true).order("id").range(from, to))
       : Promise.resolve(emptyResult),
     registrationIds.length > 0
-      ? supabase
+      ? loadRowsForIds(registrationIds, (ids, from, to) => supabase
           .from("participant_group_assignments")
           .select(
             "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)"
           )
-          .in("registration_id", registrationIds)
-          .eq("is_current", true)
+          .in("registration_id", ids)
+          .eq("is_current", true).order("id").range(from, to))
       : Promise.resolve(emptyResult),
     participantIds.length > 0
-      ? supabase
+      ? loadRowsForIds(participantIds, (ids, from, to) => supabase
           .from("participant_operational_tags")
-          .select("participant_id,assigned_at,operational_tags(id,event_id,label,color)")
-          .in("participant_id", participantIds)
+          .select("participant_id,assigned_at,operational_tags!inner(id,event_id,label,color)")
+          .eq("operational_tags.event_id", currentEventId)
+          .in("participant_id", ids).order("participant_id").order("tag_id").range(from, to))
       : Promise.resolve(emptyResult),
     participantIds.length > 0
-      ? supabase
+      ? loadRowsForIds(participantIds, (ids, from, to) => supabase
           .from("participant_event_services")
           .select(
             "id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)"
           )
-          .in("participant_id", participantIds)
-          .eq("event_id", currentEventId)
+          .in("participant_id", ids)
+          .eq("event_id", currentEventId).order("id").range(from, to))
       : Promise.resolve(emptyResult),
   ]);
   const contactByParticipantId = new Map(
@@ -1107,6 +1114,9 @@ async function getManagerOperationsSnapshot(
       const service = serviceByParticipantId.get(registration.participant_id) ?? null;
 
       return {
+        deletedAt: registration.deleted_at,
+        deletedBy: registration.deleted_by,
+        deletionReason: registration.deletion_reason,
         registrationId: registration.id,
         eventId: registration.event_id,
         eventTitle: event?.title ?? "Evento",
@@ -1253,6 +1263,7 @@ async function getManagerStatisticsSnapshot(
     .select(
       "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
     )
+    .is("deleted_at", null)
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
     .range(0, 9999);
@@ -2391,7 +2402,7 @@ function StatusMessage({
           : roleSaved
             ? "Utente operativo aggiornato."
           : managerSaved === "deleted"
-            ? "Iscrizione eliminata. Il profilo partecipante e l'account di accesso sono stati conservati."
+            ? "Iscrizione eliminata dalle attività. Account e storico sono stati conservati."
           : managerSaved
             ? "Gestione iscritti aggiornata."
             : "Configurazione apertura aggiornata."}

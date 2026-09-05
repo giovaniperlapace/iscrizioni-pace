@@ -12,7 +12,7 @@ const managerDashboard = readFileSync(
   "utf8"
 );
 const sharedSection = readFileSync(
-  join(process.cwd(), "app/dashboard/operations-participants-section.tsx"),
+  join(process.cwd(), "app/dashboard/operations-participants-table.tsx"),
   "utf8"
 );
 
@@ -26,8 +26,7 @@ test("admin and manager render the same participant-management component", () =>
 });
 
 test("the shared table exposes manager-level columns and filters", () => {
-  assert.match(sharedSection, />Servizio<\/th>/);
-  assert.match(sharedSection, />Tag<\/th>/);
+  assert.match(sharedSection, /PARTICIPANT_COLUMNS/);
   assert.match(sharedSection, /name="service"/);
   assert.match(sharedSection, /name="tag"/);
 });
@@ -46,14 +45,12 @@ test("the shared participant sheet edits identity, contacts, group, and tags", (
     "country",
     "email",
     "phone",
-    "groupId",
-    "tagIds",
   ]) {
     assert.match(sharedSection, new RegExp(`name=[{\"]${field}`));
   }
 
   assert.match(sharedSection, /name="sourceDashboard" value=\{dashboard\}/);
-  assert.match(sharedSection, /action=\{updateParticipantOperationalTags\}/);
+  assert.match(sharedSection, /operationsControl\(selected, field\)/);
 });
 
 test("admin loads the same participant tags, services, and identity fields", () => {

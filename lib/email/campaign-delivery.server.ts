@@ -1,3 +1,4 @@
+import { isCampaignRecipientOperational, RegistrationNotOperationalError } from "@/lib/email/campaign-eligibility";
 import { createHash } from "node:crypto";
 
 import { campaignHtmlToText, renderSafeCampaignHtml } from "@/lib/email/campaign-html.server";
@@ -136,6 +137,7 @@ export async function processDueCampaignDeliveries(options: {
         renderSafeCampaignHtml(campaign.body_template, delivery.templateData),
         campaignAttachments
       );
+      if (!await isCampaignRecipientOperational(service, campaign.event_id, recipient)) throw new RegistrationNotOperationalError();
       const result = await sendTransactionalEmail({
         to: delivery.email,
         subject: renderCampaignTemplate(
@@ -158,7 +160,11 @@ export async function processDueCampaignDeliveries(options: {
       if (updateError) throw new Error(updateError.message);
       incrementCount(sentByCampaign, row.campaign_id);
       sent++;
-    } catch {
+    } catch (error) {
+      if (error instanceof RegistrationNotOperationalError) {
+        await service.from("email_campaign_recipients").update({ status: "skipped", error_code: "registration_deleted", processing_started_at: null }).eq("id", row.id);
+        return;
+      }
       await markDeliveryFailed(service, row.id, "delivery_failed");
       incrementCount(failedByCampaign, row.campaign_id);
       failed++;
@@ -200,6 +206,7 @@ export async function loadCampaignDeliveryData(
   eventTitle: string,
   recipient: CampaignRecipient
 ) {
+  if (!await isCampaignRecipientOperational(service, eventId, recipient)) throw new RegistrationNotOperationalError();
   if (recipient.recipientType === "group_leader" && recipient.recipientUserId) {
     const identities = await getOperationalUserIdentities(service, [
       recipient.recipientUserId,

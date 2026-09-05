@@ -1,57 +1,19 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import test from "node:test";
+const read = (path: string) =>
+  readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-const adminDashboard = readFileSync(
-  join(process.cwd(), "app/dashboard/admin/page.tsx"),
-  "utf8"
-);
-const managerDashboard = readFileSync(
-  join(process.cwd(), "app/dashboard/manager/page.tsx"),
-  "utf8"
-);
-const participantsSection = readFileSync(
-  join(process.cwd(), "app/dashboard/operations-participants-section.tsx"),
-  "utf8"
-);
-const deleteButton = readFileSync(
-  join(
-    process.cwd(),
-    "app/dashboard/participants/registration-delete-button.tsx"
-  ),
-  "utf8"
-);
-const deleteRoute = readFileSync(
-  join(process.cwd(), "app/dashboard/participants/delete/route.ts"),
-  "utf8"
-);
-
-test("admin and manager share the confirmed registration deletion control", () => {
-  assert.match(adminDashboard, /<OperationsParticipantsSection/);
-  assert.match(managerDashboard, /<OperationsParticipantsSection/);
-  assert.match(adminDashboard, /canDeleteRegistration/);
-  assert.match(managerDashboard, /canDeleteRegistration/);
-  assert.match(participantsSection, /action="\/dashboard\/participants\/delete"/);
-  assert.match(participantsSection, /name="sourceDashboard" value=\{dashboard\}/);
-  assert.match(participantsSection, /<RegistrationDeleteButton participantName=/);
-  assert.match(deleteButton, /window\.confirm\(/);
-  assert.match(deleteButton, /Elimina iscrizione/);
-  assert.match(deleteButton, /L'account di accesso non verrà cancellato/);
-});
-
-test("registration deletion allows scoped managers and keeps participant and auth records", () => {
-  assert.match(deleteRoute, /eventRole\.role === "admin"/);
+test("ordinary deletion is a transactional lifecycle operation with a reason", () => {
+  const route = read("app/dashboard/participants/delete/route.ts");
+  assert.match(route, /rpc\(\s*"set_registration_deleted"/);
+  assert.doesNotMatch(route, /\.from\("registrations"\)/);
+  assert.match(route, /p_actor_user_id: auth.user.id/);
+  assert.match(route, /p_reason: data.get\("reason"\)/);
+  const table = read("app/dashboard/operations-participants-table.tsx");
   assert.match(
-    deleteRoute,
-    /eventRole\.role === "manager" && eventRole\.eventId === registrationRow\.event_id/
+    table,
+    /name="reason"\s+required\s+minLength=\{3\}\s+maxLength=\{500\}/,
   );
-  assert.match(deleteRoute, /\.from\("registrations"\)[\s\S]*?\.delete\(\)/);
-  assert.match(deleteRoute, /\.eq\("id", registrationId\)/);
-  assert.match(deleteRoute, /\.eq\("participant_id", participantId\)/);
-  assert.doesNotMatch(deleteRoute, /\.from\("participants"\)[\s\S]*?\.delete\(\)/);
-  assert.match(deleteRoute, /"admin\.registration_deleted"/);
-  assert.match(deleteRoute, /"manager\.registration_deleted"/);
-  assert.match(deleteRoute, /participant_record_retained: true/);
-  assert.match(deleteRoute, /auth_account_retained: true/);
+  assert.match(table, /Ripristina iscrizione/);
 });

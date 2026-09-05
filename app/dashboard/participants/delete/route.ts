@@ -1,139 +1,63 @@
 import { NextResponse, type NextRequest } from "next/server";
-
+import { revalidatePath } from "next/cache";
 import { formFailureFromRedirect } from "@/lib/forms/result";
-
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { operationsReturnPath } from "@/lib/registrations/operations-table";
 
 export async function POST(request: NextRequest) {
-  const formData = await request.formData();
-  const registrationId = optionalText(formData.get("registrationId"));
-  const participantId = optionalText(formData.get("participantId"));
-  const sourceDashboard = formData.get("sourceDashboard") === "manager" ? "manager" : "admin";
-  const navMode = formData.get("nav") === "mini" ? "mini" : "full";
-
-  if (!registrationId || !participantId) {
-    return dashboardRedirect(request, sourceDashboard, navMode, "invalid-participant");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(supabase, sourceDashboard);
-
-  if (!auth) {
-    return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
-  }
-
-  const serviceSupabase = createSupabaseServiceClient();
-  const { data: registration, error: registrationError } = await serviceSupabase
-    .from("registrations")
-    .select("id,event_id,participant_id,status")
-    .eq("id", registrationId)
-    .maybeSingle();
-  const registrationRow = registration as
-    | {
-        id: string;
-        event_id: string;
-        participant_id: string;
-        status: string;
-      }
-    | null;
-
-  if (
-    registrationError ||
-    !registrationRow ||
-    registrationRow.participant_id !== participantId
-  ) {
-    return dashboardRedirect(request, sourceDashboard, navMode, "invalid-participant");
-  }
-
-  const actorIsAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
-  const actorCanManageEvent =
-    actorIsAdmin ||
-    auth.eventRoles.some(
-      (eventRole) =>
-        eventRole.role === "manager" && eventRole.eventId === registrationRow.event_id
-    );
-
-  if (!actorCanManageEvent) {
-    return dashboardRedirect(request, sourceDashboard, navMode, "forbidden");
-  }
-
-  const { data: deletedRegistration, error: deleteError } = await serviceSupabase
-    .from("registrations")
-    .delete()
-    .eq("id", registrationId)
-    .eq("participant_id", participantId)
-    .select("id")
-    .maybeSingle();
-
-  if (deleteError || !deletedRegistration) {
-    console.error("[operations:registration-delete]", {
-      code: deleteError?.code,
-      message: deleteError?.message,
-      registrationId,
-    });
-    return dashboardRedirect(request, sourceDashboard, navMode, "delete-failed");
-  }
-
-  const { error: auditError } = await serviceSupabase.from("audit_logs").insert({
-    event_id: registrationRow.event_id,
-    actor_user_id: auth.user.id,
-    action: actorIsAdmin
-      ? "admin.registration_deleted"
-      : "manager.registration_deleted",
-    entity_table: "registrations",
-    entity_id: registrationId,
-    metadata: {
-      participant_id: participantId,
-      previous_status: registrationRow.status,
-      participant_record_retained: true,
-      auth_account_retained: true,
-      source_dashboard: sourceDashboard,
-    },
-  });
-
-  if (auditError) {
-    console.error("[operations:registration-delete-audit]", {
-      code: auditError.code,
-      message: auditError.message,
-      registrationId,
-    });
-  }
-
-  return dashboardRedirect(request, sourceDashboard, navMode, null, "deleted");
-}
-
-function dashboardRedirect(
-  request: NextRequest,
-  dashboard: "admin" | "manager",
-  navMode: "full" | "mini",
-  error: string | null,
-  saved?: "deleted"
-): NextResponse {
-  const result = saved
-    ? `${dashboard}Saved=${saved}`
-    : `${dashboard}Error=${encodeURIComponent(error ?? "invalid")}`;
-
-  if (request.headers.get("accept")?.includes("application/json")) {
-    const destination = `/dashboard/${dashboard}?section=iscritti&nav=${navMode}&${result}`;
-    return NextResponse.json(saved ? { redirect: destination } : formFailureFromRedirect(destination), { status: saved ? 200 : 422 });
-  }
-  return NextResponse.redirect(
-    new URL(
-      `/dashboard/${dashboard}?section=iscritti&nav=${navMode}&${result}`,
-      request.url
-    ),
-    { status: 303 }
+  const data = await request.formData();
+  const dashboard =
+    data.get("sourceDashboard") === "manager" ? "manager" : "admin";
+  const nav = data.get("nav") === "mini" ? "mini" : "full";
+  const destination = new URL(
+    operationsReturnPath(data.get("returnTo"), dashboard, nav),
+    request.url,
   );
-}
-
-function optionalText(value: FormDataEntryValue | null): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-
-  return trimmed.length > 0 ? trimmed : null;
+  destination.searchParams.delete("edit");
+  const restore = data.get("intent") === "restore";
+  const respond = (error: string | null) => {
+    destination.searchParams.set(
+      error ? `${dashboard}Error` : `${dashboard}Saved`,
+      error ?? (restore ? "restored" : "deleted"),
+    );
+    const path = destination.pathname + destination.search;
+    return request.headers.get("accept")?.includes("application/json")
+      ? NextResponse.json(
+          error ? formFailureFromRedirect(path) : { redirect: path },
+          { status: error ? 422 : 200 },
+        )
+      : NextResponse.redirect(destination, { status: 303 });
+  };
+  if (request.headers.get("origin") !== request.nextUrl.origin)
+    return respond("forbidden");
+  if (data.get("confirmLifecycle") !== "on") return respond("invalid");
+  const auth = await getCurrentAuthContext(
+    await createSupabaseServerClient(),
+    dashboard,
+  );
+  if (!auth) return respond("forbidden");
+  // The RPC independently validates manager event scope / admin-only restore,
+  // locks the registration and commits lifecycle, QR, queue and audit together.
+  const { error } = await createSupabaseServiceClient().rpc(
+    "set_registration_deleted",
+    {
+      p_registration_id: data.get("registrationId"),
+      p_participant_id: data.get("participantId"),
+      p_actor_user_id: auth.user.id,
+      p_reason: data.get("reason"),
+      p_restore: restore,
+    },
+  );
+  if (error)
+    return respond(error.code === "42501" ? "forbidden" : "delete-failed");
+  for (const path of [
+    "/dashboard/admin",
+    "/dashboard/manager",
+    "/dashboard/capogruppo",
+    "/dashboard/partecipante",
+  ])
+    revalidatePath(path);
+  return respond(null);
 }

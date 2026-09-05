@@ -1,3 +1,4 @@
+import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { Settings } from "lucide-react";
 
 import { ReliableForm } from "@/components/reliable-form";
@@ -99,6 +100,7 @@ type AdminPageProps = {
     adminSaved?: string;
     eventTool?: string;
     edit?: string;
+    view?: string;
     event?: string;
     groupError?: string;
     groupEvent?: string;
@@ -184,6 +186,9 @@ type RegistrationChildRelationRow = {
 };
 
 type AdminRegistrationRow = {
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deletion_reason: string | null;
   id: string;
   event_id: string;
   participant_id: string;
@@ -492,6 +497,9 @@ export default async function AdminDashboardPage({
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
                 snapshot={participantsSnapshot}
+                operatorId={auth.user.id}
+                eventId={currentEventId}
+                eventStartsOn={currentEvent?.starts_on ?? null}
                 selectedParticipant={selectedAdminParticipant}
                 canManageEvent={() => true}
                 dashboard="admin"
@@ -581,14 +589,15 @@ export default async function AdminDashboardPage({
       { data: eventRoles },
       { data: groupMemberships },
     ] = await Promise.all([
-      serviceSupabase
+      loadAllRows((from, to) => serviceSupabase
         .from("registrations")
         .select(
-          "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+          "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
         )
+        .filter("deleted_at", activeSection === "iscritti" && params.view === "deleted" ? "not.is" : "is", "null")
         .eq("event_id", currentEventId)
         .order("submitted_at", { ascending: false })
-        .limit(200),
+        .order("id").range(from, to)),
       serviceSupabase
         .from("groups")
         .select("id,event_id,name,is_assignable,is_active")
@@ -640,6 +649,8 @@ export default async function AdminDashboardPage({
       });
     }
     const registrationRows = (registrations ?? []) as AdminRegistrationRow[];
+    const deletedActorIdentities = await getOperationalUserIdentities(serviceSupabase,
+      registrationRows.flatMap(row => row.deleted_by ? [row.deleted_by] : []));
     const registrationIds = registrationRows.map((row) => row.id);
     const participantIds = registrationRows.map((row) => row.participant_id);
     const emptyResult = { data: [] };
@@ -650,35 +661,36 @@ export default async function AdminDashboardPage({
       { data: participantServices },
     ] = await Promise.all([
         participantIds.length > 0
-          ? serviceSupabase
+          ? loadRowsForIds(participantIds, (ids, from, to) => serviceSupabase
               .from("participant_contacts")
               .select("participant_id,email,phone")
-              .in("participant_id", participantIds)
-              .eq("is_primary", true)
+              .in("participant_id", ids)
+              .eq("is_primary", true).order("id").range(from, to))
           : Promise.resolve(emptyResult),
         registrationIds.length > 0
-          ? serviceSupabase
+          ? loadRowsForIds(registrationIds, (ids, from, to) => serviceSupabase
               .from("participant_group_assignments")
               .select(
                 "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)"
               )
-              .in("registration_id", registrationIds)
-              .eq("is_current", true)
+              .in("registration_id", ids)
+              .eq("is_current", true).order("id").range(from, to))
           : Promise.resolve(emptyResult),
         participantIds.length > 0
-          ? serviceSupabase
+          ? loadRowsForIds(participantIds, (ids, from, to) => serviceSupabase
               .from("participant_operational_tags")
-              .select("participant_id,assigned_at,operational_tags(id,event_id,label,color)")
-              .in("participant_id", participantIds)
+              .select("participant_id,assigned_at,operational_tags!inner(id,event_id,label,color)")
+              .eq("operational_tags.event_id", currentEventId)
+              .in("participant_id", ids).order("participant_id").order("tag_id").range(from, to))
           : Promise.resolve(emptyResult),
         participantIds.length > 0
-          ? serviceSupabase
+          ? loadRowsForIds(participantIds, (ids, from, to) => serviceSupabase
               .from("participant_event_services")
               .select(
                 "id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)"
               )
-              .in("participant_id", participantIds)
-              .eq("event_id", currentEventId)
+              .in("participant_id", ids)
+              .eq("event_id", currentEventId).order("id").range(from, to))
           : Promise.resolve(emptyResult),
       ]);
     const contactByParticipantId = new Map(
@@ -702,6 +714,10 @@ export default async function AdminDashboardPage({
         const service = serviceByParticipantId.get(registration.participant_id) ?? null;
 
         return {
+          deletedAt: registration.deleted_at,
+          deletedBy: registration.deleted_by,
+          deletedByName: registration.deleted_by ? deletedActorIdentities.get(registration.deleted_by)?.fullName ?? deletedActorIdentities.get(registration.deleted_by)?.email ?? null : null,
+          deletionReason: registration.deletion_reason,
           registrationId: registration.id,
           eventId: registration.event_id,
           eventTitle: event?.title ?? "Evento",
@@ -870,6 +886,7 @@ export default async function AdminDashboardPage({
       .select(
         "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
       )
+      .is("deleted_at", null)
       .eq("event_id", currentEventId)
       .order("submitted_at", { ascending: false })
       .range(0, 9999);
@@ -963,6 +980,7 @@ export default async function AdminDashboardPage({
       .select(
         "id,participant_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position)"
       )
+      .is("deleted_at", null)
       .eq("event_id", event.id)
       .order("submitted_at", { ascending: false });
     const registrationRows = (registrations ?? []) as RegistrationRow[];
@@ -2440,7 +2458,9 @@ function StatusMessage({
             : roleSaved
               ? "Utente operativo aggiornato."
             : adminSaved === "deleted"
-              ? "Iscrizione eliminata. Il profilo partecipante e l'account di accesso sono stati conservati."
+              ? "Iscrizione eliminata dalle attività. Account e storico sono stati conservati."
+            : adminSaved === "restored"
+              ? "Iscrizione ripristinata."
             : adminSaved
               ? "Gestione iscritti aggiornata."
               : saved === "created"

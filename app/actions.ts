@@ -1,5 +1,7 @@
 "use server";
 
+import { operationsReturnPath } from "@/lib/registrations/operations-table";
+
 import { formFailureFromRedirect, formFailure, issueFromMessage, validateContactFields } from "@/lib/forms/result";
 
 import { createHash } from "node:crypto";
@@ -265,6 +267,7 @@ export async function updateParticipantDashboard(formData: FormData) {
     .select(
       "id,event_id,participant_id,status,events(starts_on,ends_on,registration_closes_at),participants!inner(auth_user_id,first_name,last_name)"
     )
+    .is("deleted_at", null)
     .eq("id", parsed.value.registrationId)
     .maybeSingle();
 
@@ -1016,7 +1019,7 @@ export async function createOperationalTag(formData: FormData) {
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
   const sourceDashboard =
     optionalText(formData.get("sourceDashboard")) === "admin" ? "admin" : "manager";
-  const dashboardPath = `/dashboard/${sourceDashboard}?section=iscritti&nav=${nav}`;
+  const dashboardPath = operationsReturnPath(formData.get("returnTo"), sourceDashboard, nav);
   const errorParam = sourceDashboard === "admin" ? "adminError" : "managerError";
   const savedParam = sourceDashboard === "admin" ? "adminSaved" : "managerSaved";
 
@@ -1112,6 +1115,11 @@ export async function updateParticipantOperationalTags(formData: FormData) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  const { data: activeRegistration, error: activeRegistrationError } = await serviceSupabase
+    .from("registrations").select("id").eq("id", registrationId ?? "")
+    .eq("participant_id", participantId).eq("event_id", eventId).is("deleted_at", null).maybeSingle();
+  if (activeRegistrationError || !activeRegistration) return formFailure([{ field: null, code: "failed" }]);
+
   const canUpdate = isCapogruppo
     ? await canGroupLeaderTagParticipant(
         serviceSupabase,
@@ -1350,6 +1358,11 @@ export async function updateParticipantEventService(formData: FormData) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  const { data: activeRegistration, error: activeRegistrationError } = await serviceSupabase
+    .from("registrations").select("id").eq("id", registrationId ?? "")
+    .eq("participant_id", participantId).eq("event_id", eventId).is("deleted_at", null).maybeSingle();
+  if (activeRegistrationError || !activeRegistration) return formFailure([{ field: null, code: "failed" }]);
+
   const canUpdate = isCapogruppo
     ? await canGroupLeaderTagParticipant(
         serviceSupabase,
@@ -1404,6 +1417,7 @@ export async function updateParticipantEventService(formData: FormData) {
     serviceSupabase
       .from("registrations")
       .select("id,event_id,participant_id")
+      .is("deleted_at", null)
       .eq("id", registrationId)
       .eq("event_id", eventId)
       .eq("participant_id", participantId)
@@ -1505,6 +1519,7 @@ async function canGroupLeaderTagParticipant(
     .eq("is_current", true)
     .eq("registrations.event_id", eventId)
     .eq("registrations.participant_id", participantId)
+    .is("registrations.deleted_at", null)
     .in("group_id", [...scopedGroupIds])
     .limit(1);
 
@@ -3925,6 +3940,7 @@ async function auditGroupLeaderDecision(
   const { data: registration } = await supabase
     .from("registrations")
     .select("event_id")
+    .is("deleted_at", null)
     .eq("id", input.assignment.registration_id)
     .maybeSingle();
 

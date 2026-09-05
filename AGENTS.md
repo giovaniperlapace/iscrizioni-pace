@@ -4,6 +4,54 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Gestione iscritti e soft delete — blocco 5, 2026-09-05
+
+Queste regole sostituiscono la precedente tabella fissa con colonna Azioni e
+l'eliminazione fisica dell'iscrizione. Implementazione sul branch
+`codex/participants-operations-soft-delete`; migration preparate e verificate
+localmente, **non ancora applicate in produzione**.
+
+- Admin e manager usano `OperationsParticipantsSection` (confine server per i
+  permessi) e `OperationsParticipantsTable` (unico client per tabella e scheda).
+  Il nome apre la scheda anche per `manager_viewer`, in sola lettura.
+- Colonne facoltative e ordinamento sono salvati nel browser per ID operatore,
+  condivisi tra area admin e manager. L'URL può prevalere sulle preferenze
+  salvate. Il nome resta sempre visibile. Età calcolata all'inizio dell'evento.
+- Gruppo, servizio e tag si salvano direttamente dalla tabella e dalla scheda,
+  tramite la stessa RPC `update_registration_operation`; le modifiche sono
+  serializzate per iscrizione e auditabili nella stessa transazione. Un
+  selettore vuoto rimuove il gruppo/servizio; un servizio scelto è assegnato.
+- `view=without-group` è la coda dedicata con nome, paese, città, età e gruppo.
+  L'assegnazione riuscita rimuove subito la riga; un errore mantiene i dati.
+  I caricamenti sono paginati e le relazioni lette a blocchi: nessun taglio
+  silenzioso alle prime 200 iscrizioni o al limite PostgREST.
+- La scheda usa un dialog nativo con focus, Escape e scroll interno. Il campo
+  `returnTo`, validato dal server, conserva la sezione iscritti, filtri inclusi
+  `stat`, vista, ordinamento, colonne, sidebar e scheda aperta. I form marcati
+  `data-preserve-dashboard-scroll` navigano senza azzerare lo scroll.
+- `20260905190000_registration_soft_delete.sql`: `registrations.deleted_at`,
+  `deleted_by`, `deletion_reason`, `restored_at`, `restored_by`; RPC server
+  `set_registration_deleted`. Motivazione 3–500 caratteri e conferma nella UI.
+  Manager solo in evento assegnato; ripristino solo admin da `view=deleted`.
+  Account, partecipante, figli, consensi, questionari e storico restano.
+- RLS restrittiva esclude le iscrizioni eliminate e i relativi dati operativi;
+  admin può leggere l'archivio. Trigger impediscono hard delete applicativo,
+  nuovi QR/check-in e modifiche operative per iscrizioni eliminate. SQL di
+  manutenzione intenzionale come database owner resta distinto dal flusso app.
+- I QR attivi vengono revocati e marcati come sospesi dall'eliminazione. Il
+  ripristino riattiva solo questi QR ancora validi; non quelli già revocati.
+  Le campagne in attesa sono escluse senza toccare invii storici; il ripristino
+  non riavvia invii. Controllo di ammissibilità ripetuto prima dell'invio,
+  anche per recapiti delegati/capigruppo con iscrizione personale eliminata.
+- I lookup pubblici dell'email riconoscono le identità conservate per evitare
+  che una nuova registrazione aggiri l'eliminazione. Le liste operative,
+  statistiche, area personale e audience campagne filtrano `deleted_at`.
+- `20260905191000_participant_quick_operations.sql` include gruppo, servizio,
+  tag, identità e contatti; verifica permessi, evento, opzioni assegnabili e
+  iscrizione non eliminata. Le RPC che accettano l'attore sono riservate a
+  `service_role`, mai a `anon` o `authenticated`.
+- Procedura di rilascio e verifiche: `docs/participant-operations.md`.
+
 ## Gruppi, Impostazioni e link automatici — 2026-09-05
 
 Queste regole sostituiscono le precedenti istruzioni sulla generazione manuale
