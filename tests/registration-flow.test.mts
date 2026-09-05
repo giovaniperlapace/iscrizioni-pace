@@ -415,7 +415,7 @@ test("parseManualRegistrationForm validates accompanying children", () => {
   }
 });
 
-test("parseManualRegistrationForm requires contact and consent", () => {
+test("parseManualRegistrationForm requires consent even with delegated delivery", () => {
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
@@ -425,7 +425,7 @@ test("parseManualRegistrationForm requires contact and consent", () => {
 
   assert.equal(parsed.ok, false);
   if (!parsed.ok) {
-    assert.ok(parsed.errors.includes("Inserisci almeno email o telefono."));
+    assert.ok(!parsed.errors.includes("Inserisci almeno email o telefono."));
     assert.ok(
       parsed.errors.includes(
         "Conferma di avere il consenso della persona iscritta."

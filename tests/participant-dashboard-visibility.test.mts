@@ -15,7 +15,7 @@ const registrationSummary = participantDashboard.slice(
 
 const organizerContactCard = participantDashboard.slice(
   participantDashboard.indexOf("function ParticipantOrganizerContactCard"),
-  participantDashboard.indexOf("function SummaryInfo")
+  participantDashboard.indexOf("function ChevronIcon")
 );
 
 test("participant dashboard keeps group and leader assignments internal", () => {

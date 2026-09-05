@@ -4,6 +4,49 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Partecipanti gestiti e recapito delegato — 2026-09-05
+
+Blocco implementato sul branch `codex/delegated-participants`, verificato in
+locale; migration e codice **non ancora rilasciati in produzione**.
+
+- Inserimento capogruppo: email personale e telefono entrambi facoltativi con
+  consegna delegata; la consegna personale richiede un’email valida. La scelta
+  nasce delegata al capogruppo che inserisce. Nessun account o magic link viene
+  creato dal flusso manuale. Non inferire una precedente partecipazione.
+- `registration_responsibilities` modella per iscrizione il capogruppo
+  responsabile, `delivery_mode=personal|delegated`, dichiarante, data e origine.
+  L’indirizzo delegato viene risolto dal profilo del responsabile; non viene
+  copiato nei contatti personali. `registrations.source/created_by`, consensi
+  e snapshot conservano origine e consenso dichiarato dal capogruppo.
+- Migration `20260905190000_delegated_participants.sql`: creazione manuale
+  transazionale tramite RPC service-only `create_managed_registration`; RPC
+  autenticate per aggiornare contatti/identità, scegliere il recapito e leggere
+  scheda/QR con audit. Le RPC di sessione derivano l’attore da `auth.uid()`.
+- La responsabilità operativa resta lo scope dei gruppi correnti (inclusi
+  discendenti attivi), mentre il responsabile registrato identifica il referente
+  scelto per le comunicazioni. Nessun diritto permanente deriva dal fatto di
+  avere inserito una persona. `app.can_read_registration` ora verifica lo scope
+  corrente anche per le letture RLS ordinarie; owner e ruoli manager/admin
+  mantengono la lettura prevista. Il QR del capogruppo passa dalla RPC auditata.
+- La scheda del capogruppo aggiunge presenze, stato, QR reale, codice e download.
+  `app/dashboard/participant-card.tsx` condivide presentazione e QR con l’area
+  personale; azioni personali, note, tag e servizi restano nei rispettivi flussi.
+  Caricamento iscritti e risoluzione campagne sono paginati.
+- Un’email personale aggiunta aggiorna la stessa persona. Il callback collega
+  quella stessa identità soltanto dopo login verificato; tutte le ricerche auth
+  e identità ignorano `is_delegate_contact=true`, anche per i contatti legacy.
+  Un capogruppo non può cambiare l’email di un account personale già collegato.
+- La scheda consente di scegliere il recapito anche per iscritti preesistenti.
+  Le campagne distinguono email partecipante e consegna al capogruppo referente;
+  la scelta esplicita delegata prevale anche in presenza di email personale.
+  Scope e scelta vengono riverificati all’invio: un recapito congelato diventato
+  non valido fallisce senza essere sostituito silenziosamente.
+- Backfill tracciato per inserimenti manuali e persone senza email personale:
+  preferisce il creatore se ancora autorizzato, poi un referente corrente.
+  Nessun contatto personale storico viene riscritto o riclassificato per ipotesi.
+- Nuovi testi disponibili nelle sette lingue. Procedura, test e limiti del
+  rilascio in `docs/delegated-participants.md`.
+
 ## Gruppi, Impostazioni e link automatici — 2026-09-05
 
 Queste regole sostituiscono le precedenti istruzioni sulla generazione manuale
@@ -860,7 +903,7 @@ Prima di ogni feature verificare:
   bozze operative in localStorage, sessionStorage o URL.
 - Telefono facoltativo ma internazionale quando presente: `+` seguito da
   7–15 cifre, con spazi e separatori normalizzati. L'inserimento capogruppo
-  richiede almeno email o telefono. Email, nomi e date sono verificati anche
+  consente di omettere entrambi con il recapito delegato (vedi blocco dedicato). Email, nomi e date sono verificati anche
   sul server; le fasce dell'evento sono verificate prima di creare la persona.
 - Il capogruppo raccoglie solo le tre opzioni strutturate di accessibilità,
   con follow-up condizionale. La richiesta separata di ricontatto non viene

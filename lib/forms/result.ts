@@ -21,6 +21,7 @@ export function issueFromMessage(message: string): FormIssue {
   if (/nascita/i.test(message)) return { field: `${prefix}birthDate`, code: "date" };
   if (/almeno email o telefono/i.test(message)) return { field: "email", code: "contact" };
   if (/telefono/i.test(message)) return { field: "phone", code: "phone" };
+  if (message === "linked-account-email") return { field: "email", code: "linkedEmail" };
   if (/duplicate-email|email-taken/.test(message)) return { field: "email", code: "duplicateEmail" };
   if (/email/i.test(message) && !/invite-email|auth-user/.test(message)) return { field: "email", code: "email" };
   if (/presenza|invalid-days/i.test(message)) return { field: "availabilitySlots", code: "attendance" };

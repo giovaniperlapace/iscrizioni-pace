@@ -1,3 +1,5 @@
+import { ParticipantCard, ParticipantQr, ParticipantFact as SummaryInfo } from "@/app/dashboard/participant-card";
+import { isRegistrationQrActive } from "@/lib/registrations/managed-card";
 
 import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
@@ -1017,6 +1019,7 @@ export default async function PartecipanteDashboardPage({
         supabase
           .from("participant_contacts")
           .select("id,email,phone,is_primary")
+          .eq("is_delegate_contact", false)
           .eq("participant_id", participantId)
           .order("is_primary", { ascending: false }),
         supabase
@@ -1198,36 +1201,18 @@ export default async function PartecipanteDashboardPage({
         ) : (
           <>
             <section className="relative rounded-lg border border-[var(--peace-border)] bg-white p-5 pt-10 sm:p-6">
-              <QrStatusIndicator active={qrStatus?.status === "active"} copy={copy} />
-              <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
-                <div className="mx-auto grid w-full max-w-72 gap-3 lg:mx-0">
-                  <QrPreview
-                    participantCode={participant.public_code ?? ""}
-                    qrDataUrl={qrDataUrl}
-                    copy={copy}
-                  />
-                  <QrActionButtons
-                    participantCode={participant.public_code}
-                    qrDataUrl={qrDataUrl}
-                    copy={copy}
-                  />
-                  <ParticipantOrganizerContactCard
-                    copy={messageCopy}
-                    active={activeOverlay === "messaggio"}
-                  />
-                </div>
-                <RegistrationSummaryCard
-                  copy={copy}
-                  participant={participant}
-                  primaryContact={primaryContact}
-                  questionnaire={questionnaire}
-                  attendanceSummary={attendanceSummary}
-                  supportSummary={supportSummary}
-                  serviceLabel={participantServiceLabel}
-                  active={activeOverlay === "iscrizione"}
-                  locale={locale}
-                />
-              </div>
+              <ParticipantCard
+                qr={<ParticipantQr code={participant.public_code} dataUrl={qrDataUrl} locale={locale}
+                  active={isRegistrationQrActive(qrStatus, selectedRegistration.status)} />}
+                details={<RegistrationSummaryCard
+                  copy={copy} participant={participant} primaryContact={primaryContact}
+                  questionnaire={questionnaire} attendanceSummary={attendanceSummary}
+                  supportSummary={supportSummary} serviceLabel={participantServiceLabel}
+                  active={activeOverlay === "iscrizione"} locale={locale}
+                />}
+              >
+                <ParticipantOrganizerContactCard copy={messageCopy} active={activeOverlay === "messaggio"} />
+              </ParticipantCard>
             </section>
 
             <section className="grid gap-4">
@@ -1259,11 +1244,8 @@ export default async function PartecipanteDashboardPage({
               >
                 {activeOverlay === "qr" ? (
                   <section className="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center">
-                    <QrPreview
-                      participantCode={participant.public_code ?? ""}
-                      qrDataUrl={qrDataUrl}
-                      copy={copy}
-                    />
+                    <ParticipantQr code={participant.public_code} dataUrl={qrDataUrl} locale={locale}
+                      active={isRegistrationQrActive(qrStatus, selectedRegistration.status)} />
                     <div className="grid gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
@@ -1626,49 +1608,6 @@ async function getQrDataUrl(qrStatus: QrStatusRow | null): Promise<string | null
   }
 }
 
-function QrPreview({
-  participantCode,
-  qrDataUrl,
-  copy,
-}: {
-  participantCode: string;
-  qrDataUrl: string | null;
-  copy: ParticipantDashboardCopy;
-}) {
-  const cells = buildQrPreviewCells(participantCode || "PACE");
-
-  return (
-    <div className="mx-auto grid w-full max-w-48 gap-3">
-      {qrDataUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={qrDataUrl}
-          alt={copy.personalQrAlt}
-          className="aspect-square rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
-        />
-      ) : (
-        <div
-          className="grid aspect-square grid-cols-9 rounded-md border border-[var(--peace-border-strong)] bg-[var(--peace-soft)] p-3"
-          aria-hidden="true"
-        >
-          {cells.map((active, index) => (
-            <span
-              key={index}
-              className={active ? "bg-[var(--peace-ink)]" : "bg-transparent"}
-            />
-          ))}
-        </div>
-      )}
-      <p className="text-center text-sm font-semibold text-[var(--peace-ink)]">
-        <span className="text-xs uppercase tracking-wide text-[#6f7f91]">
-          {copy.yourCode}:
-        </span>{" "}
-        <span className="font-mono">{participantCode || "QR"}</span>
-      </p>
-    </div>
-  );
-}
-
 function EditableInfo({
   label,
   value,
@@ -1853,80 +1792,6 @@ function SaveInlineButton({
   );
 }
 
-function QrStatusIndicator({
-  active,
-  copy,
-}: {
-  active: boolean;
-  copy: ParticipantDashboardCopy;
-}) {
-  const label = active ? copy.qrActive : copy.qrInactive;
-
-  return (
-    <span
-      aria-label={label}
-      title={label}
-      tabIndex={0}
-      className="group absolute right-4 top-4 inline-flex size-4 rounded-full focus:outline-none"
-    >
-      <span
-        aria-hidden="true"
-        className={
-          active
-            ? "size-4 rounded-full bg-[#2f8f4e] ring-4 ring-[#e4f3e7]"
-            : "size-4 rounded-full bg-[#c94b3b] ring-4 ring-[#f7dfdc]"
-        }
-      />
-      <span className="pointer-events-none absolute right-0 top-7 z-10 w-max max-w-52 rounded-md bg-[var(--peace-ink)] px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus:opacity-100">
-        {label}
-      </span>
-    </span>
-  );
-}
-
-function QrActionButtons({
-  participantCode,
-  qrDataUrl,
-  copy,
-}: {
-  participantCode: string | null;
-  qrDataUrl: string | null;
-  copy: ParticipantDashboardCopy;
-}) {
-  return (
-    <div className="grid gap-2">
-      {qrDataUrl ? (
-        <a
-          href={qrDataUrl}
-          download={`qr-${participantCode ?? copy.personalQrFile}.png`}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-        >
-          <DownloadIcon />
-          {copy.downloadImage}
-        </a>
-      ) : (
-        <button
-          type="button"
-          disabled
-          className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md bg-[#8aa6bd] px-4 text-sm font-semibold text-white"
-        >
-          <DownloadIcon />
-          {copy.downloadImage}
-        </button>
-      )}
-      <button
-        type="button"
-        disabled
-        title={copy.availableLater}
-        className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[#6f7f91]"
-      >
-        <WalletIcon />
-        {copy.addToWallet}
-      </button>
-    </div>
-  );
-}
-
 function RegistrationSummaryCard({
   copy,
   participant,
@@ -1973,7 +1838,7 @@ function RegistrationSummaryCard({
         </span>
       </summary>
       <div className="border-t border-[var(--peace-border)] px-4 pb-4 pt-3">
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-2 xl:grid-cols-3">
           <SummaryInfo
             label="Email"
             value={primaryContact?.email ?? copy.notProvided}
@@ -2000,7 +1865,7 @@ function RegistrationSummaryCard({
           {serviceLabel ? (
             <SummaryInfo label={copy.eventService} value={serviceLabel} />
           ) : null}
-        </div>
+        </dl>
         <div className="mt-3 flex flex-wrap justify-start gap-2">
           <Link
             href="/dashboard/partecipante?overlay=iscrizione"
@@ -2048,67 +1913,6 @@ function ParticipantOrganizerContactCard({
         {copy.action}
       </Link>
     </aside>
-  );
-}
-
-function SummaryInfo({
-  label,
-  value,
-  className = "",
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`min-w-0 rounded-md border border-[var(--peace-border)] bg-[var(--peace-soft)] px-3 py-1.5 ${className}`}
-    >
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-        {label}
-      </p>
-      <p className="mt-0.5 break-words text-sm leading-5 text-[var(--peace-ink)]">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-5 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="M12 3v11" />
-      <path d="m7 10 5 5 5-5" />
-      <path d="M5 21h14" />
-    </svg>
-  );
-}
-
-function WalletIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-5 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a3 3 0 0 1 3-3h12" />
-      <path d="M16 13h6v4h-6a2 2 0 0 1 0-4Z" />
-      <path d="M6 5h11a2 2 0 0 1 2 2" />
-    </svg>
   );
 }
 
@@ -2389,31 +2193,4 @@ function parseDashboardOverlay(value: string | undefined): DashboardOverlay {
   return value === "qr" || value === "iscrizione" || value === "messaggio"
     ? value
     : null;
-}
-
-function buildQrPreviewCells(seed: string): boolean[] {
-  const cells: boolean[] = [];
-  let hash = 0;
-
-  for (const character of seed) {
-    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-  }
-
-  for (let row = 0; row < 9; row += 1) {
-    for (let column = 0; column < 9; column += 1) {
-      const inTopLeft = row < 3 && column < 3;
-      const inTopRight = row < 3 && column > 5;
-      const inBottomLeft = row > 5 && column < 3;
-      const finder = inTopLeft || inTopRight || inBottomLeft;
-      const finderCenter =
-        (row === 1 && column === 1) ||
-        (row === 1 && column === 7) ||
-        (row === 7 && column === 1);
-      const patterned = ((hash + row * 17 + column * 29) % 5) < 2;
-
-      cells.push(finder ? finderCenter || row % 2 === 0 || column % 2 === 0 : patterned);
-    }
-  }
-
-  return cells;
 }

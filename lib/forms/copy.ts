@@ -1,6 +1,10 @@
+import { MANAGED_PARTICIPANT_COPY } from "../registrations/managed-participant-copy.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
 
 const en = {
+  linkedEmail: MANAGED_PARTICIPANT_COPY.en.linkedEmail,
+    personalEmailRequired: MANAGED_PARTICIPANT_COPY.en.personalEmailRequired,
+    delegateEmailRequired: MANAGED_PARTICIPANT_COPY.en.delegateEmailRequired,
   summary: "Check the highlighted fields. Your entries have been kept.",
   required: "Complete this field.", name: "Enter a name between 2 and 120 characters.",
   email: "Enter a valid email address.", contact: "Enter at least an email address or phone number.",
@@ -15,6 +19,9 @@ const en = {
 export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   en,
   it: {
+    linkedEmail: MANAGED_PARTICIPANT_COPY.it.linkedEmail,
+    personalEmailRequired: MANAGED_PARTICIPANT_COPY.it.personalEmailRequired,
+    delegateEmailRequired: MANAGED_PARTICIPANT_COPY.it.delegateEmailRequired,
     summary: "Controlla i campi evidenziati. I dati inseriti sono stati conservati.", required: "Compila questo campo.", name: "Inserisci un nome tra 2 e 120 caratteri.",
     email: "Inserisci un indirizzo email valido.", contact: "Inserisci almeno un indirizzo email o un telefono.",
     phone: "Inserisci il prefisso internazionale, per esempio +39 333 1234567. Il numero deve iniziare con + e contenere da 7 a 15 cifre.",
@@ -25,19 +32,34 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
     failed: "Salvataggio non riuscito. I dati inseriti sono stati conservati. Controlla la connessione e riprova.",
   },
   fr: {
+    linkedEmail: MANAGED_PARTICIPANT_COPY.fr.linkedEmail,
+    personalEmailRequired: MANAGED_PARTICIPANT_COPY.fr.personalEmailRequired,
+    delegateEmailRequired: MANAGED_PARTICIPANT_COPY.fr.delegateEmailRequired,
     summary: "Vérifiez les champs signalés. Vos données ont été conservées.", required: "Remplissez ce champ.", name: "Saisissez un nom de 2 à 120 caractères.", email: "Saisissez une adresse e-mail valide.", contact: "Saisissez au moins une adresse e-mail ou un numéro de téléphone.",
     phone: "Ajoutez l'indicatif international, par exemple +33 6 12345678. Commencez par + suivi de 7 à 15 chiffres.", date: "Saisissez une date valide et vérifiez l'ordre des dates.", attendance: "Choisissez au moins un créneau de présence ou une confirmation ultérieure.", consent: "Confirmez avoir le consentement de la personne.", children: "Indiquez le nombre d'enfants, de 1 à 10.", group: "Choisissez un groupe disponible.", tooLong: "Raccourcissez le texte selon la limite indiquée.", invalid: "Vérifiez le format et les limites de ce champ.", duplicateEmail: "Cette adresse e-mail est déjà liée à une inscription ou à un compte. Vérifiez l'adresse.", duplicate: "Cet élément existe déjà. Vérifiez l'entrée existante.", forbidden: "Vous n'avez pas l'autorisation d'enregistrer cette modification.", closed: "Les modifications de cette inscription sont closes.", failed: "L'enregistrement a échoué. Vos données ont été conservées. Vérifiez la connexion et réessayez.",
   },
   de: {
+    linkedEmail: MANAGED_PARTICIPANT_COPY.de.linkedEmail,
+    personalEmailRequired: MANAGED_PARTICIPANT_COPY.de.personalEmailRequired,
+    delegateEmailRequired: MANAGED_PARTICIPANT_COPY.de.delegateEmailRequired,
     summary: "Prüfen Sie die markierten Felder. Ihre Eingaben bleiben erhalten.", required: "Füllen Sie dieses Feld aus.", name: "Geben Sie einen Namen mit 2 bis 120 Zeichen ein.", email: "Geben Sie eine gültige E-Mail-Adresse ein.", contact: "Geben Sie mindestens eine E-Mail-Adresse oder Telefonnummer ein.", phone: "Geben Sie die internationale Vorwahl ein, zum Beispiel +49 151 12345678. Beginnen Sie mit + und 7 bis 15 Ziffern.", date: "Geben Sie ein gültiges Datum ein und prüfen Sie die Reihenfolge.", attendance: "Wählen Sie mindestens einen Anwesenheitszeitraum oder eine spätere Bestätigung.", consent: "Bestätigen Sie die Einwilligung der Person.", children: "Geben Sie die Anzahl der Kinder von 1 bis 10 an.", group: "Wählen Sie eine verfügbare Gruppe.", tooLong: "Kürzen Sie den Text auf die angegebene Grenze.", invalid: "Prüfen Sie Format und Grenzen dieses Feldes.", duplicateEmail: "Diese E-Mail-Adresse gehört bereits zu einer Anmeldung oder einem Konto. Prüfen Sie die Adresse.", duplicate: "Dieser Eintrag existiert bereits. Prüfen Sie den vorhandenen Eintrag.", forbidden: "Sie dürfen diese Änderung nicht speichern.", closed: "Änderungen an dieser Anmeldung sind geschlossen.", failed: "Speichern fehlgeschlagen. Ihre Eingaben bleiben erhalten. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
   },
   es: {
+    linkedEmail: MANAGED_PARTICIPANT_COPY.es.linkedEmail,
+    personalEmailRequired: MANAGED_PARTICIPANT_COPY.es.personalEmailRequired,
+    delegateEmailRequired: MANAGED_PARTICIPANT_COPY.es.delegateEmailRequired,
     summary: "Revisa los campos señalados. Tus datos se han conservado.", required: "Completa este campo.", name: "Introduce un nombre de entre 2 y 120 caracteres.", email: "Introduce un correo electrónico válido.", contact: "Introduce al menos un correo electrónico o un teléfono.", phone: "Incluye el prefijo internacional, por ejemplo +34 612 345678. Empieza por + seguido de 7 a 15 cifras.", date: "Introduce una fecha válida y comprueba el orden de las fechas.", attendance: "Selecciona al menos una franja de asistencia o confirma más adelante.", consent: "Confirma que tienes el consentimiento de la persona.", children: "Indica el número de hijos, de 1 a 10.", group: "Selecciona un grupo disponible.", tooLong: "Acorta el texto hasta el límite indicado.", invalid: "Revisa el formato y los límites de este campo.", duplicateEmail: "Este correo ya está asociado a una inscripción o cuenta. Revisa la dirección.", duplicate: "Este elemento ya existe. Revisa la entrada existente.", forbidden: "No tienes permiso para guardar este cambio.", closed: "Las modificaciones de esta inscripción están cerradas.", failed: "No se ha podido guardar. Tus datos se han conservado. Revisa la conexión e inténtalo de nuevo.",
   },
   nl: {
+    linkedEmail: MANAGED_PARTICIPANT_COPY.nl.linkedEmail,
+    personalEmailRequired: MANAGED_PARTICIPANT_COPY.nl.personalEmailRequired,
+    delegateEmailRequired: MANAGED_PARTICIPANT_COPY.nl.delegateEmailRequired,
     summary: "Controleer de gemarkeerde velden. Je invoer is bewaard.", required: "Vul dit veld in.", name: "Voer een naam van 2 tot 120 tekens in.", email: "Voer een geldig e-mailadres in.", contact: "Voer ten minste een e-mailadres of telefoonnummer in.", phone: "Voeg de internationale landcode toe, bijvoorbeeld +31 6 12345678. Begin met + gevolgd door 7 tot 15 cijfers.", date: "Voer een geldige datum in en controleer de volgorde.", attendance: "Selecteer minstens één aanwezigheidsperiode of bevestig later.", consent: "Bevestig dat je toestemming van de persoon hebt.", children: "Geef het aantal kinderen op, van 1 tot 10.", group: "Selecteer een beschikbare groep.", tooLong: "Kort de tekst in tot de aangegeven limiet.", invalid: "Controleer de opmaak en grenzen van dit veld.", duplicateEmail: "Dit e-mailadres hoort al bij een inschrijving of account. Controleer het adres.", duplicate: "Dit item bestaat al. Controleer het bestaande item.", forbidden: "Je hebt geen toestemming om deze wijziging op te slaan.", closed: "Deze inschrijving kan niet meer worden gewijzigd.", failed: "Opslaan is mislukt. Je invoer is bewaard. Controleer de verbinding en probeer opnieuw.",
   },
   uk: {
+    linkedEmail: MANAGED_PARTICIPANT_COPY.uk.linkedEmail,
+    personalEmailRequired: MANAGED_PARTICIPANT_COPY.uk.personalEmailRequired,
+    delegateEmailRequired: MANAGED_PARTICIPANT_COPY.uk.delegateEmailRequired,
     summary: "Перевірте позначені поля. Введені дані збережено.", required: "Заповніть це поле.", name: "Введіть ім'я від 2 до 120 символів.", email: "Введіть дійсну електронну адресу.", contact: "Введіть принаймні електронну адресу або номер телефону.", phone: "Додайте міжнародний код, наприклад +380 67 1234567. Почніть із + та введіть від 7 до 15 цифр.", date: "Введіть дійсну дату та перевірте порядок дат.", attendance: "Виберіть принаймні один період присутності або підтвердження пізніше.", consent: "Підтвердьте згоду особи.", children: "Вкажіть кількість дітей від 1 до 10.", group: "Виберіть доступну групу.", tooLong: "Скоротіть текст до вказаного обмеження.", invalid: "Перевірте формат та обмеження цього поля.", duplicateEmail: "Ця адреса вже пов'язана з реєстрацією або обліковим записом. Перевірте адресу.", duplicate: "Цей запис уже існує. Перевірте наявний запис.", forbidden: "У вас немає дозволу зберігати цю зміну.", closed: "Зміни цієї реєстрації закрито.", failed: "Не вдалося зберегти. Введені дані збережено. Перевірте з'єднання та спробуйте ще раз.",
   },
 };
