@@ -1,5 +1,7 @@
 "use server";
 
+import { formFailureFromRedirect, formFailure, issueFromMessage, validateContactFields } from "@/lib/forms/result";
+
 import { createHash } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -245,16 +247,14 @@ export async function submitPublicRegistration(formData: FormData) {
 }
 
 export async function updateParticipantDashboard(formData: FormData) {
+  const contactIssues = validateContactFields(formData);
+  if (contactIssues.length) return formFailure(contactIssues);
   const parsed = parseParticipantDashboardUpdate(formData);
   const updatesAccessibility = formData.get("updatesAccessibility") === "on";
   const updatesChildren = formData.get("updatesChildren") === "on";
 
   if (!parsed.ok) {
-    redirect(
-      `/dashboard/partecipante?error=${encodeURIComponent(
-        parsed.errors[0] ?? "invalid"
-      )}`
-    );
+    return formFailure(parsed.errors.map(issueFromMessage));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -273,7 +273,7 @@ export async function updateParticipantDashboard(formData: FormData) {
     .maybeSingle();
 
   if (registrationError || !registration) {
-    redirect("/dashboard/partecipante?error=not-found");
+    return formFailureFromRedirect("/dashboard/partecipante?error=not-found");
   }
 
   const rawRegistration = registration as unknown as {
@@ -306,11 +306,11 @@ export async function updateParticipantDashboard(formData: FormData) {
   };
 
   if (registrationRow.participants?.auth_user_id !== auth.user.id) {
-    redirect("/dashboard/partecipante?error=not-found");
+    return formFailureFromRedirect("/dashboard/partecipante?error=not-found");
   }
 
   if (!canParticipantEditRegistration(registrationRow)) {
-    redirect("/dashboard/partecipante?error=closed");
+    return formFailureFromRedirect("/dashboard/partecipante?error=closed");
   }
 
   const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
@@ -324,7 +324,7 @@ export async function updateParticipantDashboard(formData: FormData) {
       (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
     )
   ) {
-    redirect("/dashboard/partecipante?error=invalid-days");
+    return formFailureFromRedirect("/dashboard/partecipante?error=invalid-days");
   }
 
   const [
@@ -350,7 +350,7 @@ export async function updateParticipantDashboard(formData: FormData) {
       .eq("registration_id", registrationRow.id),
     supabase
       .from("accessibility_needs")
-      .select("washington_group_answers,needs_operational_support,operational_notes")
+      .select("washington_group_answers,needs_operational_support")
       .eq("registration_id", registrationRow.id)
       .maybeSingle(),
     supabase
@@ -390,7 +390,6 @@ export async function updateParticipantDashboard(formData: FormData) {
     | {
         washington_group_answers: Record<string, boolean> | null;
         needs_operational_support: boolean | null;
-        operational_notes: string | null;
       }
     | null;
   const previousChildren = ((children ?? []) as Array<{
@@ -409,7 +408,6 @@ export async function updateParticipantDashboard(formData: FormData) {
         accessibilityAnswers: previousAccessibility?.washington_group_answers ?? {},
         needsOperationalSupport:
           previousAccessibility?.needs_operational_support ?? false,
-        accessibilityNotes: previousAccessibility?.operational_notes ?? null,
       },
       updatesAccessibility
     ),
@@ -427,7 +425,6 @@ export async function updateParticipantDashboard(formData: FormData) {
       children: previousChildren,
       accessibilityAnswers: previousAccessibility?.washington_group_answers ?? {},
       needsOperationalSupport: previousAccessibility?.needs_operational_support ?? false,
-      accessibilityNotes: previousAccessibility?.operational_notes ?? null,
     },
     dashboardUpdate
   );
@@ -440,7 +437,6 @@ export async function updateParticipantDashboard(formData: FormData) {
           registration_id: registrationRow.id,
           washington_group_answers: dashboardUpdate.accessibilityAnswers,
           needs_operational_support: dashboardUpdate.needsOperationalSupport,
-          operational_notes: dashboardUpdate.accessibilityNotes,
         },
         { onConflict: "registration_id" }
       ),
@@ -496,11 +492,9 @@ export async function updateParticipantDashboard(formData: FormData) {
   const failedWrite = writeResults.find((result) => result.error);
 
   if (failedWrite?.error) {
-    redirect(
-      `/dashboard/partecipante?error=${encodeURIComponent(
+    return formFailureFromRedirect(`/dashboard/partecipante?error=${encodeURIComponent(
         failedWrite.error.message
-      )}`
-    );
+      )}`);
   }
 
   const attendanceRows = dashboardUpdate.availabilityUnknown
@@ -539,11 +533,9 @@ export async function updateParticipantDashboard(formData: FormData) {
   const failedInsert = insertResults.find((result) => result.error);
 
   if (failedInsert?.error) {
-    redirect(
-      `/dashboard/partecipante?error=${encodeURIComponent(
+    return formFailureFromRedirect(`/dashboard/partecipante?error=${encodeURIComponent(
         failedInsert.error.message
-      )}`
-    );
+      )}`);
   }
 
   if (changedFields.length > 0) {
@@ -571,7 +563,7 @@ export async function updateEventOpeningState(formData: FormData) {
   const dashboardPath = "/dashboard/admin";
 
   if (!eventId || !intent) {
-    redirect(`${dashboardPath}?openingError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}?openingError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -586,7 +578,7 @@ export async function updateEventOpeningState(formData: FormData) {
   );
 
   if (!canManageEventOpening) {
-    redirect(`${dashboardPath}?openingError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}?openingError=forbidden`);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -597,14 +589,14 @@ export async function updateEventOpeningState(formData: FormData) {
     .maybeSingle();
 
   if (eventError || !event) {
-    redirect(`${dashboardPath}?openingError=not-found`);
+    return formFailureFromRedirect(`${dashboardPath}?openingError=not-found`);
   }
 
   const now = new Date().toISOString();
   const updates = getEventOpeningUpdate(intent, event, now);
 
   if (!updates) {
-    redirect(`${dashboardPath}?openingError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}?openingError=invalid`);
   }
 
   const { error: updateError } = await serviceSupabase
@@ -613,9 +605,7 @@ export async function updateEventOpeningState(formData: FormData) {
     .eq("id", eventId);
 
   if (updateError) {
-    redirect(
-      `${dashboardPath}?openingError=${encodeURIComponent(updateError.message)}`
-    );
+    return formFailureFromRedirect(`${dashboardPath}?openingError=${encodeURIComponent(updateError.message)}`);
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -641,7 +631,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
   const eventId = optionalText(formData.get("eventId"));
 
   if (!eventId) {
-    redirect("/dashboard/admin?openingError=invalid");
+    return formFailureFromRedirect("/dashboard/admin?openingError=invalid");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -660,7 +650,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
   const eventRow = event as { id: string; is_current: boolean | null } | null;
 
   if (eventError || !eventRow) {
-    redirect("/dashboard/admin?openingError=not-found");
+    return formFailureFromRedirect("/dashboard/admin?openingError=not-found");
   }
 
   if (!eventRow.is_current) {
@@ -670,7 +660,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
       .eq("is_current", true);
 
     if (clearError) {
-      redirect(`/dashboard/admin?openingError=${encodeURIComponent(clearError.message)}`);
+      return formFailureFromRedirect(`/dashboard/admin?openingError=${encodeURIComponent(clearError.message)}`);
     }
 
     const { error: setError } = await serviceSupabase
@@ -679,7 +669,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
       .eq("id", eventRow.id);
 
     if (setError) {
-      redirect(`/dashboard/admin?openingError=${encodeURIComponent(setError.message)}`);
+      return formFailureFromRedirect(`/dashboard/admin?openingError=${encodeURIComponent(setError.message)}`);
     }
   }
 
@@ -711,11 +701,11 @@ export async function createFutureEvent(formData: FormData) {
   const registrationClosesAt = optionalDateTimeLocal(formData.get("registrationClosesAt"));
 
   if (!title || !slug || !city || !country) {
-    redirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid");
+    return formFailureFromRedirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid");
   }
 
   if (startsOn && endsOn && endsOn < startsOn) {
-    redirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid-dates");
+    return formFailure([{ field: "endsOn", code: "date" }]);
   }
 
   if (
@@ -723,7 +713,7 @@ export async function createFutureEvent(formData: FormData) {
     registrationClosesAt &&
     new Date(registrationClosesAt).getTime() < new Date(registrationOpensAt).getTime()
   ) {
-    redirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid-dates");
+    return formFailure([{ field: "registrationClosesAt", code: "date" }]);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -752,11 +742,9 @@ export async function createFutureEvent(formData: FormData) {
     .single();
 
   if (error || !event) {
-    redirect(
-      `/dashboard/admin?section=evento&eventTool=new&openingError=${encodeURIComponent(
+    return formFailureFromRedirect(`/dashboard/admin?section=evento&eventTool=new&openingError=${encodeURIComponent(
         error?.message ?? "create"
-      )}`
-    );
+      )}`);
   }
 
   const eventRow = event as { id: string };
@@ -786,7 +774,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     : null;
 
   if (!assignmentId || !intent) {
-    redirect("/dashboard/capogruppo?error=invalid");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -803,7 +791,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     .eq("user_id", auth.user.id);
 
   if (membershipError || !memberships?.length) {
-    redirect("/dashboard/capogruppo?error=scope");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=scope");
   }
 
   const rootGroupIds = (memberships as Array<{ group_id: string | null }>)
@@ -815,7 +803,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     .eq("is_active", true);
 
   if (groupsError) {
-    redirect("/dashboard/capogruppo?error=groups");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=groups");
   }
 
   const groupNodes = ((groups ?? []) as Array<{
@@ -857,7 +845,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     !assignmentRow ||
     !scopedGroupIds.has(assignmentRow.group_id)
   ) {
-    redirect("/dashboard/capogruppo?error=not-found");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=not-found");
   }
 
   if (
@@ -871,7 +859,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       rootGroupIds
     )
   ) {
-    redirect("/dashboard/capogruppo?error=not-found");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=not-found");
   }
 
   const assignmentGroup = groupRows.find(
@@ -882,7 +870,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     intent === "confirm" &&
     (!assignmentGroup || !(assignmentGroup.is_assignable ?? true))
   ) {
-    redirect("/dashboard/capogruppo?error=group-not-assignable");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=group-not-assignable");
   }
 
   const now = new Date().toISOString();
@@ -911,7 +899,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       );
 
     if (!targetGroup || !canReassign) {
-      redirect("/dashboard/capogruppo?error=invalid-target-group");
+      return formFailureFromRedirect("/dashboard/capogruppo?error=invalid-target-group");
     }
 
     const { error: deactivateError } = await serviceSupabase
@@ -927,9 +915,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       .eq("is_current", true);
 
     if (deactivateError) {
-      redirect(
-        `/dashboard/capogruppo?error=${encodeURIComponent(deactivateError.message)}`
-      );
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(deactivateError.message)}`);
     }
 
     const { data: reassigned, error: reassignError } = await serviceSupabase
@@ -968,11 +954,9 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
           leader_notification_read_at: null,
         })
         .eq("id", assignmentRow.id);
-      redirect(
-        `/dashboard/capogruppo?error=${encodeURIComponent(
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(
           reassignError?.message ?? "reassign"
-        )}`
-      );
+        )}`);
     }
 
     await notifyGroupLeadersForAssignment(serviceSupabase, {
@@ -1011,7 +995,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       .eq("id", assignmentRow.id);
 
     if (error) {
-      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
     }
 
     await auditGroupLeaderDecision(serviceSupabase, {
@@ -1050,7 +1034,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       .eq("id", assignmentRow.id);
 
     if (error) {
-      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
     }
 
     await auditGroupLeaderDecision(serviceSupabase, {
@@ -1079,7 +1063,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       .eq("id", assignmentRow.id);
 
     if (error) {
-      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(error.message)}`);
     }
 
     await auditGroupLeaderDecision(serviceSupabase, {
@@ -1118,9 +1102,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
       .eq("id", assignmentRow.id);
 
     if (rejectError) {
-      redirect(
-        `/dashboard/capogruppo?error=${encodeURIComponent(rejectError.message)}`
-      );
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(rejectError.message)}`);
     }
 
     if (parentGroupId) {
@@ -1146,11 +1128,9 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
         .maybeSingle();
 
       if (escalationError) {
-        redirect(
-          `/dashboard/capogruppo?error=${encodeURIComponent(
+        return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(
             escalationError.message
-          )}`
-        );
+          )}`);
       }
 
       const escalatedAssignmentId =
@@ -1180,10 +1160,12 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     redirect("/dashboard/capogruppo?saved=1");
   }
 
-  redirect("/dashboard/capogruppo?error=invalid");
+  return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
 }
 
 export async function updateGroupLeaderParticipantContact(formData: FormData) {
+  const contactIssues = validateContactFields(formData);
+  if (contactIssues.length) return formFailure(contactIssues);
   const assignmentId = optionalText(formData.get("assignmentId"));
   const participantId = optionalText(formData.get("participantId"));
   const email = normalizeEmail(formData.get("email"));
@@ -1201,7 +1183,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
     formData.has("country");
 
   if (!assignmentId || !participantId || (!email && !phone && !hasIdentityUpdate)) {
-    redirect("/dashboard/capogruppo?error=invalid");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1221,7 +1203,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
   );
 
   if (!canUpdate) {
-    redirect("/dashboard/capogruppo?error=forbidden");
+    return formFailureFromRedirect("/dashboard/capogruppo?error=forbidden");
   }
 
   if (hasIdentityUpdate) {
@@ -1237,9 +1219,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
       .eq("id", participantId);
 
     if (participantUpdateError) {
-      redirect(
-        `/dashboard/capogruppo?error=${encodeURIComponent(participantUpdateError.message)}`
-      );
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(participantUpdateError.message)}`);
     }
   }
 
@@ -1252,7 +1232,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
       .limit(1);
 
     if (contactReadError) {
-      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(contactReadError.message)}`);
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(contactReadError.message)}`);
     }
 
     const primaryContactId =
@@ -1271,7 +1251,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
       : await serviceSupabase.from("participant_contacts").insert(values);
 
     if (result.error) {
-      redirect(`/dashboard/capogruppo?error=${encodeURIComponent(result.error.message)}`);
+      return formFailureFromRedirect(`/dashboard/capogruppo?error=${encodeURIComponent(result.error.message)}`);
     }
   }
 
@@ -1307,8 +1287,10 @@ export async function createOperationalTag(formData: FormData) {
   const errorParam = sourceDashboard === "admin" ? "adminError" : "managerError";
   const savedParam = sourceDashboard === "admin" ? "adminSaved" : "managerSaved";
 
-  if (!label || !eventId) {
-    redirect(`${dashboardPath}&${errorParam}=invalid`);
+  if (!label) return formFailure([{ field: formData.has("operationalTagLabel") ? "operationalTagLabel" : "label", code: "required" }]);
+
+  if (!eventId) {
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1325,7 +1307,7 @@ export async function createOperationalTag(formData: FormData) {
   );
 
   if (!canManageEvent) {
-    redirect(`${dashboardPath}&${errorParam}=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=forbidden`);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -1341,11 +1323,9 @@ export async function createOperationalTag(formData: FormData) {
     .single();
 
   if (error || !tag) {
-    redirect(
-      `${dashboardPath}&${errorParam}=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=${encodeURIComponent(
         error?.code === "23505" ? "duplicate-tag" : error?.message ?? "tag"
-      )}`
-    );
+      )}`);
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -1385,7 +1365,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
   const operationsErrorParam = isAdmin ? "adminError" : "managerError";
 
   if (!participantId || !eventId) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1414,7 +1394,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
       );
 
   if (!canUpdate) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
   }
 
   const { data: tags, error: tagsError } = await serviceSupabase
@@ -1423,14 +1403,14 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     .eq("event_id", eventId);
 
   if (tagsError) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(tagsError.message)}`);
+    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(tagsError.message)}`);
   }
 
   const eventTagIds = ((tags ?? []) as Array<{ id: string }>).map((tag) => tag.id);
   const eventTagIdSet = new Set(eventTagIds);
 
   if (selectedTagIds.some((tagId) => !eventTagIdSet.has(tagId))) {
-    redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
   }
 
   if (eventTagIds.length > 0) {
@@ -1441,7 +1421,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
       .in("tag_id", eventTagIds);
 
     if (deleteError) {
-      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(deleteError.message)}`);
+      return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(deleteError.message)}`);
     }
   }
 
@@ -1457,7 +1437,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
       );
 
     if (insertError) {
-      redirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(insertError.message)}`);
+      return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(insertError.message)}`);
     }
   }
 
@@ -1514,16 +1494,18 @@ export async function saveEventService(formData: FormData) {
   const dashboardPath = getEventServicesDashboardPath(sourceDashboard, nav);
   const errorParam = sourceDashboard === "admin" ? "adminError" : "serviceError";
 
-  if (!eventId || !label) {
-    redirect(`${dashboardPath}&${errorParam}=invalid`);
+  if (!label) return formFailure([{ field: formData.has("eventServiceLabel") ? "eventServiceLabel" : "label", code: "required" }]);
+
+  if (!eventId) {
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=invalid`);
   }
 
   if (!isEventServiceLabelWithinLimit(labelInput)) {
-    redirect(`${dashboardPath}&${errorParam}=service-label-too-long`);
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=service-label-too-long`);
   }
 
   if (!isEventServiceDescriptionWithinLimit(descriptionInput)) {
-    redirect(`${dashboardPath}&${errorParam}=service-description-too-long`);
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=service-description-too-long`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1543,7 +1525,7 @@ export async function saveEventService(formData: FormData) {
   );
 
   if (!canManageEvent) {
-    redirect(`${dashboardPath}&${errorParam}=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=forbidden`);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -1573,13 +1555,11 @@ export async function saveEventService(formData: FormData) {
         .single();
 
   if (result.error || !result.data) {
-    redirect(
-      `${dashboardPath}&${errorParam}=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=${encodeURIComponent(
         result.error?.code === "23505"
           ? "duplicate-service"
           : result.error?.message ?? "service"
-      )}`
-    );
+      )}`);
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -1623,7 +1603,7 @@ export async function updateParticipantEventService(formData: FormData) {
   const errorParam = isCapogruppo ? "error" : isAdmin ? "adminError" : "managerError";
 
   if (!participantId || !registrationId || !eventId) {
-    redirect(`${dashboardPath}&${errorParam}=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1652,7 +1632,7 @@ export async function updateParticipantEventService(formData: FormData) {
       );
 
   if (!canUpdate) {
-    redirect(`${dashboardPath}&${errorParam}=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=forbidden`);
   }
 
   if (!serviceId) {
@@ -1663,7 +1643,7 @@ export async function updateParticipantEventService(formData: FormData) {
       .eq("participant_id", participantId);
 
     if (deleteError) {
-      redirect(`${dashboardPath}&${errorParam}=${encodeURIComponent(deleteError.message)}`);
+      return formFailureFromRedirect(`${dashboardPath}&${errorParam}=${encodeURIComponent(deleteError.message)}`);
     }
 
     await serviceSupabase.from("audit_logs").insert({
@@ -1698,7 +1678,7 @@ export async function updateParticipantEventService(formData: FormData) {
   ]);
 
   if (!service || !registration) {
-    redirect(`${dashboardPath}&${errorParam}=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=invalid`);
   }
 
   const now = new Date().toISOString();
@@ -1729,11 +1709,9 @@ export async function updateParticipantEventService(formData: FormData) {
     .single();
 
   if (upsertError || !savedService) {
-    redirect(
-      `${dashboardPath}&${errorParam}=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}&${errorParam}=${encodeURIComponent(
         upsertError?.message ?? "service"
-      )}`
-    );
+      )}`);
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -1807,14 +1785,12 @@ async function canGroupLeaderTagParticipant(
 }
 
 export async function createGroupLeaderManualRegistration(formData: FormData) {
+  const contactIssues = validateContactFields(formData);
+  if (contactIssues.length) return formFailure(contactIssues);
   const parsed = parseManualRegistrationForm(formData);
 
   if (!parsed.ok) {
-    redirect(
-      `/dashboard/capogruppo?manualError=${encodeURIComponent(
-        parsed.errors[0] ?? "invalid"
-      )}`
-    );
+    return formFailure(parsed.errors.map(issueFromMessage));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1857,7 +1833,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       "capogruppo"
     ))
   ) {
-    redirect("/dashboard/capogruppo?manualError=forbidden");
+    return formFailureFromRedirect("/dashboard/capogruppo?manualError=forbidden");
   }
 
   if (
@@ -1868,8 +1844,24 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       groupRow.event_id
     ))
   ) {
-    redirect("/dashboard/capogruppo?manualError=duplicate-email");
+    return formFailureFromRedirect("/dashboard/capogruppo?manualError=duplicate-email");
   }
+
+  const eventDates = relatedOne(groupRow.events);
+  const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
+    eventDates?.starts_on ?? null,
+    eventDates?.ends_on ?? null
+  );
+
+  if (
+    !parsed.value.availabilityUnknown &&
+    parsed.value.availabilitySlots.some(
+      (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
+    )
+  ) {
+    return formFailureFromRedirect("/dashboard/capogruppo?manualError=invalid-days");
+  }
+
 
   const { data: participant, error: participantError } = await serviceSupabase
     .from("participants")
@@ -1887,11 +1879,9 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     .single();
 
   if (participantError || !participant) {
-    redirect(
-      `/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
         participantError?.message ?? "participant"
-      )}`
-    );
+      )}`);
   }
 
   const participantRow = participant as { id: string; public_code: string };
@@ -1907,30 +1897,13 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     .single();
 
   if (registrationError || !registration) {
-    redirect(
-      `/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
         registrationError?.message ?? "registration"
-      )}`
-    );
+      )}`);
   }
 
   const registrationId = (registration as { id: string }).id;
   const qrToken = createOpaqueQrToken();
-  const eventDates = relatedOne(groupRow.events);
-  const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
-    eventDates?.starts_on ?? null,
-    eventDates?.ends_on ?? null
-  );
-
-  if (
-    !parsed.value.availabilityUnknown &&
-    parsed.value.availabilitySlots.some(
-      (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
-    )
-  ) {
-    redirect("/dashboard/capogruppo?manualError=invalid-days");
-  }
-
   const attendanceRows =
     parsed.value.availabilityUnknown
       ? [{ registration_id: registrationId, choice: "unknown" }]
@@ -1959,8 +1932,6 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     serviceSupabase.from("accessibility_needs").insert({
       registration_id: registrationId,
       washington_group_answers: parsed.value.accessibilityAnswers,
-      needs_operational_support: parsed.value.needsOperationalSupport,
-      operational_notes: parsed.value.accessibilityNotes,
     }),
     serviceSupabase.from("registration_questionnaire_answers").insert({
       registration_id: registrationId,
@@ -2032,11 +2003,9 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   const failedWrite = results.find((result) => result.error);
 
   if (failedWrite?.error) {
-    redirect(
-      `/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
         failedWrite.error.message
-      )}`
-    );
+      )}`);
   }
 
   revalidatePath("/dashboard/capogruppo");
@@ -2051,8 +2020,10 @@ export async function createGroupRegistrationLink(formData: FormData) {
     formData.get("displayName")
   );
 
-  if (!groupId || !publicLabel) {
-    redirect(`${dashboardPath}?groupLinkError=invalid`);
+  if (!publicLabel) return formFailure([{ field: "displayName", code: "required" }]);
+
+  if (!groupId) {
+    return formFailureFromRedirect(`${dashboardPath}?groupLinkError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -2089,7 +2060,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
     !groupRow.is_assignable ||
     !(await canManageGroupRegistrationLink(serviceSupabase, auth.user.id, auth.eventRoles, groupRow.id, groupRow.event_id, sourceDashboard))
   ) {
-    redirect(`${dashboardPath}?groupLinkError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}?groupLinkError=forbidden`);
   }
 
   const { data: existingLink, error: existingLinkError } = await serviceSupabase
@@ -2101,17 +2072,13 @@ export async function createGroupRegistrationLink(formData: FormData) {
     .maybeSingle();
 
   if (existingLinkError) {
-    redirect(
-      getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" })
-    );
+    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" }));
   }
 
   if (existingLink) {
-    redirect(
-      getGroupLinksModalPath(sourceDashboard, groupRow.id, {
+    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, {
         error: "link-already-exists",
-      })
-    );
+      }));
   }
 
   const tokenCandidates = Array.from({ length: 50 }, (_, index) =>
@@ -2130,9 +2097,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
       .in("token_hash", [...tokenHashes.values()]);
 
   if (tokenCollisionError) {
-    redirect(
-      getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" })
-    );
+    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" }));
   }
 
   const usedTokenHashes = new Set(
@@ -2147,9 +2112,7 @@ export async function createGroupRegistrationLink(formData: FormData) {
   );
 
   if (!token) {
-    redirect(
-      getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" })
-    );
+    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, { error: "create" }));
   }
 
   const { data: link, error: linkError } = await serviceSupabase
@@ -2167,11 +2130,9 @@ export async function createGroupRegistrationLink(formData: FormData) {
     .single();
 
   if (linkError || !link) {
-    redirect(
-      getGroupLinksModalPath(sourceDashboard, groupRow.id, {
+    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, groupRow.id, {
         error: linkError?.code === "23505" ? "link-already-exists" : "create",
-      })
-    );
+      }));
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -2205,7 +2166,7 @@ export async function updateGroupRegistrationLink(formData: FormData) {
   );
 
   if (!linkId || !publicLabel) {
-    redirect(`${dashboardPath}?groupLinkError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}?groupLinkError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -2239,7 +2200,7 @@ export async function updateGroupRegistrationLink(formData: FormData) {
     !linkRow ||
     !(await canManageGroupRegistrationLink(serviceSupabase, auth.user.id, auth.eventRoles, linkRow.group_id, linkRow.event_id, sourceDashboard))
   ) {
-    redirect(`${dashboardPath}?groupLinkError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}?groupLinkError=forbidden`);
   }
 
   const { error: updateError } = await serviceSupabase
@@ -2251,11 +2212,9 @@ export async function updateGroupRegistrationLink(formData: FormData) {
     .eq("id", linkRow.id);
 
   if (updateError) {
-    redirect(
-      getGroupLinksModalPath(sourceDashboard, linkRow.group_id, {
+    return formFailureFromRedirect(getGroupLinksModalPath(sourceDashboard, linkRow.group_id, {
         error: "update",
-      })
-    );
+      }));
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -2296,8 +2255,10 @@ export async function saveOperationsGroup(formData: FormData) {
         ? "existing"
         : "none";
 
-  if (!name || !isValidGroupNodeType(nodeType)) {
-    redirect(`${dashboardPath}?groupError=invalid`);
+  if (!name) return formFailure([{ field: "name", code: "required" }]);
+
+  if (!isValidGroupNodeType(nodeType)) {
+    return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -2316,7 +2277,7 @@ export async function saveOperationsGroup(formData: FormData) {
     (await getCurrentOperationalEventId(serviceSupabase));
 
   if (!eventId) {
-    redirect(`${dashboardPath}?groupError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
   }
 
   const isAdmin = auth.eventRoles.some((role) => role.role === "admin");
@@ -2327,7 +2288,7 @@ export async function saveOperationsGroup(formData: FormData) {
     );
 
   if (!canManageEvent || sourceDashboard === "capogruppo") {
-    redirect(`${dashboardPath}?groupError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=forbidden`);
   }
 
   let currentGroupRow: OperationsGroupRow | null = null;
@@ -2347,7 +2308,7 @@ export async function saveOperationsGroup(formData: FormData) {
       !currentGroupRow ||
       currentGroupRow.event_id !== eventId
     ) {
-      redirect(`${dashboardPath}?groupError=not-found`);
+      return formFailureFromRedirect(`${dashboardPath}?groupError=not-found`);
     }
   }
 
@@ -2367,7 +2328,7 @@ export async function saveOperationsGroup(formData: FormData) {
       parentGroupRow.event_id !== eventId ||
       parentGroupRow.id === groupId
     ) {
-      redirect(`${dashboardPath}?groupError=invalid-parent`);
+      return formFailureFromRedirect(`${dashboardPath}?groupError=invalid-parent`);
     }
   }
 
@@ -2401,7 +2362,7 @@ export async function saveOperationsGroup(formData: FormData) {
     !isValidGroupCommunityKind(communityKind) ||
     hasInvalidAgeBand
   ) {
-    redirect(`${dashboardPath}?groupError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
   }
 
   const values = {
@@ -2422,14 +2383,14 @@ export async function saveOperationsGroup(formData: FormData) {
     : await serviceSupabase.from("groups").insert(values).select("id").single();
 
   if (result.error) {
-    redirect(`${dashboardPath}?groupError=${encodeURIComponent(result.error.message)}`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=${encodeURIComponent(result.error.message)}`);
   }
 
   const savedGroupId =
     groupId || ((result.data as { id?: string } | null)?.id ?? null);
 
   if (!savedGroupId) {
-    redirect(`${dashboardPath}?groupError=create`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=create`);
   }
 
   let assignedLeader: GroupLeaderTargetResult | null = null;
@@ -2448,7 +2409,7 @@ export async function saveOperationsGroup(formData: FormData) {
   }
 
   if (assignedLeader && !assignedLeader.ok) {
-    redirect(`${dashboardPath}?groupError=${assignedLeader.error}`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=${assignedLeader.error}`);
   }
 
   if (assignedLeader?.ok) {
@@ -2464,7 +2425,7 @@ export async function saveOperationsGroup(formData: FormData) {
     );
 
     if (leaderError) {
-      redirect(`${dashboardPath}?groupError=${encodeURIComponent(leaderError)}`);
+      return formFailureFromRedirect(`${dashboardPath}?groupError=${encodeURIComponent(leaderError)}`);
     }
   }
 
@@ -2495,7 +2456,7 @@ export async function updateGroupPublicCatalogVisibility(formData: FormData) {
   const isPublicCatalog = formData.get("isPublicCatalog") === "on";
 
   if (!groupId) {
-    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=invalid"));
+    return formFailureFromRedirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=invalid"));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -2524,7 +2485,7 @@ export async function updateGroupPublicCatalogVisibility(formData: FormData) {
     | null;
 
   if (groupError || !groupRow) {
-    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=not-found"));
+    return formFailureFromRedirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=not-found"));
   }
 
   const isAdmin = auth.eventRoles.some((role) => role.role === "admin");
@@ -2535,11 +2496,11 @@ export async function updateGroupPublicCatalogVisibility(formData: FormData) {
     );
 
   if (!canManageEvent || sourceDashboard === "capogruppo") {
-    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=forbidden"));
+    return formFailureFromRedirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=forbidden"));
   }
 
   if (!groupRow.is_assignable && isPublicCatalog) {
-    redirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=invalid"));
+    return formFailureFromRedirect(getGroupManagementListPath(sourceDashboard, navMode, "groupError=invalid"));
   }
 
   const { error: updateError } = await serviceSupabase
@@ -2548,13 +2509,11 @@ export async function updateGroupPublicCatalogVisibility(formData: FormData) {
     .eq("id", groupId);
 
   if (updateError) {
-    redirect(
-      getGroupManagementListPath(
+    return formFailureFromRedirect(getGroupManagementListPath(
         sourceDashboard,
         navMode,
         `groupError=${encodeURIComponent(updateError.message)}`
-      )
-    );
+      ));
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -2576,6 +2535,8 @@ export async function updateGroupPublicCatalogVisibility(formData: FormData) {
 }
 
 export async function assignGroupLeader(formData: FormData) {
+  const contactIssues = validateContactFields(formData);
+  if (contactIssues.length) return formFailure(contactIssues);
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const dashboardPath = getGroupManagementDashboardPath(sourceDashboard);
   const groupId = optionalText(formData.get("groupId"));
@@ -2584,7 +2545,7 @@ export async function assignGroupLeader(formData: FormData) {
   const isPrimaryLeader = leaderKind === "primary";
 
   if (!groupId || (mode !== "existing" && mode !== "new")) {
-    redirect(`${dashboardPath}?groupError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -2606,7 +2567,7 @@ export async function assignGroupLeader(formData: FormData) {
   const groupRow = group as { id: string; event_id: string } | null;
 
   if (groupError || !groupRow) {
-    redirect(`${dashboardPath}?groupError=not-found`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=not-found`);
   }
 
   const isAdmin = auth.eventRoles.some((role) => role.role === "admin");
@@ -2617,7 +2578,7 @@ export async function assignGroupLeader(formData: FormData) {
     );
 
   if (!canManageEvent || sourceDashboard === "capogruppo") {
-    redirect(`${dashboardPath}?groupError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=forbidden`);
   }
 
   const leader =
@@ -2633,7 +2594,7 @@ export async function assignGroupLeader(formData: FormData) {
         });
 
   if (!leader.ok) {
-    redirect(`${dashboardPath}?groupError=${leader.error}`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=${leader.error}`);
   }
 
   const membership = await serviceSupabase.from("group_memberships").upsert(
@@ -2648,9 +2609,7 @@ export async function assignGroupLeader(formData: FormData) {
   );
 
   if (membership.error) {
-    redirect(
-      `${dashboardPath}?groupError=${encodeURIComponent(membership.error.message)}`
-    );
+    return formFailureFromRedirect(`${dashboardPath}?groupError=${encodeURIComponent(membership.error.message)}`);
   }
 
   const syncError = await syncGroupPrimaryLeaderName(
@@ -2660,7 +2619,7 @@ export async function assignGroupLeader(formData: FormData) {
   );
 
   if (syncError) {
-    redirect(`${dashboardPath}?groupError=${encodeURIComponent(syncError)}`);
+    return formFailureFromRedirect(`${dashboardPath}?groupError=${encodeURIComponent(syncError)}`);
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -2684,6 +2643,8 @@ export async function assignGroupLeader(formData: FormData) {
 }
 
 export async function assignOperationalUserRole(formData: FormData) {
+  const contactIssues = validateContactFields(formData);
+  if (contactIssues.length) return formFailure(contactIssues);
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const navMode = optionalText(formData.get("nav"));
   const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard, navMode);
@@ -2697,7 +2658,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   const sendInvite = formData.get("sendInvite") === "on";
 
   if (!firstName || !lastName || !email || !isAssignableOperationalRole(role)) {
-    redirect(`${dashboardPath}&roleError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -2714,7 +2675,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   const currentEventId = await getCurrentOperationalEventId(serviceSupabase);
 
   if (role === "admin" && !isAdmin) {
-    redirect(`${dashboardPath}&roleError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
   }
 
   let roleEventId: string | null = null;
@@ -2722,7 +2683,7 @@ export async function assignOperationalUserRole(formData: FormData) {
 
   if (role === "capogruppo") {
     if (!groupId) {
-      redirect(`${dashboardPath}&roleError=missing-group`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=missing-group`);
     }
 
     const { data: group, error: groupError } = await serviceSupabase
@@ -2735,7 +2696,7 @@ export async function assignOperationalUserRole(formData: FormData) {
       | null;
 
     if (groupError || !groupRow) {
-      redirect(`${dashboardPath}&roleError=invalid-group`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=invalid-group`);
     }
 
     const canManageGroupEvent =
@@ -2746,14 +2707,14 @@ export async function assignOperationalUserRole(formData: FormData) {
       );
 
     if (!canManageGroupEvent) {
-      redirect(`${dashboardPath}&roleError=forbidden`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
     }
 
     roleEventId = groupRow.event_id;
     roleGroupId = groupRow.id;
   } else if (role !== "admin") {
     if (!currentEventId) {
-      redirect(`${dashboardPath}&roleError=missing-event`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=missing-event`);
     }
 
     const canManageRoleEvent =
@@ -2764,7 +2725,7 @@ export async function assignOperationalUserRole(formData: FormData) {
       );
 
     if (!canManageRoleEvent) {
-      redirect(`${dashboardPath}&roleError=forbidden`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
     }
 
     roleEventId = currentEventId;
@@ -2776,7 +2737,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   });
 
   if (!userId) {
-    redirect(`${dashboardPath}&roleError=auth-user`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=auth-user`);
   }
 
   await syncOperationalIdentityByEmail(serviceSupabase, {
@@ -2788,7 +2749,7 @@ export async function assignOperationalUserRole(formData: FormData) {
 
   if (role === "capogruppo") {
     if (!roleGroupId) {
-      redirect(`${dashboardPath}&roleError=missing-group`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=missing-group`);
     }
 
     const membership = await serviceSupabase.from("group_memberships").upsert(
@@ -2803,9 +2764,7 @@ export async function assignOperationalUserRole(formData: FormData) {
     );
 
     if (membership.error) {
-      redirect(
-        `${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`
-      );
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`);
     }
 
     const syncError = await syncGroupPrimaryLeaderName(
@@ -2815,7 +2774,7 @@ export async function assignOperationalUserRole(formData: FormData) {
     );
 
     if (syncError) {
-      redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
     }
   } else {
     const roleMatch = serviceSupabase
@@ -2830,7 +2789,7 @@ export async function assignOperationalUserRole(formData: FormData) {
         : await roleMatch.eq("event_id", roleEventId);
 
     if (selectError) {
-      redirect(`${dashboardPath}&roleError=${encodeURIComponent(selectError.message)}`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(selectError.message)}`);
     }
 
     if (!existingRole?.length) {
@@ -2844,9 +2803,7 @@ export async function assignOperationalUserRole(formData: FormData) {
         });
 
       if (insertError) {
-        redirect(
-          `${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`
-        );
+        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`);
       }
     }
   }
@@ -2885,7 +2842,7 @@ export async function assignOperationalUserRole(formData: FormData) {
         error,
       });
 
-      redirect(`${dashboardPath}&roleError=invite-email`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=invite-email`);
     }
   }
 
@@ -2896,6 +2853,8 @@ export async function assignOperationalUserRole(formData: FormData) {
 }
 
 export async function updateOperationalUserRole(formData: FormData) {
+  const contactIssues = validateContactFields(formData);
+  if (contactIssues.length) return formFailure(contactIssues);
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const navMode = optionalText(formData.get("nav"));
   const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard, navMode);
@@ -2937,7 +2896,7 @@ export async function updateOperationalUserRole(formData: FormData) {
     !email ||
     !isAssignableOperationalRole(role)
   ) {
-    redirect(`${dashboardPath}&roleError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -2959,7 +2918,7 @@ export async function updateOperationalUserRole(formData: FormData) {
   });
 
   if (!currentTarget.ok) {
-    redirect(`${dashboardPath}&roleError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 
   if (
@@ -2968,7 +2927,7 @@ export async function updateOperationalUserRole(formData: FormData) {
       eventId: currentTarget.eventId,
     })
   ) {
-    redirect(`${dashboardPath}&roleError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
   }
 
   const nextTarget = await resolveOperationalRoleTarget(serviceSupabase, {
@@ -2979,7 +2938,7 @@ export async function updateOperationalUserRole(formData: FormData) {
   });
 
   if (!nextTarget.ok) {
-    redirect(`${dashboardPath}&roleError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 
   if (
@@ -2988,7 +2947,7 @@ export async function updateOperationalUserRole(formData: FormData) {
       eventId: nextTarget.eventId,
     })
   ) {
-    redirect(`${dashboardPath}&roleError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
   }
 
   const fullName = `${firstName} ${lastName}`.trim();
@@ -2998,11 +2957,11 @@ export async function updateOperationalUserRole(formData: FormData) {
   });
 
   if (!targetUserId) {
-    redirect(`${dashboardPath}&roleError=auth-user`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=auth-user`);
   }
 
   if (targetUserId !== currentUserId) {
-    redirect(`${dashboardPath}&roleError=email-taken`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=email-taken`);
   }
 
   await syncOperationalIdentityByEmail(serviceSupabase, {
@@ -3023,7 +2982,7 @@ export async function updateOperationalUserRole(formData: FormData) {
     }>;
 
     if (selectedGroupsError || selectedGroupRows.length !== selectedGroupIds.length) {
-      redirect(`${dashboardPath}&roleError=invalid-group`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=invalid-group`);
     }
 
     const selectedGroupIdsSet = new Set(selectedGroupIds);
@@ -3037,7 +2996,7 @@ export async function updateOperationalUserRole(formData: FormData) {
           })
       )
     ) {
-      redirect(`${dashboardPath}&roleError=forbidden`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
     }
 
     const { data: existingMemberships } = await serviceSupabase
@@ -3080,7 +3039,7 @@ export async function updateOperationalUserRole(formData: FormData) {
         .in("group_id", removedGroupIds);
 
       if (removeError) {
-        redirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError.message)}`);
+        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError.message)}`);
       }
 
       for (const membership of removedMemberships) {
@@ -3092,7 +3051,7 @@ export async function updateOperationalUserRole(formData: FormData) {
           );
 
           if (syncError) {
-            redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+            return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
           }
         }
       }
@@ -3115,9 +3074,7 @@ export async function updateOperationalUserRole(formData: FormData) {
       );
 
       if (membership.error) {
-        redirect(
-          `${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`
-        );
+        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`);
       }
 
       const syncError = await syncGroupPrimaryLeaderName(
@@ -3127,7 +3084,7 @@ export async function updateOperationalUserRole(formData: FormData) {
       );
 
       if (syncError) {
-        redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
       }
     }
 
@@ -3169,7 +3126,7 @@ export async function updateOperationalUserRole(formData: FormData) {
   });
 
   if (currentUserId === auth.user.id && currentSignature !== nextSignature) {
-    redirect(`${dashboardPath}&roleError=self-role`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=self-role`);
   }
 
   if (currentSignature !== nextSignature) {
@@ -3181,7 +3138,7 @@ export async function updateOperationalUserRole(formData: FormData) {
     });
 
     if (removeError) {
-      redirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
     }
 
     if (currentTarget.isPrimaryGroupLeader && currentTarget.groupId) {
@@ -3192,14 +3149,14 @@ export async function updateOperationalUserRole(formData: FormData) {
       );
 
       if (syncError) {
-        redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
       }
     }
   }
 
   if (role === "capogruppo") {
     if (!nextTarget.groupId) {
-      redirect(`${dashboardPath}&roleError=missing-group`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=missing-group`);
     }
 
     const membership = await serviceSupabase.from("group_memberships").upsert(
@@ -3214,9 +3171,7 @@ export async function updateOperationalUserRole(formData: FormData) {
     );
 
     if (membership.error) {
-      redirect(
-        `${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`
-      );
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`);
     }
 
     const syncError = await syncGroupPrimaryLeaderName(
@@ -3226,7 +3181,7 @@ export async function updateOperationalUserRole(formData: FormData) {
     );
 
     if (syncError) {
-      redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
     }
   } else {
     const roleMatch = serviceSupabase
@@ -3241,7 +3196,7 @@ export async function updateOperationalUserRole(formData: FormData) {
         : await roleMatch.eq("event_id", nextTarget.eventId);
 
     if (selectError) {
-      redirect(`${dashboardPath}&roleError=${encodeURIComponent(selectError.message)}`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(selectError.message)}`);
     }
 
     if (!existingRole?.length) {
@@ -3255,9 +3210,7 @@ export async function updateOperationalUserRole(formData: FormData) {
         });
 
       if (insertError) {
-        redirect(
-          `${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`
-        );
+        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`);
       }
     }
   }
@@ -3297,7 +3250,7 @@ export async function deleteOperationalUserRole(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
 
   if (!userId || !isAssignableOperationalRole(role)) {
-    redirect(`${dashboardPath}&roleError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -3309,7 +3262,7 @@ export async function deleteOperationalUserRole(formData: FormData) {
   }
 
   if (userId === auth.user.id) {
-    redirect(`${dashboardPath}&roleError=self-role`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=self-role`);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -3322,7 +3275,7 @@ export async function deleteOperationalUserRole(formData: FormData) {
   });
 
   if (!target.ok) {
-    redirect(`${dashboardPath}&roleError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 
   if (
@@ -3331,7 +3284,7 @@ export async function deleteOperationalUserRole(formData: FormData) {
       eventId: target.eventId,
     })
   ) {
-    redirect(`${dashboardPath}&roleError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
   }
 
   const removeError = await removeOperationalRoleAssignment(serviceSupabase, {
@@ -3342,7 +3295,7 @@ export async function deleteOperationalUserRole(formData: FormData) {
   });
 
   if (removeError) {
-    redirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
+    return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
   }
 
   if (target.isPrimaryGroupLeader && target.groupId) {
@@ -3353,7 +3306,7 @@ export async function deleteOperationalUserRole(formData: FormData) {
     );
 
     if (syncError) {
-      redirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
+      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
     }
   }
 

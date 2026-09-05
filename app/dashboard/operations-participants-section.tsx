@@ -1,3 +1,5 @@
+
+import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 
 import {
@@ -110,7 +112,7 @@ export function OperationsParticipantsSection({
           </p>
         </div>
         {activeEventId ? (
-          <form
+          <ReliableForm
             action={createOperationalTag}
             className="grid gap-2 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 sm:grid-cols-[1fr_auto_auto]"
             autoComplete="off"
@@ -139,7 +141,7 @@ export function OperationsParticipantsSection({
             <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Crea
             </PendingSubmitButton>
-          </form>
+          </ReliableForm>
         ) : null}
       </div>
 
@@ -414,7 +416,7 @@ function OperationsParticipantEditOverlay({
         </div>
 
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
-          <form
+          <ReliableForm
             action="/dashboard/admin/participants/update"
             method="post"
             className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
@@ -430,7 +432,7 @@ function OperationsParticipantEditOverlay({
               <Field label="Paese" name="country" defaultValue={participant.country ?? ""} />
             </div>
             <SaveButton />
-          </form>
+          </ReliableForm>
 
           <section className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
             <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
@@ -450,7 +452,7 @@ function OperationsParticipantEditOverlay({
             )}
           </section>
 
-          <form
+          <ReliableForm
             action="/dashboard/admin/participants/update"
             method="post"
             className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
@@ -463,9 +465,9 @@ function OperationsParticipantEditOverlay({
               <Field label="Telefono" name="phone" defaultValue={participant.phone ?? ""} />
             </div>
             <SaveButton />
-          </form>
+          </ReliableForm>
 
-          <form
+          <ReliableForm
             action="/dashboard/admin/participants/update"
             method="post"
             className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
@@ -486,9 +488,9 @@ function OperationsParticipantEditOverlay({
               </select>
             </label>
             <SaveButton />
-          </form>
+          </ReliableForm>
 
-          <form
+          <ReliableForm
             action={updateParticipantOperationalTags}
             className="grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
             data-preserve-dashboard-scroll
@@ -504,18 +506,18 @@ function OperationsParticipantEditOverlay({
               />
             </fieldset>
             <SaveButton />
-          </form>
+          </ReliableForm>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--peace-border)] px-5 py-4">
           {canDeleteRegistration ? (
-            <form action="/dashboard/participants/delete" method="post">
+            <ReliableForm action="/dashboard/participants/delete" method="post">
               <input type="hidden" name="sourceDashboard" value={dashboard} />
               <input type="hidden" name="registrationId" value={participant.registrationId} />
               <input type="hidden" name="participantId" value={participant.participantId} />
               <input type="hidden" name="nav" value={navMode} />
               <RegistrationDeleteButton participantName={participant.name} />
-            </form>
+            </ReliableForm>
           ) : <span />}
           <Link
             href={basePath}

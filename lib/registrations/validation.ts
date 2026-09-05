@@ -44,7 +44,6 @@ export type RegistrationInput = {
   children: RegistrationChildInput[];
   hasAccessibilityNeeds: boolean | null;
   accessibilityAnswers: Record<string, boolean>;
-  accessibilityNotes: string | null;
   needsOperationalSupport: boolean;
   privacyAccepted: boolean;
   dataProcessingAccepted: boolean;
@@ -145,10 +144,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     children: parseAccompanyingChildren(formData, participatesWithChildren),
     hasAccessibilityNeeds,
     accessibilityAnswers,
-    accessibilityNotes: optionalText(formData.get("accessibilityNotes")),
-    needsOperationalSupport:
-      hasAccessibilityNeeds === true &&
-      formData.get("needsOperationalSupport") === "on",
+    needsOperationalSupport: false,
     privacyAccepted,
     dataProcessingAccepted,
     futureEventsCommunicationsAccepted,

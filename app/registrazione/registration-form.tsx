@@ -1,5 +1,7 @@
 "use client";
 
+import { migratePublicRegistrationDrafts } from "@/lib/forms/public-draft";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { submitPublicRegistration } from "@/app/actions";
@@ -37,7 +39,7 @@ type RegistrationFormProps = {
 const OTHER_COUNTRY = "Altro / non in lista";
 const OTHER_CITY = "Altro / non in lista";
 const OTHER_PHONE_PREFIX = "other";
-const FORM_STORAGE_PREFIX = "iscrizioni-pace.registration-form";
+const FORM_STORAGE_PREFIX = "iscrizioni-pace.registration-form-v2";
 const PHONE_PREFIX_OPTIONS = [
   { value: "+39", label: "Italia +39" },
   { value: "+33", label: "Francia +33" },
@@ -151,7 +153,6 @@ type RegistrationFormCopy = {
   accessibilityQuestion: string;
   accessibilityTitle: string;
   accessibilityHelp: string;
-  accessibilityNotes: string;
   previousQuestion: string;
   externalGroupQuestion: string;
   externalGroupPlaceholder: string;
@@ -219,7 +220,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
     accessibilityHelp:
       "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
-    accessibilityNotes: "Ci sono indicazioni pratiche che vuoi comunicarci? (opzionale)",
     previousQuestion:
       "Hai mai partecipato ad altri eventi o attività della Comunità di Sant'Egidio nella tua città?",
     externalGroupQuestion: "Fai parte di qualche gruppo o associazione? (opzionale)",
@@ -292,7 +292,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Which aspects should we consider?",
     accessibilityHelp:
       "You can select one or more options that are useful for organising the welcome better.",
-    accessibilityNotes: "Are there any practical notes you would like to share? (optional)",
     previousQuestion:
       "Have you ever taken part in other Sant'Egidio events or activities in your city?",
     externalGroupQuestion: "Are you part of any group or association? (optional)",
@@ -364,7 +363,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
     accessibilityHelp:
       "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
-    accessibilityNotes: "Y a-t-il des indications pratiques que tu veux nous communiquer ? (optionnel)",
     previousQuestion:
       "As-tu déjà participé à d'autres événements ou activités de la Communauté de Sant'Egidio dans ta ville ?",
     externalGroupQuestion: "Fais-tu partie d'un groupe ou d'une association ? (optionnel)",
@@ -436,7 +434,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
     accessibilityHelp:
       "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
-    accessibilityNotes: "Gibt es praktische Hinweise, die du uns mitteilen möchtest? (optional)",
     previousQuestion:
       "Hast du bereits an anderen Veranstaltungen oder Aktivitäten der Gemeinschaft Sant'Egidio in deiner Stadt teilgenommen?",
     externalGroupQuestion: "Gehörst du zu einer Gruppe oder einem Verein? (optional)",
@@ -508,7 +505,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
     accessibilityHelp:
       "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
-    accessibilityNotes: "¿Hay indicaciones prácticas que quieras comunicarnos? (opcional)",
     previousQuestion:
       "¿Has participado alguna vez en otros eventos o actividades de la Comunidad de Sant'Egidio en tu ciudad?",
     externalGroupQuestion: "¿Formas parte de algún grupo o asociación? (opcional)",
@@ -580,7 +576,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Waar moeten we rekening mee houden?",
     accessibilityHelp:
       "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
-    accessibilityNotes: "Zijn er praktische aanwijzingen die je wilt delen? (optioneel)",
     previousQuestion:
       "Heb je eerder deelgenomen aan andere evenementen of activiteiten van de Gemeenschap van Sant'Egidio in je stad?",
     externalGroupQuestion: "Maak je deel uit van een groep of vereniging? (optioneel)",
@@ -652,7 +647,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Що нам потрібно врахувати?",
     accessibilityHelp:
       "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
-    accessibilityNotes: "Чи є практичні вказівки, які ви хочете нам повідомити? (необов'язково)",
     previousQuestion:
       "Чи брали ви раніше участь в інших подіях або діяльності Спільноти Sant'Egidio у вашому місті?",
     externalGroupQuestion: "Ви належите до якоїсь групи або асоціації? (необов'язково)",
@@ -1520,13 +1514,6 @@ export function RegistrationForm({
                 </label>
               ))}
             </div>
-            <Field label={copy.accessibilityNotes}>
-              <textarea
-                name="accessibilityNotes"
-                className="field min-h-24"
-                data-field="accessibilityNotes"
-              />
-            </Field>
           </div>
         ) : null}
       </section>
@@ -2028,6 +2015,7 @@ function storageKey(email: string): string {
 
 function readStoredForm(email: string): StoredRegistrationForm | null {
   try {
+    migratePublicRegistrationDrafts(window.sessionStorage);
     const raw = window.sessionStorage.getItem(storageKey(email));
 
     if (!raw) {

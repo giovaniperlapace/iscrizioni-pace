@@ -1,4 +1,6 @@
 "use client";
+import { ReliableForm } from "@/components/reliable-form";
+
 
 import { useState } from "react";
 
@@ -72,7 +74,7 @@ export function ParticipantChildrenEditor({
   }
 
   return (
-    <form action={updateParticipantDashboard} className="grid gap-4">
+    <ReliableForm action={updateParticipantDashboard} className="grid gap-4">
       <input type="hidden" name="registrationId" value={registrationId} />
       <input type="hidden" name="updatesChildren" value="on" />
       <input
@@ -205,7 +207,7 @@ export function ParticipantChildrenEditor({
       >
         {copy.save}
       </PendingSubmitButton>
-    </form>
+    </ReliableForm>
   );
 }
 
