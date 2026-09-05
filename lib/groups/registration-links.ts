@@ -8,6 +8,7 @@ export const GROUP_REGISTRATION_LINK_RESERVED_TOKENS = new Set([
   "api",
   "auth",
   "dashboard",
+  "dev-email-preview",
   "login",
   "registrazione",
 ]);

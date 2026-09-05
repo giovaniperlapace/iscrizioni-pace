@@ -60,3 +60,13 @@ test("operational link cards expose public-name editing but no revocation", () =
   }
   assert.doesNotMatch(actions, /export async function revokeGroupRegistrationLink/);
 });
+
+test("every static application root is reserved as a group slug", async () => {
+  const { readdirSync } = await import("node:fs");
+  const { isReservedGroupRegistrationLinkToken } = await import("../lib/groups/registration-links.ts");
+  for (const entry of readdirSync(join(process.cwd(), "app"), { withFileTypes: true })) {
+    if (entry.isDirectory() && !entry.name.startsWith("[") && !entry.name.startsWith("(")) {
+      assert.ok(isReservedGroupRegistrationLinkToken(entry.name), `Reserved route missing: ${entry.name}`);
+    }
+  }
+});

@@ -31,8 +31,10 @@ insert into public.groups(name,event_id,node_type,is_assignable) values
 insert into public.group_registration_links(event_id,group_id,token_hash,token_encrypted,expires_at,max_uses)
 select event_id,id,encode(extensions.digest('legacy_slug','sha256'),'hex'),'unchanged ciphertext',now()-interval '1 day',1 from public.groups where name='Existing';
 \ir ../../supabase/migrations/20260905170000_automatic_group_links.sql
+\ir ../../supabase/migrations/20260905171000_reserve_email_preview_group_slug.sql
 
 do $$ declare g uuid; l uuid; previous_hash text; begin
+ assert not app.valid_group_link_slug('dev-email-preview'), 'preview route is reserved';
  assert (select count(*)=3 from public.group_registration_links), 'backfill count';
  assert not exists(select 1 from public.group_registration_links l join public.groups g on l.group_id=g.id where not g.is_assignable), 'structural node got link';
  assert (select token_encrypted='unchanged ciphertext' and slug is null and expires_at is null and max_uses is null from public.group_registration_links where token_encrypted is not null), 'legacy link rotated or expired';

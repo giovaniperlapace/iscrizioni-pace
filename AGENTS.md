@@ -28,6 +28,9 @@ dei link e sul menu Servizi.
 - Migration applicata in produzione: 93 link/audit creati; 107 gruppi
   assegnabili con 107 canonici, zero mancanti e zero nuovi link strutturali.
   I 14 record canonici preesistenti sono verificati invariati.
+- Migration complementare `20260905171000_reserve_email_preview_group_slug.sql`:
+  riservata anche la route `dev-email-preview`, con test di copertura di tutte
+  le route statiche alla radice.
 - Dettagli, verifiche e rilascio: `docs/automatic-group-links.md`.
 
 ## Assegnazioni operative e questionario — 2026-09-05

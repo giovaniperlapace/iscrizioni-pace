@@ -72,3 +72,7 @@ Migration applicata e registrata in produzione il 2026-09-05: 93 link e audit
 creati; 107 gruppi assegnabili e 107 canonici, zero mancanti, zero nuovi link
 strutturali. Il confronto dell’impronta dei 14 record canonici precedenti
 (esclusa soltanto la nuova colonna nulla) conferma che sono rimasti invariati.
+
+La migration complementare `20260905171000_reserve_email_preview_group_slug.sql`
+riserva anche `dev-email-preview`, intercettato da Next.js anche in produzione.
+Un test confronta l’elenco delle route statiche alla radice con gli slug riservati.
