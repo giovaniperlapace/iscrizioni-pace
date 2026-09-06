@@ -10,7 +10,7 @@ export default async function ImportInstructionsPage() {
   return (
     <main className="mx-auto grid max-w-3xl gap-5 px-4 py-8">
       <Link className="underline" href="/dashboard/participants/data-quality">
-        ← Qualità dati e scambio Excel
+        ← Importa iscritti da Excel
       </Link>
       <h1 className="text-2xl font-bold">Come importare gli iscritti</h1>
       <p>Formato {FORMAT_VERSION}</p>

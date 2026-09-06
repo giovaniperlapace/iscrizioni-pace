@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   useEffect,
@@ -9,7 +10,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { ArrowDown, ArrowUp, Columns3, Pencil, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Download, Pencil, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ReliableForm } from "@/components/reliable-form";
@@ -28,6 +29,10 @@ import type {
   OperationsParticipantRow as Row,
   OperationsParticipantsSnapshot,
 } from "@/lib/registrations/operations-types";
+
+const ImportParticipantsDialog = dynamic(
+  () => import("@/app/dashboard/participants/data-quality/import-dialog"),
+);
 
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -435,10 +440,11 @@ export function OperationsParticipantsTable({
           <p className="mt-1 text-sm text-[var(--peace-muted)]">
             {rows.length} iscrizioni · Apri la scheda dal nome del partecipante.
           </p>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <a download className={buttonClass} href={`/dashboard/participants/data-quality/api?${new URLSearchParams({ ...Object.fromEntries(searchParams), kind: "export" })}`}>Esporta Excel</a>
-            <Link className={buttonClass} href="/dashboard/participants/data-quality">Qualità dati e importazione</Link>
-          </div>
+          {canManage && <div className="mt-3 flex flex-wrap gap-3">
+            <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null })} scroll={false}>
+              Importa iscritti da Excel
+            </Link>
+          </div>}
         </div>
         {canManage && eventId && view !== "deleted" && (
           <details>
@@ -477,6 +483,9 @@ export function OperationsParticipantsTable({
           </details>
         )}
       </div>
+      {canManage && searchParams.get("import") === "excel" && (
+        <ImportParticipantsDialog closePath={paramsFor({ import: null })} />
+      )}
       <nav aria-label="Viste iscritti" className="my-4 flex flex-wrap gap-2">
         {[
           ["all", "Tutti gli iscritti"],
@@ -680,6 +689,20 @@ export function OperationsParticipantsTable({
         >
           Azzera filtri
         </Link>
+      </div>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <a
+          download
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-md border border-[#217346] bg-[#217346] px-3 text-sm font-semibold text-white hover:border-[#185c37] hover:bg-[#185c37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#217346]"
+          href={`/dashboard/participants/data-quality/api?${new URLSearchParams({ ...Object.fromEntries(searchParams), kind: "export" })}`}
+          aria-describedby="participants-export-description"
+        >
+          <Download size={18} aria-hidden />
+          Esporta iscritti
+        </a>
+        <p id="participants-export-description" className="text-sm text-[var(--peace-muted)]">
+          Scarica un file Excel con gli iscritti che corrispondono ai filtri attualmente applicati.
+        </p>
       </div>
       <p
         role="status"

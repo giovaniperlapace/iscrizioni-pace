@@ -139,6 +139,44 @@ Niente corpi Excel, token QR o copie degli indirizzi nei log nuovi.
 
 ## Verifiche e rilascio
 
+### Correzione permesso schema server — 2026-09-06, applicata
+
+Riprodotto dalla console locale l'errore della RPC `quality_event_version`:
+`42501: permission denied for schema app`. In produzione `service_role` aveva
+già EXECUTE su `app.quality_authorize`, ma mancava USAGE sullo schema `app`.
+I ruoli `anon` e `authenticated` hanno già USAGE, senza EXECUTE su questo
+helper riservato al server. La fixture SQL preesistente concedeva USAGE
+esplicitamente, nascondendo la differenza rispetto al database reale.
+
+Blocco di manutenzione autorizzato dall'utente, applicato e registrato con
+`20260906120000_service_role_app_schema_usage.sql`:
+
+```sql
+begin;
+grant usage on schema app to service_role;
+commit;
+```
+
+Non concede CREATE sullo schema né ulteriori privilegi sulle funzioni e non
+modifica le policy RLS. Suite SQL completa passata su PostgreSQL 17 temporaneo,
+con regressione del grant mancante, viewer e manager fuori scope. RPC/PostgREST
+verificata dopo il rilascio: operatore autorizzato ammesso, attore non autorizzato
+rifiutato. Conteggi/hash invariati per registrations, participants, audit_logs,
+duplicate_reviews, participant_imports e qr_tokens; nessun import o merge reale.
+Il loader condiviso specifica inoltre la FK del gruppo corrente: il join
+generico era ambiguo per PostgREST e bloccava anche l'export.
+
+`Importa iscritti da Excel` apre una modale nativa nella dashboard, tramite
+`import=excel`, con modello, istruzioni espandibili e anteprima. X/Escape
+chiudono conservando la consultazione corrente. La route legacy
+`/dashboard/participants/data-quality` reindirizza alla modale. Il controllo
+duplicati è un riquadro direttamente sotto
+la tabella iscritti admin/manager, con caricamento separato tramite Suspense.
+Il controllo riguarda l'intero evento; i link di confronto e il ritorno dopo
+la decisione conservano dashboard, filtri e modalità sidebar. L'esportazione
+Excel è sotto i filtri, con pulsante verde `Esporta iscritti`, icona download
+e descrizione dei filtri applicati.
+
 ```sh
 npm run lint
 npm run typecheck

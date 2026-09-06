@@ -93,7 +93,7 @@ export async function loadQualityPeople(
     loadRowsForIds(ids, (chunk, from, to) =>
       db
         .from("participant_group_assignments")
-        .select("registration_id,group_id,status,groups(name)")
+        .select("registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)")
         .in("registration_id", chunk)
         .eq("is_current", true)
         .order("id")

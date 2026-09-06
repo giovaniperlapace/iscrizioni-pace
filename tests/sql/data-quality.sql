@@ -4,6 +4,17 @@
 \ir ../../supabase/migrations/20260615180000_store_retrievable_qr_tokens.sql
 \ir ../../supabase/migrations/20260702100000_attendance_half_day_slots.sql
 \ir ../../supabase/migrations/20260905210000_data_quality_excel.sql
+-- Match production's missing schema permission instead of inheriting the
+-- broader participant-operations fixture grant. The maintenance migration
+-- must restore server access while keeping the helper private.
+revoke usage on schema app from service_role;
+\ir ../../supabase/migrations/20260906120000_service_role_app_schema_usage.sql
+do $$ begin
+ assert has_schema_privilege('service_role','app','USAGE'), 'server schema access missing';
+ assert not has_schema_privilege('service_role','app','CREATE'), 'server can create schema objects';
+ assert not has_function_privilege('anon','app.quality_authorize(uuid,uuid,boolean)','EXECUTE'), 'anonymous quality helper access';
+ assert not has_function_privilege('authenticated','app.quality_authorize(uuid,uuid,boolean)','EXECUTE'), 'client quality helper access';
+end $$;
 update public.events set is_current=false where is_current;
 update public.events set is_current=true where id=fixture_id(100);
 set role service_role;

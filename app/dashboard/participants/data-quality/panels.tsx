@@ -319,12 +319,14 @@ export function ReviewPanel({
   catalog,
   token,
   canWrite,
+  returnTo = "/dashboard/manager?section=iscritti#duplicati",
 }: {
   left: QualityPerson;
   right: QualityPerson;
   catalog: Catalog;
   token: string;
   canWrite: boolean;
+  returnTo?: string;
 }) {
   const router = useRouter();
   const [decision, setDecision] = useState("not_duplicate"),
@@ -346,7 +348,7 @@ export function ReviewPanel({
         reason,
         confirm,
       });
-      router.push("/dashboard/participants/data-quality");
+      router.push(returnTo);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Decisione non salvata.");
@@ -395,7 +397,8 @@ export function ReviewPanel({
             </dl>
             <Link
               className="mt-3 block underline"
-              href={`/dashboard/manager?section=iscritti&edit=${person.id}`}
+              href={`${returnTo.split("#")[0]}&edit=${person.id}`}
+              scroll={false}
             >
               Apri scheda completa
             </Link>

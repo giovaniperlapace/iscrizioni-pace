@@ -6,12 +6,33 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 
 ## Qualità dati, duplicati e scambio Excel — blocco 6, 2026-09-05
 
-- Console condivisa `/dashboard/participants/data-quality`, collegata alla
-  tabella iscritti; pagina istruzioni consultabile prima dell'upload e modello
+- Importazione condivisa dalla tabella iscritti; istruzioni consultabili
+  prima dell'upload e modello
   `.xlsx` vuoto con fogli Esempi/Istruzioni/Cataloghi separati. Formato canonico
   `pace-partecipanti-v1` in `lib/data-quality/format.ts`: date testo ISO,
   telefono internazionale, gruppi/servizi/tag per UUID o nome univoco in evento,
   stato servizio separato, consensi originali obbligatori. 2 MiB/500 righe.
+- Dal 2026-09-06, il pulsante `Importa iscritti da Excel` apre una modale
+  nativa sopra la tabella ed è visibile agli operatori con permessi di
+  scrittura. Include istruzioni espandibili, modello e anteprima; X/Escape
+  chiudono conservando filtri, sidebar e scroll. `import=excel` controlla
+  l'apertura; la vecchia route `/dashboard/participants/data-quality`
+  reindirizza alla modale nella dashboard autorizzata.
+  `OperationsDuplicatesSection` mostra il riquadro `Controllo duplicati`
+  direttamente sotto la tabella condivisa admin/manager, anche in sola
+  lettura: controlla tutte le iscrizioni operative dell'evento, a prescindere
+  dai filtri della tabella. Confronto, viste e paginazione usano i parametri
+  `duplicatePair`, `duplicateShow`, `duplicatePage`, conservando filtri e
+  dashboard; dopo una decisione si ritorna allo stesso riquadro.
+  L'export è sotto i filtri: pulsante verde con icona download `Esporta
+  iscritti` e descrizione esplicita del file Excel relativo ai filtri applicati.
+- Migration `20260906120000_service_role_app_schema_usage.sql` autorizzata e
+  applicata in produzione il 2026-09-06: aggiunge il solo USAGE sullo schema
+  `app` a `service_role`, necessario per `quality_event_version` e gli helper
+  server già autorizzati. Nessuna modifica RLS; hash/conteggi invariati su sei
+  tabelle. Corretto anche il join dei gruppi nel loader import/export con la
+  FK esplicita `participant_group_assignments_group_id_fkey`. Dettagli in
+  `docs/data-quality-excel.md`.
 - Motore unico in `lib/data-quality/duplicates.ts`: nomi normalizzati e
   Levenshtein corroborati da nascita, email, telefono, paese/città. Classi
   esatta, molto probabile, possibile, falso positivo verificato. Nessuna

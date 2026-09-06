@@ -496,6 +496,7 @@ export default async function AdminDashboardPage({
 
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
+                searchParams={params}
                 snapshot={participantsSnapshot}
                 operatorId={auth.user.id}
                 eventId={currentEventId}
