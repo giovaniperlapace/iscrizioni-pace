@@ -1,7 +1,7 @@
 import type { RegistrationInput } from "@/lib/registrations/validation";
 
 export const REGISTRATION_QUESTIONNAIRE_VERSION =
-  "2026-09-05-operative-groups";
+  "2026-09-06-conditional-groups";
 
 export type QuestionnaireLocale = "it" | "en";
 export type QuestionDataClass = "personal" | "sensitive" | "operational" | "legal";
@@ -17,6 +17,7 @@ export type RegistrationQuestion = {
   id: string;
   label: Record<QuestionnaireLocale, string> & Partial<Record<"fr" | "de" | "es" | "nl" | "uk", string>>;
   required: boolean;
+  requiredWhen?: string;
   dataClass: QuestionDataClass;
   structuredStorage: string;
   visibleTo: RoleVisibility[];
@@ -515,7 +516,7 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   },
   {
     id: "previous_santegidio_participation",
-    label: {"it": "Hai partecipato ad altri eventi con la Comunità di Sant’Egidio?", "en": "Have you attended other events with the Community of Sant’Egidio?", "fr": "As-tu participé à d’autres événements avec la Communauté de Sant’Egidio ?", "de": "Hast du an anderen Veranstaltungen mit der Gemeinschaft Sant’Egidio teilgenommen?", "es": "¿Has participado en otros eventos con la Comunidad de Sant’Egidio?", "nl": "Heb je aan andere evenementen met de Gemeenschap van Sant’Egidio deelgenomen?", "uk": "Чи брали ви участь в інших заходах зі Спільнотою святого Егідія?"},
+    label: {"it": "Hai partecipato ad altri eventi della Comunità di Sant’Egidio?", "en": "Have you attended other events organised by the Community of Sant’Egidio?", "fr": "As-tu participé à d’autres événements de la Communauté de Sant’Egidio ?", "de": "Hast du an anderen Veranstaltungen der Gemeinschaft Sant’Egidio teilgenommen?", "es": "¿Has participado en otros eventos de la Comunidad de Sant’Egidio?", "nl": "Heb je aan andere evenementen van de Gemeenschap van Sant’Egidio deelgenomen?", "uk": "Чи брали ви участь в інших заходах Спільноти святого Егідія?"},
     required: true,
     dataClass: "operational",
     structuredStorage: "participants.has_previous_santegidio_participation",
@@ -524,8 +525,9 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   },
   {
     id: "group_participation",
-    label: {"it": "Parteciperai con un gruppo alla preghiera?", "en": "Will you attend the prayer with a group?", "fr": "Participeras-tu à la prière avec un groupe ?", "de": "Wirst du mit einer Gruppe am Gebet teilnehmen?", "es": "¿Participarás en la oración con un grupo?", "nl": "Zul je met een groep aan het gebed deelnemen?", "uk": "Чи братимете ви участь у молитві з групою?"},
+    label: {"it": "Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?", "en": "Will you attend the Prayer for Peace with a group from the Community?", "fr": "Participeras-tu à la Prière pour la Paix avec un groupe de la Communauté ?", "de": "Wirst du mit einer Gruppe der Gemeinschaft am Gebet für den Frieden teilnehmen?", "es": "¿Participarás en la Oración por la Paz con un grupo de la Comunidad?", "nl": "Zul je met een groep van de Gemeenschap deelnemen aan het Gebed voor de Vrede?", "uk": "Чи братимете ви участь у Молитві за мир з групою Спільноти?"},
     required: true,
+    requiredWhen: "previous_santegidio_participation=yes",
     dataClass: "operational",
     structuredStorage: "participants.participates_with_group,participant_group_assignments",
     visibleTo: ["partecipante", "capogruppo", "manager", "manager_viewer", "admin"],

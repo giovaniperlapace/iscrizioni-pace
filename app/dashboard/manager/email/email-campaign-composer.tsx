@@ -3,6 +3,7 @@
 import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
 import { CAMPAIGN_TEMPLATE_FIELDS } from "@/lib/email/campaign-templates";
 import { CampaignRichTextEditor } from "./campaign-rich-text-editor";
 
@@ -329,9 +330,12 @@ export function EmailCampaignComposer({
     if (data) {
       setShowSendConfirmation(false);
       setNotice(
-        data.scheduled > 0
+        (data.scheduled > 0
           ? `Prima tranche conclusa: ${data.sent} inviate, ${data.failed} non riuscite. ${data.scheduled} email sono programmate per i prossimi giorni, fino a 300 al giorno.`
-          : `Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`
+          : `Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`) +
+        (data.sent > 0
+          ? ` Ricorda ai destinatari: «${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}»`
+          : "")
       );
       resetPreview();
     }
@@ -1154,6 +1158,10 @@ export function EmailCampaignComposer({
                     <strong className="break-all">{preview.testRecipientEmail}</strong>.
                     Apri quella casella e controlla che oggetto, testo, campi
                     personalizzati, immagini e allegati siano corretti.
+                  </p>
+                  <p className="mt-2">
+                    {EMAIL_DELIVERY_COPY.it.checkSpam}{" "}
+                    {EMAIL_DELIVERY_COPY.it.safeSender}
                   </p>
                   <p className="mt-2">
                     Se è tutto a posto, procedi con l’invio della campagna. Se devi

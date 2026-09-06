@@ -1,3 +1,4 @@
+import { EMAIL_DELIVERY_COPY } from "./email-delivery.ts";
 import type { DashboardRole } from "../auth/roles.ts";
 
 import { DEFAULT_LOCALE, type SupportedLocale } from "./config.ts";
@@ -93,7 +94,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       submit: "Continua",
       pending: "Invio...",
       magicLinkSent:
-        "Ti abbiamo inviato un link di accesso. Controlla la tua email e anche la cartella spam.",
+        `Ti abbiamo inviato un link di accesso. ${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}`,
       errors: {
         email: "Inserisci un indirizzo email valido.",
         "rate-limit": "Troppi tentativi ravvicinati. Riprova tra qualche minuto.",
@@ -121,7 +122,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Grazie",
       bodyBeforeEmail: "Abbiamo registrato la tua iscrizione e inviato una conferma a",
       fallbackEmail: "la tua email",
-      bodyAfterEmail: "Per rientrare nella dashboard usa la stessa email dalla home.",
+      bodyAfterEmail: `Per rientrare nella dashboard usa la stessa email dalla home. ${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}`,
       backHome: "Torna alla home e fai il primo accesso",
     },
     registrationClosed: {
@@ -166,7 +167,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       submit: "Continue",
       pending: "Sending...",
       magicLinkSent:
-        "We sent you an access link. Please check your inbox and spam folder.",
+        `We sent you an access link. ${EMAIL_DELIVERY_COPY.en.checkSpam} ${EMAIL_DELIVERY_COPY.en.safeSender}`,
       errors: {
         email: "Enter a valid email address.",
         "rate-limit": "Too many attempts in a short time. Try again in a few minutes.",
@@ -194,7 +195,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Thank you",
       bodyBeforeEmail: "We registered your participation and sent a confirmation to",
       fallbackEmail: "your email",
-      bodyAfterEmail: "To return to the dashboard, use the same email from the home page.",
+      bodyAfterEmail: `To return to the dashboard, use the same email from the home page. ${EMAIL_DELIVERY_COPY.en.checkSpam} ${EMAIL_DELIVERY_COPY.en.safeSender}`,
       backHome: "Back to home and access for the first time",
     },
     registrationClosed: {
@@ -239,7 +240,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       submit: "Continuer",
       pending: "Envoi...",
       magicLinkSent:
-        "Nous t'avons envoyé un lien d'accès. Vérifie ta boîte de réception et le dossier spam.",
+        `Nous t'avons envoyé un lien d'accès. ${EMAIL_DELIVERY_COPY.fr.checkSpam} ${EMAIL_DELIVERY_COPY.fr.safeSender}`,
       errors: {
         email: "Saisis une adresse email valide.",
         "rate-limit": "Trop de tentatives rapprochées. Réessaie dans quelques minutes.",
@@ -267,7 +268,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Merci",
       bodyBeforeEmail: "Nous avons enregistré ton inscription et envoyé une confirmation à",
       fallbackEmail: "ton email",
-      bodyAfterEmail: "Pour revenir au dashboard, utilise le même email depuis l'accueil.",
+      bodyAfterEmail: `Pour revenir au dashboard, utilise le même email depuis l'accueil. ${EMAIL_DELIVERY_COPY.fr.checkSpam} ${EMAIL_DELIVERY_COPY.fr.safeSender}`,
       backHome: "Retour à l'accueil et premier accès",
     },
     registrationClosed: {
@@ -312,7 +313,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       submit: "Weiter",
       pending: "Wird gesendet...",
       magicLinkSent:
-        "Wir haben dir einen Zugangslink gesendet. Bitte prüfe deinen Posteingang und den Spam-Ordner.",
+        `Wir haben dir einen Zugangslink gesendet. ${EMAIL_DELIVERY_COPY.de.checkSpam} ${EMAIL_DELIVERY_COPY.de.safeSender}`,
       errors: {
         email: "Gib eine gültige E-Mail-Adresse ein.",
         "rate-limit": "Zu viele Versuche in kurzer Zeit. Bitte versuche es in einigen Minuten erneut.",
@@ -340,7 +341,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Danke",
       bodyBeforeEmail: "Wir haben deine Anmeldung registriert und eine Bestätigung gesendet an",
       fallbackEmail: "deine E-Mail",
-      bodyAfterEmail: "Um zum Dashboard zurückzukehren, nutze dieselbe E-Mail auf der Startseite.",
+      bodyAfterEmail: `Um zum Dashboard zurückzukehren, nutze dieselbe E-Mail auf der Startseite. ${EMAIL_DELIVERY_COPY.de.checkSpam} ${EMAIL_DELIVERY_COPY.de.safeSender}`,
       backHome: "Zur Startseite und zum ersten Zugang",
     },
     registrationClosed: {
@@ -385,7 +386,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       submit: "Continuar",
       pending: "Enviando...",
       magicLinkSent:
-        "Te hemos enviado un enlace de acceso. Revisa tu bandeja de entrada y la carpeta de spam.",
+        `Te hemos enviado un enlace de acceso. ${EMAIL_DELIVERY_COPY.es.checkSpam} ${EMAIL_DELIVERY_COPY.es.safeSender}`,
       errors: {
         email: "Introduce una dirección de email válida.",
         "rate-limit": "Demasiados intentos seguidos. Inténtalo de nuevo en unos minutos.",
@@ -413,7 +414,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Gracias",
       bodyBeforeEmail: "Hemos registrado tu inscripción y enviado una confirmación a",
       fallbackEmail: "tu email",
-      bodyAfterEmail: "Para volver al panel, usa el mismo email desde el inicio.",
+      bodyAfterEmail: `Para volver al panel, usa el mismo email desde el inicio. ${EMAIL_DELIVERY_COPY.es.checkSpam} ${EMAIL_DELIVERY_COPY.es.safeSender}`,
       backHome: "Volver al inicio y acceder por primera vez",
     },
     registrationClosed: {
@@ -458,7 +459,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       submit: "Doorgaan",
       pending: "Verzenden...",
       magicLinkSent:
-        "We hebben je een toegangslink gestuurd. Controleer je inbox en spammap.",
+        `We hebben je een toegangslink gestuurd. ${EMAIL_DELIVERY_COPY.nl.checkSpam} ${EMAIL_DELIVERY_COPY.nl.safeSender}`,
       errors: {
         email: "Voer een geldig e-mailadres in.",
         "rate-limit": "Te veel pogingen kort na elkaar. Probeer het over enkele minuten opnieuw.",
@@ -486,7 +487,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Dank je",
       bodyBeforeEmail: "We hebben je inschrijving geregistreerd en een bevestiging gestuurd naar",
       fallbackEmail: "je e-mail",
-      bodyAfterEmail: "Gebruik hetzelfde e-mailadres op de homepagina om terug te keren naar het dashboard.",
+      bodyAfterEmail: `Gebruik hetzelfde e-mailadres op de homepagina om terug te keren naar het dashboard. ${EMAIL_DELIVERY_COPY.nl.checkSpam} ${EMAIL_DELIVERY_COPY.nl.safeSender}`,
       backHome: "Terug naar home en eerste toegang",
     },
     registrationClosed: {
@@ -531,7 +532,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       submit: "Продовжити",
       pending: "Надсилання...",
       magicLinkSent:
-        "Ми надіслали вам посилання для доступу. Перевірте вхідні повідомлення та папку «Спам».",
+        `Ми надіслали вам посилання для доступу. ${EMAIL_DELIVERY_COPY.uk.checkSpam} ${EMAIL_DELIVERY_COPY.uk.safeSender}`,
       errors: {
         email: "Введіть дійсну електронну адресу.",
         "rate-limit": "Забагато спроб поспіль. Спробуйте ще раз за кілька хвилин.",
@@ -559,7 +560,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       title: "Дякуємо",
       bodyBeforeEmail: "Ми зареєстрували вашу участь і надіслали підтвердження на",
       fallbackEmail: "вашу електронну пошту",
-      bodyAfterEmail: "Щоб повернутися до панелі, використайте ту саму адресу на головній сторінці.",
+      bodyAfterEmail: `Щоб повернутися до панелі, використайте ту саму адресу на головній сторінці. ${EMAIL_DELIVERY_COPY.uk.checkSpam} ${EMAIL_DELIVERY_COPY.uk.safeSender}`,
       backHome: "Повернутися на головну і увійти вперше",
     },
     registrationClosed: {

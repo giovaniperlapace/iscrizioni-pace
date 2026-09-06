@@ -1,3 +1,4 @@
+import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
 
 import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
@@ -705,7 +706,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Invia messaggio",
     sending: "Invio in corso...",
     sent:
-      "Il messaggio è stato correttamente inviato agli organizzatori. Riceverai una risposta al più presto possibile.",
+      `Il messaggio è stato correttamente inviato agli organizzatori. Riceverai una risposta al più presto possibile. ${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}`,
     maxLength: "Massimo 4.000 caratteri",
     errors: {
       empty: "Scrivi un messaggio prima di inviare.",
@@ -729,7 +730,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Send message",
     sending: "Sending...",
     sent:
-      "Your message has been successfully sent to the organisers. You will receive a reply as soon as possible.",
+      `Your message has been successfully sent to the organisers. You will receive a reply as soon as possible. ${EMAIL_DELIVERY_COPY.en.checkSpam} ${EMAIL_DELIVERY_COPY.en.safeSender}`,
     maxLength: "Maximum 4,000 characters",
     errors: {
       empty: "Write a message before sending.",
@@ -753,7 +754,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Envoyer le message",
     sending: "Envoi en cours...",
     sent:
-      "Ton message a bien été envoyé aux organisateurs. Tu recevras une réponse dans les meilleurs délais.",
+      `Ton message a bien été envoyé aux organisateurs. Tu recevras une réponse dans les meilleurs délais. ${EMAIL_DELIVERY_COPY.fr.checkSpam} ${EMAIL_DELIVERY_COPY.fr.safeSender}`,
     maxLength: "4 000 caractères maximum",
     errors: {
       empty: "Écris un message avant de l'envoyer.",
@@ -777,7 +778,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Nachricht senden",
     sending: "Wird gesendet...",
     sent:
-      "Deine Nachricht wurde erfolgreich an die Organisation gesendet. Du erhältst so bald wie möglich eine Antwort.",
+      `Deine Nachricht wurde erfolgreich an die Organisation gesendet. Du erhältst so bald wie möglich eine Antwort. ${EMAIL_DELIVERY_COPY.de.checkSpam} ${EMAIL_DELIVERY_COPY.de.safeSender}`,
     maxLength: "Maximal 4.000 Zeichen",
     errors: {
       empty: "Schreibe vor dem Senden eine Nachricht.",
@@ -801,7 +802,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Enviar mensaje",
     sending: "Enviando...",
     sent:
-      "Tu mensaje se ha enviado correctamente a los organizadores. Recibirás una respuesta lo antes posible.",
+      `Tu mensaje se ha enviado correctamente a los organizadores. Recibirás una respuesta lo antes posible. ${EMAIL_DELIVERY_COPY.es.checkSpam} ${EMAIL_DELIVERY_COPY.es.safeSender}`,
     maxLength: "Máximo 4.000 caracteres",
     errors: {
       empty: "Escribe un mensaje antes de enviarlo.",
@@ -825,7 +826,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Bericht verzenden",
     sending: "Wordt verzonden...",
     sent:
-      "Je bericht is correct naar de organisatie verzonden. Je ontvangt zo snel mogelijk een antwoord.",
+      `Je bericht is correct naar de organisatie verzonden. Je ontvangt zo snel mogelijk een antwoord. ${EMAIL_DELIVERY_COPY.nl.checkSpam} ${EMAIL_DELIVERY_COPY.nl.safeSender}`,
     maxLength: "Maximaal 4.000 tekens",
     errors: {
       empty: "Schrijf een bericht voordat je het verzendt.",
@@ -849,7 +850,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Надіслати повідомлення",
     sending: "Надсилання...",
     sent:
-      "Ваше повідомлення успішно надіслано організаторам. Ви отримаєте відповідь якнайшвидше.",
+      `Ваше повідомлення успішно надіслано організаторам. Ви отримаєте відповідь якнайшвидше. ${EMAIL_DELIVERY_COPY.uk.checkSpam} ${EMAIL_DELIVERY_COPY.uk.safeSender}`,
     maxLength: "Не більше 4 000 символів",
     errors: {
       empty: "Напишіть повідомлення перед надсиланням.",

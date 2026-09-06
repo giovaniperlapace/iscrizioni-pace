@@ -16,6 +16,7 @@ import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { applyOperationsDashboardFilters } from "@/lib/registrations/operations-dashboard";
+import { parseStatisticsDrilldown } from "@/lib/registrations/event-statistics";
 import { calculateAgeAtDate } from "@/lib/groups/matching";
 import { eventServiceStatusLabel } from "@/lib/registrations/event-services";
 import {
@@ -196,6 +197,33 @@ export function OperationsParticipantsTable({
         a.registrationId.localeCompare(b.registrationId)
       );
     });
+
+  const statisticsKey = searchParams.get("stat");
+  const isChildrenView = Boolean(
+    snapshot.statisticsFilter &&
+    parseStatisticsDrilldown(statisticsKey)?.personKind === "child",
+  );
+  const [childrenDisplay, setChildrenDisplay] = useState({
+    statisticsKey,
+    visible: isChildrenView,
+  });
+  // A new statistics selection restores its default without resetting on sorting.
+  if (childrenDisplay.statisticsKey !== statisticsKey) {
+    setChildrenDisplay({ statisticsKey, visible: isChildrenView });
+  }
+  const showChildren = childrenDisplay.statisticsKey === statisticsKey
+    ? childrenDisplay.visible
+    : isChildrenView;
+  const statisticsLabel = isChildrenView
+    ? snapshot.statisticsFilter?.label.replace(/^Minori accompagnati(?: · )?/, "")
+    : snapshot.statisticsFilter?.label;
+  const accompanyingChildrenCount = rows.reduce(
+    (total, row) => total + row.childrenCount,
+    0,
+  );
+  const registrationsLabel = isChildrenView
+    ? rows.length === 1 ? "iscrizione familiare" : "iscrizioni familiari"
+    : rows.length === 1 ? "iscrizione" : "iscrizioni";
 
   async function quickUpdate(
     row: Row,
@@ -438,7 +466,11 @@ export function OperationsParticipantsTable({
         <div>
           <h2 className="text-lg font-semibold">Gestione iscritti</h2>
           <p className="mt-1 text-sm text-[var(--peace-muted)]">
-            {rows.length} iscrizioni · Apri la scheda dal nome del partecipante.
+            {rows.length} {registrationsLabel}
+            {(accompanyingChildrenCount > 0 || isChildrenView) && (
+              <> · {accompanyingChildrenCount} {accompanyingChildrenCount === 1 ? "figlio accompagnato" : "figli accompagnati"}</>
+            )}
+            {" "}· Apri la scheda dal nome del partecipante.
           </p>
           {canManage && <div className="mt-3 flex flex-wrap gap-3">
             <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null })} scroll={false}>
@@ -521,21 +553,6 @@ export function OperationsParticipantsTable({
         <p className="mb-4 text-sm">
           Iscrizioni escluse dalle attività. Apri la scheda per consultare la
           motivazione e ripristinarle.
-        </p>
-      )}
-      {snapshot.statisticsFilter && (
-        <p className="mb-3 rounded-md bg-[var(--peace-sky-100)] p-3 text-sm">
-          Filtro dalle statistiche: {snapshot.statisticsFilter.label} ·{" "}
-          {snapshot.statisticsFilter.peopleCount} persone, inclusi i figli
-          collegati.{" "}
-          <Link
-            prefetch={false}
-            href={paramsFor({ stat: null, edit: null })}
-            scroll={false}
-            className="ml-2 underline"
-          >
-            Rimuovi filtro
-          </Link>
         </p>
       )}
       <AutoFilterForm
@@ -672,6 +689,14 @@ export function OperationsParticipantsTable({
             </fieldset>
           </details>
         )}
+        <button
+          type="button"
+          aria-pressed={showChildren}
+          className={`${buttonClass} ${showChildren ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
+          onClick={() => setChildrenDisplay({ statisticsKey, visible: !showChildren })}
+        >
+          Mostra figli accompagnati
+        </button>
         <Link
           prefetch={false}
           className={buttonClass}
@@ -689,6 +714,11 @@ export function OperationsParticipantsTable({
         >
           Azzera filtri
         </Link>
+        {statisticsLabel && (
+          <p className="min-w-0 flex-1 basis-72 rounded-md bg-[var(--peace-sky-100)] px-3 py-2 text-sm leading-6">
+            Filtro dalle statistiche: {statisticsLabel}
+          </p>
+        )}
       </div>
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <a
@@ -803,7 +833,7 @@ export function OperationsParticipantsTable({
                     className={`px-3 py-3 ${column === "name" ? "sticky left-0 z-10 bg-white" : ""}`}
                   >
                     {column === "name" ? (
-                      <div className="min-w-40">
+                      <div className="min-w-40 max-w-72">
                         <Link
                           prefetch={false}
                           id={`participant-${row.registrationId}`}
@@ -816,6 +846,30 @@ export function OperationsParticipantsTable({
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
+                        {showChildren && row.childrenCount > 0 && (
+                          <div className="mt-2">
+                            <span className="inline-flex rounded-md bg-[var(--peace-sky-100)] px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
+                              {row.childrenCount} {row.childrenCount === 1 ? "figlio accompagnato" : "figli accompagnati"}
+                            </span>
+                            <ul
+                              aria-label={`Figli accompagnati di ${row.name}`}
+                              className="mt-2 grid gap-1 border-l-2 border-[var(--peace-border-strong)] pl-2 text-xs leading-5 text-[var(--peace-muted)]"
+                            >
+                              {row.children.map((child) => {
+                                const age = calculateAgeAtDate(child.birth_date, eventStartsOn);
+                                return (
+                                  <li key={child.id} className="break-words">
+                                    <span className="font-medium text-[var(--peace-ink)]">{child.first_name} {child.last_name}</span>
+                                    {" · "}
+                                    <span title="Età all’inizio dell’evento">
+                                      {age === null ? "Età non disponibile" : age === 0 ? "meno di 1 anno" : `${age} ${age === 1 ? "anno" : "anni"}`}
+                                    </span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        )}
                         {pending[row.registrationId] && (
                           <p role="status">Salvataggio…</p>
                         )}

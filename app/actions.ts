@@ -559,10 +559,10 @@ export async function updateParticipantDashboard(formData: FormData) {
 export async function updateEventOpeningState(formData: FormData) {
   const eventId = optionalText(formData.get("eventId"));
   const intent = optionalText(formData.get("intent"));
-  const dashboardPath = "/dashboard/admin";
+  const dashboardPath = "/dashboard/admin?section=impostazioni";
 
   if (!eventId || !intent) {
-    return formFailureFromRedirect(`${dashboardPath}?openingError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&openingError=invalid`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -577,7 +577,7 @@ export async function updateEventOpeningState(formData: FormData) {
   );
 
   if (!canManageEventOpening) {
-    return formFailureFromRedirect(`${dashboardPath}?openingError=forbidden`);
+    return formFailureFromRedirect(`${dashboardPath}&openingError=forbidden`);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -588,14 +588,14 @@ export async function updateEventOpeningState(formData: FormData) {
     .maybeSingle();
 
   if (eventError || !event) {
-    return formFailureFromRedirect(`${dashboardPath}?openingError=not-found`);
+    return formFailureFromRedirect(`${dashboardPath}&openingError=not-found`);
   }
 
   const now = new Date().toISOString();
   const updates = getEventOpeningUpdate(intent, event, now);
 
   if (!updates) {
-    return formFailureFromRedirect(`${dashboardPath}?openingError=invalid`);
+    return formFailureFromRedirect(`${dashboardPath}&openingError=invalid`);
   }
 
   const { error: updateError } = await serviceSupabase
@@ -604,7 +604,7 @@ export async function updateEventOpeningState(formData: FormData) {
     .eq("id", eventId);
 
   if (updateError) {
-    return formFailureFromRedirect(`${dashboardPath}?openingError=${encodeURIComponent(updateError.message)}`);
+    return formFailureFromRedirect(`${dashboardPath}&openingError=${encodeURIComponent(updateError.message)}`);
   }
 
   await serviceSupabase.from("audit_logs").insert({
@@ -623,14 +623,14 @@ export async function updateEventOpeningState(formData: FormData) {
 
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
-  redirect(`${dashboardPath}?openingSaved=1`);
+  redirect(`${dashboardPath}&openingSaved=1`);
 }
 
 export async function setCurrentOperationalEvent(formData: FormData) {
   const eventId = optionalText(formData.get("eventId"));
 
   if (!eventId) {
-    return formFailureFromRedirect("/dashboard/admin?openingError=invalid");
+    return formFailureFromRedirect("/dashboard/admin?section=impostazioni&openingError=invalid");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -649,7 +649,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
   const eventRow = event as { id: string; is_current: boolean | null } | null;
 
   if (eventError || !eventRow) {
-    return formFailureFromRedirect("/dashboard/admin?openingError=not-found");
+    return formFailureFromRedirect("/dashboard/admin?section=impostazioni&openingError=not-found");
   }
 
   if (!eventRow.is_current) {
@@ -659,7 +659,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
       .eq("is_current", true);
 
     if (clearError) {
-      return formFailureFromRedirect(`/dashboard/admin?openingError=${encodeURIComponent(clearError.message)}`);
+      return formFailureFromRedirect(`/dashboard/admin?section=impostazioni&openingError=${encodeURIComponent(clearError.message)}`);
     }
 
     const { error: setError } = await serviceSupabase
@@ -668,7 +668,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
       .eq("id", eventRow.id);
 
     if (setError) {
-      return formFailureFromRedirect(`/dashboard/admin?openingError=${encodeURIComponent(setError.message)}`);
+      return formFailureFromRedirect(`/dashboard/admin?section=impostazioni&openingError=${encodeURIComponent(setError.message)}`);
     }
   }
 
@@ -686,7 +686,7 @@ export async function setCurrentOperationalEvent(formData: FormData) {
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/capogruppo");
-  redirect("/dashboard/admin?section=evento&openingSaved=1");
+  redirect("/dashboard/admin?section=impostazioni&openingSaved=1");
 }
 
 export async function createFutureEvent(formData: FormData) {
@@ -700,7 +700,7 @@ export async function createFutureEvent(formData: FormData) {
   const registrationClosesAt = optionalDateTimeLocal(formData.get("registrationClosesAt"));
 
   if (!title || !slug || !city || !country) {
-    return formFailureFromRedirect("/dashboard/admin?section=evento&eventTool=new&openingError=invalid");
+    return formFailureFromRedirect("/dashboard/admin?section=impostazioni&eventTool=new&openingError=invalid");
   }
 
   if (startsOn && endsOn && endsOn < startsOn) {
@@ -741,7 +741,7 @@ export async function createFutureEvent(formData: FormData) {
     .single();
 
   if (error || !event) {
-    return formFailureFromRedirect(`/dashboard/admin?section=evento&eventTool=new&openingError=${encodeURIComponent(
+    return formFailureFromRedirect(`/dashboard/admin?section=impostazioni&eventTool=new&openingError=${encodeURIComponent(
         error?.message ?? "create"
       )}`);
   }
@@ -760,7 +760,7 @@ export async function createFutureEvent(formData: FormData) {
   });
 
   revalidatePath("/dashboard/admin");
-  redirect("/dashboard/admin?section=evento&openingSaved=created");
+  redirect("/dashboard/admin?section=impostazioni&openingSaved=created");
 }
 
 export async function updateGroupLeaderAssignment(formData: FormData) {

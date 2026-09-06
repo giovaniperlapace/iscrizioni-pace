@@ -24,21 +24,26 @@ La validità operativa e i conteggi dipendono dall'assegnazione corrente.
 
 ## Questionario
 
-Versione `2026-09-05-operative-groups`, con sette lingue complete.
-Le domande sugli eventi precedenti e sulla partecipazione alla preghiera con
-un gruppo sono sempre visibili e richiedono risposte indipendenti.
-Solo la seconda risposta No mostra l'associazione facoltativa, salvata in
-`registration_questionnaire_answers.answers.externalGroupAssociation`.
-La risposta Sì elimina questo valore dal nuovo snapshot anche se inviato da
-un client obsoleto. Gli snapshot storici conservano versione e contenuto.
+Versione `2026-09-06-conditional-groups`, con sette lingue complete.
+La domanda sugli eventi precedenti è obbligatoria: No mostra direttamente
+l'associazione facoltativa; Sì mostra «Parteciperai alla Preghiera per la Pace
+con un gruppo della Comunità?», obbligatoria solo in questo ramo. La seconda
+risposta Sì apre la selezione gruppo, No mostra l'associazione.
+
+Il primo No azzera risposta e selezioni del ramo gruppo. Anche passando dalla
+seconda risposta Sì a No si azzerano le scelte del gruppo; il gruppo del link
+riservato resta disponibile come preselezione soltanto nel ramo Sì/Sì.
+L'associazione viene rimossa quando il suo campo scompare. Il payload esclude
+i campi non pertinenti e il server normalizza il primo No come partecipazione
+senza gruppo anche in presenza di valori residui. L'associazione facoltativa
+vive in `registration_questionnaire_answers.answers.externalGroupAssociation`.
+Gli snapshot storici conservano versione e contenuto; nessuna migration.
 
 La selezione esplicita produce subito un gruppo operativo. Nessuna selezione,
 `Non trovo il mio referente` o risposta No lasciano senza gruppo: i nodi
 territoriali servono ancora per scope e catalogo, non come code automatiche.
-Un link riservato preseleziona il gruppo e la seconda risposta Sì, ma non
-assume una precedente partecipazione. La persona può rispondere No e rimanere
-senza gruppo anche entrando dal link. Anche una membership operativa non
-prevale sulla risposta No.
+Un link riservato preseleziona solo il gruppo: entrambe le risposte Sì restano
+necessarie. Anche una membership operativa non prevale sulla risposta No.
 
 ## Migrazione e rilascio
 
@@ -75,14 +80,14 @@ npm run db:migrate:remote -- supabase/migrations/20260905150000_operative_group_
 
 ## Verifiche
 
-- Test funzionali del questionario: quattro combinazioni, seconda risposta
-  sempre richiesta, associazione facoltativa, valori gruppo residui ignorati.
+- Test funzionali del questionario: rami condizionali, seconda risposta
+  richiesta solo dopo il primo Sì, associazione facoltativa, campi residui ignorati.
 - Matching: No/null non assegnano neppure quando esiste una selezione residua.
 - PostgreSQL temporaneo: backfill, storico, override manager, null legacy,
   rifiuto da capogruppo padre, scope estraneo, privilegi RPC, ripetizione,
   normalizzazione vecchi client e rollback se fallisce l'audit.
 - Browser: componente pubblico reale con dati sintetici, sette lingue, link
-  ordinario/riservato, indipendenza risposte, associazione, desktop/mobile.
+  ordinario/riservato, cambi di risposta e azzeramenti, associazione, desktop/mobile.
   Nessuna iscrizione o email di prova in produzione.
 
 ```sh
@@ -98,6 +103,11 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/operative-group-assign
 
 Esito verificato: lint, TypeScript, 173 test automatici e build Next.js webpack
 superati; fixture SQL PostgreSQL e prove browser completate senza errori.
+
+Verifica del flusso condizionale il 2026-09-06: lint, TypeScript, 188 test
+automatici e build webpack superati; browser su fixture sintetica in tutte
+le sette lingue, con/senza link riservato, cambi di risposta e desktop/mobile,
+senza errori browser.
 
 ## Rilascio production — 2026-09-05
 

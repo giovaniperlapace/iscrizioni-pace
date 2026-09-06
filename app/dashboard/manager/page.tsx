@@ -1,3 +1,4 @@
+import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 
 import { ReliableForm } from "@/components/reliable-form";
@@ -465,6 +466,7 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "impostazioni" ? (
               <ManagerServicesSection
+                canManageEvent={auth.eventRoles.some((role) => role.role === "admin")}
                 services={managerOperations.eventServices}
                 currentEventOption={
                   currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null
@@ -573,13 +575,6 @@ function ManagerSidebar({
       help: "Elenco e modifiche",
     },
     {
-      key: "impostazioni",
-      href: "/dashboard/manager?section=impostazioni&nav=mini",
-      Icon: Settings,
-      label: "Impostazioni",
-      help: "Catalogo servizi",
-    },
-    {
       key: "email",
       href: "/dashboard/manager?section=email&nav=mini",
       Icon: Mail,
@@ -599,6 +594,13 @@ function ManagerSidebar({
       Icon: Network,
       label: "Gestione gruppi",
       help: "Territori, gruppi e link",
+    },
+    {
+      key: "impostazioni",
+      href: "/dashboard/manager?section=impostazioni&nav=mini",
+      Icon: Settings,
+      label: "Impostazioni",
+      help: "Catalogo servizi",
     },
   ];
 
@@ -1880,11 +1882,13 @@ function ManagerGroupLeaderOverlay({
 }
 
 function ManagerServicesSection({
+  canManageEvent,
   services,
   currentEventOption,
   selectedService,
   navMode,
 }: {
+  canManageEvent: boolean;
   services: EventServiceOption[];
   currentEventOption: { id: string; title: string } | null;
   selectedService: EventServiceOption | null;
@@ -1893,7 +1897,7 @@ function ManagerServicesSection({
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
-        <h2 className="text-lg font-semibold">Impostazioni</h2>
+        <OperationsSettingsNavigation active="servizi" navMode={navMode} canManageEvent={canManageEvent} />
         <h3 className="mt-5 text-base font-semibold">Catalogo servizi</h3>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
           Lista dei servizi disponibili nell&apos;evento. I partecipanti non

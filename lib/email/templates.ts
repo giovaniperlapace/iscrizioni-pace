@@ -1,3 +1,5 @@
+import { EMAIL_DELIVERY_COPY } from "../i18n/email-delivery.ts";
+
 type MagicLinkTemplateInput = {
   actionLink: string;
 };
@@ -21,12 +23,16 @@ export function renderMagicLinkEmail(input: MagicLinkTemplateInput) {
       "usa questo link per accedere alla tua iscrizione:",
       input.actionLink,
       "",
+      EMAIL_DELIVERY_COPY.it.checkSpam,
+      EMAIL_DELIVERY_COPY.it.safeSender,
+      "",
       "Se non hai richiesto tu questo link, puoi ignorare questa email.",
     ].join("\n"),
     html: [
       "<p>Ciao,</p>",
       "<p>usa questo link per accedere alla tua iscrizione:</p>",
       `<p><a href="${escapeHtml(input.actionLink)}">Accedi alla tua iscrizione</a></p>`,
+      `<p>${escapeHtml(EMAIL_DELIVERY_COPY.it.checkSpam)} ${escapeHtml(EMAIL_DELIVERY_COPY.it.safeSender)}</p>`,
       "<p>Se non hai richiesto tu questo link, puoi ignorare questa email.</p>",
     ].join(""),
   };
@@ -48,6 +54,9 @@ export function renderRegistrationConfirmationEmail(
       `Puoi entrare nella tua dashboard tornando su ${input.siteLink} e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.`,
       "",
       "Quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare.",
+      "",
+      EMAIL_DELIVERY_COPY.it.checkSpam,
+      EMAIL_DELIVERY_COPY.it.safeSender,
       "",
       "Grazie.",
     ].join("\n"),
@@ -71,6 +80,7 @@ export function renderRegistrationConfirmationEmail(
         input.siteLink
       )}</a> e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.</p>`,
       "<p>Quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare.</p>",
+      `<p>${escapeHtml(EMAIL_DELIVERY_COPY.it.checkSpam)} ${escapeHtml(EMAIL_DELIVERY_COPY.it.safeSender)}</p>`,
       "<p>Grazie.</p>",
     ].join(""),
   };

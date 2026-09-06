@@ -60,7 +60,8 @@ test("every statistics count links to the filtered participant page", () => {
   assert.match(statisticsSection, /function AttendanceCountLink/);
   assert.match(statisticsSection, /function CountLink/);
   assert.match(operationsSection, /Filtro dalle statistiche/);
-  assert.match(operationsSection, /Rimuovi filtro/);
+  assert.match(operationsSection, /href=\{paramsFor\(\{[^}]*stat: null,[^}]*\}\)\}[\s\S]*?Azzera filtri\s*<\/Link>/);
+  assert.doesNotMatch(operationsSection, /Rimuovi filtro/);
 });
 
 test("report containers use all available width without clipping content", () => {

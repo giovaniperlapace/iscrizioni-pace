@@ -1,4 +1,5 @@
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
+import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { Settings } from "lucide-react";
 
 import { ReliableForm } from "@/components/reliable-form";
@@ -6,7 +7,6 @@ import { permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import {
   BarChart3,
-  CalendarDays,
   Mail,
   Network,
   Pencil,
@@ -366,17 +366,22 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type AdminSection = "impostazioni" | "evento" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
+type AdminSection = "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
   searchParams,
 }: AdminPageProps) {
   const params = await searchParams;
-  if (params.section === "servizi" || params.section === "impostazioni") {
+  if (params.section === "servizi") {
     const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
     legacy.set("section", "impostazioni");
     permanentRedirect(`/dashboard/manager?${legacy}`);
+  }
+  if (params.section === "evento") {
+    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    legacy.set("section", "impostazioni");
+    permanentRedirect(`/dashboard/admin?${legacy}`);
   }
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "admin");
@@ -384,11 +389,14 @@ export default async function AdminDashboardPage({
   if (!auth) {
     redirect("/login");
   }
+  if (!auth.eventRoles.some((role) => role.role === "admin")) {
+    redirect(auth.dashboardPath);
+  }
 
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveAdminSection(params);
-  const needsAdminOperations = activeSection !== "evento";
+  const needsAdminOperations = activeSection !== "impostazioni";
   const currentEvent = needsAdminOperations
     ? await getCurrentOperationalEvent(
         serviceSupabase,
@@ -397,7 +405,7 @@ export default async function AdminDashboardPage({
     : null;
   const currentEventId = currentEvent?.id ?? null;
   const [snapshots, adminOperations] = await Promise.all([
-    activeSection === "evento" ? getOpeningSnapshots() : Promise.resolve([]),
+    activeSection === "impostazioni" ? getOpeningSnapshots() : Promise.resolve([]),
     needsAdminOperations
       ? getAdminOperationsSnapshot(filters, currentEventId)
       : getAdminOperationsSnapshot(filters, null),
@@ -478,7 +486,7 @@ export default async function AdminDashboardPage({
               roleSaved={params.roleSaved}
             />
 
-            {activeSection === "evento" ? (
+            {activeSection === "impostazioni" ? (
               <AdminEventSection
                 snapshots={snapshots}
                 isCreatingEvent={params.eventTool === "new"}
@@ -1094,17 +1102,10 @@ function AdminSidebar({
   const items: Array<{
     key: AdminSection;
     href: string;
-    Icon: typeof CalendarDays;
+    Icon: typeof BarChart3;
     label: string;
     help: string;
   }> = [
-    {
-      key: "evento",
-      href: adminPath("evento", navMode),
-      Icon: CalendarDays,
-      label: "Gestione evento",
-      help: "Apertura e monitoraggio",
-    },
     {
       key: "dashboard",
       href: adminPath("dashboard", navMode),
@@ -1118,13 +1119,6 @@ function AdminSidebar({
       Icon: Users,
       label: "Gestione iscritti",
       help: "Elenco e modifiche",
-    },
-    {
-      key: "impostazioni",
-      href: "/dashboard/manager?section=impostazioni&nav=mini",
-      Icon: Settings,
-      label: "Impostazioni",
-      help: "Catalogo servizi",
     },
     {
       key: "email",
@@ -1146,6 +1140,13 @@ function AdminSidebar({
       Icon: Network,
       label: "Gestione gruppi",
       help: "Territori, gruppi e link",
+    },
+    {
+      key: "impostazioni",
+      href: adminPath("impostazioni", navMode),
+      Icon: Settings,
+      label: "Impostazioni",
+      help: "Evento e servizi",
     },
   ];
 
@@ -1219,16 +1220,19 @@ function AdminEventSection({
 }) {
   return (
     <section className="grid min-w-0 gap-4">
+      <div className="surface-panel p-5">
+        <OperationsSettingsNavigation active="evento" navMode={navMode} canManageEvent />
+      </div>
       <div className="surface-panel flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Apertura e monitoraggio</h2>
+          <h3 className="text-lg font-semibold">Gestione evento: apertura e monitoraggio</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
             Usa questi comandi solo durante finestre operative concordate.
             Ogni modifica viene registrata negli audit.
           </p>
         </div>
         <Link
-          href={adminPath("evento", navMode, "eventTool=new")}
+          href={adminPath("impostazioni", navMode, "eventTool=new")}
           scroll={false}
           className="inline-flex min-h-11 w-fit items-center rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
@@ -1445,7 +1449,7 @@ function NewEventOverlay({ navMode }: { navMode: AdminNavMode }) {
             </p>
           </div>
           <Link
-            href={adminPath("evento", navMode)}
+            href={adminPath("impostazioni", navMode)}
             scroll={false}
             aria-label="Chiudi"
             className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--peace-border)] text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
@@ -1500,7 +1504,7 @@ function NewEventOverlay({ navMode }: { navMode: AdminNavMode }) {
           </div>
           <div className="flex flex-wrap justify-end gap-3 border-t border-[var(--peace-border)] pt-4">
             <Link
-              href={adminPath("evento", navMode)}
+              href={adminPath("impostazioni", navMode)}
               scroll={false}
               className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-ink)] transition hover:bg-[var(--peace-sky-100)]"
             >
@@ -2672,9 +2676,9 @@ function parseGroupTableFilters(input: {
   };
 }
 
-function resolveAdminSection(input: { section?: string }): AdminSection {
+function resolveAdminSection(input: { section?: string; openingSaved?: string; openingError?: string; eventTool?: string }): AdminSection {
   if (
-    input.section === "evento" ||
+    input.section === "impostazioni" ||
     input.section === "dashboard" ||
     input.section === "iscritti" ||
     input.section === "ruoli" ||
@@ -2683,7 +2687,9 @@ function resolveAdminSection(input: { section?: string }): AdminSection {
     return input.section;
   }
 
-  return "evento";
+  return input.openingSaved || input.openingError || input.eventTool
+    ? "impostazioni"
+    : "dashboard";
 }
 
 function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string {

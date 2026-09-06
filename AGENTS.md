@@ -77,6 +77,19 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
   salvate. Il nome resta sempre visibile. Età calcolata all'inizio dell'evento.
   Lo stato iscrizione non è una colonna selezionabile: le vecchie preferenze
   e gli URL che lo includono lo ignorano, con ordinamento di ripiego sul nome.
+- Dal 2026-09-06, `Mostra figli accompagnati`, accanto ad `Azzera filtri`,
+  mostra/nasconde sotto il genitore il badge con il numero di figli e il
+  riepilogo di nomi ed età all'inizio dell'evento. Parte spento nella vista
+  ordinaria e si attiva entrando nel filtro statistico `kind=child`; la
+  scelta è temporanea e si reimposta al cambio di statistica.
+  Le righe senza figli restano compatte;
+  la scheda continua ad aprirsi dal nome del genitore. Il riepilogo usa i figli
+  già presenti nello snapshot e gli stessi permessi della tabella condivisa.
+  Il filtro statistico `kind=child` distingue iscrizioni familiari e figli
+  nelle righe mostrate. Eventuali fratelli fuori dal filtro restano nel
+  riepilogo della propria famiglia. Non mostrare spiegazioni testuali sui figli.
+  Gli altri criteri statistici restano indicati accanto ad `Azzera filtri`, unico
+  comando di azzeramento anche per `stat`; non esiste un secondo `Rimuovi filtro`.
 - Gruppo, servizio e tag si salvano direttamente dalla tabella e dalla scheda,
   tramite la stessa RPC `update_registration_operation`; le modifiche sono
   serializzate per iscrizione e auditabili nella stessa transazione. Un
@@ -129,6 +142,16 @@ dei link e sul menu Servizi.
   diventano iscrivibili soltanto con la scelta esplicita. Validazioni server
   su evento, parent coerente e assenza di cicli. Il campo HTML si chiama
   `groupNodeType`, evitando il conflitto con la proprietà DOM `nodeType`.
+- Dal 2026-09-06, la gestione evento admin vive in
+  `/dashboard/admin?section=impostazioni`, accanto al collegamento al catalogo
+  servizi condiviso. Rimossa la voce autonoma Gestione evento dalla sidebar.
+  `section=evento` reindirizza conservando i parametri; link, overlay nuovo
+  evento e ritorni delle action usano Impostazioni. L'ingresso admin senza
+  sezione apre Statistiche. Il collegamento alla gestione evento dalle
+  impostazioni servizi è visibile solo agli admin; accesso e action restano
+  riservati al ruolo admin, senza modifiche a permessi manager o RLS.
+- Dal 2026-09-06, `Impostazioni` è sempre l’ultima voce delle sidebar admin
+  e manager, sia nel menu esteso sia in quello compatto.
 - `Impostazioni` contiene il catalogo servizi nella route condivisa
   `/dashboard/manager?section=impostazioni`, anche per admin. I vecchi URL
   `section=servizi` vengono reindirizzati conservando gli altri parametri.
@@ -165,11 +188,17 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
   possono assegnare nuovamente una persona senza gruppo.
 - Eliminati invio e template delle email per nuove assegnazioni ai capigruppo.
   Le colonne storiche di conferma/lettura restano, ma la lettura non è più usata.
-- Questionario corrente: `2026-09-05-operative-groups`. Due domande obbligatorie
-  e indipendenti: `Hai partecipato ad altri eventi con la Comunità di Sant’Egidio?`
-  e `Parteciperai con un gruppo alla preghiera?`. Solo il secondo No mostra
-  `Fai parte di qualche associazione?`, facoltativa e salvata nello snapshot
-  `answers.externalGroupAssociation`. Tutte le sette lingue sono aggiornate.
+- Questionario corrente: `2026-09-06-conditional-groups` (flusso aggiornato il
+  2026-09-06). La prima domanda sugli eventi precedenti è obbligatoria: Sì
+  mostra `Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?`,
+  anch'essa obbligatoria quando visibile; No mostra direttamente l'associazione
+  facoltativa. Nella seconda domanda Sì mostra il gruppo, No l'associazione.
+  Cambiare il primo valore in No azzera risposta e selezioni del ramo gruppo;
+  i campi non pertinenti non vengono inviati. Il server normalizza il primo
+  No come partecipazione senza gruppo anche con campi residui o link riservato.
+  I link preselezionano solo il gruppo, richiedendo entrambe le risposte Sì.
+  Associazione in `answers.externalGroupAssociation`, sette lingue aggiornate;
+  nuova versione snapshot senza riscritture storiche o migration.
 - No prevale anche su link riservato/membership. Senza scelta esplicita, o con
   `Non trovo il mio referente`, non creare assegnazioni territoriali automatiche.
   I link preselezionano il gruppo, senza assumere una precedente partecipazione.
@@ -2417,6 +2446,14 @@ Regole:
 - Salvare preferenza lingua dove serve, per profilo o iscrizione.
 
 ## Email
+
+- Dal 2026-09-06, le email applicative di conferma iscrizione e accesso
+  (testo e HTML) e gli avvisi del sito dopo l'invio ricordano di controllare
+  lo spam e salvare `registrationspeace@santegidio.org` tra gli indirizzi sicuri.
+  Testo comune in `lib/i18n/email-delivery.ts`, sette lingue per il sito;
+  comprende conferma iscrizione, magic link, risposta attesa dagli organizzatori
+  e invii di prova/campagna (rivolgendosi ai destinatari per le campagne).
+  Queste indicazioni restano valide anche cambiando provider di distribuzione.
 
 Email previste:
 

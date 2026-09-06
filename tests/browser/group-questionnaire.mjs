@@ -17,20 +17,32 @@ try {
     for (const link of [false, true]) {
       ab("open", `${base}/group-questionnaire-check?locale=${locale}${link ? "&link=1" : ""}`);
       ab("snapshot", "-i");
-      check('document.querySelectorAll("button[data-field=hasPreviousSantegidioParticipation]").length === 2 && document.querySelectorAll("button[data-field=participatesWithGroup]").length === 2', `${locale} both questions visible, link=${link}`);
-      check('document.querySelector("[name=hasPreviousSantegidioParticipation]").value === ""', `${locale} previous attendance not assumed from link`);
-      choice("participatesWithGroup", "no");
+      check('document.querySelectorAll("button[data-field=hasPreviousSantegidioParticipation]").length === 2 && !document.querySelector("button[data-field=participatesWithGroup]") && !document.querySelector("[name=externalGroupAssociation]") && !document.querySelector("[data-field=group]")', `${locale} only first question visible, link=${link}`);
+      choice("hasPreviousSantegidioParticipation", "no");
+      check('!document.querySelector("button[data-field=participatesWithGroup]") && document.querySelector("[name=externalGroupAssociation]") && document.querySelector("[name=participatesWithGroup]").value === "no"', `${locale} first No opens association`);
       ab("fill", '[name="externalGroupAssociation"]', "Associazione sintetica");
       choice("hasPreviousSantegidioParticipation", "yes");
-      check('document.querySelector("[name=externalGroupAssociation]").value === "Associazione sintetica" && document.querySelector("[name=participatesWithGroup]").value === "no"', `${locale} independent No and association`);
-      choice("hasPreviousSantegidioParticipation", "no");
-      check('document.querySelector("[name=externalGroupAssociation]").value === "Associazione sintetica"', `${locale} first answer preserves association`);
+      check('document.querySelectorAll("button[data-field=participatesWithGroup]").length === 2 && document.querySelector("[name=participatesWithGroup]").value === "" && !document.querySelector("[name=externalGroupAssociation]")', `${locale} first Yes requires fresh group answer`);
+      if (locale === "it") check('document.body.innerText.includes("Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?")', "requested Italian wording");
+      choice("participatesWithGroup", "no");
+      check('document.querySelector("[name=externalGroupAssociation]").value === "" && !document.querySelector("[data-field=group]")', `${locale} second No opens empty association`);
+      ab("fill", '[name="externalGroupAssociation"]', "Associazione sintetica");
       choice("participatesWithGroup", "yes");
-      check('!document.querySelector("[name=externalGroupAssociation]") && document.querySelector("[name=hasPreviousSantegidioParticipation]").value === "no"', `${locale} Yes hides association without changing first answer`);
+      check('!document.querySelector("[name=externalGroupAssociation]") && document.querySelector("[data-field=group]")', `${locale} second Yes opens group selection`);
       if (link) check('document.querySelector("[name=groupId]").value === "22222222-2222-4222-8222-222222222222"', `${locale} reserved group remains selected`);
+      else ab("check", '[name="cannotFindLeader"]');
+      choice("hasPreviousSantegidioParticipation", "no");
+      check('!document.querySelector("button[data-field=participatesWithGroup]") && !document.querySelector("[data-field=group]") && document.querySelector("[name=externalGroupAssociation]") && !new FormData(document.querySelector("form")).has("groupId") && !new FormData(document.querySelector("form")).has("cannotFindLeader")', `${locale} changing first answer clears group branch and payload`);
+      choice("hasPreviousSantegidioParticipation", "yes");
+      check('document.querySelector("[name=participatesWithGroup]").value === "" && !document.querySelector("[data-field=group]")', `${locale} group answer reset after first No`);
+      choice("participatesWithGroup", "yes");
+      if (!link) check('!document.querySelector("[name=cannotFindLeader]").checked', `${locale} missing-leader choice cleared`);
+      choice("participatesWithGroup", "no");
+      check('document.querySelector("[name=externalGroupAssociation]").value === "" && !document.querySelector("[data-field=group]")', `${locale} changing second answer clears group selection`);
     }
   }
   ab("open", `${base}/group-questionnaire-check?locale=it`); ab("snapshot", "-i");
+  choice("hasPreviousSantegidioParticipation", "yes");
   choice("participatesWithGroup", "no");
   ab("eval", 'document.querySelector("[name=hasPreviousSantegidioParticipation]").closest("section").scrollIntoView({block:"center"})');
   ab("screenshot", "/tmp/operative-groups-questionnaire-desktop.png");
