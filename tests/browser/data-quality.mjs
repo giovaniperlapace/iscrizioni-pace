@@ -35,9 +35,13 @@ try {
   ab("snapshot", "-i");
   check('document.body.textContent.includes("Qualità dati")', "page loads");
   ev(
-    'const data=new DataTransfer();data.items.add(new File(["fixture"],"fixture.xlsx"));document.querySelector("input[type=file]").files=data.files;',
+    'const data=new DataTransfer();data.items.add(new File(["fixture"],"fixture.xlsx"));document.querySelector("input[type=file]").files=data.files;document.querySelector("input[type=file]").dispatchEvent(new Event("change",{bubbles:true}));',
   );
-  click("Carica e valida");
+  check(
+    'document.getElementById("import-selected-file").textContent.includes("fixture.xlsx")',
+    "selected filename is visible",
+  );
+  click("Mostra anteprima");
   ab("snapshot", "-i");
   check(
     'document.querySelectorAll("tbody tr").length===2 && !document.documentElement.dataset.lastQualityAction',
@@ -47,6 +51,15 @@ try {
     'Array.from(document.querySelectorAll("button")).find(e=>e.textContent==="Conferma importazione").disabled',
     "invalid rows block commit",
   );
+  ev(
+    'const replacement=new DataTransfer();replacement.items.add(new File(["replacement"],"replacement.xlsx"));const input=document.querySelector("input[type=file]");input.files=replacement.files;input.dispatchEvent(new Event("change",{bubbles:true}));',
+  );
+  check(
+    '!Array.from(document.querySelectorAll("button")).some(e=>e.textContent==="Conferma importazione") && document.getElementById("import-selected-file").textContent.includes("replacement.xlsx")',
+    "replacing a file clears its previous preview and confirmation",
+  );
+  click("Mostra anteprima");
+  ab("snapshot", "-i");
   ab(
     "fill",
     "tbody tr:nth-child(1) textarea",
@@ -88,6 +101,29 @@ try {
   );
   ab("set", "viewport", "1280", "900");
   ab("screenshot", "/tmp/pace-quality-review-desktop.png");
+  ab("open", `${base}/data-quality-check?import=excel&q=Maria&nav=mini`);
+  ab("wait", "dialog[open]");
+  check(
+    'document.querySelector("dialog input[type=file]").getAttribute("aria-label") === "Scegli file Excel" && Array.from(document.querySelectorAll("dialog button")).find(e=>e.textContent.trim()==="Mostra anteprima").disabled',
+    "modal explains file selection and requires a file before preview",
+  );
+  ab("screenshot", "/tmp/pace-import-dialog-desktop.png");
+  ab("click", "dialog summary");
+  check('document.querySelector("dialog details").open', "compilation guide expands inside modal");
+  ab("set", "viewport", "390", "844");
+  check(
+    'document.documentElement.scrollWidth<=innerWidth && document.querySelector("dialog").getBoundingClientRect().height<=innerHeight && document.querySelector("dialog > div:last-child").scrollHeight>document.querySelector("dialog > div:last-child").clientHeight',
+    "mobile instructions scroll inside the dialog",
+  );
+  ab("screenshot", "/tmp/pace-import-instructions-mobile.png");
+  ab("click", "dialog summary");
+  ab("screenshot", "/tmp/pace-import-dialog-mobile.png");
+  ab("press", "Escape");
+  ab("wait", "input[type=file]");
+  check(
+    '!document.querySelector("dialog[open]") && location.search==="?q=Maria&nav=mini" && document.body.style.overflow!=="hidden"',
+    "Escape closes import and preserves dashboard context",
+  );
   assert.equal(ab("errors").trim(), "");
 } finally {
   ab("close");

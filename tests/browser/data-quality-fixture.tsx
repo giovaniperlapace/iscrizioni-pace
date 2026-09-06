@@ -1,5 +1,7 @@
 "use client";
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import ImportParticipantsDialog from "@/app/dashboard/participants/data-quality/import-dialog";
 import {
   ImportPanel,
   ReviewPanel,
@@ -61,6 +63,7 @@ const rows = buildPreviewRows(
   [person],
 );
 export default function Fixture() {
+  const params = useSearchParams();
   useEffect(() => {
     const original = window.fetch;
     window.fetch = async (input, init) => {
@@ -85,7 +88,9 @@ export default function Fixture() {
   return (
     <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6">
       <h1 className="text-2xl font-bold">Qualità dati — prova locale</h1>
-      <ImportPanel />
+      {params.get("import") === "excel" ? (
+        <ImportParticipantsDialog closePath="/data-quality-check?q=Maria&nav=mini" />
+      ) : <ImportPanel />}
       <ReviewPanel
         left={person}
         right={{

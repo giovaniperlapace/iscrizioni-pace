@@ -175,7 +175,14 @@ generico era ambiguo per PostgREST e bloccava anche l'export.
 
 `Importa iscritti da Excel` apre una modale nativa nella dashboard, tramite
 `import=excel`, con modello, istruzioni espandibili e anteprima. X/Escape
-chiudono conservando la consultazione corrente. La route legacy
+chiudono conservando la consultazione corrente. La modale usa colori, bordi e
+pulsanti condivisi con il sito. I tre passaggi guidano alla preparazione,
+scelta del file e conferma. Il selettore `Scegli file Excel` mostra il nome del
+file; la sostituzione azzera l'anteprima per evitare conferme sul file precedente.
+`IMPORT_GUIDE` contiene istruzioni con esempi e termini comprensibili agli
+operatori, riutilizzate nella modale, nella pagina istruzioni e nel foglio
+Istruzioni del modello. Il modello resta distinto dall'esportazione tabellare.
+La route legacy
 `/dashboard/participants/data-quality` reindirizza alla modale. Il controllo
 duplicati è un riquadro direttamente sotto
 la tabella iscritti admin/manager, con caricamento separato tramite Suspense.

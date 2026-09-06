@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { qualityAccess } from "@/lib/data-quality/access.server";
-import {
-  COLUMNS,
-  FORMAT_INSTRUCTIONS,
-  FORMAT_VERSION,
-} from "@/lib/data-quality/format";
+import { ImportInstructions } from "../import-instructions";
 export default async function ImportInstructionsPage() {
   await qualityAccess();
   return (
@@ -13,23 +9,14 @@ export default async function ImportInstructionsPage() {
         ← Importa iscritti da Excel
       </Link>
       <h1 className="text-2xl font-bold">Come importare gli iscritti</h1>
-      <p>Formato {FORMAT_VERSION}</p>
       <a
         download
-        className="underline"
+        className="btn-secondary inline-flex w-fit items-center px-4 py-2 text-sm"
         href="/dashboard/participants/data-quality/api?kind=template"
       >
         Scarica modello Excel vuoto, esempi e cataloghi
       </a>
-      <ol className="list-decimal space-y-4 pl-6">
-        {FORMAT_INSTRUCTIONS.map((text) => (
-          <li key={text}>{text}</li>
-        ))}
-      </ol>
-      <h2 className="text-xl font-semibold">
-        Intestazioni supportate, nell’ordine
-      </h2>
-      <p className="break-words font-mono text-sm">{COLUMNS.join(" · ")}</p>
+      <ImportInstructions />
       <h2 className="text-xl font-semibold">Unione consapevole</h2>
       <p>
         Scegli la scheda da conservare. Nome, cognome e valori già presenti

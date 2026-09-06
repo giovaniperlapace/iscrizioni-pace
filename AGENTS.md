@@ -19,6 +19,12 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   chiudono conservando filtri, sidebar e scroll. `import=excel` controlla
   l'apertura; la vecchia route `/dashboard/participants/data-quality`
   reindirizza alla modale nella dashboard autorizzata.
+  La modale usa i token grafici e i pulsanti condivisi del sito, con tre
+  passaggi: prepara, scegli il file, controlla e conferma. `Scegli file Excel`
+  mostra il nome selezionato; cambiare file annulla l'anteprima precedente.
+  Le istruzioni in linguaggio semplice di `IMPORT_GUIDE` sono condivise tra
+  modale, pagina istruzioni e modello scaricabile; il file esportato dalla
+  tabella non sostituisce il modello di importazione.
   `OperationsDuplicatesSection` mostra il riquadro `Controllo duplicati`
   direttamente sotto la tabella condivisa admin/manager, anche in sola
   lettura: controlla tutte le iscrizioni operative dell'evento, a prescindere

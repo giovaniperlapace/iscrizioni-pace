@@ -34,19 +34,46 @@ export type ValidatedRow = {
   serviceId: string | null;
   tagIds: string[];
 };
-export const FORMAT_INSTRUCTIONS = [
-  "Compila il foglio Partecipanti. Esempi e Istruzioni non vengono importati. Non cambiare le intestazioni e non aggiungere colonne o fogli.",
-  "Obbligatori: nome e cognome (2–120 caratteri), consenso_privacy=si, versione_privacy e data_consenso. Almeno uno tra email e telefono. Le date sono testo AAAA-MM-GG; data di nascita facoltativa, senza date future.",
-  "Telefono come testo con prefisso internazionale, ad esempio +393331234567. Email senza spazi. Paese e città sono testo libero (massimo 120 caratteri).",
-  "Gruppo e servizio: UUID dal foglio Cataloghi oppure nome esatto univoco nell’evento corrente. Gruppi strutturali/inattivi e servizi inattivi non sono assegnabili. Tag: nomi univoci o UUID separati da punto e virgola. Nessuna creazione automatica di cataloghi.",
-  "stato: submitted, confirmed oppure cancelled; se vuoto viene usato submitted. stato_servizio: assigned, preference_pending, proposal_pending o declined; se vuoto con servizio presente viene usato assigned. I tag sono interni e non vengono mostrati al partecipante.",
-  "Riporta soltanto consensi già raccolti: versione dell’informativa accettata e data originale. La conferma dell’operatore attesta la disponibilità del consenso, non sostituisce quello della persona. Non inserire dati di accessibilità nel file.",
-  "Ogni riga crea una nuova iscrizione individuale; non aggiorna persone esistenti. Presenze inizialmente da confermare. Minori accompagnati, questionari, consensi aggiuntivi e dati sensibili si gestiscono nei flussi dedicati.",
-  "Massimo 500 righe e 2 MiB per file .xlsx. Formule, macro, collegamenti esterni, colonne inattese e file compressi anomali sono rifiutati. Scrivi valori semplici, senza formule.",
-  "Il caricamento genera solo un’anteprima, valida per 20 minuti. Gli errori richiedono correzione o scarto esplicito della riga. I possibili duplicati richiedono scarto o motivazione di persona distinta. Nessuna unione automatica.",
-  "La conferma salva tutte le righe selezionate in una sola transazione, con audit degli scarti. Se i dati cambiano, aggiorna l’anteprima. Un doppio invio della stessa conferma non crea copie.",
-  "L’export contiene tutte le iscrizioni che corrispondono ai filtri, con fogli aggiuntivi di sola consultazione per minori e presenze. I consensi non vengono inventati: completa quelli mancanti prima di usare l’export per una nuova importazione. Un file già esportato può contenere oltre 500 righe.",
-];
+export const IMPORT_GUIDE = [
+  {
+    title: "Parti dal modello",
+    text: "Scarica il modello Excel e inserisci una persona per riga nel foglio Partecipanti. Lascia invariati i titoli delle colonne e i fogli. Il foglio Esempi mostra una riga compilata: serve solo come guida e non viene importato. Il file Esporta iscritti della tabella non è un modello di importazione.",
+  },
+  {
+    title: "Compila i dati obbligatori",
+    text: "Per ogni persona inserisci nome, cognome e almeno un recapito: email oppure telefono. Nome e cognome devono avere da 2 a 120 caratteri. Compila anche i tre campi del consenso indicati qui sotto. Data di nascita, paese e città sono facoltativi; paese e città possono avere fino a 120 caratteri.",
+  },
+  {
+    title: "Riporta il consenso già raccolto",
+    text: "In consenso_privacy scrivi si (senza accento). In versione_privacy riporta il nome o il codice della versione dell’informativa accettata dalla persona; in data_consenso scrivi la data in cui ha dato il consenso. Questi dati devono essere quelli originali: non copiarli dal foglio Esempi. La tua conferma finale attesta che il consenso è stato raccolto ed è disponibile.",
+  },
+  {
+    title: "Scrivi date e telefoni come negli esempi",
+    text: "Imposta le celle delle date e dei telefoni come Testo in Excel prima di compilarle. Per le date usa anno-mese-giorno: ad esempio 1990-05-20 per il 20 maggio 1990. Sono ammesse date dal 1900 a oggi. Per il telefono aggiungi il prefisso internazionale: ad esempio +393331234567. Scrivi l’email senza spazi.",
+  },
+  {
+    title: "Scegli gruppo, servizio e tag dagli elenchi",
+    text: "Questi campi sono facoltativi. Copia i nomi dal foglio Cataloghi del modello appena scaricato: contiene le opzioni disponibili per l’evento. Se ci sono nomi uguali, usa il codice riportato accanto al nome. Per più tag, separa i nomi con un punto e virgola, ad esempio Volontario; Accoglienza. I tag sono etichette interne e non sono visibili alla persona iscritta. Un nome non riconosciuto sarà segnalato nell’anteprima.",
+  },
+  {
+    title: "Lascia vuoti gli stati se non hai esigenze particolari",
+    text: "Puoi lasciare vuote le colonne stato e stato_servizio: la persona verrà iscritta e l’eventuale servizio indicato sarà assegnato. Se devi specificarli, stato accetta submitted (iscrizione inviata), confirmed (confermata) o cancelled (annullata). Con un servizio presente, stato_servizio accetta assigned (assegnato), preference_pending (preferenza da valutare), proposal_pending (proposta in attesa) o declined (rifiutato).",
+  },
+  {
+    title: "Salva un file Excel con soli valori",
+    text: "Usa il formato .xlsx, con un massimo di 500 persone e 2 MB per file. Inserisci solo testo e numeri, senza formule, macro o collegamenti ad altri file. Ogni riga aggiunge una nuova iscrizione individuale: non modifica quelle esistenti. Le presenze restano da confermare. Minori accompagnati, questionari, altri consensi e bisogni di accessibilità vanno gestiti nelle sezioni dedicate, non in questo file.",
+  },
+  {
+    title: "Controlla l’anteprima, poi conferma",
+    text: "Dopo aver scelto il file, premi Mostra anteprima: nessuna iscrizione viene ancora aggiunta. Se ci sono errori, correggi il file e caricalo di nuovo oppure scarta le righe interessate indicando il motivo. Se una persona sembra già iscritta, scarta la riga oppure spiega perché si tratta di una persona diversa. Nessuna scheda viene unita automaticamente. Solo Conferma importazione salva le righe scelte, tutte insieme. L’anteprima dura 20 minuti: se scade o i dati cambiano, carica di nuovo il file.",
+  },
+] as const;
+
+// The website and the downloadable template share the same instructions.
+export const FORMAT_INSTRUCTIONS = IMPORT_GUIDE.map(
+  ({ title, text }) => `${title}. ${text}`,
+);
+
 export function validDate(
   value: string,
   today = new Date().toISOString().slice(0, 10),

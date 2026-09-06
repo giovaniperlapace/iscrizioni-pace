@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { FileSpreadsheet, Upload } from "lucide-react";
 import { DUPLICATE_LABELS } from "@/lib/data-quality/duplicates";
 import type { PreviewRow, RowDecision } from "@/lib/data-quality/preview";
 import type { QualityPerson } from "@/lib/data-quality/data.server";
@@ -27,6 +28,7 @@ async function send(body: FormData | object) {
 }
 export function ImportPanel() {
   const router = useRouter();
+  const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<{
     rows: PreviewRow[];
     token: string;
@@ -102,27 +104,60 @@ export function ImportPanel() {
     );
   });
   return (
-    <section className="grid min-w-0 grid-cols-1 gap-4 rounded-lg border bg-white p-4">
-      <h2 className="text-xl font-semibold">Importa da Excel</h2>
-      <p className="text-sm">
-        1. Carica e controlla l’anteprima. 2. Conferma le righe da importare. Il
-        caricamento non modifica il database.
-      </p>
-      <form onSubmit={upload} className="flex flex-wrap items-end gap-3">
-        <label className="grid min-w-0 gap-1">
-          File .xlsx (massimo 2 MiB, 500 righe)
+    <section aria-labelledby="import-upload-title" className="grid min-w-0 grid-cols-1 gap-4 border-t border-[var(--peace-border)] pt-5">
+      <div>
+        <h3 id="import-upload-title" className="font-semibold text-[var(--peace-blue-900)]">2. Scegli il file compilato</h3>
+        <p id="import-file-help" className="mt-1 text-sm text-[var(--peace-muted)]">
+          Seleziona dal tuo computer il file Excel (.xlsx). Massimo 2 MB e 500 persone.
+        </p>
+      </div>
+      <form onSubmit={upload} className="grid gap-3">
+        <div className="relative min-w-0">
           <input
-            className="w-full min-w-0 max-w-full"
+            id="import-excel-file"
+            className="peer sr-only"
             type="file"
             name="file"
-            accept=".xlsx"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            aria-label="Scegli file Excel"
+            aria-describedby="import-file-help import-selected-file"
             required
             disabled={busy}
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setPreview(null);
+              setConfirmed(false);
+              setError("");
+              setSuccess("");
+            }}
           />
-        </label>
-        <button className={button} disabled={busy}>
-          Carica e valida
-        </button>
+          <label
+            htmlFor="import-excel-file"
+            className="flex min-w-0 cursor-pointer flex-wrap items-center gap-3 rounded-xl border border-dashed border-[var(--peace-border-strong)] bg-[var(--peace-soft)] p-4 transition-colors hover:border-[var(--peace-blue-800)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--peace-blue-800)] peer-disabled:pointer-events-none peer-disabled:opacity-60 sm:p-5"
+          >
+            <FileSpreadsheet size={26} aria-hidden className="shrink-0 text-[var(--peace-blue-800)]" />
+            <span id="import-selected-file" role="status" className="min-w-0 flex-1 basis-40 text-sm">
+              <span className="block break-all font-semibold text-[var(--peace-ink)]">
+                {file ? file.name : "Nessun file selezionato"}
+              </span>
+              <span className="mt-1 block text-[var(--peace-muted)]">
+                {file ? "Puoi scegliere un altro file prima di continuare." : "Premi Scegli file Excel per cercarlo sul tuo computer."}
+              </span>
+            </span>
+            <span className="btn-secondary inline-flex items-center gap-2 bg-white px-4 py-2 text-sm">
+              <Upload size={18} aria-hidden />
+              {file ? "Cambia file Excel" : "Scegli file Excel"}
+            </span>
+          </label>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button className="btn-primary px-5 py-2 text-sm" disabled={busy || !file}>
+            Mostra anteprima
+          </button>
+          <p className="text-sm text-[var(--peace-muted)]">
+            Nessuna iscrizione verrà aggiunta fino alla tua conferma finale.
+          </p>
+        </div>
       </form>
       {busy && (
         <p role="status" aria-live="polite">
@@ -130,12 +165,12 @@ export function ImportPanel() {
         </p>
       )}
       {error && (
-        <p role="alert" className="rounded bg-red-50 p-3 text-red-900">
+        <p role="alert" className="status-error rounded-xl border p-3 text-sm">
           {error}
         </p>
       )}
       {success && (
-        <p role="status" className="rounded bg-green-50 p-3 text-green-900">
+        <p role="status" className="status-success rounded-xl border p-3 text-sm">
           {success}{" "}
           <Link
             className="underline"
@@ -147,8 +182,8 @@ export function ImportPanel() {
       )}
       {preview && (
         <>
-          <h3 className="font-semibold">
-            Anteprima: {preview.rows.length} righe
+          <h3 className="border-t border-[var(--peace-border)] pt-5 font-semibold text-[var(--peace-blue-900)]">
+            3. Controlla e conferma: {preview.rows.length} righe
           </h3>
           <p>
             {preview.rows.filter((row) => !row.errors.length).length} valide ·{" "}
@@ -157,12 +192,12 @@ export function ImportPanel() {
             possibili duplicati
           </p>
           <div
-            className="max-h-[60vh] min-w-0 overflow-auto"
+            className="max-h-[60vh] min-w-0 overflow-auto rounded-xl border border-[var(--peace-border)]"
             tabIndex={0}
             aria-label="Anteprima importazione"
           >
             <table className="w-full min-w-[750px] text-left text-sm">
-              <thead>
+              <thead className="bg-[var(--peace-soft)] text-[var(--peace-blue-900)]">
                 <tr>
                   <th className="p-2">Riga e dati</th>
                   <th className="p-2">Controlli</th>
@@ -183,7 +218,7 @@ export function ImportPanel() {
                     );
                   };
                   return (
-                    <tr key={row.row} className="border-t align-top">
+                    <tr key={row.row} className="border-t border-[var(--peace-border)] align-top">
                       <td className="p-2">
                         <strong>
                           Riga {row.row}: {row.values.nome} {row.values.cognome}
@@ -195,7 +230,7 @@ export function ImportPanel() {
                             )
                             .map(([key, value]) => (
                               <div key={key} className="break-words">
-                                <dt className="inline text-gray-600">
+                                <dt className="inline text-[var(--peace-muted)]">
                                   {key}:{" "}
                                 </dt>
                                 <dd className="inline">{value || "—"}</dd>
@@ -219,7 +254,7 @@ export function ImportPanel() {
                         ))}
                         {!row.errors.length && !row.candidates.length && (
                           <p className="text-green-800">
-                            Valida, nessuna corrispondenza rilevata
+                            Pronta per l’importazione, nessun duplicato rilevato
                           </p>
                         )}
                       </td>
@@ -285,20 +320,20 @@ export function ImportPanel() {
           </label>
           {unresolved && (
             <p>
-              Correggi o scarta le righe con errori e motiva le decisioni sui
-              duplicati prima di confermare.
+              Correggi il file e caricalo di nuovo oppure scarta le righe con errori.
+              Per i possibili duplicati, indica il motivo della tua scelta prima di confermare.
             </p>
           )}
           <div className="flex flex-wrap gap-3">
             <button
-              className={button}
+              className="btn-primary px-5 py-2 text-sm"
               disabled={busy || !confirmed || unresolved}
               onClick={() => void commit()}
             >
               Conferma importazione
             </button>
             <button
-              className={button}
+              className="btn-secondary px-4 py-2 text-sm disabled:opacity-50"
               disabled={busy}
               onClick={() => {
                 setPreview(null);

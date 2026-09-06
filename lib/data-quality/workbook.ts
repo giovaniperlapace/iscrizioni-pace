@@ -276,7 +276,10 @@ export async function writeWorkbook(
   instructions.getColumn(1).width = 110;
   instructions.eachRow((row) => {
     row.alignment = { wrapText: true, vertical: "top" };
-    row.height = 65;
+    row.height = Math.max(
+      35,
+      Math.ceil(String(row.getCell(1).value ?? "").length / 100) * 16 + 12,
+    );
   });
   addSheet(book, "Esempi", COLUMNS, [
     [
