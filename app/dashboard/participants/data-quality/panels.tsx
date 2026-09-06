@@ -354,7 +354,8 @@ export function ReviewPanel({
   catalog,
   token,
   canWrite,
-  returnTo = "/dashboard/manager?section=iscritti#duplicati",
+  returnTo = "/dashboard/manager?section=iscritti&view=duplicates",
+  excludeOnly = false,
 }: {
   left: QualityPerson;
   right: QualityPerson;
@@ -362,6 +363,7 @@ export function ReviewPanel({
   token: string;
   canWrite: boolean;
   returnTo?: string;
+  excludeOnly?: boolean;
 }) {
   const router = useRouter();
   const [decision, setDecision] = useState("not_duplicate"),
@@ -383,7 +385,7 @@ export function ReviewPanel({
         reason,
         confirm,
       });
-      router.push(returnTo);
+      router.push(returnTo, { scroll: false });
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Decisione non salvata.");
@@ -393,14 +395,17 @@ export function ReviewPanel({
   }
   return (
     <section
-      className="grid min-w-0 grid-cols-1 gap-4 rounded-lg border-2 border-blue-800 bg-white p-4"
+      className="grid min-w-0 grid-cols-1 gap-4"
       id="confronto"
       aria-label="Confronto schede"
     >
       <h2 className="text-xl font-semibold">Confronto schede</h2>
       <div className="grid gap-4 sm:grid-cols-2">
         {[left, right].map((person) => (
-          <article key={person.id} className="rounded border p-3">
+          <article
+            key={person.id}
+            className="rounded-xl border border-[var(--peace-border)] bg-[var(--peace-soft)] p-4"
+          >
             <h3 className="font-bold">{person.name}</h3>
             <dl className="mt-2 space-y-1 text-sm">
               {Object.entries({
@@ -410,12 +415,10 @@ export function ReviewPanel({
                 Telefono: person.phone,
                 Paese: person.country,
                 Città: person.city,
-                Stato: person.registrationStatus,
                 Gruppo: person.currentGroupName,
                 Servizio: catalog.services.find(
                   (item) => item.id === person.currentServiceId,
                 )?.label,
-                "Stato servizio": person.currentServiceStatus,
                 Tag: person.tagIds
                   .map(
                     (id) => catalog.tags.find((t) => t.id === id)?.label ?? id,
@@ -440,41 +443,47 @@ export function ReviewPanel({
           </article>
         ))}
       </div>
-      <p className="text-sm">
-        Conserva la scheda con i dati corretti: i valori già presenti
-        prevalgono; i campi mancanti vengono completati. I tag vengono riuniti.
-        La seconda iscrizione sarà archiviata con storico conservato e QR
-        revocato.
-      </p>
-      <p className="text-sm">
-        Account distinti, identità su altri eventi o una scheda da archiviare
-        con minori, check-in, momenti o bisogni di accessibilità richiedono una
-        riconciliazione dedicata.{" "}
-        <Link
-          className="underline"
-          href="/dashboard/participants/data-quality/instructions"
-        >
-          Leggi tutti gli effetti del merge
-        </Link>
-        .
-      </p>
+      {!excludeOnly && (
+        <>
+          <p className="text-sm">
+            Conserva la scheda con i dati corretti: i valori già presenti
+            prevalgono; i campi mancanti vengono completati. I tag vengono
+            riuniti. La seconda iscrizione sarà archiviata con storico
+            conservato e QR revocato.
+          </p>
+          <p className="text-sm">
+            Account distinti, identità su altri eventi o una scheda da
+            archiviare con minori, check-in, momenti o bisogni di accessibilità
+            richiedono una riconciliazione dedicata.{" "}
+            <Link
+              className="underline"
+              href="/dashboard/participants/data-quality/instructions"
+            >
+              Leggi tutti gli effetti del merge
+            </Link>
+            .
+          </p>
+        </>
+      )}
       {canWrite && (
         <form onSubmit={review} className="grid gap-3">
-          <label className="grid gap-1">
-            Esito
-            <select
-              className="field"
-              value={decision}
-              disabled={busy}
-              onChange={(event) => {
-                setDecision(event.target.value);
-                setConfirm(false);
-              }}
-            >
-              <option value="not_duplicate">Non sono duplicati</option>
-              <option value="merged">Unisci le iscrizioni</option>
-            </select>
-          </label>
+          {!excludeOnly && (
+            <label className="grid gap-1">
+              Esito
+              <select
+                className="field"
+                value={decision}
+                disabled={busy}
+                onChange={(event) => {
+                  setDecision(event.target.value);
+                  setConfirm(false);
+                }}
+              >
+                <option value="not_duplicate">Non sono duplicati</option>
+                <option value="merged">Unisci le iscrizioni</option>
+              </select>
+            </label>
+          )}
           {decision === "merged" && (
             <fieldset className="grid gap-2">
               <legend>Scheda da conservare (scelta obbligatoria)</legend>
@@ -536,7 +545,11 @@ export function ReviewPanel({
             className={button}
             disabled={busy || !confirm || (decision === "merged" && !keepId)}
           >
-            {busy ? "Salvataggio…" : "Conferma decisione"}
+            {busy
+              ? "Salvataggio…"
+              : excludeOnly
+                ? "Conferma esclusione"
+                : "Conferma decisione"}
           </button>
         </form>
       )}

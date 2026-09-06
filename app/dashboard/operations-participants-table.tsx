@@ -57,6 +57,7 @@ export function OperationsParticipantsTable({
   operatorId,
   eventId,
   eventStartsOn,
+  dialogOnly = false,
 }: {
   snapshot: OperationsParticipantsSnapshot;
   selectedParticipant: Row | null;
@@ -67,6 +68,7 @@ export function OperationsParticipantsTable({
   operatorId: string;
   eventId: string | null;
   eventStartsOn: string | null;
+  dialogOnly?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -464,11 +466,12 @@ export function OperationsParticipantsTable({
   exportParams.set("columns", columns.join(","));
   exportParams.delete("status");
   return (
-    <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-4 sm:p-5">
+    <>
+    {!dialogOnly && <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <h2 className="text-lg font-semibold">Gestione iscritti</h2>
+            <h2 className="text-lg font-semibold">{view === "without-group" ? "Senza gruppo" : view === "deleted" ? "Iscrizioni eliminate" : "Gestione iscritti"}</h2>
             {canManage && (
               <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null })} scroll={false}>
                 Importa iscritti da Excel
@@ -523,31 +526,14 @@ export function OperationsParticipantsTable({
       {canManage && searchParams.get("import") === "excel" && (
         <ImportParticipantsDialog closePath={paramsFor({ import: null })} />
       )}
-      <nav aria-label="Viste iscritti" className="my-4 flex flex-wrap gap-2">
-        {[
-          ["all", "Tutti gli iscritti"],
-          ["without-group", "Senza gruppo"],
-          ...(dashboard === "admin"
-            ? [["deleted", "Iscrizioni eliminate"]]
-            : []),
-        ].map(([key, label]) => (
-          <Link
-            prefetch={false}
-            key={key}
-            href={paramsFor({
-              view: key === "all" ? null : key,
-              edit: null,
-              group: null,
-              stat: null,
-            })}
-            scroll={false}
-            aria-current={view === key ? "page" : undefined}
-            className={`${buttonClass} ${view === key ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
-          >
-            {label}
+      {dashboard === "admin" && view !== "without-group" && (
+        <div className="my-4">
+          <Link className={buttonClass} prefetch={false}
+            href={paramsFor({ view: view === "deleted" ? null : "deleted", edit: null, group: null, stat: null })}>
+            {view === "deleted" ? "Torna ai partecipanti" : "Iscrizioni eliminate"}
           </Link>
-        ))}
-      </nav>
+        </div>
+      )}
       {view === "without-group" && (
         <p className="mb-4 text-sm">
           Attiva la modifica rapida nella colonna Gruppo e assegna un gruppo
@@ -902,6 +888,7 @@ export function OperationsParticipantsTable({
           </p>
         )}
       </div>
+    </section>}
       {selected && (
         <ParticipantDialog participant={selected} closePath={closePath}>
           {selected.deletedAt ? (
@@ -1061,7 +1048,7 @@ export function OperationsParticipantsTable({
           )}
         </ParticipantDialog>
       )}
-    </section>
+    </>
   );
 }
 

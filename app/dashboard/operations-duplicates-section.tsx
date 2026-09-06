@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { OperationsDuplicatesTable } from "@/app/dashboard/operations-duplicates-table";
+import { DuplicateReviewDialog } from "@/app/dashboard/participants/data-quality/review-dialog";
 import { hashIdentityFingerprint } from "@/lib/data-quality/fingerprint.server";
 import { qualityAccess } from "@/lib/data-quality/access.server";
 import {
@@ -7,7 +9,6 @@ import {
   loadQualityPeople,
 } from "@/lib/data-quality/data.server";
 import {
-  DUPLICATE_LABELS,
   findDuplicates,
   identityFingerprint,
 } from "@/lib/data-quality/duplicates";
@@ -30,23 +31,22 @@ export async function OperationsDuplicatesSection({
     page: searchParams.duplicatePage,
     show: searchParams.duplicateShow,
   };
-  function path(
-    changes: Record<string, string | null> = {},
-    anchor = "duplicati",
-  ) {
+  function path(changes: Record<string, string | null> = {}) {
     const query = new URLSearchParams(
       Object.entries(searchParams).filter(
         (entry): entry is [string, string] => typeof entry[1] === "string",
       ),
     );
     query.set("section", "iscritti");
+    query.set("view", "duplicates");
+    query.delete("duplicateAction");
     query.delete("edit");
     query.delete("import");
     for (const [key, value] of Object.entries(changes)) {
       if (value === null) query.delete(key);
       else query.set(key, value);
     }
-    return `/dashboard/${dashboard}?${query}#${anchor}`;
+    return `/dashboard/${dashboard}?${query}`;
   }
   const { db, auth, event, canWrite } = await qualityAccess();
   const service = createSupabaseServiceClient();
@@ -57,7 +57,7 @@ export async function OperationsDuplicatesSection({
   if (before.error)
     return (
       <section id="duplicati" className="surface-card grid gap-3 p-5">
-        <h2 className="text-xl font-semibold">Controllo duplicati</h2>
+        <h2 className="text-xl font-semibold">Duplicati</h2>
         <p role="alert">
           Il controllo duplicati non è al momento disponibile. Riprova più
           tardi.
@@ -118,40 +118,51 @@ export async function OperationsDuplicatesSection({
     <section
       id="duplicati"
       aria-label="Controllo duplicati"
-      className="grid min-w-0 gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5"
+      className="grid min-w-0 gap-5 rounded-xl border border-amber-200 bg-amber-50/30 p-4 sm:p-6"
     >
-      <h2 className="text-xl font-semibold">Controllo duplicati</h2>
+      <h2 className="text-xl font-semibold">Duplicati</h2>
       <p className="text-sm text-[var(--peace-muted)]">
-        {event.title} · Controllo su tutte le {people.length} iscrizioni
-        operative dell’evento, indipendentemente dai filtri della tabella.
+        Verifica le possibili iscrizioni duplicate tra le {people.length}{" "}
+        iscrizioni di {event.title}.
       </p>
       <p className="text-sm">
         Confronta le schede prima di decidere. Nomi simili, contatti familiari e
         omonimie possono produrre falsi positivi. Nessuna corrispondenza viene
         unita automaticamente.
       </p>
-      <nav className="flex flex-wrap gap-4">
+      <nav aria-label="Viste duplicati" className="flex flex-wrap gap-2">
         <Link
-          className="underline"
+          className={
+            params.show !== "dismissed"
+              ? "btn-primary px-4 py-2 text-sm"
+              : "btn-secondary px-4 py-2 text-sm"
+          }
+          aria-current={params.show !== "dismissed" ? "page" : undefined}
+          scroll={false}
           href={path({
             duplicateShow: null,
             duplicatePage: null,
             duplicatePair: null,
           })}
         >
-          Da revisionare (
-          {matches.filter((m) => m.level !== "dismissed").length})
+          Da verificare ({matches.filter((m) => m.level !== "dismissed").length}
+          )
         </Link>
         <Link
-          className="underline"
+          className={
+            params.show === "dismissed"
+              ? "btn-primary px-4 py-2 text-sm"
+              : "btn-secondary px-4 py-2 text-sm"
+          }
+          aria-current={params.show === "dismissed" ? "page" : undefined}
+          scroll={false}
           href={path({
             duplicateShow: "dismissed",
             duplicatePage: null,
             duplicatePair: null,
           })}
         >
-          Falsi positivi verificati (
-          {matches.filter((m) => m.level === "dismissed").length})
+          Esclusi ({matches.filter((m) => m.level === "dismissed").length})
         </Link>
       </nav>
       {!stable && (
@@ -160,26 +171,18 @@ export async function OperationsDuplicatesSection({
           decidere.
         </p>
       )}
-      {visible.slice((page - 1) * 50, page * 50).map((match) => (
-        <Link
-          key={`${match.left}:${match.right}`}
-          className="grid gap-1 rounded-md border p-3 hover:bg-sky-50"
-          href={path(
-            { duplicatePair: `${match.left}:${match.right}` },
-            "confronto",
-          )}
-        >
-          <strong>
-            {people.find((p) => p.id === match.left)?.name} ↔{" "}
-            {people.find((p) => p.id === match.right)?.name}
-          </strong>
-          <span>{DUPLICATE_LABELS[match.level]}</span>
-          <span className="text-sm text-gray-600">
-            {match.signals.join(" · ")}
-          </span>
-        </Link>
-      ))}
-      {visible.length === 0 && <p>Nessun caso in questa vista.</p>}
+      <h3 className="text-lg font-semibold">
+        {params.show === "dismissed"
+          ? "Segnalazioni escluse"
+          : "Possibili duplicati"}{" "}
+        ({visible.length} {visible.length === 1 ? "coppia" : "coppie"})
+      </h3>
+      <OperationsDuplicatesTable
+        matches={visible.slice((page - 1) * 50, page * 50)}
+        people={people}
+        basePath={path({ duplicatePair: null })}
+        canWrite={canWrite}
+      />
       {pageCount > 1 && (
         <nav className="flex gap-4" aria-label="Pagine duplicati">
           {page > 1 && (
@@ -207,16 +210,22 @@ export async function OperationsDuplicatesSection({
           )}
         </nav>
       )}
-      {left && right && (
-        <ReviewPanel
-          key={`${left.id}:${right.id}:${before.data}`}
-          left={left}
-          right={right}
-          catalog={catalog}
-          token={token ?? ""}
-          canWrite={canWrite && Boolean(token)}
-          returnTo={path({ duplicatePair: null })}
-        />
+      {left && right && !searchParams.edit && (
+        <DuplicateReviewDialog
+          closePath={path({ duplicatePair: null })}
+          excluding={searchParams.duplicateAction === "exclude"}
+        >
+          <ReviewPanel
+            excludeOnly={searchParams.duplicateAction === "exclude"}
+            key={`${left.id}:${right.id}:${before.data}`}
+            left={left}
+            right={right}
+            catalog={catalog}
+            token={token ?? ""}
+            canWrite={canWrite && Boolean(token)}
+            returnTo={path({ duplicatePair: null })}
+          />
+        </DuplicateReviewDialog>
       )}
     </section>
   );

@@ -25,12 +25,22 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   Le istruzioni in linguaggio semplice di `IMPORT_GUIDE` sono condivise tra
   modale, pagina istruzioni e modello scaricabile; il file esportato dalla
   tabella non sostituisce il modello di importazione.
-  `OperationsDuplicatesSection` mostra il riquadro `Controllo duplicati`
-  direttamente sotto la tabella condivisa admin/manager, anche in sola
-  lettura: controlla tutte le iscrizioni operative dell'evento, a prescindere
-  dai filtri della tabella. Confronto, viste e paginazione usano i parametri
-  `duplicatePair`, `duplicateShow`, `duplicatePage`, conservando filtri e
-  dashboard; dopo una decisione si ritorna allo stesso riquadro.
+  Il menu condiviso `Sezioni partecipanti`, sopra il contenuto, separa
+  `Partecipanti`, `Duplicati` (`view=duplicates`) e `Senza gruppo`
+  (`view=without-group`): una sola tabella per volta, senza riquadri impilati.
+  Il cambio vista conserva dashboard, sidebar e preferenze colonne, ma azzera
+  i filtri della vista precedente per evitare code incomplete senza motivo visibile.
+  L'archivio admin rimane accessibile da Partecipanti.
+  `OperationsDuplicatesSection` viene caricato solo nella vista Duplicati,
+  anche in sola lettura, e controlla tutte le iscrizioni operative dell'evento.
+  La tabella mostra le due schede di ogni coppia con email, gruppo, motivo,
+  confronto e azioni. Modifica apre la scheda condivisa in dialog; il confronto
+  e l'esclusione aprono un dialog nativo, chiudibile con X/Escape senza scroll.
+  Escludi marca la coppia come persone distinte dopo motivazione/conferma e non
+  elimina iscrizioni. Le coppie escluse restano consultabili in `Esclusi`.
+  `duplicatePair`, `duplicateAction=exclude`, `duplicateShow` e `duplicatePage`
+  controllano confronto, azione, vista e paginazione; salvataggi e chiusure
+  ritornano alla vista Duplicati, conservando pagina e filtro degli esclusi.
   L'export è sotto i filtri: pulsante verde con icona download `Esporta
   iscritti` e descrizione esplicita del file Excel relativo ai filtri applicati.
 - Migration `20260906120000_service_role_app_schema_usage.sql` autorizzata e

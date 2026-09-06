@@ -2,7 +2,8 @@
 
 La tabella condivisa admin/manager offre `Esporta iscritti`, limitato ai filtri
 e alle colonne visibili, e `Importa iscritti da Excel` in modale con istruzioni
-e modello. Il controllo duplicati si trova sotto la tabella iscritti.
+e modello. Il controllo duplicati ha una vista dedicata nel menu Partecipanti, accanto
+a Partecipanti e Senza gruppo (`view=duplicates`).
 
 ## Formato canonico
 
@@ -184,10 +185,19 @@ operatori, riutilizzate nella modale, nella pagina istruzioni e nel foglio
 Istruzioni del modello. Il modello resta distinto dall'esportazione tabellare.
 La route legacy
 `/dashboard/participants/data-quality` reindirizza alla modale. Il controllo
-duplicati è un riquadro direttamente sotto
-la tabella iscritti admin/manager, con caricamento separato tramite Suspense.
-Il controllo riguarda l'intero evento; i link di confronto e il ritorno dopo
-la decisione conservano dashboard, filtri e modalità sidebar. L'esportazione
+duplicati si apre nella vista `view=duplicates` del menu condiviso
+`Sezioni partecipanti`, accanto a Partecipanti e Senza gruppo. Le tre viste
+mostrano una sola tabella alla volta. I cambi vista azzerano i filtri di ricerca,
+gruppo, servizio, tag e statistiche; conservano dashboard, sidebar e colonne.
+Il controllo riguarda l'intero evento ed è caricato tramite Suspense soltanto
+quando si apre Duplicati. Ogni coppia mostra entrambe le persone, email, gruppo,
+motivi del rilevamento, confronto e azioni dirette. `Modifica` apre la scheda
+condivisa; il confronto e `Escludi` usano un dialog nativo con X/Escape e scroll
+interno. Escludere richiede motivazione e conferma, marca la coppia come persone
+distinte e conserva entrambe le iscrizioni. La vista `Esclusi` permette la
+consultazione successiva; cambiando l'identità la segnalazione si riapre.
+Unioni e permessi restano quelli del motore esistente. Le chiusure e i salvataggi
+conservano la vista Duplicati, `duplicateShow`, `duplicatePage` e sidebar. L'esportazione
 Excel è sotto i filtri, con pulsante verde `Esporta iscritti`, icona download
 e descrizione dei filtri applicati.
 
@@ -200,6 +210,7 @@ npm run build -- --webpack
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/data-quality.sql
 # Dev server già avviato: fixture sintetica, nessuna scrittura production.
 node tests/browser/data-quality.mjs http://localhost:3116
+node tests/browser/participants-navigation.mjs http://localhost:3116
 ```
 
 Le suite verificano ranking e falsi positivi, invalidità/date/cataloghi,

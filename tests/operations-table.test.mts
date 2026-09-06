@@ -22,7 +22,9 @@ test("save return path preserves operational state and never navigates back to s
     columns: "name,age,group",
     nav: "mini",
     edit: "registration",
-    view: "without-group",
+    view: "duplicates",
+    duplicatePage: "3",
+    duplicateShow: "dismissed",
   });
   const path = operationsReturnPath(`/dashboard/manager?${state}`, "manager");
   const result = new URL(path, "https://local.test");

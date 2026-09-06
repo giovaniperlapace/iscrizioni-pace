@@ -154,7 +154,7 @@ try {
     '!document.querySelector("[data-registration-id=reg-3]") && document.querySelectorAll("tbody tr").length === 2',
     "assigned row leaves queue immediately",
   );
-  clickText("a", "Tutti gli iscritti");
+  clickText("a", "Partecipanti");
   ab("snapshot", "-i");
   evaluate('window.scrollTo(0,500); document.documentElement.dataset.previousScroll = String(window.scrollY)');
   clickText("a", "Persona Prova 11");
@@ -221,7 +221,7 @@ try {
     '!document.querySelector("[data-registration-id=reg-0]")',
     "restored row leaves archive",
   );
-  clickText("a", "Tutti gli iscritti");
+  clickText("a", "Partecipanti");
   check(
     'document.querySelector("[data-registration-id=reg-0]")',
     "restored row returns to operations",

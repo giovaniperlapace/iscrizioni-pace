@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { OperationsParticipantsNavigation } from "@/app/dashboard/operations-participants-navigation";
 import { OperationsDuplicatesSection } from "@/app/dashboard/operations-duplicates-section";
 import { OperationsParticipantsTable } from "@/app/dashboard/operations-participants-table";
 import type {
@@ -30,35 +31,43 @@ export function OperationsParticipantsSection({
   eventStartsOn: string | null;
   searchParams?: Record<string, string | undefined>;
 }) {
+  const duplicatesView = searchParams?.view === "duplicates";
   return (
     <>
-      <OperationsParticipantsTable
-        snapshot={{
-          participants: snapshot.participants,
-          allParticipants: snapshot.allParticipants,
-          groupOptions: snapshot.groupOptions,
-          operationalTags: snapshot.operationalTags,
-          eventServices: snapshot.eventServices,
-          filters: snapshot.filters,
-          statisticsFilter: snapshot.statisticsFilter,
-        }}
-        selectedParticipant={selectedParticipant}
-        editableEventIds={[
-          ...new Set(
-            snapshot.groupOptions
-              .map((group) => group.eventId)
-              .concat(eventId ?? [])
-              .filter(canManageEvent),
-          ),
-        ]}
+      <OperationsParticipantsNavigation
         dashboard={dashboard}
         navMode={navMode}
-        canDeleteRegistration={canDeleteRegistration}
-        operatorId={operatorId}
-        eventId={eventId}
-        eventStartsOn={eventStartsOn}
       />
-      {eventId && (
+      {(!duplicatesView || selectedParticipant) && (
+        <OperationsParticipantsTable
+          dialogOnly={duplicatesView}
+          snapshot={{
+            participants: snapshot.participants,
+            allParticipants: snapshot.allParticipants,
+            groupOptions: snapshot.groupOptions,
+            operationalTags: snapshot.operationalTags,
+            eventServices: snapshot.eventServices,
+            filters: snapshot.filters,
+            statisticsFilter: snapshot.statisticsFilter,
+          }}
+          selectedParticipant={selectedParticipant}
+          editableEventIds={[
+            ...new Set(
+              snapshot.groupOptions
+                .map((group) => group.eventId)
+                .concat(eventId ?? [])
+                .filter(canManageEvent),
+            ),
+          ]}
+          dashboard={dashboard}
+          navMode={navMode}
+          canDeleteRegistration={canDeleteRegistration}
+          operatorId={operatorId}
+          eventId={eventId}
+          eventStartsOn={eventStartsOn}
+        />
+      )}
+      {duplicatesView && eventId && (
         <Suspense
           fallback={
             <section
@@ -75,6 +84,9 @@ export function OperationsParticipantsSection({
             searchParams={searchParams}
           />
         </Suspense>
+      )}
+      {duplicatesView && !eventId && (
+        <p>Nessun evento disponibile per il controllo duplicati.</p>
       )}
     </>
   );

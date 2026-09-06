@@ -66,6 +66,8 @@ export function operationsReturnPath(
       "columns",
       "nav",
       "edit",
+      "duplicateShow",
+      "duplicatePage",
     ]) {
       if (source.has(key)) params.set(key, source.get(key)!);
     }
