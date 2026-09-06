@@ -14,7 +14,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   stato servizio separato, consensi originali obbligatori. 2 MiB/500 righe.
 - Dal 2026-09-06, il pulsante `Importa iscritti da Excel` apre una modale
   nativa sopra la tabella ed è visibile agli operatori con permessi di
-  scrittura. Include istruzioni espandibili, modello e anteprima; X/Escape
+  scrittura. È accanto al titolo `Gestione iscritti`, separato da `Crea tag
+  operativo` sulla destra. Include istruzioni espandibili, modello e anteprima; X/Escape
   chiudono conservando filtri, sidebar e scroll. `import=excel` controlla
   l'apertura; la vecchia route `/dashboard/participants/data-quality`
   reindirizza alla modale nella dashboard autorizzata.
@@ -49,7 +50,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   dipendenze delicate richiedono riconciliazione dedicata, senza merge parziali.
 - Export `.xlsx` con tutti i risultati dei filtri e RLS dell'operatore,
   paginazione oltre 200/1000, filtro `stat` e minori tramite iscrizione familiare.
-  Fogli Minori/Presenze di sola consultazione. Celle stringa contro formule;
+  Dal 2026-09-06 esporta un solo foglio Iscritti con le colonne effettivamente
+  visibili, nello stesso ordine, incluse preferenze browser e vista Senza gruppo.
+  Nomi leggibili per gruppo/servizio/tag, età all’inizio dell’evento e data
+  iscrizione; nessun foglio aggiuntivo o dato nascosto. Il modello canonico
+  di importazione resta separato. Celle stringa contro formule;
   preflight ZIP con limite decompresso e rifiuto macro/link/formule/colonne inattese.
 - Migration `20260905210000_data_quality_excel.sql` applicata in produzione
   il 2026-09-05, con conteggi/hash invariati su 10 tabelle (68 iscrizioni);
@@ -77,6 +82,14 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
   salvate. Il nome resta sempre visibile. Età calcolata all'inizio dell'evento.
   Lo stato iscrizione non è una colonna selezionabile: le vecchie preferenze
   e gli URL che lo includono lo ignorano, con ordinamento di ripiego sul nome.
+- Dal 2026-09-06, lo stato tecnico dell'iscrizione non compare neppure tra
+  i filtri admin/manager. Il parser condiviso ignora i vecchi parametri
+  `status` anche nell'export, evitando filtri attivi invisibili; lo stato
+  rimane nei dati interni. Gruppo, servizio, tag e archivio restano distinti.
+- I controlli `Colonne visibili`, `Mostra figli accompagnati` e `Azzera
+  filtri` sono accanto al filtro Tag; su schermi stretti vanno a capo.
+  Il selettore colonne si apre in un pannello sovrapposto. Le sue checkbox
+  non avviano il filtraggio automatico del form che le contiene.
 - Dal 2026-09-06, `Mostra figli accompagnati`, accanto ad `Azzera filtri`,
   mostra/nasconde sotto il genitore il badge con il numero di figli e il
   riepilogo di nomi ed età all'inizio dell'evento. Parte spento nella vista
@@ -88,8 +101,9 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
   Il filtro statistico `kind=child` distingue iscrizioni familiari e figli
   nelle righe mostrate. Eventuali fratelli fuori dal filtro restano nel
   riepilogo della propria famiglia. Non mostrare spiegazioni testuali sui figli.
-  Gli altri criteri statistici restano indicati accanto ad `Azzera filtri`, unico
-  comando di azzeramento anche per `stat`; non esiste un secondo `Rimuovi filtro`.
+  Tutti i filtri statistici, incluso `Minori accompagnati`, restano indicati
+  con `Filtro dalle statistiche: …` accanto ad `Azzera filtri`, unico comando
+  di azzeramento anche per `stat`; non esiste un secondo `Rimuovi filtro`.
 - Gruppo, servizio e tag si salvano direttamente dalla tabella e dalla scheda,
   tramite la stessa RPC `update_registration_operation`; le modifiche sono
   serializzate per iscrizione e auditabili nella stessa transazione. Un
@@ -236,58 +250,56 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
 - GitHub e' l'unico canale di sincronizzazione del codice tra computer e
   persone. Non usare servizi di sincronizzazione file per condividere una
   working copy Git attiva.
-- Il flusso predefinito, quando le postazioni non stanno modificando il codice
-  contemporaneamente, e' lavorare direttamente su `main`: riallineare prima il
-  checkout, eseguire i controlli proporzionati, quindi fare commit e push. Il
-  push su `main` avvia il normale deployment production.
-- Branch dedicati e pull request non sono obbligatori per il lavoro ordinario.
-  Usarli quando la modifica e' lunga, rischiosa o parallela ad altro sviluppo,
-  oppure quando e' utile una review separata, un'anteprima Vercel o un punto di
-  integrazione esplicito. Le migration delicate, le modifiche a permessi/RLS e
-  gli interventi ampi restano buoni candidati per una pull request.
-- I worktree sono uno strumento facoltativo per isolare attivita' parallele:
-  non sono richiesti per lavorare su `main` e non implicano necessariamente
-  l'apertura di una pull request.
+- Dal 2026-09-05, salvo indicazione esplicita dell'utente, tutte le modifiche
+  si effettuano direttamente su `main` nel checkout locale ordinario. Questa
+  regola sostituisce le precedenti eccezioni per lavoro lungo, rischioso o
+  parallelo, migration e permessi/RLS.
+- L'unica eccezione stabile e' il branch `codex/panel-p0-p10`, che DEVE
+  continuare a esistere per lo staging dei panel. Non eliminarlo, neppure
+  dopo un'integrazione in `main`, senza richiesta esplicita. Usarlo per le
+  modifiche quando l'utente indica espressamente lo staging/branch dei panel;
+  in assenza di indicazioni lavorare su `main`, anche se il tema sono i panel.
+- Non creare autonomamente branch, worktree o pull request. Solo una nuova
+  richiesta esplicita dell'utente puo' cambiare questa scelta; complessita',
+  rischio o comodita' di anteprima non sono motivi per derogare.
+- Riallineare prima `main`, eseguire i controlli proporzionati e, quando
+  richiesto, fare commit e push direttamente su `main`. Il push su `main`
+  avvia il normale deployment production.
 - All'inizio di ogni nuova attivita' verificare `pwd`, il branch corrente e lo
   stato con `git status --short --branch`, quindi eseguire automaticamente
-  `git fetch origin` e `git pull --ff-only` sul branch attivo per controllare e
-  ripristinare l'allineamento con GitHub prima di modificare file.
+  `git fetch origin`. Prima di modificare file assicurarsi di essere su `main`
+  ed eseguire `git pull --ff-only` con upstream `origin/main`. Quando l'utente
+  indica esplicitamente il branch panel, riallineare invece quel branch al
+  proprio upstream.
+- Se il checkout e' su un altro branch, verificare prima modifiche locali e
+  commit non integrati; passare a `main` soltanto quando e' sicuro, senza
+  perdere, trascinare o integrare automaticamente lavoro preesistente. Se non
+  e' possibile, segnalare l'impedimento prima di iniziare nuove modifiche.
 - Il pull automatico deve fermarsi e segnalare la situazione, senza forzare
   modifiche, se la working tree non e' pulita, il branch non ha un upstream, i
   commit locali e remoti sono divergenti oppure emergono conflitti. In questi
   casi risolvere consapevolmente la sincronizzazione prima di iniziare il nuovo
   lavoro.
-- Quando si lavora su un branch di staging e `main` cambia, integrare
-  periodicamente `origin/main` nel branch con un merge e ripetere l'operazione
-  prima delle verifiche finali e dell'integrazione in `main`. Non fare rebase di
-  branch gia' pubblicati o condivisi. In particolare, il branch di sviluppo dei
-  panel deve ricevere regolarmente `origin/main` e venire ripubblicato dopo il
-  merge, cosi' le correzioni production non si accumulano fino al merge finale.
+- Durante il lavoro esplicitamente destinato allo staging panel, integrare
+  periodicamente `origin/main` in `codex/panel-p0-p10` con un merge, anche prima
+  delle verifiche finali e dell'integrazione in `main`. Non fare rebase del
+  branch condiviso; ripubblicarlo dopo il merge quando il push e' richiesto.
 - Prima di terminare una sessione: eseguire i controlli proporzionati alla
-  modifica, committare, fare push, verificare che il branch coincida con il
-  remoto e lasciare la working tree pulita. Se il lavoro non e' pronto, usare
-  un commit chiaramente identificato sul branch; non lasciare file anonimi
-  non committati per una chat futura.
+  modifica e verificare il diff. Quando l'utente richiede commit/push,
+  pubblicare su `main` (o sul branch panel se espressamente indicato),
+  verificarne l'allineamento con il rispettivo remoto e lasciare
+  pulite le modifiche della sessione. Non includere lavoro estraneo al task.
 - Per cambiare computer: concludere e fare push dalla prima postazione; sulla
-  seconda eseguire il pull automatico iniziale e continuare sullo stesso branch
-  remoto, oppure scegliere esplicitamente il branch previsto per il nuovo
-  lavoro. Non modificare contemporaneamente lo stesso branch da due dispositivi
+  seconda eseguire il pull automatico iniziale e continuare su `main`, oppure
+  sul branch panel quando espressamente indicato per l'attivita'.
+  Non modificare contemporaneamente lo stesso branch da due dispositivi
   senza prima coordinare, fare push e sincronizzare.
-- Dopo l'integrazione di un branch, con o senza pull request, eliminarlo se non
-  serve piu'. Le modifiche successive possono proseguire su `main` aggiornato
-  oppure su un nuovo branch dedicato.
+- Gli altri branch o worktree preesistenti non autorizzano nuove modifiche
+  fuori da `main`; non eliminarli o integrarli automaticamente.
 - L'automazione multi-postazione deve limitarsi a verificare lo stato Git ed
-  eseguire un fetch e un fast-forward sicuro del branch attivo all'avvio della
-  nuova attivita'. Non deve imporre modalita' di checkout particolari o impedire
-  le modifiche nel checkout locale ordinario.
-- Dal 2026-08-23 il workflow multi-postazione usa checkout locali normali: si
-  lavora direttamente su `main` o sul branch di staging attivo e ogni nuova
-  attivita' inizia con il riallineamento automatico e non distruttivo da
-  GitHub. Le working copy non vengono condivise tramite servizi cloud.
-- Dal 2026-08-24, poiche' le due postazioni di norma non modificano `main` in
-  contemporanea, commit e push diretti su `main` sono il percorso ordinario.
-  Branch, worktree e pull request restano guardrail selettivi per lavoro
-  parallelo o ad alto rischio, non passaggi obbligatori per ogni modifica.
+  eseguire un fetch e un fast-forward sicuro di `main` (o del branch panel
+  espressamente indicato) all'avvio della nuova attivita', nel checkout locale
+  ordinario e senza creare branch o worktree.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
@@ -965,9 +977,10 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
   in bozza, non correnti, con dati minimi di identita' e finestre iscrizioni.
   Nelle tabelle operative non mostrare colonne evento ridondanti. Migration:
   `20260624100000_current_operational_event.sql`.
-- Branch di lavoro ordinario: `main` oppure un branch dedicato allo staging
-  della funzionalita', sempre riallineato al proprio upstream prima delle
-  modifiche.
+- Branch predefinito per tutte le modifiche: `main`, sempre riallineato a
+  `origin/main`. Il branch `codex/panel-p0-p10` deve restare disponibile per lo
+  staging e si usa solo su indicazione esplicita dell'utente. Non creare
+  autonomamente altri branch o worktree.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Per verificare l'ultimo commit/push noto su `main`, usare
@@ -2266,11 +2279,14 @@ Prima di concludere:
 
 ## Strategia Git
 
-- Lavorare direttamente sul branch gia' scelto per l'attivita': `main` oppure
-  un branch di staging dedicato a una nuova funzionalita'.
-- Eseguire prove e verifiche sul branch attivo; quando tutto funziona e l'utente
-  chiede commit/push, committare e pubblicare quello stesso branch.
-- Non cambiare o creare branch senza una ragione collegata al lavoro richiesto.
+- Salvo indicazione esplicita dell'utente, effettuare tutte le modifiche e le
+  verifiche direttamente su `main`, seguendo il riallineamento iniziale.
+- Conservare `codex/panel-p0-p10` per lo staging dei panel; lavorarci solo
+  quando espressamente indicato dall'utente, secondo il workflow sopra.
+- Quando tutto funziona e l'utente chiede commit/push, committare e pubblicare
+  direttamente su `main`, oppure sul branch panel espressamente indicato.
+- Non creare branch, worktree o pull request senza una nuova richiesta
+  esplicita dell'utente, anche per interventi lunghi, rischiosi o paralleli.
 - Preparare diff leggibili per review umana.
 - Non fare commit/push senza richiesta.
 - Se compaiono modifiche non fatte da Codex, trattarle come lavoro dell'utente.

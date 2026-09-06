@@ -8,8 +8,12 @@ import {
   loadCatalog,
   loadQualityPeople,
 } from "@/lib/data-quality/data.server";
-import { readWorkbook, writeWorkbook } from "@/lib/data-quality/workbook";
-import { MAX_FILE_BYTES, type ExcelRow } from "@/lib/data-quality/format";
+import {
+  readWorkbook,
+  writeWorkbook,
+  writeVisibleParticipantsWorkbook,
+} from "@/lib/data-quality/workbook";
+import { MAX_FILE_BYTES } from "@/lib/data-quality/format";
 import {
   buildPreviewRows,
   validateDecisions,
@@ -23,7 +27,7 @@ import {
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
 import { encryptQrToken } from "@/lib/qrcode/secure-token";
-import { loadRowsForIds } from "@/lib/supabase/all-rows";
+import { parseTablePreferences } from "@/lib/registrations/operations-table";
 import { identityFingerprint } from "@/lib/data-quality/duplicates";
 
 export const runtime = "nodejs";
@@ -52,14 +56,13 @@ function rpcError(code: string) {
 export async function GET(request: NextRequest) {
   try {
     const { db, auth, event, isAdmin } = await qualityAccess();
-    const catalog = await loadCatalog(db, event.id);
     const kind = request.nextUrl.searchParams.get("kind");
-    let rows: ExcelRow[] = [];
-    let extras: { children: string[][]; attendance: string[][] } | undefined;
+    const catalog = await loadCatalog(db, event.id, kind === "export");
+    let buffer: Buffer;
     if (kind === "export") {
       if (request.nextUrl.searchParams.get("view") === "deleted" && !isAdmin)
         throw new Error("Archivio riservato agli admin.");
-      const { people, attendance } = await filteredExportPeople(
+      const { people } = await filteredExportPeople(
         db,
         {
           ...event,
@@ -68,62 +71,17 @@ export async function GET(request: NextRequest) {
         },
         request.nextUrl.searchParams,
       );
-      const consents = (
-        await loadRowsForIds(
-          people.map((p) => p.id),
-          (ids, from, to) =>
-            db
-              .from("participant_consents")
-              .select(
-                "registration_id,privacy_version,privacy_accepted_at,data_processing_accepted",
-              )
-              .in("registration_id", ids)
-              .order("privacy_accepted_at", { ascending: false })
-              .order("id")
-              .range(from, to),
-        )
-      ).data;
-      rows = people.map((person) => {
-        const consent = consents.find(
-          (item) =>
-            item.registration_id === person.id && item.data_processing_accepted,
-        );
-        return {
-          nome: person.firstName ?? "",
-          cognome: person.lastName ?? "",
-          data_nascita: person.birthDate ?? "",
-          email: person.email ?? "",
-          telefono: person.phone ?? "",
-          paese: person.country ?? "",
-          citta: person.city ?? "",
-          gruppo: person.currentGroupId ?? "",
-          servizio: person.currentServiceId ?? "",
-          stato_servizio: person.currentServiceStatus ?? "",
-          tag: person.tagIds.join(";"),
-          stato: person.registrationStatus,
-          consenso_privacy: consent ? "si" : "",
-          versione_privacy: consent?.privacy_version ?? "",
-          data_consenso: consent?.privacy_accepted_at?.slice(0, 10) ?? "",
-        };
+      const requestedColumns = request.nextUrl.searchParams.get("columns");
+      const { columns } = parseTablePreferences({
+        columns:
+          requestedColumns === null ? undefined : requestedColumns.split(","),
       });
-      extras = {
-        children: people.flatMap((person) =>
-          person.children.map((child) => [
-            person.id,
-            person.name,
-            child.firstName,
-            child.lastName,
-            child.birthDate,
-          ]),
-        ),
-        attendance: attendance.map((choice) => [
-          choice.registration_id,
-          people.find((person) => person.id === choice.registration_id)!.name,
-          choice.day ?? "",
-          choice.day_part ?? "",
-          choice.choice ?? "",
-        ]),
-      };
+      buffer = await writeVisibleParticipantsWorkbook(
+        people,
+        catalog,
+        columns,
+        event.starts_on ?? null,
+      );
       const { error } = await createSupabaseServiceClient()
         .from("audit_logs")
         .insert({
@@ -133,9 +91,9 @@ export async function GET(request: NextRequest) {
           entity_table: "registrations",
           entity_id: event.id,
           metadata: {
-            format: "xlsx-v1",
+            format: "xlsx-visible-columns-v1",
+            columns,
             registration_count: people.length,
-            child_count: extras.children.length,
             filter_keys: [...request.nextUrl.searchParams.keys()].filter(
               (key) => key !== "kind",
             ),
@@ -143,8 +101,9 @@ export async function GET(request: NextRequest) {
         });
       if (error)
         throw new Error("Impossibile registrare l’esportazione. Riprova.");
-    } else if (kind !== "template") throw new Error("Download non valido.");
-    const buffer = await writeWorkbook(rows, catalog, extras);
+    } else if (kind === "template") {
+      buffer = await writeWorkbook([], catalog);
+    } else throw new Error("Download non valido.");
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
         ...noStore,

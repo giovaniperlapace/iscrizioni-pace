@@ -68,7 +68,7 @@ test("parseOperationsDashboardFilters normalizes invalid and long inputs", () =>
   assert.equal(filters.group, "unknown");
   assert.equal(filters.tag, "tag-pranzo");
   assert.equal(filters.service, "servizio-accoglienza");
-  assert.equal(filters.status, "submitted");
+  assert.equal(filters.status, "all");
   assert.equal(hasActiveOperationsDashboardFilters(filters), true);
 });
 
@@ -134,7 +134,7 @@ test("applyOperationsDashboardFilters searches identity separately from contacts
   );
 });
 
-test("applyOperationsDashboardFilters combines contact, group and status", () => {
+test("applyOperationsDashboardFilters combines contact and group while ignoring legacy status", () => {
   assert.deepEqual(
     applyOperationsDashboardFilters(
       participants,
@@ -266,3 +266,12 @@ function participant(
     ...overrides,
   };
 }
+
+
+test("legacy registration status never hides rows or activates a dashboard filter", () => {
+  for (const status of ["submitted", "confirmed", "cancelled", "unknown"]) {
+    const filters = parseOperationsDashboardFilters({ status });
+    assert.equal(hasActiveOperationsDashboardFilters(filters), false);
+    assert.deepEqual(applyOperationsDashboardFilters(participants, filters), participants);
+  }
+});

@@ -23,6 +23,7 @@ export type QualityPerson = Identity & {
   authUserId: string | null;
   deletedAt: string | null;
   registrationStatus: string;
+  submittedAt?: string | null;
   place: string;
   currentGroupId: string | null;
   currentGroupName: string | null;
@@ -44,6 +45,7 @@ type Registration = {
   event_id: string;
   participant_id: string;
   status: string;
+  submitted_at: string | null;
   deleted_at: string | null;
   participants: {
     first_name: string;
@@ -71,7 +73,7 @@ export async function loadQualityPeople(
       db
         .from("registrations")
         .select(
-          "id,event_id,participant_id,status,deleted_at,participants(first_name,last_name,birth_date,country_other,city_other,public_code,auth_user_id),registration_children(id,first_name,last_name,birth_date,position)",
+          "id,event_id,participant_id,status,submitted_at,deleted_at,participants(first_name,last_name,birth_date,country_other,city_other,public_code,auth_user_id),registration_children(id,first_name,last_name,birth_date,position)",
         )
         .eq("event_id", eventId)
         .order("id")
@@ -93,7 +95,9 @@ export async function loadQualityPeople(
     loadRowsForIds(ids, (chunk, from, to) =>
       db
         .from("participant_group_assignments")
-        .select("registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)")
+        .select(
+          "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)",
+        )
         .in("registration_id", chunk)
         .eq("is_current", true)
         .order("id")
@@ -161,6 +165,7 @@ export async function loadQualityPeople(
         email: contact?.email ?? null,
         phone: contact?.phone ?? null,
         registrationStatus: row.status,
+        submittedAt: row.submitted_at ?? null,
         deletedAt: row.deleted_at,
         currentGroupId: group?.group_id ?? null,
         currentGroupName: groupRelation?.name ?? null,
@@ -181,6 +186,7 @@ export async function loadQualityPeople(
 export async function loadCatalog(
   db: SupabaseClient,
   eventId: string,
+  includeInactiveServices = false,
 ): Promise<Catalog> {
   const [groups, services, tags] = await Promise.all([
     loadAllRows((from, to) =>
@@ -193,15 +199,15 @@ export async function loadCatalog(
         .order("id")
         .range(from, to),
     ),
-    loadAllRows((from, to) =>
-      db
+    loadAllRows((from, to) => {
+      const query = db
         .from("event_services")
         .select("id,label")
-        .eq("event_id", eventId)
-        .eq("is_active", true)
+        .eq("event_id", eventId);
+      return (includeInactiveServices ? query : query.eq("is_active", true))
         .order("id")
-        .range(from, to),
-    ),
+        .range(from, to);
+    }),
     loadAllRows((from, to) =>
       db
         .from("operational_tags")

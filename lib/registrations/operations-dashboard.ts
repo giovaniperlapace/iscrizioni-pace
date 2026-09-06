@@ -71,9 +71,8 @@ export function parseOperationsDashboardFilters(input: {
     group: normalizeGroupFilter(input.group),
     tag: normalizeTagFilter(input.tag),
     service: normalizeServiceFilter(input.service),
-    status: isStatusFilter(input.status)
-      ? input.status
-      : DEFAULT_FILTERS.status,
+    // Legacy status URLs must not silently filter an internal database field.
+    status: DEFAULT_FILTERS.status,
   };
 }
 
@@ -155,8 +154,7 @@ export function hasActiveOperationsDashboardFilters(
     filters.contact !== DEFAULT_FILTERS.contact ||
     filters.group !== DEFAULT_FILTERS.group ||
     filters.tag !== DEFAULT_FILTERS.tag ||
-    filters.service !== DEFAULT_FILTERS.service ||
-    filters.status !== DEFAULT_FILTERS.status
+    filters.service !== DEFAULT_FILTERS.service
   );
 }
 
@@ -164,13 +162,6 @@ function matchesOperationsDashboardFilters(
   participant: OperationsParticipantForFilter,
   filters: OperationsDashboardFilters
 ): boolean {
-  if (
-    filters.status !== "all" &&
-    participant.registrationStatus !== filters.status
-  ) {
-    return false;
-  }
-
   if (!matchesGroupFilter(participant, filters.group)) {
     return false;
   }
@@ -269,15 +260,4 @@ function normalizeServiceFilter(value: string | undefined): string {
   const normalized = (value ?? "").trim();
 
   return normalized || DEFAULT_FILTERS.service;
-}
-
-function isStatusFilter(
-  value: string | undefined
-): value is OperationsDashboardFilters["status"] {
-  return (
-    value === "all" ||
-    value === "submitted" ||
-    value === "confirmed" ||
-    value === "cancelled"
-  );
 }

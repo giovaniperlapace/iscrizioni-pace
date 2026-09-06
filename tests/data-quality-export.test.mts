@@ -100,13 +100,14 @@ test("export uses all filtered rows after pagination, including a match beyond 1
     { id: "e", title: "Fixture", starts_on: null, ends_on: null },
     new URLSearchParams("status=submitted&view=without-group"),
   );
-  assert.equal(all.people.length, 1204);
+  assert.equal(all.people.length, 1205);
   const cancelled = await filteredExportPeople(
     database(),
     { id: "e", title: "Fixture", starts_on: null, ends_on: null },
     new URLSearchParams("status=cancelled"),
   );
-  assert.equal(cancelled.people[0].id, "r1204");
+  assert.equal(cancelled.people.length, 1205);
+  assert.ok(cancelled.people.some((person) => person.id === "r1204"));
   const children = await filteredExportPeople(
     database(),
     {
@@ -122,4 +123,100 @@ test("export uses all filtered rows after pagination, including a match beyond 1
     ["r1203"],
   );
   assert.equal(children.people[0].children.length, 1);
+});
+
+test("visible-column workbook contains only chosen columns, readable values and no extra sheets", async () => {
+  const { default: ExcelJS } = await import("exceljs");
+  const { writeVisibleParticipantsWorkbook } =
+    await import("../lib/data-quality/workbook.ts");
+  const { people } = await filteredExportPeople(
+    database(),
+    {
+      id: "e",
+      title: "Fixture",
+      starts_on: "2026-10-25",
+      ends_on: "2026-10-27",
+    },
+    new URLSearchParams("contact=p1203%40example.test"),
+  );
+  const person = {
+    ...people[0],
+    name: "=FORMULA",
+    currentGroupName: "Gruppo Roma",
+    currentServiceId: "s1",
+    tagIds: ["t1"],
+    submittedAt: "2026-09-06T09:00:00Z",
+  };
+  const catalog = {
+    groups: [],
+    services: [{ id: "s1", label: "Accoglienza" }],
+    tags: [{ id: "t1", label: "Referente" }],
+  };
+  const buffer = await writeVisibleParticipantsWorkbook(
+    [person],
+    catalog,
+    ["name", "phone", "age", "group", "service", "tags", "submittedAt"],
+    "2026-10-25",
+  );
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(
+    buffer as unknown as Parameters<typeof book.xlsx.load>[0],
+  );
+  assert.deepEqual(
+    book.worksheets.map((sheet) => sheet.name),
+    ["Iscritti"],
+  );
+  const sheet = book.getWorksheet("Iscritti")!;
+  assert.deepEqual(sheet.getRow(1).values, [
+    ,
+    "Partecipante",
+    "Telefono",
+    "Età",
+    "Gruppo",
+    "Servizio",
+    "Tag",
+    "Data iscrizione",
+  ]);
+  assert.deepEqual(sheet.getRow(2).values, [
+    ,
+    "=FORMULA",
+    "—",
+    "36",
+    "Gruppo Roma",
+    "Accoglienza",
+    "Referente",
+    "6 set 2026",
+  ]);
+  assert.equal(sheet.getCell("A2").type, ExcelJS.ValueType.String);
+  assert.equal(sheet.columnCount, 7);
+  assert.equal(
+    Object.values(sheet.getRow(2).values).includes(person.email!),
+    false,
+  );
+  assert.equal(
+    Object.values(sheet.getRow(2).values).includes(person.birthDate!),
+    false,
+  );
+});
+
+test("empty visible-column export keeps only its selected headers", async () => {
+  const { default: ExcelJS } = await import("exceljs");
+  const { writeVisibleParticipantsWorkbook } =
+    await import("../lib/data-quality/workbook.ts");
+  const buffer = await writeVisibleParticipantsWorkbook(
+    [],
+    { groups: [], services: [], tags: [] },
+    ["name", "city"],
+    null,
+  );
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(
+    buffer as unknown as Parameters<typeof book.xlsx.load>[0],
+  );
+  assert.equal(book.worksheets[0].rowCount, 1);
+  assert.deepEqual(book.worksheets[0].getRow(1).values, [
+    ,
+    "Partecipante",
+    "Città",
+  ]);
 });

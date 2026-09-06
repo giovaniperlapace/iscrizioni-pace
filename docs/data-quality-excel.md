@@ -1,8 +1,8 @@
 # Qualità dati, duplicati e scambio Excel — blocco 6
 
-La tabella condivisa admin/manager offre `Esporta Excel` e `Qualità dati e
-importazione`. Console: `/dashboard/participants/data-quality`; istruzioni
-consultabili prima del caricamento: sottopagina `/instructions`.
+La tabella condivisa admin/manager offre `Esporta iscritti`, limitato ai filtri
+e alle colonne visibili, e `Importa iscritti da Excel` in modale con istruzioni
+e modello. Il controllo duplicati si trova sotto la tabella iscritti.
 
 ## Formato canonico
 
@@ -117,14 +117,21 @@ campi già avviato, senza scartare i dati dipendenti.
 
 `GET .../api?kind=export` rilegge tutti i risultati con client di sessione e
 RLS, paginazione da 500 e relazioni a blocchi da 300. Usa gli stessi helper
-filtri della tabella: ricerca, contatti, gruppo, servizio, tag, stato, coda
+filtri della tabella: ricerca, contatti, gruppo, servizio, tag, coda
 Senza gruppo e `stat`. La selezione statistica include i minori tramite
 l'iscrizione familiare. L'archivio è riservato agli admin.
+Lo stato tecnico non è un filtro operativo: eventuali vecchi parametri
+`status` sono ignorati sia nella tabella sia nell'export.
 
-I fogli aggiuntivi `Minori` e `Presenze` sono di consultazione, con ID
-iscrizione per collegamento. Non vengono importati. L'export può superare
-500 righe; per reimportarlo dividerlo e completare eventuali consensi mancanti.
-Il campo servizio mantiene anche lo stato, incluse preferenze/proposte.
+L'export contiene un solo foglio `Iscritti` con le colonne visibili della
+tabella, nello stesso ordine: il client invia sempre `columns`, anche se la
+scelta proviene dal browser o dalla vista Senza gruppo. Il server valida i
+nomi tramite `parseTablePreferences`; senza parametro usa le colonne
+predefinite. Partecipante resta obbligatorio. Gruppi, servizi (anche non più
+attivi) e tag usano nomi leggibili; Età è calcolata all'inizio dell'evento.
+Nessun foglio aggiuntivo con dati non selezionati. L'audit registra le colonne
+esportate, senza i valori. Questo file è destinato alla consultazione;
+per importare usare il modello canonico scaricabile dalla modale.
 
 Import e decisioni: admin/manager dell'evento. Viewer: consultazione, template
 ed export. RPC con attore eseguibili esclusivamente da `service_role`, con

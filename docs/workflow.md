@@ -18,15 +18,38 @@ Se la working tree e' sporca, leggere il diff prima di modificare file. Le modif
 
 ## Branch
 
-Il lavoro ordinario avviene su `main`:
+Dal 2026-09-05, salvo indicazione esplicita dell'utente, tutte le modifiche
+avvengono su `main` nel checkout locale ordinario. Prima di modificare file
+eseguire `git fetch origin`, verificare
+lo stato locale e l'allineamento con `origin/main`, quindi eseguire
+`git pull --ff-only` su `main` quando la working tree e' pulita.
+
+Quando il lavoro e' destinato a `main` e il checkout e' su un altro branch,
+controllare modifiche locali e commit
+non integrati prima di passare a `main`, senza perdere, trascinare o integrare
+automaticamente lavoro preesistente:
 
 ```bash
 git switch main
 ```
 
-Le prove si fanno in locale. Quando tutto funziona e l'utente chiede commit/push, fare commit e push direttamente su `main`.
+Le prove si fanno in locale. Quando tutto funziona e l'utente chiede
+commit/push, fare commit e push direttamente su `main`, salvo il lavoro
+espressamente destinato al branch panel.
 
-Non creare branch staging/produzione o branch milestone salvo richiesta esplicita.
+L'unica eccezione stabile e' `codex/panel-p0-p10`: questo branch DEVE restare
+disponibile per lo staging dei panel e non va eliminato automaticamente,
+neppure dopo un'integrazione. Usarlo per le modifiche solo quando l'utente
+indica espressamente lo staging/branch panel; senza indicazioni si lavora su
+`main`, anche per modifiche che riguardano i panel. Quando si lavora sul branch
+panel, riallinearlo al proprio upstream e integrare periodicamente
+`origin/main` con un merge, anche prima delle verifiche finali e
+dell'integrazione in `main`; non fare rebase del branch condiviso.
+
+Non creare autonomamente branch, worktree o pull request, anche per modifiche
+lunghe, rischiose, parallele o che includono migration e permessi/RLS. Solo una
+nuova richiesta esplicita dell'utente puo' cambiare questa scelta. Eventuali
+branch e worktree preesistenti non vanno eliminati o integrati automaticamente.
 
 ## Qualità
 

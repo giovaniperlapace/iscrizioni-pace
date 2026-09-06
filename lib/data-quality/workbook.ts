@@ -1,5 +1,12 @@
 import ExcelJS from "exceljs";
 import yauzl from "yauzl";
+import { calculateAgeAtDate } from "../groups/matching.ts";
+import {
+  PARTICIPANT_COLUMNS,
+  parseTablePreferences,
+  type ParticipantColumn,
+} from "../registrations/operations-table.ts";
+import type { QualityPerson } from "./data.server.ts";
 import {
   COLUMNS,
   FORMAT_INSTRUCTIONS,
@@ -182,6 +189,70 @@ function addSheet(
   };
   return sheet;
 }
+export async function writeVisibleParticipantsWorkbook(
+  people: QualityPerson[],
+  catalog: Catalog,
+  selectedColumns: ParticipantColumn[],
+  eventStartsOn: string | null,
+): Promise<Buffer> {
+  const { columns } = parseTablePreferences({ columns: selectedColumns });
+  const services = new Map(
+    catalog.services.map((item) => [item.id, item.label]),
+  );
+  const tags = new Map(catalog.tags.map((item) => [item.id, item.label]));
+  const dateFormat = new Intl.DateTimeFormat("it", {
+    dateStyle: "medium",
+    timeZone: "Europe/Rome",
+  });
+  const rows = people.map((person) =>
+    columns.map((column) => {
+      switch (column) {
+        case "name":
+          return person.name;
+        case "email":
+          return person.email ?? "—";
+        case "phone":
+          return person.phone ?? "—";
+        case "country":
+          return person.country ?? "—";
+        case "city":
+          return person.city ?? "—";
+        case "age":
+          return String(
+            calculateAgeAtDate(person.birthDate, eventStartsOn) ?? "—",
+          );
+        case "group":
+          return person.currentGroupName ?? "Senza gruppo";
+        case "service":
+          return (
+            services.get(person.currentServiceId ?? "") ?? "Senza servizio"
+          );
+        case "tags":
+          return (
+            person.tagIds
+              .map((id) => tags.get(id))
+              .filter(Boolean)
+              .join("; ") || "Senza tag"
+          );
+        case "submittedAt":
+          return person.submittedAt
+            ? dateFormat.format(new Date(person.submittedAt))
+            : "—";
+      }
+    }),
+  );
+  const book = new ExcelJS.Workbook();
+  book.creator = "Iscrizioni Pace";
+  book.subject = "Esportazione colonne visibili";
+  addSheet(
+    book,
+    "Iscritti",
+    columns.map((column) => PARTICIPANT_COLUMNS[column]),
+    rows,
+  );
+  return Buffer.from(await book.xlsx.writeBuffer());
+}
+
 export async function writeWorkbook(
   rows: ExcelRow[],
   catalog: Catalog,
