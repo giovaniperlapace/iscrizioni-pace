@@ -1,0 +1,246 @@
+import type { SupportedLocale } from "../i18n/config.ts";
+import type { ParticipantColumn } from "../registrations/operations-table.ts";
+type Copy = {
+  columns: Record<ParticipantColumn, string>;
+  visibleColumns: string;
+  export: string;
+  exportHelp: string;
+  empty: string;
+  error: string;
+  sheet: string;
+  groupFallback: string;
+  participantFallback: string;
+  notProvided: string;
+};
+function copy(
+  labels: string[],
+  visibleColumns: string,
+  download: string,
+  exportHelp: string,
+  empty: string,
+  error: string,
+  sheet: string,
+): Copy {
+  const [
+    name,
+    email,
+    phone,
+    country,
+    city,
+    age,
+    group,
+    service,
+    tags,
+    submittedAt,
+  ] = labels;
+  return {
+    columns: {
+      name,
+      email,
+      phone,
+      country,
+      city,
+      age,
+      group,
+      service,
+      tags,
+      submittedAt,
+    },
+    visibleColumns,
+    export: download,
+    exportHelp,
+    empty,
+    error,
+    sheet,
+    groupFallback: group,
+    participantFallback: name,
+    notProvided: "—",
+  };
+}
+export const LEADER_TABLE_COPY: Record<SupportedLocale, Copy> = {
+  it: copy(
+    [
+      "Partecipante",
+      "Email",
+      "Telefono",
+      "Paese",
+      "Città",
+      "Età",
+      "Gruppo",
+      "Servizio",
+      "Tag",
+      "Data iscrizione",
+    ],
+    "Colonne visibili",
+    "Esporta iscritti",
+    "Scarica in Excel tutti i partecipanti dei tuoi gruppi che corrispondono ai filtri, con le colonne e l’ordine visualizzati.",
+    "Nessun partecipante corrisponde ai filtri.",
+    "Esportazione non riuscita. Riprova.",
+    "Iscritti",
+  ),
+  en: copy(
+    [
+      "Participant",
+      "Email",
+      "Phone",
+      "Country",
+      "City",
+      "Age",
+      "Group",
+      "Service",
+      "Tags",
+      "Registration date",
+    ],
+    "Visible columns",
+    "Export participants",
+    "Download all participants in your groups matching the filters as an Excel file, with the displayed columns and order.",
+    "No participants match the filters.",
+    "Export failed. Please try again.",
+    "Participants",
+  ),
+  fr: copy(
+    [
+      "Participant",
+      "E-mail",
+      "Téléphone",
+      "Pays",
+      "Ville",
+      "Âge",
+      "Groupe",
+      "Service",
+      "Étiquettes",
+      "Date d’inscription",
+    ],
+    "Colonnes visibles",
+    "Exporter les participants",
+    "Téléchargez en Excel tous les participants de vos groupes correspondant aux filtres, avec les colonnes et l’ordre affichés.",
+    "Aucun participant ne correspond aux filtres.",
+    "Échec de l’exportation. Réessayez.",
+    "Participants",
+  ),
+  de: copy(
+    [
+      "Teilnehmer",
+      "E-Mail",
+      "Telefon",
+      "Land",
+      "Stadt",
+      "Alter",
+      "Gruppe",
+      "Dienst",
+      "Tags",
+      "Anmeldedatum",
+    ],
+    "Sichtbare Spalten",
+    "Teilnehmer exportieren",
+    "Laden Sie alle zu den Filtern passenden Teilnehmer Ihrer Gruppen als Excel-Datei mit den angezeigten Spalten und der angezeigten Reihenfolge herunter.",
+    "Keine Teilnehmer entsprechen den Filtern.",
+    "Export fehlgeschlagen. Bitte erneut versuchen.",
+    "Teilnehmer",
+  ),
+  es: copy(
+    [
+      "Participante",
+      "Correo electrónico",
+      "Teléfono",
+      "País",
+      "Ciudad",
+      "Edad",
+      "Grupo",
+      "Servicio",
+      "Etiquetas",
+      "Fecha de inscripción",
+    ],
+    "Columnas visibles",
+    "Exportar participantes",
+    "Descarga en Excel todos los participantes de tus grupos que coinciden con los filtros, con las columnas y el orden mostrados.",
+    "Ningún participante coincide con los filtros.",
+    "No se pudo exportar. Inténtalo de nuevo.",
+    "Participantes",
+  ),
+  nl: copy(
+    [
+      "Deelnemer",
+      "E-mail",
+      "Telefoon",
+      "Land",
+      "Stad",
+      "Leeftijd",
+      "Groep",
+      "Dienst",
+      "Tags",
+      "Inschrijfdatum",
+    ],
+    "Zichtbare kolommen",
+    "Deelnemers exporteren",
+    "Download alle deelnemers uit je groepen die aan de filters voldoen als Excel-bestand, met de getoonde kolommen en volgorde.",
+    "Geen deelnemers voldoen aan de filters.",
+    "Exporteren mislukt. Probeer het opnieuw.",
+    "Deelnemers",
+  ),
+  uk: copy(
+    [
+      "Учасник",
+      "Електронна пошта",
+      "Телефон",
+      "Країна",
+      "Місто",
+      "Вік",
+      "Група",
+      "Служіння",
+      "Теги",
+      "Дата реєстрації",
+    ],
+    "Видимі стовпці",
+    "Експортувати учасників",
+    "Завантажте в Excel всіх учасників ваших груп, які відповідають фільтрам, з видимими стовпцями та поточним порядком.",
+    "Немає учасників, які відповідають фільтрам.",
+    "Не вдалося експортувати. Спробуйте ще раз.",
+    "Учасники",
+  ),
+};
+
+export const LEADER_SERVICE_STATUS_COPY = {
+  it: {
+    assigned: "Assegnato",
+    preference_pending: "Preferenza da approvare",
+    proposal_pending: "Proposta da confermare",
+    declined: "Rifiutato",
+  },
+  en: {
+    assigned: "Assigned",
+    preference_pending: "Preference awaiting approval",
+    proposal_pending: "Proposal awaiting confirmation",
+    declined: "Declined",
+  },
+  fr: {
+    assigned: "Attribué",
+    preference_pending: "Préférence à approuver",
+    proposal_pending: "Proposition à confirmer",
+    declined: "Refusé",
+  },
+  de: {
+    assigned: "Zugewiesen",
+    preference_pending: "Wunsch wartet auf Genehmigung",
+    proposal_pending: "Vorschlag wartet auf Bestätigung",
+    declined: "Abgelehnt",
+  },
+  es: {
+    assigned: "Asignado",
+    preference_pending: "Preferencia pendiente de aprobación",
+    proposal_pending: "Propuesta pendiente de confirmación",
+    declined: "Rechazado",
+  },
+  nl: {
+    assigned: "Toegewezen",
+    preference_pending: "Voorkeur wacht op goedkeuring",
+    proposal_pending: "Voorstel wacht op bevestiging",
+    declined: "Afgewezen",
+  },
+  uk: {
+    assigned: "Призначено",
+    preference_pending: "Побажання очікує схвалення",
+    proposal_pending: "Пропозиція очікує підтвердження",
+    declined: "Відхилено",
+  },
+} satisfies Record<SupportedLocale, Record<string, string>>;

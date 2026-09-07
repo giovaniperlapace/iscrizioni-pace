@@ -241,15 +241,14 @@ export async function writeVisibleParticipantsWorkbook(
       }
     }),
   );
+  return writeTableWorkbook("Iscritti", columns.map((column) => PARTICIPANT_COLUMNS[column]), rows);
+}
+
+export async function writeTableWorkbook(name: string, headers: string[], rows: string[][]): Promise<Buffer> {
   const book = new ExcelJS.Workbook();
   book.creator = "Iscrizioni Pace";
   book.subject = "Esportazione colonne visibili";
-  addSheet(
-    book,
-    "Iscritti",
-    columns.map((column) => PARTICIPANT_COLUMNS[column]),
-    rows,
-  );
+  addSheet(book, name, headers, rows);
   return Buffer.from(await book.xlsx.writeBuffer());
 }
 

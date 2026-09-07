@@ -17,8 +17,12 @@ import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
-import { renderQrDataUrl } from "@/lib/qrcode/render";
-import { decryptQrToken } from "@/lib/qrcode/secure-token";
+import {
+  loadRegistrationQr,
+  registrationQrPreview,
+  registrationQrState,
+  type RegistrationQrRecord as QrStatusRow,
+} from "@/lib/qrcode/registration-qr";
 import { canParticipantEditRegistration } from "@/lib/registrations/participant-dashboard";
 import {
   ATTENDANCE_PARTS,
@@ -119,12 +123,6 @@ type QuestionnaireRow = {
       groupName?: string | null;
     };
   } | null;
-};
-
-type QrStatusRow = {
-  status: string;
-  expires_at: string | null;
-  token_encrypted: string | null;
 };
 
 type ParticipantServiceRow = {
@@ -1200,7 +1198,7 @@ export default async function PartecipanteDashboardPage({
         ) : (
           <>
             <section className="relative rounded-lg border border-[var(--peace-border)] bg-white p-5 pt-10 sm:p-6">
-              <QrStatusIndicator active={qrStatus?.status === "active"} copy={copy} />
+              <QrStatusIndicator active={Boolean(qrDataUrl)} copy={copy} />
               <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
                 <div className="mx-auto grid w-full max-w-72 gap-3 lg:mx-0">
                   <QrPreview
@@ -1600,33 +1598,14 @@ export default async function PartecipanteDashboardPage({
 async function getQrStatus(registrationId: string): Promise<{ data: QrStatusRow | null }> {
   try {
     const serviceSupabase = createSupabaseServiceClient();
-    const { data } = await serviceSupabase
-      .from("qr_tokens")
-      .select("status,expires_at,token_encrypted")
-      .eq("registration_id", registrationId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return { data: (data as QrStatusRow | null) ?? null };
+    return { data: await loadRegistrationQr(serviceSupabase, registrationId) };
   } catch {
     return { data: null };
   }
 }
 
 async function getQrDataUrl(qrStatus: QrStatusRow | null): Promise<string | null> {
-  if (!qrStatus || qrStatus.status !== "active" || (qrStatus.expires_at && new Date(qrStatus.expires_at).getTime() <= Date.now())) return null;
-  const token = decryptQrToken(qrStatus.token_encrypted);
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    return await renderQrDataUrl(token);
-  } catch {
-    return null;
-  }
+  return (await registrationQrPreview(qrStatus)).dataUrl;
 }
 
 function QrPreview({
@@ -2360,17 +2339,18 @@ function qrStatusLabel(
   locale: SupportedLocale,
   copy: ParticipantDashboardCopy
 ): string {
-  if (qrStatus.status === "active") {
+  const state = registrationQrState(qrStatus);
+  if (state === "active") {
     return qrStatus.expires_at
       ? copy.activeUntil(formatDate(qrStatus.expires_at, locale, copy))
       : copy.active;
   }
 
-  if (qrStatus.status === "revoked") {
+  if (state === "revoked") {
     return copy.revoked;
   }
 
-  if (qrStatus.status === "expired") {
+  if (state === "expired") {
     return copy.expired;
   }
 

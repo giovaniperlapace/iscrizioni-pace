@@ -4,6 +4,57 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## QR nella scheda capogruppo — 2026-09-07
+
+- La scheda selezionata mostra il QR reale e `Scarica immagine`, con testi in
+  sette lingue. Il PNG contiene lo stesso token opaco dell'iscrizione personale,
+  valido anche per i figli associati; non è il QR dell'operatore.
+- `leader-qr.server.ts` legge il QR solo dopo autenticazione, selezione nella
+  lista autorizzata e nuova verifica di membership/scope nell'evento corrente,
+  assegnazione corrente e iscrizione non eliminata. La query QR usa l'ID
+  iscrizione ricavato dal database, mai un ID di iscrizione inviato dal browser.
+- `lib/qrcode/registration-qr.ts` condivide lettura e rendering con l'area
+  personale: usa l'ultimo token, senza ripiegare su precedenti token attivi.
+  Revoca (anche `revoked_at`), scadenza, token mancante o non decifrabile
+  impediscono immagine e download. Nessuna generazione/rotazione/scrittura QR.
+  Al browser arriva il PNG, non il token in chiaro o cifrato come dato separato.
+- Stato e permessi sono verificati al caricamento della scheda. Il download
+  salva lo stesso PNG mostrato, come nell'area personale. L'indicatore dell'area
+  personale considera anche disponibilità e scadenza effettive.
+- Test: `tests/leader-qr.test.mts` su scope negativo, token selezionato, revoche
+  e scadenze; `tests/browser/leader-qr.mjs` prova UI e download PNG reale su
+  fixture sintetica desktop/mobile. Nessun collaudo modifica partecipanti reali.
+
+## Tabella partecipanti capogruppo — 2026-09-07
+
+- `Partecipanti del gruppo` apre la scheda dal nome, senza colonna Azioni o
+  pulsanti Dettagli. `LeaderParticipantsTable` riusa il contratto colonne e
+  preferenze manager, con intestazioni ordinabili e selettore sovrapposto.
+  Nome sempre visibile; email e telefono sono colonne indipendenti. Paese,
+  città, età all'inizio evento e data iscrizione sono facoltative.
+- Preferenze browser per operatore in `iscrizioni:leader-participants:v1:<id>`,
+  separate dalle preferenze manager; `columns`, `sort`, `direction` nell'URL
+  prevalgono. Link scheda, chiusura e salvataggi identità/contatti/note/tag/
+  servizio/rifiuto conservano filtri e preferenze con `leaderReturnPath`.
+- `/dashboard/capogruppo/export` esporta un solo foglio Excel, tutte le righe
+  filtrate, solo le colonne visibili nello stesso ordine e ordinamento.
+  UI ed export condividono filtri, ordinamento, formattazione e testi in sette
+  lingue; la scrittura di celle stringa riusa il writer manager contro formule.
+- `leader-data.server.ts` condivide tra pagina ed export il caricamento
+  paginato di membership, gruppi e assegnazioni, sostituendo il limite di 100.
+  Il server verifica sessione/ruolo, ricostruisce lo scope dall'utente corrente
+  e dalle membership capogruppo nell'evento corrente, includendo i discendenti
+  attivi. Nessun parametro del client può scegliere utente o evento. Anche
+  admin nell'area capogruppo deve avere membership per esportare dati.
+  Esclude iscrizioni eliminate e assegnazioni non correnti; servizi e tag
+  sono limitati all'evento/iscrizione pertinente. Errori di lettura interrompono
+  il caricamento anziché produrre export parziali. Nessuna nuova capacità
+  operativa manager, modifica RLS o migration.
+- Regressioni: `tests/leader-participants-table.test.mts` (scope, oltre 1.000
+  righe, filtri, export e ritorni) e `tests/browser/leader-participants.mjs`
+  (fixture locale, colonne, ordinamento, download, desktop/mobile). Queste
+  prove non sostituiscono un collaudo autenticato su Supabase con capogruppo reale.
+
 ## Qualità dati, duplicati e scambio Excel — blocco 6, 2026-09-05
 
 - Importazione condivisa dalla tabella iscritti; istruzioni consultabili

@@ -1,5 +1,6 @@
 "use server";
 
+import { leaderReturnPath } from "@/lib/groups/leader-table";
 import { operationsReturnPath } from "@/lib/registrations/operations-table";
 
 import { formFailureFromRedirect, formFailure, issueFromMessage, validateContactFields } from "@/lib/forms/result";
@@ -876,7 +877,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     });
 
     revalidatePath("/dashboard/capogruppo");
-    redirect("/dashboard/capogruppo?saved=1");
+    redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId: null, saved: "1" }));
   }
 
   if (intent === "reject") {
@@ -893,7 +894,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     revalidatePath("/dashboard/capogruppo");
     revalidatePath("/dashboard/manager");
     revalidatePath("/dashboard/admin");
-    redirect("/dashboard/capogruppo?saved=1");
+    redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId: null, saved: "1" }));
   }
 
   return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
@@ -1005,7 +1006,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
   });
 
   revalidatePath("/dashboard/capogruppo");
-  redirect(`/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignmentId)}&saved=contact`);
+  redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId, saved: "contact" }));
 }
 
 export async function createOperationalTag(formData: FormData) {
@@ -1199,11 +1200,7 @@ export async function updateParticipantOperationalTags(formData: FormData) {
   revalidatePath("/dashboard/capogruppo");
 
   if (isCapogruppo) {
-    redirect(
-      assignmentId
-        ? `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignmentId)}&saved=tags`
-        : "/dashboard/capogruppo?saved=tags"
-    );
+    redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId, saved: "tags" }));
   }
 
   const operationsRedirectParams = new URLSearchParams({
@@ -1404,7 +1401,7 @@ export async function updateParticipantEventService(formData: FormData) {
     revalidatePath("/dashboard/manager");
     revalidatePath("/dashboard/admin");
     revalidatePath("/dashboard/capogruppo");
-    redirect(getParticipantServiceSuccessPath(sourceDashboard, nav, registrationId, assignmentId));
+    redirect(isCapogruppo ? leaderReturnPath(formData.get("returnTo"), { assignmentId, saved: "service" }) : getParticipantServiceSuccessPath(sourceDashboard, nav, registrationId, assignmentId));
   }
 
   const [{ data: service }, { data: registration }] = await Promise.all([
@@ -1479,7 +1476,7 @@ export async function updateParticipantEventService(formData: FormData) {
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/capogruppo");
-  redirect(getParticipantServiceSuccessPath(sourceDashboard, nav, registrationId, assignmentId));
+  redirect(isCapogruppo ? leaderReturnPath(formData.get("returnTo"), { assignmentId, saved: "service" }) : getParticipantServiceSuccessPath(sourceDashboard, nav, registrationId, assignmentId));
 }
 
 async function canGroupLeaderTagParticipant(
