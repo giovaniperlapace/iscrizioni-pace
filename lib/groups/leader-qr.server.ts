@@ -25,7 +25,7 @@ export async function loadLeaderAssignmentQr(
     const { data, error } = await db
       .from("participant_group_assignments")
       .select(
-        "group_id,registration_id,registrations!inner(id,event_id,deleted_at)",
+        "group_id,registration_id,registrations!inner(id,event_id,deleted_at,participants!inner(first_name,last_name,public_code))",
       )
       .eq("id", assignmentId)
       .eq("is_current", true)
@@ -34,8 +34,12 @@ export async function loadLeaderAssignmentQr(
       .maybeSingle();
     if (error) throw new Error("Assignment read failed");
     if (!data || !scopedGroupIds.has(data.group_id)) return unavailable;
+    const registration = Array.isArray(data.registrations) ? data.registrations[0] : data.registrations;
+    const participant = Array.isArray(registration?.participants) ? registration.participants[0] : registration?.participants;
+    if (!participant) return unavailable;
     return await registrationQrPreview(
       await loadRegistrationQr(db, data.registration_id),
+      participant,
     );
   } catch {
     console.error("[capogruppo:qr] QR unavailable");

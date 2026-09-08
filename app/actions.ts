@@ -1383,19 +1383,11 @@ export async function updateParticipantEventService(formData: FormData) {
     .eq("participant_id", participantId).eq("event_id", eventId).is("deleted_at", null).maybeSingle();
   if (activeRegistrationError || !activeRegistration) return formFailure([{ field: null, code: "failed" }]);
 
-  const canUpdate = isCapogruppo
-    ? await canGroupLeaderTagParticipant(
-        serviceSupabase,
-        auth.user.id,
-        participantId,
-        eventId,
-        assignmentId
-      )
-    : auth.eventRoles.some(
-        (role) =>
-          role.role === "admin" ||
-          (role.role === "manager" && role.eventId === eventId)
-      );
+  // Dashboard input is navigation only; membership never grants service writes.
+  const canUpdate = !isCapogruppo && auth.eventRoles.some(
+    (role) => role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
 
   if (!canUpdate) {
     return formFailureFromRedirect(`${dashboardPath}&${errorParam}=forbidden`);
@@ -1449,7 +1441,7 @@ export async function updateParticipantEventService(formData: FormData) {
   }
 
   const now = new Date().toISOString();
-  const source = isCapogruppo ? "capogruppo" : "manager";
+  const source = "manager";
   const payload = {
     event_id: eventId,
     registration_id: registrationId,

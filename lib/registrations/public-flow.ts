@@ -28,7 +28,7 @@ import {
   getOperationalRegistrationSuggestion,
   syncOperationalIdentityByEmail,
 } from "@/lib/operational-users/identity";
-import { renderQrPngBuffer } from "@/lib/qrcode/render";
+import { renderParticipantQrPng } from "@/lib/qrcode/participant-card";
 import { encryptQrToken } from "@/lib/qrcode/secure-token";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
 import { buildAppMagicLink } from "@/lib/registrations/magic-link";
@@ -602,7 +602,10 @@ export async function createPublicRegistration(
 
   try {
     const qrCodeContentId = `registration-qr-${registrationId}@iscrizioni-pace`;
-    const qrCodePng = await renderQrPngBuffer(qrToken.token);
+    const qrCodePng = await renderParticipantQrPng(qrToken.token, {
+      first_name: input.firstName, last_name: input.lastName,
+      public_code: createdParticipant.public_code,
+    });
 
     await sendTransactionalEmail({
       to: input.email,

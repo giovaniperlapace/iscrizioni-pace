@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  outputFileTracingIncludes: {
+    "/*": ["./lib/qrcode/fonts/NotoSans-Regular.ttf"],
+  },
 };
 
 export default nextConfig;

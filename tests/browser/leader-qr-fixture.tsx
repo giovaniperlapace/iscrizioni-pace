@@ -1,5 +1,5 @@
 import { LeaderParticipantQr } from "@/app/dashboard/capogruppo/participant-qr";
-import { renderQrDataUrl } from "@/lib/qrcode/render";
+import { renderParticipantQrDataUrl } from "@/lib/qrcode/participant-card";
 
 export default async function Fixture({
   searchParams,
@@ -24,8 +24,9 @@ export default async function Fixture({
               state: qrState,
               dataUrl:
                 qrState === "active"
-                  ? await renderQrDataUrl(
+                  ? await renderParticipantQrDataUrl(
                       "synthetic-selected-participant-opaque-token",
+                      { first_name: "Anna", last_name: "Bianchi", public_code: "FIXA" },
                     )
                   : null,
               expiresAt: qrState === "active" ? "2026-10-28T00:00:00Z" : null,

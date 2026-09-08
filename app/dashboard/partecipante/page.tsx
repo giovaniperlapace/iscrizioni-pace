@@ -1085,7 +1085,7 @@ export default async function PartecipanteDashboardPage({
   const participantService = participantServiceResult.data as ParticipantServiceRow | null;
   const participantServiceLabel =
     relatedOne(participantService?.event_services ?? null)?.label ?? null;
-  const qrDataUrl = await getQrDataUrl(qrStatus);
+  const qrDataUrl = participant ? (await registrationQrPreview(qrStatus, participant)).dataUrl : null;
   const editable =
     selectedRegistration &&
     canParticipantEditRegistration({
@@ -1604,10 +1604,6 @@ async function getQrStatus(registrationId: string): Promise<{ data: QrStatusRow 
   }
 }
 
-async function getQrDataUrl(qrStatus: QrStatusRow | null): Promise<string | null> {
-  return (await registrationQrPreview(qrStatus)).dataUrl;
-}
-
 function QrPreview({
   participantCode,
   qrDataUrl,
@@ -1626,7 +1622,7 @@ function QrPreview({
         <img
           src={qrDataUrl}
           alt={copy.personalQrAlt}
-          className="aspect-square rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
+          className="h-auto w-full rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
         />
       ) : (
         <div

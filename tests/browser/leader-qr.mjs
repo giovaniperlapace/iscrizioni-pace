@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import assert from "node:assert/strict";
-import { renderQrPngBuffer } from "../../lib/qrcode/render.ts";
+import { renderParticipantQrPng } from "../../lib/qrcode/participant-card.ts";
 const base = process.argv[2] ?? "http://localhost:3116";
 if (!/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(base))
   throw new Error("Local server required");
@@ -40,7 +40,7 @@ try {
   ab("download", "a[download]", "/tmp/pace-leader-qr-download.png");
   assert.deepEqual(
     readFileSync("/tmp/pace-leader-qr-download.png"),
-    await renderQrPngBuffer("synthetic-selected-participant-opaque-token"),
+    await renderParticipantQrPng("synthetic-selected-participant-opaque-token", { first_name: "Anna", last_name: "Bianchi", public_code: "FIXA" }),
   );
   console.log(
     "PASS actual downloaded PNG matches the selected participant token",

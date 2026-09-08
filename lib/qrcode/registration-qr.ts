@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { decryptQrToken } from "./secure-token.ts";
-import { renderQrDataUrl } from "./render.ts";
+import { renderParticipantQrDataUrl, type QrParticipantIdentity } from "./participant-card.ts";
 
 export type RegistrationQrRecord = {
   status: string;
@@ -49,6 +49,7 @@ export async function loadRegistrationQr(
 }
 export async function registrationQrPreview(
   record: RegistrationQrRecord | null,
+  participant: QrParticipantIdentity,
   now = Date.now(),
 ): Promise<RegistrationQrPreview> {
   const state = registrationQrState(record, now);
@@ -57,7 +58,7 @@ export async function registrationQrPreview(
   const token = decryptQrToken(record?.token_encrypted);
   if (!token) return { state: "unavailable", dataUrl: null, expiresAt };
   try {
-    return { state, dataUrl: await renderQrDataUrl(token), expiresAt };
+    return { state, dataUrl: await renderParticipantQrDataUrl(token, participant), expiresAt };
   } catch {
     return { state: "unavailable", dataUrl: null, expiresAt };
   }

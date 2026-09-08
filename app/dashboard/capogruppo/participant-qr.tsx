@@ -128,7 +128,7 @@ export function LeaderParticipantQr({
             alt={`${copy.title}: ${participantName}`}
             width={192}
             height={192}
-            className="mx-auto aspect-square w-full max-w-48 rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
+            className="mx-auto h-auto w-full max-w-48 rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
           />
         ) : (
           <div

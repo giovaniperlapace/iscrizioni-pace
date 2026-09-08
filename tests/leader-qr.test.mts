@@ -3,7 +3,8 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { encryptQrToken } from "../lib/qrcode/secure-token.ts";
-import { renderQrDataUrl } from "../lib/qrcode/render.ts";
+import { renderParticipantQrDataUrl } from "../lib/qrcode/participant-card.ts";
+const identity = { first_name: "Anna", last_name: "Rossi", public_code: "FIXA" };
 import { registrationQrPreview } from "../lib/qrcode/registration-qr.ts";
 import { loadLeaderAssignmentQr } from "../lib/groups/leader-qr.server.ts";
 
@@ -54,6 +55,7 @@ function dbFixture(overrides: Record<string, unknown[]> = {}) {
           id: "selected-registration",
           event_id: "current",
           deleted_at: null,
+          participants: identity,
         },
       },
     ],
@@ -156,8 +158,8 @@ test("selected participant QR is the exact existing token PNG, never the operato
       "selected",
     );
     assert.equal(qr.state, "active");
-    assert.equal(qr.dataUrl, await renderQrDataUrl(fixture.tokens.selected));
-    assert.notEqual(qr.dataUrl, await renderQrDataUrl(fixture.tokens.operator));
+    assert.equal(qr.dataUrl, await renderParticipantQrDataUrl(fixture.tokens.selected, identity));
+    assert.notEqual(qr.dataUrl, await renderParticipantQrDataUrl(fixture.tokens.operator, identity));
     assert.equal(JSON.stringify(qr).includes(fixture.tokens.selected), false);
     assert.deepEqual(Object.keys(qr).sort(), ["dataUrl", "expiresAt", "state"]);
     assert.deepEqual(
@@ -246,6 +248,7 @@ test("expiry, revocation timestamp, missing and undecipherable tokens never gene
     ] as const) {
       const qr = await registrationQrPreview(
         record,
+        identity,
         Date.parse("2026-09-07T10:00:00Z"),
       );
       assert.equal(qr.state, expected);
@@ -255,6 +258,7 @@ test("expiry, revocation timestamp, missing and undecipherable tokens never gene
       (
         await registrationQrPreview(
           { ...base, expires_at: "2026-10-28T00:00:00Z" },
+          identity,
           Date.parse("2026-09-07"),
         )
       ).state,
@@ -278,6 +282,6 @@ test("page only requests QR after auth and selection in the authorized assignmen
   assert.match(page, /auth.user.id, currentEventId, selectedAssignment.id/);
   assert.match(
     readFileSync("app/dashboard/partecipante/page.tsx", "utf8"),
-    /registrationQrPreview\(qrStatus\)/,
+    /registrationQrPreview\(qrStatus, participant\)/,
   );
 });

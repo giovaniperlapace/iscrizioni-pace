@@ -4,6 +4,43 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Servizio in sola lettura per capogruppo — 2026-09-08
+
+- La scheda capogruppo mostra servizio e stato in sola lettura. Rimossi il
+  modulo servizio/stato/nota operativa e il caricamento del catalogo opzioni.
+  Note del capogruppo, tag e altri comandi restano separati.
+- `updateParticipantEventService` rifiuta richieste dalla dashboard capogruppo
+  e verifica sempre ruoli effettivi admin o manager nell'evento; manipolare
+  `sourceDashboard` non abilita la scrittura a un semplice capogruppo.
+- Blocco dedicato permessi servizio: migration revisionabile
+  `20260908180000_leader_service_read_only.sql`, testata localmente e applicata
+  in produzione il 2026-09-08 prima del push. Registrazione e policy verificate;
+  conteggio/hash di `participant_event_services` invariati (tabella vuota).
+  Restringe la policy operativa a manager/admin, conservando lettura in scope,
+  preferenza personale, assegnazioni e fonti storiche. Nessuna riscrittura dati.
+  L'helper storico `can_manage_participant_event_service` resta usato dalla
+  policy di lettura; la policy di scrittura richiede anche `has_event_role`.
+- Test: `tests/leader-service-read-only.test.mts` e
+  `tests/sql/leader-service-read-only.sql` su PostgreSQL temporaneo: lettura
+  capogruppo, divieto insert/update/delete, manager/admin, scope evento, viewer
+  e preferenza della propria iscrizione.
+
+## QR nominativo scaricabile — 2026-09-08
+
+- I PNG nell'area personale, nella scheda capogruppo e nelle nuove email di
+  conferma contengono QR, nome/cognome e codice pubblico del partecipante.
+  `lib/qrcode/participant-card.ts` è il renderer condiviso; identità da dati
+  server autorizzati, token opaco invariato, nessun dato personale nel payload.
+- Codice pubblico utile per ricerca manuale all'accoglienza; non mostrare token
+  o UUID tecnici come testo. Nomi lunghi vanno a capo senza troncamento.
+  Sharp è dipendenza diretta; Noto Sans con licenza OFL è incluso e tracciato
+  nel bundle server per latino/cirillico indipendenti dai font della macchina.
+- Wallet e stampa restano futuri: devono mantenere QR, nome completo e codice
+  pubblico sul pass/etichetta, con layout calibrato al supporto. Nessuna
+  modifica a token, database, RLS o controlli di revoca/scadenza/scope.
+- Test renderer: `tests/participant-qr-card.test.mts`; scope e stati in
+  `tests/leader-qr.test.mts`; download desktop/mobile nella fixture browser QR.
+
 ## Rimozione ruoli operativi — 2026-09-08
 
 - La scheda Modifica utente operativo in Gestione ruoli admin/manager elenca

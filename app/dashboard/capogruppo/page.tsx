@@ -14,7 +14,6 @@ import type { ReactNode } from "react";
 
 import {
   createGroupLeaderManualRegistration,
-  updateParticipantEventService,
   updateGroupLeaderAssignment,
   updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
@@ -48,7 +47,6 @@ import type {
 } from "@/lib/registrations/operational-tags";
 import {
   eventServiceStatusLabel,
-  type EventServiceOption,
   type ParticipantEventService,
 } from "@/lib/registrations/event-services";
 import {
@@ -1291,11 +1289,10 @@ export default async function CapogruppoDashboardPage({
   const { groupRows, activeGroupRows, rootGroupIds, scopedGroupIds } =
     await loadLeaderScope(serviceSupabase, auth.user.id, currentEventId);
 
-  const [assignments, operationalTags, eventServices, groupLinks] =
+  const [assignments, operationalTags, groupLinks] =
     await Promise.all([
       getAssignments([...scopedGroupIds]),
       getOperationalTags(),
-      getEventServices(),
       getGroupLinks([...scopedGroupIds]),
     ]);
   const assignedGroups = groupRows
@@ -1426,7 +1423,6 @@ export default async function CapogruppoDashboardPage({
               locale={locale}
               assignment={selectedAssignment}
               tagOptions={operationalTags}
-              serviceOptions={eventServices}
               copy={copy}
             />
           </DashboardToolOverlay>
@@ -1505,32 +1501,6 @@ export default async function CapogruppoDashboardPage({
       eventId: tag.event_id,
       label: tag.label,
       color: tag.color,
-    }));
-  }
-
-  async function getEventServices(): Promise<EventServiceOption[]> {
-    const { data } = await serviceSupabase
-      .from("event_services")
-      .select("id,event_id,label,description,is_active,public_order")
-      .eq("event_id", currentEventId)
-      .eq("is_active", true)
-      .order("public_order", { ascending: true })
-      .order("label", { ascending: true });
-
-    return ((data ?? []) as Array<{
-      id: string;
-      event_id: string;
-      label: string | null;
-      description: string | null;
-      is_active: boolean | null;
-      public_order: number | null;
-    }>).map((service) => ({
-      id: service.id,
-      eventId: service.event_id,
-      label: service.label ?? "Servizio senza nome",
-      description: service.description,
-      isActive: service.is_active ?? true,
-      publicOrder: service.public_order ?? 100,
     }));
   }
 }
@@ -2055,7 +2025,6 @@ function AssignmentDetailCard({
   returnTo,
   assignment,
   tagOptions,
-  serviceOptions,
   copy,
 }: {
   assignment: AssignmentView;
@@ -2063,7 +2032,6 @@ function AssignmentDetailCard({
   locale: SupportedLocale;
   returnTo: string;
   tagOptions: OperationalTagOption[];
-  serviceOptions: EventServiceOption[];
   copy: GroupLeaderCopy;
 }) {
 
@@ -2255,60 +2223,6 @@ function AssignmentDetailCard({
             {copy.table.saveNote}
           </PendingSubmitButton>
         </div>
-      </ReliableForm>
-
-      <ReliableForm
-        action={updateParticipantEventService}
-        className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
-        data-preserve-dashboard-scroll
-      >
-        <input type="hidden" name="sourceDashboard" value="capogruppo" />
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <input type="hidden" name="assignmentId" value={assignment.id} />
-        <input type="hidden" name="registrationId" value={assignment.registrationId} />
-        <input type="hidden" name="participantId" value={assignment.participantId} />
-        <input type="hidden" name="eventId" value={assignment.eventId} />
-        <div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            Servizio
-            <select
-              name="serviceId"
-              defaultValue={assignment.currentServiceId ?? ""}
-              className="field bg-white font-normal"
-            >
-              <option value="">Senza servizio</option>
-              {serviceOptions.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            Stato
-            <select
-              name="status"
-              defaultValue={assignment.currentServiceStatus ?? "assigned"}
-              className="field bg-white font-normal"
-            >
-              <option value="assigned">Assegnato</option>
-              <option value="proposal_pending">Proposta inviata</option>
-              <option value="preference_pending">Preferenza da approvare</option>
-            </select>
-          </label>
-        </div>
-        <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-          Nota interna
-          <textarea
-            name="operatorNote"
-            defaultValue={assignment.service?.operatorNote ?? ""}
-            rows={3}
-            className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
-          />
-        </label>
-        <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          Salva servizio
-        </PendingSubmitButton>
       </ReliableForm>
 
       <ReliableForm
