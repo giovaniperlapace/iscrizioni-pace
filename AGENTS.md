@@ -293,10 +293,10 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
   e lo affianca nei layout a due e tre colonne, anche in Senza gruppo.
   Servizio inizia sempre una nuova riga; su mobile i campi sono impilati.
   `Azzera filtri` resta accanto al filtro Tag; `Colonne visibili` e
-  `Mostra figli accompagnati` sono subito a destra di `Esporta iscritti`,
+  `Mostra figli accompagnati` precedono `Esporta iscritti`,
   fuori dal form dei filtri. Su schermi stretti i comandi vanno a capo.
   Il selettore colonne si apre in un pannello sovrapposto; le sue checkbox
-  non avviano il filtraggio automatico. La descrizione Excel è sotto i comandi.
+  non avviano il filtraggio automatico. La descrizione Excel è a destra del pulsante di export.
 - Dal 2026-09-06, `Mostra figli accompagnati`
   mostra/nasconde sotto il genitore il badge con il numero di figli e il
   riepilogo di nomi ed età all'inizio dell'evento. Parte spento nella vista

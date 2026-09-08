@@ -655,15 +655,6 @@ export function OperationsParticipantsTable({
       )}
 
       <div className="relative mb-4 flex flex-wrap items-center gap-3">
-        <a
-          download
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-md border border-[#217346] bg-[#217346] px-3 text-sm font-semibold text-white hover:border-[#185c37] hover:bg-[#185c37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#217346]"
-          href={`/dashboard/participants/data-quality/api?${exportParams}`}
-          aria-describedby="participants-export-description"
-        >
-          <Download size={18} aria-hidden />
-          Esporta iscritti
-        </a>
         {view !== "without-group" && (
           <details className="rounded-md border border-[var(--peace-border-strong)] px-3 sm:relative">
             <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
@@ -710,7 +701,16 @@ export function OperationsParticipantsTable({
         >
           Mostra figli accompagnati
         </button>
-        <p id="participants-export-description" className="w-full text-sm text-[var(--peace-muted)]">
+        <a
+          download
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-[#217346] bg-[#217346] px-3 text-sm font-semibold text-white hover:border-[#185c37] hover:bg-[#185c37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#217346]"
+          href={`/dashboard/participants/data-quality/api?${exportParams}`}
+          aria-describedby="participants-export-description"
+        >
+          <Download size={18} aria-hidden />
+          Esporta iscritti
+        </a>
+        <p id="participants-export-description" className="min-w-0 flex-1 text-sm text-[var(--peace-muted)]">
           Scarica un file Excel con gli iscritti filtrati e solo le colonne visibili selezionate.
         </p>
       </div>

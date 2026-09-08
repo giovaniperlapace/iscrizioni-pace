@@ -73,10 +73,13 @@ const checkServiceTagLayout = () => {
         const exportBox = exportButton.getBoundingClientRect();
         return [columns, children].filter(Boolean).every(e => {
           const box = e.getBoundingClientRect();
-          return !e.closest('form') && box.x > exportBox.x && Math.abs(box.y - exportBox.y) <= 2;
-        }) && !!reset.closest('form');
+          return !e.closest('form') && box.x < exportBox.x && Math.abs(box.y - exportBox.y) <= 2;
+        }) && (() => {
+          const description = document.querySelector('#participants-export-description').getBoundingClientRect();
+          return description.x > exportBox.right && Math.abs(description.y + description.height / 2 - exportBox.y - exportBox.height / 2) < 2;
+        })() && !!reset.closest('form');
       })()`,
-      `table controls follow Excel export while reset stays with filters at ${width}px`,
+      `table controls precede Excel export and its inline description while reset stays with filters at ${width}px`,
     );
   }
   ab("set", "viewport", "390", "844");
