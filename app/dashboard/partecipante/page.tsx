@@ -1,3 +1,4 @@
+import { participantQrFilename } from "@/lib/qrcode/filename";
 import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
 
@@ -1209,7 +1210,7 @@ export default async function PartecipanteDashboardPage({
                     copy={copy}
                   />
                   <QrActionButtons
-                    participantCode={participant.public_code}
+                    participantName={`${participant.first_name} ${participant.last_name}`}
                     qrDataUrl={qrPreview?.downloadDataUrl ?? null}
                     copy={copy}
                   />
@@ -1868,11 +1869,11 @@ function QrStatusIndicator({
 }
 
 function QrActionButtons({
-  participantCode,
+  participantName,
   qrDataUrl,
   copy,
 }: {
-  participantCode: string | null;
+  participantName: string;
   qrDataUrl: string | null;
   copy: ParticipantDashboardCopy;
 }) {
@@ -1881,7 +1882,7 @@ function QrActionButtons({
       {qrDataUrl ? (
         <a
           href={qrDataUrl}
-          download={`qr-${participantCode ?? copy.personalQrFile}.png`}
+          download={participantQrFilename(participantName)}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
           <DownloadIcon />

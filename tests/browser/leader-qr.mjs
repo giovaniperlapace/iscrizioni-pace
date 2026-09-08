@@ -34,8 +34,8 @@ try {
     "selected participant QR visible with active status",
   );
   check(
-    'document.querySelector("a[download]").href !== document.querySelector("img[alt*=Anna]").src && document.querySelector("a[download]").download === "qr-FIXA.png"',
-    "download uses a separate named PNG and participant code",
+    'document.querySelector("a[download]").href !== document.querySelector("img[alt*=Anna]").src && document.querySelector("a[download]").download === "qr-Anna-Bianchi.png"',
+    "download uses a separate named PNG and participant name",
   );
   ab("download", "a[download]", "/tmp/pace-leader-qr-download.png");
   assert.deepEqual(

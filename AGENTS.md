@@ -6,6 +6,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 
 ## Assegnazione ruoli a utenti esistenti — 2026-09-08
 
+- Nel selettore utente, la ricerca vuota mostra `Inizia a digitare` senza
+  risultati selezionabili; i nomi appaiono dal primo carattere non vuoto.
+  Cancellando la ricerca torna l'indicazione iniziale.
+
 - Gestione ruoli admin/manager offre `Utente esistente` (predefinito) e
   `Nuovo utente`. Il selettore condiviso cerca nome/email nei profili con
   email, inclusi account senza alcun incarico; caricamento paginato senza
@@ -60,6 +64,11 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   e gli stessi controlli di disponibilità.
   `lib/qrcode/participant-card.ts` è il renderer condiviso; identità da dati
   server autorizzati, token opaco invariato, nessun dato personale nel payload.
+- I nomi dei file scaricati e degli allegati email usano nome e cognome,
+  per esempio `qr-Anna-Bianchi.png`, tramite `participantQrFilename`.
+  Lettere internazionali conservate, separatori/percorso rimossi; nessun
+  codice pubblico nel nome del file. Il contenuto del PNG resta invariato.
+
 - Codice pubblico utile per ricerca manuale all'accoglienza; non mostrare token
   o UUID tecnici come testo. Nomi lunghi vanno a capo senza troncamento.
   Sharp è dipendenza diretta; Noto Sans con licenza OFL è incluso e tracciato

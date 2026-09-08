@@ -1,3 +1,4 @@
+import { participantQrFilename } from "@/lib/qrcode/filename";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { sendTransactionalEmail } from "@/lib/email/smtp";
@@ -616,7 +617,7 @@ export async function createPublicRegistration(
       }),
       attachments: [
         {
-          filename: `qr-${createdParticipant.public_code}.png`,
+          filename: participantQrFilename(`${input.firstName} ${input.lastName}`),
           content: qrCodePng,
           contentType: "image/png",
           cid: qrCodeContentId,

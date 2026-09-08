@@ -1,3 +1,4 @@
+import { participantQrFilename } from "@/lib/qrcode/filename";
 import { Download, QrCode } from "lucide-react";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -91,7 +92,6 @@ const COPY = {
 export function LeaderParticipantQr({
   qr,
   participantName,
-  participantCode,
   locale,
 }: {
   qr: RegistrationQrPreview;
@@ -103,7 +103,7 @@ export function LeaderParticipantQr({
   const active = qr.state === "active" && Boolean(qr.dataUrl);
   const label =
     copy[qr.state === "active" && !active ? "unavailable" : qr.state];
-  const filename = `qr-${participantCode?.replace(/[^A-Za-z0-9_-]/g, "") || "partecipante"}.png`;
+  const filename = participantQrFilename(participantName);
   return (
     <section
       aria-label={copy.title}

@@ -20,7 +20,13 @@ export function OperationalUserTargetFields({ candidates }: { candidates: RoleCa
       </div>
       {mode === "existing" ? (
         <div className="grid gap-2">
-          <ParticipantSearchField label="Utente esistente" name="existingUserId" options={candidates} />
+          <ParticipantSearchField
+            label="Utente esistente"
+            name="existingUserId"
+            options={candidates}
+            placeholder="Inizia a digitare un nome o un’email"
+            emptyQueryHint="Inizia a digitare"
+          />
           <p className="text-sm font-normal text-[var(--peace-muted)]">Cerca per nome o email, anche tra gli utenti che non hanno ancora un ruolo.</p>
         </div>
       ) : (
