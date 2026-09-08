@@ -577,7 +577,7 @@ export function OperationsParticipantsTable({
             />
           </label>
           {view !== "without-group" && (
-            <label className="grid gap-1 text-sm">
+            <label className="grid min-w-0 gap-1 text-sm sm:col-span-2 xl:col-span-1">
               Gruppo
               <select
                 name="group"
@@ -595,7 +595,7 @@ export function OperationsParticipantsTable({
               </select>
             </label>
           )}
-          <label className="grid gap-1 text-sm">
+          <label className="grid min-w-0 gap-1 text-sm sm:col-start-1">
             Servizio
             <select
               name="service"
@@ -627,7 +627,7 @@ export function OperationsParticipantsTable({
               ))}
             </select>
           </label>
-          <div className="flex flex-wrap items-start gap-2" onChange={(event) => event.stopPropagation()}>
+          <div className="flex flex-wrap items-start gap-2 sm:col-span-2 xl:col-span-1" onChange={(event) => event.stopPropagation()}>
             {view !== "without-group" && (
               <details className="relative rounded-md border border-[var(--peace-border-strong)] px-3">
                 <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">

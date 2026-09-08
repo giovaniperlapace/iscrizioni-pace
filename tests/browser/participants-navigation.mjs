@@ -51,6 +51,24 @@ const click = (selector, text) => {
   );
   ab("snapshot", "-i");
 };
+const checkServiceTagLayout = () => {
+  for (const width of [768, 1024, 1280, 1600]) {
+    ab("set", "viewport", String(width), "1000");
+    check(
+      `(() => {
+        const service = document.querySelector('select[name="service"]').getBoundingClientRect();
+        const tag = document.querySelector('select[name="tag"]').getBoundingClientRect();
+        return Math.abs(service.y - tag.y) < 1 &&
+          Math.abs(service.width - tag.width) < 1 && tag.x > service.x &&
+          document.documentElement.scrollWidth <= innerWidth;
+      })()`,
+      `service and tag share a row and width at ${width}px`,
+    );
+  }
+  ab("set", "viewport", "390", "844");
+  check("document.documentElement.scrollWidth <= innerWidth", "filters fit mobile");
+  ab("set", "viewport", "1440", "1000");
+};
 try {
   ab(
     "open",
@@ -58,6 +76,7 @@ try {
   );
   ab("set", "viewport", "1440", "1000");
   ab("snapshot", "-i");
+  checkServiceTagLayout();
   click('nav[aria-label="Sezioni partecipanti"] a', "Duplicati");
   check(
     'document.querySelectorAll("table").length===1 && document.querySelector("[aria-label=\\"Tabella possibili duplicati\\"]") && !document.querySelector("input[name=q]")',
@@ -76,6 +95,7 @@ try {
     'document.querySelectorAll("table").length===1 && document.querySelectorAll("tbody tr").length===4',
     "without-group replaces duplicates with focused queue",
   );
+  checkServiceTagLayout();
   click('nav[aria-label="Sezioni partecipanti"] a', "Partecipanti");
   check(
     'document.querySelectorAll("table").length===1 && document.querySelectorAll("tbody tr").length===12',

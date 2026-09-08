@@ -290,8 +290,9 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
   `status` anche nell'export, evitando filtri attivi invisibili; lo stato
   rimane nei dati interni. Gruppo, servizio, tag e archivio restano distinti.
 - Il filtro Tag occupa una sola colonna della griglia, larga quanto Servizio,
-  e lo affianca nel layout desktop a tre colonne. I controlli `Colonne
-  visibili`, `Mostra figli accompagnati` e `Azzera filtri` sono accanto al
+  e lo affianca nei layout a due e tre colonne, anche in Senza gruppo.
+  Servizio inizia sempre una nuova riga; su mobile i campi sono impilati.
+  I controlli `Colonne visibili`, `Mostra figli accompagnati` e `Azzera filtri` sono accanto al
   filtro Tag; su schermi stretti vanno a capo.
   Il selettore colonne si apre in un pannello sovrapposto. Le sue checkbox
   non avviano il filtraggio automatico del form che le contiene.
