@@ -1,3 +1,4 @@
+import { OperationalRoleRemoval } from "@/components/operational-role-removal";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 
@@ -2363,6 +2364,12 @@ function ManagerOperationalRoleEditOverlay({
             </PendingSubmitButton>
           </div>
         </ReliableForm>
+        <OperationalRoleRemoval
+          userId={role.userId}
+          assignments={role.assignments}
+          sourceDashboard="manager"
+          navMode={navMode}
+        />
       </div>
     </div>
   );

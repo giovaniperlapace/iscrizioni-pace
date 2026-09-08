@@ -2917,7 +2917,7 @@ export async function deleteOperationalUserRole(formData: FormData) {
   const eventId = optionalText(formData.get("eventId"));
   const groupId = optionalText(formData.get("groupId"));
 
-  if (!userId || !isAssignableOperationalRole(role)) {
+  if (!userId || !isAssignableOperationalRole(role) || formData.get("confirmRemoval") !== "on") {
     return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 

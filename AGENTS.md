@@ -4,6 +4,17 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Rimozione ruoli operativi — 2026-09-08
+
+- La scheda Modifica utente operativo in Gestione ruoli admin/manager elenca
+  tutti gli incarichi in `OperationalRoleRemoval`, con ruolo, evento e gruppo.
+  Ogni incarico dispone di Rimuovi ruolo e conferma esplicita, verificata anche
+  dalla server action esistente `deleteOperationalUserRole`.
+- La rimozione riguarda solo ruolo/evento o membership del gruppo selezionato;
+  conserva altri incarichi, account e iscrizione personale. Restano i controlli
+  server su scope, admin globale e divieto di rimozione dei propri ruoli,
+  audit e sincronizzazione del nome referente principale. Nessuna migration.
+
 ## Inserimento capogruppo e email delegata — 2026-09-08
 
 - Il form manuale usa `ManualEmailFields` in sette lingue. Richiede l’email

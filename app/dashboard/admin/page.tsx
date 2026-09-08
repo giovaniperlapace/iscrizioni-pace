@@ -1,3 +1,4 @@
+import { OperationalRoleRemoval } from "@/components/operational-role-removal";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { Settings } from "lucide-react";
@@ -1866,6 +1867,12 @@ function AdminOperationalRoleEditOverlay({
             </PendingSubmitButton>
           </div>
         </ReliableForm>
+        <OperationalRoleRemoval
+          userId={role.userId}
+          assignments={role.assignments}
+          sourceDashboard="admin"
+          navMode={navMode}
+        />
       </div>
     </div>
   );
