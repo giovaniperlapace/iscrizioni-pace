@@ -7,7 +7,10 @@ import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared
 import { OperationsParticipantsNavigation } from "@/app/dashboard/operations-participants-navigation";
 import { OperationsDuplicatesTable } from "@/app/dashboard/operations-duplicates-table";
 import { DuplicateReviewDialog } from "@/app/dashboard/participants/data-quality/review-dialog";
-import { ReviewPanel } from "@/app/dashboard/participants/data-quality/panels";
+import {
+  DuplicateDeletePanel,
+  ReviewPanel,
+} from "@/app/dashboard/participants/data-quality/panels";
 import type { QualityPerson } from "@/lib/data-quality/data.server";
 import type { DuplicateMatch } from "@/lib/data-quality/duplicates";
 import { OperationsParticipantsTable } from "@/app/dashboard/operations-participants-table";
@@ -199,16 +202,14 @@ export default function Fixture() {
     filters,
   };
   const duplicatesView = params.get("view") === "duplicates";
-  const qualityPeople: QualityPerson[] = visible
-    .slice(0, 2)
-    .map((row) => ({
-      ...row,
-      id: row.registrationId,
-      children: [],
-      registrationStatus: row.registrationStatus ?? "submitted",
-      authUserId: row.authUserId ?? null,
-      deletedAt: null,
-    }));
+  const qualityPeople: QualityPerson[] = visible.slice(0, 2).map((row) => ({
+    ...row,
+    id: row.registrationId,
+    children: [],
+    registrationStatus: row.registrationStatus ?? "submitted",
+    authUserId: row.authUserId ?? null,
+    deletedAt: null,
+  }));
   const matches: DuplicateMatch[] = [
     {
       left: "reg-0",
@@ -219,7 +220,7 @@ export default function Fixture() {
   ];
   const showDismissed = params.get("duplicateShow") === "dismissed";
   const duplicateParams = new URLSearchParams(params.toString());
-  for (const key of ["edit", "duplicatePair", "duplicateAction"])
+  for (const key of ["edit", "duplicatePair", "duplicateAction", "duplicateDelete"])
     duplicateParams.delete(key);
   const duplicatePath = `/dashboard/admin?${duplicateParams}`;
   return (
@@ -271,17 +272,36 @@ export default function Fixture() {
             {params.has("duplicatePair") && !params.has("edit") && (
               <DuplicateReviewDialog
                 closePath={duplicatePath}
+                title={params.get("duplicateAction") === "delete" ? "Elimina iscrizione" : params.get("duplicateAction") === "merge" ? "Unisci iscrizioni" : undefined}
                 excluding={params.get("duplicateAction") === "exclude"}
               >
-                <ReviewPanel
-                  left={qualityPeople[0]}
-                  right={qualityPeople[1]}
-                  catalog={{ groups: [], services: [], tags: [] }}
-                  token="fixture"
-                  canWrite={!viewer}
-                  returnTo={duplicatePath}
-                  excludeOnly={params.get("duplicateAction") === "exclude"}
-                />
+                {params.get("duplicateAction") === "delete" ? (
+                  <DuplicateDeletePanel
+                    person={qualityPeople.find(
+                      (person) => person.id === params.get("duplicateDelete"),
+                    )!}
+                    dashboard="admin"
+                    returnTo={duplicatePath}
+                  />
+                ) : (
+                  <ReviewPanel
+                    key={params.get("duplicateAction")}
+                    mode={
+                      params.get("duplicateAction") === "merge"
+                        ? "merge"
+                        : params.get("duplicateAction") === "exclude"
+                          ? "exclude"
+                          : "compare"
+                    }
+                    left={qualityPeople[0]}
+                    right={qualityPeople[1]}
+                    catalog={{ groups: [], services: [], tags: [] }}
+                    token="fixture"
+                    canWrite={!viewer}
+                    returnTo={duplicatePath}
+                    excludeOnly={params.get("duplicateAction") === "exclude"}
+                  />
+                )}
               </DuplicateReviewDialog>
             )}
           </section>

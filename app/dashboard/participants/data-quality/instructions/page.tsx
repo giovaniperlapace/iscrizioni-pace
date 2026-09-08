@@ -14,30 +14,9 @@ export default async function ImportInstructionsPage() {
         className="btn-secondary inline-flex w-fit items-center px-4 py-2 text-sm"
         href="/dashboard/participants/data-quality/api?kind=template"
       >
-        Scarica modello Excel vuoto, esempi e cataloghi
+        Scarica il modello Excel
       </a>
       <ImportInstructions />
-      <h2 className="text-xl font-semibold">Unione consapevole</h2>
-      <p>
-        Scegli la scheda da conservare. Nome, cognome e valori già presenti
-        hanno precedenza; i dati mancanti sono completati dall’altra scheda. I
-        tag vengono riuniti; gruppo e servizio vengono recuperati solo se
-        assenti. Le scelte di presenza già presenti prevalgono.
-      </p>
-      <p>
-        Il secondo record viene archiviato con un collegamento al primo; il suo
-        QR è revocato e le email in attesa vengono escluse. Consensi,
-        questionari, storico e audit rimangono nella scheda originaria. Il
-        record unito non può essere ripristinato dalla normale azione di
-        ripristino.
-      </p>
-      <p>
-        Conserva la scheda collegata all’account. Due account distinti,
-        iscrizioni della stessa identità ad altri eventi o una scheda da
-        archiviare con minori, check-in, prenotazioni di momenti o bisogni di
-        accessibilità richiedono una riconciliazione dedicata prima del merge.
-        Il sistema annulla integralmente l’operazione in questi casi.
-      </p>
     </main>
   );
 }

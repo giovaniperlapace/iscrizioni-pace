@@ -84,7 +84,7 @@ try {
   click('nav[aria-label="Sezioni partecipanti"] a', "Duplicati");
   ab("screenshot", "/tmp/pace-duplicates-desktop.png");
   dialogFlowStarted = true;
-  click("tbody a", "Modifica");
+  click("tbody td:first-child a", "Anna Bianchi");
   ab("wait", "dialog[open]");
   ab("fill", 'dialog [name="firstName"]', "Anna Maria");
   click("button", "Salva dati");
@@ -100,26 +100,62 @@ try {
     'document.querySelector("tbody").textContent.includes("Anna Maria Bianchi") && !document.querySelector("dialog[open]")',
     "Escape returns to updated duplicates table",
   );
-  click("tbody a", "Escludi");
+  check(
+    'Array.from(document.querySelector("tbody tr td:last-child").querySelectorAll("a")).map(e=>e.textContent).join("|") === "Elimina|Non sono duplicati|Unisci iscrizioni"',
+    "three actions in the requested order",
+  );
+  click("tbody td:nth-child(5) a", "Anna Maria Bianchi");
   ab("wait", "dialog[open]");
   check(
-    'document.querySelector("dialog h2").textContent==="Escludi segnalazione" && !document.querySelector("dialog select") && !document.documentElement.dataset.lastQualityDecision',
+    '!document.querySelector("dialog form")',
+    "underlined name opens read-only comparison",
+  );
+  ev('document.querySelector("dialog").dispatchEvent(new Event("cancel", {cancelable:true}))');
+  ab("wait", "200");
+  check('document.querySelector("tbody") && !document.querySelector("dialog[open]")', "comparison closes back to table");
+  click("tbody a", "Elimina");
+  ab("wait", "dialog[open]");
+  check(
+    'document.querySelector("dialog form").getAttribute("action") === "/dashboard/participants/delete" && document.querySelector("dialog input[name=confirmLifecycle]").required && document.querySelector("dialog textarea").required',
+    "delete opens existing protected lifecycle form without writing",
+  );
+  ev('document.querySelector("dialog").dispatchEvent(new Event("cancel", {cancelable:true}))');
+  ab("wait", "200");
+  click("tbody a", "Unisci iscrizioni");
+  ab("wait", "dialog[open]");
+  check(
+    '!document.querySelector("dialog select") && document.querySelectorAll("dialog input[type=radio]").length === 2',
+    "merge opens directly with survivor choices",
+  );
+  ab("set", "viewport", "390", "844");
+  check(
+    "document.documentElement.scrollWidth<=innerWidth",
+    "merge dialog fits mobile",
+  );
+  ab("screenshot", "/tmp/pace-merge-mobile.png");
+  ev('document.querySelector("dialog").dispatchEvent(new Event("cancel", {cancelable:true}))');
+  ab("wait", "200");
+  ab("set", "viewport", "1440", "1000");
+  click("tbody a", "Non sono duplicati");
+  ab("wait", "dialog[open]");
+  check(
+    'document.querySelector("dialog h2").textContent==="Non sono duplicati" && !document.querySelector("dialog select") && !document.documentElement.dataset.lastQualityDecision',
     "exclude opens focused comparison without writing",
   );
   check(
-    'Array.from(document.querySelectorAll("button")).find(e=>e.textContent==="Conferma esclusione").disabled',
+    'Array.from(document.querySelectorAll("button")).find(e=>e.textContent==="Conferma: non sono duplicati").disabled',
     "exclusion requires explicit confirmation",
   );
   ab("fill", "dialog textarea", "Persone distinte: verifica con il referente.");
   ab("check", "dialog input[type=checkbox]");
-  click("button", "Conferma esclusione");
+  click("button", "Conferma: non sono duplicati");
   check(
     '!document.querySelector("dialog[open]") && document.querySelector("tbody").textContent.includes("Nessun caso")',
     "confirmed exclusion leaves review queue",
   );
   click('nav[aria-label="Viste duplicati"] a', "Esclusi");
   check(
-    'document.querySelectorAll("tbody tr").length===2 && !Array.from(document.querySelectorAll("tbody a")).some(e=>e.textContent==="Escludi")',
+    'document.querySelectorAll("tbody tr").length===2 && !Array.from(document.querySelectorAll("tbody a")).some(e=>e.textContent==="Non sono duplicati")',
     "excluded pair remains available without duplicate exclusion action",
   );
   ab("set", "viewport", "390", "844");

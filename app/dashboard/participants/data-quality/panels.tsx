@@ -8,6 +8,10 @@ import type { PreviewRow, RowDecision } from "@/lib/data-quality/preview";
 import type { QualityPerson } from "@/lib/data-quality/data.server";
 import type { Catalog } from "@/lib/data-quality/format";
 
+import { ReliableForm } from "@/components/reliable-form";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { suggestedMergeSurvivor } from "@/lib/data-quality/merge-choice";
+
 const endpoint = "/dashboard/participants/data-quality/api";
 const button =
   "min-h-11 rounded-md border border-blue-800 px-4 py-2 font-semibold text-blue-900 disabled:opacity-50";
@@ -356,6 +360,7 @@ export function ReviewPanel({
   canWrite,
   returnTo = "/dashboard/manager?section=iscritti&view=duplicates",
   excludeOnly = false,
+  mode,
 }: {
   left: QualityPerson;
   right: QualityPerson;
@@ -364,16 +369,27 @@ export function ReviewPanel({
   canWrite: boolean;
   returnTo?: string;
   excludeOnly?: boolean;
+  mode?: "compare" | "exclude" | "merge";
 }) {
   const router = useRouter();
-  const [decision, setDecision] = useState("not_duplicate"),
-    [keepId, setKeepId] = useState("");
+  const [decision, setDecision] = useState(
+      mode === "merge" ? "merged" : "not_duplicate",
+    ),
+    [keepId, setKeepId] = useState(
+      mode === "merge" ? suggestedMergeSurvivor(left, right) : "",
+    );
+  const bothAccounts = Boolean(left.authUserId && right.authUserId);
+  const losing = [left, right].find((person) => person.id !== keepId);
+  const mergeBlocked =
+    decision === "merged" &&
+    (bothAccounts || Boolean(keepId && losing?.children.length));
   const [reason, setReason] = useState(""),
     [confirm, setConfirm] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   async function review(event: FormEvent) {
     event.preventDefault();
+    if (mergeBlocked) return;
     setBusy(true);
     setError("");
     try {
@@ -410,6 +426,11 @@ export function ReviewPanel({
             <dl className="mt-2 space-y-1 text-sm">
               {Object.entries({
                 Codice: person.publicCode,
+                "Data iscrizione": person.submittedAt
+                  ? new Date(person.submittedAt).toLocaleString("it-IT", {
+                      timeZone: "Europe/Rome",
+                    })
+                  : null,
                 "Data di nascita": person.birthDate,
                 Email: person.email,
                 Telefono: person.phone,
@@ -443,7 +464,7 @@ export function ReviewPanel({
           </article>
         ))}
       </div>
-      {!excludeOnly && (
+      {!excludeOnly && mode !== "compare" && (
         <>
           <p className="text-sm">
             Conserva la scheda con i dati corretti: i valori già presenti
@@ -452,107 +473,187 @@ export function ReviewPanel({
             conservato e QR revocato.
           </p>
           <p className="text-sm">
-            Account distinti, identità su altri eventi o una scheda da
-            archiviare con minori, check-in, momenti o bisogni di accessibilità
-            richiedono una riconciliazione dedicata.{" "}
-            <Link
-              className="underline"
-              href="/dashboard/participants/data-quality/instructions"
-            >
-              Leggi tutti gli effetti del merge
-            </Link>
-            .
+            Se l’unione non è possibile, chiedi a un amministratore di
+            verificare il caso. Nessuna delle due iscrizioni viene modificata.
           </p>
         </>
       )}
-      {canWrite && (
-        <form onSubmit={review} className="grid gap-3">
-          {!excludeOnly && (
+      {mode === "merge" && (
+        <p className="text-sm">
+          Proponiamo l’iscrizione più recente quando entrambe le date sono
+          disponibili. Se una sola scheda ha un account collegato, conserviamo
+          quella per mantenere l’accesso. Controlla i dati prima di confermare:
+          una data più recente non garantisce che siano corretti.
+        </p>
+      )}
+      {mergeBlocked && (
+        <p role="alert" className="text-red-800">
+          {bothAccounts
+            ? "Queste iscrizioni hanno entrambe un account collegato: l’unione non è disponibile. Chiedi a un amministratore di verificare il caso."
+            : "La scheda da archiviare ha minori accompagnati: l’unione non è disponibile. Chiedi a un amministratore di verificare il caso."}
+        </p>
+      )}
+      {canWrite &&
+        mode !== "compare" &&
+        !(decision === "merged" && bothAccounts) && (
+          <form onSubmit={review} className="grid gap-3">
+            {!excludeOnly && !mode && (
+              <label className="grid gap-1">
+                Esito
+                <select
+                  className="field"
+                  value={decision}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setDecision(event.target.value);
+                    setConfirm(false);
+                  }}
+                >
+                  <option value="not_duplicate">Non sono duplicati</option>
+                  <option value="merged">Unisci le iscrizioni</option>
+                </select>
+              </label>
+            )}
+            {decision === "merged" && (
+              <fieldset className="grid gap-2">
+                <legend>Iscrizione da conservare</legend>
+                {[left, right].map((person) => (
+                  <label key={person.id} className="flex gap-2">
+                    <input
+                      type="radio"
+                      name="keep"
+                      required
+                      value={person.id}
+                      checked={keepId === person.id}
+                      disabled={
+                        busy ||
+                        Boolean(
+                          [left, right].find((other) => other.id !== person.id)
+                            ?.authUserId,
+                        )
+                      }
+                      onChange={() => {
+                        setKeepId(person.id);
+                        setConfirm(false);
+                      }}
+                    />
+                    {person.name} · {person.publicCode}
+                  </label>
+                ))}
+              </fieldset>
+            )}
             <label className="grid gap-1">
-              Esito
-              <select
+              Motivazione
+              <textarea
                 className="field"
-                value={decision}
+                required
+                minLength={3}
+                maxLength={500}
+                value={reason}
                 disabled={busy}
                 onChange={(event) => {
-                  setDecision(event.target.value);
+                  setReason(event.target.value);
                   setConfirm(false);
                 }}
-              >
-                <option value="not_duplicate">Non sono duplicati</option>
-                <option value="merged">Unisci le iscrizioni</option>
-              </select>
+              />
             </label>
-          )}
-          {decision === "merged" && (
-            <fieldset className="grid gap-2">
-              <legend>Scheda da conservare (scelta obbligatoria)</legend>
-              {[left, right].map((person) => (
-                <label key={person.id} className="flex gap-2">
-                  <input
-                    type="radio"
-                    name="keep"
-                    required
-                    value={person.id}
-                    checked={keepId === person.id}
-                    disabled={busy}
-                    onChange={() => {
-                      setKeepId(person.id);
-                      setConfirm(false);
-                    }}
-                  />
-                  {person.name} · {person.publicCode}
-                </label>
-              ))}
-            </fieldset>
-          )}
-          <label className="grid gap-1">
-            Motivazione
-            <textarea
-              className="field"
-              required
-              minLength={3}
-              maxLength={500}
-              value={reason}
-              disabled={busy}
-              onChange={(event) => {
-                setReason(event.target.value);
-                setConfirm(false);
-              }}
-            />
-          </label>
-          <label className="flex items-start gap-2">
-            <input
-              type="checkbox"
-              required
-              checked={confirm}
-              disabled={busy}
-              onChange={(event) => setConfirm(event.target.checked)}
-              className="mt-1"
-            />
-            Ho confrontato le schede e confermo questo esito
-            {decision === "merged"
-              ? `, conservando ${[left, right].find((person) => person.id === keepId)?.publicCode ?? "la scheda da scegliere"}`
-              : ""}
-            .
-          </label>
-          {error && (
-            <p role="alert" className="text-red-800">
-              {error}
-            </p>
-          )}
-          <button
-            className={button}
-            disabled={busy || !confirm || (decision === "merged" && !keepId)}
-          >
-            {busy
-              ? "Salvataggio…"
-              : excludeOnly
-                ? "Conferma esclusione"
-                : "Conferma decisione"}
-          </button>
-        </form>
-      )}
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                required
+                checked={confirm}
+                disabled={busy}
+                onChange={(event) => setConfirm(event.target.checked)}
+                className="mt-1"
+              />
+              Ho confrontato le schede e confermo questo esito
+              {decision === "merged"
+                ? `, conservando ${[left, right].find((person) => person.id === keepId)?.publicCode ?? "la scheda da scegliere"}`
+                : ""}
+              .
+            </label>
+            {error && (
+              <p role="alert" className="text-red-800">
+                {error}
+              </p>
+            )}
+            <button
+              className={button}
+              disabled={
+                busy ||
+                mergeBlocked ||
+                !confirm ||
+                (decision === "merged" && !keepId)
+              }
+            >
+              {busy
+                ? "Salvataggio…"
+                : excludeOnly
+                  ? "Conferma: non sono duplicati"
+                  : mode === "merge"
+                    ? "Conferma unione"
+                    : "Conferma decisione"}
+            </button>
+          </form>
+        )}
     </section>
+  );
+}
+
+export function DuplicateDeletePanel({
+  person,
+  dashboard,
+  returnTo,
+}: {
+  person: QualityPerson;
+  dashboard: "admin" | "manager";
+  returnTo: string;
+}) {
+  return (
+    <ReliableForm
+      action="/dashboard/participants/delete"
+      method="post"
+      data-preserve-dashboard-scroll
+      className="grid gap-4"
+    >
+      <input
+        type="hidden"
+        name="registrationId"
+        value={person.registrationId}
+      />
+      <input type="hidden" name="participantId" value={person.participantId} />
+      <input type="hidden" name="sourceDashboard" value={dashboard} />
+      <input type="hidden" name="returnTo" value={returnTo} />
+      <input type="hidden" name="intent" value="delete" />
+      <p>
+        Stai eliminando l’iscrizione di{" "}
+        <strong>
+          {person.name} · {person.publicCode}
+        </strong>
+        {person.email ? ` (${person.email})` : ""}.
+      </p>
+      <p className="text-sm">
+        L’altra iscrizione resta invariata. Questa iscrizione verrà esclusa
+        dalle attività e il suo QR sarà sospeso. Account e storico restano
+        conservati; un admin può ripristinarla.
+      </p>
+      <label className="grid gap-1">
+        Motivazione dell’eliminazione
+        <textarea
+          name="reason"
+          required
+          minLength={3}
+          maxLength={500}
+          className="field min-h-20"
+        />
+      </label>
+      <label className="flex min-h-11 items-center gap-2">
+        <input type="checkbox" name="confirmLifecycle" required />
+        Confermo l’eliminazione di {person.name} · {person.publicCode}
+      </label>
+      <PendingSubmitButton className="btn-secondary min-h-11 w-fit px-4 py-2 !border-red-300 !text-red-700">
+        Elimina iscrizione
+      </PendingSubmitButton>
+    </ReliableForm>
   );
 }

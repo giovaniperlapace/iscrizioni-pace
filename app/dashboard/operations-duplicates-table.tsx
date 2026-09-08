@@ -26,7 +26,12 @@ export function OperationsDuplicatesTable({
   function href(changes: Record<string, string>) {
     const url = new URL(basePath, "https://local.invalid");
     url.hash = "";
-    for (const key of ["edit", "duplicatePair", "duplicateAction"])
+    for (const key of [
+      "edit",
+      "duplicatePair",
+      "duplicateAction",
+      "duplicateDelete",
+    ])
       url.searchParams.delete(key);
     for (const [key, value] of Object.entries(changes))
       url.searchParams.set(key, value);
@@ -118,28 +123,54 @@ export function OperationsDuplicatesTable({
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex flex-col items-start gap-2">
-                    <Link
-                      className={actionClass}
-                      href={href({ edit: person.id })}
-                      scroll={false}
-                      prefetch={false}
-                      aria-label={`${canWrite ? "Modifica" : "Apri scheda di"} ${person.name} (${person.publicCode})`}
-                    >
-                      {canWrite ? "Modifica" : "Apri scheda"}
-                    </Link>
-                    {canWrite && match.level !== "dismissed" && (
-                      <Link
-                        className={actionClass}
-                        href={href({
-                          duplicatePair: pair,
-                          duplicateAction: "exclude",
-                        })}
-                        scroll={false}
-                        prefetch={false}
-                        aria-label={`Escludi segnalazione tra ${person.name} (${person.publicCode}) e ${other.name} (${other.publicCode})`}
-                      >
-                        Escludi
-                      </Link>
+                    {canWrite ? (
+                      <>
+                        <Link
+                          className={`${actionClass} !border-red-300 !text-red-700`}
+                          href={href({
+                            duplicatePair: pair,
+                            duplicateAction: "delete",
+                            duplicateDelete: person.id,
+                          })}
+                          scroll={false}
+                          prefetch={false}
+                          aria-label={`Elimina ${person.name} (${person.publicCode})`}
+                        >
+                          Elimina
+                        </Link>
+                        {match.level !== "dismissed" ? (
+                          <Link
+                            className={actionClass}
+                            href={href({
+                              duplicatePair: pair,
+                              duplicateAction: "exclude",
+                            })}
+                            scroll={false}
+                            prefetch={false}
+                          >
+                            Non sono duplicati
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-[var(--peace-muted)]">
+                            Già segnati come non duplicati
+                          </span>
+                        )}
+                        <Link
+                          className={`${actionClass} !bg-[var(--peace-blue-800)] !text-white`}
+                          href={href({
+                            duplicatePair: pair,
+                            duplicateAction: "merge",
+                          })}
+                          scroll={false}
+                          prefetch={false}
+                        >
+                          Unisci iscrizioni
+                        </Link>
+                      </>
+                    ) : (
+                      <span className="text-[var(--peace-muted)]">
+                        Sola lettura
+                      </span>
                     )}
                   </div>
                 </td>

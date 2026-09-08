@@ -4,6 +4,29 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Azioni duplicati — 2026-09-08
+
+- La pagina istruzioni contiene solo la guida all’importazione Excel, condivisa
+  con modale e modello scaricabile. Rimossi i dettagli tecnici sull’unione e
+  il link a questa pagina dal confronto duplicati. La guida consiglia di
+  lasciare vuoti gli stati, senza elencare i valori tecnici; formato e
+  validazioni dell’importazione restano invariati.
+
+- La tabella offre nell’ordine `Elimina`, `Non sono duplicati`, `Unisci iscrizioni`.
+  Il nome sottolineato nella colonna Confronta con apre il solo confronto;
+  il nome principale apre ancora la scheda. Ogni azione apre un dialog dedicato.
+  Elimina riguarda la riga scelta e riusa la route soft delete con motivazione
+  e conferma; i viewer non hanno azioni di scrittura.
+- Unisci propone l’iscrizione con `submitted_at` più recente, non la data di
+  creazione dell’account Auth. Se una sola scheda ha un account collegato,
+  quella prevale per conservare l’accesso. Date mancanti/uguali richiedono
+  scelta manuale; due account bloccano l’unione. Conferma sempre esplicita;
+  nessun cambio a RPC, permessi, RLS o dati esistenti.
+- I vincoli SQL restano: le dipendenze non riconciliabili annullano l’unione
+  integralmente. UI anticipa i blocchi per due account e minori della scheda
+  da archiviare. Test suggerimento: `tests/duplicate-merge-choice.test.mts`;
+  dialog desktop/mobile: `tests/browser/participants-navigation.mjs`.
+
 ## Assegnazione ruoli a utenti esistenti — 2026-09-08
 
 - Nel selettore utente, la ricerca vuota mostra `Inizia a digitare` senza

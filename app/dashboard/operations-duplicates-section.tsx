@@ -17,7 +17,10 @@ import {
   sealQualityPayload,
 } from "@/lib/data-quality/seal.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { ReviewPanel } from "@/app/dashboard/participants/data-quality/panels";
+import {
+  DuplicateDeletePanel,
+  ReviewPanel,
+} from "@/app/dashboard/participants/data-quality/panels";
 
 export async function OperationsDuplicatesSection({
   dashboard,
@@ -40,6 +43,7 @@ export async function OperationsDuplicatesSection({
     query.set("section", "iscritti");
     query.set("view", "duplicates");
     query.delete("duplicateAction");
+    query.delete("duplicateDelete");
     query.delete("edit");
     query.delete("import");
     for (const [key, value] of Object.entries(changes)) {
@@ -114,6 +118,10 @@ export async function OperationsDuplicatesSection({
           ),
         })
       : null;
+  const action = searchParams.duplicateAction;
+  const deleting = [left, right].find(
+    (person) => person && person.id === searchParams.duplicateDelete,
+  );
   return (
     <section
       id="duplicati"
@@ -213,18 +221,44 @@ export async function OperationsDuplicatesSection({
       {left && right && !searchParams.edit && (
         <DuplicateReviewDialog
           closePath={path({ duplicatePair: null })}
-          excluding={searchParams.duplicateAction === "exclude"}
+          excluding={action === "exclude"}
+          title={
+            action === "delete"
+              ? "Elimina iscrizione"
+              : action === "merge"
+                ? "Unisci iscrizioni"
+                : undefined
+          }
         >
-          <ReviewPanel
-            excludeOnly={searchParams.duplicateAction === "exclude"}
-            key={`${left.id}:${right.id}:${before.data}`}
-            left={left}
-            right={right}
-            catalog={catalog}
-            token={token ?? ""}
-            canWrite={canWrite && Boolean(token)}
-            returnTo={path({ duplicatePair: null })}
-          />
+          {action === "delete" ? (
+            canWrite && deleting ? (
+              <DuplicateDeletePanel
+                person={deleting}
+                dashboard={dashboard}
+                returnTo={path({ duplicatePair: null })}
+              />
+            ) : (
+              <p>Eliminazione non disponibile.</p>
+            )
+          ) : (
+            <ReviewPanel
+              excludeOnly={action === "exclude"}
+              mode={
+                action === "merge"
+                  ? "merge"
+                  : action === "exclude"
+                    ? "exclude"
+                    : "compare"
+              }
+              key={`${left.id}:${right.id}:${before.data}:${action}`}
+              left={left}
+              right={right}
+              catalog={catalog}
+              token={token ?? ""}
+              canWrite={canWrite && Boolean(token)}
+              returnTo={path({ duplicatePair: null })}
+            />
+          )}
         </DuplicateReviewDialog>
       )}
     </section>

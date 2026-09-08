@@ -9,10 +9,12 @@ export function DuplicateReviewDialog({
   children,
   closePath,
   excluding = false,
+  title,
 }: {
   children: ReactNode;
   closePath: string;
   excluding?: boolean;
+  title?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const router = useRouter();
@@ -43,7 +45,7 @@ export function DuplicateReviewDialog({
     >
       <header className="flex items-center justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
         <h2 id="duplicate-dialog-title" className="text-xl font-semibold">
-          {excluding ? "Escludi segnalazione" : "Confronto duplicati"}
+          {title ?? (excluding ? "Non sono duplicati" : "Confronto duplicati")}
         </h2>
         <Link
           href={closePath}

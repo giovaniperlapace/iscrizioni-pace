@@ -98,6 +98,13 @@ manuale, per non aggirare il soft delete.
 Confronto affiancato con dati identificativi, contatti, gruppo, servizio, tag,
 stato e collegamento alla scheda completa. Per unire servono scelta del
 record da conservare, motivazione e conferma esplicita.
+Dal 2026-09-08 la tabella separa Elimina, Non sono duplicati e Unisci iscrizioni;
+il nome sottolineato apre il confronto senza modulo decisione. Elimina apre
+la conferma soft delete della sola riga scelta. Unisci propone la data di
+iscrizione (`submitted_at`) più recente, salvo una sola scheda collegata ad
+account, che deve essere conservata. Non usa la data di creazione Auth.
+Date uguali o mancanti richiedono scelta; due account impediscono l’unione.
+La proposta è modificabile nei limiti dell’account e va sempre confermata.
 
 `review_participant_duplicate` serializza la revisione, controlla scope e
 versione e conserva nome/cognome/valori presenti del record scelto. Completa

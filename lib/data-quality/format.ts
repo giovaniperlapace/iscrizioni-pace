@@ -41,7 +41,7 @@ export const IMPORT_GUIDE = [
   },
   {
     title: "Compila i dati obbligatori",
-    text: "Per ogni persona inserisci nome, cognome e almeno un recapito: email oppure telefono. Nome e cognome devono avere da 2 a 120 caratteri. Compila anche i tre campi del consenso indicati qui sotto. Data di nascita, paese e città sono facoltativi; paese e città possono avere fino a 120 caratteri.",
+    text: "Per ogni persona inserisci nome, cognome e almeno un recapito: email oppure telefono. Compila anche i tre campi del consenso indicati qui sotto. Data di nascita, paese e città sono facoltativi.",
   },
   {
     title: "Riporta il consenso già raccolto",
@@ -56,8 +56,8 @@ export const IMPORT_GUIDE = [
     text: "Questi campi sono facoltativi. Copia i nomi dal foglio Cataloghi del modello appena scaricato: contiene le opzioni disponibili per l’evento. Se ci sono nomi uguali, usa il codice riportato accanto al nome. Per più tag, separa i nomi con un punto e virgola, ad esempio Volontario; Accoglienza. I tag sono etichette interne e non sono visibili alla persona iscritta. Un nome non riconosciuto sarà segnalato nell’anteprima.",
   },
   {
-    title: "Lascia vuoti gli stati se non hai esigenze particolari",
-    text: "Puoi lasciare vuote le colonne stato e stato_servizio: la persona verrà iscritta e l’eventuale servizio indicato sarà assegnato. Se devi specificarli, stato accetta submitted (iscrizione inviata), confirmed (confermata) o cancelled (annullata). Con un servizio presente, stato_servizio accetta assigned (assegnato), preference_pending (preferenza da valutare), proposal_pending (proposta in attesa) o declined (rifiutato).",
+    title: "Lascia vuote le colonne degli stati",
+    text: "Lascia vuote le colonne stato e stato_servizio: la persona verrà iscritta e il servizio, se indicato, sarà assegnato.",
   },
   {
     title: "Salva un file Excel con soli valori",
@@ -65,7 +65,7 @@ export const IMPORT_GUIDE = [
   },
   {
     title: "Controlla l’anteprima, poi conferma",
-    text: "Dopo aver scelto il file, premi Mostra anteprima: nessuna iscrizione viene ancora aggiunta. Se ci sono errori, correggi il file e caricalo di nuovo oppure scarta le righe interessate indicando il motivo. Se una persona sembra già iscritta, scarta la riga oppure spiega perché si tratta di una persona diversa. Nessuna scheda viene unita automaticamente. Solo Conferma importazione salva le righe scelte, tutte insieme. L’anteprima dura 20 minuti: se scade o i dati cambiano, carica di nuovo il file.",
+    text: "Dopo aver scelto il file, premi Mostra anteprima: nessuna iscrizione viene ancora aggiunta. Se ci sono errori, correggi il file e caricalo di nuovo oppure scarta le righe interessate indicando il motivo. Se una persona sembra già iscritta, scarta la riga oppure spiega perché si tratta di una persona diversa. Nessuna scheda viene unita automaticamente. Premi Conferma importazione per aggiungere gli iscritti. Se l’anteprima non è più valida, carica di nuovo il file.",
   },
 ] as const;
 
