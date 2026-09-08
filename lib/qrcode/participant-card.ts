@@ -13,7 +13,7 @@ function escapeText(value: string): string {
 }
 
 // Visible identity belongs to the card, never to the opaque QR payload.
-// Shared by downloads and email; future wallet/print layouts must retain it.
+// Used for named downloads; future wallet/print layouts must retain it.
 export async function renderParticipantQrPng(
   token: string,
   participant: QrParticipantIdentity,

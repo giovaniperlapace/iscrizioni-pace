@@ -1,3 +1,4 @@
+import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
 
 import { ReliableForm } from "@/components/reliable-form";
@@ -1085,7 +1086,8 @@ export default async function PartecipanteDashboardPage({
   const participantService = participantServiceResult.data as ParticipantServiceRow | null;
   const participantServiceLabel =
     relatedOne(participantService?.event_services ?? null)?.label ?? null;
-  const qrDataUrl = participant ? (await registrationQrPreview(qrStatus, participant)).dataUrl : null;
+  const qrPreview = participant ? await registrationQrPreview(qrStatus, participant) : null;
+  const qrDataUrl = qrPreview?.dataUrl ?? null;
   const editable =
     selectedRegistration &&
     canParticipantEditRegistration({
@@ -1208,7 +1210,7 @@ export default async function PartecipanteDashboardPage({
                   />
                   <QrActionButtons
                     participantCode={participant.public_code}
-                    qrDataUrl={qrDataUrl}
+                    qrDataUrl={qrPreview?.downloadDataUrl ?? null}
                     copy={copy}
                   />
                   <ParticipantOrganizerContactCard
@@ -1529,6 +1531,9 @@ export default async function PartecipanteDashboardPage({
                             >
                               {copy.accessibilityRequest}
                             </label>
+                            <p className="text-sm leading-6 text-[var(--peace-muted)]">
+                              {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+                            </p>
                             <div className="hidden gap-3 peer-checked:grid">
                               <div>
                                 <h3 className="font-semibold">

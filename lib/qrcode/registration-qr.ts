@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { renderQrDataUrl } from "./render.ts";
 import { decryptQrToken } from "./secure-token.ts";
 import { renderParticipantQrDataUrl, type QrParticipantIdentity } from "./participant-card.ts";
 
@@ -13,6 +14,7 @@ export type RegistrationQrState =
 export type RegistrationQrPreview = {
   state: RegistrationQrState;
   dataUrl: string | null;
+  downloadDataUrl: string | null;
   expiresAt: string | null;
 };
 
@@ -54,12 +56,16 @@ export async function registrationQrPreview(
 ): Promise<RegistrationQrPreview> {
   const state = registrationQrState(record, now);
   const expiresAt = record?.expires_at ?? null;
-  if (state !== "active") return { state, dataUrl: null, expiresAt };
+  if (state !== "active") return { state, dataUrl: null, downloadDataUrl: null, expiresAt };
   const token = decryptQrToken(record?.token_encrypted);
-  if (!token) return { state: "unavailable", dataUrl: null, expiresAt };
+  if (!token) return { state: "unavailable", dataUrl: null, downloadDataUrl: null, expiresAt };
   try {
-    return { state, dataUrl: await renderParticipantQrDataUrl(token, participant), expiresAt };
+    const [dataUrl, downloadDataUrl] = await Promise.all([
+      renderQrDataUrl(token),
+      renderParticipantQrDataUrl(token, participant),
+    ]);
+    return { state, dataUrl, downloadDataUrl, expiresAt };
   } catch {
-    return { state: "unavailable", dataUrl: null, expiresAt };
+    return { state: "unavailable", dataUrl: null, downloadDataUrl: null, expiresAt };
   }
 }

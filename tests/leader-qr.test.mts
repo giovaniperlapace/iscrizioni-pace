@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { encryptQrToken } from "../lib/qrcode/secure-token.ts";
+import { renderQrDataUrl } from "../lib/qrcode/render.ts";
 import { renderParticipantQrDataUrl } from "../lib/qrcode/participant-card.ts";
 const identity = { first_name: "Anna", last_name: "Rossi", public_code: "FIXA" };
 import { registrationQrPreview } from "../lib/qrcode/registration-qr.ts";
@@ -158,10 +159,12 @@ test("selected participant QR is the exact existing token PNG, never the operato
       "selected",
     );
     assert.equal(qr.state, "active");
-    assert.equal(qr.dataUrl, await renderParticipantQrDataUrl(fixture.tokens.selected, identity));
-    assert.notEqual(qr.dataUrl, await renderParticipantQrDataUrl(fixture.tokens.operator, identity));
+    assert.equal(qr.downloadDataUrl, await renderParticipantQrDataUrl(fixture.tokens.selected, identity));
+    assert.equal(qr.dataUrl, await renderQrDataUrl(fixture.tokens.selected));
+    assert.notEqual(qr.dataUrl, qr.downloadDataUrl);
+    assert.notEqual(qr.downloadDataUrl, await renderParticipantQrDataUrl(fixture.tokens.operator, identity));
     assert.equal(JSON.stringify(qr).includes(fixture.tokens.selected), false);
-    assert.deepEqual(Object.keys(qr).sort(), ["dataUrl", "expiresAt", "state"]);
+    assert.deepEqual(Object.keys(qr).sort(), ["dataUrl", "downloadDataUrl", "expiresAt", "state"]);
     assert.deepEqual(
       Buffer.from(qr.dataUrl!.split(",")[1], "base64").subarray(0, 8),
       Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
@@ -201,6 +204,7 @@ test("no QR lookup for missing membership, outside scope/event, stale or deleted
         scenario.assignment ?? "selected",
       );
       assert.equal(qr.dataUrl, null);
+      assert.equal(qr.downloadDataUrl, null);
       assert.equal(qr.state, "unavailable");
       assert.equal(fixture.qrReads(), 0);
     } finally {
@@ -225,6 +229,7 @@ test("newest revoked token does not resurrect an older active token", async () =
     );
     assert.equal(qr.state, "revoked");
     assert.equal(qr.dataUrl, null);
+      assert.equal(qr.downloadDataUrl, null);
   } finally {
     fixture.restore();
   }
@@ -253,6 +258,7 @@ test("expiry, revocation timestamp, missing and undecipherable tokens never gene
       );
       assert.equal(qr.state, expected);
       assert.equal(qr.dataUrl, null);
+      assert.equal(qr.downloadDataUrl, null);
     }
     assert.equal(
       (

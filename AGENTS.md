@@ -25,10 +25,22 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   capogruppo, divieto insert/update/delete, manager/admin, scope evento, viewer
   e preferenza della propria iscrizione.
 
+## Descrizione domande accessibilità — 2026-09-08
+
+- Iscrizione pubblica (inclusi link di gruppo), inserimento manuale capogruppo
+  e modifica iscrizione personale mostrano sempre sotto la domanda di
+  accessibilità la descrizione sulle comunicazioni relative ai luoghi e agli
+  eventi, anche prima della risposta. Testo condiviso in sette lingue in
+  `lib/i18n/accessibility.ts`.
+
 ## QR nominativo scaricabile — 2026-09-08
 
-- I PNG nell'area personale, nella scheda capogruppo e nelle nuove email di
-  conferma contengono QR, nome/cognome e codice pubblico del partecipante.
+- Solo i PNG scaricati dall'area personale e dalla scheda capogruppo
+  contengono QR, nome/cognome e codice pubblico del partecipante. A schermo
+  e nell'immagine inline dell'email si visualizza il solo QR.
+  `registrationQrPreview` restituisce `dataUrl` per l'anteprima e
+  `downloadDataUrl` per il download nominativo, entrambi con lo stesso token
+  e gli stessi controlli di disponibilità.
   `lib/qrcode/participant-card.ts` è il renderer condiviso; identità da dati
   server autorizzati, token opaco invariato, nessun dato personale nel payload.
 - Codice pubblico utile per ricerca manuale all'accoglienza; non mostrare token
@@ -94,7 +106,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   impediscono immagine e download. Nessuna generazione/rotazione/scrittura QR.
   Al browser arriva il PNG, non il token in chiaro o cifrato come dato separato.
 - Stato e permessi sono verificati al caricamento della scheda. Il download
-  salva lo stesso PNG mostrato, come nell'area personale. L'indicatore dell'area
+  salva il PNG nominativo separato dall’anteprima, come nell’area personale. L'indicatore dell'area
   personale considera anche disponibilità e scadenza effettive.
 - Test: `tests/leader-qr.test.mts` su scope negativo, token selezionato, revoche
   e scadenze; `tests/browser/leader-qr.mjs` prova UI e download PNG reale su

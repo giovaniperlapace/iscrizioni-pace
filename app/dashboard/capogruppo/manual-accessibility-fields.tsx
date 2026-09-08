@@ -1,5 +1,6 @@
 "use client";
 
+import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { useState } from "react";
 
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
@@ -44,6 +45,9 @@ export function ManualAccessibilityFields({
           <option value="yes">{copy.yes}</option>
         </select>
       </label>
+      <p className="text-sm leading-6 text-[var(--peace-muted)]">
+        {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+      </p>
 
       {hasAccessibilityNeeds === "yes" ? (
         <>

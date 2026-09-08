@@ -152,9 +152,9 @@ export function LeaderParticipantQr({
               }).format(new Date(qr.expiresAt))}
             </p>
           ) : null}
-          {active && qr.dataUrl ? (
+          {active && qr.downloadDataUrl ? (
             <a
-              href={qr.dataUrl}
+              href={qr.downloadDataUrl}
               download={filename}
               aria-label={`${copy.download}: ${participantName}`}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white hover:bg-[var(--peace-blue-900)]"

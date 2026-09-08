@@ -2052,7 +2052,7 @@ function AssignmentDetailCard({
       </div>
 
       <LeaderParticipantQr
-        qr={qr ?? { state: "unavailable", dataUrl: null, expiresAt: null }}
+        qr={qr ?? { state: "unavailable", dataUrl: null, downloadDataUrl: null, expiresAt: null }}
         participantName={assignment.participantName}
         participantCode={assignment.participantCode}
         locale={locale}

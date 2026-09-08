@@ -1,4 +1,5 @@
 import { LeaderParticipantQr } from "@/app/dashboard/capogruppo/participant-qr";
+import { renderQrDataUrl } from "@/lib/qrcode/render";
 import { renderParticipantQrDataUrl } from "@/lib/qrcode/participant-card";
 
 export default async function Fixture({
@@ -22,7 +23,8 @@ export default async function Fixture({
             locale="it"
             qr={{
               state: qrState,
-              dataUrl:
+              dataUrl: qrState === "active" ? await renderQrDataUrl("synthetic-selected-participant-opaque-token") : null,
+              downloadDataUrl:
                 qrState === "active"
                   ? await renderParticipantQrDataUrl(
                       "synthetic-selected-participant-opaque-token",

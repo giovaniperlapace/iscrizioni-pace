@@ -17,6 +17,7 @@ export async function loadLeaderAssignmentQr(
   const unavailable: RegistrationQrPreview = {
     state: "unavailable",
     dataUrl: null,
+    downloadDataUrl: null,
     expiresAt: null,
   };
   try {

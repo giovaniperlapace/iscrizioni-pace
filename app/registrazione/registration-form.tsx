@@ -1,5 +1,6 @@
 "use client";
 
+import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { migratePublicRegistrationDrafts } from "@/lib/forms/public-draft";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -1436,6 +1437,9 @@ export function RegistrationForm({
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.accessibilityQuestion}</span>
+          <p className="text-sm font-normal leading-6 text-[var(--peace-muted)]">
+            {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+          </p>
           <input
             name="hasAccessibilityNeeds"
             type="hidden"
