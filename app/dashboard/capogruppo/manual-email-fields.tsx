@@ -51,6 +51,15 @@ export function ManualEmailFields({ locale, emailLabel }: {
   const copy = MANUAL_EMAIL_COPY[locale];
   return (
     <div className="grid gap-3 lg:col-span-2">
+      <p id={helpId} className="text-sm text-[var(--peace-muted)]">
+        {useLeaderEmail ? copy.delegated : copy.personal}
+      </p>
+      {!useLeaderEmail ? (
+        <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+          {emailLabel}
+          <input name="email" type="email" required className="field" aria-describedby={helpId} />
+        </label>
+      ) : null}
       <label className="flex items-center gap-3 text-sm font-semibold text-[var(--peace-ink)]">
         <input
           name="useLeaderEmail"
@@ -62,15 +71,6 @@ export function ManualEmailFields({ locale, emailLabel }: {
         />
         {copy.choice}
       </label>
-      <p id={helpId} className="text-sm text-[var(--peace-muted)]">
-        {useLeaderEmail ? copy.delegated : copy.personal}
-      </p>
-      {!useLeaderEmail ? (
-        <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-          {emailLabel}
-          <input name="email" type="email" required className="field" aria-describedby={helpId} />
-        </label>
-      ) : null}
     </div>
   );
 }
