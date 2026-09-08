@@ -1,3 +1,4 @@
+import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
 import { OperationalRoleRemoval } from "@/components/operational-role-removal";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
@@ -2139,28 +2140,13 @@ function ManagerOperationalUsersSection({
       <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <h2 className="text-lg font-semibold">Utenti e ruoli</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
-          Crea accessi operativi per gli eventi assegnati senza creare una
-          iscrizione. Manager, viewer e accoglienza accedono direttamente alla
-          dashboard operativa; solo il capogruppo completa anche
-          l&apos;iscrizione personale.
+          Assegna un ruolo a un utente esistente oppure crea un nuovo accesso
+          operativo. L’iscrizione personale all’evento resta separata.
         </p>
         <ReliableForm action={assignOperationalUserRole} className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="nav" value={navMode} />
-          <div className="grid gap-3 lg:grid-cols-3">
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Nome
-              <input name="firstName" className="field bg-white font-normal" required />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Cognome
-              <input name="lastName" className="field bg-white font-normal" required />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Email
-              <input name="email" type="email" className="field bg-white font-normal" required />
-            </label>
-          </div>
+          <OperationalUserTarget />
           <OperationalRoleFields
             eventOptions={eventOptions}
             groupOptions={groupOptions.map((group) => ({
@@ -2177,7 +2163,7 @@ function ManagerOperationalUsersSection({
             showInviteOption
           />
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-            Crea utente e assegna ruolo
+            Assegna ruolo
           </PendingSubmitButton>
         </ReliableForm>
       </div>

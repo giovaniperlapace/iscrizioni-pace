@@ -4,6 +4,23 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Assegnazione ruoli a utenti esistenti — 2026-09-08
+
+- Gestione ruoli admin/manager offre `Utente esistente` (predefinito) e
+  `Nuovo utente`. Il selettore condiviso cerca nome/email nei profili con
+  email, inclusi account senza alcun incarico; caricamento paginato senza
+  taglio a 1.000 utenti. La directory espone soltanto ID, nome ed email e
+  viene caricata solo dopo verifica di un ruolo effettivo admin/manager.
+- `assignOperationalUserRole` rilegge il profilo selezionato dopo i controlli
+  operativi di ruolo/evento/gruppo. In modalità esistente non crea account,
+  non aggiorna identità/contatti e non collega o modifica iscrizioni personali;
+  ignora i campi nome/email inviati dal client. Restano audit, invito opzionale
+  e controllo del ruolo già assegnato. Nessuna migration o modifica RLS.
+- La tabella sottostante continua a mostrare soltanto i ruoli assegnati.
+  Test server con dati simulati: `tests/operational-role-assignment.test.mts`;
+  fixture browser desktop/mobile: `tests/browser/operational-role-assignment.mjs`.
+  Nessun ruolo assegnato o invito inviato a utenti reali durante il collaudo.
+
 ## Servizio in sola lettura per capogruppo — 2026-09-08
 
 - La scheda capogruppo mostra servizio e stato in sola lettura. Rimossi il

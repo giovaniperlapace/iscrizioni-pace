@@ -2310,14 +2310,18 @@ export async function assignOperationalUserRole(formData: FormData) {
   const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard, navMode);
   const firstName = optionalText(formData.get("firstName"));
   const lastName = optionalText(formData.get("lastName"));
-  const email = normalizeEmail(formData.get("email"));
+  let email = normalizeEmail(formData.get("email"));
+  const mode = optionalText(formData.get("mode")) ?? "new";
+  const existingUserId = optionalText(formData.get("existingUserId"));
   const role = optionalText(formData.get("role"));
   const groupId = optionalText(formData.get("groupId"));
   const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
   const isPrimaryLeader = leaderKind === "primary";
   const sendInvite = formData.get("sendInvite") === "on";
 
-  if (!firstName || !lastName || !email || !isAssignableOperationalRole(role)) {
+  if (!isAssignableOperationalRole(role) ||
+      (mode !== "existing" && mode !== "new") ||
+      (mode === "existing" ? !existingUserId : (!firstName || !lastName || !email))) {
     return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
   }
 
@@ -2331,7 +2335,7 @@ export async function assignOperationalUserRole(formData: FormData) {
 
   const isAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
   const serviceSupabase = createSupabaseServiceClient();
-  const fullName = `${firstName} ${lastName}`.trim();
+  let fullName = [firstName, lastName].filter(Boolean).join(" ");
   const currentEventId = await getCurrentOperationalEventId(serviceSupabase);
 
   if (role === "admin" && !isAdmin) {
@@ -2391,21 +2395,27 @@ export async function assignOperationalUserRole(formData: FormData) {
     roleEventId = currentEventId;
   }
 
-  const userId = await ensureAuthUserForGroupLeader(serviceSupabase, {
-    email,
-    fullName,
-  });
-
-  if (!userId) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=auth-user`);
+  let userId: string | null;
+  if (mode === "existing") {
+    // Resolve the selected account again on the server. Submitted identity
+    // fields must never rename or relink an existing user's personal record.
+    const { data: profile, error } = await serviceSupabase.from("profiles")
+      .select("id,email,full_name").eq("id", existingUserId).maybeSingle();
+    if (error || !profile?.email) {
+      return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
+    }
+    userId = profile.id;
+    email = normalizeEmail(profile.email);
+    fullName = profile.full_name || email;
+  } else {
+    userId = await ensureAuthUserForGroupLeader(serviceSupabase, { email, fullName });
+    if (!userId) {
+      return formFailureFromRedirect(`${dashboardPath}&roleError=auth-user`);
+    }
+    await syncOperationalIdentityByEmail(serviceSupabase, {
+      email, firstName: firstName!, lastName: lastName!, userId,
+    });
   }
-
-  await syncOperationalIdentityByEmail(serviceSupabase, {
-    email,
-    firstName,
-    lastName,
-    userId,
-  });
 
   if (role === "capogruppo") {
     if (!roleGroupId) {
