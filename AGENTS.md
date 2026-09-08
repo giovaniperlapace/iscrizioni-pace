@@ -45,9 +45,9 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 ## Descrizione domande accessibilità — 2026-09-08
 
 - Iscrizione pubblica (inclusi link di gruppo), inserimento manuale capogruppo
-  e modifica iscrizione personale mostrano sempre sotto la domanda di
-  accessibilità la descrizione sulle comunicazioni relative ai luoghi e agli
-  eventi, anche prima della risposta. Testo condiviso in sette lingue in
+  e modifica iscrizione personale mostrano sotto le opzioni di
+  disabilità la descrizione sulle comunicazioni relative ai luoghi e agli
+  eventi, quando le opzioni sono visibili. Testo condiviso in sette lingue in
   `lib/i18n/accessibility.ts`.
 
 ## QR nominativo scaricabile — 2026-09-08

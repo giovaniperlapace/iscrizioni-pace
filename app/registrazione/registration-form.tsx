@@ -1437,9 +1437,6 @@ export function RegistrationForm({
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
           <span>{copy.accessibilityQuestion}</span>
-          <p className="text-sm font-normal leading-6 text-[var(--peace-muted)]">
-            {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
-          </p>
           <input
             name="hasAccessibilityNeeds"
             type="hidden"
@@ -1498,6 +1495,9 @@ export function RegistrationForm({
                 </label>
               ))}
             </div>
+            <p className="text-sm leading-6 text-[var(--peace-muted)]">
+              {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+            </p>
           </div>
         ) : null}
       </section>

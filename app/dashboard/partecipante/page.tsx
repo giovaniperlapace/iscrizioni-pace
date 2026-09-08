@@ -1531,9 +1531,6 @@ export default async function PartecipanteDashboardPage({
                             >
                               {copy.accessibilityRequest}
                             </label>
-                            <p className="text-sm leading-6 text-[var(--peace-muted)]">
-                              {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
-                            </p>
                             <div className="hidden gap-3 peer-checked:grid">
                               <div>
                                 <h3 className="font-semibold">
@@ -1563,6 +1560,9 @@ export default async function PartecipanteDashboardPage({
                                   </label>
                                 ))}
                               </div>
+                              <p className="text-sm leading-6 text-[var(--peace-muted)]">
+                                {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+                              </p>
                             </div>
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />

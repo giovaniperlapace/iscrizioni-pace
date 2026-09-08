@@ -45,9 +45,6 @@ export function ManualAccessibilityFields({
           <option value="yes">{copy.yes}</option>
         </select>
       </label>
-      <p className="text-sm leading-6 text-[var(--peace-muted)]">
-        {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
-      </p>
 
       {hasAccessibilityNeeds === "yes" ? (
         <>
@@ -66,6 +63,9 @@ export function ManualAccessibilityFields({
               </label>
             ))}
           </div>
+          <p className="text-sm leading-6 text-[var(--peace-muted)]">
+            {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+          </p>
         </>
       ) : null}
     </fieldset>
