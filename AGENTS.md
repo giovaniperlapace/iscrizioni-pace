@@ -289,8 +289,10 @@ iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
   i filtri admin/manager. Il parser condiviso ignora i vecchi parametri
   `status` anche nell'export, evitando filtri attivi invisibili; lo stato
   rimane nei dati interni. Gruppo, servizio, tag e archivio restano distinti.
-- I controlli `Colonne visibili`, `Mostra figli accompagnati` e `Azzera
-  filtri` sono accanto al filtro Tag; su schermi stretti vanno a capo.
+- Il filtro Tag occupa una sola colonna della griglia, larga quanto Servizio,
+  e lo affianca nel layout desktop a tre colonne. I controlli `Colonne
+  visibili`, `Mostra figli accompagnati` e `Azzera filtri` sono accanto al
+  filtro Tag; su schermi stretti vanno a capo.
   Il selettore colonne si apre in un pannello sovrapposto. Le sue checkbox
   non avviano il filtraggio automatico del form che le contiene.
 - Dal 2026-09-06, `Mostra figli accompagnati`, accanto ad `Azzera filtri`,

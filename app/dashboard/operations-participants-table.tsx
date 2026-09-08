@@ -555,7 +555,7 @@ export function OperationsParticipantsTable({
       >
         <input type="hidden" name="section" value="iscritti" />
         <input type="hidden" name="nav" value={navMode} />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <label className="grid gap-1 text-sm">
             Partecipante, codice o provenienza
             <input
@@ -611,88 +611,86 @@ export function OperationsParticipantsTable({
               ))}
             </select>
           </label>
-          <div className="col-span-full flex flex-wrap items-end gap-3">
-            <label className="grid min-w-48 flex-1 gap-1 text-sm">
-              Tag
-              <select
-                name="tag"
-                className="field"
-                defaultValue={snapshot.filters.tag}
-              >
-                <option value="all">Tutti i tag</option>
-                <option value="none">Senza tag</option>
-                {snapshot.operationalTags.map((tag) => (
-                  <option key={tag.id} value={tag.id}>
-                    {tag.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="flex flex-wrap items-start gap-2" onChange={(event) => event.stopPropagation()}>
-              {view !== "without-group" && (
-                <details className="relative rounded-md border border-[var(--peace-border-strong)] px-3">
-                  <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-                    <Columns3 size={16} aria-hidden />
-                    Colonne visibili
-                  </summary>
-                  <fieldset
-                    aria-label="Colonne visibili"
-                    className="absolute left-0 top-full z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
-                  >
-                    {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
-                      <label
-                        key={key}
-                        className="flex min-h-11 items-center gap-2 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={preferences.columns.includes(
-                            key as ParticipantColumn,
-                          )}
-                          disabled={key === "name"}
-                          onChange={(event) =>
-                            savePreferences({
-                              ...preferences,
-                              columns: event.target.checked
-                                ? [...preferences.columns, key as ParticipantColumn]
-                                : preferences.columns.filter(
-                                    (column) => column !== key,
-                                  ),
-                            })
-                          }
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </fieldset>
-                </details>
-              )}
-              <button
-                type="button"
-                aria-pressed={showChildren}
-                className={`${buttonClass} ${showChildren ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
-                onClick={() => setChildrenDisplay({ statisticsKey, visible: !showChildren })}
-              >
-                Mostra figli accompagnati
-              </button>
-              <Link
-                prefetch={false}
-                className={buttonClass}
-                href={paramsFor({
-                  q: null,
-                  contact: null,
-                  group: null,
-                  service: null,
-                  tag: null,
-                  status: null,
-                  stat: null,
-                  edit: null,
-                })}
-                scroll={false}
-              >
-                Azzera filtri
-              </Link>
-            </div>
+          <label className="grid min-w-0 gap-1 text-sm">
+            Tag
+            <select
+              name="tag"
+              className="field"
+              defaultValue={snapshot.filters.tag}
+            >
+              <option value="all">Tutti i tag</option>
+              <option value="none">Senza tag</option>
+              {snapshot.operationalTags.map((tag) => (
+                <option key={tag.id} value={tag.id}>
+                  {tag.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex flex-wrap items-start gap-2" onChange={(event) => event.stopPropagation()}>
+            {view !== "without-group" && (
+              <details className="relative rounded-md border border-[var(--peace-border-strong)] px-3">
+                <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
+                  <Columns3 size={16} aria-hidden />
+                  Colonne visibili
+                </summary>
+                <fieldset
+                  aria-label="Colonne visibili"
+                  className="absolute left-0 top-full z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
+                >
+                  {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="flex min-h-11 items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={preferences.columns.includes(
+                          key as ParticipantColumn,
+                        )}
+                        disabled={key === "name"}
+                        onChange={(event) =>
+                          savePreferences({
+                            ...preferences,
+                            columns: event.target.checked
+                              ? [...preferences.columns, key as ParticipantColumn]
+                              : preferences.columns.filter(
+                                  (column) => column !== key,
+                                ),
+                          })
+                        }
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+              </details>
+            )}
+            <button
+              type="button"
+              aria-pressed={showChildren}
+              className={`${buttonClass} ${showChildren ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
+              onClick={() => setChildrenDisplay({ statisticsKey, visible: !showChildren })}
+            >
+              Mostra figli accompagnati
+            </button>
+            <Link
+              prefetch={false}
+              className={buttonClass}
+              href={paramsFor({
+                q: null,
+                contact: null,
+                group: null,
+                service: null,
+                tag: null,
+                status: null,
+                stat: null,
+                edit: null,
+              })}
+              scroll={false}
+            >
+              Azzera filtri
+            </Link>
           </div>
         </div>
       </AutoFilterForm>
