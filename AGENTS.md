@@ -4,6 +4,33 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Inserimento capogruppo e email delegata — 2026-09-08
+
+- Il form manuale usa `ManualEmailFields` in sette lingue. Richiede l’email
+  personale oppure la scelta `Voglio usare la mia email`, che rimuove il campo
+  e consente l’inserimento anche senza telefono. Il server scarta le email
+  residue quando `useLeaderEmail=on`; non copia mai l’email del referente
+  nei contatti e non crea/collega un account per chi ha scelto la delega.
+  Senza recapiti non viene creata una riga vuota in `participant_contacts`.
+- Lo snapshot conserva `answers.contact.useLeaderEmail` e
+  `communicationDelegateUserId`, ricavato soltanto dall’utente autenticato,
+  coerente con `registrations.created_by` e registrato anche nell’audit.
+- Le campagne usano quel capogruppo, anche con membership su un antenato
+  attivo, verificando evento, assegnazione corrente, scope e raggiungibilità.
+  Se perde lo scope o la sua iscrizione è eliminata, niente invio automatico
+  ad altri referenti. Per schede storiche senza scelta esplicita resta il
+  fallback precedente. L’email personale corrente ha sempre precedenza.
+- Aggiungere l’email personale dalla scheda abilita le comunicazioni dirette
+  e il normale Magic Link: Auth viene creato al primo Magic Link e la callback
+  verificata collega la scheda per email. Nessun invito automatico.
+  I contatti impediscono l’email di un altro partecipante o quella del
+  capogruppo su una scheda altrui. Gli invii in coda ricalcolano il destinatario
+  prima dell’invio e salvano tipo/delegato effettivi nella consegna.
+- Nessuna migration, modifica RLS o riscrittura dei dati esistenti.
+  Test: `tests/manual-email-delegation.test.mts` e
+  `tests/browser/manual-email.mjs`, solo fixture sintetiche, sette lingue/mobile.
+  Dettagli e limiti: `docs/manual-email-delegation.md`.
+
 ## QR nella scheda capogruppo — 2026-09-07
 
 - La scheda selezionata mostra il QR reale e `Scarica immagine`, con testi in
@@ -269,6 +296,11 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
   possono assegnare nuovamente una persona senza gruppo.
 - Eliminati invio e template delle email per nuove assegnazioni ai capigruppo.
   Le colonne storiche di conferma/lettura restano, ma la lettura non è più usata.
+- Dal 2026-09-08, nei link di gruppo validi il modulo condiviso nasconde
+  entrambe le domande e invia le due risposte come Sì; mostra subito il nome
+  del gruppo in sola lettura. I valori effettivi prevalgono anche su bozze
+  recuperate dopo errore. Il flusso ordinario resta condizionale come sotto;
+  la validazione server continua a verificare il link e il gruppo.
 - Questionario corrente: `2026-09-06-conditional-groups` (flusso aggiornato il
   2026-09-06). La prima domanda sugli eventi precedenti è obbligatoria: Sì
   mostra `Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?`,
@@ -277,12 +309,12 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
   Cambiare il primo valore in No azzera risposta e selezioni del ramo gruppo;
   i campi non pertinenti non vengono inviati. Il server normalizza il primo
   No come partecipazione senza gruppo anche con campi residui o link riservato.
-  I link preselezionano solo il gruppo, richiedendo entrambe le risposte Sì.
+  Nei link le due risposte Sì sono implicite dal 2026-09-08.
   Associazione in `answers.externalGroupAssociation`, sette lingue aggiornate;
   nuova versione snapshot senza riscritture storiche o migration.
 - No prevale anche su link riservato/membership. Senza scelta esplicita, o con
   `Non trovo il mio referente`, non creare assegnazioni territoriali automatiche.
-  I link preselezionano il gruppo, senza assumere una precedente partecipazione.
+  Nel flusso ordinario non assumere una precedente partecipazione.
 - Migration testata su PostgreSQL temporaneo e applicata in produzione il 2026-09-05:
   `20260905150000_operative_group_assignments.sql`. Conserva audit/snapshot
   storici, rimuove code automatiche ancora probabili e assegnazioni incompatibili

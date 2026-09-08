@@ -943,6 +943,29 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=forbidden");
   }
 
+  if (email) {
+    // An email enables personal access: never attach the operator's address or
+    // an address already identifying a different participant.
+    const { data: otherContacts, error: emailLookupError } = await serviceSupabase
+      .from("participant_contacts")
+      .select("id")
+      .eq("email", email)
+      .neq("participant_id", participantId)
+      .limit(1);
+    if (emailLookupError) return formFailure([{ field: "email", code: "failed" }]);
+    if (otherContacts?.length) {
+      return formFailure([{ field: "email", code: "duplicateEmail" }]);
+    }
+    if (email === normalizeEmail(auth.user.email ?? null)) {
+      const { data: participant, error } = await serviceSupabase.from("participants")
+        .select("auth_user_id").eq("id", participantId).maybeSingle();
+      if (error) return formFailure([{ field: "email", code: "failed" }]);
+      if (participant?.auth_user_id !== auth.user.id) {
+        return formFailure([{ field: "email", code: "duplicateEmail" }]);
+      }
+    }
+  }
+
   if (hasIdentityUpdate) {
     const { error: participantUpdateError } = await serviceSupabase
       .from("participants")
@@ -1530,7 +1553,9 @@ async function canGroupLeaderTagParticipant(
 }
 
 export async function createGroupLeaderManualRegistration(formData: FormData) {
-  const contactIssues = validateContactFields(formData);
+  const contactIssues = validateContactFields(formData).filter(
+    issue => !(formData.get("useLeaderEmail") === "on" && issue.field === "email")
+  );
   if (contactIssues.length) return formFailure(contactIssues);
   const parsed = parseManualRegistrationForm(formData);
 
@@ -1543,6 +1568,10 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
 
   if (!auth || auth.dashboardRole !== "capogruppo") {
     redirect("/login");
+  }
+
+  if (parsed.value.useLeaderEmail && !auth.user.email) {
+    return formFailure([{ field: "useLeaderEmail", code: "invalid" }]);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -1579,6 +1608,10 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     ))
   ) {
     return formFailureFromRedirect("/dashboard/capogruppo?manualError=forbidden");
+  }
+
+  if (parsed.value.email && parsed.value.email === normalizeEmail(auth.user.email ?? null)) {
+    return formFailure([{ field: "email", code: "duplicateEmail" }]);
   }
 
   if (
@@ -1670,13 +1703,31 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
           day_part: slot.part,
           choice: "yes",
         }));
+  // Persist the delivery choice before exposing the operational assignment.
+  // A failed snapshot must never make an explicit delegate look like a legacy entry.
+  const { error: questionnaireError } = await serviceSupabase
+    .from("registration_questionnaire_answers")
+    .insert({
+      registration_id: registrationId,
+      event_id: groupRow.event_id,
+      questionnaire_version: REGISTRATION_QUESTIONNAIRE_VERSION,
+      answers: buildManualRegistrationQuestionnaireAnswers(parsed.value, {
+        id: groupRow.id,
+        name: groupRow.name,
+      }, auth.user.id),
+      visibility_summary: getQuestionnaireVisibilitySummary(),
+    });
+  if (questionnaireError) return formFailure([{ field: null, code: "failed" }]);
+
   const writes = [
-    serviceSupabase.from("participant_contacts").insert({
-      participant_id: participantRow.id,
-      email: parsed.value.email,
-      phone: parsed.value.phone,
-      is_primary: true,
-    }),
+    ...(parsed.value.email || parsed.value.phone ? [
+      serviceSupabase.from("participant_contacts").insert({
+        participant_id: participantRow.id,
+        email: parsed.value.email,
+        phone: parsed.value.phone,
+        is_primary: true,
+      }),
+    ] : []),
     serviceSupabase.from("participant_consents").insert({
       registration_id: registrationId,
       privacy_version: PRIVACY_VERSION,
@@ -1689,16 +1740,6 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     serviceSupabase.from("accessibility_needs").insert({
       registration_id: registrationId,
       washington_group_answers: parsed.value.accessibilityAnswers,
-    }),
-    serviceSupabase.from("registration_questionnaire_answers").insert({
-      registration_id: registrationId,
-      event_id: groupRow.event_id,
-      questionnaire_version: REGISTRATION_QUESTIONNAIRE_VERSION,
-      answers: buildManualRegistrationQuestionnaireAnswers(parsed.value, {
-        id: groupRow.id,
-        name: groupRow.name,
-      }),
-      visibility_summary: getQuestionnaireVisibilitySummary(),
     }),
     ...(parsed.value.children.length > 0
       ? [
@@ -1745,6 +1786,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
         group_id: groupRow.id,
         source: "capogruppo",
         has_email: Boolean(parsed.value.email),
+        communication_delegate_user_id: parsed.value.useLeaderEmail ? auth.user.id : null,
         has_phone: Boolean(parsed.value.phone),
         accompanying_children_count: parsed.value.children.length,
         participant_public_code: participantRow.public_code,

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 
 import { campaignHtmlToText, renderSafeCampaignHtml } from "@/lib/email/campaign-html.server";
 import {
+  resolveCurrentParticipantRecipient,
   type CampaignRecipient,
   type CampaignDeliveryKind,
   type CampaignRecipientType,
@@ -137,7 +138,7 @@ export async function processDueCampaignDeliveries(options: {
         renderSafeCampaignHtml(campaign.body_template, delivery.templateData),
         campaignAttachments
       );
-      if (!await isCampaignRecipientOperational(service, campaign.event_id, recipient)) throw new RegistrationNotOperationalError();
+      if (!await isCampaignRecipientOperational(service, campaign.event_id, delivery.recipient)) throw new RegistrationNotOperationalError();
       const result = await sendTransactionalEmail({
         to: delivery.email,
         subject: renderCampaignTemplate(
@@ -152,6 +153,8 @@ export async function processDueCampaignDeliveries(options: {
         .from("email_campaign_recipients")
         .update({
           status: "sent",
+          delivery_kind: delivery.recipient.deliveryKind,
+          delegate_user_id: delivery.recipient.delegateUserId,
           provider_message_id: hashMessageId(result.messageId),
           sent_at: new Date().toISOString(),
           processing_started_at: null,
@@ -206,6 +209,16 @@ export async function loadCampaignDeliveryData(
   eventTitle: string,
   recipient: CampaignRecipient
 ) {
+  if (recipient.recipientType === "participant" && recipient.registrationId) {
+    const current = await resolveCurrentParticipantRecipient(eventId, recipient.registrationId);
+    if (!current || current.participantId !== recipient.participantId) {
+      if (!await isCampaignRecipientOperational(service, eventId, { ...recipient, delegateUserId: null })) {
+        throw new RegistrationNotOperationalError();
+      }
+      throw new Error("Destinatario non più raggiungibile.");
+    }
+    recipient = current;
+  }
   if (!await isCampaignRecipientOperational(service, eventId, recipient)) throw new RegistrationNotOperationalError();
   if (recipient.recipientType === "group_leader" && recipient.recipientUserId) {
     const identities = await getOperationalUserIdentities(service, [
@@ -236,6 +249,7 @@ export async function loadCampaignDeliveryData(
       participantCode = participant?.public_code ?? null;
     }
     return {
+      recipient,
       email: identity.email.trim(),
       templateData: {
         firstName: name.firstName || identity.fullName || "Capogruppo",
@@ -269,6 +283,7 @@ export async function loadCampaignDeliveryData(
     throw new Error("Destinatario non più raggiungibile.");
   }
   return {
+    recipient,
     email,
     templateData: {
       firstName: participant.first_name,

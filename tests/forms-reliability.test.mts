@@ -8,7 +8,7 @@ import { parseParticipantDashboardUpdate } from "../lib/registrations/participan
 
 function manualData() {
   const data = new FormData();
-  for (const [key, value] of Object.entries({ groupId: "11111111-1111-4111-8111-111111111111", firstName: "Test", lastName: "Persona", phone: "+39 333 1234567", availabilityUnknown: "on", consentConfirmed: "on" })) data.set(key, value);
+  for (const [key, value] of Object.entries({ groupId: "11111111-1111-4111-8111-111111111111", firstName: "Test", lastName: "Persona", email: "synthetic@example.org", phone: "+39 333 1234567", availabilityUnknown: "on", consentConfirmed: "on" })) data.set(key, value);
   return data;
 }
 

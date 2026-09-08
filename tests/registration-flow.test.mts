@@ -334,6 +334,7 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
   formData.set("lastName", "Bianchi");
+  formData.set("useLeaderEmail", "on");
   formData.set("phone", "+39 333 123 4567");
   formData.append("availabilityDays", "2026-10-25");
   formData.append("availabilityDays", "2026-10-26");
@@ -425,7 +426,7 @@ test("parseManualRegistrationForm requires contact and consent", () => {
 
   assert.equal(parsed.ok, false);
   if (!parsed.ok) {
-    assert.ok(parsed.errors.includes("Inserisci almeno email o telefono."));
+    assert.ok(parsed.errors.includes("Inserisci un indirizzo email valido."));
     assert.ok(
       parsed.errors.includes(
         "Conferma di avere il consenso della persona iscritta."

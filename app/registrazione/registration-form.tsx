@@ -686,8 +686,12 @@ export function RegistrationForm({
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("");
   const [hasPreviousParticipation, setHasPreviousParticipation] = useState("");
   const [participatesWithGroup, setParticipatesWithGroup] = useState("");
-  const effectiveParticipatesWithGroup =
-    hasPreviousParticipation === "no"
+  const effectiveHasPreviousParticipation = options.groupLink
+    ? "yes"
+    : hasPreviousParticipation;
+  const effectiveParticipatesWithGroup = options.groupLink
+    ? "yes"
+    : hasPreviousParticipation === "no"
       ? "no"
       : hasPreviousParticipation === "yes"
         ? participatesWithGroup
@@ -947,7 +951,6 @@ export function RegistrationForm({
         }
 
         saveCurrentForm();
-        const effectiveHasPreviousParticipation = hasPreviousParticipation;
 
         if (
           !hasAccessibilityNeeds ||
@@ -1496,52 +1499,54 @@ export function RegistrationForm({
       </section>
 
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
-        <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.previousQuestion}</span>
-          <input
-            name="hasPreviousSantegidioParticipation"
-            type="hidden"
-            value={hasPreviousParticipation}
-          />
-          <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
-            <ChoiceButton
-              active={hasPreviousParticipation === "yes"}
-              label={copy.yes}
-              dataField="hasPreviousSantegidioParticipation"
-              onClick={() => {
-                markPromptFieldTouched("hasPreviousSantegidioParticipation");
-                setHasPreviousParticipation("yes");
-              }}
-            />
-            <ChoiceButton
-              active={hasPreviousParticipation === "no"}
-              label={copy.no}
-              dataField="hasPreviousSantegidioParticipation"
-              onClick={() => {
-                markPromptFieldTouched("hasPreviousSantegidioParticipation");
-                setHasPreviousParticipation("no");
-                setParticipatesWithGroup("");
-                setCannotFindLeader(false);
-                setSelectedGroupValue(options.groupLink?.groupId ?? "");
-                setGroupSearch(options.groupLink?.displayLabel ?? "");
-                setShowGroupOptions(false);
-              }}
-            />
+        <input
+          name="hasPreviousSantegidioParticipation"
+          type="hidden"
+          value={effectiveHasPreviousParticipation}
+        />
+        {!hasGroupLink ? (
+          <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
+            <span>{copy.previousQuestion}</span>
+            <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
+              <ChoiceButton
+                active={hasPreviousParticipation === "yes"}
+                label={copy.yes}
+                dataField="hasPreviousSantegidioParticipation"
+                onClick={() => {
+                  markPromptFieldTouched("hasPreviousSantegidioParticipation");
+                  setHasPreviousParticipation("yes");
+                }}
+              />
+              <ChoiceButton
+                active={hasPreviousParticipation === "no"}
+                label={copy.no}
+                dataField="hasPreviousSantegidioParticipation"
+                onClick={() => {
+                  markPromptFieldTouched("hasPreviousSantegidioParticipation");
+                  setHasPreviousParticipation("no");
+                  setParticipatesWithGroup("");
+                  setCannotFindLeader(false);
+                  setSelectedGroupValue(options.groupLink?.groupId ?? "");
+                  setGroupSearch(options.groupLink?.displayLabel ?? "");
+                  setShowGroupOptions(false);
+                }}
+              />
+            </div>
+            {!hasPreviousParticipation &&
+            shouldShowPrompt("hasPreviousSantegidioParticipation") ? (
+              <p className="text-xs text-[#8a3323]">
+                {copy.requiredChoice}
+              </p>
+            ) : null}
           </div>
-          {!hasPreviousParticipation &&
-          shouldShowPrompt("hasPreviousSantegidioParticipation") ? (
-            <p className="text-xs text-[#8a3323]">
-              {copy.requiredChoice}
-            </p>
-          ) : null}
-        </div>
+        ) : null}
 
         <input
           name="participatesWithGroup"
           type="hidden"
           value={effectiveParticipatesWithGroup}
         />
-        {hasPreviousParticipation === "yes" ? (
+        {!hasGroupLink && hasPreviousParticipation === "yes" ? (
           <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
             <span>{copy.groupQuestion}</span>
             <div className="grid grid-cols-2 gap-3 sm:max-w-xs">

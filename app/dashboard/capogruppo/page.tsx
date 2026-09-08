@@ -1,3 +1,4 @@
+import { ManualEmailFields } from "./manual-email-fields";
 import { LeaderParticipantQr } from "./participant-qr";
 import { loadLeaderAssignmentQr } from "@/lib/groups/leader-qr.server";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
@@ -1887,10 +1888,7 @@ function ManualRegistrationSection({
             {copy.lastName}
             <input name="lastName" required minLength={2} className="field" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.email}
-            <input name="email" type="email" className="field" />
-          </label>
+          <ManualEmailFields locale={locale} emailLabel={copy.email} />
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.phone}
             <input name="phone" type="tel" className="field" placeholder="+393331234567" aria-describedby="manual-phone-help" />

@@ -25,14 +25,16 @@ La validità operativa e i conteggi dipendono dall'assegnazione corrente.
 ## Questionario
 
 Versione `2026-09-06-conditional-groups`, con sette lingue complete.
-La domanda sugli eventi precedenti è obbligatoria: No mostra direttamente
+Dal 2026-09-08 i link di gruppo validi mostrano direttamente il gruppo in sola
+lettura: entrambe le risposte sono implicite come Sì e le domande sono nascoste.
+Il ripristino di una bozza non cambia questi valori.
+Nel percorso ordinario la domanda sugli eventi precedenti è obbligatoria: No mostra direttamente
 l'associazione facoltativa; Sì mostra «Parteciperai alla Preghiera per la Pace
 con un gruppo della Comunità?», obbligatoria solo in questo ramo. La seconda
 risposta Sì apre la selezione gruppo, No mostra l'associazione.
 
 Il primo No azzera risposta e selezioni del ramo gruppo. Anche passando dalla
-seconda risposta Sì a No si azzerano le scelte del gruppo; il gruppo del link
-riservato resta disponibile come preselezione soltanto nel ramo Sì/Sì.
+seconda risposta Sì a No si azzerano le scelte del gruppo.
 L'associazione viene rimossa quando il suo campo scompare. Il payload esclude
 i campi non pertinenti e il server normalizza il primo No come partecipazione
 senza gruppo anche in presenza di valori residui. L'associazione facoltativa

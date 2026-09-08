@@ -17,6 +17,11 @@ try {
     for (const link of [false, true]) {
       ab("open", `${base}/group-questionnaire-check?locale=${locale}${link ? "&link=1" : ""}`);
       ab("snapshot", "-i");
+      if (link) {
+        check('!document.querySelector("button[data-field=hasPreviousSantegidioParticipation]") && !document.querySelector("button[data-field=participatesWithGroup]") && !document.querySelector("[name=externalGroupAssociation]") && document.querySelector("[data-field=group]").value === "Gruppo sintetico" && document.querySelector("[data-field=group]").readOnly', `${locale} link shows only fixed group`);
+        check('new FormData(document.querySelector("[name=hasPreviousSantegidioParticipation]").closest("form")).get("hasPreviousSantegidioParticipation") === "yes" && new FormData(document.querySelector("[name=hasPreviousSantegidioParticipation]").closest("form")).get("participatesWithGroup") === "yes" && document.querySelector("[name=groupId]").value === "22222222-2222-4222-8222-222222222222"', `${locale} link submits both Yes answers and selected group`);
+        continue;
+      }
       check('document.querySelectorAll("button[data-field=hasPreviousSantegidioParticipation]").length === 2 && !document.querySelector("button[data-field=participatesWithGroup]") && !document.querySelector("[name=externalGroupAssociation]") && !document.querySelector("[data-field=group]")', `${locale} only first question visible, link=${link}`);
       choice("hasPreviousSantegidioParticipation", "no");
       check('!document.querySelector("button[data-field=participatesWithGroup]") && document.querySelector("[name=externalGroupAssociation]") && document.querySelector("[name=participatesWithGroup]").value === "no"', `${locale} first No opens association`);
@@ -32,7 +37,7 @@ try {
       if (link) check('document.querySelector("[name=groupId]").value === "22222222-2222-4222-8222-222222222222"', `${locale} reserved group remains selected`);
       else ab("check", '[name="cannotFindLeader"]');
       choice("hasPreviousSantegidioParticipation", "no");
-      check('!document.querySelector("button[data-field=participatesWithGroup]") && !document.querySelector("[data-field=group]") && document.querySelector("[name=externalGroupAssociation]") && !new FormData(document.querySelector("form")).has("groupId") && !new FormData(document.querySelector("form")).has("cannotFindLeader")', `${locale} changing first answer clears group branch and payload`);
+      check('!document.querySelector("button[data-field=participatesWithGroup]") && !document.querySelector("[data-field=group]") && document.querySelector("[name=externalGroupAssociation]") && !new FormData(document.querySelector("[name=hasPreviousSantegidioParticipation]").closest("form")).has("groupId") && !new FormData(document.querySelector("[name=hasPreviousSantegidioParticipation]").closest("form")).has("cannotFindLeader")', `${locale} changing first answer clears group branch and payload`);
       choice("hasPreviousSantegidioParticipation", "yes");
       check('document.querySelector("[name=participatesWithGroup]").value === "" && !document.querySelector("[data-field=group]")', `${locale} group answer reset after first No`);
       choice("participatesWithGroup", "yes");
