@@ -64,9 +64,32 @@ const checkServiceTagLayout = () => {
       })()`,
       `service and tag share a row and width at ${width}px`,
     );
+    check(
+      `(() => {
+        const exportButton = document.querySelector('a[download]');
+        const columns = document.querySelector('fieldset[aria-label="Colonne visibili"]')?.closest('details');
+        const children = Array.from(document.querySelectorAll('button')).find(e => e.textContent.trim() === 'Mostra figli accompagnati');
+        const reset = Array.from(document.querySelectorAll('a')).find(e => e.textContent.trim() === 'Azzera filtri');
+        const exportBox = exportButton.getBoundingClientRect();
+        return [columns, children].filter(Boolean).every(e => {
+          const box = e.getBoundingClientRect();
+          return !e.closest('form') && box.x > exportBox.x && Math.abs(box.y - exportBox.y) <= 2;
+        }) && !!reset.closest('form');
+      })()`,
+      `table controls follow Excel export while reset stays with filters at ${width}px`,
+    );
   }
   ab("set", "viewport", "390", "844");
   check("document.documentElement.scrollWidth <= innerWidth", "filters fit mobile");
+  ev(`document.querySelector('fieldset[aria-label="Colonne visibili"]')?.closest("details").setAttribute("open", "")`);
+  check(
+    `(() => {
+      const panel = document.querySelector('fieldset[aria-label="Colonne visibili"]')?.getBoundingClientRect();
+      return !panel || (panel.left >= 0 && panel.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth);
+    })()`,
+    "columns menu fits mobile beside Excel export",
+  );
+  ev(`document.querySelector('fieldset[aria-label="Colonne visibili"]')?.closest("details").removeAttribute("open")`);
   ab("set", "viewport", "1440", "1000");
 };
 try {

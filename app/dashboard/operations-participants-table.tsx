@@ -627,53 +627,7 @@ export function OperationsParticipantsTable({
               ))}
             </select>
           </label>
-          <div className="flex flex-wrap items-start gap-2 sm:col-span-2 xl:col-span-1" onChange={(event) => event.stopPropagation()}>
-            {view !== "without-group" && (
-              <details className="relative rounded-md border border-[var(--peace-border-strong)] px-3">
-                <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-                  <Columns3 size={16} aria-hidden />
-                  Colonne visibili
-                </summary>
-                <fieldset
-                  aria-label="Colonne visibili"
-                  className="absolute left-0 top-full z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
-                >
-                  {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
-                    <label
-                      key={key}
-                      className="flex min-h-11 items-center gap-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={preferences.columns.includes(
-                          key as ParticipantColumn,
-                        )}
-                        disabled={key === "name"}
-                        onChange={(event) =>
-                          savePreferences({
-                            ...preferences,
-                            columns: event.target.checked
-                              ? [...preferences.columns, key as ParticipantColumn]
-                              : preferences.columns.filter(
-                                  (column) => column !== key,
-                                ),
-                          })
-                        }
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </fieldset>
-              </details>
-            )}
-            <button
-              type="button"
-              aria-pressed={showChildren}
-              className={`${buttonClass} ${showChildren ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
-              onClick={() => setChildrenDisplay({ statisticsKey, visible: !showChildren })}
-            >
-              Mostra figli accompagnati
-            </button>
+          <div className="flex flex-wrap items-start gap-2 sm:col-span-2 xl:col-span-1">
             <Link
               prefetch={false}
               className={buttonClass}
@@ -700,7 +654,7 @@ export function OperationsParticipantsTable({
         </p>
       )}
 
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <div className="relative mb-4 flex flex-wrap items-center gap-3">
         <a
           download
           className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-md border border-[#217346] bg-[#217346] px-3 text-sm font-semibold text-white hover:border-[#185c37] hover:bg-[#185c37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#217346]"
@@ -710,7 +664,53 @@ export function OperationsParticipantsTable({
           <Download size={18} aria-hidden />
           Esporta iscritti
         </a>
-        <p id="participants-export-description" className="text-sm text-[var(--peace-muted)]">
+        {view !== "without-group" && (
+          <details className="rounded-md border border-[var(--peace-border-strong)] px-3 sm:relative">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
+              <Columns3 size={16} aria-hidden />
+              Colonne visibili
+            </summary>
+            <fieldset
+              aria-label="Colonne visibili"
+              className="absolute left-0 z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] sm:top-full flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
+            >
+              {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex min-h-11 items-center gap-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={preferences.columns.includes(
+                      key as ParticipantColumn,
+                    )}
+                    disabled={key === "name"}
+                    onChange={(event) =>
+                      savePreferences({
+                        ...preferences,
+                        columns: event.target.checked
+                          ? [...preferences.columns, key as ParticipantColumn]
+                          : preferences.columns.filter(
+                              (column) => column !== key,
+                            ),
+                      })
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+          </details>
+        )}
+        <button
+          type="button"
+          aria-pressed={showChildren}
+          className={`${buttonClass} ${showChildren ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
+          onClick={() => setChildrenDisplay({ statisticsKey, visible: !showChildren })}
+        >
+          Mostra figli accompagnati
+        </button>
+        <p id="participants-export-description" className="w-full text-sm text-[var(--peace-muted)]">
           Scarica un file Excel con gli iscritti filtrati e solo le colonne visibili selezionate.
         </p>
       </div>
