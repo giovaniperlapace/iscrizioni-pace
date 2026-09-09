@@ -1,5 +1,7 @@
 "use client";
 
+import { OTHER_PHONE_PREFIX, PHONE_PREFIX_OPTIONS } from "@/lib/registrations/phone-prefixes";
+
 import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { migratePublicRegistrationDrafts } from "@/lib/forms/public-draft";
 
@@ -39,46 +41,7 @@ type RegistrationFormProps = {
 
 const OTHER_COUNTRY = "Altro / non in lista";
 const OTHER_CITY = "Altro / non in lista";
-const OTHER_PHONE_PREFIX = "other";
 const FORM_STORAGE_PREFIX = "iscrizioni-pace.registration-form-v2";
-const PHONE_PREFIX_OPTIONS = [
-  { value: "+39", label: "Italia +39" },
-  { value: "+33", label: "Francia +33" },
-  { value: "+49", label: "Germania +49" },
-  { value: "+34", label: "Spagna +34" },
-  { value: "+351", label: "Portogallo +351" },
-  { value: "+44", label: "Regno Unito +44" },
-  { value: "+353", label: "Irlanda +353" },
-  { value: "+41", label: "Svizzera +41" },
-  { value: "+43", label: "Austria +43" },
-  { value: "+32", label: "Belgio +32" },
-  { value: "+31", label: "Paesi Bassi +31" },
-  { value: "+45", label: "Danimarca +45" },
-  { value: "+46", label: "Svezia +46" },
-  { value: "+47", label: "Norvegia +47" },
-  { value: "+358", label: "Finlandia +358" },
-  { value: "+48", label: "Polonia +48" },
-  { value: "+420", label: "Cechia +420" },
-  { value: "+421", label: "Slovacchia +421" },
-  { value: "+36", label: "Ungheria +36" },
-  { value: "+386", label: "Slovenia +386" },
-  { value: "+385", label: "Croazia +385" },
-  { value: "+30", label: "Grecia +30" },
-  { value: "+40", label: "Romania +40" },
-  { value: "+359", label: "Bulgaria +359" },
-  { value: "+380", label: "Ucraina +380" },
-  { value: "+1", label: "Stati Uniti / Canada +1" },
-  { value: "+55", label: "Brasile +55" },
-  { value: "+54", label: "Argentina +54" },
-  { value: "+52", label: "Messico +52" },
-  { value: "+91", label: "India +91" },
-  { value: "+86", label: "Cina +86" },
-  { value: "+81", label: "Giappone +81" },
-  { value: "+61", label: "Australia +61" },
-  { value: "+212", label: "Marocco +212" },
-  { value: "+216", label: "Tunisia +216" },
-  { value: "+20", label: "Egitto +20" },
-] as const;
 
 type PromptField =
   | "hasAccessibilityNeeds"

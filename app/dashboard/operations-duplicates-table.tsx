@@ -3,6 +3,7 @@ import {
   DUPLICATE_LABELS,
   type DuplicateMatch,
 } from "@/lib/data-quality/duplicates";
+import { formatDuplicateRegistrationDate } from "@/lib/data-quality/registration-date";
 import type { QualityPerson } from "@/lib/data-quality/data.server";
 
 export function OperationsDuplicatesTable({
@@ -94,6 +95,9 @@ export function OperationsDuplicatesTable({
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {person.publicCode}
                   </p>
+                  <p className="mt-2 text-xs text-[var(--peace-muted)]">
+                    Data iscrizione: {formatDuplicateRegistrationDate(person.submittedAt)}
+                  </p>
                 </td>
                 <td className="max-w-64 break-words px-4 py-4 text-[var(--peace-muted)]">
                   {person.email || "—"}
@@ -120,6 +124,9 @@ export function OperationsDuplicatesTable({
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {other.publicCode}
                   </p>
+                  <p className="mt-2 text-xs text-[var(--peace-muted)]">
+                    Data iscrizione: {formatDuplicateRegistrationDate(other.submittedAt)}
+                  </p>
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex flex-col items-start gap-2">
@@ -134,10 +141,13 @@ export function OperationsDuplicatesTable({
                           })}
                           scroll={false}
                           prefetch={false}
-                          aria-label={`Elimina ${person.name} (${person.publicCode})`}
+                          aria-label={`Elimina questa iscrizione: ${person.name} (${person.publicCode}); mantieni ${other.name} (${other.publicCode})`}
                         >
-                          Elimina
+                          Elimina questa iscrizione
                         </Link>
+                        <p className="max-w-48 text-xs text-[var(--peace-muted)]">
+                          Mantieni l’altra iscrizione.
+                        </p>
                         {match.level !== "dismissed" ? (
                           <Link
                             className={actionClass}
@@ -155,17 +165,6 @@ export function OperationsDuplicatesTable({
                             Già segnati come non duplicati
                           </span>
                         )}
-                        <Link
-                          className={`${actionClass} !bg-[var(--peace-blue-800)] !text-white`}
-                          href={href({
-                            duplicatePair: pair,
-                            duplicateAction: "merge",
-                          })}
-                          scroll={false}
-                          prefetch={false}
-                        >
-                          Unisci iscrizioni
-                        </Link>
                       </>
                     ) : (
                       <span className="text-[var(--peace-muted)]">

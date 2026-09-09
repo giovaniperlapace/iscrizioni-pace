@@ -4,6 +4,38 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Prefisso telefono nell’inserimento manuale — 2026-09-09
+
+- `ManualPhoneFields` affianca prefisso e numero nel form capogruppo, con
+  default +39 e opzione Altro. Catalogo prefissi condiviso con iscrizione
+  pubblica in `lib/registrations/phone-prefixes.ts`; testi e paesi localizzati
+  nelle sette lingue. Rimossa la descrizione tecnica sotto il telefono.
+- Telefono facoltativo: senza numero invia stringa vuota; altrimenti compone
+  il campo `phone` con prefisso e numero senza separatori. Validazioni server
+  invariate, nessuna modifica ai contatti esistenti.
+
+## Nomi composti nelle email capigruppo — 2026-09-09
+
+- `loadCampaignDeliveryData`, condiviso da anteprima, prova e invio, usa
+  `participants.first_name` e `last_name` quando esiste una scheda collegata,
+  senza separare nuovamente il nome completo. Conserva cognomi e nomi composti.
+  Il fallback storico resta solo per profili senza scheda partecipante;
+  errore di lettura/scheda mancante interrompe il rendering.
+- Caso verificato in sola lettura in produzione: Francesco / De Palma sono
+  già salvati correttamente. Nessuna correzione dati né invio email effettuato.
+
+## Semplificazione duplicati — 2026-09-09
+
+- La tabella admin/manager offre soltanto `Elimina questa iscrizione`, con
+  descrizione `Mantieni l’altra iscrizione`, e `Non sono duplicati`.
+  Rimossa l’azione Unisci; anche i vecchi URL `duplicateAction=merge` aprono
+  il solo confronto. RPC e dati storici delle unioni restano invariati.
+- Sotto entrambi i nomi compare `Data iscrizione`, da `submitted_at`, con
+  data e ora nel fuso Europe/Rome, condivisa con il dialog di confronto.
+  Non è la data di creazione dell’account Auth. Valori assenti/non validi: `—`.
+- Eliminazione ancora singola e reversibile, con motivazione e conferma;
+  account e altra iscrizione conservati. Nessuna migration o modifica RLS.
+
 ## Azioni duplicati — 2026-09-08
 
 - La pagina istruzioni contiene solo la guida all’importazione Excel, condivisa

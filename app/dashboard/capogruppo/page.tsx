@@ -1,10 +1,10 @@
+import { ManualPhoneFields } from "@/app/dashboard/capogruppo/manual-phone-fields";
 import { ManualEmailFields } from "./manual-email-fields";
 import { LeaderParticipantQr } from "./participant-qr";
 import { loadLeaderAssignmentQr } from "@/lib/groups/leader-qr.server";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
 import { LeaderParticipantsTable } from "./participants-table";
 import { filterLeaderRows, leaderReturnPath, toLeaderTableRow } from "@/lib/groups/leader-table";
-import { FORM_COPY } from "@/lib/forms/copy";
 import { MANUAL_DUPLICATE_COPY } from "@/lib/data-quality/manual-copy";
 
 import { ReliableForm } from "@/components/reliable-form";
@@ -1859,11 +1859,7 @@ function ManualRegistrationSection({
             <input name="lastName" required minLength={2} className="field" />
           </label>
           <ManualEmailFields locale={locale} emailLabel={copy.email} />
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.phone}
-            <input name="phone" type="tel" className="field" placeholder="+393331234567" aria-describedby="manual-phone-help" />
-            <span id="manual-phone-help" className="text-xs font-normal">{FORM_COPY[locale].phone}</span>
-          </label>
+          <ManualPhoneFields locale={locale} label={copy.phone} />
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.birthDate}
             <input name="birthDate" type="date" className="field" />

@@ -10,6 +10,7 @@ import type { Catalog } from "@/lib/data-quality/format";
 
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { formatDuplicateRegistrationDate } from "@/lib/data-quality/registration-date";
 import { suggestedMergeSurvivor } from "@/lib/data-quality/merge-choice";
 
 const endpoint = "/dashboard/participants/data-quality/api";
@@ -426,11 +427,7 @@ export function ReviewPanel({
             <dl className="mt-2 space-y-1 text-sm">
               {Object.entries({
                 Codice: person.publicCode,
-                "Data iscrizione": person.submittedAt
-                  ? new Date(person.submittedAt).toLocaleString("it-IT", {
-                      timeZone: "Europe/Rome",
-                    })
-                  : null,
+                "Data iscrizione": formatDuplicateRegistrationDate(person.submittedAt),
                 "Data di nascita": person.birthDate,
                 Email: person.email,
                 Telefono: person.phone,

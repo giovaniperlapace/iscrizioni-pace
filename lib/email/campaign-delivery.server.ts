@@ -238,15 +238,21 @@ export async function loadCampaignDeliveryData(
       const group = relatedOne(membership.groups);
       return group?.name ? [group.name] : [];
     });
-    const name = splitFullName(identity.fullName);
+    let name = splitFullName(identity.fullName);
     let participantCode: string | null = null;
     if (identity.participantId) {
-      const { data: participant } = await service
+      const { data: participant, error } = await service
         .from("participants")
-        .select("public_code")
+        .select("public_code,first_name,last_name")
         .eq("id", identity.participantId)
         .maybeSingle();
-      participantCode = participant?.public_code ?? null;
+      if (error) throw error;
+      if (!participant) throw new Error("Dati del capogruppo non disponibili.");
+      name = {
+        firstName: participant.first_name ?? "",
+        lastName: participant.last_name ?? "",
+      };
+      participantCode = participant.public_code ?? null;
     }
     return {
       recipient,

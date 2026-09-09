@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { ManualPhoneFields } from "@/app/dashboard/capogruppo/manual-phone-fields";
 import { ManualEmailFields } from "@/app/dashboard/capogruppo/manual-email-fields";
 import { ReliableForm } from "@/components/reliable-form";
 import { normalizeLocale } from "@/lib/i18n/config";
@@ -20,6 +21,7 @@ export default function Fixture() {
       <input type="hidden" name="availabilityUnknown" value="on" />
       <input type="hidden" name="consentConfirmed" value="on" />
       <ManualEmailFields locale={locale} emailLabel="Email" />
+      <ManualPhoneFields locale={locale} label="Telefono" />
       <button type="submit" className="button-primary">Verifica</button>
     </ReliableForm>
     <output data-result className="break-all">{result}</output>
