@@ -3169,3 +3169,44 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Iscrizione multipla capogruppo ai panel — 2026-09-09
+
+- La dashboard capogruppo offre `Iscrizioni ai panel`, pagina dedicata
+  `/dashboard/capogruppo/panel`: prima si sceglie un panel/sezione individuale,
+  poi si selezionano iscrizioni correnti dei propri gruppi e discendenti attivi.
+  Nome/codice e gruppo filtrano solo la vista; la checkbox generale agisce sui
+  partecipanti disponibili filtrati e preserva le selezioni nascoste. Cambiare
+  panel azzera la selezione. Un riepilogo nominale precede la conferma.
+- Le RPC autenticate `get_group_panel_booking_view` e `book_group_panel`, nella
+  migration `20260909120000_group_panel_bookings.sql`, verificano autonomamente
+  evento corrente, membership capogruppo e scope ricorsivo. Nessun actor id o
+  service role viene passato dal client. Manager/manager_viewer con membership
+  restano esclusi (salvo admin); gli admin usano comunque lo scope delle proprie
+  membership in questa vista. Nessuna nuova policy amplia l'accesso alle tabelle.
+- Le prenotazioni riusano `moment_attendance_choices` e le sezioni individuali.
+  Un lotto e' atomico: gruppi non autorizzati, iscrizioni annullate/eliminate,
+  panel indisponibile, sovrapposizioni o capienza insufficiente annullano tutto.
+  Il lock segue registrazioni ordinate, assegnazioni, panel e sezione; i minori
+  collegati consumano posti tramite `app.registration_panel_party_size`.
+  Duplicati e persone gia' prenotate sono idempotenti. Audit per iscrizione:
+  `panel.group_booking_confirmed`. Nessun invio email automatico.
+- Test funzionali SQL reversibili:
+  `tests/sql/group-panel-bookings-rollback-check.sql`. Fixture sintetica per
+  collaudo UI esclusivamente staging:
+  `supabase/seeds/group-panel-dashboard-staging.sql` (4 adulti, 1 minore,
+  gruppo `Test iscrizioni panel`). L'account staging dedicato e'
+  `capogruppo.panel.staging@example.invalid`, con membership sul nodo Italia.
+- Il 2026-09-09 e' stato integrato `origin/main` nel branch panel, preservando
+  panel/scuole e aggiornando le dashboard con le modifiche recenti di main.
+  Le migration mancanti da `20260822100000` a `20260908180000` e le nuove RPC
+  sono state applicate solo allo staging. La migration dati
+  `20260813170000_rename_anziani_and_amici_groups.sql` non e' applicabile alla
+  fixture staging (mancano i gruppi sorgente); il tentativo e' stato annullato
+  e non e' stato registrato come riuscito. La route `scuole` e' stata aggiunta
+  agli slug riservati nell'app e nella migration `20260909121000`.
+- Diagnosi accesso: il certificato staging e' valido sul server `91.99.81.31`.
+  Il resolver locale della postazione restituiva invece `151.5.216.190` per
+  l'hostname sslip.io. Per le operazioni di diagnosi e preparazione account e'
+  stato usato l'IP verificato mantenendo SNI e verifica HTTPS; nessuna modifica
+  al DNS globale e nessuna disattivazione della verifica certificati.
