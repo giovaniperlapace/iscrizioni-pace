@@ -4,6 +4,16 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Build riproducibile — 2026-09-09
+
+- Prima delle verifiche di rilascio confrontare le versioni installate con
+  `package-lock.json`; se divergono eseguire `npm ci`. Il lockfile resta la
+  fonte per le dipendenze usate da Vercel, attualmente Next.js 16.2.9.
+- Il deployment di `c0c83dc` è fallito perché la fixture browser includeva
+  `AppRouterInstance.bfcacheId`, presente nel Next.js 16.3.0 installato
+  localmente ma assente nel 16.2.9 del lockfile. Rimossa la proprietà dalla
+  fixture e reinstallate le dipendenze dal lockfile, senza aggiornamenti.
+
 ## Prefisso telefono nell’inserimento manuale — 2026-09-09
 
 - `ManualPhoneFields` affianca prefisso e numero nel form capogruppo, con

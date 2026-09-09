@@ -226,7 +226,6 @@ export default function Fixture() {
   return (
     <AppRouterContext.Provider
       value={{
-        bfcacheId: "participant-operations-fixture",
         back() {},
         forward() {},
         refresh() {},
