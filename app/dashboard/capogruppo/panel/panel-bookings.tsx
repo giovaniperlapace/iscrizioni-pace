@@ -54,7 +54,7 @@ export function GroupPanelBookings({view, sectionId, locale}: {view: GroupPanelV
         {view.panels.map(p => <option key={p.sectionId} value={p.sectionId}>{p.title} · {dateFormat.format(new Date(p.startsAt))}–{timeFormat.format(new Date(p.endsAt))} · {p.location} · {p.audience}</option>)}
       </select>
       {!view.panels.length ? <p>{copy.emptyPanels}</p> : null}
-      {panel ? <div className="flex items-center justify-end gap-3 border-t border-[var(--peace-border)] pt-3 text-sm">
+      {panel ? <div className="flex items-center justify-start gap-3 border-t border-[var(--peace-border)] pt-3 text-sm">
         <strong className="rounded-full bg-[var(--peace-sky-100)] px-3 py-1.5 text-[var(--peace-blue-800)]">{copy.remaining}: {panel.remaining}</strong>
       </div> : null}
     </div>
