@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CalendarDays, Clock3, MapPin, RefreshCw, RotateCcw, UserPlus } from "lucide-react";
+import { CalendarDays, RefreshCw, RotateCcw, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { GROUP_BOOKING_COPY } from "@/lib/panels/group-booking-copy";
@@ -51,11 +51,10 @@ export function GroupPanelBookings({view, sectionId, locale}: {view: GroupPanelV
         startTransition(() => router.push(value ? `/dashboard/capogruppo/panel?section=${encodeURIComponent(value)}` : "/dashboard/capogruppo/panel"));
       }}>
         <option value="">{copy.choose}</option>
-        {view.panels.map(p => <option key={p.sectionId} value={p.sectionId}>{p.title} · {dateFormat.format(new Date(p.startsAt))} · {p.audience}</option>)}
+        {view.panels.map(p => <option key={p.sectionId} value={p.sectionId}>{p.title} · {dateFormat.format(new Date(p.startsAt))}–{timeFormat.format(new Date(p.endsAt))} · {p.location} · {p.audience}</option>)}
       </select>
       {!view.panels.length ? <p>{copy.emptyPanels}</p> : null}
-      {panel ? <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--peace-border)] pt-3 text-sm">
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-[var(--peace-muted)]"><span className="inline-flex items-center gap-2"><Clock3 size={16} aria-hidden="true" />{dateFormat.format(new Date(panel.startsAt))}–{timeFormat.format(new Date(panel.endsAt))}</span><span className="inline-flex items-center gap-2"><MapPin size={16} aria-hidden="true" />{panel.location}</span><span>{panel.audience}</span></div>
+      {panel ? <div className="flex items-center justify-end gap-3 border-t border-[var(--peace-border)] pt-3 text-sm">
         <strong className="rounded-full bg-[var(--peace-sky-100)] px-3 py-1.5 text-[var(--peace-blue-800)]">{copy.remaining}: {panel.remaining}</strong>
       </div> : null}
     </div>

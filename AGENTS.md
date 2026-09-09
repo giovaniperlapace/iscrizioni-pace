@@ -3223,3 +3223,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   e sotto su mobile, collegata con `aria-describedby`. Spiega il ricaricamento
   dei posti/iscrizioni e l'azzeramento della selezione. Comportamento e RPC
   invariati; nessuna migration.
+
+- Il selettore panel riunisce titolo, data, inizio/fine, sala e pubblico. Non
+  ripetere questi dettagli sotto il selettore: la riga sottostante contiene
+  soltanto i posti disponibili, allineati a destra anche su mobile.
