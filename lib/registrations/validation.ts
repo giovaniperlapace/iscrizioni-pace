@@ -44,7 +44,6 @@ export type RegistrationInput = {
   children: RegistrationChildInput[];
   hasAccessibilityNeeds: boolean | null;
   accessibilityAnswers: Record<string, boolean>;
-  accessibilityNotes: string | null;
   needsOperationalSupport: boolean;
   privacyAccepted: boolean;
   dataProcessingAccepted: boolean;
@@ -83,12 +82,15 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   const birthDate = optionalDate(formData.get("birthDate"));
   const birthPlace = optionalText(formData.get("birthPlace"));
   const nationality = optionalText(formData.get("nationality"));
-  const participatesWithGroup = parseBooleanChoice(
-    formData.get("participatesWithGroup")
-  );
   const hasPreviousSantegidioParticipation = parseBooleanChoice(
     formData.get("hasPreviousSantegidioParticipation")
   );
+  // The first No skips the group question and overrides stale/forged group fields.
+  const participatesWithGroup = hasPreviousSantegidioParticipation === false
+    ? false
+    : hasPreviousSantegidioParticipation === true
+      ? parseBooleanChoice(formData.get("participatesWithGroup"))
+      : null;
   const cannotFindLeader = formData.get("cannotFindLeader") === "on";
   const groupId = optionalUuid(formData.get("groupId"));
   const groupRegistrationLinkToken = optionalText(
@@ -126,7 +128,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     cityOther: optionalText(formData.get("cityOther")),
     hasPreviousSantegidioParticipation,
     externalGroupAssociation:
-      hasPreviousSantegidioParticipation === false
+      participatesWithGroup === false
         ? optionalText(formData.get("externalGroupAssociation"))
         : null,
     participatesWithGroup,
@@ -145,10 +147,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     children: parseAccompanyingChildren(formData, participatesWithChildren),
     hasAccessibilityNeeds,
     accessibilityAnswers,
-    accessibilityNotes: optionalText(formData.get("accessibilityNotes")),
-    needsOperationalSupport:
-      hasAccessibilityNeeds === true &&
-      formData.get("needsOperationalSupport") === "on",
+    needsOperationalSupport: false,
     privacyAccepted,
     dataProcessingAccepted,
     futureEventsCommunicationsAccepted,
@@ -229,7 +228,6 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
   }
 
   if (
-    input.hasPreviousSantegidioParticipation === true &&
     input.participatesWithGroup === true &&
     !input.cannotFindLeader &&
     !input.groupId &&

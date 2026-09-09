@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  renderGroupLeaderAssignmentNotificationEmail,
   renderMagicLinkEmail,
   renderRegistrationConfirmationEmail,
 } from "../lib/email/templates.ts";
@@ -48,6 +47,7 @@ test("parseRegistrationForm validates required public registration fields", () =
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.set("externalGroupAssociation", "Associazione Giovani del quartiere");
   formData.append("availabilityDays", "2026-10-25");
   formData.append("availabilityDays", "2026-10-27");
@@ -109,6 +109,7 @@ test("parseRegistrationForm validates and stores accompanying children", () => {
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("participatesWithChildren", "yes");
@@ -154,6 +155,7 @@ test("parseRegistrationForm rejects incomplete or future child records", () => {
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("participatesWithChildren", "yes");
@@ -182,7 +184,6 @@ test("questionnaire answers snapshot keeps configurable answers together", () =>
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "yes");
   formData.set("accessibility_hearing", "on");
-  formData.set("accessibilityNotes", "Preferisce essere contattata al mattino.");
   formData.set("hasPreviousSantegidioParticipation", "yes");
   formData.set("participatesWithGroup", "no");
   formData.set("attendanceChoice", "yes");
@@ -212,7 +213,7 @@ test("questionnaire answers snapshot keeps configurable answers together", () =>
   }
 });
 
-test("parseRegistrationForm keeps accessibility notes optional", () => {
+test("parseRegistrationForm accepts structured accessibility answers", () => {
   const formData = new FormData();
   formData.set("email", "maria@example.org");
   formData.set("firstName", "Maria");
@@ -225,6 +226,7 @@ test("parseRegistrationForm keeps accessibility notes optional", () => {
   formData.set("hasAccessibilityNeeds", "yes");
   formData.set("accessibility_hearing", "on");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
@@ -233,7 +235,7 @@ test("parseRegistrationForm keeps accessibility notes optional", () => {
 
   assert.equal(parsed.ok, true);
   if (parsed.ok) {
-    assert.equal(parsed.value.accessibilityNotes, null);
+    assert.deepEqual(parsed.value.accessibilityAnswers, { hearing: true });
   }
 });
 
@@ -249,6 +251,7 @@ test("parseRegistrationForm requires sensitive consent only for accessibility ne
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
 
@@ -287,6 +290,7 @@ test("parseRegistrationForm keeps phone optional but validates it when present",
   formData.set("cityOther", "Roma");
   formData.set("hasAccessibilityNeeds", "no");
   formData.set("hasPreviousSantegidioParticipation", "no");
+  formData.set("participatesWithGroup", "no");
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
@@ -330,13 +334,12 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
   formData.set("lastName", "Bianchi");
+  formData.set("useLeaderEmail", "on");
   formData.set("phone", "+39 333 123 4567");
   formData.append("availabilityDays", "2026-10-25");
   formData.append("availabilityDays", "2026-10-26");
   formData.set("hasAccessibilityNeeds", "yes");
   formData.set("accessibility_walkingOrSteps", "on");
-  formData.set("needsOperationalSupport", "on");
-  formData.set("accessibilityNotes", "Serve posto vicino all'ingresso.");
   formData.set("leaderNote", "  Arriva con il gruppo di Roma.  ");
   formData.set("consentConfirmed", "on");
 
@@ -360,8 +363,6 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
     assert.deepEqual(parsed.value.accessibilityAnswers, {
       walkingOrSteps: true,
     });
-    assert.equal(parsed.value.needsOperationalSupport, true);
-    assert.equal(parsed.value.accessibilityNotes, "Serve posto vicino all'ingresso.");
     assert.equal(parsed.value.leaderNote, "Arriva con il gruppo di Roma.");
   }
 });
@@ -425,7 +426,7 @@ test("parseManualRegistrationForm requires contact and consent", () => {
 
   assert.equal(parsed.ok, false);
   if (!parsed.ok) {
-    assert.ok(parsed.errors.includes("Inserisci almeno email o telefono."));
+    assert.ok(parsed.errors.includes("Inserisci un indirizzo email valido."));
     assert.ok(
       parsed.errors.includes(
         "Conferma di avere il consenso della persona iscritta."
@@ -443,7 +444,6 @@ test("manual registration questionnaire snapshot marks group leader source", () 
   formData.set("availabilityUnknown", "on");
   formData.set("hasAccessibilityNeeds", "yes");
   formData.set("accessibility_walkingOrSteps", "on");
-  formData.set("accessibilityNotes", "Da richiamare prima della partenza.");
   formData.set("participatesWithChildren", "yes");
   formData.set("childrenCount", "1");
   formData.set("child_0_firstName", "Anna");
@@ -476,10 +476,6 @@ test("manual registration questionnaire snapshot marks group leader source", () 
     assert.deepEqual(answers.accessibility.washingtonGroupAnswers, {
       walkingOrSteps: true,
     });
-    assert.equal(
-      answers.accessibility.operationalNotes,
-      "Da richiamare prima della partenza."
-    );
     assert.equal(answers.consents.acceptedByGroupLeader, true);
   }
 });
@@ -607,22 +603,6 @@ test("registration confirmation includes the short participant code", () => {
   assert.match(rendered.html, /cid:registration-qr@example\.org/);
 });
 
-test("group leader assignment notification points to the review dashboard", () => {
-  const rendered = renderGroupLeaderAssignmentNotificationEmail({
-    leaderName: "Referente",
-    participantName: "Maria Rossi",
-    participantCode: "A7K2",
-    groupName: "Roma",
-    eventTitle: "Assisi 2026",
-    dashboardLink: "https://registrationspeace.santegidio.org/dashboard/capogruppo?filter=to-review",
-  });
-
-  assert.match(rendered.subject, /Nuova persona da verificare/);
-  assert.match(rendered.text, /Maria Rossi \(A7K2\)/);
-  assert.match(rendered.text, /filter=to-review/);
-  assert.match(rendered.html, /Apri la dashboard capogruppo/);
-});
-
 test("rate limit blocks attempts after the configured threshold", () => {
   assert.equal(checkRateLimit("test-key", { limit: 2, windowMs: 1000 }, 0), true);
   assert.equal(checkRateLimit("test-key", { limit: 2, windowMs: 1000 }, 1), true);
@@ -641,7 +621,6 @@ test("parseParticipantDashboardUpdate validates editable participant fields", ()
   formData.set("moment_22222222-2222-4222-8222-222222222222", "yes");
   formData.set("hasAccessibilityNeeds", "on");
   formData.set("accessibility_walkingOrSteps", "on");
-  formData.set("accessibilityNotes", "Preferisce ingresso senza scale.");
 
   const parsed = parseParticipantDashboardUpdate(formData);
 
@@ -686,7 +665,6 @@ test("parseParticipantDashboardUpdate clears hidden accessibility details when s
   formData.set("registrationId", "11111111-1111-4111-8111-111111111111");
   formData.append("availabilityDays", "2026-09-04");
   formData.set("accessibility_walkingOrSteps", "on");
-  formData.set("accessibilityNotes", "Nota rimasta nel form nascosto.");
 
   const parsed = parseParticipantDashboardUpdate(formData);
 
@@ -694,7 +672,6 @@ test("parseParticipantDashboardUpdate clears hidden accessibility details when s
   if (parsed.ok) {
     assert.deepEqual(parsed.value.accessibilityAnswers, {});
     assert.equal(parsed.value.needsOperationalSupport, false);
-    assert.equal(parsed.value.accessibilityNotes, null);
   }
 });
 
@@ -716,28 +693,24 @@ test("preserveAccessibilityUnlessEdited keeps sensitive details out of unrelated
     {
       accessibilityAnswers: { walkingOrSteps: true },
       needsOperationalSupport: true,
-      accessibilityNotes: "Preferisce ingresso senza scale.",
     },
     false
   );
 
   assert.deepEqual(preserved.accessibilityAnswers, { walkingOrSteps: true });
   assert.equal(preserved.needsOperationalSupport, true);
-  assert.equal(preserved.accessibilityNotes, "Preferisce ingresso senza scale.");
 
   const edited = preserveAccessibilityUnlessEdited(
     parsed.value,
     {
       accessibilityAnswers: { walkingOrSteps: true },
       needsOperationalSupport: true,
-      accessibilityNotes: "Preferisce ingresso senza scale.",
     },
     true
   );
 
   assert.deepEqual(edited.accessibilityAnswers, {});
   assert.equal(edited.needsOperationalSupport, false);
-  assert.equal(edited.accessibilityNotes, null);
 });
 
 test("canParticipantEditRegistration closes cancelled and late registrations", () => {
@@ -787,7 +760,6 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
       children: [],
       accessibilityAnswers: {},
       needsOperationalSupport: false,
-      accessibilityNotes: null,
     },
     {
       registrationId: "11111111-1111-4111-8111-111111111111",
@@ -815,7 +787,6 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
         walkingOrSteps: true,
       },
       needsOperationalSupport: true,
-      accessibilityNotes: "Serve supporto.",
     }
   );
 
@@ -827,7 +798,6 @@ test("diffParticipantDashboardUpdate returns changed field names for audit", () 
     "accompanying_children",
     "accessibility_answers",
     "needs_operational_support",
-    "accessibility_notes",
   ]);
 });
 

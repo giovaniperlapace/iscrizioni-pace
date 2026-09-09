@@ -672,7 +672,7 @@ Deliverable:
 - almeno una stampante candidata disponibile fisicamente;
 - scheda tecnica di formato, DPI, velocita', collegamento, driver e sistemi
   supportati;
-- template etichetta di prova con QR, codice e testo minimo;
+- template etichetta di prova con QR, nome e cognome del partecipante e codice pubblico (requisito confermato il 2026-09-08, comune anche ai futuri pass wallet);
 - prima opzione universale tramite pagina di stampa e driver di sistema;
 - valutazione, solo se necessaria, di SDK vendor, WebUSB/WebBluetooth o bridge
   locale controllato;

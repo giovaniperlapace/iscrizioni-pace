@@ -1,6 +1,7 @@
 import {
   buildAttendanceDayColumns,
   parseDateOnly,
+  type AttendancePart,
 } from "./attendance-slots.ts";
 
 export type StatisticsParticipant = {
@@ -84,7 +85,16 @@ export type StatisticsPersonRow = {
 export type StatisticsAttendanceSlot = {
   key: string;
   day: string;
-  dayPart: "morning" | "afternoon" | "day";
+  dayPart: AttendancePart;
+};
+
+export type StatisticsDrilldownFilter = {
+  personKind?: StatisticsPersonKind | "all";
+  country?: string;
+  city?: string;
+  group?: string;
+  attendanceSlot?: string | "none";
+  ageBand?: StatisticsAgeBand;
 };
 
 export type EventStatisticsSummary = {
@@ -103,6 +113,161 @@ export type EventStatisticsSnapshot = {
   attendanceSlots: StatisticsAttendanceSlot[];
   summary: EventStatisticsSummary;
 };
+
+export function serializeStatisticsDrilldown(
+  filter: StatisticsDrilldownFilter
+): string {
+  const params = new URLSearchParams();
+
+  if (filter.personKind) {
+    params.set("kind", filter.personKind);
+  }
+  if (filter.country) {
+    params.set("country", filter.country);
+  }
+  if (filter.city) {
+    params.set("city", filter.city);
+  }
+  if (filter.group) {
+    params.set("group", filter.group);
+  }
+  if (filter.attendanceSlot) {
+    params.set("attendance", filter.attendanceSlot);
+  }
+  if (filter.ageBand) {
+    params.set("age", filter.ageBand);
+  }
+
+  if (params.size === 0) {
+    params.set("kind", "all");
+  }
+
+  return params.toString();
+}
+
+export function parseStatisticsDrilldown(
+  value: string | null | undefined
+): StatisticsDrilldownFilter | null {
+  if (!value) {
+    return null;
+  }
+
+  const params = new URLSearchParams(value);
+  const filter: StatisticsDrilldownFilter = {};
+  const kind = params.get("kind");
+  const attendance = params.get("attendance");
+  const age = params.get("age");
+
+  if (kind === "all" || kind === "participant" || kind === "child") {
+    filter.personKind = kind;
+  }
+  if (params.get("country")) {
+    filter.country = params.get("country") ?? undefined;
+  }
+  if (params.get("city")) {
+    filter.city = params.get("city") ?? undefined;
+  }
+  if (params.get("group")) {
+    filter.group = params.get("group") ?? undefined;
+  }
+  if (
+    attendance === "none" ||
+    /^\d{4}-\d{2}-\d{2}__(morning|afternoon)$/.test(attendance ?? "")
+  ) {
+    filter.attendanceSlot = attendance ?? undefined;
+  }
+  if (isStatisticsAgeBand(age)) {
+    filter.ageBand = age;
+  }
+
+  return Object.keys(filter).length > 0 ? filter : null;
+}
+
+export function filterStatisticsPeople(
+  people: StatisticsPersonRow[],
+  filter: StatisticsDrilldownFilter
+): StatisticsPersonRow[] {
+  return people.filter((person) => {
+    if (
+      filter.personKind &&
+      filter.personKind !== "all" &&
+      person.kind !== filter.personKind
+    ) {
+      return false;
+    }
+    if (filter.country && person.country !== filter.country) {
+      return false;
+    }
+    if (filter.city && person.city !== filter.city) {
+      return false;
+    }
+    if (filter.group && person.group !== filter.group) {
+      return false;
+    }
+    if (filter.ageBand && person.ageBand !== filter.ageBand) {
+      return false;
+    }
+    if (
+      filter.attendanceSlot === "none" &&
+      person.attendanceSlotKeys.length > 0
+    ) {
+      return false;
+    }
+    if (
+      filter.attendanceSlot &&
+      filter.attendanceSlot !== "none" &&
+      !person.attendanceSlotKeys.includes(filter.attendanceSlot)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function describeStatisticsDrilldown(
+  filter: StatisticsDrilldownFilter,
+  slots: StatisticsAttendanceSlot[]
+): string {
+  const parts: string[] = [];
+
+  if (filter.personKind === "all") {
+    parts.push("Tutte le persone");
+  } else if (filter.personKind === "participant") {
+    parts.push("Partecipanti iscritti");
+  } else if (filter.personKind === "child") {
+    parts.push("Minori accompagnati");
+  }
+  if (filter.country) {
+    parts.push(`Paese: ${filter.country}`);
+  }
+  if (filter.city) {
+    parts.push(`Città: ${filter.city}`);
+  }
+  if (filter.group) {
+    parts.push(`Gruppo: ${filter.group}`);
+  }
+  if (filter.ageBand) {
+    parts.push(
+      filter.ageBand === "unknown"
+        ? "Età non indicata"
+        : `Fascia di età: ${filter.ageBand}`
+    );
+  }
+  if (filter.attendanceSlot === "none") {
+    parts.push("Nessuna fascia indicata");
+  } else if (filter.attendanceSlot) {
+    const slot = slots.find((candidate) => candidate.key === filter.attendanceSlot);
+
+    if (slot) {
+      parts.push(
+        `${slot.dayPart === "morning" ? "Mattina" : "Pomeriggio"} ${formatFilterDate(slot.day)}`
+      );
+    }
+  }
+
+  return parts.join(" · ") || "Filtro statistico";
+}
 
 type GroupNode = StatisticsGroup & {
   parentGroupId: string | null;
@@ -270,6 +435,10 @@ function buildPeopleDetail(
   const slotsByKey = new Map<string, StatisticsAttendanceSlot>();
 
   for (const column of buildAttendanceDayColumns(eventStartsOn, eventEndsOn)) {
+    if (eventStartsOn && column.day < eventStartsOn) {
+      continue;
+    }
+
     for (const part of column.parts) {
       const key = attendanceDetailSlotKey(column.day, part);
       slotsByKey.set(key, { key, day: column.day, dayPart: part });
@@ -287,13 +456,21 @@ function buildPeopleDetail(
     }
 
     if (choice.choice === "yes" && choice.day) {
-      const dayPart =
+      const dayParts: AttendancePart[] =
         choice.day_part === "morning" || choice.day_part === "afternoon"
-          ? choice.day_part
-          : "day";
-      const key = attendanceDetailSlotKey(choice.day, dayPart);
-      current.selected.add(key);
-      slotsByKey.set(key, { key, day: choice.day, dayPart });
+          ? [choice.day_part]
+          : ["morning", "afternoon"];
+
+      for (const dayPart of dayParts) {
+        const key = attendanceDetailSlotKey(choice.day, dayPart);
+
+        if (eventStartsOn && !slotsByKey.has(key)) {
+          continue;
+        }
+
+        current.selected.add(key);
+        slotsByKey.set(key, { key, day: choice.day, dayPart });
+      }
     }
 
     attendanceByRegistrationId.set(choice.registration_id, current);
@@ -454,7 +631,7 @@ function getStatisticsAgeBand(age: number | null): StatisticsAgeBand {
 
 function attendanceDetailSlotKey(
   day: string,
-  dayPart: "morning" | "afternoon" | "day"
+  dayPart: AttendancePart
 ): string {
   return `${day}__${dayPart}`;
 }
@@ -603,4 +780,30 @@ function normalizeBucketId(value: string): string {
 
 function getRegisteredPeopleCount(participant: StatisticsParticipant): number {
   return 1 + Math.max(0, participant.childrenCount ?? 0);
+}
+
+function isStatisticsAgeBand(
+  value: string | null
+): value is StatisticsAgeBand {
+  return (
+    value === "0-14" ||
+    value === "15-30" ||
+    value === "30-65" ||
+    value === "65+" ||
+    value === "unknown"
+  );
+}
+
+function formatFilterDate(value: string): string {
+  const date = parseDateOnly(value);
+
+  if (!date) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(date);
 }

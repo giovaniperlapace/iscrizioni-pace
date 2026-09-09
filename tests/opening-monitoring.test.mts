@@ -106,7 +106,6 @@ test("summarizeRegistrationMonitoring counts launch watch items", () => {
     cancelled: 1,
     last24Hours: 3,
     withoutCurrentGroup: 1,
-    probableGroup: 2,
     participantSelectedGroup: 1,
     ruleMatchedGroup: 1,
     newcomerGroup: 1,

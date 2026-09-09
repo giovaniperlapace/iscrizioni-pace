@@ -1,0 +1,39 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import assert from "node:assert/strict";
+const base = process.argv[2] ?? "http://localhost:3107";
+if (!/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(base)) throw new Error("Local server required");
+const route = new URL("../../app/role-assignment-check/", import.meta.url);
+mkdirSync(route, { recursive: true });
+writeFileSync(new URL("page.tsx", route), 'export { default } from "@/tests/browser/operational-role-assignment-fixture";');
+const ab = (...args) => execFileSync("npx", ["--yes", "agent-browser", "--session", "role-assignment-check", ...args], { encoding: "utf8", timeout: 60000 });
+const check = (code, label) => { assert.match(ab("eval", `Boolean(${code})`), /true/, label); console.log(`PASS ${label}`); };
+try {
+  ab("open", `${base}/role-assignment-check`); ab("snapshot", "-i");
+  check('document.querySelector("[name=mode]").value === "existing" && !document.querySelector("[name=firstName]")', "existing account is default");
+  check('!document.querySelector("[name=mode]").closest("form").checkValidity()', "requires a selected user");
+  ab("fill", 'input[type="search"]', "persona@example.test"); ab("snapshot", "-i");
+  ab("find", "role", "button", "click", "--name", "Persona senza ruoli persona@example.test");
+  ab("uncheck", '[name="sendInvite"]');
+  ab("find", "role", "button", "click", "--name", "Assegna ruolo");
+  check('JSON.parse(document.querySelector("[data-submitted]").textContent).existingUserId === "no-role"', "submits first role for existing account");
+  check('JSON.parse(document.querySelector("[data-submitted]").textContent).role === "accoglienza"', "reception role submitted");
+  ab("screenshot", "/tmp/role-assignment-desktop.png");
+  ab("fill", 'input[type="search"]', "altro");
+  check('!document.querySelector("[name=existingUserId]").value && !document.querySelector("[name=mode]").closest("form").checkValidity()', "editing search clears selection");
+  ab("find", "role", "button", "click", "--name", "Nuovo utente"); ab("snapshot", "-i");
+  check('!document.querySelector("[name=existingUserId]") && document.querySelector("[name=email]").required', "new mode requires identity and clears target");
+  ab("fill", '[name="firstName"]', "Nuovo"); ab("fill", '[name="lastName"]', "Utente"); ab("fill", '[name="email"]', "nuovo@example.test");
+  ab("find", "role", "button", "click", "--name", "Assegna ruolo");
+  check('JSON.parse(document.querySelector("[data-submitted]").textContent).mode === "new"', "new user flow preserved");
+  ab("find", "role", "button", "click", "--name", "Utente esistente", "--exact");
+  ab("set", "viewport", "390", "844"); ab("snapshot", "-i");
+  check('document.documentElement.scrollWidth <= innerWidth', "mobile fits viewport");
+  ab("screenshot", "/tmp/role-assignment-mobile.png");
+  check('!document.querySelector("[data-nextjs-dialog]")', "no framework overlay");
+  assert.equal(ab("errors").trim(), "");
+  console.log("PASS no browser errors");
+} finally {
+  ab("close"); rmSync(route, { recursive: true, force: true });
+  rmSync(new URL("../../.next/dev/types/app/role-assignment-check/", import.meta.url), { recursive: true, force: true });
+}

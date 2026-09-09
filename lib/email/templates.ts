@@ -1,3 +1,5 @@
+import { EMAIL_DELIVERY_COPY } from "../i18n/email-delivery.ts";
+
 type MagicLinkTemplateInput = {
   actionLink: string;
 };
@@ -11,14 +13,6 @@ type RegistrationConfirmationInput = {
   qrCodeContentId?: string;
 };
 
-type GroupLeaderAssignmentNotificationInput = {
-  leaderName: string;
-  participantName: string;
-  participantCode: string | null;
-  groupName: string;
-  eventTitle: string;
-  dashboardLink: string;
-};
 
 type SchoolBookingConfirmationInput = {
   teacherFirstName: string;
@@ -41,12 +35,16 @@ export function renderMagicLinkEmail(input: MagicLinkTemplateInput) {
       "usa questo link per accedere alla tua iscrizione:",
       input.actionLink,
       "",
+      EMAIL_DELIVERY_COPY.it.checkSpam,
+      EMAIL_DELIVERY_COPY.it.safeSender,
+      "",
       "Se non hai richiesto tu questo link, puoi ignorare questa email.",
     ].join("\n"),
     html: [
       "<p>Ciao,</p>",
       "<p>usa questo link per accedere alla tua iscrizione:</p>",
       `<p><a href="${escapeHtml(input.actionLink)}">Accedi alla tua iscrizione</a></p>`,
+      `<p>${escapeHtml(EMAIL_DELIVERY_COPY.it.checkSpam)} ${escapeHtml(EMAIL_DELIVERY_COPY.it.safeSender)}</p>`,
       "<p>Se non hai richiesto tu questo link, puoi ignorare questa email.</p>",
     ].join(""),
   };
@@ -68,6 +66,9 @@ export function renderRegistrationConfirmationEmail(
       `Puoi entrare nella tua dashboard tornando su ${input.siteLink} e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.`,
       "",
       "Quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare.",
+      "",
+      EMAIL_DELIVERY_COPY.it.checkSpam,
+      EMAIL_DELIVERY_COPY.it.safeSender,
       "",
       "Grazie.",
     ].join("\n"),
@@ -91,9 +92,18 @@ export function renderRegistrationConfirmationEmail(
         input.siteLink
       )}</a> e inserendo la stessa email usata per registrarti. Riceverai un link personale di accesso per riaprire e aggiornare la tua scheda.</p>`,
       "<p>Quando sarà pubblicato il programma completo, dalla dashboard potrai anche scegliere i momenti a cui partecipare.</p>",
+      `<p>${escapeHtml(EMAIL_DELIVERY_COPY.it.checkSpam)} ${escapeHtml(EMAIL_DELIVERY_COPY.it.safeSender)}</p>`,
       "<p>Grazie.</p>",
     ].join(""),
   };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 export function renderSchoolBookingConfirmationEmail(
@@ -123,45 +133,3 @@ export function renderSchoolBookingConfirmationEmail(
   };
 }
 
-export function renderGroupLeaderAssignmentNotificationEmail(
-  input: GroupLeaderAssignmentNotificationInput
-) {
-  const participantCode = input.participantCode
-    ? ` (${input.participantCode})`
-    : "";
-
-  return {
-    subject: `Nuova persona da verificare - ${input.groupName}`,
-    text: [
-      `Ciao ${input.leaderName},`,
-      "",
-      `C'è una nuova persona da verificare per ${input.groupName}: ${input.participantName}${participantCode}.`,
-      `Evento: ${input.eventTitle}.`,
-      "",
-      "Apri la dashboard capogruppo per confermare l'appartenenza, aggiungere una nota interna o rimandarla al livello superiore.",
-      input.dashboardLink,
-      "",
-      "Grazie.",
-    ].join("\n"),
-    html: [
-      `<p>Ciao ${escapeHtml(input.leaderName)},</p>`,
-      `<p>C'è una nuova persona da verificare per <strong>${escapeHtml(
-        input.groupName
-      )}</strong>: <strong>${escapeHtml(
-        input.participantName
-      )}${escapeHtml(participantCode)}</strong>.</p>`,
-      `<p>Evento: <strong>${escapeHtml(input.eventTitle)}</strong>.</p>`,
-      "<p>Apri la dashboard capogruppo per confermare l'appartenenza, aggiungere una nota interna o rimandarla al livello superiore.</p>",
-      `<p><a href="${escapeHtml(input.dashboardLink)}">Apri la dashboard capogruppo</a></p>`,
-      "<p>Grazie.</p>",
-    ].join(""),
-  };
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}

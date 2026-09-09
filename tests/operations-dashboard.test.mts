@@ -3,11 +3,13 @@ import test from "node:test";
 
 import {
   applyOperationsDashboardFilters,
+  applyStatisticsDrilldownToOperations,
   hasActiveOperationsDashboardFilters,
   parseOperationsDashboardFilters,
   summarizeOperationsDashboardParticipants,
   type OperationsParticipantForFilter,
 } from "../lib/registrations/operations-dashboard.ts";
+import { buildEventStatisticsSnapshot } from "../lib/registrations/event-statistics.ts";
 
 const participants: OperationsParticipantForFilter[] = [
   participant({
@@ -66,7 +68,7 @@ test("parseOperationsDashboardFilters normalizes invalid and long inputs", () =>
   assert.equal(filters.group, "unknown");
   assert.equal(filters.tag, "tag-pranzo");
   assert.equal(filters.service, "servizio-accoglienza");
-  assert.equal(filters.status, "submitted");
+  assert.equal(filters.status, "all");
   assert.equal(hasActiveOperationsDashboardFilters(filters), true);
 });
 
@@ -132,7 +134,7 @@ test("applyOperationsDashboardFilters searches identity separately from contacts
   );
 });
 
-test("applyOperationsDashboardFilters combines contact, group and status", () => {
+test("applyOperationsDashboardFilters combines contact and group while ignoring legacy status", () => {
   assert.deepEqual(
     applyOperationsDashboardFilters(
       participants,
@@ -167,8 +169,7 @@ test("summarizeOperationsDashboardParticipants reports loaded and filtered rows"
     total: 3,
     filtered: 1,
     withoutGroup: 0,
-    probableGroup: 0,
-    confirmedGroup: 1,
+    assignedGroup: 1,
     withoutEmail: 0,
     withoutService: 0,
   });
@@ -185,7 +186,63 @@ test("operations summary counts children as registered people", () => {
 
   assert.equal(summary.total, 4);
   assert.equal(summary.filtered, 4);
-  assert.equal(summary.confirmedGroup, 4);
+  assert.equal(summary.assignedGroup, 4);
+});
+
+test("statistics drilldown opens the registrations containing matching people", () => {
+  const operationsRows = [
+    { ...participant({ name: "Famiglia Rossi" }), registrationId: "registration-a" },
+    { ...participant({ name: "Luca Bianchi" }), registrationId: "registration-b" },
+  ];
+  const statistics = buildEventStatisticsSnapshot({
+    participants: [
+      {
+        registrationId: "registration-a",
+        eventId: "assisi",
+        eventTitle: "Assisi 2026",
+        name: "Famiglia Rossi",
+        currentGroupId: null,
+        currentGroupName: null,
+        country: "Italia",
+        city: "Roma",
+        childrenCount: 1,
+        children: [
+          {
+            id: "child-a",
+            firstName: "Anna",
+            lastName: "Rossi",
+            birthDate: "2016-01-01",
+            position: 0,
+          },
+        ],
+      },
+      {
+        registrationId: "registration-b",
+        eventId: "assisi",
+        eventTitle: "Assisi 2026",
+        name: "Luca Bianchi",
+        currentGroupId: null,
+        currentGroupName: null,
+        country: "Francia",
+        city: "Parigi",
+      },
+    ],
+    groups: [],
+    attendanceChoices: [],
+  });
+  const selection = applyStatisticsDrilldownToOperations(
+    operationsRows,
+    statistics,
+    { country: "Italia", personKind: "child" }
+  );
+
+  assert.deepEqual(
+    selection.participants.map((row) => row.registrationId),
+    ["registration-a"]
+  );
+  assert.equal(selection.summary.peopleCount, 1);
+  assert.equal(selection.summary.registrationCount, 1);
+  assert.equal(selection.summary.label, "Minori accompagnati · Paese: Italia");
 });
 
 function participant(
@@ -209,3 +266,12 @@ function participant(
     ...overrides,
   };
 }
+
+
+test("legacy registration status never hides rows or activates a dashboard filter", () => {
+  for (const status of ["submitted", "confirmed", "cancelled", "unknown"]) {
+    const filters = parseOperationsDashboardFilters({ status });
+    assert.equal(hasActiveOperationsDashboardFilters(filters), false);
+    assert.deepEqual(applyOperationsDashboardFilters(participants, filters), participants);
+  }
+});

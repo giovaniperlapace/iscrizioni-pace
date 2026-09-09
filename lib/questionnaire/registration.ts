@@ -1,7 +1,7 @@
 import type { RegistrationInput } from "@/lib/registrations/validation";
 
 export const REGISTRATION_QUESTIONNAIRE_VERSION =
-  "2026-07-28-accompanying-children";
+  "2026-09-06-conditional-groups";
 
 export type QuestionnaireLocale = "it" | "en";
 export type QuestionDataClass = "personal" | "sensitive" | "operational" | "legal";
@@ -15,8 +15,9 @@ export type RoleVisibility =
 
 export type RegistrationQuestion = {
   id: string;
-  label: Record<QuestionnaireLocale, string>;
+  label: Record<QuestionnaireLocale, string> & Partial<Record<"fr" | "de" | "es" | "nl" | "uk", string>>;
   required: boolean;
+  requiredWhen?: string;
   dataClass: QuestionDataClass;
   structuredStorage: string;
   visibleTo: RoleVisibility[];
@@ -515,11 +516,8 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   },
   {
     id: "previous_santegidio_participation",
-    label: {
-      it: "Hai già partecipato a eventi o iniziative Sant'Egidio?",
-      en: "Have you already joined Sant'Egidio events or initiatives?",
-    },
-    required: false,
+    label: {"it": "Hai partecipato ad altri eventi della Comunità di Sant’Egidio?", "en": "Have you attended other events organised by the Community of Sant’Egidio?", "fr": "As-tu participé à d’autres événements de la Communauté de Sant’Egidio ?", "de": "Hast du an anderen Veranstaltungen der Gemeinschaft Sant’Egidio teilgenommen?", "es": "¿Has participado en otros eventos de la Comunidad de Sant’Egidio?", "nl": "Heb je aan andere evenementen van de Gemeenschap van Sant’Egidio deelgenomen?", "uk": "Чи брали ви участь в інших заходах Спільноти святого Егідія?"},
+    required: true,
     dataClass: "operational",
     structuredStorage: "participants.has_previous_santegidio_participation",
     visibleTo: ["partecipante", "capogruppo", "manager", "manager_viewer", "admin"],
@@ -527,15 +525,22 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   },
   {
     id: "group_participation",
-    label: {
-      it: "Parteciperai all'incontro con un gruppo della Comunità di Sant'Egidio?",
-      en: "Are you joining with a Sant'Egidio group?",
-    },
-    required: false,
+    label: {"it": "Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?", "en": "Will you attend the Prayer for Peace with a group from the Community?", "fr": "Participeras-tu à la Prière pour la Paix avec un groupe de la Communauté ?", "de": "Wirst du mit einer Gruppe der Gemeinschaft am Gebet für den Frieden teilnehmen?", "es": "¿Participarás en la Oración por la Paz con un grupo de la Comunidad?", "nl": "Zul je met een groep van de Gemeenschap deelnemen aan het Gebed voor de Vrede?", "uk": "Чи братимете ви участь у Молитві за мир з групою Спільноти?"},
+    required: true,
+    requiredWhen: "previous_santegidio_participation=yes",
     dataClass: "operational",
     structuredStorage: "participants.participates_with_group,participant_group_assignments",
     visibleTo: ["partecipante", "capogruppo", "manager", "manager_viewer", "admin"],
     editableAfterSubmit: true,
+  },
+  {
+    id: "external_group_association",
+    label: {"it": "Fai parte di qualche associazione?", "en": "Are you a member of any association?", "fr": "Fais-tu partie d’une association ?", "de": "Gehörst du einem Verein an?", "es": "¿Formas parte de alguna asociación?", "nl": "Ben je lid van een vereniging?", "uk": "Чи належите ви до якоїсь асоціації?"},
+    required: false,
+    dataClass: "operational",
+    structuredStorage: "registration_questionnaire_answers.answers.externalGroupAssociation",
+    visibleTo: ["partecipante", "manager", "manager_viewer", "admin"],
+    editableAfterSubmit: false,
   },
   {
     id: "attendance",
@@ -574,12 +579,12 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   {
     id: "accessibility_support",
     label: {
-      it: "Richiesta di supporto operativo e note",
-      en: "Operational support request and notes",
+      it: "Richiesta di supporto operativo",
+      en: "Operational support request",
     },
     required: false,
     dataClass: "sensitive",
-    structuredStorage: "accessibility_needs.needs_operational_support,operational_notes",
+    structuredStorage: "accessibility_needs.needs_operational_support",
     visibleTo: ["partecipante", "manager", "admin"],
     editableAfterSubmit: true,
   },
@@ -649,7 +654,6 @@ export function buildRegistrationQuestionnaireAnswers(input: RegistrationInput) 
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
       washingtonGroupAnswers: input.accessibilityAnswers,
       needsOperationalSupport: input.needsOperationalSupport,
-      hasNotes: Boolean(input.accessibilityNotes),
     },
     consents: {
       privacyAccepted: input.privacyAccepted,

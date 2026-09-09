@@ -1,6 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useReliableFormPending } from "@/components/reliable-form";
 import { useFormStatus } from "react-dom";
 
 type PendingSubmitButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -15,7 +16,9 @@ export function PendingSubmitButton({
   type = "submit",
   ...props
 }: PendingSubmitButtonProps) {
-  const { pending } = useFormStatus();
+  const { pending: nativePending } = useFormStatus();
+  const reliablePending = useReliableFormPending();
+  const pending = nativePending || reliablePending;
 
   return (
     <button

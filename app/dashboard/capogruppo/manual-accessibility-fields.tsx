@@ -1,5 +1,6 @@
 "use client";
 
+import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { useState } from "react";
 
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
@@ -14,8 +15,6 @@ type ManualAccessibilityFieldsProps = {
     unknown: string;
     no: string;
     yes: string;
-    needsSupport: string;
-    notes: string;
   };
 };
 
@@ -64,22 +63,9 @@ export function ManualAccessibilityFields({
               </label>
             ))}
           </div>
-          <label className="flex gap-3 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm font-medium text-[var(--peace-ink)]">
-            <input
-              name="needsOperationalSupport"
-              type="checkbox"
-              className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
-            />
-            {copy.needsSupport}
-          </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.notes}
-            <textarea
-              name="accessibilityNotes"
-              rows={3}
-              className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
-            />
-          </label>
+          <p className="text-sm leading-6 text-[var(--peace-muted)]">
+            {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+          </p>
         </>
       ) : null}
     </fieldset>

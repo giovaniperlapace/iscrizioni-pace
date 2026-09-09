@@ -1,7 +1,13 @@
+import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
+import { OperationalRoleRemoval } from "@/components/operational-role-removal";
+import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
+import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
+
+import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 import {
   BarChart3,
-  ClipboardList,
+  Settings,
   Mail,
   MapPin,
   Network,
@@ -10,12 +16,11 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { redirect } from "next/navigation";
+import { permanentRedirect, redirect } from "next/navigation";
 
 import {
   assignOperationalUserRole,
   assignGroupLeader,
-  createGroupRegistrationLink,
   saveEventService,
   saveOperationsGroup,
   updateGroupPublicCatalogVisibility,
@@ -55,6 +60,7 @@ import {
   getGroupRegistrationLinkStatus,
 } from "@/lib/groups/registration-links";
 import {
+  applyStatisticsDrilldownToOperations,
   applyOperationsDashboardFilters,
   parseOperationsDashboardFilters,
   summarizeOperationsDashboardParticipants,
@@ -73,6 +79,7 @@ import {
 } from "@/lib/registrations/event-services";
 import {
   buildEventStatisticsSnapshot,
+  parseStatisticsDrilldown,
   type EventStatisticsSnapshot,
 } from "@/lib/registrations/event-statistics";
 import {
@@ -149,6 +156,7 @@ type ManagerPageProps = {
     roleEventId?: string;
     roleGroupId?: string;
     edit?: string;
+    view?: string;
     event?: string;
     group?: string;
     contact?: string;
@@ -176,6 +184,9 @@ type RegistrationChildRelationRow = {
 };
 
 type ManagerRegistrationRow = {
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deletion_reason: string | null;
   id: string;
   event_id: string;
   participant_id: string;
@@ -258,6 +269,7 @@ type ManagerGroupRegistrationLinkRow = {
   public_label: string | null;
   internal_label: string | null;
   token_encrypted: string | null;
+  slug: string | null;
   use_count: number | null;
   max_uses: number | null;
   created_at: string | null;
@@ -355,13 +367,18 @@ type AttendanceChoiceRow = {
   choice: string | null;
 };
 
-type ManagerSection = "dashboard" | "iscritti" | "servizi" | "panel" | "email" | "ruoli" | "gruppi";
+type ManagerSection = "dashboard" | "iscritti" | "impostazioni" | "panel" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
   searchParams,
 }: ManagerPageProps) {
   const params = await searchParams;
+  if (params.section === "servizi") {
+    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    legacy.set("section", "impostazioni");
+    permanentRedirect(`/dashboard/manager?${legacy}`);
+  }
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "manager");
 
@@ -407,34 +424,42 @@ export default async function ManagerDashboardPage({
           filters,
           currentEventId
         );
-  const [statistics, panelStatistics] =
-    activeSection === "dashboard"
-      ? await Promise.all([
-          getManagerStatisticsSnapshot(
-            serviceSupabase,
-            scope,
-            managerOperations.groupTree,
-            currentEventId,
-            currentEvent?.starts_on ?? null,
-            currentEvent?.ends_on ?? null
-          ),
-          panelStatisticsPromise,
-        ])
-      : [
-          buildEventStatisticsSnapshot({
-            participants: [],
-            groups: [],
-            attendanceChoices: [],
-          }),
-          emptyPanelStatisticsSnapshot(),
-        ];
+  const statisticsDrilldown =
+    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
+  const panelStatistics = await panelStatisticsPromise;
+  const statistics =
+    activeSection === "dashboard" || statisticsDrilldown
+      ? await getManagerStatisticsSnapshot(
+          serviceSupabase,
+          scope,
+          managerOperations.groupTree,
+          currentEventId,
+          currentEvent?.starts_on ?? null,
+          currentEvent?.ends_on ?? null
+        )
+      : buildEventStatisticsSnapshot({
+          participants: [],
+          groups: [],
+          attendanceChoices: [],
+        });
+  const statisticsSelection = statisticsDrilldown
+    ? applyStatisticsDrilldownToOperations(
+        managerOperations.participants,
+        statistics,
+        statisticsDrilldown
+      )
+    : null;
+  const participantsSnapshot = statisticsSelection
+    ? {
+        ...managerOperations,
+        participants: statisticsSelection.participants,
+        statisticsFilter: statisticsSelection.summary,
+      }
+    : managerOperations;
   const selectedParticipant =
     managerOperations.allParticipants.find(
       (participant) => participant.registrationId === params.edit
     ) ?? null;
-  const selectedCanManage = selectedParticipant
-    ? scope.canManageEvent(selectedParticipant.eventId)
-    : false;
   const selectedGroup =
     managerOperations.groupTree.find((group) => group.id === params.groupId) ??
     null;
@@ -497,8 +522,12 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
-                snapshot={managerOperations}
-                selectedParticipant={selectedCanManage ? selectedParticipant : null}
+                searchParams={params}
+                snapshot={participantsSnapshot}
+                operatorId={auth.user.id}
+                eventId={currentEventId}
+                eventStartsOn={currentEvent?.starts_on ?? null}
+                selectedParticipant={selectedParticipant}
                 canManageEvent={scope.canManageEvent}
                 dashboard="manager"
                 navMode={navMode}
@@ -506,8 +535,9 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
-            {activeSection === "servizi" ? (
+            {activeSection === "impostazioni" ? (
               <ManagerServicesSection
+                canManageEvent={auth.eventRoles.some((role) => role.role === "admin")}
                 services={managerOperations.eventServices}
                 currentEventOption={
                   currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null
@@ -682,13 +712,6 @@ function ManagerSidebar({
       help: "Elenco e modifiche",
     },
     {
-      key: "servizi",
-      href: "/dashboard/manager?section=servizi&nav=mini",
-      Icon: ClipboardList,
-      label: "Servizi",
-      help: "Lista e assegnazioni",
-    },
-    {
       key: "panel",
       href: "/dashboard/manager?section=panel&nav=mini",
       Icon: MapPin,
@@ -715,6 +738,13 @@ function ManagerSidebar({
       Icon: Network,
       label: "Gestione gruppi",
       help: "Territori, gruppi e link",
+    },
+    {
+      key: "impostazioni",
+      href: "/dashboard/manager?section=impostazioni&nav=mini",
+      Icon: Settings,
+      label: "Impostazioni",
+      help: "Catalogo servizi",
     },
   ];
 
@@ -976,7 +1006,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
   if (
     params.section === "dashboard" ||
     params.section === "iscritti" ||
-    params.section === "servizi" ||
+    params.section === "impostazioni" ||
     params.section === "panel" ||
     params.section === "email" ||
     params.section === "ruoli" ||
@@ -1007,7 +1037,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.serviceId ||
     params.serviceSaved
   ) {
-    return "servizi";
+    return "impostazioni";
   }
 
   if (
@@ -1022,6 +1052,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.q ||
     params.event ||
     params.group ||
+    params.stat ||
     params.status ||
     params.managerError ||
     params.managerSaved
@@ -1056,14 +1087,15 @@ async function getManagerOperationsSnapshot(
     };
   }
 
-  const registrationsQuery = supabase
+  const registrationsQuery = loadAllRows((from, to) => supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+      "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
     )
+    .is("deleted_at", null)
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
-    .limit(200);
+    .order("id").range(from, to));
   const groupsQuery = supabase
     .from("groups")
     .select("id,event_id,name,is_assignable,is_active")
@@ -1085,7 +1117,7 @@ async function getManagerOperationsSnapshot(
   const groupLinksQuery = supabase
     .from("group_registration_links")
     .select(
-      "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
+      "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
     )
     .eq("event_id", currentEventId)
     .eq("is_canonical", true)
@@ -1148,35 +1180,36 @@ async function getManagerOperationsSnapshot(
     { data: participantServices },
   ] = await Promise.all([
     participantIds.length > 0
-      ? supabase
+      ? loadRowsForIds(participantIds, (ids, from, to) => supabase
           .from("participant_contacts")
           .select("participant_id,email,phone")
-          .in("participant_id", participantIds)
-          .eq("is_primary", true)
+          .in("participant_id", ids)
+          .eq("is_primary", true).order("id").range(from, to))
       : Promise.resolve(emptyResult),
     registrationIds.length > 0
-      ? supabase
+      ? loadRowsForIds(registrationIds, (ids, from, to) => supabase
           .from("participant_group_assignments")
           .select(
             "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)"
           )
-          .in("registration_id", registrationIds)
-          .eq("is_current", true)
+          .in("registration_id", ids)
+          .eq("is_current", true).order("id").range(from, to))
       : Promise.resolve(emptyResult),
     participantIds.length > 0
-      ? supabase
+      ? loadRowsForIds(participantIds, (ids, from, to) => supabase
           .from("participant_operational_tags")
-          .select("participant_id,assigned_at,operational_tags(id,event_id,label,color)")
-          .in("participant_id", participantIds)
+          .select("participant_id,assigned_at,operational_tags!inner(id,event_id,label,color)")
+          .eq("operational_tags.event_id", currentEventId)
+          .in("participant_id", ids).order("participant_id").order("tag_id").range(from, to))
       : Promise.resolve(emptyResult),
     participantIds.length > 0
-      ? supabase
+      ? loadRowsForIds(participantIds, (ids, from, to) => supabase
           .from("participant_event_services")
           .select(
             "id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)"
           )
-          .in("participant_id", participantIds)
-          .eq("event_id", currentEventId)
+          .in("participant_id", ids)
+          .eq("event_id", currentEventId).order("id").range(from, to))
       : Promise.resolve(emptyResult),
   ]);
   const contactByParticipantId = new Map(
@@ -1229,6 +1262,9 @@ async function getManagerOperationsSnapshot(
       const service = serviceByParticipantId.get(registration.participant_id) ?? null;
 
       return {
+        deletedAt: registration.deleted_at,
+        deletedBy: registration.deleted_by,
+        deletionReason: registration.deletion_reason,
         registrationId: registration.id,
         eventId: registration.event_id,
         eventTitle: event?.title ?? "Evento",
@@ -1308,7 +1344,7 @@ async function getManagerOperationsSnapshot(
         groupId: link.group_id,
         publicLabel: link.public_label,
         internalLabel: link.internal_label,
-        url: buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
+        url: link.slug ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token: link.slug }) : buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
         useCount: link.use_count ?? 0,
         maxUses: link.max_uses,
         createdAt: link.created_at,
@@ -1375,6 +1411,7 @@ async function getManagerStatisticsSnapshot(
     .select(
       "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
     )
+    .is("deleted_at", null)
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
     .range(0, 9999);
@@ -1682,7 +1719,7 @@ function ManagerGroupTreeSection({
           }
 
           return (
-            <form
+            <ReliableForm
               key={group.id}
               id={`manager-public-catalog-${group.id}`}
               action={updateGroupPublicCatalogVisibility}
@@ -1695,7 +1732,7 @@ function ManagerGroupTreeSection({
               {!isPublicCatalog ? (
                 <input type="hidden" name="isPublicCatalog" value="on" />
               ) : null}
-            </form>
+            </ReliableForm>
           );
         })}
       </div>
@@ -1763,7 +1800,7 @@ function ManagerGroupEditOverlay({
             {group ? "Modifica gruppo" : "Nuovo gruppo"}
           </h3>
         </div>
-        <form action={saveOperationsGroup} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
+        <ReliableForm action={saveOperationsGroup} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           {group ? <input type="hidden" name="groupId" value={group.id} /> : null}
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
@@ -1790,7 +1827,7 @@ function ManagerGroupEditOverlay({
               Salva gruppo
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
       </div>
     </div>
   );
@@ -1829,35 +1866,14 @@ function ManagerGroupLinksOverlay({
         <div className="grid gap-5 overflow-y-auto px-5 py-5">
           <AutoCopyLinkNotice url={createdUrl} />
 
-          {canManage && links.length === 0 ? (
-            <form action={createGroupRegistrationLink} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
-              <input type="hidden" name="sourceDashboard" value="manager" />
-              <input type="hidden" name="groupId" value={group.id} />
-              <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                Nome pubblico del link
-                <input
-                  name="displayName"
-                  className="field"
-                  defaultValue={group.publicLabel ?? group.name}
-                  required
-                />
-              </label>
-              <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                Genera link
-              </PendingSubmitButton>
-            </form>
-          ) : !canManage ? (
-            <p className="rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm text-[var(--peace-muted)]">
-              Consultazione senza permessi di modifica.
-            </p>
-          ) : null}
+
 
           <div className="grid gap-2">
             {links.map((link) => (
               <div key={link.id} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm">
                 <div>
                   {canManage ? (
-                    <form
+                    <ReliableForm
                       action={updateGroupRegistrationLink}
                       className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                       data-preserve-dashboard-scroll
@@ -1873,10 +1889,15 @@ function ManagerGroupLinksOverlay({
                           required
                         />
                       </label>
+                      <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                        Slug (URL)
+                        <input name="slug" className="field bg-white text-sm" defaultValue={link.url ? decodeURIComponent(new URL(link.url).pathname.slice(1)) : ""} pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,95}" minLength={3} maxLength={96} required />
+                        <span className="font-normal">Modificando lo slug, il vecchio URL non sarà più valido.</span>
+                      </label>
                       <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
-                        Salva nome
+                        Salva link
                       </PendingSubmitButton>
-                    </form>
+                    </ReliableForm>
                   ) : (
                     <p className="font-medium text-[var(--peace-ink)]">
                       {link.publicLabel ?? group.publicLabel ?? group.name}
@@ -1947,7 +1968,7 @@ function ManagerGroupLeaderOverlay({
           {canManage ? (
             <GroupLeaderModeTabs
               existingForm={
-              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
+              <ReliableForm action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4" data-preserve-dashboard-scroll>
                   <input type="hidden" name="sourceDashboard" value="manager" />
                   <input type="hidden" name="groupId" value={group.id} />
                   <input type="hidden" name="mode" value="existing" />
@@ -1966,10 +1987,10 @@ function ManagerGroupLeaderOverlay({
                   <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
                     Assegna capogruppo
                   </PendingSubmitButton>
-                </form>
+                </ReliableForm>
               }
               newForm={
-              <form action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4" data-preserve-dashboard-scroll>
+              <ReliableForm action={assignGroupLeader} className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4" data-preserve-dashboard-scroll>
                   <input type="hidden" name="sourceDashboard" value="manager" />
                   <input type="hidden" name="groupId" value={group.id} />
                   <input type="hidden" name="mode" value="new" />
@@ -1991,7 +2012,7 @@ function ManagerGroupLeaderOverlay({
                   <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
                     Crea utente e assegna
                   </PendingSubmitButton>
-                </form>
+                </ReliableForm>
               }
             />
           ) : (
@@ -2006,11 +2027,13 @@ function ManagerGroupLeaderOverlay({
 }
 
 function ManagerServicesSection({
+  canManageEvent,
   services,
   currentEventOption,
   selectedService,
   navMode,
 }: {
+  canManageEvent: boolean;
   services: EventServiceOption[];
   currentEventOption: { id: string; title: string } | null;
   selectedService: EventServiceOption | null;
@@ -2019,7 +2042,8 @@ function ManagerServicesSection({
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
-        <h2 className="text-lg font-semibold">Servizi</h2>
+        <OperationsSettingsNavigation active="servizi" navMode={navMode} canManageEvent={canManageEvent} />
+        <h3 className="mt-5 text-base font-semibold">Catalogo servizi</h3>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
           Lista dei servizi disponibili nell&apos;evento. I partecipanti non
           possono assegnarsi un servizio in autonomia: manager e capigruppo
@@ -2028,7 +2052,7 @@ function ManagerServicesSection({
       </div>
 
       {currentEventOption ? (
-        <form
+        <ReliableForm
           action={saveEventService}
           className="mt-5 grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 md:grid-cols-[1fr_1.4fr_auto]"
           data-preserve-dashboard-scroll
@@ -2068,7 +2092,7 @@ function ManagerServicesSection({
           <PendingSubmitButton className="min-h-11 self-end rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Crea
           </PendingSubmitButton>
-        </form>
+        </ReliableForm>
       ) : null}
 
       <div className="mt-5 overflow-x-auto">
@@ -2104,7 +2128,7 @@ function ManagerServicesSection({
                   )}
                 </td>
                 <td className="py-4 pr-4">
-                  <form
+                  <ReliableForm
                     id={statusFormId}
                     action={saveEventService}
                     className="hidden"
@@ -2124,7 +2148,7 @@ function ManagerServicesSection({
                     {!service.isActive ? (
                       <input type="hidden" name="isActive" value="1" />
                     ) : null}
-                  </form>
+                  </ReliableForm>
                   <EventServiceActiveSwitch
                     formId={statusFormId}
                     isActive={service.isActive}
@@ -2133,7 +2157,7 @@ function ManagerServicesSection({
                 </td>
                 <td className="py-4 pl-4 text-right">
                   <Link
-                    href={`${managerPath("servizi", navMode)}&serviceId=${service.id}`}
+                    href={`${managerPath("impostazioni", navMode)}&serviceId=${service.id}`}
                     scroll={false}
                     className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
                   >
@@ -2179,7 +2203,7 @@ function ManagerServiceEditOverlay({
             </p>
           </div>
           <Link
-            href={managerPath("servizi", navMode)}
+            href={managerPath("impostazioni", navMode)}
             scroll={false}
             className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label="Chiudi modale modifica servizio"
@@ -2187,7 +2211,7 @@ function ManagerServiceEditOverlay({
             <X className="size-5" aria-hidden="true" />
           </Link>
         </div>
-        <form action={saveEventService} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
+        <ReliableForm action={saveEventService} className="grid overflow-y-auto" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="serviceId" value={service.id} />
           <input type="hidden" name="eventId" value={service.eventId} />
@@ -2225,7 +2249,7 @@ function ManagerServiceEditOverlay({
           </div>
           <div className="flex justify-end gap-2 border-t border-[var(--peace-border)] px-5 py-4">
             <Link
-              href={managerPath("servizi", navMode)}
+              href={managerPath("impostazioni", navMode)}
               scroll={false}
               className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
@@ -2235,7 +2259,7 @@ function ManagerServiceEditOverlay({
               Salva servizio
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
       </div>
     </div>
   );
@@ -2259,28 +2283,13 @@ function ManagerOperationalUsersSection({
       <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <h2 className="text-lg font-semibold">Utenti e ruoli</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
-          Crea accessi operativi per gli eventi assegnati senza creare una
-          iscrizione. Manager, viewer e accoglienza accedono direttamente alla
-          dashboard operativa; solo il capogruppo completa anche
-          l&apos;iscrizione personale.
+          Assegna un ruolo a un utente esistente oppure crea un nuovo accesso
+          operativo. L’iscrizione personale all’evento resta separata.
         </p>
-        <form action={assignOperationalUserRole} className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
+        <ReliableForm action={assignOperationalUserRole} className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="nav" value={navMode} />
-          <div className="grid gap-3 lg:grid-cols-3">
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Nome
-              <input name="firstName" className="field bg-white font-normal" required />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Cognome
-              <input name="lastName" className="field bg-white font-normal" required />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Email
-              <input name="email" type="email" className="field bg-white font-normal" required />
-            </label>
-          </div>
+          <OperationalUserTarget />
           <OperationalRoleFields
             eventOptions={eventOptions}
             groupOptions={groupOptions.map((group) => ({
@@ -2297,9 +2306,9 @@ function ManagerOperationalUsersSection({
             showInviteOption
           />
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-            Crea utente e assegna ruolo
+            Assegna ruolo
           </PendingSubmitButton>
-        </form>
+        </ReliableForm>
       </div>
 
       <div className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
@@ -2400,7 +2409,7 @@ function ManagerOperationalRoleEditOverlay({
           </Link>
         </div>
 
-        <form action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
+        <ReliableForm action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
           <input type="hidden" name="sourceDashboard" value="manager" />
           <input type="hidden" name="nav" value={navMode} />
           <input type="hidden" name="currentUserId" value={role.userId} />
@@ -2483,7 +2492,13 @@ function ManagerOperationalRoleEditOverlay({
               Salva modifiche
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
+        <OperationalRoleRemoval
+          userId={role.userId}
+          assignments={role.assignments}
+          sourceDashboard="manager"
+          navMode={navMode}
+        />
       </div>
     </div>
   );
@@ -2528,7 +2543,7 @@ function StatusMessage({
           : roleSaved
             ? "Utente operativo aggiornato."
           : managerSaved === "deleted"
-            ? "Iscrizione eliminata. Il profilo partecipante e l'account di accesso sono stati conservati."
+            ? "Iscrizione eliminata dalle attività. Account e storico sono stati conservati."
           : managerSaved
             ? "Gestione iscritti aggiornata."
             : "Configurazione apertura aggiornata."}

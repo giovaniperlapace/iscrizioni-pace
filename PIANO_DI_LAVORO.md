@@ -1,5 +1,10 @@
 # Piano di lavoro
 
+Aggiornamento 2026-09-05: il blocco di semplificazione gruppi sostituisce
+conferme ordinarie, notifiche per iscrizione e risalite automatiche descritte
+nelle milestone storiche. Regole correnti e rilascio SQL/codice in
+`docs/operative-group-assignments.md` e `AGENTS.md`.
+
 > Aggiornamento 2026-08-04: per location, panel, sezioni di capienza,
 > iscrizioni individuali, prenotazioni scuole, campagne collegate ai panel,
 > statistiche panel, accoglienza QR e stampa badge usare
@@ -63,8 +68,7 @@ Stato locale aggiornato al 2026-06-17:
   operativi tramite tab.
 - Milestone 12 e' avviata: prima tranche UX consolidata nel commit `3d4d00d`
   con messaggi form meno prematuri, consenso accessibilità condizionale,
-  login non tecnico, domande accessibilità ridotte e note accessibilità senza
-  placeholder. Restano da rivedere le dashboard operative una sezione alla
+  login non tecnico e domande accessibilità ridotte. Restano da rivedere le dashboard operative una sezione alla
   volta.
 - Seconda tranche Milestone 12 completata in localhost su dashboard
   partecipante con utente test non personale, capogruppo, manager, admin e
@@ -1168,7 +1172,7 @@ La sequenza sotto sostituisce l'ordine precedente. Il criterio e':
     solo se l'utente risponde "Sì" ai bisogni di accessibilità;
   - le domande accessibilità sono state ridotte temporaneamente a: sentire,
     camminare/salire gradini, sedia a rotelle o altro ausilio per la mobilità;
-  - il campo note accessibilità non mostra placeholder/suggerimenti;
+  - le domande di accessibilità usano soltanto opzioni strutturate;
   - il login non autenticato non mostra più il path tecnico della dashboard.
 - Seconda tranche completata:
   - dashboard partecipante con utente test non personale, dashboard

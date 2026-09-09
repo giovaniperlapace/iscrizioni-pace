@@ -1,3 +1,4 @@
+import { validateContactFields } from "../forms/result.ts";
 import {
   DEFAULT_LOCALE,
   type SupportedLocale,
@@ -25,6 +26,7 @@ export type ManualRegistrationInput = {
   firstName: string;
   lastName: string;
   email: string | null;
+  useLeaderEmail: boolean;
   phone: string | null;
   birthDate: string | null;
   preferredLocale: SupportedLocale;
@@ -34,8 +36,6 @@ export type ManualRegistrationInput = {
   availabilityUnknown: boolean;
   hasAccessibilityNeeds: boolean | null;
   accessibilityAnswers: Record<string, boolean>;
-  accessibilityNotes: string | null;
-  needsOperationalSupport: boolean;
   leaderNote: string | null;
   consentConfirmed: boolean;
 };
@@ -45,7 +45,8 @@ const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;
 export function parseManualRegistrationForm(
   formData: FormData
 ): ValidationResult<ManualRegistrationInput> {
-  const email = normalizeEmail(formData.get("email"));
+  const useLeaderEmail = formData.get("useLeaderEmail") === "on";
+  const email = useLeaderEmail ? "" : normalizeEmail(formData.get("email"));
   const participatesWithChildren =
     formData.get("participatesWithChildren") === "yes";
   const value: ManualRegistrationInput = {
@@ -53,6 +54,7 @@ export function parseManualRegistrationForm(
     firstName: optionalText(formData.get("firstName")) ?? "",
     lastName: optionalText(formData.get("lastName")) ?? "",
     email: email.length > 0 ? email : null,
+    useLeaderEmail,
     phone: normalizePhone(formData.get("phone")),
     birthDate: optionalDate(formData.get("birthDate")),
     preferredLocale: DEFAULT_LOCALE,
@@ -61,13 +63,15 @@ export function parseManualRegistrationForm(
     availabilityUnknown: formData.get("availabilityUnknown") === "on",
     availabilitySlots: parseAvailabilitySlots(formData),
     hasAccessibilityNeeds: parseBooleanChoice(formData.get("hasAccessibilityNeeds")),
-    accessibilityAnswers: parseAccessibilityAnswers(formData),
-    accessibilityNotes: optionalText(formData.get("accessibilityNotes")),
-    needsOperationalSupport: formData.get("needsOperationalSupport") === "on",
+    accessibilityAnswers: formData.get("hasAccessibilityNeeds") === "yes" ? parseAccessibilityAnswers(formData) : {},
     leaderNote: normalizeLeaderNote(formData.get("leaderNote")),
     consentConfirmed: formData.get("consentConfirmed") === "on",
   };
   const errors = validateManualRegistrationInput(value);
+  for (const issue of validateContactFields(formData)) {
+    if (issue.field === "email" && !useLeaderEmail) errors.push("Inserisci un indirizzo email valido.");
+    if (issue.field === "birthDate") errors.push("Inserisci una data di nascita valida.");
+  }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value };
 }
@@ -81,16 +85,16 @@ export function validateManualRegistrationInput(
     errors.push("Seleziona un gruppo.");
   }
 
-  if (input.firstName.length < 2) {
+  if (input.firstName.length < 2 || input.firstName.length > 120) {
     errors.push("Inserisci il nome.");
   }
 
-  if (input.lastName.length < 2) {
+  if (input.lastName.length < 2 || input.lastName.length > 120) {
     errors.push("Inserisci il cognome.");
   }
 
-  if (!input.email && !input.phone) {
-    errors.push("Inserisci almeno email o telefono.");
+  if (!input.useLeaderEmail && !input.email) {
+    errors.push("Inserisci un indirizzo email valido.");
   }
 
   if (input.phone && !PHONE_PATTERN.test(input.phone)) {
@@ -119,7 +123,8 @@ export function validateManualRegistrationInput(
 
 export function buildManualRegistrationQuestionnaireAnswers(
   input: ManualRegistrationInput,
-  group: { id: string; name: string | null }
+  group: { id: string; name: string | null },
+  actorUserId?: string
 ) {
   return {
     source: "capogruppo_manual",
@@ -131,6 +136,8 @@ export function buildManualRegistrationQuestionnaireAnswers(
     contact: {
       hasEmail: Boolean(input.email),
       hasPhone: Boolean(input.phone),
+      useLeaderEmail: input.useLeaderEmail,
+      communicationDelegateUserId: input.useLeaderEmail ? actorUserId ?? null : null,
     },
     groupParticipation: {
       hasPreviousSantegidioParticipation: true,
@@ -154,8 +161,6 @@ export function buildManualRegistrationQuestionnaireAnswers(
     accessibility: {
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
       washingtonGroupAnswers: input.accessibilityAnswers,
-      needsOperationalSupport: input.needsOperationalSupport,
-      operationalNotes: input.accessibilityNotes,
     },
     consents: {
       privacyAccepted: true,

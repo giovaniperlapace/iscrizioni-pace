@@ -24,7 +24,6 @@ export type ParticipantDashboardUpdate = {
   children: RegistrationChildInput[];
   accessibilityAnswers: Record<string, boolean>;
   needsOperationalSupport: boolean;
-  accessibilityNotes: string | null;
 };
 
 export type ParticipantDashboardValidation =
@@ -61,9 +60,6 @@ export function parseParticipantDashboardUpdate(
       ? parseAccessibilityAnswers(formData)
       : {},
     needsOperationalSupport: hasAccessibilityNeeds,
-    accessibilityNotes: hasAccessibilityNeeds
-      ? optionalText(formData.get("accessibilityNotes"))
-      : null,
   };
 
   const errors = validateParticipantDashboardUpdate(value);
@@ -147,7 +143,6 @@ export function diffParticipantDashboardUpdate(
     children: RegistrationChildInput[];
     accessibilityAnswers: Record<string, boolean>;
     needsOperationalSupport: boolean | null;
-    accessibilityNotes: string | null;
   },
   after: ParticipantDashboardUpdate
 ): string[] {
@@ -194,9 +189,6 @@ export function diffParticipantDashboardUpdate(
     changed.push("needs_operational_support");
   }
 
-  if ((before.accessibilityNotes ?? "") !== (after.accessibilityNotes ?? "")) {
-    changed.push("accessibility_notes");
-  }
 
   return changed;
 }
@@ -206,7 +198,6 @@ export function preserveAccessibilityUnlessEdited(
   previous: {
     accessibilityAnswers: Record<string, boolean>;
     needsOperationalSupport: boolean | null;
-    accessibilityNotes: string | null;
   },
   updatesAccessibility: boolean
 ): ParticipantDashboardUpdate {
@@ -218,7 +209,6 @@ export function preserveAccessibilityUnlessEdited(
     ...input,
     accessibilityAnswers: previous.accessibilityAnswers,
     needsOperationalSupport: Boolean(previous.needsOperationalSupport),
-    accessibilityNotes: previous.accessibilityNotes,
   };
 }
 
@@ -301,7 +291,7 @@ function parseAccessibilityAnswers(formData: FormData): Record<string, boolean> 
 
     const answerKey = key.slice("accessibility_".length);
 
-    if (/^[a-zA-Z][a-zA-Z0-9]*$/.test(answerKey)) {
+    if (["hearing", "walkingOrSteps", "wheelchairOrMobilityAid"].includes(answerKey)) {
       answers[answerKey] = true;
     }
   }

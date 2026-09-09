@@ -1,3 +1,5 @@
+import { explicitParticipantDelegate, groupAndAncestorIds, chooseParticipantDelegate } from "./participant-delegate";
+import { loadAllRows } from "@/lib/supabase/all-rows";
 import { getOperationalUserIdentities } from "@/lib/operational-users/identity";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -41,6 +43,8 @@ type RegistrationRow = {
   id: string;
   participant_id: string;
   status: string;
+  source: string;
+  created_by: string | null;
 };
 
 const QUERY_PAGE_SIZE = 1000;
@@ -60,9 +64,13 @@ export async function resolveCampaignRecipients(
   return resolveParticipantRecipients(eventId, filters.status);
 }
 
-async function resolveParticipantRecipients(eventId: string, status: string) {
+export async function resolveCurrentParticipantRecipient(eventId: string, registrationId: string) {
+  return (await resolveParticipantRecipients(eventId, "all", registrationId))[0] ?? null;
+}
+
+async function resolveParticipantRecipients(eventId: string, status: string, registrationId?: string) {
   const service = createSupabaseServiceClient();
-  const registrations = await loadEventRegistrations(eventId, status);
+  const registrations = await loadEventRegistrations(eventId, status, registrationId);
   if (!registrations.length) return [];
 
   const participantIds = registrations.map((row) => row.participant_id);
@@ -75,6 +83,7 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+  const deletedUserIds = await loadDeletedUserIds(eventId);
   const direct = new Set(
     contacts
       .filter((row) => Boolean(row.email?.trim()))
@@ -98,8 +107,24 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
         return data ?? [];
       }
     );
+    const { data: groups } = await loadAllRows<{ id: string; parent_group_id: string | null }>((from, to) =>
+      service.from("groups").select("id,parent_group_id")
+        .eq("event_id", eventId).eq("is_active", true).order("id").range(from, to)
+    );
+    const groupsById = new Map(groups.map(group => [group.id, group]));
+    const snapshots = await loadInChunks(missingRegistrations.map(row => row.id), async ids => {
+      const { data, error } = await service.from("registration_questionnaire_answers")
+        .select("registration_id,answers").eq("event_id", eventId).in("registration_id", ids);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    });
+    // Keep the original explicit delegation even if later questionnaire
+    // versions add snapshots without the manual-entry contact metadata.
+    const answersByRegistration = new Map(snapshots
+      .filter(row => row.answers?.contact?.useLeaderEmail === true)
+      .map(row => [row.registration_id, row.answers]));
     const memberships = await loadInChunks(
-      [...new Set(assignments.map((row) => row.group_id))],
+      [...new Set(assignments.flatMap(row => groupAndAncestorIds(row.group_id, groupsById)))],
       async (ids) => {
         const { data, error } = await service
           .from("group_memberships")
@@ -123,7 +148,7 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
     );
     const leadersByGroup = new Map<string, string[]>();
     for (const membership of memberships) {
-      if (!validUsers.has(membership.user_id)) continue;
+      if (!validUsers.has(membership.user_id) || deletedUserIds.has(membership.user_id)) continue;
       const current = leadersByGroup.get(membership.group_id) ?? [];
       if (!current.includes(membership.user_id)) current.push(membership.user_id);
       leadersByGroup.set(membership.group_id, current);
@@ -134,8 +159,11 @@ async function resolveParticipantRecipients(eventId: string, status: string) {
       "group_id"
     );
     for (const registration of missingRegistrations) {
-      const delegate = (groupsByRegistration.get(registration.id) ?? [])
-        .flatMap((groupId) => leadersByGroup.get(groupId) ?? [])[0];
+      const explicit = explicitParticipantDelegate(registration, answersByRegistration.get(registration.id));
+      const eligibleLeaders = (groupsByRegistration.get(registration.id) ?? [])
+        .flatMap(groupId => explicit.explicit ? groupAndAncestorIds(groupId, groupsById) : [groupId])
+        .flatMap(groupId => leadersByGroup.get(groupId) ?? []);
+      const delegate = chooseParticipantDelegate(explicit, eligibleLeaders);
       if (delegate) delegates.set(registration.participant_id, delegate);
     }
   }
@@ -182,7 +210,8 @@ async function resolveGroupLeaderRecipients(eventId: string) {
     .order("is_primary", { ascending: false });
   if (error) throw new Error(error.message);
 
-  const userIds = [...new Set((memberships ?? []).map((row) => row.user_id))];
+  const deletedUserIds = await loadDeletedUserIds(eventId);
+  const userIds = [...new Set((memberships ?? []).map((row) => row.user_id))].filter(id => !deletedUserIds.has(id));
   const identities = await getOperationalUserIdentities(service, userIds);
 
   return userIds.flatMap<CampaignRecipient>((userId) => {
@@ -504,16 +533,18 @@ export async function loadCampaignRecipientPreviews(
   );
 }
 
-async function loadEventRegistrations(eventId: string, status: string) {
+async function loadEventRegistrations(eventId: string, status: string, registrationId?: string) {
   const service = createSupabaseServiceClient();
   const result: RegistrationRow[] = [];
 
   for (let from = 0; ; from += QUERY_PAGE_SIZE) {
     let query = service
       .from("registrations")
-      .select("id,participant_id,status")
+      .select("id,participant_id,status,source,created_by")
+      .is("deleted_at", null)
       .eq("event_id", eventId)
       .order("submitted_at", { ascending: true });
+    if (registrationId) query = query.eq("id", registrationId);
     if (status !== "all") {
       query =
         status === "active"
@@ -553,4 +584,15 @@ function collectRelationIds<
     result.set(row[key], current);
   }
   return result;
+}
+
+async function loadDeletedUserIds(eventId: string): Promise<Set<string>> {
+  const service = createSupabaseServiceClient();
+  const { data } = await loadAllRows((from, to) => service.from("registrations")
+    .select("id,participants!inner(auth_user_id)").eq("event_id", eventId).not("deleted_at", "is", null)
+    .order("id").range(from, to));
+  return new Set(data.flatMap(row => {
+    const participant = Array.isArray(row.participants) ? row.participants[0] : row.participants;
+    return participant?.auth_user_id ? [participant.auth_user_id] : [];
+  }));
 }

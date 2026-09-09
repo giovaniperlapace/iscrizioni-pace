@@ -6,16 +6,14 @@ import {
   calculateAgeAtDate,
   findMatchingGroupCandidates,
   findTerritorialFallback,
+  findTerritorialReviewGroup,
   formatGroupOptionLabel,
   resolveGroupAssignmentForRegistration,
   type GroupMatchCandidate,
 } from "../lib/groups/matching.ts";
 import {
   collectDescendantGroupIds,
-  getEscalationTargetGroupId,
-  matchesGroupLeaderFilter,
   normalizeLeaderInternalNote,
-  summarizeGroupLeaderAssignments,
 } from "../lib/groups/capogruppo-dashboard.ts";
 import {
   buildGroupRegistrationUrl,
@@ -95,6 +93,28 @@ const groups: GroupMatchCandidate[] = [
     nodeType: "country",
     ageBands: [],
     publicOrder: 50,
+  }),
+  group({
+    id: "territorial-italy",
+    name: "Italia",
+    countryId: ITALY,
+    cityId: null,
+    nodeType: "country",
+    communityKind: "territorial",
+    isAssignable: false,
+    isPublicCatalog: false,
+    publicOrder: 800,
+  }),
+  group({
+    id: "territorial-rome",
+    name: "Roma",
+    countryId: ITALY,
+    cityId: ROME,
+    nodeType: "city",
+    communityKind: "territorial",
+    isAssignable: false,
+    isPublicCatalog: false,
+    publicOrder: 810,
   }),
   group({
     id: "newcomers-italy",
@@ -220,7 +240,7 @@ test("public suggestions exclude territorial city and country nodes", () => {
   assert.equal(internalFallback?.id, "roma-city");
 });
 
-test("new participants resolve to the closest territorial newcomers node", () => {
+test("participants without a selected group remain without a group", () => {
   const assignment = resolveGroupAssignmentForRegistration({
     groups,
     criteria: {
@@ -235,12 +255,10 @@ test("new participants resolve to the closest territorial newcomers node", () =>
     cannotFindLeader: false,
   });
 
-  assert.equal(assignment?.groupId, "newcomers-rome");
-  assert.equal(assignment?.source, "rule");
-  assert.equal(assignment?.reason, "newcomer_territorial_fallback");
+  assert.equal(assignment, null);
 });
 
-test("Sant'Egidio participants without an explicit group stay unassigned", () => {
+test("previous participation never triggers a territorial assignment", () => {
   for (const input of [
     { participatesWithGroup: false, cannotFindLeader: false },
     { participatesWithGroup: true, cannotFindLeader: true },
@@ -260,6 +278,42 @@ test("Sant'Egidio participants without an explicit group stay unassigned", () =>
 
     assert.equal(assignment, null);
   }
+});
+
+test("new participants remain without a group even when newcomer nodes exist", () => {
+  const assignment = resolveGroupAssignmentForRegistration({
+    groups: groups.filter((candidate) => candidate.communityKind !== "territorial"),
+    criteria: {
+      countryId: ITALY,
+      cityId: ROME,
+      birthDate: "1998-01-01",
+      eventStartsOn: "2026-10-25",
+    },
+    selectedGroupId: null,
+    hasPreviousSantegidioParticipation: false,
+    participatesWithGroup: null,
+    cannotFindLeader: false,
+  });
+
+  assert.equal(assignment, null);
+});
+
+test("territorial review prefers the city node and can fall back to the country", () => {
+  const romeReview = findTerritorialReviewGroup(groups, {
+    countryId: ITALY,
+    cityId: ROME,
+    birthDate: null,
+    eventStartsOn: "2026-10-25",
+  });
+  const countryReview = findTerritorialReviewGroup(groups, {
+    countryId: ITALY,
+    cityId: TURIN,
+    birthDate: null,
+    eventStartsOn: "2026-10-25",
+  });
+
+  assert.equal(romeReview?.id, "territorial-rome");
+  assert.equal(countryReview?.id, "territorial-italy");
 });
 
 test("territorial fallback can climb from city to country", () => {
@@ -289,40 +343,6 @@ test("group leader scope includes descendant groups", () => {
   );
 
   assert.deepEqual([...scoped], ["italy", "rome", "rome-area"]);
-});
-
-test("group leader rejection escalates to the direct parent", () => {
-  const groupsById = new Map([
-    ["italy", { id: "italy", parentGroupId: null }],
-    ["rome", { id: "rome", parentGroupId: "italy" }],
-  ]);
-
-  assert.equal(getEscalationTargetGroupId(groupsById, "rome"), "italy");
-  assert.equal(getEscalationTargetGroupId(groupsById, "italy"), null);
-});
-
-test("group leader summary tracks assignments that need review", () => {
-  const summary = summarizeGroupLeaderAssignments([
-    { status: "probable", isCurrent: true, leaderNotificationReadAt: null },
-    { status: "probable", isCurrent: true, leaderNotificationReadAt: "2026-06-16T10:00:00Z" },
-    { status: "confirmed", isCurrent: true, leaderNotificationReadAt: null },
-    { status: "rejected", isCurrent: false, leaderNotificationReadAt: null },
-  ]);
-
-  assert.deepEqual(summary, {
-    total: 4,
-    toReview: 1,
-    probable: 2,
-    confirmed: 1,
-    rejected: 1,
-  });
-  assert.equal(
-    matchesGroupLeaderFilter(
-      { status: "probable", isCurrent: true, leaderNotificationReadAt: null },
-      "to-review"
-    ),
-    true
-  );
 });
 
 test("group leader internal notes are compacted and bounded", () => {
@@ -460,4 +480,17 @@ function group(
     publicOrder: 100,
     ...overrides,
   };
+}
+
+for (const previous of [true, false]) {
+  for (const withGroup of [true, false, null]) {
+    test(`explicit group choice respects withGroup=${withGroup}, previous=${previous}`, () => {
+      const result = resolveGroupAssignmentForRegistration({
+        groups, criteria: { countryId: ITALY, cityId: ROME, birthDate: null, eventStartsOn: null },
+        selectedGroupId: "roma-area", hasPreviousSantegidioParticipation: previous,
+        participatesWithGroup: withGroup, cannotFindLeader: false,
+      });
+      assert.equal(result?.groupId ?? null, withGroup === true ? "roma-area" : null);
+    });
+  }
 }

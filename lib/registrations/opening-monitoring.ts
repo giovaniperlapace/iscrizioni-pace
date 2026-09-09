@@ -29,7 +29,6 @@ export type RegistrationMonitoringSummary = {
   cancelled: number;
   last24Hours: number;
   withoutCurrentGroup: number;
-  probableGroup: number;
   participantSelectedGroup: number;
   ruleMatchedGroup: number;
   newcomerGroup: number;
@@ -97,9 +96,6 @@ export function summarizeRegistrationMonitoring(
         summary.withoutCurrentGroup += 1;
       }
 
-      if (row.currentAssignmentStatus === "probable") {
-        summary.probableGroup += 1;
-      }
 
       if (row.currentAssignmentSource === "participant_selected") {
         summary.participantSelectedGroup += 1;
@@ -129,7 +125,6 @@ export function summarizeRegistrationMonitoring(
       cancelled: 0,
       last24Hours: 0,
       withoutCurrentGroup: 0,
-      probableGroup: 0,
       participantSelectedGroup: 0,
       ruleMatchedGroup: 0,
       newcomerGroup: 0,

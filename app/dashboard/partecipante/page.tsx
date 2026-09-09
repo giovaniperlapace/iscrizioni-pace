@@ -1,3 +1,8 @@
+import { participantQrFilename } from "@/lib/qrcode/filename";
+import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
+import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
+
+import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -18,8 +23,12 @@ import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { ACCESSIBILITY_DIFFICULTIES } from "@/lib/questionnaire/registration";
-import { renderQrDataUrl } from "@/lib/qrcode/render";
-import { decryptQrToken } from "@/lib/qrcode/secure-token";
+import {
+  loadRegistrationQr,
+  registrationQrPreview,
+  registrationQrState,
+  type RegistrationQrRecord as QrStatusRow,
+} from "@/lib/qrcode/registration-qr";
 import { canParticipantEditRegistration } from "@/lib/registrations/participant-dashboard";
 import {
   ATTENDANCE_PARTS,
@@ -83,7 +92,6 @@ type ContactRow = {
 type AccessibilityRow = {
   washington_group_answers: Record<string, boolean> | null;
   needs_operational_support: boolean;
-  operational_notes: string | null;
 };
 
 type RegistrationChildRow = {
@@ -122,12 +130,6 @@ type QuestionnaireRow = {
       groupName?: string | null;
     };
   } | null;
-};
-
-type QrStatusRow = {
-  status: string;
-  expires_at: string | null;
-  token_encrypted: string | null;
 };
 
 type ParticipantServiceRow = {
@@ -171,7 +173,6 @@ type ParticipantDashboardCopy = {
   accessibilityRequest: string;
   accessibilityTitle: string;
   accessibilityHelp: string;
-  accessibilityNotes: string;
   editClosed: string;
   notProvided: string;
   notAssigned: string;
@@ -240,7 +241,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
     accessibilityHelp:
       "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
-    accessibilityNotes: "Indicazioni pratiche per l'organizzazione",
     editClosed: "La finestra di modifica non è attiva per questa iscrizione.",
     notProvided: "Non indicata",
     notAssigned: "Non assegnato",
@@ -310,7 +310,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Which aspects should we consider?",
     accessibilityHelp:
       "You can select one or more options that are useful for organising the welcome better.",
-    accessibilityNotes: "Practical notes for the organisation",
     editClosed: "The edit window is not active for this registration.",
     notProvided: "Not provided",
     notAssigned: "Not assigned",
@@ -380,7 +379,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
     accessibilityHelp:
       "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
-    accessibilityNotes: "Indications pratiques pour l'organisation",
     editClosed: "La fenêtre de modification n'est pas active pour cette inscription.",
     notProvided: "Non indiqué",
     notAssigned: "Non attribué",
@@ -450,7 +448,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
     accessibilityHelp:
       "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
-    accessibilityNotes: "Praktische Hinweise für die Organisation",
     editClosed: "Das Bearbeitungsfenster ist für diese Anmeldung nicht aktiv.",
     notProvided: "Nicht angegeben",
     notAssigned: "Nicht zugewiesen",
@@ -520,7 +517,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
     accessibilityHelp:
       "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
-    accessibilityNotes: "Indicaciones prácticas para la organización",
     editClosed: "La ventana de modificación no está activa para esta inscripción.",
     notProvided: "No indicado",
     notAssigned: "No asignado",
@@ -590,7 +586,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Waar moeten we rekening mee houden?",
     accessibilityHelp:
       "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
-    accessibilityNotes: "Praktische aanwijzingen voor de organisatie",
     editClosed: "Het wijzigingsvenster is niet actief voor deze inschrijving.",
     notProvided: "Niet aangegeven",
     notAssigned: "Niet toegewezen",
@@ -660,7 +655,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     accessibilityTitle: "Що нам потрібно врахувати?",
     accessibilityHelp:
       "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
-    accessibilityNotes: "Практичні вказівки для організації",
     editClosed: "Вікно редагування для цієї реєстрації не активне.",
     notProvided: "Не вказано",
     notAssigned: "Не призначено",
@@ -717,7 +711,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Invia messaggio",
     sending: "Invio in corso...",
     sent:
-      "Il messaggio è stato correttamente inviato agli organizzatori. Riceverai una risposta al più presto possibile.",
+      `Il messaggio è stato correttamente inviato agli organizzatori. Riceverai una risposta al più presto possibile. ${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}`,
     maxLength: "Massimo 4.000 caratteri",
     errors: {
       empty: "Scrivi un messaggio prima di inviare.",
@@ -741,7 +735,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Send message",
     sending: "Sending...",
     sent:
-      "Your message has been successfully sent to the organisers. You will receive a reply as soon as possible.",
+      `Your message has been successfully sent to the organisers. You will receive a reply as soon as possible. ${EMAIL_DELIVERY_COPY.en.checkSpam} ${EMAIL_DELIVERY_COPY.en.safeSender}`,
     maxLength: "Maximum 4,000 characters",
     errors: {
       empty: "Write a message before sending.",
@@ -765,7 +759,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Envoyer le message",
     sending: "Envoi en cours...",
     sent:
-      "Ton message a bien été envoyé aux organisateurs. Tu recevras une réponse dans les meilleurs délais.",
+      `Ton message a bien été envoyé aux organisateurs. Tu recevras une réponse dans les meilleurs délais. ${EMAIL_DELIVERY_COPY.fr.checkSpam} ${EMAIL_DELIVERY_COPY.fr.safeSender}`,
     maxLength: "4 000 caractères maximum",
     errors: {
       empty: "Écris un message avant de l'envoyer.",
@@ -789,7 +783,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Nachricht senden",
     sending: "Wird gesendet...",
     sent:
-      "Deine Nachricht wurde erfolgreich an die Organisation gesendet. Du erhältst so bald wie möglich eine Antwort.",
+      `Deine Nachricht wurde erfolgreich an die Organisation gesendet. Du erhältst so bald wie möglich eine Antwort. ${EMAIL_DELIVERY_COPY.de.checkSpam} ${EMAIL_DELIVERY_COPY.de.safeSender}`,
     maxLength: "Maximal 4.000 Zeichen",
     errors: {
       empty: "Schreibe vor dem Senden eine Nachricht.",
@@ -813,7 +807,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Enviar mensaje",
     sending: "Enviando...",
     sent:
-      "Tu mensaje se ha enviado correctamente a los organizadores. Recibirás una respuesta lo antes posible.",
+      `Tu mensaje se ha enviado correctamente a los organizadores. Recibirás una respuesta lo antes posible. ${EMAIL_DELIVERY_COPY.es.checkSpam} ${EMAIL_DELIVERY_COPY.es.safeSender}`,
     maxLength: "Máximo 4.000 caracteres",
     errors: {
       empty: "Escribe un mensaje antes de enviarlo.",
@@ -837,7 +831,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Bericht verzenden",
     sending: "Wordt verzonden...",
     sent:
-      "Je bericht is correct naar de organisatie verzonden. Je ontvangt zo snel mogelijk een antwoord.",
+      `Je bericht is correct naar de organisatie verzonden. Je ontvangt zo snel mogelijk een antwoord. ${EMAIL_DELIVERY_COPY.nl.checkSpam} ${EMAIL_DELIVERY_COPY.nl.safeSender}`,
     maxLength: "Maximaal 4.000 tekens",
     errors: {
       empty: "Schrijf een bericht voordat je het verzendt.",
@@ -861,7 +855,7 @@ const PARTICIPANT_MESSAGE_COPY: Record<
     send: "Надіслати повідомлення",
     sending: "Надсилання...",
     sent:
-      "Ваше повідомлення успішно надіслано організаторам. Ви отримаєте відповідь якнайшвидше.",
+      `Ваше повідомлення успішно надіслано організаторам. Ви отримаєте відповідь якнайшвидше. ${EMAIL_DELIVERY_COPY.uk.checkSpam} ${EMAIL_DELIVERY_COPY.uk.safeSender}`,
     maxLength: "Не більше 4 000 символів",
     errors: {
       empty: "Напишіть повідомлення перед надсиланням.",
@@ -998,6 +992,7 @@ export default async function PartecipanteDashboardPage({
     .select(
       "id,event_id,participant_id,status,submitted_at,events!inner(id,title,slug,city,country,starts_on,ends_on,registration_closes_at,is_current),participants!inner(auth_user_id,first_name,last_name,birth_date,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
     )
+    .is("deleted_at", null)
     .eq("events.is_current", true)
     .order("submitted_at", { ascending: false });
 
@@ -1034,7 +1029,7 @@ export default async function PartecipanteDashboardPage({
           .order("is_primary", { ascending: false }),
         supabase
           .from("accessibility_needs")
-          .select("washington_group_answers,needs_operational_support,operational_notes")
+          .select("washington_group_answers,needs_operational_support")
           .eq("registration_id", registrationId)
           .maybeSingle(),
         supabase
@@ -1103,7 +1098,8 @@ export default async function PartecipanteDashboardPage({
   const panelCatalog = (panelCatalogResult.data ?? []) as ParticipantPanelCatalogRow[];
   const participantServiceLabel =
     relatedOne(participantService?.event_services ?? null)?.label ?? null;
-  const qrDataUrl = await getQrDataUrl(qrStatus);
+  const qrPreview = participant ? await registrationQrPreview(qrStatus, participant) : null;
+  const qrDataUrl = qrPreview?.dataUrl ?? null;
   const editable =
     selectedRegistration &&
     canParticipantEditRegistration({
@@ -1142,7 +1138,6 @@ export default async function PartecipanteDashboardPage({
   ).filter(Boolean).length;
   const hasAccessibilityRequest =
     Boolean(accessibility?.needs_operational_support) ||
-    Boolean(accessibility?.operational_notes) ||
     sensitiveNeedCount > 0;
   const attendanceSummary = availabilityUnknown
     ? copy.attendanceUnknownSummary
@@ -1217,7 +1212,7 @@ export default async function PartecipanteDashboardPage({
         ) : (
           <>
             <section className="relative rounded-lg border border-[var(--peace-border)] bg-white p-5 pt-10 sm:p-6">
-              <QrStatusIndicator active={qrStatus?.status === "active"} copy={copy} />
+              <QrStatusIndicator active={Boolean(qrDataUrl)} copy={copy} />
               <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
                 <div className="mx-auto grid w-full max-w-72 gap-3 lg:mx-0">
                   <QrPreview
@@ -1226,8 +1221,8 @@ export default async function PartecipanteDashboardPage({
                     copy={copy}
                   />
                   <QrActionButtons
-                    participantCode={participant.public_code}
-                    qrDataUrl={qrDataUrl}
+                    participantName={`${participant.first_name} ${participant.last_name}`}
+                    qrDataUrl={qrPreview?.downloadDataUrl ?? null}
                     copy={copy}
                   />
                   <ParticipantOrganizerContactCard
@@ -1319,7 +1314,7 @@ export default async function PartecipanteDashboardPage({
                           editable={Boolean(editable)}
                           copy={copy}
                         >
-                          <form
+                          <ReliableForm
                             action={updateParticipantDashboard}
                             className="grid gap-3"
                           >
@@ -1358,7 +1353,7 @@ export default async function PartecipanteDashboardPage({
                               </Field>
                             </div>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                          </form>
+                          </ReliableForm>
                         </EditableInfo>
                         <Info
                           label={copy.submittedAt}
@@ -1378,7 +1373,7 @@ export default async function PartecipanteDashboardPage({
                           editable={Boolean(editable)}
                           copy={copy}
                         >
-                          <form
+                          <ReliableForm
                             action={updateParticipantDashboard}
                             className="grid gap-3"
                           >
@@ -1400,7 +1395,7 @@ export default async function PartecipanteDashboardPage({
                               />
                             </Field>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                          </form>
+                          </ReliableForm>
                         </EditableInfo>
                         <Info
                           label={copy.birthDate}
@@ -1459,7 +1454,7 @@ export default async function PartecipanteDashboardPage({
                         editable={Boolean(editable)}
                         copy={copy}
                       >
-                        <form
+                        <ReliableForm
                           action={updateParticipantDashboard}
                           className="grid gap-3"
                         >
@@ -1490,20 +1485,16 @@ export default async function PartecipanteDashboardPage({
                             />
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                        </form>
+                        </ReliableForm>
                       </EditableInfo>
 
                       <EditableInfo
                         label={copy.accessibilitySupport}
-                        value={
-                          accessibility?.operational_notes
-                            ? `${supportSummary}: ${accessibility.operational_notes}`
-                            : supportSummary
-                        }
+                        value={supportSummary}
                         editable={Boolean(editable)}
                         copy={copy}
                       >
-                        <form
+                        <ReliableForm
                           action={updateParticipantDashboard}
                           className="grid gap-3"
                         >
@@ -1567,19 +1558,13 @@ export default async function PartecipanteDashboardPage({
                                   </label>
                                 ))}
                               </div>
-                              <Field label={copy.accessibilityNotes}>
-                                <textarea
-                                  name="accessibilityNotes"
-                                  className="field min-h-28"
-                                  defaultValue={
-                                    accessibility?.operational_notes ?? ""
-                                  }
-                                />
-                              </Field>
+                              <p className="text-sm leading-6 text-[var(--peace-muted)]">
+                                {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+                              </p>
                             </div>
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
-                        </form>
+                        </ReliableForm>
                       </EditableInfo>
 
                       {!editable ? (
@@ -1616,31 +1601,9 @@ export default async function PartecipanteDashboardPage({
 async function getQrStatus(registrationId: string): Promise<{ data: QrStatusRow | null }> {
   try {
     const serviceSupabase = createSupabaseServiceClient();
-    const { data } = await serviceSupabase
-      .from("qr_tokens")
-      .select("status,expires_at,token_encrypted")
-      .eq("registration_id", registrationId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return { data: (data as QrStatusRow | null) ?? null };
+    return { data: await loadRegistrationQr(serviceSupabase, registrationId) };
   } catch {
     return { data: null };
-  }
-}
-
-async function getQrDataUrl(qrStatus: QrStatusRow | null): Promise<string | null> {
-  const token = decryptQrToken(qrStatus?.token_encrypted);
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    return await renderQrDataUrl(token);
-  } catch {
-    return null;
   }
 }
 
@@ -1662,7 +1625,7 @@ function QrPreview({
         <img
           src={qrDataUrl}
           alt={copy.personalQrAlt}
-          className="aspect-square rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
+          className="h-auto w-full rounded-md border border-[var(--peace-border-strong)] bg-white p-3"
         />
       ) : (
         <div
@@ -1903,11 +1866,11 @@ function QrStatusIndicator({
 }
 
 function QrActionButtons({
-  participantCode,
+  participantName,
   qrDataUrl,
   copy,
 }: {
-  participantCode: string | null;
+  participantName: string;
   qrDataUrl: string | null;
   copy: ParticipantDashboardCopy;
 }) {
@@ -1916,7 +1879,7 @@ function QrActionButtons({
       {qrDataUrl ? (
         <a
           href={qrDataUrl}
-          download={`qr-${participantCode ?? copy.personalQrFile}.png`}
+          download={participantQrFilename(participantName)}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
           <DownloadIcon />
@@ -2360,17 +2323,18 @@ function qrStatusLabel(
   locale: SupportedLocale,
   copy: ParticipantDashboardCopy
 ): string {
-  if (qrStatus.status === "active") {
+  const state = registrationQrState(qrStatus);
+  if (state === "active") {
     return qrStatus.expires_at
       ? copy.activeUntil(formatDate(qrStatus.expires_at, locale, copy))
       : copy.active;
   }
 
-  if (qrStatus.status === "revoked") {
+  if (state === "revoked") {
     return copy.revoked;
   }
 
-  if (qrStatus.status === "expired") {
+  if (state === "expired") {
     return copy.expired;
   }
 

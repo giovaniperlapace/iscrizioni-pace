@@ -1,3 +1,4 @@
+import { participantQrFilename } from "@/lib/qrcode/filename";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { sendTransactionalEmail } from "@/lib/email/smtp";
@@ -19,7 +20,6 @@ import {
   hashGroupRegistrationLinkToken,
   isValidGroupRegistrationLinkToken,
 } from "@/lib/groups/registration-links";
-import { notifyGroupLeadersForAssignment } from "@/lib/groups/leader-notifications";
 import {
   buildRegistrationQuestionnaireAnswers,
   getQuestionnaireVisibilitySummary,
@@ -218,7 +218,7 @@ export async function hasExistingRegistrationForEmail(
     .select("id")
     .eq("event_id", eventId)
     .in("participant_id", participantIds)
-    .neq("status", "cancelled")
+    .or("status.neq.cancelled,deleted_at.not.is.null")
     .limit(1);
 
   return !registrationError && Boolean(registrations?.length);
@@ -434,7 +434,9 @@ export async function createPublicRegistration(
     participatesWithGroup: input.participatesWithGroup,
     cannotFindLeader: input.cannotFindLeader,
   });
-  const resolvedGroupAssignment = leaderGroupAssignment
+  const resolvedGroupAssignment = input.participatesWithGroup !== true
+    ? null
+    : leaderGroupAssignment
     ? {
         groupId: leaderGroupAssignment.groupId,
         status: "confirmed" as const,
@@ -446,7 +448,7 @@ export async function createPublicRegistration(
     : groupLink
     ? {
         groupId: groupLink.group.id,
-        status: "probable" as const,
+        status: "confirmed" as const,
         source: "participant_selected" as const,
         confidence: 0.95,
         reason: "group_registration_link",
@@ -455,7 +457,7 @@ export async function createPublicRegistration(
     : groupAssignment
       ? {
           ...groupAssignment,
-          status: "probable" as const,
+          status: "confirmed" as const,
         }
       : null;
 
@@ -492,7 +494,6 @@ export async function createPublicRegistration(
     supabase.from("accessibility_needs").insert({
       registration_id: registrationId,
       washington_group_answers: input.accessibilityAnswers,
-      operational_notes: input.accessibilityNotes,
       needs_operational_support: input.needsOperationalSupport,
     }),
     supabase.from("registration_questionnaire_answers").insert({
@@ -531,9 +532,6 @@ export async function createPublicRegistration(
   ];
 
   if (resolvedGroupAssignment) {
-    const confirmedAt =
-      resolvedGroupAssignment.status === "confirmed" ? new Date().toISOString() : null;
-
     writes.push(
       supabase.from("participant_group_assignments").insert({
         registration_id: registrationId,
@@ -543,13 +541,6 @@ export async function createPublicRegistration(
         confidence: resolvedGroupAssignment.confidence,
         assignment_reason: resolvedGroupAssignment.reason,
         matcher_version: resolvedGroupAssignment.matcherVersion,
-        confirmed_by:
-          resolvedGroupAssignment.status === "confirmed" ? authUserId : null,
-        confirmed_at: confirmedAt,
-        leader_decision_by:
-          resolvedGroupAssignment.status === "confirmed" ? authUserId : null,
-        leader_decision_at: confirmedAt,
-        leader_notification_read_at: confirmedAt,
       })
     );
   }
@@ -591,7 +582,7 @@ export async function createPublicRegistration(
     throw failedWrite.error;
   }
 
-  if (groupLink) {
+  if (groupLink && resolvedGroupAssignment?.groupId === groupLink.group.id) {
     await Promise.all([
       supabase
         .from("group_registration_links")
@@ -610,23 +601,6 @@ export async function createPublicRegistration(
     ]);
   }
 
-  if (resolvedGroupAssignment?.status === "probable") {
-    const { data: assignment } = await supabase
-      .from("participant_group_assignments")
-      .select("id")
-      .eq("registration_id", registrationId)
-      .eq("group_id", resolvedGroupAssignment.groupId)
-      .maybeSingle();
-    const assignmentId = (assignment as { id: string } | null)?.id ?? null;
-
-    if (assignmentId) {
-      await notifyGroupLeadersForAssignment(supabase, {
-        assignmentId,
-        appUrl: publicSiteUrl,
-      });
-    }
-  }
-
   try {
     const qrCodeContentId = `registration-qr-${registrationId}@iscrizioni-pace`;
     const qrCodePng = await renderQrPngBuffer(qrToken.token);
@@ -643,7 +617,7 @@ export async function createPublicRegistration(
       }),
       attachments: [
         {
-          filename: `qr-${createdParticipant.public_code}.png`,
+          filename: participantQrFilename(`${input.firstName} ${input.lastName}`),
           content: qrCodePng,
           contentType: "image/png",
           cid: qrCodeContentId,

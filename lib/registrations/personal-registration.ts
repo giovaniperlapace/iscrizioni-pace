@@ -46,6 +46,7 @@ export async function getPersonalRegistrationSummary(
   let query = supabase
     .from("registrations")
     .select("id,event_id,status,submitted_at,events(title,starts_on)")
+    .is("deleted_at", null)
     .in("participant_id", participantIds)
     .neq("status", "cancelled")
     .order("submitted_at", { ascending: false })

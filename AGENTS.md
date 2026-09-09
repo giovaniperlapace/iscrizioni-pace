@@ -4,6 +4,443 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Azioni duplicati — 2026-09-08
+
+- La pagina istruzioni contiene solo la guida all’importazione Excel, condivisa
+  con modale e modello scaricabile. Rimossi i dettagli tecnici sull’unione e
+  il link a questa pagina dal confronto duplicati. La guida consiglia di
+  lasciare vuoti gli stati, senza elencare i valori tecnici; formato e
+  validazioni dell’importazione restano invariati.
+
+- La tabella offre nell’ordine `Elimina`, `Non sono duplicati`, `Unisci iscrizioni`.
+  Il nome sottolineato nella colonna Confronta con apre il solo confronto;
+  il nome principale apre ancora la scheda. Ogni azione apre un dialog dedicato.
+  Elimina riguarda la riga scelta e riusa la route soft delete con motivazione
+  e conferma; i viewer non hanno azioni di scrittura.
+- Unisci propone l’iscrizione con `submitted_at` più recente, non la data di
+  creazione dell’account Auth. Se una sola scheda ha un account collegato,
+  quella prevale per conservare l’accesso. Date mancanti/uguali richiedono
+  scelta manuale; due account bloccano l’unione. Conferma sempre esplicita;
+  nessun cambio a RPC, permessi, RLS o dati esistenti.
+- I vincoli SQL restano: le dipendenze non riconciliabili annullano l’unione
+  integralmente. UI anticipa i blocchi per due account e minori della scheda
+  da archiviare. Test suggerimento: `tests/duplicate-merge-choice.test.mts`;
+  dialog desktop/mobile: `tests/browser/participants-navigation.mjs`.
+
+## Assegnazione ruoli a utenti esistenti — 2026-09-08
+
+- Nel selettore utente, la ricerca vuota mostra `Inizia a digitare` senza
+  risultati selezionabili; i nomi appaiono dal primo carattere non vuoto.
+  Cancellando la ricerca torna l'indicazione iniziale.
+
+- Gestione ruoli admin/manager offre `Utente esistente` (predefinito) e
+  `Nuovo utente`. Il selettore condiviso cerca nome/email nei profili con
+  email, inclusi account senza alcun incarico; caricamento paginato senza
+  taglio a 1.000 utenti. La directory espone soltanto ID, nome ed email e
+  viene caricata solo dopo verifica di un ruolo effettivo admin/manager.
+- `assignOperationalUserRole` rilegge il profilo selezionato dopo i controlli
+  operativi di ruolo/evento/gruppo. In modalità esistente non crea account,
+  non aggiorna identità/contatti e non collega o modifica iscrizioni personali;
+  ignora i campi nome/email inviati dal client. Restano audit, invito opzionale
+  e controllo del ruolo già assegnato. Nessuna migration o modifica RLS.
+- La tabella sottostante continua a mostrare soltanto i ruoli assegnati.
+  Test server con dati simulati: `tests/operational-role-assignment.test.mts`;
+  fixture browser desktop/mobile: `tests/browser/operational-role-assignment.mjs`.
+  Nessun ruolo assegnato o invito inviato a utenti reali durante il collaudo.
+
+## Servizio in sola lettura per capogruppo — 2026-09-08
+
+- La scheda capogruppo mostra servizio e stato in sola lettura. Rimossi il
+  modulo servizio/stato/nota operativa e il caricamento del catalogo opzioni.
+  Note del capogruppo, tag e altri comandi restano separati.
+- `updateParticipantEventService` rifiuta richieste dalla dashboard capogruppo
+  e verifica sempre ruoli effettivi admin o manager nell'evento; manipolare
+  `sourceDashboard` non abilita la scrittura a un semplice capogruppo.
+- Blocco dedicato permessi servizio: migration revisionabile
+  `20260908180000_leader_service_read_only.sql`, testata localmente e applicata
+  in produzione il 2026-09-08 prima del push. Registrazione e policy verificate;
+  conteggio/hash di `participant_event_services` invariati (tabella vuota).
+  Restringe la policy operativa a manager/admin, conservando lettura in scope,
+  preferenza personale, assegnazioni e fonti storiche. Nessuna riscrittura dati.
+  L'helper storico `can_manage_participant_event_service` resta usato dalla
+  policy di lettura; la policy di scrittura richiede anche `has_event_role`.
+- Test: `tests/leader-service-read-only.test.mts` e
+  `tests/sql/leader-service-read-only.sql` su PostgreSQL temporaneo: lettura
+  capogruppo, divieto insert/update/delete, manager/admin, scope evento, viewer
+  e preferenza della propria iscrizione.
+
+## Descrizione domande accessibilità — 2026-09-08
+
+- Iscrizione pubblica (inclusi link di gruppo), inserimento manuale capogruppo
+  e modifica iscrizione personale mostrano sotto le opzioni di
+  disabilità la descrizione sulle comunicazioni relative ai luoghi e agli
+  eventi, quando le opzioni sono visibili. Testo condiviso in sette lingue in
+  `lib/i18n/accessibility.ts`.
+
+## QR nominativo scaricabile — 2026-09-08
+
+- Solo i PNG scaricati dall'area personale e dalla scheda capogruppo
+  contengono QR, nome/cognome e codice pubblico del partecipante. A schermo
+  e nell'immagine inline dell'email si visualizza il solo QR.
+  `registrationQrPreview` restituisce `dataUrl` per l'anteprima e
+  `downloadDataUrl` per il download nominativo, entrambi con lo stesso token
+  e gli stessi controlli di disponibilità.
+  `lib/qrcode/participant-card.ts` è il renderer condiviso; identità da dati
+  server autorizzati, token opaco invariato, nessun dato personale nel payload.
+- I nomi dei file scaricati e degli allegati email usano nome e cognome,
+  per esempio `qr-Anna-Bianchi.png`, tramite `participantQrFilename`.
+  Lettere internazionali conservate, separatori/percorso rimossi; nessun
+  codice pubblico nel nome del file. Il contenuto del PNG resta invariato.
+
+- Codice pubblico utile per ricerca manuale all'accoglienza; non mostrare token
+  o UUID tecnici come testo. Nomi lunghi vanno a capo senza troncamento.
+  Sharp è dipendenza diretta; Noto Sans con licenza OFL è incluso e tracciato
+  nel bundle server per latino/cirillico indipendenti dai font della macchina.
+- Wallet e stampa restano futuri: devono mantenere QR, nome completo e codice
+  pubblico sul pass/etichetta, con layout calibrato al supporto. Nessuna
+  modifica a token, database, RLS o controlli di revoca/scadenza/scope.
+- Test renderer: `tests/participant-qr-card.test.mts`; scope e stati in
+  `tests/leader-qr.test.mts`; download desktop/mobile nella fixture browser QR.
+
+## Rimozione ruoli operativi — 2026-09-08
+
+- La scheda Modifica utente operativo in Gestione ruoli admin/manager elenca
+  tutti gli incarichi in `OperationalRoleRemoval`, con ruolo, evento e gruppo.
+  Ogni incarico dispone di Rimuovi ruolo e conferma esplicita, verificata anche
+  dalla server action esistente `deleteOperationalUserRole`.
+- La rimozione riguarda solo ruolo/evento o membership del gruppo selezionato;
+  conserva altri incarichi, account e iscrizione personale. Restano i controlli
+  server su scope, admin globale e divieto di rimozione dei propri ruoli,
+  audit e sincronizzazione del nome referente principale. Nessuna migration.
+
+## Inserimento capogruppo e email delegata — 2026-09-08
+
+- Il form manuale usa `ManualEmailFields` in sette lingue. Richiede l’email
+  personale oppure la scelta `Voglio usare la mia email`, che rimuove il campo
+  e consente l’inserimento anche senza telefono. Il server scarta le email
+  residue quando `useLeaderEmail=on`; non copia mai l’email del referente
+  nei contatti e non crea/collega un account per chi ha scelto la delega.
+  Senza recapiti non viene creata una riga vuota in `participant_contacts`.
+- Lo snapshot conserva `answers.contact.useLeaderEmail` e
+  `communicationDelegateUserId`, ricavato soltanto dall’utente autenticato,
+  coerente con `registrations.created_by` e registrato anche nell’audit.
+- Le campagne usano quel capogruppo, anche con membership su un antenato
+  attivo, verificando evento, assegnazione corrente, scope e raggiungibilità.
+  Se perde lo scope o la sua iscrizione è eliminata, niente invio automatico
+  ad altri referenti. Per schede storiche senza scelta esplicita resta il
+  fallback precedente. L’email personale corrente ha sempre precedenza.
+- Aggiungere l’email personale dalla scheda abilita le comunicazioni dirette
+  e il normale Magic Link: Auth viene creato al primo Magic Link e la callback
+  verificata collega la scheda per email. Nessun invito automatico.
+  I contatti impediscono l’email di un altro partecipante o quella del
+  capogruppo su una scheda altrui. Gli invii in coda ricalcolano il destinatario
+  prima dell’invio e salvano tipo/delegato effettivi nella consegna.
+- Nessuna migration, modifica RLS o riscrittura dei dati esistenti.
+  Test: `tests/manual-email-delegation.test.mts` e
+  `tests/browser/manual-email.mjs`, solo fixture sintetiche, sette lingue/mobile.
+  Dettagli e limiti: `docs/manual-email-delegation.md`.
+
+## QR nella scheda capogruppo — 2026-09-07
+
+- La scheda selezionata mostra il QR reale e `Scarica immagine`, con testi in
+  sette lingue. Il PNG contiene lo stesso token opaco dell'iscrizione personale,
+  valido anche per i figli associati; non è il QR dell'operatore.
+- `leader-qr.server.ts` legge il QR solo dopo autenticazione, selezione nella
+  lista autorizzata e nuova verifica di membership/scope nell'evento corrente,
+  assegnazione corrente e iscrizione non eliminata. La query QR usa l'ID
+  iscrizione ricavato dal database, mai un ID di iscrizione inviato dal browser.
+- `lib/qrcode/registration-qr.ts` condivide lettura e rendering con l'area
+  personale: usa l'ultimo token, senza ripiegare su precedenti token attivi.
+  Revoca (anche `revoked_at`), scadenza, token mancante o non decifrabile
+  impediscono immagine e download. Nessuna generazione/rotazione/scrittura QR.
+  Al browser arriva il PNG, non il token in chiaro o cifrato come dato separato.
+- Stato e permessi sono verificati al caricamento della scheda. Il download
+  salva il PNG nominativo separato dall’anteprima, come nell’area personale. L'indicatore dell'area
+  personale considera anche disponibilità e scadenza effettive.
+- Test: `tests/leader-qr.test.mts` su scope negativo, token selezionato, revoche
+  e scadenze; `tests/browser/leader-qr.mjs` prova UI e download PNG reale su
+  fixture sintetica desktop/mobile. Nessun collaudo modifica partecipanti reali.
+
+## Tabella partecipanti capogruppo — 2026-09-07
+
+- `Partecipanti del gruppo` apre la scheda dal nome, senza colonna Azioni o
+  pulsanti Dettagli. `LeaderParticipantsTable` riusa il contratto colonne e
+  preferenze manager, con intestazioni ordinabili e selettore sovrapposto.
+  Nome sempre visibile; email e telefono sono colonne indipendenti. Paese,
+  città, età all'inizio evento e data iscrizione sono facoltative.
+- Preferenze browser per operatore in `iscrizioni:leader-participants:v1:<id>`,
+  separate dalle preferenze manager; `columns`, `sort`, `direction` nell'URL
+  prevalgono. Link scheda, chiusura e salvataggi identità/contatti/note/tag/
+  servizio/rifiuto conservano filtri e preferenze con `leaderReturnPath`.
+- `/dashboard/capogruppo/export` esporta un solo foglio Excel, tutte le righe
+  filtrate, solo le colonne visibili nello stesso ordine e ordinamento.
+  UI ed export condividono filtri, ordinamento, formattazione e testi in sette
+  lingue; la scrittura di celle stringa riusa il writer manager contro formule.
+- `leader-data.server.ts` condivide tra pagina ed export il caricamento
+  paginato di membership, gruppi e assegnazioni, sostituendo il limite di 100.
+  Il server verifica sessione/ruolo, ricostruisce lo scope dall'utente corrente
+  e dalle membership capogruppo nell'evento corrente, includendo i discendenti
+  attivi. Nessun parametro del client può scegliere utente o evento. Anche
+  admin nell'area capogruppo deve avere membership per esportare dati.
+  Esclude iscrizioni eliminate e assegnazioni non correnti; servizi e tag
+  sono limitati all'evento/iscrizione pertinente. Errori di lettura interrompono
+  il caricamento anziché produrre export parziali. Nessuna nuova capacità
+  operativa manager, modifica RLS o migration.
+- Regressioni: `tests/leader-participants-table.test.mts` (scope, oltre 1.000
+  righe, filtri, export e ritorni) e `tests/browser/leader-participants.mjs`
+  (fixture locale, colonne, ordinamento, download, desktop/mobile). Queste
+  prove non sostituiscono un collaudo autenticato su Supabase con capogruppo reale.
+
+## Qualità dati, duplicati e scambio Excel — blocco 6, 2026-09-05
+
+- Importazione condivisa dalla tabella iscritti; istruzioni consultabili
+  prima dell'upload e modello
+  `.xlsx` vuoto con fogli Esempi/Istruzioni/Cataloghi separati. Formato canonico
+  `pace-partecipanti-v1` in `lib/data-quality/format.ts`: date testo ISO,
+  telefono internazionale, gruppi/servizi/tag per UUID o nome univoco in evento,
+  stato servizio separato, consensi originali obbligatori. 2 MiB/500 righe.
+- Dal 2026-09-06, il pulsante `Importa iscritti da Excel` apre una modale
+  nativa sopra la tabella ed è visibile agli operatori con permessi di
+  scrittura. È accanto al titolo `Gestione iscritti`, separato da `Crea tag
+  operativo` sulla destra. Include istruzioni espandibili, modello e anteprima; X/Escape
+  chiudono conservando filtri, sidebar e scroll. `import=excel` controlla
+  l'apertura; la vecchia route `/dashboard/participants/data-quality`
+  reindirizza alla modale nella dashboard autorizzata.
+  La modale usa i token grafici e i pulsanti condivisi del sito, con tre
+  passaggi: prepara, scegli il file, controlla e conferma. `Scegli file Excel`
+  mostra il nome selezionato; cambiare file annulla l'anteprima precedente.
+  Le istruzioni in linguaggio semplice di `IMPORT_GUIDE` sono condivise tra
+  modale, pagina istruzioni e modello scaricabile; il file esportato dalla
+  tabella non sostituisce il modello di importazione.
+  Il menu condiviso `Sezioni partecipanti`, sopra il contenuto, separa
+  `Partecipanti`, `Duplicati` (`view=duplicates`) e `Senza gruppo`
+  (`view=without-group`): una sola tabella per volta, senza riquadri impilati.
+  Il cambio vista conserva dashboard, sidebar e preferenze colonne, ma azzera
+  i filtri della vista precedente per evitare code incomplete senza motivo visibile.
+  L'archivio admin rimane accessibile da Partecipanti.
+  `OperationsDuplicatesSection` viene caricato solo nella vista Duplicati,
+  anche in sola lettura, e controlla tutte le iscrizioni operative dell'evento.
+  La tabella mostra le due schede di ogni coppia con email, gruppo, motivo,
+  confronto e azioni. Modifica apre la scheda condivisa in dialog; il confronto
+  e l'esclusione aprono un dialog nativo, chiudibile con X/Escape senza scroll.
+  Escludi marca la coppia come persone distinte dopo motivazione/conferma e non
+  elimina iscrizioni. Le coppie escluse restano consultabili in `Esclusi`.
+  `duplicatePair`, `duplicateAction=exclude`, `duplicateShow` e `duplicatePage`
+  controllano confronto, azione, vista e paginazione; salvataggi e chiusure
+  ritornano alla vista Duplicati, conservando pagina e filtro degli esclusi.
+  L'export è sotto i filtri: pulsante verde con icona download `Esporta
+  iscritti` e descrizione esplicita del file Excel relativo ai filtri applicati.
+- Migration `20260906120000_service_role_app_schema_usage.sql` autorizzata e
+  applicata in produzione il 2026-09-06: aggiunge il solo USAGE sullo schema
+  `app` a `service_role`, necessario per `quality_event_version` e gli helper
+  server già autorizzati. Nessuna modifica RLS; hash/conteggi invariati su sei
+  tabelle. Corretto anche il join dei gruppi nel loader import/export con la
+  FK esplicita `participant_group_assignments_group_id_fkey`. Dettagli in
+  `docs/data-quality-excel.md`.
+- Motore unico in `lib/data-quality/duplicates.ts`: nomi normalizzati e
+  Levenshtein corroborati da nascita, email, telefono, paese/città. Classi
+  esatta, molto probabile, possibile, falso positivo verificato. Nessuna
+  unione automatica. Usato da console, import e inserimento manuale capogruppo.
+- Preview solo in memoria/cifrata, legata a operatore, evento, scopo e scadenza
+  20 minuti. Nessuna scrittura prima della conferma esplicita; scarti e
+  persone distinte motivati. Commit SQL atomico e idempotente con UUID/hash,
+  controllo versione DB e lock brevi. Falsi positivi persistiti con fingerprint
+  SHA-256; cambiando i dati il caso si riapre. Archiviate da verificare con admin.
+- Merge consapevole: record da conservare scelto esplicitamente, dati presenti
+  prevalenti, completamento mancanti, tag/presenze riuniti; source archiviata
+  con `registrations.merged_into_id`, storico conservato e QR revocato.
+  Ripristino ordinario vietato. Account distinti, identità su altri eventi e
+  dipendenze delicate richiedono riconciliazione dedicata, senza merge parziali.
+- Export `.xlsx` con tutti i risultati dei filtri e RLS dell'operatore,
+  paginazione oltre 200/1000, filtro `stat` e minori tramite iscrizione familiare.
+  Dal 2026-09-06 esporta un solo foglio Iscritti con le colonne effettivamente
+  visibili, nello stesso ordine, incluse preferenze browser e vista Senza gruppo.
+  Nomi leggibili per gruppo/servizio/tag, età all’inizio dell’evento e data
+  iscrizione; nessun foglio aggiuntivo o dato nascosto. Il modello canonico
+  di importazione resta separato. Celle stringa contro formule;
+  preflight ZIP con limite decompresso e rifiuto macro/link/formule/colonne inattese.
+- Migration `20260905210000_data_quality_excel.sql` applicata in produzione
+  il 2026-09-05, con conteggi/hash invariati su 10 tabelle (68 iscrizioni);
+  nessun import/merge su dati reali. Introduce `duplicate_reviews`,
+  `participant_imports`, `merged_into_id`, RPC servizio con controlli SQL,
+  RLS nuove tabelle e audit transazionale; nessuna policy esistente allargata.
+- Test: `tests/data-quality*.test.mts`, `tests/sql/data-quality.sql` su DB
+  temporaneo vuoto, `tests/browser/data-quality.mjs` su fixture locale.
+  Formato, limitazioni merge, sicurezza e rilascio: `docs/data-quality-excel.md`.
+
+## Gestione iscritti e soft delete — blocco 5, 2026-09-05
+
+Queste regole sostituiscono la precedente tabella fissa con colonna Azioni e
+l'eliminazione fisica dell'iscrizione. Migration applicate e registrate in
+produzione il 2026-09-05; codice rilasciato tramite PR #8 (`b0485c4`), deployment
+`dpl_4P4U8mz6tCf75twJKFHreStCMYHV` Ready sul dominio pubblico. Verificate 68
+iscrizioni conservate e nessuna eliminata dalla migration, hash invariati su
+18 tabelle, 13 policy restrittive, 5 trigger e RPC/PostgREST con privilegi corretti.
+
+- Admin e manager usano `OperationsParticipantsSection` (confine server per i
+  permessi) e `OperationsParticipantsTable` (unico client per tabella e scheda).
+  Il nome apre la scheda anche per `manager_viewer`, in sola lettura.
+- Colonne facoltative e ordinamento sono salvati nel browser per ID operatore,
+  condivisi tra area admin e manager. L'URL può prevalere sulle preferenze
+  salvate. Il nome resta sempre visibile. Età calcolata all'inizio dell'evento.
+  Lo stato iscrizione non è una colonna selezionabile: le vecchie preferenze
+  e gli URL che lo includono lo ignorano, con ordinamento di ripiego sul nome.
+- Dal 2026-09-06, lo stato tecnico dell'iscrizione non compare neppure tra
+  i filtri admin/manager. Il parser condiviso ignora i vecchi parametri
+  `status` anche nell'export, evitando filtri attivi invisibili; lo stato
+  rimane nei dati interni. Gruppo, servizio, tag e archivio restano distinti.
+- Il filtro Tag occupa una sola colonna della griglia, larga quanto Servizio,
+  e lo affianca nei layout a due e tre colonne, anche in Senza gruppo.
+  Servizio inizia sempre una nuova riga; su mobile i campi sono impilati.
+  `Azzera filtri` resta accanto al filtro Tag; `Colonne visibili` e
+  `Mostra figli accompagnati` precedono `Esporta iscritti`,
+  fuori dal form dei filtri. Su schermi stretti i comandi vanno a capo.
+  Il selettore colonne si apre in un pannello sovrapposto; le sue checkbox
+  non avviano il filtraggio automatico. La descrizione Excel è a destra del pulsante di export.
+- Dal 2026-09-06, `Mostra figli accompagnati`
+  mostra/nasconde sotto il genitore il badge con il numero di figli e il
+  riepilogo di nomi ed età all'inizio dell'evento. Parte spento nella vista
+  ordinaria e si attiva entrando nel filtro statistico `kind=child`; la
+  scelta è temporanea e si reimposta al cambio di statistica.
+  Le righe senza figli restano compatte;
+  la scheda continua ad aprirsi dal nome del genitore. Il riepilogo usa i figli
+  già presenti nello snapshot e gli stessi permessi della tabella condivisa.
+  Il filtro statistico `kind=child` distingue iscrizioni familiari e figli
+  nelle righe mostrate. Eventuali fratelli fuori dal filtro restano nel
+  riepilogo della propria famiglia. Non mostrare spiegazioni testuali sui figli.
+  Tutti i filtri statistici, incluso `Minori accompagnati`, restano indicati
+  con `Filtro dalle statistiche: …` accanto ad `Azzera filtri`, unico comando
+  di azzeramento anche per `stat`; non esiste un secondo `Rimuovi filtro`.
+- Gruppo, servizio e tag si salvano direttamente dalla tabella e dalla scheda,
+  tramite la stessa RPC `update_registration_operation`; le modifiche sono
+  serializzate per iscrizione e auditabili nella stessa transazione. Un
+  selettore vuoto rimuove il gruppo/servizio; un servizio scelto è assegnato.
+- Le intestazioni Gruppo e Servizio hanno ciascuna un interruttore a matita
+  sulla stessa riga del titolo, con tooltip `Modifica rapida` e sfondo blu
+  quando attivo. Parte spento e abilita i selettori per l'intera colonna.
+  Le due scelte sono indipendenti e temporanee, senza salvataggio nel browser;
+  valgono anche per la coda Senza gruppo. A interruttore spento si leggono i
+  valori correnti; la scheda resta modificabile secondo i permessi. Nessun
+  interruttore per `manager_viewer` o nell'archivio delle iscrizioni eliminate.
+- `view=without-group` è la coda dedicata con nome, paese, città, età e gruppo.
+  L'assegnazione riuscita rimuove subito la riga; un errore mantiene i dati.
+  I caricamenti sono paginati e le relazioni lette a blocchi: nessun taglio
+  silenzioso alle prime 200 iscrizioni o al limite PostgREST.
+- La scheda usa un dialog nativo con focus, Escape e scroll interno. Il campo
+  `returnTo`, validato dal server, conserva la sezione iscritti, filtri inclusi
+  `stat`, vista, ordinamento, colonne, sidebar e scheda aperta. I form marcati
+  `data-preserve-dashboard-scroll` navigano senza azzerare lo scroll.
+- `20260905190000_registration_soft_delete.sql`: `registrations.deleted_at`,
+  `deleted_by`, `deletion_reason`, `restored_at`, `restored_by`; RPC server
+  `set_registration_deleted`. Motivazione 3–500 caratteri e conferma nella UI.
+  Manager solo in evento assegnato; ripristino solo admin da `view=deleted`.
+  Account, partecipante, figli, consensi, questionari e storico restano.
+- RLS restrittiva esclude le iscrizioni eliminate e i relativi dati operativi;
+  admin può leggere l'archivio. Trigger impediscono hard delete applicativo,
+  nuovi QR/check-in e modifiche operative per iscrizioni eliminate. SQL di
+  manutenzione intenzionale come database owner resta distinto dal flusso app.
+- I QR attivi vengono revocati e marcati come sospesi dall'eliminazione. Il
+  ripristino riattiva solo questi QR ancora validi; non quelli già revocati.
+  Le campagne in attesa sono escluse senza toccare invii storici; il ripristino
+  non riavvia invii. Controllo di ammissibilità ripetuto prima dell'invio,
+  anche per recapiti delegati/capigruppo con iscrizione personale eliminata.
+- I lookup pubblici dell'email riconoscono le identità conservate per evitare
+  che una nuova registrazione aggiri l'eliminazione. Le liste operative,
+  statistiche, area personale e audience campagne filtrano `deleted_at`.
+- `20260905191000_participant_quick_operations.sql` include gruppo, servizio,
+  tag, identità e contatti; verifica permessi, evento, opzioni assegnabili e
+  iscrizione non eliminata. Le RPC che accettano l'attore sono riservate a
+  `service_role`, mai a `anon` o `authenticated`.
+- Procedura di rilascio e verifiche: `docs/participant-operations.md`.
+
+## Gruppi, Impostazioni e link automatici — 2026-09-05
+
+Queste regole sostituiscono le precedenti istruzioni sulla generazione manuale
+dei link e sul menu Servizi.
+
+- Il form condiviso admin/manager distingue tipo e posizione. Default:
+  `Gruppo effettivo`, assegnabile. Paese/città/area nascono strutturali e
+  diventano iscrivibili soltanto con la scelta esplicita. Validazioni server
+  su evento, parent coerente e assenza di cicli. Il campo HTML si chiama
+  `groupNodeType`, evitando il conflitto con la proprietà DOM `nodeType`.
+- Dal 2026-09-06, la gestione evento admin vive in
+  `/dashboard/admin?section=impostazioni`, accanto al collegamento al catalogo
+  servizi condiviso. Rimossa la voce autonoma Gestione evento dalla sidebar.
+  `section=evento` reindirizza conservando i parametri; link, overlay nuovo
+  evento e ritorni delle action usano Impostazioni. L'ingresso admin senza
+  sezione apre Statistiche. Il collegamento alla gestione evento dalle
+  impostazioni servizi è visibile solo agli admin; accesso e action restano
+  riservati al ruolo admin, senza modifiche a permessi manager o RLS.
+- Dal 2026-09-06, `Impostazioni` è sempre l’ultima voce delle sidebar admin
+  e manager, sia nel menu esteso sia in quello compatto.
+- `Impostazioni` contiene il catalogo servizi nella route condivisa
+  `/dashboard/manager?section=impostazioni`, anche per admin. I vecchi URL
+  `section=servizi` vengono reindirizzati conservando gli altri parametri.
+- Migration `20260905170000_automatic_group_links.sql`: trigger transazionale
+  di creazione link canonico e audit per ogni gruppo assegnabile, backfill
+  dei mancanti e colonna `slug` per gli URL amministrativi pubblici. I vecchi
+  token cifrati restano validi. Nessuna modifica RLS.
+- Il canonico non può essere revocato, cancellato, spostato, scadere o esaurirsi.
+  `Gestisci link` modifica nome pubblico/slug e mostra URL e copia. Non esiste
+  più `Genera link`. Collisioni gestite senza invalidare il link corrente;
+  cambiare slug rende inutilizzabile il vecchio URL, come spiegato nella UI.
+- Migration applicata in produzione: 93 link/audit creati; 107 gruppi
+  assegnabili con 107 canonici, zero mancanti e zero nuovi link strutturali.
+  I 14 record canonici preesistenti sono verificati invariati.
+- Migration complementare `20260905171000_reserve_email_preview_group_slug.sql`:
+  riservata anche la route `dev-email-preview`, con test di copertura di tutte
+  le route statiche alla radice.
+- Dettagli, verifiche e rilascio: `docs/automatic-group-links.md`.
+
+## Assegnazioni operative e questionario — 2026-09-05
+
+Queste regole sostituiscono le precedenti indicazioni su conferma ordinaria,
+notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
+
+- Ogni assegnazione corrente è operativa; `confirmed` resta il valore tecnico,
+  senza richiedere una conferma successiva. UI e conteggi usano gruppo assegnato.
+- Il capogruppo vede tutte le persone correnti in scope e gestisce soltanto
+  l'eccezione `Non appartiene al mio gruppo`, oltre alle note e ai dati già
+  modificabili. Non esistono più Da confermare, conferma/non conferma,
+  smistamento ai discendenti o lettura della notifica.
+- Il rifiuto disattiva l'assegnazione e porta sempre in `Senza gruppo`, senza
+  risalita al padre. La RPC server `reject_group_assignment` verifica evento,
+  membership e scope; rimozione e audit sono transazionali. Solo admin/manager
+  possono assegnare nuovamente una persona senza gruppo.
+- Eliminati invio e template delle email per nuove assegnazioni ai capigruppo.
+  Le colonne storiche di conferma/lettura restano, ma la lettura non è più usata.
+- Dal 2026-09-08, nei link di gruppo validi il modulo condiviso nasconde
+  entrambe le domande e invia le due risposte come Sì; mostra subito il nome
+  del gruppo in sola lettura. I valori effettivi prevalgono anche su bozze
+  recuperate dopo errore. Il flusso ordinario resta condizionale come sotto;
+  la validazione server continua a verificare il link e il gruppo.
+- Questionario corrente: `2026-09-06-conditional-groups` (flusso aggiornato il
+  2026-09-06). La prima domanda sugli eventi precedenti è obbligatoria: Sì
+  mostra `Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?`,
+  anch'essa obbligatoria quando visibile; No mostra direttamente l'associazione
+  facoltativa. Nella seconda domanda Sì mostra il gruppo, No l'associazione.
+  Cambiare il primo valore in No azzera risposta e selezioni del ramo gruppo;
+  i campi non pertinenti non vengono inviati. Il server normalizza il primo
+  No come partecipazione senza gruppo anche con campi residui o link riservato.
+  Nei link le due risposte Sì sono implicite dal 2026-09-08.
+  Associazione in `answers.externalGroupAssociation`, sette lingue aggiornate;
+  nuova versione snapshot senza riscritture storiche o migration.
+- No prevale anche su link riservato/membership. Senza scelta esplicita, o con
+  `Non trovo il mio referente`, non creare assegnazioni territoriali automatiche.
+  Nel flusso ordinario non assumere una precedente partecipazione.
+- Migration testata su PostgreSQL temporaneo e applicata in produzione il 2026-09-05:
+  `20260905150000_operative_group_assignments.sql`. Conserva audit/snapshot
+  storici, rimuove code automatiche ancora probabili e assegnazioni incompatibili
+  con No (salvo override admin/manager), converte le restanti probabili senza
+  inventare una conferma umana. Trigger/default normalizzano i nuovi stati;
+  nessuna modifica alle policy RLS. Rilascio SQL/codice completato: 36 probabili
+  rese operative, 23 assegnazioni rimosse, 44 correnti finali; 59 audit nuovi,
+  506 audit precedenti e 68 snapshot verificati invariati. RPC/PostgREST verificati
+  e iscrizioni riaperte con la finestra originale.
+- Procedura e dettagli: `docs/operative-group-assignments.md`. Regressioni in
+  `tests/group-questionnaire.test.mts`, `tests/browser/group-questionnaire.mjs`
+  e `tests/sql/operative-group-assignments.sql`.
+
 ## Stato del progetto
 
 - Nome progetto/repository: `iscrizioni-pace`.
@@ -18,37 +455,63 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 
 ## Workflow Git e postazioni multiple
 
-- Non lavorare dentro cartelle sincronizzate da OneDrive, Dropbox, iCloud o
-  servizi analoghi: la sincronizzazione della directory `.git` puo' creare
-  lock, ref duplicati e worktree corrotti. Ogni postazione deve avere un clone
-  locale indipendente fuori dalle cartelle cloud.
+- Non lavorare dentro cartelle sincronizzate da servizi cloud: la
+  sincronizzazione della directory `.git` puo' creare lock, ref duplicati e
+  repository corrotti. Ogni postazione deve avere un clone locale indipendente
+  fuori dalle cartelle cloud.
 - GitHub e' l'unico canale di sincronizzazione del codice tra computer e
-  persone. OneDrive puo' contenere materiali di progetto e snapshot
-  immutabili `.bundle` o `.tar.gz`, ma non una working copy Git attiva.
-- `main` deve restare pulito, aggiornato e utilizzabile. Non sviluppare
-  direttamente su `main`: ogni intervento usa un branch breve `codex/<tema>`
-  creato da `origin/main` aggiornato.
-- Nell'app Codex avviare di norma ogni nuovo lavoro in un worktree basato su
-  `main`. Una chat o un'attivita' corrisponde a un worktree e a un solo branch;
-  non riutilizzare indefinitamente branch di milestone gia' concluse.
-- Prima di iniziare un lavoro: verificare `git status`, eseguire
-  `git fetch origin`, aggiornare `main` con `git pull --ff-only` e solo dopo
-  creare branch o worktree.
-- Se `main` cambia mentre un branch e' ancora aperto, integrare
-  `origin/main` nel branch con un merge prima delle verifiche finali e della
-  pull request. Non fare rebase di branch gia' pubblicati o condivisi.
+  persone. Non usare servizi di sincronizzazione file per condividere una
+  working copy Git attiva.
+- Dal 2026-09-05, salvo indicazione esplicita dell'utente, tutte le modifiche
+  si effettuano direttamente su `main` nel checkout locale ordinario. Questa
+  regola sostituisce le precedenti eccezioni per lavoro lungo, rischioso o
+  parallelo, migration e permessi/RLS.
+- L'unica eccezione stabile e' il branch `codex/panel-p0-p10`, che DEVE
+  continuare a esistere per lo staging dei panel. Non eliminarlo, neppure
+  dopo un'integrazione in `main`, senza richiesta esplicita. Usarlo per le
+  modifiche quando l'utente indica espressamente lo staging/branch dei panel;
+  in assenza di indicazioni lavorare su `main`, anche se il tema sono i panel.
+- Non creare autonomamente branch, worktree o pull request. Solo una nuova
+  richiesta esplicita dell'utente puo' cambiare questa scelta; complessita',
+  rischio o comodita' di anteprima non sono motivi per derogare.
+- Riallineare prima `main`, eseguire i controlli proporzionati e, quando
+  richiesto, fare commit e push direttamente su `main`. Il push su `main`
+  avvia il normale deployment production.
+- All'inizio di ogni nuova attivita' verificare `pwd`, il branch corrente e lo
+  stato con `git status --short --branch`, quindi eseguire automaticamente
+  `git fetch origin`. Prima di modificare file assicurarsi di essere su `main`
+  ed eseguire `git pull --ff-only` con upstream `origin/main`. Quando l'utente
+  indica esplicitamente il branch panel, riallineare invece quel branch al
+  proprio upstream.
+- Se il checkout e' su un altro branch, verificare prima modifiche locali e
+  commit non integrati; passare a `main` soltanto quando e' sicuro, senza
+  perdere, trascinare o integrare automaticamente lavoro preesistente. Se non
+  e' possibile, segnalare l'impedimento prima di iniziare nuove modifiche.
+- Il pull automatico deve fermarsi e segnalare la situazione, senza forzare
+  modifiche, se la working tree non e' pulita, il branch non ha un upstream, i
+  commit locali e remoti sono divergenti oppure emergono conflitti. In questi
+  casi risolvere consapevolmente la sincronizzazione prima di iniziare il nuovo
+  lavoro.
+- Durante il lavoro esplicitamente destinato allo staging panel, integrare
+  periodicamente `origin/main` in `codex/panel-p0-p10` con un merge, anche prima
+  delle verifiche finali e dell'integrazione in `main`. Non fare rebase del
+  branch condiviso; ripubblicarlo dopo il merge quando il push e' richiesto.
 - Prima di terminare una sessione: eseguire i controlli proporzionati alla
-  modifica, committare, fare push, verificare che il branch coincida con il
-  remoto e lasciare la working tree pulita. Se il lavoro non e' pronto, usare
-  un commit chiaramente identificato sul branch; non lasciare file anonimi
-  non committati per una chat futura.
+  modifica e verificare il diff. Quando l'utente richiede commit/push,
+  pubblicare su `main` (o sul branch panel se espressamente indicato),
+  verificarne l'allineamento con il rispettivo remoto e lasciare
+  pulite le modifiche della sessione. Non includere lavoro estraneo al task.
 - Per cambiare computer: concludere e fare push dalla prima postazione; sulla
-  seconda eseguire fetch e aprire lo stesso branch remoto oppure creare un
-  nuovo branch da `origin/main`. Non modificare contemporaneamente lo stesso
-  branch da due dispositivi senza prima coordinare e sincronizzare.
-- Dopo il merge della pull request, eliminare il branch breve e il relativo
-  worktree. Le modifiche successive partono da un nuovo branch creato dal
-  nuovo `main`.
+  seconda eseguire il pull automatico iniziale e continuare su `main`, oppure
+  sul branch panel quando espressamente indicato per l'attivita'.
+  Non modificare contemporaneamente lo stesso branch da due dispositivi
+  senza prima coordinare, fare push e sincronizzare.
+- Gli altri branch o worktree preesistenti non autorizzano nuove modifiche
+  fuori da `main`; non eliminarli o integrarli automaticamente.
+- L'automazione multi-postazione deve limitarsi a verificare lo stato Git ed
+  eseguire un fetch e un fast-forward sicuro di `main` (o del branch panel
+  espressamente indicato) all'avvio della nuova attivita', nel checkout locale
+  ordinario e senza creare branch o worktree.
 - Milestone 1 ha inizializzato questa cartella come repository Git locale.
 - Milestone 2 ha aggiunto guardrail di qualità e documentazione operativa.
 - Milestone 4 ha aggiunto autenticazione base Supabase, callback auth,
@@ -133,6 +596,17 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
 - Le statistiche generiche sopra la tabella iscritti admin/manager sono state
   rimosse per ridurre rumore visivo. Inventario delle statistiche disponibili:
   `docs/statistiche-disponibili.md`.
+- Dal 2026-09-03 la pagina statistiche condivisa da admin e manager usa tre
+  report sintetici: riepilogo territori/gruppi, pivot geografica espandibile
+  paese > città > gruppo con colonne mattina/pomeriggio, riepilogo presenze e
+  fasce di età. La pivot mostra il livello gruppo soltanto per città con più
+  gruppi. Non esistono più le tabelle nominali per territorio, presenza o età,
+  né la vista completa finale. Tutti i conteggi sono link a `Gestione iscritti`
+  tramite il filtro compatto `stat`; il filtro deve continuare a includere i
+  minori accompagnati collegandoli alla relativa iscrizione familiare. Le
+  statistiche di presenza espongono solo mattina e pomeriggio dei giorni
+  dell'evento: eventuali scelte legacy `day` valgono per entrambe le fasce e
+  l'eventuale fascia di arrivo precedente all'inizio non compare nel report.
 - Il 2026-06-17 la roadmap futura e' stata rinumerata dalla prossima milestone
   in poi: Milestone 12 e' revisione guidata UX, navigazione e dati dashboard;
   Milestone 13 e' multilingua minima e testi localizzati; Milestone 14 e'
@@ -146,7 +620,7 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   interazione o submit tentato, consenso dati sensibili di accessibilità
   mostrato/richiesto solo quando l'utente segnala bisogni di accessibilità,
   login non autenticato senza path tecnico, riduzione temporanea delle domande
-  accessibilità e rimozione dei placeholder dai campi note accessibilità.
+  accessibilità.
 - Nella seconda tranche della Milestone 12 sono state riviste in localhost la
   dashboard partecipante con utente test non personale, dashboard capogruppo,
   manager, admin e accoglienza. Patch approvate: i dati accessibilità della
@@ -525,17 +999,32 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `Amici Sant'Egidio`. Il rinomino aggiorna anche `groups.public_label` e le
   etichette dei link riservati attivi, ma non ruota gli slug gia' distribuiti;
   ogni modifica e' registrata con audit action `group.renamed`.
-- Dal 2026-07-26 chi dichiara di avere gia' partecipato ad attivita'
-  Sant'Egidio ma non seleziona esplicitamente un gruppo deve restare senza
-  assegnazione: sia la risposta "No" all'appartenenza a un gruppo sia
-  l'opzione "Non trovo il mio gruppo o referente" non autorizzano un matching
-  automatico verso il primo gruppo territoriale compatibile. Restano valide le
-  scelte esplicite, i link riservati, l'eventuale membership capogruppo e la
-  coda territoriale strutturata `newcomers` per chi non ha mai partecipato.
-  La migration `20260726120000_stop_unselected_group_auto_assignment.sql`
-  rende non correnti soltanto le precedenti assegnazioni automatiche ancora
-  probabili, conservandole come rifiutate e registrando l'audit; non modifica
-  assegnazioni gia' confermate da un referente.
+- La regola introdotta il 2026-07-26 per lasciare senza assegnazione chi non
+  selezionava esplicitamente un gruppo e' stata superata il 2026-08-24 dopo le
+  prime iscrizioni operative. Una scelta esplicita resta `probable` soltanto
+  nel gruppo scelto e non deve comparire nella coda da confermare dei nodi
+  superiori. Chi non seleziona un gruppo viene invece assegnato `probable` al
+  nodo territoriale `city` o `country` piu' vicino, con reason
+  `territorial_review_queue`; per Roma la coda e' il nodo `Roma`. Un rifiuto da
+  un gruppo continua a risalire al padre. Il referente del nodo territoriale
+  puo' riassegnare la persona a un gruppo attivo e assegnabile del proprio
+  sottoalbero, dove apparira' nuovamente come da confermare. I nodi territoriali
+  non assegnabili non possono confermare una persona come appartenente al nodo:
+  devono smistarla a un discendente oppure rifiutarla verso il livello superiore.
+  Nella sezione `Da confermare`, l'azione apre una scheda esplicitamente
+  orientata allo smistamento: mostra il motivo dell'assegnazione al livello
+  corrente, colloca subito accanto il selettore dei gruppi discendenti e indica
+  dinamicamente il nodo padre reale a cui la persona risalira' scegliendo
+  `Non riconosciuto`. I testi non devono codificare esempi come Roma/Italia:
+  devono usare i nomi dei nodi effettivi dell'albero. Nella tabella pending non
+  mostrare `Non riconosciuto`: la riga usa l'azione non spezzabile
+  `Vedi dettagli e assegna`. Dentro la scheda, assegnazione a un discendente e
+  `Non riconosciuto` devono stare nello stesso blocco decisionale, contigui e
+  separati visivamente da `Oppure`, per risultare alternative reciproche.
+  La migration `20260824193000_territorial_group_review_queue.sql` riallinea le
+  iscrizioni esistenti che non hanno mai avuto alcuna assegnazione; la migration
+  storica `20260726120000_stop_unselected_group_auto_assignment.sql` resta
+  versionata ma non descrive piu' il comportamento corrente.
 - Dal 2026-07-28 gruppo attribuito e referente sono informazioni esclusivamente
   operative e non devono essere mostrati nella dashboard partecipante, ne'
   sotto il nome ne' nel riepilogo dell'iscrizione. Nel riepilogo personale il
@@ -713,7 +1202,10 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   in bozza, non correnti, con dati minimi di identita' e finestre iscrizioni.
   Nelle tabelle operative non mostrare colonne evento ridondanti. Migration:
   `20260624100000_current_operational_event.sql`.
-- Branch di lavoro ordinario: `main`.
+- Branch predefinito per tutte le modifiche: `main`, sempre riallineato a
+  `origin/main`. Il branch `codex/panel-p0-p10` deve restare disponibile per lo
+  staging e si usa solo su indicazione esplicita dell'utente. Non creare
+  autonomamente altri branch o worktree.
 - Remote `origin` configurato:
   `https://github.com/giovaniperlapace/iscrizioni-pace`.
 - Per verificare l'ultimo commit/push noto su `main`, usare
@@ -732,6 +1224,49 @@ Prima di ogni feature verificare:
   avvisare esplicitamente l'utente se ci sono modifiche locali/conflitti da
   gestire. Non iniziare nuove modifiche codice su una base non allineata senza
   averlo segnalato.
+
+
+## Form e minimizzazione accessibilità — 2026-09-05
+
+- I form operativi usano `components/reliable-form.tsx`: invio esplicito senza
+  reset React in caso di errore, valori mantenuti in memoria nella modale,
+  messaggi accanto ai campi con `aria-invalid`/`aria-describedby`, focus al
+  primo campo non valido nell'ordine del form e blocco del doppio invio.
+- Le azioni dashboard restituiscono `FormFailure` per errori di validazione o
+  salvataggio; i redirect restano per successo e autenticazione. L'adattatore
+  `lib/forms/result.ts` converte i codici storici in errori localizzati e non
+  espone dettagli infrastrutturali. Le route POST delle schede operative
+  supportano la stessa risposta quando il client richiede JSON.
+- Non introdurre nuovi form in overlay che reindirizzino in caso di errore.
+  Usare `ReliableForm` e restituire problemi con campo/codice; non salvare
+  bozze operative in localStorage, sessionStorage o URL.
+- Telefono facoltativo ma internazionale quando presente: `+` seguito da
+  7–15 cifre, con spazi e separatori normalizzati. L'inserimento capogruppo
+  richiede almeno email o telefono. Email, nomi e date sono verificati anche
+  sul server; le fasce dell'evento sono verificate prima di creare la persona.
+- Il capogruppo raccoglie solo le tre opzioni strutturate di accessibilità,
+  con follow-up condizionale. La richiesta separata di ricontatto non viene
+  più raccolta. Il partecipante conserva la propria richiesta di supporto.
+- Il testo libero relativo all'accessibilità non viene più raccolto,
+  visualizzato, inviato o salvato in alcun flusso. Le bozze pubbliche del
+  formato precedente vengono migrate nel browser eliminando soltanto il
+  valore ritirato e conservando gli altri campi.
+- Versione della tranche accessibilità: `2026-09-05-accessibility-minimization`; le versioni
+  storiche conservano il loro identificativo e sono state ripulite.
+- Migration verificata su PostgreSQL locale e applicata in produzione il
+  2026-09-05 dopo il deployment del codice compatibile:
+  `20260905120000_minimize_accessibility_data.sql`. Rimuove la colonna ritirata,
+  pulisce ricorsivamente snapshot e audit, azzera il vecchio flag manuale e
+  impedisce nuovi snapshot con proprietà di accessibilità fuori contratto.
+  Non modifica RLS o le note interne di gruppi/servizi. Verifica remota:
+  colonna ritirata assente, 68 snapshot ripuliti, nessuna proprietà ritirata
+  negli audit, richiesta personale di supporto conservata, PostgREST HTTP 200.
+- Stato remoto e procedura di rilascio: `docs/form-reliability-accessibility.md`.
+  La migration va applicata dopo il deploy del codice compatibile, su ambiente
+  concordato; la pulizia è irreversibile e non va sostituita da un backup di
+  dati sensibili nel repository.
+- Regressioni: `tests/forms-reliability.test.mts`,
+  `tests/browser/forms-reliability.mjs`, `tests/sql/accessibility-minimization.sql`.
 
 ## Milestone 0 - discovery
 
@@ -1042,7 +1577,7 @@ Decisioni:
   politica, includendo paesi transcontinentali come Russia e Turchia.
 - `registration_questionnaire_answers` conserva solo uno snapshot versionato
   delle risposte/configurazione per audit e manutenzione futura.
-- Le domande Washington Group e le note di supporto restano dati sensibili:
+- Le risposte strutturate alle domande di accessibilità restano dati sensibili:
   visibili a partecipante, manager e admin, non all'accoglienza diretta.
 - Nel testo visibile all'utente non va citato il Washington Group o la
   classificazione tecnica delle aree funzionali; la documentazione può restare
@@ -1051,8 +1586,7 @@ Decisioni:
   ora solo tre opzioni accessibilità: sentire, camminare/salire gradini, uso di
   sedia a rotelle o altro ausilio per la mobilità. Sono state rimosse
   temporaneamente le opzioni vedere, cura di sé, ricordare/concentrarsi,
-  comunicare e bisogno di assistenza durante l'evento. Il campo note pratiche
-  non deve avere placeholder/suggerimenti nel box.
+  comunicare e bisogno di assistenza durante l'evento.
 - Assisi 2026 e' l'evento operativo prossimo in preparazione. Il titolo
   visibile deve essere quello della locandina:
   `UNARMED AND DISARMING PEACE - PACE DISARMATA E DISARMANTE`.
@@ -1247,8 +1781,7 @@ Funzioni disponibili:
 - Codice partecipante `participants.public_code` visibile in dashboard come
   identificativo operativo semplice dentro l'area QR con etichetta "Il tuo
   codice"; non va duplicato nell'header.
-- Modifica controllata di telefono, giorni di presenza, richiesta di supporto e
-  note pratiche. La lingua preferita non e' modificabile/richiesta.
+- Modifica controllata di telefono, giorni di presenza e richiesta di supporto. La lingua preferita non e' modificabile/richiesta.
 - Le modifiche sono consentite solo se la registrazione non e' `cancelled` e
   se `events.registration_closes_at` non e' superato.
 - La dashboard filtra sempre le iscrizioni sul `participants.auth_user_id`
@@ -1268,7 +1801,7 @@ Decisioni:
 - Per leggere lo stato QR e scrivere audit server-side si usa service role solo
   dopo aver verificato la proprieta' della registrazione con sessione utente.
 - L'accessibilita' viene riepilogata senza mostrare tassonomie tecniche nella
-  UI; il partecipante puo' comunque vedere/modificare le proprie note operative.
+  UI; il partecipante può vedere/modificare le proprie scelte strutturate.
 - I momenti del programma/panel non vanno raccolti nel form pubblico di
   iscrizione e non sono un campo del riepilogo modificabile. Vanno trattati
   come esperienza separata della dashboard: al momento si mostra "Panel a cui
@@ -1407,11 +1940,11 @@ Decisioni:
 - Il matching usa `participants.country_id` e `participants.city_id` quando il
   paese/città digitato coincide con i cataloghi. I campi testuali restano
   comunque conservati come fallback e nello snapshot questionario.
-- Se la persona dichiara di non avere partecipazione precedente Sant'Egidio,
-  il sistema assegna il nodo `newcomers` più vicino per città o paese.
-- Se la persona ha partecipazione Sant'Egidio ma non trova il referente o non
-  partecipa con gruppo, il sistema assegna un gruppo/referente probabile con
-  `source = 'rule'` e `status = 'probable'`.
+- Se la persona non seleziona un gruppo, il sistema assegna prima il nodo
+  territoriale interno `city` o `country` piu' vicino con `source = 'rule'`,
+  `status = 'probable'` e reason `territorial_review_queue`. Solo negli eventi
+  o territori privi di questi nodi, chi non ha partecipazione precedente puo'
+  ancora usare come fallback il nodo `newcomers` piu' vicino.
 - Se il partecipante seleziona un gruppo, l'assegnazione resta `probable` con
   `source = 'participant_selected'`; la conferma esplicita del referente resta
   demandata alla dashboard capogruppo futura.
@@ -1461,7 +1994,7 @@ Deliverable:
   metriche, accesso "La mia iscrizione", filtri `Da verificare`, `Probabili`,
   `Confermati`, `Rifiutati` e schede assegnazione.
 - Server action `updateGroupLeaderAssignment` in `app/actions.ts` con intent
-  `note`, `read`, `confirm`, `unconfirm`, `reject`.
+  `note`, `read`, `confirm`, `unconfirm`, `reject`, `reassign`.
 - Server action `updateGroupLeaderParticipantContact` in `app/actions.ts` per
   modificare dalla scheda capogruppo identita' minima e contatti primari, dopo
   verifica dello scope del capogruppo.
@@ -1469,8 +2002,11 @@ Deliverable:
 Decisioni:
 
 - La dashboard capogruppo usa il service role lato server solo dopo aver
-  verificato sessione e membership del referente, così include anche i
-  discendenti dei nodi assegnati. Il service role non arriva mai al browser.
+  verificato sessione e membership del referente. Le persone confermate dei
+  discendenti restano consultabili nello scope gerarchico, mentre le assegnazioni
+  `probable` sono caricate soltanto per i gruppi collegati direttamente al
+  referente: un capogruppo di Roma non vede e non puo' decidere i pending di
+  Sant'Andrea. Il service role non arriva mai al browser.
 - La UI della tabella mostra dati personali minimi utili al lavoro del
   capogruppo: nome/cognome, telefono, email e conferma appartenenza. Il gruppo
   e' mostrato solo se nella vista corrente compaiono piu' gruppi. Accessibilità
@@ -1484,6 +2020,12 @@ Decisioni:
   assegnazione corrente `probable` sul padre con `source = 'capogruppo'`.
   Se non c'e' padre, la registrazione resta senza assegnazione corrente e
   finisce nella coda manager già monitorata come "senza gruppo corrente".
+- `reassign` e' disponibile su un'assegnazione `probable` del gruppo diretto:
+  rende non corrente l'assegnazione al nodo superiore e crea o riattiva una
+  nuova assegnazione `probable` su un gruppo attivo e assegnabile del
+  sottoalbero, con reason `group_leader_reassigned_to_descendant`. Il referente
+  del gruppo destinazione riceve la normale notifica operativa e deve ancora
+  confermare l'appartenenza.
 - Rifiuto, conferma, nota e lettura sono decisioni interne: non inviano email
   o notifiche al partecipante.
 - L'audit log salva action e metadati tecnici (`group_id`, stato precedente,
@@ -1616,9 +2158,11 @@ Decisioni:
   ha già partecipato o se parteciperà con un gruppo: i valori sono impliciti e
   inviati come hidden (`hasPreviousSantegidioParticipation=yes`,
   `participatesWithGroup=yes`, `groupId=<gruppo>`).
-- Il riquadro del form pubblico da link riservato deve spiegare che il link
-  iscrive a quello specifico gruppo e offrire l'uscita verso `/registrazione`
-  per l'iscrizione generica se il gruppo non è corretto.
+- Il riquadro del form pubblico da link riservato deve indicare chiaramente il
+  gruppo vincolato nel formato italiano `Questo link iscrive al gruppo di
+  “Nome gruppo”`. Non deve offrire link o inviti verso `/registrazione` o verso
+  l'iscrizione generica, per evitare che la persona abbandoni per errore il
+  flusso specifico del gruppo.
 - Email e telefono sono alternativi: serve almeno un recapito.
 - Se l'email è presente, l'action blocca doppie iscrizioni allo stesso evento.
 - L'inserimento manuale non invia email automatiche al partecipante.
@@ -1909,14 +2453,11 @@ Decisione aggiornata il 2026-06-15:
 - Le opzioni gruppo nel form devono essere ricercabili sia per nome gruppo sia
   per referente principale, per esempio `Giovani per la Pace - referente
   Stefano Orlando`.
-- Deve esistere l'opzione "Non trovo il mio referente". In quel caso, oppure
-  se una persona ha già partecipato a Sant'Egidio ma dice di non partecipare
-  con un gruppo, il sistema assegna il gruppo più probabile in base a
-  territorio/età con stato `probable`.
-- Il referente vede le assegnazioni probabili in una coda interna e può
-  confermare o rifiutare. Dopo rifiuto si risale automaticamente al padre
-  dell'albero finché esiste un responsabile; se nessuno riconosce la persona,
-  l'assegnazione finisce in coda manager.
+- Deve esistere l'opzione "Non trovo il mio referente". In quel caso la
+  persona resta Senza gruppo, come chi dichiara di partecipare senza gruppo.
+- Una selezione esplicita è subito operativa. Il referente segnala soltanto
+  chi non appartiene al gruppo; il rifiuto porta direttamente a Senza gruppo,
+  disponibile per riassegnazione manuale di admin/manager.
 - Il partecipante non riceve notifiche di rifiuto, risalita o
   riclassificazione interna.
 - I referenti di qualunque livello dell'albero e i manager possono essere anche
@@ -1975,9 +2516,14 @@ Prima di concludere:
 
 ## Strategia Git
 
-- Lavorare normalmente su `main`.
-- Le prove si fanno in locale; quando tutto funziona e l'utente chiede commit/push, fare commit e push direttamente su `main`.
-- Non creare branch staging/produzione o branch milestone salvo richiesta esplicita.
+- Salvo indicazione esplicita dell'utente, effettuare tutte le modifiche e le
+  verifiche direttamente su `main`, seguendo il riallineamento iniziale.
+- Conservare `codex/panel-p0-p10` per lo staging dei panel; lavorarci solo
+  quando espressamente indicato dall'utente, secondo il workflow sopra.
+- Quando tutto funziona e l'utente chiede commit/push, committare e pubblicare
+  direttamente su `main`, oppure sul branch panel espressamente indicato.
+- Non creare branch, worktree o pull request senza una nuova richiesta
+  esplicita dell'utente, anche per interventi lunghi, rischiosi o paralleli.
 - Preparare diff leggibili per review umana.
 - Non fare commit/push senza richiesta.
 - Se compaiono modifiche non fatte da Codex, trattarle come lavoro dell'utente.
@@ -2080,9 +2626,9 @@ Non creare migration senza una milestone dedicata e un diff SQL revisionabile.
 
 ## App modello
 
-App modello locale:
-
-`/Users/stefanolaptop/Library/CloudStorage/OneDrive-ComunitàdiSant'Egidio/modello_app`
+L'eventuale app modello deve trovarsi in un clone o in una cartella locale non
+sincronizzata da servizi cloud. Verificarne il percorso sulla postazione in uso
+prima di consultarla.
 
 Usarla come riferimento, non come sorgente da copiare automaticamente.
 
@@ -2154,11 +2700,19 @@ Regole:
 
 ## Email
 
+- Dal 2026-09-06, le email applicative di conferma iscrizione e accesso
+  (testo e HTML) e gli avvisi del sito dopo l'invio ricordano di controllare
+  lo spam e salvare `registrationspeace@santegidio.org` tra gli indirizzi sicuri.
+  Testo comune in `lib/i18n/email-delivery.ts`, sette lingue per il sito;
+  comprende conferma iscrizione, magic link, risposta attesa dagli organizzatori
+  e invii di prova/campagna (rivolgendosi ai destinatari per le campagne).
+  Queste indicazioni restano valide anche cambiando provider di distribuzione.
+
 Email previste:
 
 - Conferma iscrizione.
 - Magic link.
-- Notifica a capogruppo per nuova associazione.
+- Nessuna notifica automatica al capogruppo per nuova associazione.
 - Comunicazioni per persone senza email inviate al referente.
 - Campagne manager/admin filtrate.
 

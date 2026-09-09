@@ -78,6 +78,7 @@ export async function sendParticipantOrganizerMessage(
     .select(
       "id,event_id,participant_id,events!inner(is_current),participants!inner(auth_user_id,first_name,last_name,public_code)"
     )
+    .is("deleted_at", null)
     .eq("events.is_current", true)
     .eq("participants.auth_user_id", auth.user.id)
     .order("submitted_at", { ascending: false })

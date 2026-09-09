@@ -13,6 +13,7 @@ type ParticipantSearchFieldProps = {
   name: string;
   options: ParticipantSearchOption[];
   placeholder?: string;
+  emptyQueryHint?: string;
 };
 
 const MAX_RESULTS = 5;
@@ -22,6 +23,7 @@ export function ParticipantSearchField({
   name,
   options,
   placeholder = "Cerca per nome o email",
+  emptyQueryHint,
 }: ParticipantSearchFieldProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -29,6 +31,8 @@ export function ParticipantSearchField({
   const inputRef = useRef<HTMLInputElement>(null);
   const normalizedQuery = query.trim().toLowerCase();
   const results = useMemo(() => {
+    if (!normalizedQuery && emptyQueryHint) return [];
+
     const filteredOptions = normalizedQuery
       ? options.filter((option) =>
           [option.name, option.email]
@@ -40,7 +44,7 @@ export function ParticipantSearchField({
       : options;
 
     return filteredOptions.slice(0, MAX_RESULTS);
-  }, [normalizedQuery, options]);
+  }, [normalizedQuery, options, emptyQueryHint]);
   const selected = options.find((option) => option.id === selectedId) ?? null;
   const selectOption = (option: ParticipantSearchOption) => {
     setSelectedId(option.id);
@@ -79,7 +83,11 @@ export function ParticipantSearchField({
           />
           {showOptions ? (
             <div className="absolute z-50 mt-2 max-h-48 w-full overflow-auto rounded-md border border-[var(--peace-border-strong)] bg-white shadow-lg">
-              {results.length > 0 ? (
+              {!normalizedQuery && emptyQueryHint ? (
+                <p className="px-3 py-2 text-sm font-normal text-[var(--peace-muted)]" role="status">
+                  {emptyQueryHint}
+                </p>
+              ) : results.length > 0 ? (
                 results.map((option) => (
                   <button
                     key={option.id}

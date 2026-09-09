@@ -3,6 +3,7 @@
 import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
 import { CAMPAIGN_TEMPLATE_FIELDS } from "@/lib/email/campaign-templates";
 import { CampaignRichTextEditor } from "./campaign-rich-text-editor";
 
@@ -84,6 +85,7 @@ export function EmailCampaignComposer({
   const [savedTemplates, setSavedTemplates] = useState(initialTemplates);
   const [templateId, setTemplateId] = useState("");
   const [templateName, setTemplateName] = useState("");
+  const templateNameRef = useRef<HTMLInputElement>(null);
   const [templateSaveError, setTemplateSaveError] = useState("");
   const [templateSaveMode, setTemplateSaveMode] = useState<TemplateSaveMode>("create");
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -355,9 +357,12 @@ export function EmailCampaignComposer({
     if (data) {
       setShowSendConfirmation(false);
       setNotice(
-        data.scheduled > 0
+        (data.scheduled > 0
           ? `Prima tranche conclusa: ${data.sent} inviate, ${data.failed} non riuscite. ${data.scheduled} email sono programmate per i prossimi giorni, fino a 300 al giorno.`
-          : `Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`
+          : `Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`) +
+        (data.sent > 0
+          ? ` Ricorda ai destinatari: «${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}»`
+          : "")
       );
       resetPreview();
     }
@@ -367,6 +372,7 @@ export function EmailCampaignComposer({
     const cleanTemplateName = templateName.trim();
     if (!cleanTemplateName) {
       setTemplateSaveError("Inserisci un titolo interno per il modello.");
+      templateNameRef.current?.focus();
       return;
     }
     setBusy(true);
@@ -407,6 +413,7 @@ export function EmailCampaignComposer({
       setShowTemplateSave(false);
     } catch (cause) {
       setTemplateSaveError(cause instanceof Error ? cause.message : "Salvataggio non riuscito.");
+      templateNameRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -1098,6 +1105,9 @@ export function EmailCampaignComposer({
               Titolo interno del modello
               <input
                 className="field font-normal"
+                ref={templateNameRef}
+                aria-invalid={Boolean(templateSaveError)}
+                aria-describedby={templateSaveError ? "template-save-error" : undefined}
                 value={templateName}
                 onChange={(event) => {
                   setTemplateName(event.target.value);
@@ -1111,7 +1121,7 @@ export function EmailCampaignComposer({
               />
             </label>
             {templateSaveError ? (
-              <p className="status-error mt-3">{templateSaveError}</p>
+              <p id="template-save-error" role="alert" className="status-error mt-3">{templateSaveError}</p>
             ) : null}
             <div className="mt-5 flex flex-wrap justify-end gap-3">
               <button
@@ -1236,6 +1246,10 @@ export function EmailCampaignComposer({
                     <strong className="break-all">{preview.testRecipientEmail}</strong>.
                     Apri quella casella e controlla che oggetto, testo, campi
                     personalizzati, immagini e allegati siano corretti.
+                  </p>
+                  <p className="mt-2">
+                    {EMAIL_DELIVERY_COPY.it.checkSpam}{" "}
+                    {EMAIL_DELIVERY_COPY.it.safeSender}
                   </p>
                   <p className="mt-2">
                     Se è tutto a posto, procedi con l’invio della campagna. Se devi

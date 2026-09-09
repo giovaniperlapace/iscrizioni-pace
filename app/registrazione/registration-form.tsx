@@ -1,7 +1,9 @@
 "use client";
 
+import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
+import { migratePublicRegistrationDrafts } from "@/lib/forms/public-draft";
+
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 
 import { submitPublicRegistration } from "@/app/actions";
 import { EventIdentity } from "@/components/event-identity";
@@ -38,7 +40,7 @@ type RegistrationFormProps = {
 const OTHER_COUNTRY = "Altro / non in lista";
 const OTHER_CITY = "Altro / non in lista";
 const OTHER_PHONE_PREFIX = "other";
-const FORM_STORAGE_PREFIX = "iscrizioni-pace.registration-form";
+const FORM_STORAGE_PREFIX = "iscrizioni-pace.registration-form-v2";
 const PHONE_PREFIX_OPTIONS = [
   { value: "+39", label: "Italia +39" },
   { value: "+33", label: "Francia +33" },
@@ -120,8 +122,6 @@ type RegistrationFormCopy = {
   intro: string;
   groupLinkPrefix: string;
   groupLinkSuffix: string;
-  groupLinkHelp: string;
-  genericRegistration: string;
   firstName: string;
   lastName: string;
   country: string;
@@ -154,7 +154,6 @@ type RegistrationFormCopy = {
   accessibilityQuestion: string;
   accessibilityTitle: string;
   accessibilityHelp: string;
-  accessibilityNotes: string;
   previousQuestion: string;
   externalGroupQuestion: string;
   externalGroupPlaceholder: string;
@@ -186,11 +185,8 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     newRegistration: "Nuova iscrizione",
     intro:
       "Questa è la prima iscrizione all'evento. Dopo l'invio potrai accedere alla tua dashboard, scaricare il QR code per l'ingresso e, quando sarà pubblicato il programma completo, scegliere i momenti a cui partecipare, come panel tematici ed eventi.",
-    groupLinkPrefix: "Questo link iscrive al gruppo",
+    groupLinkPrefix: "Questo link iscrive al gruppo di",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Se non pensi che questo sia il tuo gruppo, usa l'iscrizione generica per scegliere il gruppo o il referente corretto.",
-    genericRegistration: "Vai all'iscrizione generica",
     firstName: "Nome",
     lastName: "Cognome",
     country: "Paese in cui vivi abitualmente",
@@ -225,13 +221,10 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
     accessibilityHelp:
       "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
-    accessibilityNotes: "Ci sono indicazioni pratiche che vuoi comunicarci? (opzionale)",
-    previousQuestion:
-      "Hai mai partecipato ad altri eventi o attività della Comunità di Sant'Egidio nella tua città?",
-    externalGroupQuestion: "Fai parte di qualche gruppo o associazione? (opzionale)",
-    externalGroupPlaceholder: "Scrivi il nome del gruppo o associazione, se vuoi",
-    groupQuestion:
-      "Parteciperai all'incontro con un gruppo della Comunità di Sant'Egidio?",
+    previousQuestion: "Hai partecipato ad altri eventi della Comunità di Sant’Egidio?",
+    externalGroupQuestion: "Fai parte di qualche associazione?",
+    externalGroupPlaceholder: "Nome dell’associazione (facoltativo)",
+    groupQuestion: "Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?",
     groupLabel: "Gruppo",
     groupPlaceholder: "Cerca per gruppo",
     groupDisabledPlaceholder: "Indica prima paese, città e data di nascita",
@@ -264,9 +257,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "This is your first registration for the event. After submitting it, you will be able to access your dashboard, download the QR code for entry and, when the full programme is published, choose the moments you want to attend, such as thematic panels and events.",
     groupLinkPrefix: "This link registers you with the group",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "If you do not think this is your group, use the general registration to choose the correct group or contact person.",
-    genericRegistration: "Go to general registration",
     firstName: "First name",
     lastName: "Last name",
     country: "Country where you usually live",
@@ -301,12 +291,10 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Which aspects should we consider?",
     accessibilityHelp:
       "You can select one or more options that are useful for organising the welcome better.",
-    accessibilityNotes: "Are there any practical notes you would like to share? (optional)",
-    previousQuestion:
-      "Have you ever taken part in other Sant'Egidio events or activities in your city?",
-    externalGroupQuestion: "Are you part of any group or association? (optional)",
-    externalGroupPlaceholder: "Write the name of the group or association, if you wish",
-    groupQuestion: "Are you part of a Sant'Egidio group or assembly?",
+    previousQuestion: "Have you attended other events organised by the Community of Sant’Egidio?",
+    externalGroupQuestion: "Are you a member of any association?",
+    externalGroupPlaceholder: "Association name (optional)",
+    groupQuestion: "Will you attend the Prayer for Peace with a group from the Community?",
     groupLabel: "Group",
     groupPlaceholder: "Search by group",
     groupDisabledPlaceholder: "Enter country, city and date of birth first",
@@ -339,9 +327,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Il s'agit de ta première inscription à l'événement. Après l'envoi, tu pourras accéder à ton dashboard, télécharger le QR code pour l'entrée et, lorsque le programme complet sera publié, choisir les moments auxquels participer, comme les panels thématiques et les événements.",
     groupLinkPrefix: "Ce lien t'inscrit au groupe",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Si tu ne penses pas que ce soit ton groupe, utilise l'inscription générale pour choisir le bon groupe ou le bon référent.",
-    genericRegistration: "Aller à l'inscription générale",
     firstName: "Prénom",
     lastName: "Nom",
     country: "Pays où tu vis habituellement",
@@ -376,12 +361,10 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
     accessibilityHelp:
       "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
-    accessibilityNotes: "Y a-t-il des indications pratiques que tu veux nous communiquer ? (optionnel)",
-    previousQuestion:
-      "As-tu déjà participé à d'autres événements ou activités de la Communauté de Sant'Egidio dans ta ville ?",
-    externalGroupQuestion: "Fais-tu partie d'un groupe ou d'une association ? (optionnel)",
-    externalGroupPlaceholder: "Écris le nom du groupe ou de l'association, si tu veux",
-    groupQuestion: "Fais-tu partie d'un groupe ou d'une assemblée de Sant'Egidio ?",
+    previousQuestion: "As-tu participé à d’autres événements de la Communauté de Sant’Egidio ?",
+    externalGroupQuestion: "Fais-tu partie d’une association ?",
+    externalGroupPlaceholder: "Nom de l’association (facultatif)",
+    groupQuestion: "Participeras-tu à la Prière pour la Paix avec un groupe de la Communauté ?",
     groupLabel: "Groupe",
     groupPlaceholder: "Chercher par groupe",
     groupDisabledPlaceholder: "Indique d'abord pays, ville et date de naissance",
@@ -414,9 +397,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Dies ist deine erste Anmeldung für die Veranstaltung. Nach dem Absenden kannst du dein Dashboard öffnen, den QR-Code für den Einlass herunterladen und, sobald das vollständige Programm veröffentlicht ist, die Programmpunkte auswählen, an denen du teilnehmen möchtest.",
     groupLinkPrefix: "Dieser Link meldet dich für die Gruppe an",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Wenn du denkst, dass dies nicht deine Gruppe ist, nutze die allgemeine Anmeldung, um die richtige Gruppe oder Kontaktperson auszuwählen.",
-    genericRegistration: "Zur allgemeinen Anmeldung",
     firstName: "Vorname",
     lastName: "Nachname",
     country: "Land, in dem du normalerweise lebst",
@@ -451,12 +431,10 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
     accessibilityHelp:
       "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
-    accessibilityNotes: "Gibt es praktische Hinweise, die du uns mitteilen möchtest? (optional)",
-    previousQuestion:
-      "Hast du bereits an anderen Veranstaltungen oder Aktivitäten der Gemeinschaft Sant'Egidio in deiner Stadt teilgenommen?",
-    externalGroupQuestion: "Gehörst du zu einer Gruppe oder einem Verein? (optional)",
-    externalGroupPlaceholder: "Schreibe den Namen der Gruppe oder des Vereins, wenn du möchtest",
-    groupQuestion: "Gehörst du zu einer Gruppe oder Versammlung von Sant'Egidio?",
+    previousQuestion: "Hast du an anderen Veranstaltungen der Gemeinschaft Sant’Egidio teilgenommen?",
+    externalGroupQuestion: "Gehörst du einem Verein an?",
+    externalGroupPlaceholder: "Name des Vereins (optional)",
+    groupQuestion: "Wirst du mit einer Gruppe der Gemeinschaft am Gebet für den Frieden teilnehmen?",
     groupLabel: "Gruppe",
     groupPlaceholder: "Nach Gruppe suchen",
     groupDisabledPlaceholder: "Gib zuerst Land, Stadt und Geburtsdatum an",
@@ -489,9 +467,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Esta es tu primera inscripción al evento. Después de enviarla podrás acceder a tu panel, descargar el código QR para la entrada y, cuando se publique el programa completo, elegir los momentos en los que participar, como paneles temáticos y eventos.",
     groupLinkPrefix: "Este enlace te inscribe en el grupo",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Si no crees que este sea tu grupo, usa la inscripción general para elegir el grupo o referente correcto.",
-    genericRegistration: "Ir a la inscripción general",
     firstName: "Nombre",
     lastName: "Apellidos",
     country: "País en el que vives habitualmente",
@@ -526,12 +501,10 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
     accessibilityHelp:
       "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
-    accessibilityNotes: "¿Hay indicaciones prácticas que quieras comunicarnos? (opcional)",
-    previousQuestion:
-      "¿Has participado alguna vez en otros eventos o actividades de la Comunidad de Sant'Egidio en tu ciudad?",
-    externalGroupQuestion: "¿Formas parte de algún grupo o asociación? (opcional)",
-    externalGroupPlaceholder: "Escribe el nombre del grupo o asociación, si quieres",
-    groupQuestion: "¿Formas parte de un grupo o asamblea de Sant'Egidio?",
+    previousQuestion: "¿Has participado en otros eventos de la Comunidad de Sant’Egidio?",
+    externalGroupQuestion: "¿Formas parte de alguna asociación?",
+    externalGroupPlaceholder: "Nombre de la asociación (opcional)",
+    groupQuestion: "¿Participarás en la Oración por la Paz con un grupo de la Comunidad?",
     groupLabel: "Grupo",
     groupPlaceholder: "Buscar por grupo",
     groupDisabledPlaceholder: "Indica primero país, ciudad y fecha de nacimiento",
@@ -564,9 +537,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Dit is je eerste inschrijving voor het evenement. Na verzending kun je je dashboard openen, de QR-code voor de toegang downloaden en, zodra het volledige programma is gepubliceerd, de momenten kiezen waaraan je wilt deelnemen.",
     groupLinkPrefix: "Deze link schrijft je in bij de groep",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Als je denkt dat dit niet je groep is, gebruik dan de algemene inschrijving om de juiste groep of contactpersoon te kiezen.",
-    genericRegistration: "Ga naar algemene inschrijving",
     firstName: "Voornaam",
     lastName: "Achternaam",
     country: "Land waar je gewoonlijk woont",
@@ -601,12 +571,10 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Waar moeten we rekening mee houden?",
     accessibilityHelp:
       "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
-    accessibilityNotes: "Zijn er praktische aanwijzingen die je wilt delen? (optioneel)",
-    previousQuestion:
-      "Heb je eerder deelgenomen aan andere evenementen of activiteiten van de Gemeenschap van Sant'Egidio in je stad?",
-    externalGroupQuestion: "Maak je deel uit van een groep of vereniging? (optioneel)",
-    externalGroupPlaceholder: "Schrijf de naam van de groep of vereniging, als je wilt",
-    groupQuestion: "Maak je deel uit van een groep of vergadering van Sant'Egidio?",
+    previousQuestion: "Heb je aan andere evenementen van de Gemeenschap van Sant’Egidio deelgenomen?",
+    externalGroupQuestion: "Ben je lid van een vereniging?",
+    externalGroupPlaceholder: "Naam van de vereniging (optioneel)",
+    groupQuestion: "Zul je met een groep van de Gemeenschap deelnemen aan het Gebed voor de Vrede?",
     groupLabel: "Groep",
     groupPlaceholder: "Zoek op groep",
     groupDisabledPlaceholder: "Vul eerst land, stad en geboortedatum in",
@@ -639,9 +607,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Це ваша перша реєстрація на подію. Після надсилання ви зможете відкрити свою панель, завантажити QR-код для входу і, коли буде опублікована повна програма, вибрати частини програми, у яких хочете взяти участь.",
     groupLinkPrefix: "Це посилання реєструє вас у групі",
     groupLinkSuffix: ".",
-    groupLinkHelp:
-      "Якщо ви вважаєте, що це не ваша група, скористайтеся загальною реєстрацією, щоб вибрати правильну групу або контактну особу.",
-    genericRegistration: "Перейти до загальної реєстрації",
     firstName: "Ім'я",
     lastName: "Прізвище",
     country: "Країна, де ви зазвичай живете",
@@ -676,12 +641,10 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityTitle: "Що нам потрібно врахувати?",
     accessibilityHelp:
       "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
-    accessibilityNotes: "Чи є практичні вказівки, які ви хочете нам повідомити? (необов'язково)",
-    previousQuestion:
-      "Чи брали ви раніше участь в інших подіях або діяльності Спільноти Sant'Egidio у вашому місті?",
-    externalGroupQuestion: "Ви належите до якоїсь групи або асоціації? (необов'язково)",
-    externalGroupPlaceholder: "Напишіть назву групи або асоціації, якщо хочете",
-    groupQuestion: "Ви належите до групи або зібрання Sant'Egidio?",
+    previousQuestion: "Чи брали ви участь в інших заходах Спільноти святого Егідія?",
+    externalGroupQuestion: "Чи належите ви до якоїсь асоціації?",
+    externalGroupPlaceholder: "Назва асоціації (необов’язково)",
+    groupQuestion: "Чи братимете ви участь у Молитві за мир з групою Спільноти?",
     groupLabel: "Група",
     groupPlaceholder: "Шукати за групою",
     groupDisabledPlaceholder: "Спочатку вкажіть країну, місто і дату народження",
@@ -722,12 +685,18 @@ export function RegistrationForm({
   const formRef = useRef<HTMLFormElement>(null);
   const submittedRef = useRef(false);
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("");
-  const [hasPreviousParticipation, setHasPreviousParticipation] = useState(
-    options.groupLink ? "yes" : ""
-  );
-  const [participatesWithGroup, setParticipatesWithGroup] = useState(
-    options.groupLink ? "yes" : ""
-  );
+  const [hasPreviousParticipation, setHasPreviousParticipation] = useState("");
+  const [participatesWithGroup, setParticipatesWithGroup] = useState("");
+  const effectiveHasPreviousParticipation = options.groupLink
+    ? "yes"
+    : hasPreviousParticipation;
+  const effectiveParticipatesWithGroup = options.groupLink
+    ? "yes"
+    : hasPreviousParticipation === "no"
+      ? "no"
+      : hasPreviousParticipation === "yes"
+        ? participatesWithGroup
+        : "";
   const [birthDate, setBirthDate] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -904,10 +873,12 @@ export function RegistrationForm({
     const restoreTimer = window.setTimeout(() => {
       setHasAccessibilityNeeds(stored.state.hasAccessibilityNeeds);
       setHasPreviousParticipation(
-        options.groupLink ? "yes" : stored.state.hasPreviousParticipation
+        stored.state.hasPreviousParticipation
       );
       setParticipatesWithGroup(
-        options.groupLink ? "yes" : stored.state.participatesWithGroup
+        stored.state.hasPreviousParticipation === "yes"
+          ? stored.state.participatesWithGroup
+          : ""
       );
       setBirthDate(stored.state.birthDate);
       setCountrySearch(stored.state.countrySearch);
@@ -981,20 +952,12 @@ export function RegistrationForm({
         }
 
         saveCurrentForm();
-        const effectiveHasPreviousParticipation = hasGroupLink
-          ? "yes"
-          : hasPreviousParticipation;
-        const effectiveParticipatesWithGroup = hasGroupLink
-          ? "yes"
-          : participatesWithGroup;
 
         if (
           !hasAccessibilityNeeds ||
           !effectiveHasPreviousParticipation ||
-          (effectiveHasPreviousParticipation === "yes" &&
-            !effectiveParticipatesWithGroup) ||
-          (effectiveHasPreviousParticipation === "yes" &&
-            effectiveParticipatesWithGroup === "yes" &&
+          !effectiveParticipatesWithGroup ||
+          (effectiveParticipatesWithGroup === "yes" &&
             !cannotFindLeader &&
             !selectedGroupValue) ||
           (!availabilityUnknown && selectedAttendanceSlots.length === 0)
@@ -1008,7 +971,6 @@ export function RegistrationForm({
             availabilityUnknown,
             selectedAttendanceSlots,
             needsGroupChoice:
-              effectiveHasPreviousParticipation === "yes" &&
               effectiveParticipatesWithGroup === "yes" &&
               !cannotFindLeader &&
               !selectedGroupValue,
@@ -1026,17 +988,6 @@ export function RegistrationForm({
           type="hidden"
           value={groupRegistrationLinkToken}
         />
-      ) : null}
-      {options.groupLink ? (
-        <>
-          <input
-            name="hasPreviousSantegidioParticipation"
-            type="hidden"
-            value="yes"
-          />
-          <input name="participatesWithGroup" type="hidden" value="yes" />
-          <input name="groupId" type="hidden" value={options.groupLink.groupId} />
-        </>
       ) : null}
       <header className="surface-card overflow-hidden">
         <div className="relative isolate event-gradient px-5 py-7 text-white sm:px-7">
@@ -1062,19 +1013,10 @@ export function RegistrationForm({
               <p className="font-semibold">
                 {copy.groupLinkPrefix}{" "}
                 <span className="text-[var(--peace-blue-900)]">
-                  {options.groupLink.displayLabel}
+                  “{options.groupLink.displayLabel}”
                 </span>
                 {copy.groupLinkSuffix}
               </p>
-              <p className="mt-2 leading-6 text-[var(--peace-muted)]">
-                {copy.groupLinkHelp}
-              </p>
-              <Link
-                href="/registrazione"
-                className="btn-secondary mt-3 inline-flex min-h-9 items-center px-3 text-sm"
-              >
-                {copy.genericRegistration}
-              </Link>
             </div>
           ) : null}
         </div>
@@ -1553,64 +1495,64 @@ export function RegistrationForm({
                 </label>
               ))}
             </div>
-            <Field label={copy.accessibilityNotes}>
-              <textarea
-                name="accessibilityNotes"
-                className="field min-h-24"
-                data-field="accessibilityNotes"
-              />
-            </Field>
+            <p className="text-sm leading-6 text-[var(--peace-muted)]">
+              {ACCESSIBILITY_COMMUNICATION_HELP[locale]}
+            </p>
           </div>
         ) : null}
       </section>
 
-      {!hasGroupLink ? (
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
-        <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.previousQuestion}</span>
-          <input
-            name="hasPreviousSantegidioParticipation"
-            type="hidden"
-            value={hasPreviousParticipation}
-          />
-          <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
-            <ChoiceButton
-              active={hasPreviousParticipation === "yes"}
-              label={copy.yes}
-              dataField="hasPreviousSantegidioParticipation"
-              onClick={() => {
-                markPromptFieldTouched("hasPreviousSantegidioParticipation");
-                setHasPreviousParticipation("yes");
-              }}
-            />
-            <ChoiceButton
-              active={hasPreviousParticipation === "no"}
-              label={copy.no}
-              dataField="hasPreviousSantegidioParticipation"
-              onClick={() => {
-                markPromptFieldTouched("hasPreviousSantegidioParticipation");
-                setHasPreviousParticipation("no");
-                setParticipatesWithGroup("");
-                setCannotFindLeader(false);
-              }}
-            />
+        <input
+          name="hasPreviousSantegidioParticipation"
+          type="hidden"
+          value={effectiveHasPreviousParticipation}
+        />
+        {!hasGroupLink ? (
+          <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
+            <span>{copy.previousQuestion}</span>
+            <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
+              <ChoiceButton
+                active={hasPreviousParticipation === "yes"}
+                label={copy.yes}
+                dataField="hasPreviousSantegidioParticipation"
+                onClick={() => {
+                  markPromptFieldTouched("hasPreviousSantegidioParticipation");
+                  setHasPreviousParticipation("yes");
+                }}
+              />
+              <ChoiceButton
+                active={hasPreviousParticipation === "no"}
+                label={copy.no}
+                dataField="hasPreviousSantegidioParticipation"
+                onClick={() => {
+                  markPromptFieldTouched("hasPreviousSantegidioParticipation");
+                  setHasPreviousParticipation("no");
+                  setParticipatesWithGroup("");
+                  setCannotFindLeader(false);
+                  setSelectedGroupValue(options.groupLink?.groupId ?? "");
+                  setGroupSearch(options.groupLink?.displayLabel ?? "");
+                  setShowGroupOptions(false);
+                }}
+              />
+            </div>
+            {!hasPreviousParticipation &&
+            shouldShowPrompt("hasPreviousSantegidioParticipation") ? (
+              <p className="text-xs text-[#8a3323]">
+                {copy.requiredChoice}
+              </p>
+            ) : null}
           </div>
-          {!hasPreviousParticipation &&
-          shouldShowPrompt("hasPreviousSantegidioParticipation") ? (
-            <p className="text-xs text-[#8a3323]">
-              {copy.requiredChoice}
-            </p>
-          ) : null}
-        </div>
+        ) : null}
 
-        {hasPreviousParticipation === "yes" && !hasGroupLink ? (
+        <input
+          name="participatesWithGroup"
+          type="hidden"
+          value={effectiveParticipatesWithGroup}
+        />
+        {!hasGroupLink && hasPreviousParticipation === "yes" ? (
           <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
             <span>{copy.groupQuestion}</span>
-            <input
-              name="participatesWithGroup"
-              type="hidden"
-              value={participatesWithGroup}
-            />
             <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
               <ChoiceButton
                 active={participatesWithGroup === "yes"}
@@ -1630,6 +1572,9 @@ export function RegistrationForm({
                   markPromptFieldTouched("participatesWithGroup");
                   setParticipatesWithGroup("no");
                   setCannotFindLeader(false);
+                  setSelectedGroupValue(options.groupLink?.groupId ?? "");
+                  setGroupSearch(options.groupLink?.displayLabel ?? "");
+                  setShowGroupOptions(false);
                 }}
               />
             </div>
@@ -1642,7 +1587,7 @@ export function RegistrationForm({
           </div>
         ) : null}
 
-        {hasPreviousParticipation === "no" ? (
+        {effectiveParticipatesWithGroup === "no" ? (
           <Field label={copy.externalGroupQuestion}>
             <input
               name="externalGroupAssociation"
@@ -1652,9 +1597,7 @@ export function RegistrationForm({
           </Field>
         ) : null}
 
-        {hasPreviousParticipation === "yes" &&
-        participatesWithGroup === "yes" &&
-        !hasGroupLink ? (
+        {effectiveParticipatesWithGroup === "yes" ? (
           <Field label={copy.groupLabel}>
             <input
               name={hasRealGroups ? "groupId" : "groupName"}
@@ -1761,7 +1704,6 @@ export function RegistrationForm({
           </Field>
         ) : null}
       </section>
-      ) : null}
 
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div>
@@ -2061,6 +2003,7 @@ function storageKey(email: string): string {
 
 function readStoredForm(email: string): StoredRegistrationForm | null {
   try {
+    migratePublicRegistrationDrafts(window.sessionStorage);
     const raw = window.sessionStorage.getItem(storageKey(email));
 
     if (!raw) {
@@ -2172,10 +2115,7 @@ function focusClientSideMissingField(
     return;
   }
 
-  if (
-    state.hasPreviousParticipation === "yes" &&
-    !state.participatesWithGroup
-  ) {
+  if (!state.participatesWithGroup) {
     focusField(form, "participatesWithGroup");
     return;
   }

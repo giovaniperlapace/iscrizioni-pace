@@ -1,4 +1,4 @@
-export const GROUP_MATCHER_VERSION = "2026-07-27-multi-age-bands-v3";
+export const GROUP_MATCHER_VERSION = "2026-09-05-operative-groups-v5";
 
 export type GroupAgeBand = "giovani" | "adulti" | "anziani";
 export type GroupCommunityKind = "santegidio" | "newcomers" | "territorial";
@@ -162,11 +162,31 @@ export function findTerritorialFallback(
   );
 }
 
+export function findTerritorialReviewGroup(
+  groups: GroupMatchCandidate[],
+  criteria: GroupMatchCriteria
+): GroupMatchCandidate | null {
+  return (
+    groups
+      .filter(
+        (group) =>
+          group.communityKind === "territorial" &&
+          (group.nodeType === "city" || group.nodeType === "country") &&
+          hasTerritorialMatch(group, criteria)
+      )
+      .sort(
+        (left, right) =>
+          scoreTerritory(right, criteria) - scoreTerritory(left, criteria) ||
+          nodeSpecificityScore(right.nodeType) - nodeSpecificityScore(left.nodeType) ||
+          left.publicOrder - right.publicOrder ||
+          left.name.localeCompare(right.name)
+      )[0] ?? null
+  );
+}
+
 export function resolveGroupAssignmentForRegistration({
-  groups,
-  criteria,
   selectedGroupId,
-  hasPreviousSantegidioParticipation,
+  participatesWithGroup,
   cannotFindLeader,
 }: {
   groups: GroupMatchCandidate[];
@@ -176,31 +196,16 @@ export function resolveGroupAssignmentForRegistration({
   participatesWithGroup: boolean | null;
   cannotFindLeader: boolean;
 }): ResolvedGroupAssignment | null {
-  if (selectedGroupId && !cannotFindLeader) {
-    return {
-      groupId: selectedGroupId,
-      source: "participant_selected",
-      confidence: 0.85,
-      reason: "participant_selected_group",
-      matcherVersion: GROUP_MATCHER_VERSION,
-    };
+  if (participatesWithGroup !== true || !selectedGroupId || cannotFindLeader) {
+    return null;
   }
-
-  if (hasPreviousSantegidioParticipation === false) {
-    const fallback = findTerritorialFallback(groups, criteria, "newcomers");
-
-    return fallback
-      ? {
-          groupId: fallback.id,
-          source: "rule",
-          confidence: 0.7,
-          reason: "newcomer_territorial_fallback",
-          matcherVersion: GROUP_MATCHER_VERSION,
-        }
-      : null;
-  }
-
-  return null;
+  return {
+    groupId: selectedGroupId,
+    source: "participant_selected",
+    confidence: 1,
+    reason: "participant_selected_group",
+    matcherVersion: GROUP_MATCHER_VERSION,
+  };
 }
 
 export function formatGroupOptionLabel(group: {

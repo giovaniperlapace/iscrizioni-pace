@@ -1,3 +1,10 @@
+import {
+  describeStatisticsDrilldown,
+  filterStatisticsPeople,
+  type EventStatisticsSnapshot,
+  type StatisticsDrilldownFilter,
+} from "./event-statistics.ts";
+
 export type OperationsParticipantForFilter = {
   eventId: string;
   eventTitle: string;
@@ -29,10 +36,16 @@ export type OperationsDashboardSummary = {
   total: number;
   filtered: number;
   withoutGroup: number;
-  probableGroup: number;
-  confirmedGroup: number;
+  assignedGroup: number;
   withoutEmail: number;
   withoutService: number;
+};
+
+export type OperationsStatisticsFilterSummary = {
+  label: string;
+  peopleCount: number;
+  registrationCount: number;
+  visibleRegistrationCount: number;
 };
 
 const DEFAULT_FILTERS: OperationsDashboardFilters = {
@@ -58,9 +71,8 @@ export function parseOperationsDashboardFilters(input: {
     group: normalizeGroupFilter(input.group),
     tag: normalizeTagFilter(input.tag),
     service: normalizeServiceFilter(input.service),
-    status: isStatusFilter(input.status)
-      ? input.status
-      : DEFAULT_FILTERS.status,
+    // Legacy status URLs must not silently filter an internal database field.
+    status: DEFAULT_FILTERS.status,
   };
 }
 
@@ -70,6 +82,35 @@ export function applyOperationsDashboardFilters<
   return participants.filter((participant) =>
     matchesOperationsDashboardFilters(participant, filters)
   );
+}
+
+export function applyStatisticsDrilldownToOperations<
+  T extends { registrationId: string },
+>(
+  participants: T[],
+  statistics: EventStatisticsSnapshot,
+  filter: StatisticsDrilldownFilter
+): {
+  participants: T[];
+  summary: OperationsStatisticsFilterSummary;
+} {
+  const matchingPeople = filterStatisticsPeople(statistics.people, filter);
+  const matchingRegistrationIds = new Set(
+    matchingPeople.map((person) => person.registrationId)
+  );
+  const filteredParticipants = participants.filter((participant) =>
+    matchingRegistrationIds.has(participant.registrationId)
+  );
+
+  return {
+    participants: filteredParticipants,
+    summary: {
+      label: describeStatisticsDrilldown(filter, statistics.attendanceSlots),
+      peopleCount: matchingPeople.length,
+      registrationCount: matchingRegistrationIds.size,
+      visibleRegistrationCount: filteredParticipants.length,
+    },
+  };
 }
 
 export function summarizeOperationsDashboardParticipants(
@@ -82,14 +123,9 @@ export function summarizeOperationsDashboardParticipants(
     withoutGroup: countRegisteredPeople(
       filteredParticipants.filter((participant) => !participant.currentGroupId)
     ),
-    probableGroup: countRegisteredPeople(
+    assignedGroup: countRegisteredPeople(
       filteredParticipants.filter(
-        (participant) => participant.currentGroupStatus === "probable"
-      )
-    ),
-    confirmedGroup: countRegisteredPeople(
-      filteredParticipants.filter(
-        (participant) => participant.currentGroupStatus === "confirmed"
+        (participant) => Boolean(participant.currentGroupId)
       )
     ),
     withoutEmail: filteredParticipants.filter((participant) => !participant.email)
@@ -118,8 +154,7 @@ export function hasActiveOperationsDashboardFilters(
     filters.contact !== DEFAULT_FILTERS.contact ||
     filters.group !== DEFAULT_FILTERS.group ||
     filters.tag !== DEFAULT_FILTERS.tag ||
-    filters.service !== DEFAULT_FILTERS.service ||
-    filters.status !== DEFAULT_FILTERS.status
+    filters.service !== DEFAULT_FILTERS.service
   );
 }
 
@@ -127,13 +162,6 @@ function matchesOperationsDashboardFilters(
   participant: OperationsParticipantForFilter,
   filters: OperationsDashboardFilters
 ): boolean {
-  if (
-    filters.status !== "all" &&
-    participant.registrationStatus !== filters.status
-  ) {
-    return false;
-  }
-
   if (!matchesGroupFilter(participant, filters.group)) {
     return false;
   }
@@ -232,15 +260,4 @@ function normalizeServiceFilter(value: string | undefined): string {
   const normalized = (value ?? "").trim();
 
   return normalized || DEFAULT_FILTERS.service;
-}
-
-function isStatusFilter(
-  value: string | undefined
-): value is OperationsDashboardFilters["status"] {
-  return (
-    value === "all" ||
-    value === "submitted" ||
-    value === "confirmed" ||
-    value === "cancelled"
-  );
 }

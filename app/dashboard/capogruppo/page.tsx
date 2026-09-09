@@ -1,11 +1,19 @@
+import { ManualEmailFields } from "./manual-email-fields";
+import { LeaderParticipantQr } from "./participant-qr";
+import { loadLeaderAssignmentQr } from "@/lib/groups/leader-qr.server";
+import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
+import { LeaderParticipantsTable } from "./participants-table";
+import { filterLeaderRows, leaderReturnPath, toLeaderTableRow } from "@/lib/groups/leader-table";
+import { FORM_COPY } from "@/lib/forms/copy";
+import { MANUAL_DUPLICATE_COPY } from "@/lib/data-quality/manual-copy";
+
+import { ReliableForm } from "@/components/reliable-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import {
   createGroupLeaderManualRegistration,
-  createGroupRegistrationLink,
-  updateParticipantEventService,
   updateGroupLeaderAssignment,
   updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
@@ -25,11 +33,8 @@ import { ManualChildrenFields } from "@/app/dashboard/capogruppo/manual-children
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
-import {
-  collectDescendantGroupIds,
-  type GroupLeaderReviewFilter,
-  type GroupTreeNode,
-} from "@/lib/groups/capogruppo-dashboard";
+import { loadLeaderScope, loadLeaderAssignmentRows, type GroupRow } from "@/lib/groups/leader-data.server";
+import { toAssignmentView, type AssignmentView } from "@/lib/groups/leader-assignments";
 import {
   buildGroupRegistrationUrl,
   getGroupRegistrationLinkStatus,
@@ -39,11 +44,9 @@ import { getRequestLocale } from "@/lib/i18n/server";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
 import type {
   OperationalTagOption,
-  ParticipantOperationalTag,
 } from "@/lib/registrations/operational-tags";
 import {
   eventServiceStatusLabel,
-  type EventServiceOption,
   type ParticipantEventService,
 } from "@/lib/registrations/event-services";
 import {
@@ -69,32 +72,13 @@ type CapogruppoPageProps = {
     group?: string;
     tag?: string;
     sort?: string;
+    columns?: string;
+    direction?: string;
     tool?: string;
     groupId?: string;
     assignmentId?: string;
     edit?: string;
   }>;
-};
-
-type GroupMembershipRow = {
-  group_id: string | null;
-};
-
-type GroupRow = {
-  id: string;
-  event_id: string;
-  name: string;
-  parent_group_id: string | null;
-  node_type: string | null;
-  is_assignable: boolean | null;
-  is_public_catalog: boolean | null;
-  is_active: boolean | null;
-  public_label: string | null;
-  primary_leader_name: string | null;
-  events:
-    | { title: string | null; starts_on: string | null; ends_on: string | null }
-    | Array<{ title: string | null; starts_on: string | null; ends_on: string | null }>
-    | null;
 };
 
 type GroupLinkRow = {
@@ -104,6 +88,7 @@ type GroupLinkRow = {
   public_label: string | null;
   internal_label: string | null;
   token_encrypted: string | null;
+  slug: string | null;
   use_count: number | null;
   max_uses: number | null;
   created_at: string | null;
@@ -140,313 +125,21 @@ type ScopedGroupView = {
   eventEndsOn: string | null;
 };
 
-type RegistrationChildRelationRow = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  birth_date: string;
-  position: number;
-};
-
-type AssignmentRow = {
-  id: string;
-  registration_id: string;
-  group_id: string;
-  status: string | null;
-  source: string | null;
-  confidence: number | null;
-  is_current: boolean | null;
-  assignment_reason: string | null;
-  escalation_depth: number | null;
-  leader_internal_note: string | null;
-  leader_notification_read_at: string | null;
-  leader_decision_at: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  groups:
-    | {
-        id: string;
-        name: string | null;
-        node_type: string | null;
-        parent_group_id: string | null;
-      }
-    | Array<{
-        id: string;
-        name: string | null;
-        node_type: string | null;
-        parent_group_id: string | null;
-      }>
-    | null;
-  registrations:
-    | {
-        id: string;
-        event_id: string;
-        status: string | null;
-        submitted_at: string | null;
-        registration_children: RegistrationChildRelationRow[] | null;
-        participants:
-          | {
-              id: string;
-              first_name: string | null;
-              last_name: string | null;
-              public_code: string | null;
-              birth_date: string | null;
-              country_other: string | null;
-              city_other: string | null;
-              participant_contacts:
-                | Array<{
-                    email: string | null;
-                    phone: string | null;
-                    is_primary: boolean | null;
-                  }>
-                | null;
-              countries:
-                | { name_it: string | null }
-                | Array<{ name_it: string | null }>
-                | null;
-              cities:
-                | { name: string | null }
-                | Array<{ name: string | null }>
-                | null;
-              participates_with_group: boolean | null;
-              participant_event_services:
-                | Array<ParticipantEventServiceRelationRow>
-                | null;
-              participant_operational_tags:
-                | Array<{
-                    assigned_at: string | null;
-                    operational_tags:
-                      | {
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }
-                      | Array<{
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }>
-                      | null;
-                  }>
-                | null;
-            }
-          | Array<{
-              id: string;
-              first_name: string | null;
-              last_name: string | null;
-              public_code: string | null;
-              birth_date: string | null;
-              country_other: string | null;
-              city_other: string | null;
-              participant_contacts:
-                | Array<{
-                    email: string | null;
-                    phone: string | null;
-                    is_primary: boolean | null;
-                  }>
-                | null;
-              countries:
-                | { name_it: string | null }
-                | Array<{ name_it: string | null }>
-                | null;
-              cities:
-                | { name: string | null }
-                | Array<{ name: string | null }>
-                | null;
-              participates_with_group: boolean | null;
-              participant_event_services:
-                | Array<ParticipantEventServiceRelationRow>
-                | null;
-              participant_operational_tags:
-                | Array<{
-                    assigned_at: string | null;
-                    operational_tags:
-                      | {
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }
-                      | Array<{
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }>
-                      | null;
-                  }>
-                | null;
-            }>
-          | null;
-      }
-    | Array<{
-        id: string;
-        event_id: string;
-        status: string | null;
-        submitted_at: string | null;
-        registration_children: RegistrationChildRelationRow[] | null;
-        participants:
-          | {
-              id: string;
-              first_name: string | null;
-              last_name: string | null;
-              public_code: string | null;
-              birth_date: string | null;
-              country_other: string | null;
-              city_other: string | null;
-              participant_contacts:
-                | Array<{
-                    email: string | null;
-                    phone: string | null;
-                    is_primary: boolean | null;
-                  }>
-                | null;
-              countries:
-                | { name_it: string | null }
-                | Array<{ name_it: string | null }>
-                | null;
-              cities:
-                | { name: string | null }
-                | Array<{ name: string | null }>
-                | null;
-              participates_with_group: boolean | null;
-              participant_event_services:
-                | Array<ParticipantEventServiceRelationRow>
-                | null;
-              participant_operational_tags:
-                | Array<{
-                    assigned_at: string | null;
-                    operational_tags:
-                      | {
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }
-                      | Array<{
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }>
-                      | null;
-                  }>
-                | null;
-            }
-          | Array<{
-              id: string;
-              first_name: string | null;
-              last_name: string | null;
-              public_code: string | null;
-              birth_date: string | null;
-              country_other: string | null;
-              city_other: string | null;
-              participant_contacts:
-                | Array<{
-                    email: string | null;
-                    phone: string | null;
-                    is_primary: boolean | null;
-                  }>
-                | null;
-              countries:
-                | { name_it: string | null }
-                | Array<{ name_it: string | null }>
-                | null;
-              cities:
-                | { name: string | null }
-                | Array<{ name: string | null }>
-                | null;
-              participates_with_group: boolean | null;
-              participant_event_services:
-                | Array<ParticipantEventServiceRelationRow>
-                | null;
-              participant_operational_tags:
-                | Array<{
-                    assigned_at: string | null;
-                    operational_tags:
-                      | {
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }
-                      | Array<{
-                          id: string;
-                          event_id: string;
-                          label: string;
-                          color: string;
-                        }>
-                      | null;
-                  }>
-                | null;
-            }>
-          | null;
-      }>
-    | null;
-};
-
-type AssignmentView = {
-  id: string;
-  registrationId: string;
-  eventId: string;
-  participantId: string;
-  groupId: string;
-  groupName: string;
-  groupNodeType: string | null;
-  parentGroupId: string | null;
-  parentGroupName: string | null;
-  participantFirstName: string | null;
-  participantLastName: string | null;
-  participantName: string;
-  participantCode: string | null;
-  participantEmail: string | null;
-  participantPhone: string | null;
-  participantCity: string | null;
-  participantCountry: string | null;
-  participantPlace: string;
-  birthDate: string | null;
-  registrationStatus: string | null;
-  submittedAt: string | null;
-  status: string | null;
-  source: string | null;
-  confidence: number | null;
-  isCurrent: boolean;
-  assignmentReason: string | null;
-  escalationDepth: number;
-  leaderInternalNote: string | null;
-  leaderNotificationReadAt: string | null;
-  leaderDecisionAt: string | null;
-  updatedAt: string | null;
-  tags: ParticipantOperationalTag[];
-  tagIds: string[];
-  service: ParticipantEventService | null;
-  currentServiceId: string | null;
-  currentServiceStatus: string | null;
-  children: RegistrationChildRelationRow[];
-};
-
-type ParticipantEventServiceRelationRow = {
-  id: string;
-  event_id: string;
-  registration_id: string;
-  participant_id: string;
-  service_id: string;
-  status: string | null;
-  source: string | null;
-  participant_note: string | null;
-  operator_note: string | null;
-  updated_at: string | null;
-  event_services:
-    | { label: string | null }
-    | Array<{ label: string | null }>
-    | null;
-};
 type DashboardTool = "link" | "manual";
 
 type AssignmentSort = "name" | "updated" | "submitted" | "status";
+const GROUP_EXCEPTION_COPY = {
+  it: { reject: "Non appartiene al mio gruppo", help: "La persona verrà spostata in Senza gruppo e potrà essere riassegnata da admin o manager.", warning: (name: string) => `Spostare ${name} in Senza gruppo?` },
+  en: { reject: "Does not belong to my group", help: "The person will move to Without a group and can be reassigned by an admin or manager.", warning: (name: string) => `Move ${name} to Without a group?` },
+  fr: { reject: "Ne fait pas partie de mon groupe", help: "La personne sera déplacée dans Sans groupe et pourra être réaffectée par un administrateur ou un gestionnaire.", warning: (name: string) => `Déplacer ${name} dans Sans groupe ?` },
+  de: { reject: "Gehört nicht zu meiner Gruppe", help: "Die Person wird Ohne Gruppe zugeordnet und kann von Admin oder Manager neu zugewiesen werden.", warning: (name: string) => `${name} nach Ohne Gruppe verschieben?` },
+  es: { reject: "No pertenece a mi grupo", help: "La persona pasará a Sin grupo y podrá ser reasignada por un administrador o gestor.", warning: (name: string) => `¿Mover a ${name} a Sin grupo?` },
+  nl: { reject: "Hoort niet bij mijn groep", help: "De persoon gaat naar Zonder groep en kan door een beheerder of manager opnieuw worden toegewezen.", warning: (name: string) => `${name} naar Zonder groep verplaatsen?` },
+  uk: { reject: "Не належить до моєї групи", help: "Особу буде переміщено до категорії Без групи; адміністратор або менеджер зможе призначити їй групу.", warning: (name: string) => `Перемістити ${name} до категорії Без групи?` },
+};
+
 type GroupLeaderCopy = {
+  exception: { reject: string; help: string; warning: (name: string) => string };
   srTitle: string;
   areaDescription: string;
   saved: string;
@@ -461,7 +154,9 @@ type GroupLeaderCopy = {
   publicHidden: string;
   leader: string;
   manageLinks: string;
-  generateLink: string;
+  linkSlug: string;
+  linkSlugHelp: string;
+
   addParticipant: string;
   inactiveGroupHelp: string;
   noGroups: string;
@@ -482,7 +177,7 @@ type GroupLeaderCopy = {
   justCreatedLink: string;
   unlabeledLink: string;
   existingLinks: string;
-  newLink: string;
+
   saveLinkName: string;
   copyLink: string;
   uses: string;
@@ -520,7 +215,6 @@ type GroupLeaderCopy = {
     reset: string;
     empty: string;
   };
-  filterLabels: Record<GroupLeaderReviewFilter, string>;
   sortLabels: Record<AssignmentSort, string>;
   table: {
     participant: string;
@@ -536,26 +230,14 @@ type GroupLeaderCopy = {
     emailMissing: string;
     phoneMissing: string;
     updated: (date: string) => string;
-    unread: string;
+
     openCard: string;
     openCardAria: (name: string, code: string | null) => string;
     manage: string;
     manageAria: (name: string, code: string | null) => string;
     saveNote: string;
-    confirm: string;
-    reject: string;
-    rejectWarning: (
-      participantName: string,
-      currentGroupName: string,
-      parentGroupName: string | null
-    ) => string;
-    markRead: string;
+
     details: string;
-  };
-  pending: {
-    title: string;
-    help: string;
-    empty: string;
   };
   detail: {
     title: string;
@@ -585,14 +267,9 @@ type GroupLeaderCopy = {
     unknown: string;
     no: string;
     yes: string;
-    needsSupport: string;
-    notes: string;
   };
   statusLabels: {
-    confirmed: string;
-    rejected: string;
-    superseded: string;
-    probable: string;
+
     active: (date: string) => string;
     expired: string;
     revoked: string;
@@ -605,24 +282,12 @@ type GroupLeaderCopy = {
     manager: string;
     admin: string;
   };
-  assignmentReasonLabels: {
-    participantSelectedGroup: string;
-    groupRegistrationLink: string;
-    newcomerTerritorialFallback: string;
-    participantCannotFindLeader: string;
-    santegidioTerritorialFallback: string;
-    groupLeaderRejectedEscalatedToParent: string;
-    groupLeaderManualEntry: string;
-    adminUpdatedGroup: string;
-    managerUpdatedGroup: string;
-    capogruppoUpdatedGroup: string;
-  };
 };
 
 const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
+  exception: GROUP_EXCEPTION_COPY.it,
   srTitle: "Dashboard capogruppo",
-  areaDescription:
-    "In questa area puoi verificare le assegnazioni dei tuoi gruppi, confermare i partecipanti o rimandarli al livello superiore.",
+  areaDescription: "Gestisci i partecipanti dei tuoi gruppi e segnala soltanto chi non appartiene al gruppo.",
   saved: "Aggiornamento salvato.",
   errorPrefix: "Operazione non completata",
   linkAlreadyExists:
@@ -636,7 +301,9 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   publicHidden: "Non visibile nel form pubblico",
   leader: "referente",
   manageLinks: "Gestisci link",
-  generateLink: "Genera link",
+  linkSlug: "Slug (indirizzo del link)",
+    linkSlugHelp: "Modificando lo slug, il vecchio URL non sarà più valido.",
+
   addParticipant: "Inserisci partecipante",
   inactiveGroupHelp:
     "Questo gruppo è collegato al tuo account, ma non è attivo nel catalogo operativo. Prima di usare link o inserimenti manuali serve un intervento di un manager/admin per riattivarlo o collegarti al gruppo corretto.",
@@ -660,8 +327,8 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   justCreatedLink: "Link appena generato",
   unlabeledLink: "Link senza etichetta",
   existingLinks: "Link del gruppo",
-  newLink: "Genera link",
-  saveLinkName: "Salva nome",
+
+  saveLinkName: "Salva link",
   copyLink: "Copia link",
   uses: "usi",
   noActiveLinks: "Nessun link attivo.",
@@ -702,13 +369,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     reset: "Azzera",
     empty: "Nessun partecipante con questi filtri.",
   },
-  filterLabels: {
-    all: "Tutti",
-    "to-review": "Da verificare",
-    probable: "Probabili",
-    confirmed: "Confermati",
-    rejected: "Rifiutati",
-  },
   sortLabels: {
     name: "Nome",
     updated: "Aggiornamento recente",
@@ -729,25 +389,14 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     emailMissing: "Email non indicata",
     phoneMissing: "Telefono non indicato",
     updated: (date) => `aggiornata ${date}`,
-    unread: "Da leggere",
+
     openCard: "Scheda",
     openCardAria: (name, code) => `Apri scheda di ${name}${code ? ` ${code}` : ""}`,
     manage: "Gestisci",
     manageAria: (name, code) => `Gestisci ${name}${code ? ` ${code}` : ""}`,
     saveNote: "Salva nota",
-    confirm: "Conferma",
-    reject: "Non riconosciuto",
-    rejectWarning: (participantName, currentGroupName, parentGroupName) =>
-      parentGroupName
-        ? `Stai per indicare che ${participantName} non appartiene al gruppo ${currentGroupName}. La sua assegnazione risalira' a ${parentGroupName}, dove dovra' essere verificata e confermata da un referente. Vuoi continuare?`
-        : `Stai per indicare che ${participantName} non appartiene al gruppo ${currentGroupName}. Non c'e' un gruppo superiore disponibile: la persona uscira' dalle assegnazioni correnti del gruppo e andra' gestita manualmente da manager/admin. Vuoi continuare?`,
-    markRead: "Segna letta",
+
     details: "Dettagli",
-  },
-  pending: {
-    title: "Da confermare",
-    help: "Controlla prima queste persone: risultano collegate al tuo gruppo, ma attendono una conferma esplicita.",
-    empty: "Non ci sono partecipanti in attesa di conferma.",
   },
   detail: {
     title: "Scheda partecipante",
@@ -777,14 +426,9 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     unknown: "Non so / da verificare",
     no: "No",
     yes: "Sì",
-    needsSupport: "Serve ricontattare la persona o organizzare un supporto pratico.",
-    notes: "Indicazioni pratiche",
   },
   statusLabels: {
-    confirmed: "Confermato",
-    rejected: "Rifiutato",
-    superseded: "Superato",
-    probable: "Probabile",
+
     active: (date) => `Attivo dal ${date}`,
     expired: "Scaduto",
     revoked: "Revocato",
@@ -797,25 +441,13 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     manager: "Manager",
     admin: "Admin",
   },
-  assignmentReasonLabels: {
-    participantSelectedGroup: "gruppo indicato nel form",
-    groupRegistrationLink: "link riservato di iscrizione",
-    newcomerTerritorialFallback: "nuovo partecipante assegnato per territorio",
-    participantCannotFindLeader: "referente non trovato nel form",
-    santegidioTerritorialFallback: "assegnazione territoriale probabile",
-    groupLeaderRejectedEscalatedToParent: "rifiuto risalito al nodo superiore",
-    groupLeaderManualEntry: "inserimento manuale del referente",
-    adminUpdatedGroup: "assegnato da admin",
-    managerUpdatedGroup: "assegnato da manager",
-    capogruppoUpdatedGroup: "assegnato dal referente",
-  },
 };
 
 const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   ...IT_GROUP_LEADER_COPY,
+  exception: GROUP_EXCEPTION_COPY.en,
   srTitle: "Group leader dashboard",
-  areaDescription:
-    "In this area you can review the assignments for your groups, confirm participants or send them back to the higher level.",
+  areaDescription: "Manage participants in your groups and report anyone who does not belong to the group.",
   saved: "Update saved.",
   errorPrefix: "Operation not completed",
   linkAlreadyExists:
@@ -829,7 +461,9 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   publicHidden: "Not visible in the public form",
   leader: "contact person",
   manageLinks: "Manage links",
-  generateLink: "Generate link",
+  linkSlug: "Slug (link address)",
+    linkSlugHelp: "Changing the slug makes the previous URL invalid.",
+
   addParticipant: "Add participant",
   inactiveGroupHelp:
     "This group is linked to your account, but it is not active in the operational catalogue. Before using links or manual entries, a manager/admin needs to reactivate it or connect you to the correct group.",
@@ -853,8 +487,8 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   justCreatedLink: "Newly generated link",
   unlabeledLink: "Unlabelled link",
   existingLinks: "Group link",
-  newLink: "Generate link",
-  saveLinkName: "Save name",
+
+  saveLinkName: "Save link",
   copyLink: "Copy link",
   uses: "uses",
   noActiveLinks: "No active link.",
@@ -894,13 +528,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     reset: "Reset",
     empty: "No participant matches these filters.",
   },
-  filterLabels: {
-    all: "All",
-    "to-review": "To review",
-    probable: "Probable",
-    confirmed: "Confirmed",
-    rejected: "Rejected",
-  },
   sortLabels: {
     name: "Name",
     updated: "Recently updated",
@@ -921,25 +548,14 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     emailMissing: "Email not provided",
     phoneMissing: "Phone not provided",
     updated: (date) => `updated ${date}`,
-    unread: "Unread",
+
     openCard: "Card",
     openCardAria: (name, code) => `Open ${name}${code ? ` ${code}` : ""} card`,
     manage: "Manage",
     manageAria: (name, code) => `Manage ${name}${code ? ` ${code}` : ""}`,
     saveNote: "Save note",
-    confirm: "Confirm",
-    reject: "Not recognised",
-    rejectWarning: (participantName, currentGroupName, parentGroupName) =>
-      parentGroupName
-        ? `You are about to mark ${participantName} as not belonging to ${currentGroupName}. Their assignment will move up to ${parentGroupName}, where another leader will need to review and confirm it. Continue?`
-        : `You are about to mark ${participantName} as not belonging to ${currentGroupName}. There is no higher group available, so the person will leave the current group assignments and will need manual manager/admin handling. Continue?`,
-    markRead: "Mark as read",
+
     details: "Details",
-  },
-  pending: {
-    title: "To confirm",
-    help: "Start here: these people are linked to your group, but still need an explicit confirmation.",
-    empty: "No participant is waiting for confirmation.",
   },
   detail: {
     title: "Participant card",
@@ -969,14 +585,9 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     unknown: "I do not know / to be checked",
     no: "No",
     yes: "Yes",
-    needsSupport: "The person should be contacted again or practical support should be organised.",
-    notes: "Practical notes",
   },
   statusLabels: {
-    confirmed: "Confirmed",
-    rejected: "Rejected",
-    superseded: "Superseded",
-    probable: "Probable",
+
     active: (date) => `Active since ${date}`,
     expired: "Expired",
     revoked: "Revoked",
@@ -989,18 +600,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     manager: "Manager",
     admin: "Admin",
   },
-  assignmentReasonLabels: {
-    participantSelectedGroup: "group indicated in the form",
-    groupRegistrationLink: "reserved registration link",
-    newcomerTerritorialFallback: "new participant assigned by territory",
-    participantCannotFindLeader: "contact person not found in the form",
-    santegidioTerritorialFallback: "probable territorial assignment",
-    groupLeaderRejectedEscalatedToParent: "rejection escalated to the parent node",
-    groupLeaderManualEntry: "manual entry by the group leader",
-    adminUpdatedGroup: "assigned by admin",
-    managerUpdatedGroup: "assigned by manager",
-    capogruppoUpdatedGroup: "assigned by the group leader",
-  },
 };
 
 const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
@@ -1008,9 +607,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   en: EN_GROUP_LEADER_COPY,
   fr: {
     ...EN_GROUP_LEADER_COPY,
+    exception: GROUP_EXCEPTION_COPY.fr,
     srTitle: "Dashboard responsable de groupe",
-    areaDescription:
-      "Dans cet espace, tu peux vérifier les affectations de tes groupes, confirmer les participants ou les renvoyer au niveau supérieur.",
+    areaDescription: "Gère les participants de tes groupes et signale les personnes qui n’en font pas partie.",
     yourGroups: "Tes groupes",
     yourGroupsHelp: "Voici les groupes reliés à ton compte de responsable de groupe.",
     registrableCount: (count) => `${count} peuvent recevoir des inscriptions`,
@@ -1022,7 +621,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participants du groupe",
     participantsHelp:
       "Tu trouves ici les personnes reliées aux groupes que tu gères. Les décisions sur le groupe sont internes et n'envoient pas de message automatique au participant.",
-    generateLink: "Générer un lien",
+    linkSlug: "Slug (adresse du lien)",
+    linkSlugHelp: "Si vous modifiez le slug, l’ancienne URL ne sera plus valide.",
+    saveLinkName: "Enregistrer le lien",
+
     addParticipant: "Ajouter un participant",
     inactiveGroupHelp:
       "Ce groupe est relié à ton compte, mais il n'est pas actif dans le catalogue opérationnel. Avant d'utiliser des liens ou des ajouts manuels, un manager/admin doit le réactiver ou te relier au bon groupe.",
@@ -1078,13 +680,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       reset: "Réinitialiser",
       empty: "Aucun participant avec ces filtres.",
     },
-    filterLabels: {
-      all: "Tous",
-      "to-review": "À vérifier",
-      probable: "Probables",
-      confirmed: "Confirmés",
-      rejected: "Refusés",
-    },
     sortLabels: {
       name: "Nom",
       updated: "Mise à jour récente",
@@ -1105,13 +700,11 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       emailMissing: "Email non indiqué",
       phoneMissing: "Téléphone non indiqué",
       updated: (date) => `mise à jour ${date}`,
-      unread: "À lire",
+
       manage: "Gérer",
       manageAria: (name, code) => `Gérer ${name}${code ? ` ${code}` : ""}`,
       saveNote: "Enregistrer la note",
-      confirm: "Confirmer",
-      reject: "Non reconnu",
-      markRead: "Marquer comme lu",
+
     },
     attendance: {
       title: "Présence",
@@ -1126,14 +719,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Je ne sais pas / à vérifier",
       no: "Non",
       yes: "Oui",
-      needsSupport: "Il faut recontacter la personne ou organiser un support pratique.",
-      notes: "Indications pratiques",
     },
     statusLabels: {
-      confirmed: "Confirmé",
-      rejected: "Refusé",
-      superseded: "Remplacé",
-      probable: "Probable",
+
       active: (date) => `Actif depuis ${date}`,
       expired: "Expiré",
       revoked: "Révoqué",
@@ -1146,24 +734,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       manager: "Manager",
       admin: "Admin",
     },
-    assignmentReasonLabels: {
-      participantSelectedGroup: "groupe indiqué dans le formulaire",
-      groupRegistrationLink: "lien réservé d'inscription",
-      newcomerTerritorialFallback: "nouveau participant affecté par territoire",
-      participantCannotFindLeader: "référent non trouvé dans le formulaire",
-      santegidioTerritorialFallback: "affectation territoriale probable",
-      groupLeaderRejectedEscalatedToParent: "refus remonté au niveau supérieur",
-      groupLeaderManualEntry: "ajout manuel par le responsable",
-      adminUpdatedGroup: "affecté par l'admin",
-      managerUpdatedGroup: "affecté par le manager",
-      capogruppoUpdatedGroup: "affecté par le responsable",
-    },
   },
   de: {
     ...EN_GROUP_LEADER_COPY,
+    exception: GROUP_EXCEPTION_COPY.de,
     srTitle: "Dashboard Gruppenleitung",
-    areaDescription:
-      "In diesem Bereich kannst du die Zuordnungen deiner Gruppen prüfen, Teilnehmende bestätigen oder an die höhere Ebene zurückgeben.",
+    areaDescription: "Verwalte die Teilnehmenden deiner Gruppen und melde Personen, die nicht zur Gruppe gehören.",
     yourGroups: "Deine Gruppen",
     yourGroupsHelp: "Das sind die Gruppen, die mit deinem Gruppenleitungs-Konto verbunden sind.",
     registrableCount: (count) => `${count} können Anmeldungen erhalten`,
@@ -1175,7 +751,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Teilnehmende der Gruppe",
     participantsHelp:
       "Hier findest du die Personen, die mit den von dir verwalteten Gruppen verbunden sind. Gruppenentscheidungen sind intern und senden keine automatischen Nachrichten an die teilnehmende Person.",
-    generateLink: "Link erstellen",
+    linkSlug: "Slug (Linkadresse)",
+    linkSlugHelp: "Wenn Sie den Slug ändern, ist die bisherige URL nicht mehr gültig.",
+    saveLinkName: "Link speichern",
+
     addParticipant: "Teilnehmende Person hinzufügen",
     inactiveGroupHelp:
       "Diese Gruppe ist mit deinem Konto verbunden, aber im operativen Katalog nicht aktiv. Bevor Links oder manuelle Einträge verwendet werden, muss ein Manager/Admin sie reaktivieren oder dich mit der richtigen Gruppe verbinden.",
@@ -1231,13 +810,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       reset: "Zurücksetzen",
       empty: "Keine Teilnehmenden mit diesen Filtern.",
     },
-    filterLabels: {
-      all: "Alle",
-      "to-review": "Zu prüfen",
-      probable: "Wahrscheinlich",
-      confirmed: "Bestätigt",
-      rejected: "Abgelehnt",
-    },
     sortLabels: {
       name: "Name",
       updated: "Kürzlich aktualisiert",
@@ -1258,13 +830,11 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       emailMissing: "E-Mail nicht angegeben",
       phoneMissing: "Telefon nicht angegeben",
       updated: (date) => `aktualisiert ${date}`,
-      unread: "Zu lesen",
+
       manage: "Verwalten",
       manageAria: (name, code) => `${name}${code ? ` ${code}` : ""} verwalten`,
       saveNote: "Notiz speichern",
-      confirm: "Bestätigen",
-      reject: "Nicht erkannt",
-      markRead: "Als gelesen markieren",
+
     },
     attendance: {
       title: "Anwesenheit",
@@ -1279,14 +849,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Ich weiß es nicht / zu prüfen",
       no: "Nein",
       yes: "Ja",
-      needsSupport: "Die Person sollte erneut kontaktiert oder praktische Unterstützung organisiert werden.",
-      notes: "Praktische Hinweise",
     },
     statusLabels: {
-      confirmed: "Bestätigt",
-      rejected: "Abgelehnt",
-      superseded: "Überholt",
-      probable: "Wahrscheinlich",
+
       active: (date) => `Aktiv seit ${date}`,
       expired: "Abgelaufen",
       revoked: "Widerrufen",
@@ -1299,24 +864,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       manager: "Manager",
       admin: "Admin",
     },
-    assignmentReasonLabels: {
-      participantSelectedGroup: "im Formular angegebene Gruppe",
-      groupRegistrationLink: "reservierter Anmeldelink",
-      newcomerTerritorialFallback: "neue teilnehmende Person nach Gebiet zugeordnet",
-      participantCannotFindLeader: "Kontaktperson im Formular nicht gefunden",
-      santegidioTerritorialFallback: "wahrscheinliche territoriale Zuordnung",
-      groupLeaderRejectedEscalatedToParent: "Ablehnung an die übergeordnete Ebene weitergegeben",
-      groupLeaderManualEntry: "manuelle Eingabe durch die Gruppenleitung",
-      adminUpdatedGroup: "vom Admin zugeordnet",
-      managerUpdatedGroup: "vom Manager zugeordnet",
-      capogruppoUpdatedGroup: "von der Gruppenleitung zugeordnet",
-    },
   },
   es: {
     ...EN_GROUP_LEADER_COPY,
+    exception: GROUP_EXCEPTION_COPY.es,
     srTitle: "Panel responsable de grupo",
-    areaDescription:
-      "En esta área puedes revisar las asignaciones de tus grupos, confirmar participantes o devolverlos al nivel superior.",
+    areaDescription: "Gestiona los participantes de tus grupos e indica quién no pertenece al grupo.",
     yourGroups: "Tus grupos",
     yourGroupsHelp: "Estos son los grupos vinculados a tu cuenta de responsable de grupo.",
     registrableCount: (count) => `${count} pueden recibir inscripciones`,
@@ -1328,7 +881,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Participantes del grupo",
     participantsHelp:
       "Aquí encuentras las personas vinculadas a los grupos que gestionas. Las decisiones sobre el grupo son internas y no envían mensajes automáticos al participante.",
-    generateLink: "Generar enlace",
+    linkSlug: "Slug (dirección del enlace)",
+    linkSlugHelp: "Al cambiar el slug, la URL anterior dejará de ser válida.",
+    saveLinkName: "Guardar enlace",
+
     addParticipant: "Añadir participante",
     inactiveGroupHelp:
       "Este grupo está vinculado a tu cuenta, pero no está activo en el catálogo operativo. Antes de usar enlaces o entradas manuales, un manager/admin debe reactivarlo o conectarte al grupo correcto.",
@@ -1384,13 +940,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       reset: "Restablecer",
       empty: "Ningún participante con estos filtros.",
     },
-    filterLabels: {
-      all: "Todos",
-      "to-review": "Por revisar",
-      probable: "Probables",
-      confirmed: "Confirmados",
-      rejected: "Rechazados",
-    },
     sortLabels: {
       name: "Nombre",
       updated: "Actualización reciente",
@@ -1411,13 +960,11 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       emailMissing: "Email no indicado",
       phoneMissing: "Teléfono no indicado",
       updated: (date) => `actualizada ${date}`,
-      unread: "Por leer",
+
       manage: "Gestionar",
       manageAria: (name, code) => `Gestionar ${name}${code ? ` ${code}` : ""}`,
       saveNote: "Guardar nota",
-      confirm: "Confirmar",
-      reject: "No reconocido",
-      markRead: "Marcar como leída",
+
     },
     attendance: {
       title: "Presencia",
@@ -1432,14 +979,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "No lo sé / por verificar",
       no: "No",
       yes: "Sí",
-      needsSupport: "Hay que volver a contactar a la persona u organizar apoyo práctico.",
-      notes: "Indicaciones prácticas",
     },
     statusLabels: {
-      confirmed: "Confirmado",
-      rejected: "Rechazado",
-      superseded: "Sustituido",
-      probable: "Probable",
+
       active: (date) => `Activo desde ${date}`,
       expired: "Caducado",
       revoked: "Revocado",
@@ -1452,24 +994,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       manager: "Manager",
       admin: "Admin",
     },
-    assignmentReasonLabels: {
-      participantSelectedGroup: "grupo indicado en el formulario",
-      groupRegistrationLink: "enlace reservado de inscripción",
-      newcomerTerritorialFallback: "nuevo participante asignado por territorio",
-      participantCannotFindLeader: "referente no encontrado en el formulario",
-      santegidioTerritorialFallback: "asignación territorial probable",
-      groupLeaderRejectedEscalatedToParent: "rechazo elevado al nivel superior",
-      groupLeaderManualEntry: "entrada manual del responsable",
-      adminUpdatedGroup: "asignado por admin",
-      managerUpdatedGroup: "asignado por manager",
-      capogruppoUpdatedGroup: "asignado por el responsable",
-    },
   },
   nl: {
     ...EN_GROUP_LEADER_COPY,
+    exception: GROUP_EXCEPTION_COPY.nl,
     srTitle: "Dashboard groepsleider",
-    areaDescription:
-      "In deze omgeving kun je de toewijzingen van je groepen controleren, deelnemers bevestigen of terugsturen naar het hogere niveau.",
+    areaDescription: "Beheer de deelnemers van je groepen en meld wie niet bij de groep hoort.",
     yourGroups: "Je groepen",
     yourGroupsHelp: "Dit zijn de groepen die aan je groepsleidersaccount zijn gekoppeld.",
     registrableCount: (count) => `${count} kunnen inschrijvingen ontvangen`,
@@ -1481,7 +1011,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Deelnemers van de groep",
     participantsHelp:
       "Hier vind je de mensen die gekoppeld zijn aan de groepen die je beheert. Beslissingen over de groep zijn intern en sturen geen automatische berichten naar de deelnemer.",
-    generateLink: "Link genereren",
+    linkSlug: "Slug (linkadres)",
+    linkSlugHelp: "Als je de slug wijzigt, is de vorige URL niet meer geldig.",
+    saveLinkName: "Link opslaan",
+
     addParticipant: "Deelnemer toevoegen",
     inactiveGroupHelp:
       "Deze groep is gekoppeld aan je account, maar is niet actief in de operationele catalogus. Voordat je links of handmatige invoer gebruikt, moet een manager/admin de groep opnieuw activeren of je aan de juiste groep koppelen.",
@@ -1537,13 +1070,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       reset: "Wissen",
       empty: "Geen deelnemer met deze filters.",
     },
-    filterLabels: {
-      all: "Alle",
-      "to-review": "Te controleren",
-      probable: "Waarschijnlijk",
-      confirmed: "Bevestigd",
-      rejected: "Afgewezen",
-    },
     sortLabels: {
       name: "Naam",
       updated: "Recent bijgewerkt",
@@ -1564,13 +1090,11 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       emailMissing: "E-mail niet opgegeven",
       phoneMissing: "Telefoon niet opgegeven",
       updated: (date) => `bijgewerkt ${date}`,
-      unread: "Te lezen",
+
       manage: "Beheren",
       manageAria: (name, code) => `${name}${code ? ` ${code}` : ""} beheren`,
       saveNote: "Notitie opslaan",
-      confirm: "Bevestigen",
-      reject: "Niet herkend",
-      markRead: "Markeer als gelezen",
+
     },
     attendance: {
       title: "Aanwezigheid",
@@ -1585,14 +1109,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Ik weet het niet / te controleren",
       no: "Nee",
       yes: "Ja",
-      needsSupport: "De persoon moet opnieuw worden gecontacteerd of praktische ondersteuning moet worden georganiseerd.",
-      notes: "Praktische aanwijzingen",
     },
     statusLabels: {
-      confirmed: "Bevestigd",
-      rejected: "Afgewezen",
-      superseded: "Vervangen",
-      probable: "Waarschijnlijk",
+
       active: (date) => `Actief sinds ${date}`,
       expired: "Verlopen",
       revoked: "Ingetrokken",
@@ -1605,24 +1124,12 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       manager: "Manager",
       admin: "Admin",
     },
-    assignmentReasonLabels: {
-      participantSelectedGroup: "groep aangegeven in het formulier",
-      groupRegistrationLink: "gereserveerde inschrijflink",
-      newcomerTerritorialFallback: "nieuwe deelnemer toegewezen op basis van gebied",
-      participantCannotFindLeader: "contactpersoon niet gevonden in het formulier",
-      santegidioTerritorialFallback: "waarschijnlijke territoriale toewijzing",
-      groupLeaderRejectedEscalatedToParent: "afwijzing doorgestuurd naar hoger niveau",
-      groupLeaderManualEntry: "handmatige invoer door de groepsleider",
-      adminUpdatedGroup: "toegewezen door admin",
-      managerUpdatedGroup: "toegewezen door manager",
-      capogruppoUpdatedGroup: "toegewezen door de groepsleider",
-    },
   },
   uk: {
     ...EN_GROUP_LEADER_COPY,
+    exception: GROUP_EXCEPTION_COPY.uk,
     srTitle: "Панель керівника групи",
-    areaDescription:
-      "У цій зоні можна перевірити призначення ваших груп, підтвердити учасників або повернути їх на вищий рівень.",
+    areaDescription: "Керуйте учасниками своїх груп і повідомляйте про тих, хто не належить до групи.",
     yourGroups: "Ваші групи",
     yourGroupsHelp: "Це групи, пов'язані з вашим обліковим записом керівника групи.",
     registrableCount: (count) => `${count} можуть приймати реєстрації`,
@@ -1634,7 +1141,10 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     participantsTitle: "Учасники групи",
     participantsHelp:
       "Тут можна знайти людей, пов'язаних із групами, якими ви керуєте. Рішення щодо групи є внутрішніми і не надсилають автоматичних повідомлень учаснику.",
-    generateLink: "Створити посилання",
+    linkSlug: "Slug (адреса посилання)",
+    linkSlugHelp: "Після зміни slug попередня URL-адреса більше не буде дійсною.",
+    saveLinkName: "Зберегти посилання",
+
     addParticipant: "Додати учасника",
     inactiveGroupHelp:
       "Ця група пов'язана з вашим обліковим записом, але не активна в робочому каталозі. Перед використанням посилань або ручного додавання manager/admin має повторно активувати її або прив'язати вас до правильної групи.",
@@ -1690,13 +1200,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       reset: "Скинути",
       empty: "Немає учасників за цими фільтрами.",
     },
-    filterLabels: {
-      all: "Усі",
-      "to-review": "Перевірити",
-      probable: "Ймовірні",
-      confirmed: "Підтверджені",
-      rejected: "Відхилені",
-    },
     sortLabels: {
       name: "Ім'я",
       updated: "Нещодавно оновлені",
@@ -1717,13 +1220,11 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       emailMissing: "Email не вказано",
       phoneMissing: "Телефон не вказано",
       updated: (date) => `оновлено ${date}`,
-      unread: "Прочитати",
+
       manage: "Керувати",
       manageAria: (name, code) => `Керувати ${name}${code ? ` ${code}` : ""}`,
       saveNote: "Зберегти нотатку",
-      confirm: "Підтвердити",
-      reject: "Не розпізнано",
-      markRead: "Позначити як прочитане",
+
     },
     attendance: {
       title: "Присутність",
@@ -1738,14 +1239,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       unknown: "Не знаю / потрібно перевірити",
       no: "Ні",
       yes: "Так",
-      needsSupport: "Потрібно повторно зв'язатися з особою або організувати практичну підтримку.",
-      notes: "Практичні вказівки",
     },
     statusLabels: {
-      confirmed: "Підтверджено",
-      rejected: "Відхилено",
-      superseded: "Замінено",
-      probable: "Ймовірно",
+
       active: (date) => `Активне з ${date}`,
       expired: "Минув термін",
       revoked: "Відкликано",
@@ -1757,18 +1253,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       capogruppo: "Керівник групи",
       manager: "Manager",
       admin: "Admin",
-    },
-    assignmentReasonLabels: {
-      participantSelectedGroup: "групу вказано у формі",
-      groupRegistrationLink: "зарезервоване реєстраційне посилання",
-      newcomerTerritorialFallback: "нового учасника призначено за територією",
-      participantCannotFindLeader: "відповідальну особу не знайдено у формі",
-      santegidioTerritorialFallback: "ймовірне територіальне призначення",
-      groupLeaderRejectedEscalatedToParent: "відмову передано на вищий рівень",
-      groupLeaderManualEntry: "ручне додавання керівником групи",
-      adminUpdatedGroup: "призначено admin",
-      managerUpdatedGroup: "призначено manager",
-      capogruppoUpdatedGroup: "призначено керівником групи",
     },
   },
 };
@@ -1802,34 +1286,13 @@ export default async function CapogruppoDashboardPage({
     redirect("/login");
   }
 
-  const [{ data: memberships }, { data: groups }] = await Promise.all([
-    serviceSupabase
-      .from("group_memberships")
-      .select("group_id")
-      .eq("user_id", auth.user.id),
-    serviceSupabase
-      .from("groups")
-      .select(
-        "id,event_id,name,parent_group_id,node_type,is_assignable,is_public_catalog,is_active,public_label,primary_leader_name,events(title,starts_on,ends_on)"
-      )
-      .eq("event_id", currentEventId),
-  ]);
-  const rootGroupIds = ((memberships ?? []) as GroupMembershipRow[])
-    .map((membership) => membership.group_id)
-    .filter((groupId): groupId is string => Boolean(groupId));
-  const groupRows = (groups ?? []) as GroupRow[];
-  const activeGroupRows = groupRows.filter((group) => group.is_active ?? true);
-  const groupNodes = activeGroupRows.map<GroupTreeNode>((group) => ({
-    id: group.id,
-    parentGroupId: group.parent_group_id,
-  }));
-  const scopedGroupIds = collectDescendantGroupIds(groupNodes, rootGroupIds);
+  const { groupRows, activeGroupRows, rootGroupIds, scopedGroupIds } =
+    await loadLeaderScope(serviceSupabase, auth.user.id, currentEventId);
 
-  const [assignments, operationalTags, eventServices, groupLinks] =
+  const [assignments, operationalTags, groupLinks] =
     await Promise.all([
       getAssignments([...scopedGroupIds]),
       getOperationalTags(),
-      getEventServices(),
       getGroupLinks([...scopedGroupIds]),
     ]);
   const assignedGroups = groupRows
@@ -1838,34 +1301,25 @@ export default async function CapogruppoDashboardPage({
   const scopedGroups = activeGroupRows
     .filter((group) => scopedGroupIds.has(group.id))
     .map((group) => toScopedGroupView(group, copy));
-  const confirmedAssignments = assignments.filter(
-    (assignment) => assignment.isCurrent && assignment.status === "confirmed"
+  const currentAssignments = assignments.filter(
+    (assignment) => assignment.isCurrent
   );
-  const groupFilterOptions = buildGroupFilterOptions(confirmedAssignments, locale);
-  const showGroupColumn = groupFilterOptions.length > 1;
-  const effectiveGroupFilter = showGroupColumn ? groupFilter : "all";
-  const filteredAssignments = sortAssignments(
-    assignments.filter((assignment) =>
-      matchesAssignmentFilters(assignment, {
-        query,
-        contactQuery,
-        groupFilter: effectiveGroupFilter,
-        tagFilter,
-      })
-    ),
-    locale
-  );
-  const pendingAssignments = sortAssignments(
-    assignments.filter(isPendingAssignment),
-    locale
-  );
-  const tableAssignments = filteredAssignments.filter(
-    (assignment) => assignment.isCurrent && assignment.status === "confirmed"
-  );
+  const groupFilterOptions = buildGroupFilterOptions(currentAssignments, locale);
+  const showGroupColumn = groupFilterOptions.length > 1 || groupFilter !== "all";
+  const effectiveGroupFilter = groupFilter;
+  const tableParams = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+  const returnTo = leaderReturnPath(`/dashboard/capogruppo?${tableParams}`);
+  const tableAssignments = filterLeaderRows(currentAssignments, tableParams);
   const selectedAssignment =
     params.assignmentId
       ? assignments.find((assignment) => assignment.id === params.assignmentId) ?? null
       : null;
+
+  const selectedQr = selectedAssignment
+    ? await loadLeaderAssignmentQr(
+        serviceSupabase, auth.user.id, currentEventId, selectedAssignment.id
+      )
+    : null;
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -1898,15 +1352,9 @@ export default async function CapogruppoDashboardPage({
           copy={copy}
         />
 
-        <PendingAssignmentsPanel
-          assignments={pendingAssignments}
-          copy={copy}
-          showGroupColumn={new Set(pendingAssignments.map((assignment) => assignment.groupId)).size > 1}
-        />
-
         <section
           id="assegnazioni-gruppo"
-          className="rounded-lg border border-[var(--peace-border)] bg-white p-5"
+          className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5"
         >
           <div>
             <div>
@@ -1928,10 +1376,11 @@ export default async function CapogruppoDashboardPage({
             copy={copy}
           />
 
-          <AssignmentsTable
-            assignments={tableAssignments}
-            copy={copy}
-            showGroupColumn={showGroupColumn}
+          <LeaderParticipantsTable
+            rows={tableAssignments.map(toLeaderTableRow)}
+            operatorId={auth.user.id}
+            startsOn={assignedGroups[0]?.eventStartsOn ?? null}
+            locale={locale}
           />
         </section>
 
@@ -1967,11 +1416,13 @@ export default async function CapogruppoDashboardPage({
         ) : null}
 
         {selectedAssignment ? (
-          <DashboardToolOverlay title={copy.detail.title} copy={copy}>
+          <DashboardToolOverlay title={copy.detail.title} copy={copy} closePath={leaderReturnPath(returnTo, { assignmentId: null })}>
             <AssignmentDetailCard
+              returnTo={returnTo}
+              qr={selectedQr}
+              locale={locale}
               assignment={selectedAssignment}
               tagOptions={operationalTags}
-              serviceOptions={eventServices}
               copy={copy}
             />
           </DashboardToolOverlay>
@@ -1981,28 +1432,16 @@ export default async function CapogruppoDashboardPage({
     </main>
   );
 
-  async function getAssignments(groupIds: string[]): Promise<AssignmentView[]> {
+  async function getAssignments(
+    groupIds: string[]
+  ): Promise<AssignmentView[]> {
     if (groupIds.length === 0) {
       return [];
     }
 
-    const { data, error } = await serviceSupabase
-          .from("participant_group_assignments")
-          .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_notification_read_at,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))"
-      )
-      .in("group_id", groupIds)
-      .eq("registrations.event_id", currentEventId)
-      .eq("is_current", true)
-      .order("updated_at", { ascending: false })
-      .limit(100);
+    const data = await loadLeaderAssignmentRows(serviceSupabase, currentEventId!, groupIds);
 
-    if (error) {
-      console.error("[capogruppo:assignments]", error.message);
-      return [];
-    }
-
-    return ((data ?? []) as AssignmentRow[])
+    return data
       .map((row) => toAssignmentView(row, copy, groupRows))
       .filter((assignment): assignment is AssignmentView => Boolean(assignment));
   }
@@ -2015,7 +1454,7 @@ export default async function CapogruppoDashboardPage({
     const { data, error } = await serviceSupabase
       .from("group_registration_links")
       .select(
-        "id,event_id,group_id,public_label,internal_label,token_encrypted,use_count,max_uses,created_at,expires_at,revoked_at"
+        "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
       )
       .in("group_id", groupIds)
       .eq("event_id", currentEventId)
@@ -2036,7 +1475,7 @@ export default async function CapogruppoDashboardPage({
       groupId: link.group_id,
       publicLabel: link.public_label,
       internalLabel: link.internal_label,
-      url: buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
+      url: link.slug ? buildGroupRegistrationUrl({ appUrl: getAppUrl(), token: link.slug }) : buildGroupLinkUrlFromEncryptedToken(link.token_encrypted),
       useCount: link.use_count ?? 0,
       maxUses: link.max_uses,
       createdAt: link.created_at,
@@ -2062,32 +1501,6 @@ export default async function CapogruppoDashboardPage({
       eventId: tag.event_id,
       label: tag.label,
       color: tag.color,
-    }));
-  }
-
-  async function getEventServices(): Promise<EventServiceOption[]> {
-    const { data } = await serviceSupabase
-      .from("event_services")
-      .select("id,event_id,label,description,is_active,public_order")
-      .eq("event_id", currentEventId)
-      .eq("is_active", true)
-      .order("public_order", { ascending: true })
-      .order("label", { ascending: true });
-
-    return ((data ?? []) as Array<{
-      id: string;
-      event_id: string;
-      label: string | null;
-      description: string | null;
-      is_active: boolean | null;
-      public_order: number | null;
-    }>).map((service) => ({
-      id: service.id,
-      eventId: service.event_id,
-      label: service.label ?? "Servizio senza nome",
-      description: service.description,
-      isActive: service.is_active ?? true,
-      publicOrder: service.public_order ?? 100,
     }));
   }
 }
@@ -2203,11 +1616,13 @@ function AssignedScopeSection({
 }
 
 function DashboardToolOverlay({
+  closePath = "/dashboard/capogruppo",
   title,
   copy,
   children,
 }: {
   title: string;
+  closePath?: string;
   copy: GroupLeaderCopy;
   children: ReactNode;
 }) {
@@ -2217,7 +1632,8 @@ function DashboardToolOverlay({
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-xl font-semibold text-[var(--peace-ink)]">{title}</h2>
           <Link
-            href="/dashboard/capogruppo"
+            href={closePath}
+            scroll={false}
             className="inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label={copy.close}
           >
@@ -2316,7 +1732,7 @@ function GroupLeaderLinksSection({
                         key={link.id}
                         className="rounded-md border border-[var(--peace-border)] bg-white p-3 text-sm"
                       >
-                        <form
+                        <ReliableForm
                           action={updateGroupRegistrationLink}
                           className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                           data-preserve-dashboard-scroll
@@ -2334,10 +1750,15 @@ function GroupLeaderLinksSection({
                               required
                             />
                           </label>
-                          <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
+                          <label className="grid gap-1 text-xs font-semibold text-[var(--peace-muted)]">
+                        {copy.linkSlug}
+                        <input name="slug" className="field bg-white text-sm" defaultValue={link.url ? decodeURIComponent(new URL(link.url).pathname.slice(1)) : ""} pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,95}" minLength={3} maxLength={96} required />
+                        <span className="font-normal">{copy.linkSlugHelp}</span>
+                      </label>
+                      <PendingSubmitButton className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-3 text-xs font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]">
                             {copy.saveLinkName}
                           </PendingSubmitButton>
-                        </form>
+                        </ReliableForm>
                         <p className="mt-1 text-xs text-[var(--peace-muted)]">
                           {groupLinkStatusLabel(link, locale, copy)} - {copy.uses} {link.useCount}
                           {link.maxUses ? `/${link.maxUses}` : ""}
@@ -2366,31 +1787,7 @@ function GroupLeaderLinksSection({
                   </div>
                 </div>
 
-                {groupLinks.length === 0 ? (
-                  <form
-                    action={createGroupRegistrationLink}
-                    className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-white p-4"
-                    data-preserve-dashboard-scroll
-                  >
-                    <input type="hidden" name="sourceDashboard" value="capogruppo" />
-                    <input type="hidden" name="groupId" value={group.id} />
-                    <h4 className="text-sm font-semibold text-[var(--peace-ink)]">
-                      {copy.newLink}
-                    </h4>
-                    <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                      {copy.publicLabel}
-                      <input
-                        name="displayName"
-                        className="field"
-                        defaultValue={group.publicLabel ?? group.name}
-                        required
-                      />
-                    </label>
-                    <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-                      {copy.generateLink}
-                    </PendingSubmitButton>
-                  </form>
-                ) : null}
+
               </div>
             </article>
           );
@@ -2435,8 +1832,10 @@ function ManualRegistrationSection({
       </div>
 
       {assignableGroups.length > 0 ? (
-        <form
+        <ReliableForm
           action={createGroupLeaderManualRegistration}
+          validation="manualRegistration"
+          locale={locale}
           className="mt-5 grid gap-4 lg:grid-cols-2"
         >
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
@@ -2459,13 +1858,11 @@ function ManualRegistrationSection({
             {copy.lastName}
             <input name="lastName" required minLength={2} className="field" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.email}
-            <input name="email" type="email" className="field" />
-          </label>
+          <ManualEmailFields locale={locale} emailLabel={copy.email} />
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.phone}
-            <input name="phone" className="field" placeholder="+393331234567" />
+            <input name="phone" type="tel" className="field" placeholder="+393331234567" aria-describedby="manual-phone-help" />
+            <span id="manual-phone-help" className="text-xs font-normal">{FORM_COPY[locale].phone}</span>
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.birthDate}
@@ -2494,12 +1891,16 @@ function ManualRegistrationSection({
             />
             {copy.consent}
           </label>
+          <label className="grid gap-1 text-sm lg:col-span-2">
+            {MANUAL_DUPLICATE_COPY[locale]}
+            <textarea name="duplicateReason" className="field" minLength={3} maxLength={500} />
+          </label>
           <div className="lg:col-span-2">
             <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               {copy.addParticipant}
             </PendingSubmitButton>
           </div>
-        </form>
+        </ReliableForm>
       ) : (
         <p className="mt-4 text-sm text-[var(--peace-muted)]">
           {copy.noRegistrableGroups}
@@ -2541,11 +1942,8 @@ function AssignmentFilters({
         contact: "",
         group: "all",
         tag: "all",
-        sort: "name",
       }}
     >
-      <input type="hidden" name="sort" value="name" />
-      {!showGroupColumn ? <input type="hidden" name="group" value="all" /> : null}
       <div className="overflow-x-auto rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3">
         <div className={filterGridClassName}>
           <label className="sr-only" htmlFor="leader-participant-q">
@@ -2621,276 +2019,21 @@ function AssignmentFilters({
   );
 }
 
-function PendingAssignmentsPanel({
-  assignments,
-  copy,
-  showGroupColumn,
-}: {
-  assignments: AssignmentView[];
-  copy: GroupLeaderCopy;
-  showGroupColumn: boolean;
-}) {
-  return (
-    <section className="mt-5 rounded-lg border border-[#dfc46d] bg-[#fff8dc] p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-[var(--peace-ink)]">
-            {copy.pending.title}
-          </h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-            {copy.pending.help}
-          </p>
-        </div>
-        <span className="w-fit rounded-full border border-[#dfc46d] bg-white px-3 py-1 text-sm font-semibold text-[#6b5214]">
-          {assignments.length}
-        </span>
-      </div>
-
-      {assignments.length === 0 ? (
-        <p className="mt-4 rounded-md border border-[#ead894] bg-white/70 p-3 text-sm text-[var(--peace-muted)]">
-          {copy.pending.empty}
-        </p>
-      ) : (
-        <div className="mt-4 overflow-x-auto rounded-md border border-[#ead894] bg-white">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-[#ead894] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
-                <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
-                {showGroupColumn ? (
-                  <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
-                ) : null}
-                <th className="py-3 pr-4 font-semibold">Servizio</th>
-                <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
-                <th className="py-3 pr-4 text-right font-semibold">{copy.table.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assignments.map((assignment) => (
-                <PendingAssignmentRow
-                  key={assignment.id}
-                  assignment={assignment}
-                  copy={copy}
-                  showGroupColumn={showGroupColumn}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function PendingAssignmentRow({
-  assignment,
-  copy,
-  showGroupColumn,
-}: {
-  assignment: AssignmentView;
-  copy: GroupLeaderCopy;
-  showGroupColumn: boolean;
-}) {
-  const detailHref = `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`;
-
-  return (
-    <tr className="border-b border-[#ead894] align-top last:border-b-0">
-      <td className="py-4 pl-4 pr-4">
-        <Link
-          href={detailHref}
-          scroll={false}
-          className="font-semibold text-[var(--peace-blue-800)] underline-offset-4 hover:underline"
-        >
-          {assignment.participantName}
-        </Link>
-        <p className="mt-1 text-xs text-[var(--peace-muted)]">
-          {assignment.participantCode ?? copy.table.withoutCode} -{" "}
-          {statusLabel(assignment.status, assignment.isCurrent, copy)}
-        </p>
-      </td>
-      <td className="py-4 pr-4 text-[var(--peace-ink)]">
-        <p>{assignment.participantEmail ?? copy.table.emailMissing}</p>
-        <p className="mt-1 text-xs text-[var(--peace-muted)]">
-          {assignment.participantPhone ?? copy.table.phoneMissing}
-        </p>
-      </td>
-      {showGroupColumn ? (
-        <td className="py-4 pr-4 text-[var(--peace-ink)]">{assignment.groupName}</td>
-      ) : null}
-      <td className="py-4 pr-4">
-        <ParticipantServiceSummary service={assignment.service} />
-      </td>
-      <td className="py-4 pr-4">
-        <OperationalTagList tags={assignment.tags} emptyLabel={copy.filters.noTags} />
-      </td>
-      <td className="py-4 pr-4">
-        <div className="flex justify-end gap-2">
-          <form action={updateGroupLeaderAssignment}>
-            <input type="hidden" name="assignmentId" value={assignment.id} />
-            <PendingSubmitButton
-              name="intent"
-              value="confirm"
-              className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-            >
-              {copy.table.confirm}
-            </PendingSubmitButton>
-          </form>
-          <form action={updateGroupLeaderAssignment}>
-            <input type="hidden" name="assignmentId" value={assignment.id} />
-            <ConfirmSubmitButton
-              name="intent"
-              value="reject"
-              confirmMessage={copy.table.rejectWarning(
-                assignment.participantName,
-                assignment.groupName,
-                assignment.parentGroupName
-              )}
-              className="min-h-10 rounded-md border border-[#d1a7a0] px-3 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
-            >
-              {copy.table.reject}
-            </ConfirmSubmitButton>
-          </form>
-          <Link
-            href={detailHref}
-            scroll={false}
-            className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            {copy.table.details}
-          </Link>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function AssignmentsTable({
-  assignments,
-  copy,
-  showGroupColumn,
-}: {
-  assignments: AssignmentView[];
-  copy: GroupLeaderCopy;
-  showGroupColumn: boolean;
-}) {
-  if (assignments.length === 0) {
-    return (
-      <div className="mt-5 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
-        {copy.filters.empty}
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-5 overflow-x-auto rounded-md border border-[var(--peace-border)]">
-      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-        <thead>
-          <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
-            <th className="py-3 pl-4 pr-4 font-semibold">{copy.table.participant}</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.contacts}</th>
-            {showGroupColumn ? (
-              <th className="py-3 pr-4 font-semibold">{copy.table.group}</th>
-            ) : null}
-            <th className="py-3 pr-4 font-semibold">Servizio</th>
-            <th className="py-3 pr-4 font-semibold">{copy.table.tags}</th>
-            <th className="py-3 pr-4 text-right font-semibold">{copy.table.actions}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {assignments.map((assignment) => (
-            <AssignmentRowView
-              key={assignment.id}
-              assignment={assignment}
-              copy={copy}
-              showGroupColumn={showGroupColumn}
-            />
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function AssignmentRowView({
-  assignment,
-  copy,
-  showGroupColumn,
-}: {
-  assignment: AssignmentView;
-  copy: GroupLeaderCopy;
-  showGroupColumn: boolean;
-}) {
-  const cardLabel = copy.table.openCardAria(
-    assignment.participantName,
-    assignment.participantCode
-  );
-  const detailHref = `/dashboard/capogruppo?assignmentId=${encodeURIComponent(assignment.id)}`;
-
-  return (
-    <tr className="border-b border-[var(--peace-border)] align-top transition hover:bg-[#f7fbfe] last:border-b-0">
-      <td className="py-4 pl-4 pr-4">
-        <Link
-          href={detailHref}
-          scroll={false}
-          aria-label={cardLabel}
-          className="block font-semibold text-[var(--peace-blue-800)] underline-offset-4 hover:underline"
-        >
-          {assignment.participantName}
-        </Link>
-        <p className="mt-1 text-xs text-[var(--peace-muted)]">
-          {assignment.participantCode ?? copy.table.withoutCode} - {assignment.participantPlace}
-        </p>
-      </td>
-      <td className="py-4 pr-4 text-[var(--peace-ink)]">
-        <Link href={detailHref} scroll={false} className="block hover:underline">
-          {assignment.participantEmail ?? copy.table.emailMissing}
-        </Link>
-        <Link
-          href={detailHref}
-          scroll={false}
-          className="mt-1 block text-xs text-[var(--peace-muted)] hover:underline"
-        >
-          {assignment.participantPhone ?? copy.table.phoneMissing}
-        </Link>
-      </td>
-      {showGroupColumn ? (
-        <td className="py-4 pr-4 text-[var(--peace-ink)]">
-          <Link href={detailHref} scroll={false} className="block hover:underline">
-            {assignment.groupName}
-          </Link>
-        </td>
-      ) : null}
-      <td className="py-4 pr-4">
-        <ParticipantServiceSummary service={assignment.service} />
-      </td>
-      <td className="py-4 pr-4">
-        <OperationalTagList tags={assignment.tags} emptyLabel={copy.filters.noTags} />
-      </td>
-      <td className="py-4 pr-4 text-right">
-        <Link
-          href={detailHref}
-          scroll={false}
-          aria-label={cardLabel}
-          className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-        >
-          {copy.table.details}
-        </Link>
-      </td>
-    </tr>
-  );
-}
-
 function AssignmentDetailCard({
+  qr,
+  locale,
+  returnTo,
   assignment,
   tagOptions,
-  serviceOptions,
   copy,
 }: {
   assignment: AssignmentView;
+  qr: RegistrationQrPreview | null;
+  locale: SupportedLocale;
+  returnTo: string;
   tagOptions: OperationalTagOption[];
-  serviceOptions: EventServiceOption[];
   copy: GroupLeaderCopy;
 }) {
-  const canDecide = assignment.isCurrent && assignment.status === "probable";
 
   return (
     <section className="grid gap-5">
@@ -2908,13 +2051,21 @@ function AssignmentDetailCard({
         </div>
       </div>
 
+      <LeaderParticipantQr
+        qr={qr ?? { state: "unavailable", dataUrl: null, downloadDataUrl: null, expiresAt: null }}
+        participantName={assignment.participantName}
+        participantCode={assignment.participantCode}
+        locale={locale}
+      />
+
       <div className="grid gap-4 md:grid-cols-2">
         <DetailBlock title={copy.detail.identity}>
-          <form
+          <ReliableForm
             action={updateGroupLeaderParticipantContact}
             className="grid gap-3"
             data-preserve-dashboard-scroll
           >
+            <input type="hidden" name="returnTo" value={returnTo} />
             <input type="hidden" name="assignmentId" value={assignment.id} />
             <input type="hidden" name="participantId" value={assignment.participantId} />
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
@@ -2961,15 +2112,16 @@ function AssignmentDetailCard({
             <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva
             </PendingSubmitButton>
-          </form>
+          </ReliableForm>
         </DetailBlock>
 
         <DetailBlock title={copy.detail.contacts}>
-          <form
+          <ReliableForm
             action={updateGroupLeaderParticipantContact}
             className="grid gap-3"
             data-preserve-dashboard-scroll
           >
+            <input type="hidden" name="returnTo" value={returnTo} />
             <input type="hidden" name="assignmentId" value={assignment.id} />
             <input type="hidden" name="participantId" value={assignment.participantId} />
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
@@ -2992,11 +2144,7 @@ function AssignmentDetailCard({
             <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva
             </PendingSubmitButton>
-          </form>
-        </DetailBlock>
-
-        <DetailBlock title={copy.detail.group}>
-          <DetailLine label={copy.group}>{assignment.groupName}</DetailLine>
+          </ReliableForm>
         </DetailBlock>
 
         <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
@@ -3021,6 +2169,25 @@ function AssignmentDetailCard({
         </DetailBlock>
       </div>
 
+      <DetailBlock title={copy.detail.assignment}>
+        <p className="text-sm font-semibold">{assignment.groupName}</p>
+        {assignment.isCurrent ? (
+          <ReliableForm action={updateGroupLeaderAssignment} className="mt-3 grid gap-3" data-preserve-dashboard-scroll>
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <input type="hidden" name="assignmentId" value={assignment.id} />
+            <p className="text-sm text-[var(--peace-muted)]">{copy.exception.help}</p>
+            <ConfirmSubmitButton
+              name="intent"
+              value="reject"
+              confirmMessage={copy.exception.warning(assignment.participantName)}
+              className="min-h-10 w-fit rounded-md border border-[#d1a7a0] bg-white px-4 text-sm font-semibold text-[#8a3f35] hover:bg-[#fff0ee]"
+            >
+              {copy.exception.reject}
+            </ConfirmSubmitButton>
+          </ReliableForm>
+        ) : null}
+      </DetailBlock>
+
       <DetailBlock title={copy.detail.notes}>
         <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--peace-ink)]">
           {assignment.leaderInternalNote ?? copy.detail.noNote}
@@ -3031,10 +2198,12 @@ function AssignmentDetailCard({
         <ParticipantServiceSummary service={assignment.service} />
       </DetailBlock>
 
-      <form
+      <ReliableForm
         action={updateGroupLeaderAssignment}
         className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+        data-preserve-dashboard-scroll
       >
+        <input type="hidden" name="returnTo" value={returnTo} />
         <input type="hidden" name="assignmentId" value={assignment.id} />
         <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
           {copy.internalNote}
@@ -3053,98 +2222,16 @@ function AssignmentDetailCard({
           >
             {copy.table.saveNote}
           </PendingSubmitButton>
-          {canDecide ? (
-            <>
-              <PendingSubmitButton
-                name="intent"
-                value="confirm"
-                className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-              >
-                {copy.table.confirm}
-              </PendingSubmitButton>
-              <ConfirmSubmitButton
-                name="intent"
-                value="reject"
-                confirmMessage={copy.table.rejectWarning(
-                  assignment.participantName,
-                  assignment.groupName,
-                  assignment.parentGroupName
-                )}
-                className="min-h-10 rounded-md border border-[#d1a7a0] px-4 text-sm font-semibold text-[#8a3f35] transition hover:bg-[#fff0ee]"
-              >
-                {copy.table.reject}
-              </ConfirmSubmitButton>
-            </>
-          ) : null}
-          {assignment.isCurrent && assignment.status === "confirmed" ? (
-            <PendingSubmitButton
-              name="intent"
-              value="unconfirm"
-              className="min-h-10 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
-            >
-              Segna da verificare
-            </PendingSubmitButton>
-          ) : null}
         </div>
-      </form>
+      </ReliableForm>
 
-      <form
-        action={updateParticipantEventService}
-        className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
-      >
-        <input type="hidden" name="sourceDashboard" value="capogruppo" />
-        <input type="hidden" name="assignmentId" value={assignment.id} />
-        <input type="hidden" name="registrationId" value={assignment.registrationId} />
-        <input type="hidden" name="participantId" value={assignment.participantId} />
-        <input type="hidden" name="eventId" value={assignment.eventId} />
-        <div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            Servizio
-            <select
-              name="serviceId"
-              defaultValue={assignment.currentServiceId ?? ""}
-              className="field bg-white font-normal"
-            >
-              <option value="">Senza servizio</option>
-              {serviceOptions.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            Stato
-            <select
-              name="status"
-              defaultValue={assignment.currentServiceStatus ?? "assigned"}
-              className="field bg-white font-normal"
-            >
-              <option value="assigned">Assegnato</option>
-              <option value="proposal_pending">Proposta inviata</option>
-              <option value="preference_pending">Preferenza da approvare</option>
-            </select>
-          </label>
-        </div>
-        <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-          Nota interna
-          <textarea
-            name="operatorNote"
-            defaultValue={assignment.service?.operatorNote ?? ""}
-            rows={3}
-            className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
-          />
-        </label>
-        <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          Salva servizio
-        </PendingSubmitButton>
-      </form>
-
-      <form
+      <ReliableForm
         action={updateParticipantOperationalTags}
         className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+        data-preserve-dashboard-scroll
       >
         <input type="hidden" name="sourceDashboard" value="capogruppo" />
+        <input type="hidden" name="returnTo" value={returnTo} />
         <input type="hidden" name="assignmentId" value={assignment.id} />
         <input type="hidden" name="registrationId" value={assignment.registrationId} />
         <input type="hidden" name="participantId" value={assignment.participantId} />
@@ -3162,7 +2249,7 @@ function AssignmentDetailCard({
         <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
           Salva
         </PendingSubmitButton>
-      </form>
+      </ReliableForm>
     </section>
   );
 }
@@ -3178,23 +2265,6 @@ function DetailBlock({
     <div className="rounded-md border border-[var(--peace-border)] bg-white p-4">
       <h4 className="text-sm font-semibold text-[var(--peace-ink)]">{title}</h4>
       <div className="mt-3 grid gap-2">{children}</div>
-    </div>
-  );
-}
-
-function DetailLine({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="grid gap-1 text-sm">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-        {label}
-      </dt>
-      <dd className="text-[var(--peace-ink)]">{children}</dd>
     </div>
   );
 }
@@ -3220,35 +2290,6 @@ function ScopeBadge({
   );
 }
 
-function OperationalTagList({
-  tags,
-  emptyLabel,
-}: {
-  tags: ParticipantOperationalTag[];
-  emptyLabel: string;
-}) {
-  if (tags.length === 0) {
-    return <span className="text-sm text-[var(--peace-muted)]">{emptyLabel}</span>;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {tags.map((tag) => (
-        <span
-          key={tag.id}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--peace-border)] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--peace-ink)]"
-        >
-          <span
-            aria-hidden="true"
-            className="size-2.5 rounded-full"
-            style={{ backgroundColor: tag.color }}
-          />
-          {tag.label}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 function ParticipantServiceSummary({
   service,
@@ -3340,211 +2381,6 @@ function StatusMessage({
   );
 }
 
-function toAssignmentView(
-  row: AssignmentRow,
-  copy: GroupLeaderCopy,
-  groups: GroupRow[]
-): AssignmentView | null {
-  const registration = relatedOne(row.registrations);
-  const participant = relatedOne(registration?.participants ?? null);
-  const group = relatedOne(row.groups);
-
-  if (!registration || !participant || !group) {
-    return null;
-  }
-
-  const tags = mapParticipantOperationalTags(participant.participant_operational_tags);
-  const service = mapParticipantEventService(
-    participant.participant_event_services,
-    participant.id
-  );
-  const parentGroup = group.parent_group_id
-    ? groups.find((candidate) => candidate.id === group.parent_group_id)
-    : null;
-
-  return {
-    id: row.id,
-    registrationId: row.registration_id,
-    eventId: registration.event_id,
-    participantId: participant.id,
-    groupId: row.group_id,
-    groupName: group.name ?? copy.groupFallback,
-    groupNodeType: group.node_type,
-    parentGroupId: group.parent_group_id,
-    parentGroupName: parentGroup?.name ?? null,
-    participantFirstName: participant.first_name,
-    participantLastName: participant.last_name,
-    participantName: formatParticipantName(
-      participant.first_name,
-      participant.last_name,
-      copy
-    ),
-    participantCode: participant.public_code,
-    participantEmail: getPrimaryContact(participant.participant_contacts)?.email ?? null,
-    participantPhone: getPrimaryContact(participant.participant_contacts)?.phone ?? null,
-    participantCity: relatedOne(participant.cities)?.name ?? participant.city_other,
-    participantCountry: relatedOne(participant.countries)?.name_it ?? participant.country_other,
-    participantPlace: formatPlace(
-      relatedOne(participant.cities)?.name ?? participant.city_other,
-      relatedOne(participant.countries)?.name_it ?? participant.country_other,
-      copy
-    ),
-    birthDate: participant.birth_date,
-    registrationStatus: registration.status,
-    submittedAt: registration.submitted_at,
-    status: row.status,
-    source: row.source,
-    confidence: row.confidence,
-    isCurrent: row.is_current ?? true,
-    assignmentReason: row.assignment_reason,
-    escalationDepth: row.escalation_depth ?? 0,
-    leaderInternalNote: row.leader_internal_note,
-    leaderNotificationReadAt: row.leader_notification_read_at,
-    leaderDecisionAt: row.leader_decision_at,
-    updatedAt: row.updated_at,
-    tags,
-    tagIds: tags.map((tag) => tag.id),
-    service,
-    currentServiceId: service?.serviceId ?? null,
-    currentServiceStatus: service?.status ?? null,
-    children: [...(registration.registration_children ?? [])].sort(
-      (first, second) => first.position - second.position
-    ),
-  };
-}
-
-function formatParticipantName(
-  firstName: string | null,
-  lastName: string | null,
-  copy: GroupLeaderCopy
-): string {
-  const name = [firstName, lastName].filter(Boolean).join(" ").trim();
-
-  return name || copy.participantFallback;
-}
-
-function getPrimaryContact(
-  contacts:
-    | Array<{
-        email: string | null;
-        phone: string | null;
-        is_primary: boolean | null;
-      }>
-    | null
-): { email: string | null; phone: string | null } | null {
-  if (!contacts || contacts.length === 0) {
-    return null;
-  }
-
-  return contacts.find((contact) => contact.is_primary) ?? contacts[0] ?? null;
-}
-
-function mapParticipantOperationalTags(
-  rows:
-    | Array<{
-        assigned_at: string | null;
-        operational_tags:
-          | {
-              id: string;
-              event_id: string;
-              label: string;
-              color: string;
-            }
-          | Array<{
-              id: string;
-              event_id: string;
-              label: string;
-              color: string;
-            }>
-          | null;
-      }>
-    | null
-): ParticipantOperationalTag[] {
-  return (rows ?? [])
-    .map((row) => {
-      const tag = relatedOne(row.operational_tags);
-
-      return tag
-        ? {
-            id: tag.id,
-            eventId: tag.event_id,
-            label: tag.label,
-            color: tag.color,
-            assignedAt: row.assigned_at,
-          }
-        : null;
-    })
-    .filter((tag): tag is ParticipantOperationalTag => Boolean(tag));
-}
-
-function mapParticipantEventService(
-  rows: Array<ParticipantEventServiceRelationRow> | null,
-  participantId: string
-): ParticipantEventService | null {
-  const row = rows?.[0] ?? null;
-
-  if (!row) {
-    return null;
-  }
-
-  const service = relatedOne(row.event_services);
-
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    registrationId: row.registration_id,
-    participantId,
-    serviceId: row.service_id,
-    serviceLabel: service?.label ?? "Servizio senza nome",
-    status:
-      row.status === "preference_pending" ||
-      row.status === "proposal_pending" ||
-      row.status === "assigned" ||
-      row.status === "declined"
-        ? row.status
-        : "assigned",
-    source:
-      row.source === "participant_preference" ||
-      row.source === "capogruppo" ||
-      row.source === "manager"
-        ? row.source
-        : "manager",
-    participantNote: row.participant_note,
-    operatorNote: row.operator_note,
-    updatedAt: row.updated_at,
-  };
-}
-
-function formatPlace(
-  city: string | null,
-  country: string | null,
-  copy: GroupLeaderCopy
-): string {
-  const parts = [city, country].filter(Boolean);
-
-  return parts.length > 0 ? parts.join(", ") : copy.notProvided;
-}
-
-function statusLabel(
-  status: string | null,
-  isCurrent: boolean,
-  copy: GroupLeaderCopy
-): string {
-  if (status === "confirmed" && isCurrent) {
-    return copy.statusLabels.confirmed;
-  }
-
-  if (status === "rejected") {
-    return copy.statusLabels.rejected;
-  }
-
-  if (!isCurrent) {
-    return copy.statusLabels.superseded;
-  }
-
-  return copy.statusLabels.probable;
-}
-
 function groupLinkStatusLabel(
   link: GroupLinkView,
   locale: SupportedLocale,
@@ -3605,82 +2441,6 @@ function dashboardToolTitle(
   return tool === "link" ? copy.manageLinks : copy.addParticipant;
 }
 
-function isPendingAssignment(assignment: AssignmentView): boolean {
-  return assignment.isCurrent && assignment.status === "probable";
-}
-
-function matchesAssignmentFilters(
-  assignment: AssignmentView,
-  filters: {
-    query: string;
-    contactQuery: string;
-    groupFilter: string;
-    tagFilter: string;
-  }
-): boolean {
-  return (
-    matchesAssignmentQuery(assignment, filters.query) &&
-    matchesAssignmentContact(assignment, filters.contactQuery) &&
-    matchesAssignmentGroup(assignment, filters.groupFilter) &&
-    matchesAssignmentTag(assignment, filters.tagFilter)
-  );
-}
-
-function matchesAssignmentQuery(
-  assignment: AssignmentView,
-  query: string
-): boolean {
-  if (!query) {
-    return true;
-  }
-
-  const normalizedQuery = query.toLowerCase();
-  const haystack = [assignment.participantName, assignment.participantCode]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return haystack.includes(normalizedQuery);
-}
-
-function matchesAssignmentContact(
-  assignment: AssignmentView,
-  query: string
-): boolean {
-  if (!query) {
-    return true;
-  }
-
-  const normalizedQuery = query.toLowerCase();
-
-  return [assignment.participantEmail, assignment.participantPhone]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase()
-    .includes(normalizedQuery);
-}
-
-function matchesAssignmentGroup(
-  assignment: AssignmentView,
-  groupFilter: string
-): boolean {
-  return groupFilter === "all" || assignment.groupId === groupFilter;
-}
-
-function matchesAssignmentTag(
-  assignment: AssignmentView,
-  tagFilter: string
-): boolean {
-  if (tagFilter === "all") {
-    return true;
-  }
-
-  if (tagFilter === "none") {
-    return assignment.tagIds.length === 0;
-  }
-
-  return assignment.tagIds.includes(tagFilter);
-}
 
 function buildGroupFilterOptions(
   assignments: AssignmentView[],
@@ -3695,21 +2455,6 @@ function buildGroupFilterOptions(
   return [...groups.entries()]
     .map(([id, name]) => ({ id, name }))
     .sort((left, right) => left.name.localeCompare(right.name, locale));
-}
-
-function sortAssignments(
-  assignments: AssignmentView[],
-  locale: SupportedLocale
-): AssignmentView[] {
-  return [...assignments].sort(
-    (left, right) =>
-      dateTimeValue(right.submittedAt) - dateTimeValue(left.submittedAt) ||
-      left.participantName.localeCompare(right.participantName, locale)
-  );
-}
-
-function dateTimeValue(value: string | null): number {
-  return value ? new Date(value).getTime() : 0;
 }
 
 function getManualRegistrationEventDays(
