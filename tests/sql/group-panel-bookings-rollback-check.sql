@@ -172,6 +172,33 @@ begin
  exception when exclusion_violation then null; end;
  result := public.book_group_panel(c.event_id,c.overlapping_section_id,array[c.second_registration_id]);
  if result->>'count' <> '1' then raise exception 'second booking failed'; end if;
+ begin
+  perform public.set_group_panel_booking(c.event_id,c.first_section_id,s.outside_registration_id,false);
+  raise exception 'outside scope cancellation accepted';
+ exception when insufficient_privilege then null; end;
+ result := public.set_group_panel_booking(c.event_id,c.first_section_id,c.first_registration_id,false);
+ if result->>'count' <> '1' or result->>'seats' <> '2' then raise exception 'cancellation did not release family seats'; end if;
+ result := public.set_group_panel_booking(c.event_id,c.first_section_id,c.first_registration_id,false);
+ if result->>'count' <> '0' then raise exception 'cancellation retry not idempotent'; end if;
+ result := public.get_group_panel_booking_view(c.event_id,c.first_section_id);
+ if exists(select 1 from jsonb_array_elements(result->'participants') p where p->>'registrationId'=c.first_registration_id::text and p->>'status'<>'available') then raise exception 'cancellation did not update status'; end if;
+ result := public.set_group_panel_booking(c.event_id,c.first_section_id,c.first_registration_id,true);
+ if result->>'count' <> '1' or result->>'seats' <> '2' then raise exception 'rebooking failed'; end if;
+ begin
+  perform public.set_group_panel_booking(c.event_id,c.overlapping_section_id,c.first_registration_id,true);
+  raise exception 'row action accepted overlap';
+ exception when exclusion_violation then null; end;
+ begin
+  perform public.set_group_panel_booking(c.event_id,c.first_section_id,c.second_registration_id,true);
+  raise exception 'row action accepted invalid booking';
+ exception when exclusion_violation then null; end;
+ perform public.set_group_panel_booking(c.event_id,c.overlapping_section_id,c.second_registration_id,false);
+ begin
+  perform public.set_group_panel_booking(c.event_id,c.first_section_id,c.second_registration_id,true);
+  raise exception 'row action exceeded capacity';
+ exception when sqlstate 'P0001' then if sqlerrm not like '%full%' then raise; end if; end;
+ perform public.set_group_panel_booking(c.event_id,c.overlapping_section_id,c.second_registration_id,true);
+ raise notice 'PASS: scoped cancellation, family seats, repeated cancellation, rebooking and overlap';
  raise notice 'PASS: descendant scope, batch rollback, children, capacity, overlap, duplicates and retry';
 end $$;
 reset role;
@@ -182,6 +209,7 @@ do $$ declare c p6_test_context%rowtype; begin
  select * into c from p6_test_context;
  begin perform public.get_group_panel_booking_view(c.event_id,c.first_section_id); raise exception 'nonleader could read'; exception when insufficient_privilege then null; end;
  begin perform public.book_group_panel(c.event_id,c.first_section_id,array[c.second_registration_id]); raise exception 'nonleader could book'; exception when insufficient_privilege then null; end;
+ begin perform public.set_group_panel_booking(c.event_id,c.first_section_id,c.second_registration_id,false); raise exception 'unauthorized cancellation: nonleader could book'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub', (select first_user_id::text from p6_test_context), true);
@@ -190,6 +218,7 @@ set local role authenticated;
 do $$ declare c p6_test_context%rowtype; begin
  select * into c from p6_test_context;
  begin perform public.book_group_panel(c.event_id,c.first_section_id,array[c.first_registration_id]); raise exception 'viewer with membership could book'; exception when insufficient_privilege then null; end;
+ begin perform public.set_group_panel_booking(c.event_id,c.first_section_id,c.first_registration_id,false); raise exception 'unauthorized cancellation: viewer with membership could book'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 delete from public.event_user_roles where user_id=(select first_user_id from p6_test_context) and role='manager_viewer';
@@ -200,10 +229,11 @@ do $$ declare c p6_test_context%rowtype; result jsonb; begin
  result:=public.get_group_panel_booking_view(c.event_id,c.first_section_id);
  if jsonb_array_length(result->'participants')<>1 then raise exception 'deleted registration visible'; end if;
  begin perform public.book_group_panel(c.event_id,c.first_section_id,array[c.second_registration_id]); raise exception 'deleted registration bookable'; exception when insufficient_privilege then null; end;
+ begin perform public.set_group_panel_booking(c.event_id,c.first_section_id,c.second_registration_id,false); raise exception 'unauthorized cancellation: deleted registration bookable'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 do $$ begin
- if has_function_privilege('anon','public.book_group_panel(uuid,uuid,uuid[])','execute') or
+ if has_function_privilege('anon','public.set_group_panel_booking(uuid,uuid,uuid,boolean)','execute') or has_function_privilege('anon','public.book_group_panel(uuid,uuid,uuid[])','execute') or
     has_function_privilege('anon','public.get_group_panel_booking_view(uuid,uuid)','execute') then raise exception 'anon can call RPC'; end if;
  raise notice 'PASS: nonleader, viewer, anonymous and deleted registration guards';
 end $$;

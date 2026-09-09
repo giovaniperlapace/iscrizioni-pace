@@ -3227,3 +3227,24 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Il selettore panel riunisce titolo, data, inizio/fine, sala e pubblico. Non
   ripetere questi dettagli sotto il selettore: la riga sottostante contiene
   soltanto i posti disponibili, allineati a sinistra anche su mobile.
+
+### Azioni per partecipante nei panel — 2026-09-09
+
+- Sostituiscono la selezione multipla e il riepilogo: ogni riga mostra lo stato
+  `Iscritto`/`Non iscritto` separato dal pulsante `Disiscrivi`/`Iscrivi`.
+  Sovrapposizione e posti insufficienti sono motivi espliciti di disabilitazione.
+  Feedback nella riga, blocco delle azioni durante il salvataggio, refresh anche
+  dopo errori per aggiornare disponibilità e stato; filtri conservati.
+- `setGroupPanelBooking` passa una sola iscrizione e uno stato desiderato
+  booleano alla RPC autenticata `set_group_panel_booking`, mai un toggle.
+  La prenotazione riusa i controlli atomici di `book_group_panel`; la rimozione
+  ricontrolla evento, membership, scope e iscrizione attiva sotto lock,
+  aggiorna la scelta a `no` e libera la sezione effettivamente prenotata.
+  I figli seguono il genitore in entrambe le operazioni. Retry idempotenti;
+  audit `panel.group_booking_cancelled` solo quando la scelta cambia.
+- Migration `20260909210000_group_panel_row_actions.sql`: nessun ampliamento
+  RLS, nessun invio email. Test SQL con rollback in
+  `tests/sql/group-panel-bookings-rollback-check.sql`: rimozione, figli,
+  nuova iscrizione, capienza, sovrapposizioni, scope, viewer e anon.
+- La descrizione di Aggiorna disponibilità riguarda solo posti e iscrizioni:
+  non esiste più una selezione da azzerare. Testi e azioni in sette lingue.

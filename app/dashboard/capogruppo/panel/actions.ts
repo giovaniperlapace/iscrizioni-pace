@@ -6,15 +6,15 @@ import { getCurrentOperationalEventId } from "@/lib/events/current";
 import { groupBookingError, validGroupBookingSelection, type GroupBookingResult } from "@/lib/panels/group-bookings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function bookGroupPanel(sectionId: string, registrationIds: string[]): Promise<GroupBookingResult> {
-  if (!validGroupBookingSelection(sectionId, registrationIds)) return {error: "failure"};
+export async function setGroupPanelBooking(sectionId: string, registrationId: string, booked: boolean): Promise<GroupBookingResult> {
+  if (!validGroupBookingSelection(sectionId, [registrationId]) || typeof booked !== "boolean") return {error: "failure"};
   const db = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(db, "capogruppo");
   if (!auth || auth.dashboardRole !== "capogruppo") return {error: "scopeError"};
   const eventId = await getCurrentOperationalEventId(db);
   if (!eventId) return {error: "scopeError"};
-  const {data, error} = await db.rpc("book_group_panel", {
-    p_event_id: eventId, p_section_id: sectionId, p_registration_ids: [...new Set(registrationIds)],
+  const {data, error} = await db.rpc("set_group_panel_booking", {
+    p_event_id: eventId, p_section_id: sectionId, p_registration_id: registrationId, p_booked: booked,
   });
   if (error) {
     console.error("[group-panel:book]", error.code, error.message);
