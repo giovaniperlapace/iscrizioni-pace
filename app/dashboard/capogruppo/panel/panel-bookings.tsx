@@ -30,7 +30,7 @@ export function GroupPanelBookings({view, sectionId, locale}: {view: GroupPanelV
     startTransition(async () => {
       try {
         const response = await setGroupPanelBooking(panel.sectionId, registrationId, booked);
-        setResult({registrationId, booked, response});
+        setResult("error" in response ? {registrationId, booked, response} : null);
         router.refresh();
       } catch {
         setResult({registrationId, booked, response: {error: "failure"}});

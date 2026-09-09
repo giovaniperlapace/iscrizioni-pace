@@ -3248,3 +3248,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   nuova iscrizione, capienza, sovrapposizioni, scope, viewer e anon.
 - La descrizione di Aggiorna disponibilità riguarda solo posti e iscrizioni:
   non esiste più una selezione da azzerare. Testi e azioni in sette lingue.
+
+- Su richiesta dell’utente, niente messaggi di successo dopo iscrizione o
+  rimozione: stato, pulsante e posti aggiornati confermano l’esito. Restano
+  gli errori nella riga interessata.
