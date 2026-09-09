@@ -1,4 +1,4 @@
-import { GROUP_BOOKING_COPY } from "@/lib/panels/group-booking-copy";
+import { LeaderSectionNavigation } from "@/app/dashboard/capogruppo/section-navigation";
 import { ManualEmailFields } from "./manual-email-fields";
 import { LeaderParticipantQr } from "./participant-qr";
 import { loadLeaderAssignmentQr } from "@/lib/groups/leader-qr.server";
@@ -1335,7 +1335,7 @@ export default async function CapogruppoDashboardPage({
           <DashboardAreaDescription>
             {copy.areaDescription}
           </DashboardAreaDescription>
-          <Link href="/dashboard/capogruppo/panel" className="inline-flex min-h-11 w-fit items-center rounded-md bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white">{GROUP_BOOKING_COPY[locale].title}</Link>
+          <LeaderSectionNavigation active="participants" locale={locale} />
         </header>
 
         <StatusMessage

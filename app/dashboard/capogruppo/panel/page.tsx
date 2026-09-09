@@ -1,3 +1,4 @@
+import { LeaderSectionNavigation } from "@/app/dashboard/capogruppo/section-navigation";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
@@ -21,8 +22,8 @@ export default async function GroupPanelPage({searchParams}: {searchParams: Prom
   return <main className="app-page text-[var(--peace-ink)]">
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
       <DashboardRoleTabs activeRole="capogruppo" eventRoles={auth.eventRoles} />
-      <Link className="text-sm font-semibold text-[var(--peace-blue-800)] underline" href="/dashboard/capogruppo">← {copy.back}</Link>
-      <header><h1 className="text-2xl font-semibold">{copy.title}</h1><p className="mt-2 text-[var(--peace-muted)]">{copy.intro}</p></header>
+      <LeaderSectionNavigation active="panels" locale={locale} />
+      <header><h1 className="text-xl font-semibold text-[var(--peace-blue-900)]">{copy.title}</h1><p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">{copy.intro}</p></header>
       {result?.data && !result.error ? <GroupPanelBookings key={section ?? "none"} view={result.data as GroupPanelView} sectionId={section} locale={locale} /> :
         <div role="alert" className="surface-panel p-5"><p>{copy.loadError}</p><Link href="/dashboard/capogruppo/panel" className="mt-3 inline-block underline">{copy.refresh}</Link></div>}
     </section>

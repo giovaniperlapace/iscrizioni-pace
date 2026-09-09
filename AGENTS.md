@@ -3210,3 +3210,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   l'hostname sslip.io. Per le operazioni di diagnosi e preparazione account e'
   stato usato l'IP verificato mantenendo SNI e verifica HTTPS; nessuna modifica
   al DNS globale e nessuna disattivazione della verifica certificati.
+
+### Navigazione e stile panel capogruppo — 2026-09-09
+
+- `LeaderSectionNavigation` condivide tra elenco partecipanti e pagina panel
+  il menu a due schede con icone, stato attivo e `aria-current`, coerente con
+  le sezioni della gestione iscritti. Sostituisce pulsante isolato e link indietro.
+- La vista panel usa pulsanti `btn-primary`/`btn-secondary`, token bordo
+  `--peace-border`, icone per luogo/orario e aggiornamento, evidenziazione delle
+  righe selezionate e badge della disponibilita'.
+- `Aggiorna disponibilità` ha una descrizione in sette lingue, alla sua destra
+  e sotto su mobile, collegata con `aria-describedby`. Spiega il ricaricamento
+  dei posti/iscrizioni e l'azzeramento della selezione. Comportamento e RPC
+  invariati; nessuna migration.
