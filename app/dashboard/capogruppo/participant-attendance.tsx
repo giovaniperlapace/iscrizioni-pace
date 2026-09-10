@@ -1,3 +1,4 @@
+import { SuccessMessage } from "@/components/success-message";
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ManualAttendanceFields } from "./manual-attendance-fields";
@@ -15,7 +16,7 @@ export function LeaderParticipantAttendance({ assignmentId, returnTo, attendance
   action: (data: FormData) => Promise<FormFailure | void>;
 }) {
   return <ReliableForm action={action} locale={locale} className="grid min-w-0 gap-3" data-preserve-dashboard-scroll>
-    {savedMessage ? <p role="status" className="rounded-md border border-[#bad2b8] bg-[#edf7ea] p-3 text-sm text-[#2f6541]">{savedMessage}</p> : null}
+    {savedMessage ? <SuccessMessage locale={locale} clearQuery className="rounded-md border border-[#bad2b8] bg-[#edf7ea] p-3 text-sm text-[#2f6541]">{savedMessage}</SuccessMessage> : null}
     <input type="hidden" name="returnTo" value={returnTo} />
     <input type="hidden" name="assignmentId" value={assignmentId} />
     <ManualAttendanceFields

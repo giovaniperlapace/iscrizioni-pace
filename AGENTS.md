@@ -4,6 +4,23 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Messaggi di successo temporanei — 2026-09-10
+
+- `SuccessMessage` chiude le conferme dopo 5 secondi o tramite ×, con
+  etichetta accessibile nelle sette lingue e pulsante non submit.
+  Usato nelle dashboard admin/manager/capogruppo/partecipante, nella scheda
+  presenze, nei salvataggi rapidi, nell’importazione e nel salvataggio modelli email.
+- I messaggi server ricevono una chiave per risposta, così salvataggi consecutivi
+  con lo stesso testo mostrano di nuovo la conferma. Alla chiusura si rimuovono
+  dall’URL solo i parametri di successo, senza navigazione né perdita di filtri,
+  scheda aperta, hash o messaggi di errore. I messaggi client si rimontano per
+  ciascuna nuova conferma.
+- Errori, avvisi, stato di operazioni in corso e istruzioni di accesso/verifica
+  email restano visibili; anche i riepiloghi campagne con possibili invii falliti
+  o programmati restano persistenti. Nessuna modifica a dati, permessi o RLS.
+- Verifica browser: `tests/browser/success-message.mjs`, fixture sintetica,
+  timer reale, chiusura manuale, conferme ripetute, URL conservato, sette lingue/mobile.
+
 ## Giorni di presenza nella scheda capogruppo — 2026-09-10
 
 - La scheda mostra le presenze correnti e permette di salvarle per giorno e

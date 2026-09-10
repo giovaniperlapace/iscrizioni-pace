@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import { LeaderParticipantAttendance } from "./participant-attendance";
 import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
 import { ManualPhoneFields } from "@/app/dashboard/capogruppo/manual-phone-fields";
@@ -1341,12 +1343,13 @@ export default async function CapogruppoDashboardPage({
         </header>
 
         <StatusMessage
+          locale={locale}
           error={params.error ?? params.groupLinkError}
           saved={params.saved ?? params.groupLinkSaved ?? params.manualSaved}
           copy={copy}
         />
 
-        <StatusMessage error={params.manualError} saved={undefined} copy={copy} />
+        <StatusMessage locale={locale} error={params.manualError} saved={undefined} copy={copy} />
 
         <AssignedScopeSection
           assignedGroups={assignedGroups}
@@ -2067,7 +2070,7 @@ function AssignmentDetailCard({
       {attendance ? (
         <LeaderParticipantAttendance assignmentId={assignment.id} returnTo={returnTo}
           attendance={attendance} locale={locale} copy={copy.attendance}
-          action={updateGroupLeaderAttendance} savedMessage={attendanceSaved ? copy.saved : undefined} />
+          key={attendanceSaved ? randomUUID() : assignment.id} action={updateGroupLeaderAttendance} savedMessage={attendanceSaved ? copy.saved : undefined} />
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -2364,19 +2367,21 @@ function TagCheckboxGrid({
 }
 
 function StatusMessage({
+  locale,
   error,
   saved,
   copy,
 }: {
+  locale: SupportedLocale;
   error: string | undefined;
   saved: string | undefined;
   copy: GroupLeaderCopy;
 }) {
   if (saved) {
     return (
-      <div className="rounded-lg border border-[#bad2b8] bg-[#edf7ea] p-4 text-sm text-[#2f6541]">
+      <SuccessMessage key={randomUUID()} clearQuery locale={locale} className="rounded-lg border border-[#bad2b8] bg-[#edf7ea] p-4 text-sm text-[#2f6541]">
         {copy.saved}
-      </div>
+      </SuccessMessage>
     );
   }
 

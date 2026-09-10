@@ -1,4 +1,6 @@
 "use client";
+
+import { SuccessMessage } from "@/components/success-message";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -175,7 +177,7 @@ export function ImportPanel() {
         </p>
       )}
       {success && (
-        <p role="status" className="status-success rounded-xl border p-3 text-sm">
+        <SuccessMessage key={success} className="status-success rounded-xl border p-3 text-sm">
           {success}{" "}
           <Link
             className="underline"
@@ -183,7 +185,7 @@ export function ImportPanel() {
           >
             Apri gli iscritti
           </Link>
-        </p>
+        </SuccessMessage>
       )}
       {preview && (
         <>

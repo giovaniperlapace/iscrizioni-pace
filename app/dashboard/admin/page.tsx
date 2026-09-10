@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
 import { OperationalRoleRemoval } from "@/components/operational-role-removal";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
@@ -2448,7 +2450,7 @@ function StatusMessage({
 }) {
   if (saved || adminSaved || groupSaved || groupLinkSaved || roleSaved) {
     return (
-      <p className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
+      <SuccessMessage key={randomUUID()} clearQuery className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
         {groupSaved
           ? "Gruppo aggiornato."
           : groupLinkSaved
@@ -2464,7 +2466,7 @@ function StatusMessage({
               : saved === "created"
                 ? "Evento futuro creato in bozza."
                 : "Configurazione apertura aggiornata."}
-      </p>
+      </SuccessMessage>
     );
   }
 

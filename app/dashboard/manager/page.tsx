@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
 import { OperationalRoleRemoval } from "@/components/operational-role-removal";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
@@ -2390,7 +2392,7 @@ function StatusMessage({
 }) {
   if (saved || managerSaved || groupLinkSaved || groupSaved || serviceSaved || roleSaved) {
     return (
-      <p className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
+      <SuccessMessage key={randomUUID()} clearQuery className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
         {groupSaved
           ? "Gruppo aggiornato."
           : groupLinkSaved
@@ -2404,7 +2406,7 @@ function StatusMessage({
           : managerSaved
             ? "Gestione iscritti aggiornata."
             : "Configurazione apertura aggiornata."}
-      </p>
+      </SuccessMessage>
     );
   }
 

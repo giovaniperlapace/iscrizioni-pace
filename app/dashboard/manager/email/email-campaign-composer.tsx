@@ -1,5 +1,7 @@
 "use client";
 
+import { SuccessMessage } from "@/components/success-message";
+
 import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -103,6 +105,8 @@ export function EmailCampaignComposer({
   const [testSent, setTestSent] = useState(false);
   const [showSendConfirmation, setShowSendConfirmation] = useState(false);
   const [notice, setNotice] = useState("");
+  const [noticeDismissible, setNoticeDismissible] = useState(false);
+  const [noticeVersion, setNoticeVersion] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const selectFilteredCheckboxRef = useRef<HTMLInputElement>(null);
@@ -210,6 +214,7 @@ export function EmailCampaignComposer({
     setBusy(true);
     setError("");
     setNotice("");
+    setNoticeDismissible(false);
     try {
       const response = await fetch("/api/email-campaigns", {
         method: "POST",
@@ -235,6 +240,7 @@ export function EmailCampaignComposer({
     setBusy(true);
     setError("");
     setNotice("");
+    setNoticeDismissible(false);
     try {
       const formData = new FormData();
       formData.set("action", "preview");
@@ -280,6 +286,7 @@ export function EmailCampaignComposer({
     setTestSent(false);
     setShowSendConfirmation(false);
     setNotice("");
+    setNoticeDismissible(false);
     setError("");
   }
 
@@ -296,6 +303,7 @@ export function EmailCampaignComposer({
     setTestSent(false);
     setShowSendConfirmation(false);
     setNotice("");
+    setNoticeDismissible(false);
     setError("");
   }
 
@@ -310,6 +318,7 @@ export function EmailCampaignComposer({
     setGroupMembershipFilter("all");
     resetPreview();
     setNotice("");
+    setNoticeDismissible(false);
     setError("");
   }
 
@@ -376,6 +385,8 @@ export function EmailCampaignComposer({
         ...current.filter((item) => item.id !== updatedTemplate.id),
       ]);
       setTemplateId(updatedTemplate.id);
+      setNoticeDismissible(true);
+      setNoticeVersion(version => version + 1);
       setNotice(
         templateSaveMode === "update"
           ? "Modello aggiornato."
@@ -421,7 +432,9 @@ export function EmailCampaignComposer({
       </section>
 
       {error ? <p className="status-error">{error}</p> : null}
-      {notice ? <p className="status-success">{notice}</p> : null}
+      {notice ? noticeDismissible
+        ? <SuccessMessage key={noticeVersion} className="status-success">{notice}</SuccessMessage>
+        : <p className="status-success">{notice}</p> : null}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(17rem,1fr)]">
         <section className="surface-card grid gap-5 p-5 sm:p-6">

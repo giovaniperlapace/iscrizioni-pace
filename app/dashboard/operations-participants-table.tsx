@@ -1,5 +1,7 @@
 "use client";
 
+import { SuccessMessage } from "@/components/success-message";
+
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -714,13 +716,7 @@ export function OperationsParticipantsTable({
           Scarica un file Excel con gli iscritti filtrati e solo le colonne visibili selezionate.
         </p>
       </div>
-      <p
-        role="status"
-        aria-live="polite"
-        className="my-2 text-sm text-[var(--peace-blue-800)]"
-      >
-        {notice}
-      </p>
+      {notice ? <SuccessMessage key={notice} className="my-2 text-sm text-[var(--peace-blue-800)]">{notice}</SuccessMessage> : null}
       <div
         className="overflow-x-auto rounded-md border border-[var(--peace-border)]"
         role="region"
