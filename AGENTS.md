@@ -4,6 +4,34 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Giorni di presenza nella scheda capogruppo — 2026-09-10
+
+- La scheda mostra le presenze correnti e permette di salvarle per giorno e
+  fascia mattina/pomeriggio, inclusa la vigilia pomeriggio, oppure come da
+  confermare. `LeaderParticipantAttendance` riusa `ManualAttendanceFields`,
+  ora inizializzabile e localizzato nelle sette lingue, con scorrimento interno
+  della griglia su mobile. Nessun salvataggio automatico; errori nel form
+  conservano le scelte. Ritorno alla scheda con filtri/preferenze conservati.
+- `loadLeaderAttendance` ricava l’iscrizione dall’assegnazione corrente dopo
+  verifica della membership nell’evento corrente e dello scope, inclusi i
+  discendenti attivi. Esclude iscrizioni eliminate e interrompe la lettura
+  in caso di errore. I vecchi giorni interi vengono mostrati come due fasce.
+- `updateGroupLeaderAttendance` autentica il capogruppo e valida le date.
+  La RPC `update_group_leader_attendance` ripete i controlli su evento,
+  membership e assegnazione; sostituzione delle presenze e audit sono atomici.
+  Attore dal server, nessun ID iscrizione/evento dal form. RPC riservata a
+  `service_role`; nessun ampliamento delle policy RLS esistenti.
+- Migration `20260910120000_leader_attendance.sql` applicata e registrata in
+  produzione il 2026-09-10, dopo i test su PostgreSQL temporaneo e prima del
+  push. RPC/PostgREST e privilegi verificati; prova sullo schema reale in
+  transazione integralmente annullata. Hash/conteggi dei record preesistenti
+  invariati su sei tabelle e 89 policy invariate. Una nuova iscrizione arrivata
+  durante i controlli è stata distinta tramite `created_at` e audit ordinario.
+  Nessuna modifica persistente ai partecipanti durante il collaudo. Snapshot originari, QR e scelte dei singoli
+  momenti restano separati; i figli condividono le presenze familiari esistenti.
+- Test: `tests/leader-attendance.test.mts`, `tests/sql/leader-attendance.sql`
+  e `tests/browser/leader-attendance.mjs` (fixture sintetica desktop/mobile).
+
 ## Build riproducibile — 2026-09-09
 
 - Prima delle verifiche di rilascio confrontare le versioni installate con

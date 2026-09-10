@@ -1,3 +1,5 @@
+import { LeaderParticipantAttendance } from "./participant-attendance";
+import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
 import { ManualPhoneFields } from "@/app/dashboard/capogruppo/manual-phone-fields";
 import { ManualEmailFields } from "./manual-email-fields";
 import { LeaderParticipantQr } from "./participant-qr";
@@ -17,6 +19,7 @@ import {
   updateGroupLeaderAssignment,
   updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
+  updateGroupLeaderAttendance,
   updateParticipantOperationalTags,
 } from "@/app/actions";
 import {
@@ -1315,11 +1318,12 @@ export default async function CapogruppoDashboardPage({
       ? assignments.find((assignment) => assignment.id === params.assignmentId) ?? null
       : null;
 
-  const selectedQr = selectedAssignment
-    ? await loadLeaderAssignmentQr(
-        serviceSupabase, auth.user.id, currentEventId, selectedAssignment.id
-      )
-    : null;
+  const [selectedQr, selectedAttendance] = selectedAssignment
+    ? await Promise.all([
+        loadLeaderAssignmentQr(serviceSupabase, auth.user.id, currentEventId, selectedAssignment.id),
+        loadLeaderAttendance(serviceSupabase, auth.user.id, currentEventId, selectedAssignment.id),
+      ])
+    : [null, null];
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -1420,6 +1424,8 @@ export default async function CapogruppoDashboardPage({
             <AssignmentDetailCard
               returnTo={returnTo}
               qr={selectedQr}
+              attendance={selectedAttendance}
+              attendanceSaved={params.saved === "attendance"}
               locale={locale}
               assignment={selectedAssignment}
               tagOptions={operationalTags}
@@ -1864,7 +1870,7 @@ function ManualRegistrationSection({
             {copy.birthDate}
             <input name="birthDate" type="date" className="field" />
           </label>
-          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} />
+          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} />
           <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields
             locale={locale}
@@ -2016,6 +2022,8 @@ function AssignmentFilters({
 }
 
 function AssignmentDetailCard({
+  attendanceSaved,
+  attendance,
   qr,
   locale,
   returnTo,
@@ -2025,6 +2033,8 @@ function AssignmentDetailCard({
 }: {
   assignment: AssignmentView;
   qr: RegistrationQrPreview | null;
+  attendance: Awaited<ReturnType<typeof loadLeaderAttendance>>;
+  attendanceSaved: boolean;
   locale: SupportedLocale;
   returnTo: string;
   tagOptions: OperationalTagOption[];
@@ -2053,6 +2063,12 @@ function AssignmentDetailCard({
         participantCode={assignment.participantCode}
         locale={locale}
       />
+
+      {attendance ? (
+        <LeaderParticipantAttendance assignmentId={assignment.id} returnTo={returnTo}
+          attendance={attendance} locale={locale} copy={copy.attendance}
+          action={updateGroupLeaderAttendance} savedMessage={attendanceSaved ? copy.saved : undefined} />
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <DetailBlock title={copy.detail.identity}>

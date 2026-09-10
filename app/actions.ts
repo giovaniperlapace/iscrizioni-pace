@@ -1,5 +1,8 @@
 "use server";
 
+import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
+import { parseLeaderAttendance } from "@/lib/groups/leader-attendance";
+
 import { leaderReturnPath } from "@/lib/groups/leader-table";
 import { operationsReturnPath } from "@/lib/registrations/operations-table";
 
@@ -898,6 +901,33 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
+}
+
+export async function updateGroupLeaderAttendance(formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "capogruppo");
+  if (!auth || auth.dashboardRole !== "capogruppo") redirect("/login");
+  const assignmentId = optionalText(formData.get("assignmentId"));
+  if (!assignmentId || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(assignmentId)) {
+    return formFailure([{ field: null, code: "forbidden" }]);
+  }
+  const db = createSupabaseServiceClient();
+  try {
+    const eventId = await getCurrentOperationalEventId(db);
+    const current = eventId ? await loadLeaderAttendance(db, auth.user.id, eventId, assignmentId) : null;
+    if (!current) return formFailure([{ field: null, code: "forbidden" }]);
+    const input = parseLeaderAttendance(formData, current.startsOn, current.endsOn);
+    if (!input) return formFailure([{ field: "availabilitySlots", code: "attendance" }]);
+    const { error } = await db.rpc("update_group_leader_attendance", {
+      p_assignment_id: assignmentId, p_actor_user_id: auth.user.id,
+      p_unknown: input.unknown, p_slots: input.slots,
+    });
+    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : "failed" }]);
+  } catch {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  for (const path of ["/dashboard/capogruppo", "/dashboard/partecipante", "/dashboard/manager", "/dashboard/admin"]) revalidatePath(path);
+  redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId, saved: "attendance" }));
 }
 
 export async function updateGroupLeaderParticipantContact(formData: FormData) {

@@ -278,13 +278,13 @@ test("page only requests QR after auth and selection in the authorized assignmen
   const page = readFileSync("app/dashboard/capogruppo/page.tsx", "utf8");
   assert.ok(
     page.indexOf('auth.dashboardRole !== "capogruppo"') <
-      page.indexOf("const selectedQr"),
+      page.indexOf("const [selectedQr, selectedAttendance]"),
   );
   assert.match(
     page,
     /assignments.find\(\(assignment\) => assignment.id === params.assignmentId\)/,
   );
-  assert.match(page, /selectedAssignment\s*\? await loadLeaderAssignmentQr/);
+  assert.match(page, /selectedAssignment\s*\? await Promise\.all\(\[\s*loadLeaderAssignmentQr/);
   assert.match(page, /auth.user.id, currentEventId, selectedAssignment.id/);
   assert.match(
     readFileSync("app/dashboard/partecipante/page.tsx", "utf8"),
