@@ -1852,7 +1852,6 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     ? await sendAccountAccessEmail(serviceSupabase, {
         email: parsed.value.email,
         name: `${parsed.value.firstName} ${parsed.value.lastName}`.trim(),
-        locale: parsed.value.preferredLocale,
         siteLink: getAppUrl(),
         eventId: groupRow.event_id,
         actorUserId: auth.user.id,
@@ -2342,7 +2341,7 @@ export async function assignGroupLeader(formData: FormData) {
   if (mode === "new") {
     const sent = await sendAccountAccessEmail(serviceSupabase, {
       email: normalizeEmail(formData.get("email")), name: leader.fullName,
-      role: "capogruppo", siteLink: getAppUrl(), eventId: groupRow.event_id,
+      role: "capogruppo", siteLink: getAppUrl(), eventId: groupRow.event_id, groupId: groupRow.id,
       actorUserId: auth.user.id, entityId: leader.userId,
     });
     if (!sent) {
@@ -2554,7 +2553,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   if (sendInvite) {
     const sent = await sendAccountAccessEmail(serviceSupabase, {
       email, name: fullName, role, siteLink: getAppUrl(),
-      eventId: roleEventId, actorUserId: auth.user.id, entityId: userId!,
+      eventId: roleEventId, groupId: roleGroupId, actorUserId: auth.user.id, entityId: userId!,
     });
     if (!sent) {
       revalidatePath("/dashboard/admin");

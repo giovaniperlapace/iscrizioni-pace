@@ -19,7 +19,7 @@ test("access instructions are localized, escaped, and use a stable URL without c
     assert.ok(result.text.includes("registrationspeace@santegidio.org"));
   }
   assert.throws(() => renderAccountAccessEmail({ name: "Test", siteLink: "javascript:alert(1)" }));
-  const role = renderAccountAccessEmail({ name: "Test", siteLink: "https://example.test", role: "manager_viewer" });
+  const role = renderAccountAccessEmail({ name: "Test", siteLink: "https://example.test", role: "manager_viewer", locale: "it" });
   assert.match(role.subject, /sola lettura/);
   assert.match(role.text, /La mia iscrizione/);
 });
@@ -74,21 +74,23 @@ test("historical preflight pages beyond 1,000 and aborts on a read failure", asy
 test("SMTP success/failure is audited truthfully and audit failure never repeats an accepted send", async () => {
   const source = readFileSync(new URL("../lib/email/account-access.server.ts", import.meta.url), "utf8");
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  for (const smtpFails of [false, true]) for (const auditFails of [false, true]) {
+  for (const smtpFails of [false, true]) for (const auditFails of [false, true]) for (const localeFails of [false, true]) {
     let sends = 0; const logs: Record<string, unknown>[] = [];
     const exports: Record<string, (...args: unknown[]) => Promise<boolean>> = {};
     new Function("require", "exports", output)((id: string) => {
       if (id.includes("node:crypto")) return { createHash: () => ({ update: () => ({ digest: () => "hash" }) }) };
       if (id.includes("account-access.ts")) return { renderAccountAccessEmail };
-      if (id.includes("smtp")) return { sendTransactionalEmail: async () => { sends++; if (smtpFails) throw Error("private@email.test"); } };
+      if (id.includes("group-locale.server")) return { loadRegistrationEmailLocale: async () => { if (localeFails) throw Error("country read failed"); return { locale: "it", countryIso2: "IT", groupId: "group" }; } };
+      if (id.includes("smtp")) return { sendTransactionalEmail: async (mail: { subject: string }) => { assert.equal(mail.subject, ACCESS_EMAIL_COPY.it.subject); sends++; if (smtpFails) throw Error("private@email.test"); } };
       throw Error(id);
     }, exports);
     const result = await exports.sendAccountAccessEmail({ from: () => ({ insert: async (row: Record<string, unknown>) => {
       logs.push(row); return { error: auditFails ? Error("audit failed") : null };
-    } }) }, { name: "Synthetic", siteLink: "https://example.test", email: "private@email.test", eventId: "event", actorUserId: "actor", entityId: "reg" });
-    assert.equal(result, !smtpFails); assert.equal(sends, 1);
-    assert.match(String(logs[0].action), smtpFails ? /_failed$/ : /_(sent|simulated)$/);
+    } }) }, { name: "Synthetic", siteLink: "https://example.test", email: "private@email.test", eventId: "event", actorUserId: "actor", entityId: "reg", locale: "en" });
+    assert.equal(result, !smtpFails && !localeFails); assert.equal(sends, localeFails ? 0 : 1);
+    assert.match(String(logs[0].action), smtpFails || localeFails ? /_failed$/ : /_(sent|simulated)$/);
     assert.ok(!JSON.stringify(logs).includes("private@email.test"));
+    assert.equal((logs[0].metadata as Record<string, unknown>).locale, localeFails ? null : "it");
   }
 });
 

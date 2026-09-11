@@ -15,9 +15,9 @@ dopo il salvataggio della membership. Modifiche successive e selezione di un
 capogruppo esistente dalla gestione gruppi non inviano automaticamente email.
 
 Il template `lib/email/account-access.ts` contiene testo e HTML con escape dei
-dati. Per i partecipanti usa la lingua dell’iscrizione, con le sette traduzioni
-e fallback inglese. Gli inviti ai ruoli sono italiani, come i precedenti inviti
-operativi, con il ruolo leggibile e il riferimento a «La mia iscrizione».
+dati. Le notifiche ai partecipanti e ai ruoli usano le sette traduzioni e la lingua
+del paese del gruppo. Gli inviti ai ruoli includono il ruolo leggibile e il
+riferimento a «La mia iscrizione».
 
 La mail contiene il collegamento stabile alla home e queste istruzioni:
 
@@ -40,6 +40,39 @@ Il flusso Auth resta quello esistente: per il partecipante inserito manualmente
 non si crea un account al momento della notifica. Il primo Magic Link richiesto
 dalla home crea l’utenza; la callback verificata collega la scheda per email.
 L’account operativo viene creato/riutilizzato dal flusso ruoli esistente.
+
+## Lingua per i prossimi invii
+
+Correzione del 2026-09-11 dopo la segnalazione del gruppo Anziani -
+Monti/Esquilino: la preferenza dell’iscrizione, inizializzata in inglese dal
+form manuale, non determina più la lingua di queste notifiche.
+
+| Paese del gruppo | Lingua |
+| --- | --- |
+| Italia (IT) | Italiano |
+| Francia (FR) | Francese |
+| Germania (DE) | Tedesco |
+| Spagna (ES) | Spagnolo |
+| Paesi Bassi (NL) | Neerlandese |
+| Ucraina (UA) | Ucraino |
+| Altri paesi, gruppo o paese assente | Inglese |
+
+Il nodo Paese determina la lingua di tutti i discendenti. Senza un nodo Paese
+si usa il primo `country_id` presente risalendo dal gruppo. Nomi, lingua del
+browser e paese personale del partecipante non cambiano questa regola.
+L’assegnazione deve essere corrente e l’iscrizione appartenere all’evento;
+eliminate e annullate non sono ammesse. Errori di lettura, dati incoerenti,
+cicli o nodi inattivi/mancanti non producono un invio in inglese per errore.
+Per i nuovi capigruppo operativi si usa il gruppo appena assegnato; i ruoli
+senza gruppo ricevono inglese. La lingua del sito e le preferenze salvate non
+vengono riscritte. La regola riguarda le notifiche automatiche di accesso:
+non traduce il contenuto libero delle campagne.
+
+Audit degli invii: `locale`, `country_iso2`, `group_id` e
+`locale_source=group-country-v1`. Verifica DB in sola lettura: Esquilino e
+Anziani - Monti/Esquilino risolvono entrambi IT/it. **Nessun reinvio** delle
+notifiche precedenti, come richiesto dall’utente; la correzione si applica
+esclusivamente alle prossime notifiche.
 
 ## Esiti e limiti
 
@@ -84,7 +117,7 @@ Verifica in sola lettura del 2026-09-11 sull’evento corrente: **19 candidabili
 5 eliminate/annullate, 4 delegate, 1 con provenienza da chiarire. Non è un
 elenco congelato per l’invio: email, stato e precedenti consegne devono essere
 riletti immediatamente prima di un eventuale invio storico autorizzato.
-Nessun invio storico eseguito. Prima della pubblicazione del 2026-09-11 sono
+Prima della pubblicazione del 2026-09-11 sono
 state inviate, su richiesta esplicita, soltanto due email di prova a
 `registrationspeace@santegidio.org`, con nomi sintetici e prefisso `[PROVA]`:
 «La tua iscrizione è pronta» e «Il tuo accesso come Capogruppo». Entrambe
@@ -92,6 +125,32 @@ accettate dal server SMTP (250), usando template e trasporto dell’app con il
 collegamento al dominio pubblico. Nessun account/iscrizione/ruolo creato per
 queste prove. Controlli di rilascio: lint, TypeScript, 242 test e build riusciti;
 fixture browser desktop/mobile verificata durante l’implementazione.
+
+## Invio storico eseguito il 2026-09-11
+
+Su richiesta esplicita sono state inviate **18 notifiche**, tutte accettate da
+SMTP e verificate in `audit_logs`, senza errori: 16 in inglese e 2 in italiano,
+secondo `participants.preferred_locale`. Un candidato dei 19 precedenti è
+stato escluso perché utente operativo. Restano esclusi i 5 inattivi, 4 delegati
+e il caso con provenienza non verificata.
+
+Batch: `9aabdb88-0ae1-4f7b-b1ce-4085594a3630`. Nessun invito operativo.
+La verifica aggiuntiva, richiesta per questo invio, ha escluso chi compare
+in `event_user_roles` con ruolo operativo o `group_memberships`, tramite
+`auth_user_id` e tramite email del profilo, anche per incarichi su altri eventi.
+Il comando di anteprima generale non applica questa esclusione aggiuntiva.
+
+L’insieme iniziale è stato limitato alle iscrizioni anteriori al rilascio
+(`submitted_at < 2026-09-11T11:55:23.507Z`), congelato per ID/hash email e
+riletto prima di ogni invio per stato, email, delega, ruoli e notifiche già
+registrate. Ogni tentativo è preceduto da un audit
+`email.account_access_backfill_started` con ID deterministico e poi da
+`email.account_access_sent` con batch e identificativo SMTP. Le prenotazioni
+sono da controllare prima di qualunque futuro recupero: in caso di esito
+incerto non ripetere automaticamente l’invio, anche se manca `_sent`.
+Non sono stati creati account, assegnati ruoli o modificati dati di iscrizione.
+Le sole scritture sul database sono i 36 record di audit (18 tentativi e
+18 esiti). L’accettazione SMTP non conferma la consegna finale in casella.
 
 ## Verifiche
 

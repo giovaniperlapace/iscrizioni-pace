@@ -14,6 +14,31 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   senza troncamento e interruzione su errore di un blocco successivo. Nessun
   invio email, modifica dati o migration durante il controllo.
 
+## Lingua delle notifiche dal paese del gruppo — 2026-09-11
+
+- Le notifiche automatiche di accesso usano il paese della gerarchia del
+  gruppo, non `participants.preferred_locale` (che l’inserimento manuale
+  inizializza in inglese). IT→it, FR→fr, DE→de, ES→es, NL→nl, UA→uk;
+  tutti gli altri paesi o assenza di gruppo/paese→en. Non inferire la lingua
+  dal nome del gruppo, dal paese personale o dal browser dell’operatore.
+- `group-locale.ts` risale tutti gli antenati; il nodo Paese prevale sui campi
+  dei discendenti. Se non esiste un nodo Paese usa il primo paese valorizzato
+  risalendo il gruppo. `group-locale.server.ts` ricava il gruppo corrente
+  dall’iscrizione nell’evento e carica la gerarchia con paginazione.
+  Errori DB, cicli, nodi mancanti/inattivi o estranei all’evento interrompono
+  l’invio; non vengono mascherati dal fallback inglese.
+- Per nuovi capigruppo operativi si usa il gruppo appena assegnato e validato
+  dal server; i ruoli senza gruppo usano inglese. Anche il template ruoli è
+  ora tradotto nelle sette lingue. L’audit salva lingua, ISO paese, gruppo e
+  `locale_source=group-country-v1` oltre agli esiti precedenti.
+- Verifica in sola lettura sul DB reale: Esquilino e Anziani - Monti/Esquilino
+  risolvono entrambi IT/it. Nessuna modifica a preferenze, iscrizioni, ruoli
+  o RLS. Su richiesta esplicita si correggono solo i prossimi invii:
+  NON reinviare quelli già spediti nella lingua precedente.
+- Test: `tests/email-group-locale.test.mts` e `tests/account-access.test.mts`
+  coprono ereditarietà, override del vecchio default inglese, paesi/fallback,
+  paginazione oltre 1.000 gruppi, ambiguità e errori prima di SMTP.
+
 ## Email di accesso per inserimenti assistiti — 2026-09-11
 
 - `createGroupLeaderManualRegistration` invia le istruzioni dopo tutte le
@@ -26,7 +51,8 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   la membership in modalità nuova; selezione e modifica di esistenti restano
   separate. Permessi, identità e recapiti continuano a usare i controlli esistenti.
 - `account-access.ts` separa template testo/HTML dall’invio SMTP: sette lingue
-  per partecipanti, italiano per ruoli. Collegamento stabile alla home,
+  per partecipanti e ruoli, scelte dal paese del gruppo come descritto sopra.
+  Collegamento stabile alla home,
   istruzioni senza password e completamento della scheda; nessun token nella
   notifica. Gli inviti ruoli sostituiscono il precedente Magic Link generico.
   Il testo per i partecipanti nomina l’Incontro internazionale per la Pace
@@ -44,10 +70,20 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   delega, ambiguità, eliminazione/annullamento o notifica già registrata.
   Errori DB interrompono la lettura; paginazione oltre 1.000. Verifica del
   2026-09-11: 19 candidabili, 5 inattivi, 4 delegati, 1 da chiarire.
-  Nessun invio storico. Prima del rilascio, su richiesta esplicita, inviate
+  Prima del rilascio, su richiesta esplicita, inviate
   due prove a `registrationspeace@santegidio.org` con i template definitivi
   italiani e prefisso `[PROVA]`: partecipante e ruolo Capogruppo. Entrambe
   accettate da SMTP (250), senza creare account/iscrizioni o assegnare ruoli.
+- Recupero storico autorizzato ed eseguito il 2026-09-11: 18 notifiche accettate
+  da SMTP e registrate in audit (16 en, 2 it), zero errori. Dei 19 candidati,
+  escluso un utente operativo per richiesta esplicita; controllati ruoli e
+  membership tramite account collegato e corrispondenza email, anche fuori
+  dall’evento corrente. Batch `9aabdb88-0ae1-4f7b-b1ce-4085594a3630`.
+  Selezione riletta prima di ciascun invio; solo iscrizioni precedenti al
+  rilascio (`submitted_at < 2026-09-11T11:55:23.507Z`). Prenotazioni in audit
+  `email.account_access_backfill_started` con PK deterministica per iscrizione
+  impediscono tentativi duplicati; nessun retry automatico per esiti incerti.
+  Nessun invito a utenti operativi né modifica a account/iscrizioni/ruoli.
 - Nessuna migration, modifica RLS o nuova dipendenza. Test azioni/SMTP/audit e
   storico in `tests/account-access.test.mts`, ruoli in
   `tests/operational-role-assignment.test.mts`, fixture browser desktop/mobile.
