@@ -1,3 +1,4 @@
+import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { LeaderParticipantAttendance } from "./participant-attendance";
@@ -2391,7 +2392,9 @@ function StatusMessage({
 
   return (
     <div className="rounded-lg border border-[#e0b6af] bg-[#fff0ee] p-4 text-sm text-[#8a3f35]">
-      {error === "link-already-exists"
+      {error === "access-email"
+        ? ACCESS_EMAIL_COPY[locale].failed
+        : error === "link-already-exists"
         ? copy.linkAlreadyExists
         : `${copy.errorPrefix}: ${error}.`}
     </div>

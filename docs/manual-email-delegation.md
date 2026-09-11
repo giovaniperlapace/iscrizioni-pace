@@ -4,7 +4,9 @@ Dal 2026-09-08, l’inserimento manuale distingue:
 
 - **Email personale**: obbligatoria senza delega. Il partecipante riceve le
   comunicazioni al proprio indirizzo e può richiedere un Magic Link dalla home.
-  Il primo Magic Link crea l’utenza e la callback verificata collega la scheda.
+  Dal 2026-09-11 riceve automaticamente le istruzioni dopo il salvataggio
+  completo. Il primo Magic Link crea l’utenza e la callback verificata collega
+  la scheda. Dettagli: `docs/account-access-notifications.md`.
 - **Voglio usare la mia email**: il campo personale scompare. Il partecipante
   non ha email né account personale; il capogruppo gestisce la scheda e riceve
   le comunicazioni per suo conto. Anche il telefono è facoltativo.

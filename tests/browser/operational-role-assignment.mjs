@@ -23,6 +23,7 @@ try {
   check('!document.querySelector("[name=existingUserId]").value && !document.querySelector("[name=mode]").closest("form").checkValidity()', "editing search clears selection");
   ab("find", "role", "button", "click", "--name", "Nuovo utente"); ab("snapshot", "-i");
   check('!document.querySelector("[name=existingUserId]") && document.querySelector("[name=email]").required', "new mode requires identity and clears target");
+  check('!document.querySelector("[name=sendInvite]") && document.body.innerText.includes("automaticamente")', "new account notification is automatic");
   ab("fill", '[name="firstName"]', "Nuovo"); ab("fill", '[name="lastName"]', "Utente"); ab("fill", '[name="email"]', "nuovo@example.test");
   ab("find", "role", "button", "click", "--name", "Assegna ruolo");
   check('JSON.parse(document.querySelector("[data-submitted]").textContent).mode === "new"', "new user flow preserved");

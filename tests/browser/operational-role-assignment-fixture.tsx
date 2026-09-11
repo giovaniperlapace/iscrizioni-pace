@@ -13,7 +13,7 @@ export default function Fixture() {
         { id: "operator", name: "Operatore esistente", email: "operatore@example.test" },
       ]} />
       <OperationalRoleFields eventOptions={[{ id: "event", title: "Evento" }]} groupOptions={[]}
-        roleOptions={[{ value: "accoglienza", label: "Accoglienza" }, { value: "manager_viewer", label: "Manager viewer" }]} showInviteOption />
+        roleOptions={[{ value: "accoglienza", label: "Accoglienza" }, { value: "manager_viewer", label: "Manager viewer" }]} />
       <button className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white">Assegna ruolo</button>
     </form><output className="block break-all" data-submitted>{submitted}</output></main>;
 }

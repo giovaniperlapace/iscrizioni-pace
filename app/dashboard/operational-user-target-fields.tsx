@@ -27,10 +27,15 @@ export function OperationalUserTargetFields({ candidates }: { candidates: RoleCa
             placeholder="Inizia a digitare un nome o un’email"
             emptyQueryHint="Inizia a digitare"
           />
+          <label className="flex items-start gap-2 text-sm">
+            <input name="sendInvite" type="checkbox" className="mt-1" defaultChecked />
+            <span>Invia un’email con il ruolo assegnato e le istruzioni per accedere.</span>
+          </label>
           <p className="text-sm font-normal text-[var(--peace-muted)]">Cerca per nome o email, anche tra gli utenti che non hanno ancora un ruolo.</p>
         </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-3">
+          <p className="text-sm text-[var(--peace-muted)] lg:col-span-3">Il nuovo utente riceverà automaticamente un’email con il ruolo assegnato e le istruzioni per accedere e completare la propria iscrizione.</p>
           <label className="grid gap-1 text-sm font-semibold">Nome<input name="firstName" className="field bg-white font-normal" required /></label>
           <label className="grid gap-1 text-sm font-semibold">Cognome<input name="lastName" className="field bg-white font-normal" required /></label>
           <label className="grid gap-1 text-sm font-semibold">Email<input name="email" type="email" className="field bg-white font-normal" required /></label>

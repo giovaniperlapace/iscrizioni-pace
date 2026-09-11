@@ -2162,7 +2162,6 @@ function ManagerOperationalUsersSection({
               { value: "manager_viewer", label: "Manager viewer" },
               { value: "accoglienza", label: "Accoglienza" },
             ]}
-            showInviteOption
           />
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Assegna ruolo

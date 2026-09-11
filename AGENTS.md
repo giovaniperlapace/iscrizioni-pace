@@ -4,6 +4,45 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Email di accesso per inserimenti assistiti — 2026-09-11
+
+- `createGroupLeaderManualRegistration` invia le istruzioni dopo tutte le
+  scritture riuscite, solo con email personale e senza `useLeaderEmail`.
+  La notifica non crea Auth: il primo Magic Link dalla home e la callback
+  verificata collegano l’iscrizione esistente, come prima.
+- `assignOperationalUserRole` rende l’avviso automatico in modalità Nuovo
+  utente; per Utente esistente resta facoltativo. La checkbox vive nel selettore
+  utente, visibile solo per gli esistenti. Anche `assignGroupLeader` invia dopo
+  la membership in modalità nuova; selezione e modifica di esistenti restano
+  separate. Permessi, identità e recapiti continuano a usare i controlli esistenti.
+- `account-access.ts` separa template testo/HTML dall’invio SMTP: sette lingue
+  per partecipanti, italiano per ruoli. Collegamento stabile alla home,
+  istruzioni senza password e completamento della scheda; nessun token nella
+  notifica. Gli inviti ruoli sostituiscono il precedente Magic Link generico.
+  Il testo per i partecipanti nomina l’Incontro internazionale per la Pace
+  «Pace disarmata e disarmante» ad Assisi: introduzione, collegamento, poi
+  istruzioni sull’email, in tutte le lingue. Titolo/luogo specifici dell’evento
+  corrente nel template; aggiornare per eventi futuri.
+- `account-access.server.ts` registra esiti reali `_sent`, `_failed`, `_simulated`
+  con prefisso `email.account_access`, iscrizione/profilo e hash email.
+  `invite_requested` sostituisce l’inesatto `invite_sent` nell’audit del ruolo.
+  Un errore SMTP conserva il salvataggio e mostra un avviso, tradotto per il
+  capogruppo; non richiede di ripetere la creazione. Nessun retry automatico o
+  garanzia di consegna in casella. Limiti di interruzione/audit documentati.
+- `scripts/preview-account-access.mts` verifica solo in lettura gli iscritti
+  storici: provenienza capogruppo, email personale originaria, assenza di
+  delega, ambiguità, eliminazione/annullamento o notifica già registrata.
+  Errori DB interrompono la lettura; paginazione oltre 1.000. Verifica del
+  2026-09-11: 19 candidabili, 5 inattivi, 4 delegati, 1 da chiarire.
+  Nessun invio storico. Prima del rilascio, su richiesta esplicita, inviate
+  due prove a `registrationspeace@santegidio.org` con i template definitivi
+  italiani e prefisso `[PROVA]`: partecipante e ruolo Capogruppo. Entrambe
+  accettate da SMTP (250), senza creare account/iscrizioni o assegnare ruoli.
+- Nessuna migration, modifica RLS o nuova dipendenza. Test azioni/SMTP/audit e
+  storico in `tests/account-access.test.mts`, ruoli in
+  `tests/operational-role-assignment.test.mts`, fixture browser desktop/mobile.
+  Dettagli e limiti: `docs/account-access-notifications.md`.
+
 ## Messaggi di successo temporanei — 2026-09-10
 
 - `SuccessMessage` chiude le conferme dopo 5 secondi o tramite ×, con
@@ -2227,7 +2266,8 @@ Decisioni:
   flusso specifico del gruppo.
 - Email e telefono sono alternativi: serve almeno un recapito.
 - Se l'email è presente, l'action blocca doppie iscrizioni allo stesso evento.
-- L'inserimento manuale non invia email automatiche al partecipante.
+- Dal 2026-09-11 l’inserimento manuale invia le istruzioni di accesso solo con
+  email personale e senza delega; vedere la sezione Email di accesso sopra.
 - I dati di paese/città del partecipante sono ereditati dal gruppo scelto
   quando presenti; eventuali dettagli più completi restano modificabili in
   passaggi successivi.

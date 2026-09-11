@@ -1664,7 +1664,6 @@ function AdminOperationalUsersSection({
               { value: "accoglienza", label: "Accoglienza" },
               { value: "admin", label: "Admin globale" },
             ]}
-            showInviteOption
           />
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Assegna ruolo
