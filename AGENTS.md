@@ -4,6 +4,16 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Caricamento campagne email — 2026-09-11
+
+- Risolto localmente il crash di apertura «This page couldn't load»: i filtri
+  UUID con blocchi da 400 superavano il limite URI del proxy («URI too long»).
+  `campaign-recipients.server.ts` usa blocchi da 100 per le letture dei destinatari.
+  Verificato in sola lettura sul database reale: tutti i 268 candidati caricati.
+- Regressione in `tests/campaign-recipient-loading.test.mts`: 1.268 destinatari
+  senza troncamento e interruzione su errore di un blocco successivo. Nessun
+  invio email, modifica dati o migration durante il controllo.
+
 ## Email di accesso per inserimenti assistiti — 2026-09-11
 
 - `createGroupLeaderManualRegistration` invia le istruzioni dopo tutte le
