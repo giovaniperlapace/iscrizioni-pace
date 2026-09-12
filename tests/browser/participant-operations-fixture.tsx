@@ -273,7 +273,7 @@ export default function Fixture() {
             {params.has("duplicatePair") && !params.has("edit") && (
               <DuplicateReviewDialog
                 closePath={duplicatePath}
-                title={params.get("duplicateAction") === "delete" ? "Elimina iscrizione" : params.get("duplicateAction") === "merge" ? "Unisci iscrizioni" : undefined}
+                title={params.get("duplicateAction") === "delete" ? "Elimina iscrizione" : undefined}
                 excluding={params.get("duplicateAction") === "exclude"}
               >
                 {params.get("duplicateAction") === "delete" ? (
@@ -288,11 +288,7 @@ export default function Fixture() {
                   <ReviewPanel
                     key={params.get("duplicateAction")}
                     mode={
-                      params.get("duplicateAction") === "merge"
-                        ? "merge"
-                        : params.get("duplicateAction") === "exclude"
-                          ? "exclude"
-                          : "compare"
+                      params.get("duplicateAction") === "exclude" ? "exclude" : "compare"
                     }
                     left={qualityPeople[0]}
                     right={qualityPeople[1]}

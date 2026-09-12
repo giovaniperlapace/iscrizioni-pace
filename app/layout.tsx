@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeadbar } from "@/components/app-headbar";
 import { getRequestLocale } from "@/lib/i18n/server";
 
+import { WorkStatusProvider } from "@/components/work-status";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,8 +37,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AppHeadbar />
-        {children}
+        <WorkStatusProvider locale={locale}>
+          <AppHeadbar />
+          {children}
+        </WorkStatusProvider>
       </body>
     </html>
   );

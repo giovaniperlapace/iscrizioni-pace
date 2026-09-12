@@ -1,10 +1,12 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
 import { OperationalRoleRemoval } from "@/components/operational-role-removal";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 
 import { ReliableForm } from "@/components/reliable-form";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import {
   BarChart3,
   Settings,
@@ -2303,7 +2305,6 @@ function ManagerOperationalUsersSection({
               { value: "manager_viewer", label: "Manager viewer" },
               { value: "accoglienza", label: "Accoglienza" },
             ]}
-            showInviteOption
           />
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Assegna ruolo
@@ -2533,7 +2534,7 @@ function StatusMessage({
 }) {
   if (saved || managerSaved || groupLinkSaved || groupSaved || serviceSaved || roleSaved) {
     return (
-      <p className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
+      <SuccessMessage key={randomUUID()} clearQuery className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
         {groupSaved
           ? "Gruppo aggiornato."
           : groupLinkSaved
@@ -2547,7 +2548,7 @@ function StatusMessage({
           : managerSaved
             ? "Gestione iscritti aggiornata."
             : "Configurazione apertura aggiornata."}
-      </p>
+      </SuccessMessage>
     );
   }
 

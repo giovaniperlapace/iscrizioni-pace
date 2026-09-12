@@ -48,7 +48,8 @@ type RegistrationRow = {
 };
 
 const QUERY_PAGE_SIZE = 1000;
-const QUERY_CHUNK_SIZE = 400;
+// Keep UUID filters below the production proxy's request-URI limit.
+const QUERY_CHUNK_SIZE = 100;
 
 export async function resolveCampaignRecipients(
   eventId: string,

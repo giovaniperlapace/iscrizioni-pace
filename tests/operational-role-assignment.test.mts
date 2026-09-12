@@ -4,15 +4,16 @@ import test from "node:test";
 import ts from "typescript";
 
 const source = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
-function actionHarness(actorRole = "manager", actorEvent = "event", profileExists = true) {
+function actionHarness(actorRole = "manager", actorEvent = "event", profileExists = true, options: { allowNew?: boolean; mailFails?: boolean; writeFails?: boolean } = {}) {
   const writes: Array<{ table: string; value: Record<string, unknown> }> = [];
   const reads: string[] = [];
+  const sends: Record<string, unknown>[] = [];
   const db = { from(table: string) {
     reads.push(table);
     const query = {
       select() { return this; }, eq() { return this; }, is() { return this; }, limit() { return this; },
       maybeSingle() { return Promise.resolve({ data: table === "profiles" && profileExists ? { id: "existing", email: "existing@example.test", full_name: "Nome originale" } : null, error: null }); },
-      insert(value: Record<string, unknown>) { writes.push({ table, value }); return { error: null }; },
+      insert(value: Record<string, unknown>) { writes.push({ table, value }); return { error: options.writeFails ? { message: "write failed" } : null }; },
       data: [], error: null,
     };
     return query;
@@ -27,8 +28,10 @@ function actionHarness(actorRole = "manager", actorEvent = "event", profileExist
     createSupabaseServerClient: async () => db, createSupabaseServiceClient: () => db,
     getCurrentAuthContext: async () => ({ user: { id: "actor" }, eventRoles: [{ role: actorRole, eventId: actorEvent }] }),
     getCurrentOperationalEventId: async () => "event",
-    ensureAuthUserForGroupLeader: () => { throw new Error("Must not create an account"); },
-    syncOperationalIdentityByEmail: () => { throw new Error("Must not overwrite identity"); },
+    ensureAuthUserForGroupLeader: () => { if (options.allowNew) return "new-user"; throw new Error("Must not create an account"); },
+    syncOperationalIdentityByEmail: () => { if (options.allowNew) return; throw new Error("Must not overwrite identity"); },
+    sendAccountAccessEmail: async (_db: unknown, input: Record<string, unknown>) => { sends.push(input); return !options.mailFails; },
+    getAppUrl: () => "https://example.test",
     hashEmailForAudit: () => "email-hash", revalidatePath: () => {},
     redirect: (path: string) => { throw new Error(`REDIRECT:${path}`); },
   };
@@ -37,7 +40,7 @@ function actionHarness(actorRole = "manager", actorEvent = "event", profileExist
   const action = new Function(...Object.keys(dependencies), `${js}; return assignOperationalUserRole;`)(...Object.values(dependencies));
   const form = new FormData();
   for (const [key, value] of Object.entries({ sourceDashboard: "manager", mode: "existing", existingUserId: "existing", role: "accoglienza" })) form.set(key, value);
-  return { action, form, writes, reads };
+  return { action, form, writes, reads, sends };
 }
 
 test("assigns a first reception role to an existing account without creating or renaming it", async () => {
@@ -80,4 +83,39 @@ test("candidate directory includes users without roles and loads beyond 1,000 ac
   assert.equal((await load(db)).length, 1101);
   assert.deepEqual(offsets, [0, 500, 1000]);
   await assert.rejects(load({ from() { return { select() { return this; }, order() { return this; }, range() { return { error: new Error("db") }; } }; } }), /Impossibile caricare/);
+});
+
+
+test("new role users always receive instructions even when the checkbox is omitted", async () => {
+  for (const mailFails of [false, true]) {
+    const h = actionHarness("manager", "event", true, { allowNew: true, mailFails });
+    h.form.set("mode", "new"); h.form.set("firstName", "New"); h.form.set("lastName", "Person"); h.form.set("email", "new@example.test");
+    await assert.rejects(h.action(h.form), mailFails ? /roleError=invite-email/ : /roleSaved=1/);
+    assert.equal(h.sends.length, 1);
+    assert.equal(h.sends[0].email, "new@example.test");
+    assert.equal(h.sends[0].role, "accoglienza");
+    assert.equal(h.writes[0].table, "event_user_roles");
+    assert.equal((h.writes[1].value.metadata as Record<string, unknown>).invite_requested, true);
+    assert.ok(!("invite_sent" in (h.writes[1].value.metadata as Record<string, unknown>)));
+  }
+});
+
+test("existing role invitations use the server profile and never send when role writes fail", async () => {
+  const h = actionHarness(); h.form.set("sendInvite", "on"); h.form.set("email", "forged@example.test");
+  await assert.rejects(h.action(h.form), /roleSaved=1/);
+  assert.equal(h.sends[0].email, "existing@example.test");
+  const failed = actionHarness("manager", "event", true, { writeFails: true }); failed.form.set("sendInvite", "on");
+  assert.match(await failed.action(failed.form), /roleError/); assert.equal(failed.sends.length, 0);
+});
+
+test("admin assignment links the selected account to all events", async () => {
+  const h = actionHarness("admin");
+  h.form.set("sourceDashboard", "admin");
+  h.form.set("role", "admin");
+  await assert.rejects(h.action(h.form), /roleSaved=1/);
+  assert.deepEqual(h.writes[0], {
+    table: "event_user_roles",
+    value: { user_id: "existing", event_id: null, role: "admin", created_by: "actor" },
+  });
+  assert.equal(h.sends.length, 0);
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { SupportedLocale } from "@/lib/i18n/config";
 
 import {
   ATTENDANCE_PARTS,
@@ -10,6 +11,9 @@ import {
 
 type ManualAttendanceFieldsProps = {
   eventDays: AttendanceDayColumn[];
+  locale?: SupportedLocale;
+  initialUnknown?: boolean;
+  initialSlots?: string[];
   copy: {
     title: string;
     help: string;
@@ -21,13 +25,16 @@ type ManualAttendanceFieldsProps = {
 export function ManualAttendanceFields({
   eventDays,
   copy,
+  locale = "it",
+  initialUnknown = true,
+  initialSlots = [],
 }: ManualAttendanceFieldsProps) {
-  const [availabilityUnknown, setAvailabilityUnknown] = useState(true);
-  const [selectedAttendanceSlots, setSelectedAttendanceSlots] = useState<string[]>([]);
+  const [availabilityUnknown, setAvailabilityUnknown] = useState(initialUnknown);
+  const [selectedAttendanceSlots, setSelectedAttendanceSlots] = useState<string[]>(initialSlots);
   const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${eventDays.length}, minmax(5.5rem, 1fr))`;
 
   return (
-    <fieldset className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
+    <fieldset className="grid min-w-0 gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
       <legend className="px-1 text-sm font-semibold text-[var(--peace-ink)]">
         {copy.title}
       </legend>
@@ -36,13 +43,13 @@ export function ManualAttendanceFields({
       </p>
 
       {eventDays.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-[var(--peace-border)] bg-white">
+        <div className="overflow-x-auto rounded-lg border border-[var(--peace-border)] bg-white">
           <div
             className="grid bg-[#f7fbfe] text-center text-xs font-semibold uppercase text-[var(--peace-muted)]"
             style={{ gridTemplateColumns }}
           >
             <div className="border-r border-[var(--peace-border)] px-3 py-3 text-left">
-              Fascia
+              {({ it: "Fascia", en: "Time", fr: "Créneau", de: "Tageszeit", es: "Franja", nl: "Dagdeel", uk: "Час дня" })[locale]}
             </div>
             {eventDays.map((day) => (
               <div
@@ -60,7 +67,7 @@ export function ManualAttendanceFields({
               style={{ gridTemplateColumns }}
             >
               <div className="border-r border-[var(--peace-border)] bg-[#fbfdff] px-3 py-3 text-sm font-medium text-[var(--peace-ink)]">
-                {part.label.it}
+                {part.label[locale]}
               </div>
               {eventDays.map((day) => {
                 const slotAvailable = day.parts.includes(part.value);
@@ -88,7 +95,7 @@ export function ManualAttendanceFields({
                         checked={selectedAttendanceSlots.includes(slotValue)}
                         disabled={availabilityUnknown}
                         className="h-4 w-4 accent-[var(--peace-blue-800)]"
-                        aria-label={`${part.label.it} ${day.label}`}
+                        aria-label={`${part.label[locale]} ${day.label}`}
                         onChange={(event) => {
                           setSelectedAttendanceSlots((current) =>
                             event.target.checked

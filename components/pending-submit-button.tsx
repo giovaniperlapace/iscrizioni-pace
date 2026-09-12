@@ -2,6 +2,7 @@
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { useReliableFormPending } from "@/components/reliable-form";
+import { WorkStatus } from "@/components/work-status";
 import { useFormStatus } from "react-dom";
 
 type PendingSubmitButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -30,6 +31,7 @@ export function PendingSubmitButton({
       className={`pending-submit-button ${className}`}
     >
       {pending && pendingLabel ? pendingLabel : children}
+      {pending && <WorkStatus spinner={false} className="sr-only" />}
     </button>
   );
 }

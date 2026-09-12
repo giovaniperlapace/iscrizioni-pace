@@ -147,8 +147,12 @@ try {
     "Escape returns to updated duplicates table",
   );
   check(
-    'Array.from(document.querySelector("tbody tr td:last-child").querySelectorAll("a")).map(e=>e.textContent).join("|") === "Elimina|Non sono duplicati|Unisci iscrizioni"',
-    "three actions in the requested order",
+    'Array.from(document.querySelector("tbody tr td:last-child").querySelectorAll("a")).map(e=>e.textContent).join("|") === "Elimina questa iscrizione|Non sono duplicati"',
+    "two actions in the requested order",
+  );
+  check(
+    `Array.from(document.querySelectorAll("tbody tr")).every(row => (row.innerText.match(/Data iscrizione:/g) || []).length === 2) && !document.querySelector('a[href*="duplicateAction=merge"]')`,
+    "both registration dates are visible and merge links are absent",
   );
   click("tbody td:nth-child(5) a", "Anna Maria Bianchi");
   ab("wait", "dialog[open]");
@@ -159,7 +163,7 @@ try {
   ev('document.querySelector("dialog").dispatchEvent(new Event("cancel", {cancelable:true}))');
   ab("wait", "200");
   check('document.querySelector("tbody") && !document.querySelector("dialog[open]")', "comparison closes back to table");
-  click("tbody a", "Elimina");
+  click("tbody a", "Elimina questa iscrizione");
   ab("wait", "dialog[open]");
   check(
     'document.querySelector("dialog form").getAttribute("action") === "/dashboard/participants/delete" && document.querySelector("dialog input[name=confirmLifecycle]").required && document.querySelector("dialog textarea").required',
@@ -167,21 +171,6 @@ try {
   );
   ev('document.querySelector("dialog").dispatchEvent(new Event("cancel", {cancelable:true}))');
   ab("wait", "200");
-  click("tbody a", "Unisci iscrizioni");
-  ab("wait", "dialog[open]");
-  check(
-    '!document.querySelector("dialog select") && document.querySelectorAll("dialog input[type=radio]").length === 2',
-    "merge opens directly with survivor choices",
-  );
-  ab("set", "viewport", "390", "844");
-  check(
-    "document.documentElement.scrollWidth<=innerWidth",
-    "merge dialog fits mobile",
-  );
-  ab("screenshot", "/tmp/pace-merge-mobile.png");
-  ev('document.querySelector("dialog").dispatchEvent(new Event("cancel", {cancelable:true}))');
-  ab("wait", "200");
-  ab("set", "viewport", "1440", "1000");
   click("tbody a", "Non sono duplicati");
   ab("wait", "dialog[open]");
   check(

@@ -1,5 +1,10 @@
 "use server";
 
+import { sendAccountAccessEmail } from "@/lib/email/account-access.server";
+
+import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
+import { parseLeaderAttendance } from "@/lib/groups/leader-attendance";
+
 import { leaderReturnPath } from "@/lib/groups/leader-table";
 import { operationsReturnPath } from "@/lib/registrations/operations-table";
 
@@ -983,6 +988,33 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
+}
+
+export async function updateGroupLeaderAttendance(formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "capogruppo");
+  if (!auth || auth.dashboardRole !== "capogruppo") redirect("/login");
+  const assignmentId = optionalText(formData.get("assignmentId"));
+  if (!assignmentId || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(assignmentId)) {
+    return formFailure([{ field: null, code: "forbidden" }]);
+  }
+  const db = createSupabaseServiceClient();
+  try {
+    const eventId = await getCurrentOperationalEventId(db);
+    const current = eventId ? await loadLeaderAttendance(db, auth.user.id, eventId, assignmentId) : null;
+    if (!current) return formFailure([{ field: null, code: "forbidden" }]);
+    const input = parseLeaderAttendance(formData, current.startsOn, current.endsOn);
+    if (!input) return formFailure([{ field: "availabilitySlots", code: "attendance" }]);
+    const { error } = await db.rpc("update_group_leader_attendance", {
+      p_assignment_id: assignmentId, p_actor_user_id: auth.user.id,
+      p_unknown: input.unknown, p_slots: input.slots,
+    });
+    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : "failed" }]);
+  } catch {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  for (const path of ["/dashboard/capogruppo", "/dashboard/partecipante", "/dashboard/manager", "/dashboard/admin"]) revalidatePath(path);
+  redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId, saved: "attendance" }));
 }
 
 export async function updateGroupLeaderParticipantContact(formData: FormData) {
@@ -2542,8 +2574,18 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       )}`);
   }
 
+  const accessEmailSent = !parsed.value.useLeaderEmail && parsed.value.email
+    ? await sendAccountAccessEmail(serviceSupabase, {
+        email: parsed.value.email,
+        name: `${parsed.value.firstName} ${parsed.value.lastName}`.trim(),
+        siteLink: getAppUrl(),
+        eventId: groupRow.event_id,
+        actorUserId: auth.user.id,
+        entityId: registrationId,
+      })
+    : true;
   revalidatePath("/dashboard/capogruppo");
-  redirect("/dashboard/capogruppo?manualSaved=1");
+  redirect(`/dashboard/capogruppo?manualSaved=1${accessEmailSent ? "" : "&manualError=access-email"}`);
 }
 
 export async function updateGroupRegistrationLink(formData: FormData) {
@@ -3022,6 +3064,20 @@ export async function assignGroupLeader(formData: FormData) {
     },
   });
 
+  if (mode === "new") {
+    const sent = await sendAccountAccessEmail(serviceSupabase, {
+      email: normalizeEmail(formData.get("email")), name: leader.fullName,
+      role: "capogruppo", siteLink: getAppUrl(), eventId: groupRow.event_id, groupId: groupRow.id,
+      actorUserId: auth.user.id, entityId: leader.userId,
+    });
+    if (!sent) {
+      revalidatePath("/dashboard/admin");
+      revalidatePath("/dashboard/manager");
+      revalidatePath("/dashboard/capogruppo");
+      redirect(`${dashboardPath}?groupError=invite-email`);
+    }
+  }
+
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/capogruppo");
@@ -3043,7 +3099,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
   const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
   const isPrimaryLeader = leaderKind === "primary";
-  const sendInvite = formData.get("sendInvite") === "on";
+  const sendInvite = mode === "new" || formData.get("sendInvite") === "on";
 
   if (!isAssignableOperationalRole(role) ||
       (mode !== "existing" && mode !== "new") ||
@@ -3216,29 +3272,20 @@ export async function assignOperationalUserRole(formData: FormData) {
       email_hash: hashEmailForAudit(email),
       group_id: roleGroupId,
       leader_kind: role === "capogruppo" ? leaderKind : null,
-      invite_sent: sendInvite,
+      invite_requested: sendInvite,
     },
   });
 
   if (sendInvite) {
-    try {
-      const invitePath = getOperationalRoleInvitePath(role, email);
-      await sendMagicLinkEmail(
-        serviceSupabase,
-        email,
-        `${getAppUrl()}/auth/callback?redirect_to=${encodeURIComponent(
-          invitePath
-        )}`
-      );
-    } catch (error) {
-      await logEmailFailure(serviceSupabase, {
-        eventId: roleEventId,
-        action: "email.operational_role_invite_failed",
-        email,
-        error,
-      });
-
-      return formFailureFromRedirect(`${dashboardPath}&roleError=invite-email`);
+    const sent = await sendAccountAccessEmail(serviceSupabase, {
+      email, name: fullName, role, siteLink: getAppUrl(),
+      eventId: roleEventId, groupId: roleGroupId, actorUserId: auth.user.id, entityId: userId!,
+    });
+    if (!sent) {
+      revalidatePath("/dashboard/admin");
+      revalidatePath("/dashboard/manager");
+      revalidatePath("/dashboard/capogruppo");
+      redirect(`${dashboardPath}&roleError=invite-email`);
     }
   }
 
@@ -4573,23 +4620,6 @@ function isAssignableOperationalRole(
     value === "accoglienza" ||
     value === "capogruppo"
   );
-}
-
-function getOperationalRoleInvitePath(
-  role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo",
-  email: string
-): string {
-  switch (role) {
-    case "admin":
-      return "/dashboard/admin";
-    case "manager":
-    case "manager_viewer":
-      return "/dashboard/manager";
-    case "accoglienza":
-      return "/dashboard/accoglienza";
-    case "capogruppo":
-      return `/registrazione?email=${encodeURIComponent(email)}`;
-  }
 }
 
 async function resolveOperationalRoleTarget(

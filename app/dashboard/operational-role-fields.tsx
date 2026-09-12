@@ -31,7 +31,6 @@ type OperationalRoleFieldsProps = {
   defaultLeaderKind?: "primary" | "secondary" | null;
   defaultLeaderKindsByGroupId?: Record<string, "primary" | "secondary">;
   allowMultipleGroupLeaders?: boolean;
-  showInviteOption?: boolean;
 };
 
 const EVENT_SCOPED_ROLES = new Set(["manager", "manager_viewer", "accoglienza"]);
@@ -47,7 +46,6 @@ export function OperationalRoleFields({
   defaultLeaderKind,
   defaultLeaderKindsByGroupId = {},
   allowMultipleGroupLeaders = false,
-  showInviteOption = false,
 }: OperationalRoleFieldsProps) {
   const defaultRole =
     defaultRoleProp && roleOptions.some((option) => option.value === defaultRoleProp)
@@ -98,6 +96,13 @@ export function OperationalRoleFields({
             ))}
           </select>
         </label>
+        {role === "admin" ? (
+          <p className="text-sm text-[var(--peace-muted)] lg:col-span-2 lg:self-end">
+            Admin globale dà accesso alla dashboard admin e alla gestione di tutti
+            gli eventi. Il ruolo è collegato all’account dell’utente scelto;
+            l’iscrizione personale all’evento è facoltativa.
+          </p>
+        ) : null}
         {isEventScopedRole ? (
           <input
             type="hidden"
@@ -227,16 +232,6 @@ export function OperationalRoleFields({
           </>
         ) : null}
       </div>
-      {showInviteOption ? (
-        <label className="flex items-start gap-2 text-sm text-[var(--peace-ink)]">
-          <input name="sendInvite" type="checkbox" className="mt-1" defaultChecked />
-          <span>
-            {isGroupLeader
-              ? "Invia subito un magic link con invito a completare l'iscrizione personale."
-              : "Invia subito un magic link per accedere alla dashboard operativa."}
-          </span>
-        </label>
-      ) : null}
     </div>
   );
 }

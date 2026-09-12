@@ -1,15 +1,20 @@
 import { LeaderSectionNavigation } from "@/app/dashboard/capogruppo/section-navigation";
+import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
+import { LeaderParticipantAttendance } from "./participant-attendance";
+import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
+import { ManualPhoneFields } from "@/app/dashboard/capogruppo/manual-phone-fields";
 import { ManualEmailFields } from "./manual-email-fields";
 import { LeaderParticipantQr } from "./participant-qr";
 import { loadLeaderAssignmentQr } from "@/lib/groups/leader-qr.server";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
 import { LeaderParticipantsTable } from "./participants-table";
 import { filterLeaderRows, leaderReturnPath, toLeaderTableRow } from "@/lib/groups/leader-table";
-import { FORM_COPY } from "@/lib/forms/copy";
 import { MANUAL_DUPLICATE_COPY } from "@/lib/data-quality/manual-copy";
 
 import { ReliableForm } from "@/components/reliable-form";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -18,6 +23,7 @@ import {
   updateGroupLeaderAssignment,
   updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
+  updateGroupLeaderAttendance,
   updateParticipantOperationalTags,
 } from "@/app/actions";
 import {
@@ -1316,11 +1322,12 @@ export default async function CapogruppoDashboardPage({
       ? assignments.find((assignment) => assignment.id === params.assignmentId) ?? null
       : null;
 
-  const selectedQr = selectedAssignment
-    ? await loadLeaderAssignmentQr(
-        serviceSupabase, auth.user.id, currentEventId, selectedAssignment.id
-      )
-    : null;
+  const [selectedQr, selectedAttendance] = selectedAssignment
+    ? await Promise.all([
+        loadLeaderAssignmentQr(serviceSupabase, auth.user.id, currentEventId, selectedAssignment.id),
+        loadLeaderAttendance(serviceSupabase, auth.user.id, currentEventId, selectedAssignment.id),
+      ])
+    : [null, null];
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
@@ -1339,12 +1346,13 @@ export default async function CapogruppoDashboardPage({
         </header>
 
         <StatusMessage
+          locale={locale}
           error={params.error ?? params.groupLinkError}
           saved={params.saved ?? params.groupLinkSaved ?? params.manualSaved}
           copy={copy}
         />
 
-        <StatusMessage error={params.manualError} saved={undefined} copy={copy} />
+        <StatusMessage locale={locale} error={params.manualError} saved={undefined} copy={copy} />
 
         <AssignedScopeSection
           assignedGroups={assignedGroups}
@@ -1422,6 +1430,8 @@ export default async function CapogruppoDashboardPage({
             <AssignmentDetailCard
               returnTo={returnTo}
               qr={selectedQr}
+              attendance={selectedAttendance}
+              attendanceSaved={params.saved === "attendance"}
               locale={locale}
               assignment={selectedAssignment}
               tagOptions={operationalTags}
@@ -1861,16 +1871,12 @@ function ManualRegistrationSection({
             <input name="lastName" required minLength={2} className="field" />
           </label>
           <ManualEmailFields locale={locale} emailLabel={copy.email} />
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.phone}
-            <input name="phone" type="tel" className="field" placeholder="+393331234567" aria-describedby="manual-phone-help" />
-            <span id="manual-phone-help" className="text-xs font-normal">{FORM_COPY[locale].phone}</span>
-          </label>
+          <ManualPhoneFields locale={locale} label={copy.phone} />
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
             {copy.birthDate}
             <input name="birthDate" type="date" className="field" />
           </label>
-          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} />
+          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} />
           <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields
             locale={locale}
@@ -2022,6 +2028,8 @@ function AssignmentFilters({
 }
 
 function AssignmentDetailCard({
+  attendanceSaved,
+  attendance,
   qr,
   locale,
   returnTo,
@@ -2031,6 +2039,8 @@ function AssignmentDetailCard({
 }: {
   assignment: AssignmentView;
   qr: RegistrationQrPreview | null;
+  attendance: Awaited<ReturnType<typeof loadLeaderAttendance>>;
+  attendanceSaved: boolean;
   locale: SupportedLocale;
   returnTo: string;
   tagOptions: OperationalTagOption[];
@@ -2059,6 +2069,12 @@ function AssignmentDetailCard({
         participantCode={assignment.participantCode}
         locale={locale}
       />
+
+      {attendance ? (
+        <LeaderParticipantAttendance assignmentId={assignment.id} returnTo={returnTo}
+          attendance={attendance} locale={locale} copy={copy.attendance}
+          key={attendanceSaved ? randomUUID() : assignment.id} action={updateGroupLeaderAttendance} savedMessage={attendanceSaved ? copy.saved : undefined} />
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <DetailBlock title={copy.detail.identity}>
@@ -2354,19 +2370,21 @@ function TagCheckboxGrid({
 }
 
 function StatusMessage({
+  locale,
   error,
   saved,
   copy,
 }: {
+  locale: SupportedLocale;
   error: string | undefined;
   saved: string | undefined;
   copy: GroupLeaderCopy;
 }) {
   if (saved) {
     return (
-      <div className="rounded-lg border border-[#bad2b8] bg-[#edf7ea] p-4 text-sm text-[#2f6541]">
+      <SuccessMessage key={randomUUID()} clearQuery locale={locale} className="rounded-lg border border-[#bad2b8] bg-[#edf7ea] p-4 text-sm text-[#2f6541]">
         {copy.saved}
-      </div>
+      </SuccessMessage>
     );
   }
 
@@ -2376,7 +2394,9 @@ function StatusMessage({
 
   return (
     <div className="rounded-lg border border-[#e0b6af] bg-[#fff0ee] p-4 text-sm text-[#8a3f35]">
-      {error === "link-already-exists"
+      {error === "access-email"
+        ? ACCESS_EMAIL_COPY[locale].failed
+        : error === "link-already-exists"
         ? copy.linkAlreadyExists
         : `${copy.errorPrefix}: ${error}.`}
     </div>

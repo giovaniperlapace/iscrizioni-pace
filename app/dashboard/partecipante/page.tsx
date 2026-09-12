@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import { participantQrFilename } from "@/lib/qrcode/filename";
 import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
 
 import { ReliableForm } from "@/components/reliable-form";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { redirect } from "next/navigation";
 
 import { updateParticipantDashboard } from "@/app/actions";
@@ -1185,9 +1187,9 @@ export default async function PartecipanteDashboardPage({
             </div>
           </div>
           {params.saved ? (
-            <p className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
+            <SuccessMessage key={randomUUID()} clearQuery locale={locale} className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
               {copy.saved}
-            </p>
+            </SuccessMessage>
           ) : null}
           {params.error ? (
             <p className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">

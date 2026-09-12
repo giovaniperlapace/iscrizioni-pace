@@ -1,7 +1,9 @@
 "use client";
+
+import { SuccessMessage } from "@/components/success-message";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { FileSpreadsheet, Upload } from "lucide-react";
 import { DUPLICATE_LABELS } from "@/lib/data-quality/duplicates";
 import type { PreviewRow, RowDecision } from "@/lib/data-quality/preview";
@@ -10,6 +12,7 @@ import type { Catalog } from "@/lib/data-quality/format";
 
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { formatDuplicateRegistrationDate } from "@/lib/data-quality/registration-date";
 import { suggestedMergeSurvivor } from "@/lib/data-quality/merge-choice";
 
 const endpoint = "/dashboard/participants/data-quality/api";
@@ -155,7 +158,7 @@ export function ImportPanel() {
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button className="btn-primary px-5 py-2 text-sm" disabled={busy || !file}>
+          <button className="btn-primary px-5 py-2 text-sm" aria-busy={busy} disabled={busy || !file}>
             Mostra anteprima
           </button>
           <p className="text-sm text-[var(--peace-muted)]">
@@ -174,7 +177,7 @@ export function ImportPanel() {
         </p>
       )}
       {success && (
-        <p role="status" className="status-success rounded-xl border p-3 text-sm">
+        <SuccessMessage key={success} className="status-success rounded-xl border p-3 text-sm">
           {success}{" "}
           <Link
             className="underline"
@@ -182,7 +185,7 @@ export function ImportPanel() {
           >
             Apri gli iscritti
           </Link>
-        </p>
+        </SuccessMessage>
       )}
       {preview && (
         <>
@@ -331,6 +334,7 @@ export function ImportPanel() {
           <div className="flex flex-wrap gap-3">
             <button
               className="btn-primary px-5 py-2 text-sm"
+              aria-busy={busy}
               disabled={busy || !confirmed || unresolved}
               onClick={() => void commit()}
             >
@@ -426,11 +430,7 @@ export function ReviewPanel({
             <dl className="mt-2 space-y-1 text-sm">
               {Object.entries({
                 Codice: person.publicCode,
-                "Data iscrizione": person.submittedAt
-                  ? new Date(person.submittedAt).toLocaleString("it-IT", {
-                      timeZone: "Europe/Rome",
-                    })
-                  : null,
+                "Data iscrizione": formatDuplicateRegistrationDate(person.submittedAt),
                 "Data di nascita": person.birthDate,
                 Email: person.email,
                 Telefono: person.phone,
@@ -579,6 +579,7 @@ export function ReviewPanel({
             )}
             <button
               className={button}
+              aria-busy={busy}
               disabled={
                 busy ||
                 mergeBlocked ||

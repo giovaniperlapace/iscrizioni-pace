@@ -4,6 +4,252 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Sincronizzazione main nel panel — 2026-09-12
+
+- Integrato `origin/main` a `0bc2997` sulla base panel `39deb81`; analisi dei
+  10 commit, conflitti e verifiche in `docs/panel-main-integration-2026-09-12.md`.
+  Restano P11-P16 sul branch panel e il rinvio del rilascio production.
+- Conservate le correzioni applicative di main e le funzioni panel. Il branch
+  panel mantiene il proprio lockfile Next 16.3.0/React 19.2.8; usare `npm ci`
+  dopo il cambio branch. La nota storica Next 16.2.9 riguarda main: la fixture
+  panel richiede ancora `bfcacheId`, come verificato dal typecheck.
+- La migration `20260910120000_leader_attendance.sql` è presente nel codice
+  ma non ancora registrata nello staging (RPC assente al controllo read-only).
+  Applicarla su richiesta prima del collaudo del salvataggio disponibilità.
+  Queste sono intenzioni dichiarate, distinte da prenotazioni panel e dalle
+  presenze effettive P11. Nessuna modifica SQL remota durante il merge.
+- L'assenza della migration dati `20260813170000` è preesistente e legata alla
+  fixture; non applicarla automaticamente. Le migration panel risultano
+  registrate. Nessun push/deploy incluso in questa sincronizzazione locale.
+
+## Indicatori di attesa condivisi — 2026-09-12
+
+- I collegamenti applicativi usano `components/pending-link.tsx`, wrapper di
+  Next Link con `useLinkStatus`: spinner e colore sul collegamento in attesa,
+  comprese le sezioni via query string come Statistiche. Stato gestito da Next,
+  senza timer di completamento o intercettazioni globali di click/fetch.
+- `PendingSubmitButton` mantiene i controlli esistenti contro doppi invii;
+  CSS condiviso aggiunge colore e spinner ai pulsanti con `aria-busy=true`
+  o `data-pending=true`. Anteprime/modelli/campagne email e importazione Excel
+  espongono il proprio stato asincrono. Gli elementi sincroni restano immediati.
+  Gli interruttori servizio/catalogo esterni al modulo osservano il suo
+  `aria-busy` tramite `useAssociatedFormPending`, con cleanup dedicato: lo
+  stato provvisorio termina anche dopo una risposta di errore.
+- `WorkStatusProvider` riceve la lingua dal layout; lo stato accessibile e i
+  filtri sono tradotti nelle sette lingue. I filtri non bloccanti mostrano anche
+  un indicatore visibile senza impedire di scrivere. Animazione disattivata
+  con `prefers-reduced-motion` mantenendo simbolo e colore.
+- `PendingDownload` segue la risposta completa degli endpoint Excel per export
+  admin/manager e modello di importazione; blocca tentativi simultanei, verifica
+  il tipo di file e mostra un errore con possibilità di riprovare. Il download
+  capogruppo conserva la gestione asincrona esistente e usa il nuovo stile.
+- Collaudo sintetico con ritardi reali in `tests/browser/pending-feedback.mjs`:
+  navigazione, moduli, filtri, download, errori, lingue e mobile. Nessuna modifica
+  a database, autorizzazioni o invii email durante queste verifiche.
+
+## Compatibilità Safari della tabella statistiche — 2026-09-12
+
+- La pivot territori usa `border-separate border-spacing-0`, con bordi sulle
+  celle e isolamento dei livelli; solo la prima colonna resta sticky nello
+  scorrimento orizzontale. Evitare il precedente `thead` sticky annidato e
+  i bordi collassati: su Safari sono stati segnalati nomi e intestazioni invisibili.
+- Verifica locale del rendering del componente con dati sintetici su WebKit
+  26.5 e Chromium, desktop/mobile e prima colonna dopo scroll orizzontale;
+  nove test statistici superati. Il difetto iniziale non si riproduce nel WebKit
+  di prova: da confermare sul Safari segnalato dopo il rilascio.
+- Verifiche di rilascio: dopo `npm ci` e rigenerazione della build, superati
+  lint, typecheck, tutti i 257 test e build production. Nessuna modifica
+  a dati o conteggi.
+
+## Accesso admin globale e ruoli della sessione — 2026-09-12
+
+- `Admin globale` è il ruolo `admin` con `event_id = null`, collegato tramite
+  `user_id` all'account Auth: abilita la dashboard admin e tutti gli eventi.
+  Non esiste un secondo ruolo admin per singolo evento; la registrazione
+  personale è facoltativa. Il selettore ruoli ora lo spiega esplicitamente.
+- Sessione e proxy filtrano ruoli e membership per l'ID autenticato: RLS può
+  rendere visibili gli incarichi altrui agli operatori, ma questi non devono
+  diventare parte della loro identità né escludere il ruolo proprio a causa
+  del limite delle righe restituite.
+- Verifica reale in sola lettura sull'account segnalato: account Auth confermato,
+  email del profilo corrispondente, ruolo admin globale collegato e `app.is_admin()`
+  vero con ruolo SQL authenticated. Nessuna modifica dati o invio email.
+- Regressioni in `tests/auth-session-scope.test.mts` per sessione/proxy, admin,
+  manager e partecipante con oltre 1.000 incarichi visibili; assegnazione admin
+  all'account esistente in `tests/operational-role-assignment.test.mts`.
+
+## Caricamento campagne email — 2026-09-11
+
+- Risolto localmente il crash di apertura «This page couldn't load»: i filtri
+  UUID con blocchi da 400 superavano il limite URI del proxy («URI too long»).
+  `campaign-recipients.server.ts` usa blocchi da 100 per le letture dei destinatari.
+  Verificato in sola lettura sul database reale: tutti i 268 candidati caricati.
+- Regressione in `tests/campaign-recipient-loading.test.mts`: 1.268 destinatari
+  senza troncamento e interruzione su errore di un blocco successivo. Nessun
+  invio email, modifica dati o migration durante il controllo.
+
+## Lingua delle notifiche dal paese del gruppo — 2026-09-11
+
+- Le notifiche automatiche di accesso usano il paese della gerarchia del
+  gruppo, non `participants.preferred_locale` (che l’inserimento manuale
+  inizializza in inglese). IT→it, FR→fr, DE→de, ES→es, NL→nl, UA→uk;
+  tutti gli altri paesi o assenza di gruppo/paese→en. Non inferire la lingua
+  dal nome del gruppo, dal paese personale o dal browser dell’operatore.
+- `group-locale.ts` risale tutti gli antenati; il nodo Paese prevale sui campi
+  dei discendenti. Se non esiste un nodo Paese usa il primo paese valorizzato
+  risalendo il gruppo. `group-locale.server.ts` ricava il gruppo corrente
+  dall’iscrizione nell’evento e carica la gerarchia con paginazione.
+  Errori DB, cicli, nodi mancanti/inattivi o estranei all’evento interrompono
+  l’invio; non vengono mascherati dal fallback inglese.
+- Per nuovi capigruppo operativi si usa il gruppo appena assegnato e validato
+  dal server; i ruoli senza gruppo usano inglese. Anche il template ruoli è
+  ora tradotto nelle sette lingue. L’audit salva lingua, ISO paese, gruppo e
+  `locale_source=group-country-v1` oltre agli esiti precedenti.
+- Verifica in sola lettura sul DB reale: Esquilino e Anziani - Monti/Esquilino
+  risolvono entrambi IT/it. Nessuna modifica a preferenze, iscrizioni, ruoli
+  o RLS. Su richiesta esplicita si correggono solo i prossimi invii:
+  NON reinviare quelli già spediti nella lingua precedente.
+- Test: `tests/email-group-locale.test.mts` e `tests/account-access.test.mts`
+  coprono ereditarietà, override del vecchio default inglese, paesi/fallback,
+  paginazione oltre 1.000 gruppi, ambiguità e errori prima di SMTP.
+
+## Email di accesso per inserimenti assistiti — 2026-09-11
+
+- `createGroupLeaderManualRegistration` invia le istruzioni dopo tutte le
+  scritture riuscite, solo con email personale e senza `useLeaderEmail`.
+  La notifica non crea Auth: il primo Magic Link dalla home e la callback
+  verificata collegano l’iscrizione esistente, come prima.
+- `assignOperationalUserRole` rende l’avviso automatico in modalità Nuovo
+  utente; per Utente esistente resta facoltativo. La checkbox vive nel selettore
+  utente, visibile solo per gli esistenti. Anche `assignGroupLeader` invia dopo
+  la membership in modalità nuova; selezione e modifica di esistenti restano
+  separate. Permessi, identità e recapiti continuano a usare i controlli esistenti.
+- `account-access.ts` separa template testo/HTML dall’invio SMTP: sette lingue
+  per partecipanti e ruoli, scelte dal paese del gruppo come descritto sopra.
+  Collegamento stabile alla home,
+  istruzioni senza password e completamento della scheda; nessun token nella
+  notifica. Gli inviti ruoli sostituiscono il precedente Magic Link generico.
+  Il testo per i partecipanti nomina l’Incontro internazionale per la Pace
+  «Pace disarmata e disarmante» ad Assisi: introduzione, collegamento, poi
+  istruzioni sull’email, in tutte le lingue. Titolo/luogo specifici dell’evento
+  corrente nel template; aggiornare per eventi futuri.
+- `account-access.server.ts` registra esiti reali `_sent`, `_failed`, `_simulated`
+  con prefisso `email.account_access`, iscrizione/profilo e hash email.
+  `invite_requested` sostituisce l’inesatto `invite_sent` nell’audit del ruolo.
+  Un errore SMTP conserva il salvataggio e mostra un avviso, tradotto per il
+  capogruppo; non richiede di ripetere la creazione. Nessun retry automatico o
+  garanzia di consegna in casella. Limiti di interruzione/audit documentati.
+- `scripts/preview-account-access.mts` verifica solo in lettura gli iscritti
+  storici: provenienza capogruppo, email personale originaria, assenza di
+  delega, ambiguità, eliminazione/annullamento o notifica già registrata.
+  Errori DB interrompono la lettura; paginazione oltre 1.000. Verifica del
+  2026-09-11: 19 candidabili, 5 inattivi, 4 delegati, 1 da chiarire.
+  Prima del rilascio, su richiesta esplicita, inviate
+  due prove a `registrationspeace@santegidio.org` con i template definitivi
+  italiani e prefisso `[PROVA]`: partecipante e ruolo Capogruppo. Entrambe
+  accettate da SMTP (250), senza creare account/iscrizioni o assegnare ruoli.
+- Recupero storico autorizzato ed eseguito il 2026-09-11: 18 notifiche accettate
+  da SMTP e registrate in audit (16 en, 2 it), zero errori. Dei 19 candidati,
+  escluso un utente operativo per richiesta esplicita; controllati ruoli e
+  membership tramite account collegato e corrispondenza email, anche fuori
+  dall’evento corrente. Batch `9aabdb88-0ae1-4f7b-b1ce-4085594a3630`.
+  Selezione riletta prima di ciascun invio; solo iscrizioni precedenti al
+  rilascio (`submitted_at < 2026-09-11T11:55:23.507Z`). Prenotazioni in audit
+  `email.account_access_backfill_started` con PK deterministica per iscrizione
+  impediscono tentativi duplicati; nessun retry automatico per esiti incerti.
+  Nessun invito a utenti operativi né modifica a account/iscrizioni/ruoli.
+- Nessuna migration, modifica RLS o nuova dipendenza. Test azioni/SMTP/audit e
+  storico in `tests/account-access.test.mts`, ruoli in
+  `tests/operational-role-assignment.test.mts`, fixture browser desktop/mobile.
+  Dettagli e limiti: `docs/account-access-notifications.md`.
+
+## Messaggi di successo temporanei — 2026-09-10
+
+- `SuccessMessage` chiude le conferme dopo 5 secondi o tramite ×, con
+  etichetta accessibile nelle sette lingue e pulsante non submit.
+  Usato nelle dashboard admin/manager/capogruppo/partecipante, nella scheda
+  presenze, nei salvataggi rapidi, nell’importazione e nel salvataggio modelli email.
+- I messaggi server ricevono una chiave per risposta, così salvataggi consecutivi
+  con lo stesso testo mostrano di nuovo la conferma. Alla chiusura si rimuovono
+  dall’URL solo i parametri di successo, senza navigazione né perdita di filtri,
+  scheda aperta, hash o messaggi di errore. I messaggi client si rimontano per
+  ciascuna nuova conferma.
+- Errori, avvisi, stato di operazioni in corso e istruzioni di accesso/verifica
+  email restano visibili; anche i riepiloghi campagne con possibili invii falliti
+  o programmati restano persistenti. Nessuna modifica a dati, permessi o RLS.
+- Verifica browser: `tests/browser/success-message.mjs`, fixture sintetica,
+  timer reale, chiusura manuale, conferme ripetute, URL conservato, sette lingue/mobile.
+
+## Giorni di presenza nella scheda capogruppo — 2026-09-10
+
+- La scheda mostra le presenze correnti e permette di salvarle per giorno e
+  fascia mattina/pomeriggio, inclusa la vigilia pomeriggio, oppure come da
+  confermare. `LeaderParticipantAttendance` riusa `ManualAttendanceFields`,
+  ora inizializzabile e localizzato nelle sette lingue, con scorrimento interno
+  della griglia su mobile. Nessun salvataggio automatico; errori nel form
+  conservano le scelte. Ritorno alla scheda con filtri/preferenze conservati.
+- `loadLeaderAttendance` ricava l’iscrizione dall’assegnazione corrente dopo
+  verifica della membership nell’evento corrente e dello scope, inclusi i
+  discendenti attivi. Esclude iscrizioni eliminate e interrompe la lettura
+  in caso di errore. I vecchi giorni interi vengono mostrati come due fasce.
+- `updateGroupLeaderAttendance` autentica il capogruppo e valida le date.
+  La RPC `update_group_leader_attendance` ripete i controlli su evento,
+  membership e assegnazione; sostituzione delle presenze e audit sono atomici.
+  Attore dal server, nessun ID iscrizione/evento dal form. RPC riservata a
+  `service_role`; nessun ampliamento delle policy RLS esistenti.
+- Migration `20260910120000_leader_attendance.sql` applicata e registrata in
+  produzione il 2026-09-10, dopo i test su PostgreSQL temporaneo e prima del
+  push. RPC/PostgREST e privilegi verificati; prova sullo schema reale in
+  transazione integralmente annullata. Hash/conteggi dei record preesistenti
+  invariati su sei tabelle e 89 policy invariate. Una nuova iscrizione arrivata
+  durante i controlli è stata distinta tramite `created_at` e audit ordinario.
+  Nessuna modifica persistente ai partecipanti durante il collaudo. Snapshot originari, QR e scelte dei singoli
+  momenti restano separati; i figli condividono le presenze familiari esistenti.
+- Test: `tests/leader-attendance.test.mts`, `tests/sql/leader-attendance.sql`
+  e `tests/browser/leader-attendance.mjs` (fixture sintetica desktop/mobile).
+
+## Build riproducibile — 2026-09-09
+
+- Prima delle verifiche di rilascio confrontare le versioni installate con
+  `package-lock.json`; se divergono eseguire `npm ci`. Il lockfile resta la
+  fonte per le dipendenze usate da Vercel, attualmente Next.js 16.2.9.
+- Il deployment di `c0c83dc` è fallito perché la fixture browser includeva
+  `AppRouterInstance.bfcacheId`, presente nel Next.js 16.3.0 installato
+  localmente ma assente nel 16.2.9 del lockfile. Rimossa la proprietà dalla
+  fixture e reinstallate le dipendenze dal lockfile, senza aggiornamenti.
+
+## Prefisso telefono nell’inserimento manuale — 2026-09-09
+
+- `ManualPhoneFields` affianca prefisso e numero nel form capogruppo, con
+  default +39 e opzione Altro. Catalogo prefissi condiviso con iscrizione
+  pubblica in `lib/registrations/phone-prefixes.ts`; testi e paesi localizzati
+  nelle sette lingue. Rimossa la descrizione tecnica sotto il telefono.
+- Telefono facoltativo: senza numero invia stringa vuota; altrimenti compone
+  il campo `phone` con prefisso e numero senza separatori. Validazioni server
+  invariate, nessuna modifica ai contatti esistenti.
+
+## Nomi composti nelle email capigruppo — 2026-09-09
+
+- `loadCampaignDeliveryData`, condiviso da anteprima, prova e invio, usa
+  `participants.first_name` e `last_name` quando esiste una scheda collegata,
+  senza separare nuovamente il nome completo. Conserva cognomi e nomi composti.
+  Il fallback storico resta solo per profili senza scheda partecipante;
+  errore di lettura/scheda mancante interrompe il rendering.
+- Caso verificato in sola lettura in produzione: Francesco / De Palma sono
+  già salvati correttamente. Nessuna correzione dati né invio email effettuato.
+
+## Semplificazione duplicati — 2026-09-09
+
+- La tabella admin/manager offre soltanto `Elimina questa iscrizione`, con
+  descrizione `Mantieni l’altra iscrizione`, e `Non sono duplicati`.
+  Rimossa l’azione Unisci; anche i vecchi URL `duplicateAction=merge` aprono
+  il solo confronto. RPC e dati storici delle unioni restano invariati.
+- Sotto entrambi i nomi compare `Data iscrizione`, da `submitted_at`, con
+  data e ora nel fuso Europe/Rome, condivisa con il dialog di confronto.
+  Non è la data di creazione dell’account Auth. Valori assenti/non validi: `—`.
+- Eliminazione ancora singola e reversibile, con motivazione e conferma;
+  account e altra iscrizione conservati. Nessuna migration o modifica RLS.
+
 ## Azioni duplicati — 2026-09-08
 
 - La pagina istruzioni contiene solo la guida all’importazione Excel, condivisa
@@ -2166,7 +2412,8 @@ Decisioni:
   flusso specifico del gruppo.
 - Email e telefono sono alternativi: serve almeno un recapito.
 - Se l'email è presente, l'action blocca doppie iscrizioni allo stesso evento.
-- L'inserimento manuale non invia email automatiche al partecipante.
+- Dal 2026-09-11 l’inserimento manuale invia le istruzioni di accesso solo con
+  email personale e senza delega; vedere la sezione Email di accesso sopra.
 - I dati di paese/città del partecipante sono ereditati dal gruppo scelto
   quando presenti; eventuali dettagli più completi restano modificabili in
   passaggi successivi.

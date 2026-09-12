@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
 import { OperationalRoleRemoval } from "@/components/operational-role-removal";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
@@ -6,7 +8,7 @@ import { Settings } from "lucide-react";
 
 import { ReliableForm } from "@/components/reliable-form";
 import { permanentRedirect, redirect } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import {
   BarChart3,
   Mail,
@@ -1795,7 +1797,6 @@ function AdminOperationalUsersSection({
               { value: "accoglienza", label: "Accoglienza" },
               { value: "admin", label: "Admin globale" },
             ]}
-            showInviteOption
           />
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
             Assegna ruolo
@@ -2581,7 +2582,7 @@ function StatusMessage({
 }) {
   if (saved || adminSaved || groupSaved || groupLinkSaved || roleSaved) {
     return (
-      <p className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
+      <SuccessMessage key={randomUUID()} clearQuery className="rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
         {groupSaved
           ? "Gruppo aggiornato."
           : groupLinkSaved
@@ -2597,7 +2598,7 @@ function StatusMessage({
               : saved === "created"
                 ? "Evento futuro creato in bozza."
                 : "Configurazione apertura aggiornata."}
-      </p>
+      </SuccessMessage>
     );
   }
 

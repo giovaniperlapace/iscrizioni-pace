@@ -104,8 +104,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const [{ data: eventRoles }, { data: groupMemberships }] = await Promise.all([
-    supabase.from("event_user_roles").select("role"),
-    supabase.from("group_memberships").select("role"),
+    supabase.from("event_user_roles").select("role").eq("user_id", user.id),
+    supabase.from("group_memberships").select("role").eq("user_id", user.id),
   ]);
   const availableRoles = new Set<DashboardRole>(["partecipante"]);
 

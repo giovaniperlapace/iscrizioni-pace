@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { OperationsDuplicatesTable } from "@/app/dashboard/operations-duplicates-table";
 import { DuplicateReviewDialog } from "@/app/dashboard/participants/data-quality/review-dialog";
 import { hashIdentityFingerprint } from "@/lib/data-quality/fingerprint.server";
@@ -135,8 +135,8 @@ export async function OperationsDuplicatesSection({
       </p>
       <p className="text-sm">
         Confronta le schede prima di decidere. Nomi simili, contatti familiari e
-        omonimie possono produrre falsi positivi. Nessuna corrispondenza viene
-        unita automaticamente.
+        omonimie possono produrre falsi positivi. Puoi eliminare una sola
+        iscrizione mantenendo l’altra, oppure segnalarle come persone distinte.
       </p>
       <nav aria-label="Viste duplicati" className="flex flex-wrap gap-2">
         <Link
@@ -225,9 +225,7 @@ export async function OperationsDuplicatesSection({
           title={
             action === "delete"
               ? "Elimina iscrizione"
-              : action === "merge"
-                ? "Unisci iscrizioni"
-                : undefined
+              : undefined
           }
         >
           {action === "delete" ? (
@@ -244,11 +242,7 @@ export async function OperationsDuplicatesSection({
             <ReviewPanel
               excludeOnly={action === "exclude"}
               mode={
-                action === "merge"
-                  ? "merge"
-                  : action === "exclude"
-                    ? "exclude"
-                    : "compare"
+                action === "exclude" ? "exclude" : "compare"
               }
               key={`${left.id}:${right.id}:${before.data}:${action}`}
               left={left}

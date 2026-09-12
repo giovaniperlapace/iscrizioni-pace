@@ -81,11 +81,14 @@ Stato di partenza al 2026-08-04:
   backup e piano di rollback. Restano le verifiche hardware P14-P16 e
   l'approvazione separata dell'estensione opzionale P13.
 
-Checkpoint documentale del 2026-09-12: HEAD panel `d60b072`, allineato al
-proprio remoto; ultimo antenato comune con `origin/main` `a9eeeb2`.
-`origin/main` è a `0bc2997`, con 10 commit non ancora incorporati (33 commit
-esclusivi del branch panel). Nessun merge eseguito in questo aggiornamento;
-ricontrollare questi riferimenti prima della prossima sincronizzazione.
+Sincronizzazione del 2026-09-12: incorporato `origin/main` a `0bc2997` nella
+base panel `39deb81`; esaminati tutti i 10 commit. Conflitti risolti conservando
+le evoluzioni di entrambi i branch. Dettagli, adattamento del test campagne e
+verifiche in `docs/panel-main-integration-2026-09-12.md`.
+La nuova migration `20260910120000_leader_attendance.sql` resta da applicare
+allo staging su richiesta prima del collaudo del relativo salvataggio; nessun
+push, deploy o SQL remoto eseguito durante la sincronizzazione. Il prossimo
+sviluppo resta P11, dopo il completamento del riallineamento dello staging.
 
 Stato integrazione al 2026-08-07: le migration P2-P9 sono applicate e
 registrate soltanto nel database staging. Home panel e modulo pubblico scuole

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import {
   Baby,
   ChevronDown,
@@ -278,9 +278,10 @@ function TerritoryAttendancePivot({
       </div>
 
       <div className="mt-5 min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-[var(--peace-border)]">
-        <table className="w-full min-w-max border-collapse text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-[#f7fbfe]">
-            <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
+        {/* Separate cell borders avoid WebKit painting issues with sticky table cells. */}
+        <table className="isolate w-full min-w-max border-separate border-spacing-0 text-left text-sm">
+          <thead className="bg-[#f7fbfe]">
+            <tr className="text-xs uppercase tracking-wide text-[#6f7f91] [&>th]:border-b [&>th]:border-[var(--peace-border)]">
               <th className="sticky left-0 z-20 min-w-64 bg-[#f7fbfe] px-4 py-3 font-semibold">
                 Territorio o gruppo
               </th>
@@ -374,7 +375,7 @@ function TerritoryPivotTableRow({
     row.level === "country" ? "pl-4" : row.level === "city" ? "pl-10" : "pl-16";
 
   return (
-    <tr className={`border-b border-[var(--peace-border)] last:border-b-0 ${rowTone}`}>
+    <tr className={`[&>th]:border-b [&>td]:border-b [&>th]:border-[var(--peace-border)] [&>td]:border-[var(--peace-border)] last:[&>th]:border-b-0 last:[&>td]:border-b-0 ${rowTone}`}>
       <th
         scope="row"
         className={`sticky left-0 z-[5] min-w-64 py-3 pr-4 text-left ${indent} ${rowTone}`}
