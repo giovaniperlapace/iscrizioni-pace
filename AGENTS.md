@@ -4,6 +4,20 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Compatibilità Safari della tabella statistiche — 2026-09-12
+
+- La pivot territori usa `border-separate border-spacing-0`, con bordi sulle
+  celle e isolamento dei livelli; solo la prima colonna resta sticky nello
+  scorrimento orizzontale. Evitare il precedente `thead` sticky annidato e
+  i bordi collassati: su Safari sono stati segnalati nomi e intestazioni invisibili.
+- Verifica locale del rendering del componente con dati sintetici su WebKit
+  26.5 e Chromium, desktop/mobile e prima colonna dopo scroll orizzontale;
+  nove test statistici superati. Il difetto iniziale non si riproduce nel WebKit
+  di prova: da confermare sul Safari segnalato dopo il rilascio.
+- Verifiche di rilascio: dopo `npm ci` e rigenerazione della build, superati
+  lint, typecheck, tutti i 257 test e build production. Nessuna modifica
+  a dati o conteggi.
+
 ## Accesso admin globale e ruoli della sessione — 2026-09-12
 
 - `Admin globale` è il ruolo `admin` con `event_id = null`, collegato tramite
