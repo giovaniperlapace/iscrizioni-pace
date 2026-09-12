@@ -629,6 +629,20 @@ serve a un'azione operativa concreta.
 
 ### Milestone P11 - verifica QR e modello delle presenze effettive
 
+Stato: implementata e verificata localmente il 2026-09-12 sul branch panel.
+Comprende console manuale per codice/QR, risposta minima, check-in distinti
+adulto/minori/scuole, correzioni e annullamenti espliciti, idempotenza, audit e
+RLS. Verifiche: 330 test, lint/typecheck, build staging, PostgreSQL temporaneo
+con schema canonico e concorrenza reale, browser desktop/mobile sintetico.
+Migration `20260912150000_reception_check_ins.sql` applicata e registrata solo
+allo staging il 2026-09-12 su richiesta successiva, insieme all'autorizzazione
+al commit/push panel. Cinque funzioni confrontate con il file locale,
+privilegi/PostgREST e prova SQL famiglia/scuola con rollback verificati;
+conteggi/hash dei dati preesistenti invariati su 41 tabelle. Resta la revisione
+funzionale autenticata della preview prima della chiusura e del passaggio P12.
+Production invariata.
+Dettagli e limiti: `docs/panel-p11-reception.md`.
+
 Scopo: rendere sicura e corretta la registrazione della presenza prima di
 costruire lo scanner.
 

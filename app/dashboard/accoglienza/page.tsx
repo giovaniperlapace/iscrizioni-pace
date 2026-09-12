@@ -1,3 +1,6 @@
+import { ReceptionConsole } from "./reception-console";
+import { receptionCheckIn } from "./actions";
+
 import { redirect } from "next/navigation";
 
 import {
@@ -25,10 +28,11 @@ export default async function AccoglienzaDashboardPage() {
             eventRoles={auth.eventRoles}
           />
           <DashboardAreaDescription>
-            In questa area potrai scansionare i QR code e verificare
-            l&apos;accesso con i soli dati operativi necessari.
+            Verifica i codici e registra le persone realmente presenti
+            con i soli dati necessari all’ingresso.
           </DashboardAreaDescription>
         </header>
+        <ReceptionConsole commandAction={receptionCheckIn} />
       </section>
     </main>
   );

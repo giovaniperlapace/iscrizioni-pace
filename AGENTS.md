@@ -4,6 +4,56 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## P11 — verifica QR e presenze effettive, 2026-09-12
+
+- Implementata localmente sul branch panel, con console manuale nella dashboard
+  accoglienza: codice partecipante esatto oppure contenuto opaco del QR,
+  selezione dei componenti presenti e quantità esplicite studenti/accompagnatori.
+  Fotocamera P12 e collegamento delle statistiche effettive P13 restano separati.
+- Migration `20260912150000_reception_check_ins.sql` applicata e registrata
+  **solo allo staging il 2026-09-12**, su richiesta esplicita. Estende `check_ins` con minore/FK composta,
+  prenotazione scuola, conteggi, annullamento e ultima modifica; unicità per
+  persona/evento e scuola/evento. Le righe legacy indicano solo l'adulto.
+  Nessuna modifica alle intenzioni giornaliere o alle prenotazioni panel.
+- `reception_check_in` è una RPC atomica SECURITY INVOKER, EXECUTE solo
+  service_role: attore autenticato dal server, evento corrente e ruoli reali
+  ricontrollati nel DB (admin globale, manager o accoglienza dell'evento).
+  Token hash SHA-256, ultimo token attivo/non revocato/non scaduto, iscrizione
+  operativa; stato invalido uniforme senza dati personali. Codice pubblico come
+  fallback autorizzato, senza obbligo di QR. Risposte proiettate esplicitamente:
+  solo nomi/codice/presenza o scuola/classe/quantità, nessun recapito/questionario.
+- Scritture dirette authenticated su `check_ins` rimosse; accoglienza non legge
+  più direttamente QR o check-in, usa la risposta minima. Le letture operative
+  manager/viewer e gli scope personali restano distinti. Audit `reception.*`
+  con attore/evento/fonte/timestamp e stati tecnici prima/dopo; niente token,
+  contatti o motivazioni libere. Fallimento audit = rollback integrale.
+- `check_in_revision` e `check_in_requests` proteggono correzioni concorrenti e
+  retry tardivi: nessun doppio ingresso e nessuna vecchia richiesta che riattivi
+  una presenza annullata. Non eliminare il registro mentre l'evento è operativo.
+  La console blocca doppi invii, conserva in memoria lo stesso comando su esito
+  incerto e richiede nuova verifica su conflitto. Correzione/annullamento hanno
+  conferma esplicita; `correct` sostituisce i presenti della famiglia, `cancel`
+  riguarda soltanto i selezionati. Scuole: quantità effettive entro il prenotato.
+- Un minore con check-in storico (anche annullato) non può essere eliminato o
+  riassegnato. `replace_owned_registration_children` conserva gli ID se il
+  nucleo è identico e rifiuta sostituzioni con storia: richiedono revisione
+  operativa. Le famiglie senza storia minori conservano il flusso precedente.
+- Verifiche locali: 330 test, lint/typecheck, build staging; PostgreSQL 17 con
+  schema canonico, RLS per tutti i ruoli, audit/rollback e concorrenza reale
+  (8 ingressi, 8 retry identici, 2 correzioni concorrenti); browser desktop/mobile
+  con componente reale e backend simulato. Script `tests/sql/run-reception-checks.mjs`
+  e `tests/browser/reception.mjs`. Applicazione SQL staging verificata:
+  cinque corpi funzione uguali al file locale, EXECUTE solo service_role,
+  PostgREST raggiungibile, conteggi/hash dei dati preesistenti invariati su 41
+  tabelle. Prova famiglia/scuola/retry/conflitto/audit con rollback completo in
+  `tests/sql/reception-staging-rollback-check.sql`; QR e ruolo di accoglienza
+  della prova esistono soltanto nella transazione annullata. Applicazione e
+  registrazione nella stessa transazione del runner, rimuovendo esclusivamente
+  BEGIN/COMMIT esterni da una copia temporanea della migration. Commit/push
+  del branch panel autorizzati. Restano revisione funzionale autenticata sulla
+  preview prima della chiusura P11; nessuna modifica production o invio email.
+  Contratto, limiti e procedura: `docs/panel-p11-reception.md`.
+
 ## Sincronizzazione main nel panel — 2026-09-12
 
 - Integrato `origin/main` a `0bc2997` sulla base panel `39deb81`; analisi dei
