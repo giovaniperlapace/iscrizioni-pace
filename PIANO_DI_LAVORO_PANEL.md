@@ -85,10 +85,12 @@ Sincronizzazione del 2026-09-12: incorporato `origin/main` a `0bc2997` nella
 base panel `39deb81`; esaminati tutti i 10 commit. Conflitti risolti conservando
 le evoluzioni di entrambi i branch. Dettagli, adattamento del test campagne e
 verifiche in `docs/panel-main-integration-2026-09-12.md`.
-La nuova migration `20260910120000_leader_attendance.sql` resta da applicare
-allo staging su richiesta prima del collaudo del relativo salvataggio; nessun
-push, deploy o SQL remoto eseguito durante la sincronizzazione. Il prossimo
-sviluppo resta P11, dopo il completamento del riallineamento dello staging.
+La migration `20260910120000_leader_attendance.sql` è stata poi applicata
+allo staging il 2026-09-12 su richiesta esplicita: registrazione, privilegi,
+PostgREST e salvataggio/rilettura SQL sulla fixture con rollback verificati.
+Conteggi/hash invariati su 41 tabelle e policy RLS invariate. Il codice del
+merge resta locale, da pubblicare e collaudare nella preview; nessun push o
+deploy eseguito. Il prossimo sviluppo resta P11.
 
 Stato integrazione al 2026-08-07: le migration P2-P9 sono applicate e
 registrate soltanto nel database staging. Home panel e modulo pubblico scuole

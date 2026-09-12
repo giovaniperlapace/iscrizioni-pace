@@ -13,11 +13,15 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   panel mantiene il proprio lockfile Next 16.3.0/React 19.2.8; usare `npm ci`
   dopo il cambio branch. La nota storica Next 16.2.9 riguarda main: la fixture
   panel richiede ancora `bfcacheId`, come verificato dal typecheck.
-- La migration `20260910120000_leader_attendance.sql` è presente nel codice
-  ma non ancora registrata nello staging (RPC assente al controllo read-only).
-  Applicarla su richiesta prima del collaudo del salvataggio disponibilità.
-  Queste sono intenzioni dichiarate, distinte da prenotazioni panel e dalle
-  presenze effettive P11. Nessuna modifica SQL remota durante il merge.
+- La migration `20260910120000_leader_attendance.sql`, inizialmente assente,
+  è stata applicata e registrata sullo staging il 2026-09-12 su richiesta
+  successiva al merge. Corpo RPC verificato contro il file locale, EXECUTE
+  riservato a service_role e PostgREST verificato. Conteggi/hash invariati su
+  41 tabelle pubbliche e policy RLS invariate. Test della fixture sintetica
+  con rollback in `tests/sql/leader-attendance-staging-rollback-check.sql`:
+  salvataggio/rilettura, scope, validazione, audit e conservazione panel/check-in.
+  Queste sono intenzioni dichiarate, distinte dalle presenze effettive P11.
+  Nessun push o deployment applicativo in questa applicazione SQL.
 - L'assenza della migration dati `20260813170000` è preesistente e legata alla
   fixture; non applicarla automaticamente. Le migration panel risultano
   registrate. Nessun push/deploy incluso in questa sincronizzazione locale.
