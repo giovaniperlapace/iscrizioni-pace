@@ -41,25 +41,51 @@ Stato di partenza al 2026-08-04:
 
 ## 2. Metodo obbligatorio per ogni milestone
 
-### Strategia di integrazione P0-P10
+### Strategia di integrazione P0-P16 — aggiornata il 2026-09-12
 
-- Le milestone da P0 a P10 vengono sviluppate e collaudate su un unico branch
-  di lunga durata, `codex/panel-p0-p10`, collegato all'ambiente di staging.
-- Ogni milestone mantiene commit, verifiche e pausa di revisione distinti, ma
-  il branch panel non viene unito a `main` al termine delle singole milestone.
-- Codice e migration panel da P0 a P10 arrivano in production soltanto dopo il
-  completamento e il collaudo complessivo della Milestone P10.
-- Le migration panel vengono applicate durante lo sviluppo esclusivamente al
-  database di staging. Non devono essere applicate al database production
-  prima della procedura finale di rilascio P0-P10.
-- I bugfix urgenti delle funzioni iscrizioni continuano a essere sviluppati e
-  rilasciati da `main`; dopo ogni rilascio rilevante, `main` viene integrato nel
-  branch panel per evitare divergenza e scoprire presto eventuali conflitti.
-- Prima del merge finale sono obbligatori: riallineamento con `origin/main`,
-  regressione completa su iscrizioni, iscritti, gruppi, servizi, campagne e QR,
-  verifica RLS e concorrenza capienze, backup production e piano di rollback.
-- Le milestone P11 e successive iniziano un ciclo separato dopo il rilascio di
-  P0-P10 e non devono prolungare il branch di integrazione del modulo panel.
+- L'utente conferma il buon esito delle novità fino a P10. P0-P10 e le
+  successive correzioni costituiscono la base da conservare; P11-P16 proseguono
+  sullo stesso branch `codex/panel-p0-p10` e sullo staging esistente, senza
+  rinominarlo o ricrearlo. La prossima milestone è P11.
+- Questa decisione sostituisce il rilascio previsto dopo P10 e il ciclo
+  separato per P11-P16. Nessun merge verso `main` o rilascio production ora:
+  il rilascio resta una decisione esplicita futura, non scatta automaticamente
+  al completamento di una milestone, neppure P16.
+- Ogni milestone mantiene commit, verifiche e pausa di revisione distinti.
+  Le note datate nelle sezioni P0-P10 restano storico delle singole tranche,
+  non istruzioni per rifare o sovrascrivere il lavoro già accettato. Il buon
+  esito riferito dall'utente non sostituisce nuove evidenze dei test di rilascio.
+- Le migration nuove restano destinate esclusivamente allo staging durante
+  lo sviluppo; applicazioni remote, commit e push richiedono la richiesta
+  esplicita già prevista dal piano.
+- Le attività ordinarie continuano su `main`. Prima di ogni nuova milestone
+  panel e dopo rilasci rilevanti: `git fetch origin`, controllo dello stato e
+  `git pull --ff-only` sul proprio upstream `origin/codex/panel-p0-p10`.
+  Esaminare poi i commit e il diff da `origin/main` non ancora incorporati.
+- Integrare periodicamente `origin/main` **nel branch panel** con un merge,
+  preservando la storia condivisa: niente rebase, reset distruttivi o force
+  push. Prima del merge mettere al sicuro le modifiche locali con commit
+  autorizzati; non trascinare lavoro non proprio o sostituire interi file
+  scegliendo indiscriminatamente una delle due versioni.
+- Risolvere i conflitti conservando sia le correzioni di `main` sia le funzioni
+  panel già accettate. Controllare in particolare action condivise, dashboard,
+  QR, campagne, permessi e documentazione. Le migration già applicate non si
+  riscrivono: verificare ordine e dipendenze, usando nuove migration correttive
+  quando necessario. Un merge Git non applica automaticamente il database.
+- Annotare per ogni sincronizzazione commit di `origin/main` incorporato,
+  conflitti risolti, migration da applicare allo staging ed esiti dei test.
+  Eseguire regressioni delle aree toccate e dei panel prima di proseguire.
+- Prima del futuro merge verso `main`: nuovo riallineamento, regressione
+  completa iscrizioni/iscritti/gruppi/servizi/campagne/QR e P11-P16 realizzate,
+  verifica RLS e concorrenza, inventario migration rispetto alla production,
+  backup e piano di rollback. Restano le verifiche hardware P14-P16 e
+  l'approvazione separata dell'estensione opzionale P13.
+
+Checkpoint documentale del 2026-09-12: HEAD panel `d60b072`, allineato al
+proprio remoto; ultimo antenato comune con `origin/main` `a9eeeb2`.
+`origin/main` è a `0bc2997`, con 10 commit non ancora incorporati (33 commit
+esclusivi del branch panel). Nessun merge eseguito in questo aggiornamento;
+ricontrollare questi riferimenti prima della prossima sincronizzazione.
 
 Stato integrazione al 2026-08-07: le migration P2-P9 sono applicate e
 registrate soltanto nel database staging. Home panel e modulo pubblico scuole
@@ -734,10 +760,10 @@ senza overbooking, perdita di presenze o esposizione di dati fuori ruolo.
 
 ## 6. Dipendenze e ordine di rilascio
 
-Il primo rilascio production e il primo merge verso `main` avvengono soltanto
-dopo il completamento della P10. Le pause di revisione fra milestone restano
-obbligatorie e servono a validare progressivamente lo stesso ambiente di
-staging, non a produrre rilasci parziali.
+P11-P16 proseguono sul branch panel e sullo staging esistente dopo il buon
+esito di P0-P10. Il primo merge verso `main` e il rilascio production restano
+sospesi fino a una futura richiesta esplicita e alle verifiche della sezione
+2. Le pause di revisione fra milestone restano obbligatorie.
 
 Ordine raccomandato:
 

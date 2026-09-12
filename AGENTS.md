@@ -1420,7 +1420,8 @@ npm run db:migrate:production -- supabase/migrations/<timestamp>_<nome>.sql \
   assoluto, stack e container espliciti. Staging rifiuta il container
   production noto.
 - Il comando production richiede inoltre la conferma con la versione esatta
-  della migration. Per P0-P10 non va eseguito prima del collaudo complessivo.
+  della migration. Per il ciclo panel P0-P16 richiede il collaudo complessivo
+  e una richiesta esplicita di rilascio; il rilascio è attualmente rinviato.
 - Lo script copia il file SQL sul server, lo applica con `psql` nel container
   selezionato, registra la versione e invia `notify pgrst, 'reload schema'`.
 - Non usare `supabase db push` su questo ambiente finché la connessione CLI verso il Postgres interno continua a fallire con TLS.
@@ -2806,15 +2807,23 @@ Quando il piano verrà cancellato:
 - Le decisioni contenute nel piano sono proposte progettuali finche' la
   Milestone P0 non le conferma. Non creare o applicare migration panel/scuole
   prima di quella verifica.
-- Decisione del 2026-08-05: le milestone panel P0-P10 vengono sviluppate su un
-  unico branch di lunga durata `codex/panel-p0-p10` collegato a staging. Ogni
-  milestone mantiene commit, test e revisione separati, ma nessun codice o
-  migration panel P0-P10 viene unito a `main` o applicato in production prima
-  del completamento e collaudo complessivo della P10. I bugfix iscrizioni
-  continuano su `main` e vanno integrati tempestivamente nel branch panel. Il
-  rilascio finale richiede regressione delle funzioni esistenti, verifica RLS e
-  concorrenza, backup production e piano di rollback. P11 e successive partono
-  in un ciclo separato dopo questo rilascio.
+- Decisione aggiornata il 2026-09-12: l'utente conferma il buon esito fino a
+  P10 e mantiene P11-P16 sullo stesso branch `codex/panel-p0-p10` e staging.
+  Conservare P0-P10 e le correzioni successive; non rinominare o ricreare il
+  branch. Sostituita la precedente previsione di rilascio dopo P10 e ciclo
+  separato P11-P16. Merge verso `main` e production restano rinviati fino a
+  richiesta esplicita futura, anche dopo P16; prossima milestone P11.
+- Il lavoro ordinario continua su `main`. Incorporare periodicamente
+  `origin/main` nel branch panel con merge, mai rebase/reset/force push,
+  dopo verifica e tutela del lavoro locale. Risolvere i conflitti conservando
+  entrambe le evoluzioni, senza sostituzioni indiscriminate di file. Annotare
+  SHA incorporato, conflitti, migration e regressioni nel piano panel.
+  Non riscrivere migration già applicate; verificare ordine e dipendenze sullo
+  staging. Il merge Git non autorizza né esegue applicazioni SQL remote.
+- `PIANO_DI_LAVORO_PANEL.md`, sezione 2, definisce sincronizzazione e rilascio:
+  test delle funzioni esistenti e nuove, RLS/concorrenza, inventario migration,
+  backup e rollback. Le vecchie note datate P0-P10 sono storico delle tranche,
+  non richieste di rifare quanto accettato; mantenere le evidenze di collaudo.
 - Durante il bootstrap staging del 2026-08-05 e' stato rimosso il file
   ridondante `20260728120000_single_active_group_registration_link.sql`: aveva
   lo stesso timestamp di `20260728120000_single_group_registration_link.sql`
