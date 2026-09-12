@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef, useTransition } from "react";
+import { WorkStatus } from "@/components/work-status";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type AutoFilterFormProps = {
@@ -135,17 +136,11 @@ export function AutoFilterForm({
         {isPending && blockWhilePending ? (
           <div
             className="absolute inset-0 z-10 grid place-items-center rounded-md bg-white/55"
-            aria-live="polite"
-            aria-label="Aggiornamento filtri in corso"
           >
-            <span className="grid h-11 w-11 place-items-center rounded-full border border-[var(--peace-border-strong)] bg-white/90 shadow-sm">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--peace-blue-800)] border-t-transparent" />
-            </span>
+            <WorkStatus className="rounded-md border border-[var(--peace-border-strong)] bg-white/90 px-3 py-2 text-sm text-[var(--peace-blue-800)] shadow-sm" />
           </div>
         ) : isPending ? (
-          <span className="sr-only" aria-live="polite">
-            Aggiornamento filtri in corso
-          </span>
+          <WorkStatus className="mt-2 text-sm text-[var(--peace-blue-800)]" />
         ) : null}
       </div>
     </form>

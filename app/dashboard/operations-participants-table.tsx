@@ -1,8 +1,9 @@
 "use client";
 
+import { PendingDownload } from "@/components/pending-download";
 import { SuccessMessage } from "@/components/success-message";
 
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -703,15 +704,15 @@ export function OperationsParticipantsTable({
         >
           Mostra figli accompagnati
         </button>
-        <a
-          download
+        <PendingDownload
+          filename="partecipanti.xlsx"
           className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-[#217346] bg-[#217346] px-3 text-sm font-semibold text-white hover:border-[#185c37] hover:bg-[#185c37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#217346]"
           href={`/dashboard/participants/data-quality/api?${exportParams}`}
           aria-describedby="participants-export-description"
         >
           <Download size={18} aria-hidden />
           Esporta iscritti
-        </a>
+        </PendingDownload>
         <p id="participants-export-description" className="min-w-0 flex-1 text-sm text-[var(--peace-muted)]">
           Scarica un file Excel con gli iscritti filtrati e solo le colonne visibili selezionate.
         </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { PendingDownload } from "@/components/pending-download";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Download, FileSpreadsheet, X } from "lucide-react";
@@ -70,13 +71,13 @@ export default function ImportParticipantsDialog({
             Usa il modello e compila il foglio Partecipanti, una persona per riga.
             Trovi anche un esempio e gli elenchi di gruppi, servizi e tag disponibili.
           </p>
-          <a
-            download
+          <PendingDownload
+            filename="modello-partecipanti.xlsx"
             href="/dashboard/participants/data-quality/api?kind=template"
             className="btn-secondary inline-flex w-fit items-center gap-2 px-4 py-2 text-sm"
           >
             <Download size={18} aria-hidden /> Scarica modello Excel
-          </a>
+          </PendingDownload>
           <details className="group surface-panel">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl p-4 text-sm font-semibold text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-[var(--peace-blue-800)] [&::-webkit-details-marker]:hidden">
               Come compilare il modello

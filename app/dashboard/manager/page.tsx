@@ -6,7 +6,7 @@ import { OperationsSettingsNavigation } from "@/app/dashboard/operations-setting
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 
 import { ReliableForm } from "@/components/reliable-form";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import {
   BarChart3,
   Settings,

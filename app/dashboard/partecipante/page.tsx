@@ -5,7 +5,7 @@ import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
 
 import { ReliableForm } from "@/components/reliable-form";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { redirect } from "next/navigation";
 
 import { updateParticipantDashboard } from "@/app/actions";

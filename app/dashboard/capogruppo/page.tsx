@@ -13,7 +13,7 @@ import { filterLeaderRows, leaderReturnPath, toLeaderTableRow } from "@/lib/grou
 import { MANUAL_DUPLICATE_COPY } from "@/lib/data-quality/manual-copy";
 
 import { ReliableForm } from "@/components/reliable-form";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 

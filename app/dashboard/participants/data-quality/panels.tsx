@@ -3,7 +3,7 @@
 import { SuccessMessage } from "@/components/success-message";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { FileSpreadsheet, Upload } from "lucide-react";
 import { DUPLICATE_LABELS } from "@/lib/data-quality/duplicates";
 import type { PreviewRow, RowDecision } from "@/lib/data-quality/preview";
@@ -158,7 +158,7 @@ export function ImportPanel() {
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button className="btn-primary px-5 py-2 text-sm" disabled={busy || !file}>
+          <button className="btn-primary px-5 py-2 text-sm" aria-busy={busy} disabled={busy || !file}>
             Mostra anteprima
           </button>
           <p className="text-sm text-[var(--peace-muted)]">
@@ -334,6 +334,7 @@ export function ImportPanel() {
           <div className="flex flex-wrap gap-3">
             <button
               className="btn-primary px-5 py-2 text-sm"
+              aria-busy={busy}
               disabled={busy || !confirmed || unresolved}
               onClick={() => void commit()}
             >
@@ -578,6 +579,7 @@ export function ReviewPanel({
             )}
             <button
               className={button}
+              aria-busy={busy}
               disabled={
                 busy ||
                 mergeBlocked ||

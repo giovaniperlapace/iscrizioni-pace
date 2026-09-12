@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/pending-link";
 
 import { EventIdentity } from "@/components/event-identity";
 import { getMessages } from "@/lib/i18n/messages";

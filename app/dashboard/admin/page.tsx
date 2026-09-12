@@ -8,7 +8,7 @@ import { Settings } from "lucide-react";
 
 import { ReliableForm } from "@/components/reliable-form";
 import { permanentRedirect, redirect } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import {
   BarChart3,
   Mail,

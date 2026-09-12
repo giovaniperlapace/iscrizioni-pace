@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { useSearchParams } from "next/navigation";
 import { Copy, UserRoundSearch, Users } from "lucide-react";
 

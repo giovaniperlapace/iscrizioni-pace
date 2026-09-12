@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useAssociatedFormPending } from "@/components/associated-form-pending";
 
 type GroupPublicCatalogSwitchProps = {
   formId: string;
@@ -13,8 +13,8 @@ export function GroupPublicCatalogSwitch({
   groupName,
   isPublicCatalog,
 }: GroupPublicCatalogSwitchProps) {
-  const [optimisticValue, setOptimisticValue] = useState(isPublicCatalog);
-  const [isSaving, setIsSaving] = useState(false);
+  const isSaving = useAssociatedFormPending(formId);
+  const optimisticValue = isSaving ? !isPublicCatalog : isPublicCatalog;
   const label = optimisticValue ? "Visibile" : "Nascosto";
 
   return (
@@ -25,13 +25,11 @@ export function GroupPublicCatalogSwitch({
       }`}
       className="inline-flex min-h-9 w-fit items-center gap-2 rounded-full border border-[var(--peace-border-strong)] bg-white px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)] shadow-sm transition hover:bg-[var(--peace-sky-100)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
       data-pending={isSaving ? "true" : "false"}
+      aria-busy={isSaving}
+      disabled={isSaving}
       form={formId}
       role="switch"
       type="submit"
-      onClick={() => {
-        setOptimisticValue((value) => !value);
-        setIsSaving(true);
-      }}
     >
       <span
         aria-hidden="true"

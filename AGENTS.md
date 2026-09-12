@@ -4,6 +4,31 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Indicatori di attesa condivisi — 2026-09-12
+
+- I collegamenti applicativi usano `components/pending-link.tsx`, wrapper di
+  Next Link con `useLinkStatus`: spinner e colore sul collegamento in attesa,
+  comprese le sezioni via query string come Statistiche. Stato gestito da Next,
+  senza timer di completamento o intercettazioni globali di click/fetch.
+- `PendingSubmitButton` mantiene i controlli esistenti contro doppi invii;
+  CSS condiviso aggiunge colore e spinner ai pulsanti con `aria-busy=true`
+  o `data-pending=true`. Anteprime/modelli/campagne email e importazione Excel
+  espongono il proprio stato asincrono. Gli elementi sincroni restano immediati.
+  Gli interruttori servizio/catalogo esterni al modulo osservano il suo
+  `aria-busy` tramite `useAssociatedFormPending`, con cleanup dedicato: lo
+  stato provvisorio termina anche dopo una risposta di errore.
+- `WorkStatusProvider` riceve la lingua dal layout; lo stato accessibile e i
+  filtri sono tradotti nelle sette lingue. I filtri non bloccanti mostrano anche
+  un indicatore visibile senza impedire di scrivere. Animazione disattivata
+  con `prefers-reduced-motion` mantenendo simbolo e colore.
+- `PendingDownload` segue la risposta completa degli endpoint Excel per export
+  admin/manager e modello di importazione; blocca tentativi simultanei, verifica
+  il tipo di file e mostra un errore con possibilità di riprovare. Il download
+  capogruppo conserva la gestione asincrona esistente e usa il nuovo stile.
+- Collaudo sintetico con ritardi reali in `tests/browser/pending-feedback.mjs`:
+  navigazione, moduli, filtri, download, errori, lingue e mobile. Nessuna modifica
+  a database, autorizzazioni o invii email durante queste verifiche.
+
 ## Compatibilità Safari della tabella statistiche — 2026-09-12
 
 - La pivot territori usa `border-separate border-spacing-0`, con bordi sulle

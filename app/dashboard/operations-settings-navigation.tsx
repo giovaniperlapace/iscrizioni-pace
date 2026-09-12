@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/pending-link";
 
 export function OperationsSettingsNavigation({
   active,

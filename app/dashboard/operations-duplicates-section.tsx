@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { OperationsDuplicatesTable } from "@/app/dashboard/operations-duplicates-table";
 import { DuplicateReviewDialog } from "@/app/dashboard/participants/data-quality/review-dialog";
 import { hashIdentityFingerprint } from "@/lib/data-quality/fingerprint.server";

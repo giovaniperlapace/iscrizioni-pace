@@ -885,6 +885,7 @@ export function EmailCampaignComposer({
         <button
           type="button"
           className="btn-primary"
+          aria-busy={busy}
           disabled={busy || selectedRecipientIds.length === 0}
           onClick={createPreview}
         >
@@ -1061,6 +1062,7 @@ export function EmailCampaignComposer({
               <button
                 type="submit"
                 className="btn-primary inline-flex items-center justify-center gap-2 px-4"
+                aria-busy={busy}
                 disabled={busy || !templateName.trim()}
               >
                 <Save aria-hidden="true" className="h-4 w-4" />
