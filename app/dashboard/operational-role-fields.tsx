@@ -96,6 +96,13 @@ export function OperationalRoleFields({
             ))}
           </select>
         </label>
+        {role === "admin" ? (
+          <p className="text-sm text-[var(--peace-muted)] lg:col-span-2 lg:self-end">
+            Admin globale dà accesso alla dashboard admin e alla gestione di tutti
+            gli eventi. Il ruolo è collegato all’account dell’utente scelto;
+            l’iscrizione personale all’evento è facoltativa.
+          </p>
+        ) : null}
         {isEventScopedRole ? (
           <input
             type="hidden"

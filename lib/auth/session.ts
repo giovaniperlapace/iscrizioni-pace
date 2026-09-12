@@ -40,7 +40,7 @@ export async function getCurrentAuthContext(
     return null;
   }
 
-  const eventRoles = await getEventRolesForCurrentUser(supabase);
+  const eventRoles = await getEventRolesForCurrentUser(supabase, user.id);
   const dashboardRole = pickDashboardRole(
     eventRoles.map((role) => role.role),
     requestedRole
@@ -78,11 +78,14 @@ export async function ensureCurrentUserProfile(
 }
 
 async function getEventRolesForCurrentUser(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  userId: string
 ): Promise<EventUserRole[]> {
+  // RLS also exposes other operators' assignments to administrators.
+  // Visibility of a role must never make it part of the current identity.
   const [eventRolesResult, groupMembershipsResult] = await Promise.all([
-    supabase.from("event_user_roles").select("role,event_id"),
-    supabase.from("group_memberships").select("role,groups(event_id)"),
+    supabase.from("event_user_roles").select("role,event_id").eq("user_id", userId),
+    supabase.from("group_memberships").select("role,groups(event_id)").eq("user_id", userId),
   ]);
 
   const roles: EventUserRole[] = [];

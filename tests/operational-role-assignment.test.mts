@@ -107,3 +107,15 @@ test("existing role invitations use the server profile and never send when role 
   const failed = actionHarness("manager", "event", true, { writeFails: true }); failed.form.set("sendInvite", "on");
   assert.match(await failed.action(failed.form), /roleError/); assert.equal(failed.sends.length, 0);
 });
+
+test("admin assignment links the selected account to all events", async () => {
+  const h = actionHarness("admin");
+  h.form.set("sourceDashboard", "admin");
+  h.form.set("role", "admin");
+  await assert.rejects(h.action(h.form), /roleSaved=1/);
+  assert.deepEqual(h.writes[0], {
+    table: "event_user_roles",
+    value: { user_id: "existing", event_id: null, role: "admin", created_by: "actor" },
+  });
+  assert.equal(h.sends.length, 0);
+});

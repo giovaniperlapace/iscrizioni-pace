@@ -4,6 +4,23 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Accesso admin globale e ruoli della sessione — 2026-09-12
+
+- `Admin globale` è il ruolo `admin` con `event_id = null`, collegato tramite
+  `user_id` all'account Auth: abilita la dashboard admin e tutti gli eventi.
+  Non esiste un secondo ruolo admin per singolo evento; la registrazione
+  personale è facoltativa. Il selettore ruoli ora lo spiega esplicitamente.
+- Sessione e proxy filtrano ruoli e membership per l'ID autenticato: RLS può
+  rendere visibili gli incarichi altrui agli operatori, ma questi non devono
+  diventare parte della loro identità né escludere il ruolo proprio a causa
+  del limite delle righe restituite.
+- Verifica reale in sola lettura sull'account segnalato: account Auth confermato,
+  email del profilo corrispondente, ruolo admin globale collegato e `app.is_admin()`
+  vero con ruolo SQL authenticated. Nessuna modifica dati o invio email.
+- Regressioni in `tests/auth-session-scope.test.mts` per sessione/proxy, admin,
+  manager e partecipante con oltre 1.000 incarichi visibili; assegnazione admin
+  all'account esistente in `tests/operational-role-assignment.test.mts`.
+
 ## Caricamento campagne email — 2026-09-11
 
 - Risolto localmente il crash di apertura «This page couldn't load»: i filtri
