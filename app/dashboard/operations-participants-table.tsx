@@ -53,6 +53,7 @@ const serverPreferences = () => "";
 export function OperationsParticipantsTable({
   snapshot,
   selectedParticipant,
+  attendancePanel,
   editableEventIds,
   dashboard,
   navMode,
@@ -64,6 +65,7 @@ export function OperationsParticipantsTable({
 }: {
   snapshot: OperationsParticipantsSnapshot;
   selectedParticipant: Row | null;
+  attendancePanel?: ReactNode;
   editableEventIds: string[];
   dashboard: "admin" | "manager";
   navMode: "mini" | "full";
@@ -886,6 +888,7 @@ export function OperationsParticipantsTable({
     </section>}
       {selected && (
         <ParticipantDialog participant={selected} closePath={closePath}>
+          {attendancePanel}
           {selected.deletedAt ? (
             <div className="grid gap-2 rounded-md bg-red-50 p-4 text-sm">
               <p>Eliminata il {formatDate(selected.deletedAt)}.</p>

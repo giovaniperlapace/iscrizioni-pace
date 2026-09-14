@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { OperationsAttendance } from "./operations-attendance";
 import { OperationsParticipantsNavigation } from "@/app/dashboard/operations-participants-navigation";
 import { OperationsDuplicatesSection } from "@/app/dashboard/operations-duplicates-section";
 import { OperationsParticipantsTable } from "@/app/dashboard/operations-participants-table";
@@ -51,6 +52,13 @@ export function OperationsParticipantsSection({
             statisticsFilter: snapshot.statisticsFilter,
           }}
           selectedParticipant={selectedParticipant}
+          attendancePanel={selectedParticipant && !selectedParticipant.deletedAt && canManageEvent(selectedParticipant.eventId) ? (
+            <Suspense fallback={<p role="status">Caricamento presenze…</p>}>
+              <OperationsAttendance registrationId={selectedParticipant.registrationId} dashboard={dashboard}
+                canManageEvent={canManageEvent}
+                returnTo={`/dashboard/${dashboard}?${new URLSearchParams(Object.entries(searchParams ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string"))}`} />
+            </Suspense>
+          ) : null}
           editableEventIds={[
             ...new Set(
               snapshot.groupOptions

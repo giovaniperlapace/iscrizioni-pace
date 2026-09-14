@@ -905,6 +905,34 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
 }
 
+export async function updateOperationsAttendance(formData: FormData) {
+  const dashboard = formData.get("sourceDashboard") === "admin" ? "admin" : "manager";
+  const auth = await getCurrentAuthContext(await createSupabaseServerClient(), dashboard);
+  if (!auth) return formFailure([{ field: null, code: "forbidden" }]);
+  const registrationId = optionalText(formData.get("registrationId"));
+  if (!registrationId || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(registrationId)) return formFailure([{ field: null, code: "forbidden" }]);
+  const db = createSupabaseServiceClient();
+  try {
+    const { loadOperationsAttendance } = await import("@/lib/registrations/operations-attendance.server");
+    const current = await loadOperationsAttendance(db, registrationId, eventId => auth.eventRoles.some(role =>
+      (role.role === "admin" && role.eventId === null) || (role.role === "manager" && role.eventId === eventId)));
+    if (!current) return formFailure([{ field: null, code: "forbidden" }]);
+    const input = parseLeaderAttendance(formData, current.startsOn, current.endsOn);
+    if (!input) return formFailure([{ field: "availabilitySlots", code: "attendance" }]);
+    const { error } = await db.rpc("update_operations_attendance", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id, p_unknown: input.unknown, p_slots: input.slots,
+    });
+    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : "failed" }]);
+  } catch {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  for (const path of ["/dashboard/admin", "/dashboard/manager", "/dashboard/capogruppo", "/dashboard/partecipante"]) revalidatePath(path);
+  const { operationsReturnPath } = await import("@/lib/registrations/operations-table");
+  const destination = new URL(operationsReturnPath(formData.get("returnTo"), dashboard, "full"), "https://local.invalid");
+  destination.searchParams.set(`${dashboard}Saved`, "1");
+  redirect(destination.pathname + destination.search);
+}
+
 export async function updateGroupLeaderAttendance(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "capogruppo");
