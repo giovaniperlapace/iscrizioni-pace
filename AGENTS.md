@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Richieste dashboard e limite URL — 2026-09-14
+
+- La patch `loadRowsForIds` usa blocchi di
+  100 UUID. I precedenti 300 producono URL di circa 12 KiB respinti dal proxy
+  Kong con HTTP 414; errore riprodotto sul server reale e osservato nei log
+  del 14 settembre, 10:28–10:39 Europe/Rome. Digest della schermata
+  `2526072483` correlato esattamente su Vercel alle 10:29:44.
+  Conservare paginazione e rifiuto
+  dei risultati parziali. Nessuna modifica a database o configurazione server.
+- Regressioni in `tests/supabase-id-batches.test.mts`; riscontri e limiti
+  dell'indagine, incluso episodio di sabato non correlato, in
+  `docs/incident-2026-09-14-manager.md`.
+
+
 Questo file e' la memoria operativa stabile per Codex e per futuri agenti che lavoreranno su questa app. Deve restare aggiornato quando cambiano architettura, workflow, comandi, schema dati, ruoli, policy RLS o decisioni importanti.
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.

@@ -25,8 +25,11 @@ export async function loadRowsForIds<T>(
 ): Promise<{ data: T[]; error: null }> {
   const rows: T[] = [];
   const unique = [...new Set(ids)];
-  for (let index = 0; index < unique.length; index += 300) {
-    const chunk = unique.slice(index, index + 300);
+  // Encoded UUID filters must fit Kong's request-line limit (8 KiB).
+  // 300 UUIDs produce an ~12 KiB URL; 100 leave room for selects and filters.
+  const batchSize = 100;
+  for (let index = 0; index < unique.length; index += batchSize) {
+    const chunk = unique.slice(index, index + batchSize);
     rows.push(...(await loadAllRows((from, to) => load(chunk, from, to))).data);
   }
   return { data: rows, error: null };

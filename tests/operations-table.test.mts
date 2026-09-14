@@ -89,7 +89,7 @@ test("operations pagination includes old registrations and every related record 
     },
   );
   assert.equal(related.data.length, 1202);
-  assert.ok(calls.every((count) => count <= 300));
+  assert.ok(calls.every((count) => count <= 100));
   await assert.rejects(
     loadAllRows(async () => ({
       data: null,
