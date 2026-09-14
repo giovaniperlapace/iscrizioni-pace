@@ -1,3 +1,5 @@
+import { loadEventStatisticsSnapshot } from "@/lib/registrations/event-statistics.server";
+import { participantGeography, type ParticipantGeography } from "@/lib/registrations/geography";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
@@ -167,6 +169,8 @@ type ManagerRegistrationRow = {
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
+        countries?: ParticipantGeography["countries"];
+        cities?: ParticipantGeography["cities"];
       }
     | Array<{
         id: string;
@@ -177,6 +181,8 @@ type ManagerRegistrationRow = {
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
+        countries?: ParticipantGeography["countries"];
+        cities?: ParticipantGeography["cities"];
       }>
     | null;
 };
@@ -320,12 +326,6 @@ type OperationalUserRoleAssignment = {
   groupName: string | null;
 };
 
-type AttendanceChoiceRow = {
-  registration_id: string;
-  day: string | null;
-  day_part: string | null;
-  choice: string | null;
-};
 
 type ManagerSection = "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
@@ -376,7 +376,6 @@ export default async function ManagerDashboardPage({
       ? await getManagerStatisticsSnapshot(
           serviceSupabase,
           scope,
-          managerOperations.groupTree,
           currentEventId,
           currentEvent?.starts_on ?? null,
           currentEvent?.ends_on ?? null
@@ -949,7 +948,7 @@ async function getManagerOperationsSnapshot(
   const registrationsQuery = loadAllRows((from, to) => supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+      "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)"
     )
     .is("deleted_at", null)
     .eq("event_id", currentEventId)
@@ -1113,6 +1112,7 @@ async function getManagerOperationsSnapshot(
 
   const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
+      const geography = participantGeography(participant);
       const event = relatedOne(registration.events);
       const contact = contactByParticipantId.get(registration.participant_id);
       const assignment = assignmentByRegistrationId.get(registration.id);
@@ -1137,9 +1137,9 @@ async function getManagerOperationsSnapshot(
         ),
         publicCode: participant?.public_code ?? null,
         birthDate: participant?.birth_date ?? null,
-        country: participant?.country_other ?? null,
-        city: participant?.city_other ?? null,
-        place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
+        country: geography.country,
+        city: geography.city,
+        place: formatPlace(geography.city, geography.country),
         email: contact?.email ?? null,
         phone: contact?.phone ?? null,
         registrationStatus: registration.status,
@@ -1249,7 +1249,6 @@ async function getManagerOperationsSnapshot(
 async function getManagerStatisticsSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   scope: ReturnType<typeof getManagerEventScope>,
-  groupTree: ManagerGroupTreeRow[],
   currentEventId: string | null,
   eventStartsOn: string | null,
   eventEndsOn: string | null
@@ -1265,92 +1264,7 @@ async function getManagerStatisticsSnapshot(
     });
   }
 
-  const registrationsQuery = supabase
-    .from("registrations")
-    .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
-    )
-    .is("deleted_at", null)
-    .eq("event_id", currentEventId)
-    .order("submitted_at", { ascending: false })
-    .range(0, 9999);
-
-  const { data: registrations } = await registrationsQuery;
-  const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
-  const registrationIds = registrationRows.map((row) => row.id);
-  const [{ data: assignments }, { data: attendanceChoices }] = await Promise.all([
-    registrationIds.length > 0
-      ? supabase
-          .from("participant_group_assignments")
-          .select(
-            "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)"
-          )
-          .in("registration_id", registrationIds)
-          .eq("is_current", true)
-      : Promise.resolve({ data: [] }),
-    registrationIds.length > 0
-      ? supabase
-          .from("event_attendance_choices")
-          .select("registration_id,day,day_part,choice")
-          .in("registration_id", registrationIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-  const assignmentByRegistrationId = new Map(
-    ((assignments ?? []) as ManagerCurrentAssignmentRow[]).map((row) => [
-      row.registration_id,
-      row,
-    ])
-  );
-  const participants = registrationRows.map((registration) => {
-    const participant = relatedOne(registration.participants);
-    const event = relatedOne(registration.events);
-    const assignment = assignmentByRegistrationId.get(registration.id);
-    const group = relatedOne(assignment?.groups ?? null);
-
-    return {
-      registrationId: registration.id,
-      eventId: registration.event_id,
-      eventTitle: event?.title ?? "Evento",
-      participantId: registration.participant_id,
-      authUserId: participant?.auth_user_id ?? null,
-      firstName: participant?.first_name ?? null,
-      lastName: participant?.last_name ?? null,
-      name: formatParticipantName(
-        participant?.first_name ?? null,
-        participant?.last_name ?? null
-      ),
-      publicCode: participant?.public_code ?? null,
-      birthDate: participant?.birth_date ?? null,
-      country: participant?.country_other ?? null,
-      city: participant?.city_other ?? null,
-      place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
-      email: null,
-      phone: null,
-      registrationStatus: registration.status,
-      submittedAt: registration.submitted_at,
-      currentGroupId: assignment?.group_id ?? null,
-      currentGroupName: group?.name ?? null,
-      currentGroupStatus: assignment?.status ?? null,
-      childrenCount: registration.registration_children?.length ?? 0,
-      children: (registration.registration_children ?? []).map((child) => ({
-        id: child.id,
-        firstName: child.first_name,
-        lastName: child.last_name,
-        birthDate: child.birth_date,
-        position: child.position,
-      })),
-      tagIds: [],
-      tags: [],
-    };
-  });
-
-  return buildEventStatisticsSnapshot({
-    participants,
-    groups: groupTree,
-    attendanceChoices: (attendanceChoices ?? []) as AttendanceChoiceRow[],
-    eventStartsOn,
-    eventEndsOn,
-  });
+  return loadEventStatisticsSnapshot(supabase, currentEventId, { eventStartsOn, eventEndsOn });
 }
 
 function ManagerGroupTreeSection({

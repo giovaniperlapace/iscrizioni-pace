@@ -1,3 +1,4 @@
+import { participantGeography, type ParticipantGeography } from "../registrations/geography.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashIdentityFingerprint } from "./fingerprint.server.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
@@ -53,6 +54,8 @@ type Registration = {
     birth_date: string | null;
     country_other: string | null;
     city_other: string | null;
+    countries?: ParticipantGeography["countries"];
+    cities?: ParticipantGeography["cities"];
     public_code: string;
     auth_user_id: string | null;
   } | null;
@@ -73,7 +76,7 @@ export async function loadQualityPeople(
       db
         .from("registrations")
         .select(
-          "id,event_id,participant_id,status,submitted_at,deleted_at,participants(first_name,last_name,birth_date,country_other,city_other,public_code,auth_user_id),registration_children(id,first_name,last_name,birth_date,position)",
+          "id,event_id,participant_id,status,submitted_at,deleted_at,participants(first_name,last_name,birth_date,country_other,city_other,public_code,auth_user_id,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)",
         )
         .eq("event_id", eventId)
         .order("id")
@@ -141,6 +144,7 @@ export async function loadQualityPeople(
     .filter((row) => row.participants)
     .map((row) => {
       const p = row.participants!;
+      const geography = participantGeography(p);
       const contact = contactsByParticipant.get(row.participant_id);
       const group = groupsByRegistration.get(row.id);
       const groupRelation = group?.groups as unknown as { name: string } | null;
@@ -155,10 +159,10 @@ export async function loadQualityPeople(
         lastName: p.last_name,
         name: `${p.first_name} ${p.last_name}`,
         birthDate: p.birth_date,
-        country: p.country_other,
-        city: p.city_other,
+        country: geography.country,
+        city: geography.city,
         place:
-          [p.city_other, p.country_other].filter(Boolean).join(", ") ||
+          [geography.city, geography.country].filter(Boolean).join(", ") ||
           "Provenienza non indicata",
         publicCode: p.public_code,
         authUserId: p.auth_user_id,

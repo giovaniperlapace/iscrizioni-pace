@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Statistiche e geografia complete — 2026-09-14
+
+- `lib/registrations/event-statistics.server.ts` carica le statistiche comuni
+  admin/manager, dopo i controlli di ruolo/evento dei chiamanti. Paginazione
+  stabile di tutte le fonti, blocchi da 100 UUID anche per assegnazioni e
+  presenze. Errori e gerarchie incomplete interrompono il riepilogo; i boundary
+  admin/manager offrono Riprova senza conteggi falsi o parziali.
+- `geography.ts` condivide il fallback testo personale → catalogo collegato
+  fra statistiche, elenchi ed export. La gerarchia del gruppo conserva la
+  precedenza territoriale nelle statistiche. Non trattare il solo campo
+  `city_other` vuoto come assenza di città: gli inserimenti capogruppo usano ID.
+- Paese pubblico validato nel browser e sul server: opzioni esistenti e paesi
+  extraeuropei nelle sette lingue; città/province come Roma/RM rifiutate.
+- Correzione dati autorizzata: due schede RM/Roma portate a Italia e collegate
+  al catalogo IT, con transazione protetta e audit prima/dopo, batch
+  `statistics-countries-2026-09-14`. Nessuna riassegnazione delle 12 persone
+  realmente senza gruppo e nessuna modifica a presenze, account o consensi.
+- Diagnosi, collaudo (267 test, lint, typecheck, build, browser sintetico e
+  letture reali) e limiti in `docs/incident-2026-09-14-statistics.md`.
+
 ## Richieste dashboard e limite URL — 2026-09-14
 
 - La patch `loadRowsForIds` usa blocchi di

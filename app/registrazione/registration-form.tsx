@@ -23,6 +23,7 @@ import {
 } from "@/lib/questionnaire/registration";
 import type { PublicRegistrationOptions } from "@/lib/registrations/public-flow";
 import type { SupportedLocale } from "@/lib/i18n/config";
+import { isCountryName, COUNTRY_VALIDATION_MESSAGE } from "@/lib/registrations/country-validation";
 import {
   ATTENDANCE_PARTS,
   buildAttendanceDayColumns,
@@ -1088,6 +1089,10 @@ export function RegistrationForm({
               value={customCountry}
               data-field="country"
               onChange={(event) => {
+                event.target.setCustomValidity(
+                  event.target.value.trim() && !isCountryName(event.target.value)
+                    ? COUNTRY_VALIDATION_MESSAGE[locale] : ""
+                );
                 setCustomCountry(event.target.value);
                 clearCitySelection();
               }}

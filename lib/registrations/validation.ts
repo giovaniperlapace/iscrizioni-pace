@@ -2,6 +2,7 @@ import {
   DEFAULT_LOCALE,
   type SupportedLocale,
 } from "../i18n/config.ts";
+import { isCountryName, COUNTRY_VALIDATION_MESSAGE } from "./country-validation.ts";
 import {
   attendanceSlotKey,
   parseAttendanceSlot,
@@ -186,6 +187,8 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
 
   if (!input.countryId && !input.countryOther) {
     errors.push("Seleziona un paese o indica un paese non presente in lista.");
+  } else if (input.countryOther && !isCountryName(input.countryOther)) {
+    errors.push(COUNTRY_VALIDATION_MESSAGE.it);
   }
 
   if (!input.cityId && !input.cityOther) {
