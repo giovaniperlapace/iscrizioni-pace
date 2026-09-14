@@ -3044,3 +3044,28 @@ Quando il piano verrà cancellato:
 - Le decisioni contenute nel piano sono proposte progettuali finche' la
   Milestone P0 non le conferma. Non creare o applicare migration panel/scuole
   prima di quella verifica.
+
+
+## Presenza comunicata nelle schede admin e manager — 2026-09-14
+
+- La scheda condivisa include `OperationsAttendance`: lettura delle presenze
+  correnti della singola iscrizione, griglia mattina/pomeriggio e stato da
+  confermare, riusando `ManualAttendanceFields` del capogruppo. Caricamento
+  indipendente con stato visibile; un errore non viene mostrato come assenza
+  di presenze. Solo admin globale e manager dell'evento possono modificare;
+  iscritti senza gruppo inclusi, eliminati esclusi. Filtri e scheda conservati.
+- `updateOperationsAttendance` controlla i ruoli della sessione e rilegge le
+  date dell'evento. La RPC `update_operations_attendance` ripete i controlli,
+  blocca l'iscrizione e sostituisce le presenze insieme all'audit in transazione.
+  Attore ricavato dal server, RPC riservata a service_role. Presenze capogruppo,
+  snapshot originali, scelte dei momenti e RLS rimangono separati.
+- Migration `20260914140000_operations_attendance.sql` applicata e registrata
+  in produzione il 2026-09-14 su richiesta esplicita. Privilegi verificati:
+  solo service_role può eseguire la RPC. Prova reale in transazione annullata:
+  hash e conteggio delle 1.376 presenze invariati; 89 policy RLS invariate.
+  Pubblicazione del codice tramite push su main e deployment Git Vercel.
+- Regressioni: `tests/operations-attendance.test.mts` e
+  `tests/sql/operations-attendance.sql`: scope evento, iscrizioni eliminate,
+  errori lettura, date, audit atomico e privilegi RPC. Verificati anche i test
+  SQL preesistenti del capogruppo. In copia pulita dal lockfile: 270 test,
+  typecheck, lint e build superati.
