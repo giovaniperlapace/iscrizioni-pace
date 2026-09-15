@@ -5,7 +5,6 @@ import {
   checkRateLimit,
   clearExpiredRateLimitBuckets,
 } from "../lib/security/rate-limit.ts";
-import { getEmailConfig } from "../lib/email/config.ts";
 import { createSupabaseServiceClient } from "../lib/supabase/service.ts";
 
 test("service-role Supabase client is reused for unchanged configuration", () => {
@@ -54,74 +53,7 @@ test("rate limiter removes only expired buckets", () => {
   );
 });
 
-test("SMTP pool defaults and bounds are deterministic", () => {
-  const names = [
-    "EMAIL_DELIVERY_MODE",
-    "SMTP_POOL",
-    "SMTP_MAX_CONNECTIONS",
-    "SMTP_MAX_MESSAGES",
-  ] as const;
-  const previous = new Map(names.map((name) => [name, process.env[name]]));
-
-  process.env.EMAIL_DELIVERY_MODE = "log";
-  delete process.env.SMTP_POOL;
-  delete process.env.SMTP_MAX_CONNECTIONS;
-  delete process.env.SMTP_MAX_MESSAGES;
-
-  try {
-    assert.deepEqual(
-      pickPoolConfig(getEmailConfig()),
-      {
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
-      }
-    );
-
-    process.env.SMTP_POOL = "false";
-    process.env.SMTP_MAX_CONNECTIONS = "11";
-    process.env.SMTP_MAX_MESSAGES = "0";
-
-    assert.deepEqual(
-      pickPoolConfig(getEmailConfig()),
-      {
-        pool: false,
-        maxConnections: 5,
-        maxMessages: 100,
-      }
-    );
-
-    process.env.SMTP_POOL = "invalid";
-    process.env.SMTP_MAX_CONNECTIONS = "3";
-    process.env.SMTP_MAX_MESSAGES = "250";
-
-    assert.deepEqual(
-      pickPoolConfig(getEmailConfig()),
-      {
-        pool: true,
-        maxConnections: 3,
-        maxMessages: 250,
-      }
-    );
-  } finally {
-    for (const name of names) {
-      restoreEnv(name, previous.get(name));
-    }
-  }
-});
-
-function pickPoolConfig(config: ReturnType<typeof getEmailConfig>) {
-  return {
-    pool: config.pool,
-    maxConnections: config.maxConnections,
-    maxMessages: config.maxMessages,
-  };
-}
-
 function restoreEnv(name: string, value: string | undefined) {
-  if (value === undefined) {
-    delete process.env[name];
-  } else {
-    process.env[name] = value;
-  }
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
 }

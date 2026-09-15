@@ -1,6 +1,5 @@
-import nodemailer, { type Transporter } from "nodemailer";
-
-import { getEmailConfig, type EmailConfig } from "./config";
+// Historical module path retained for existing callers; all delivery uses Postmark.
+import { getEmailConfig } from "./config.ts";
 
 export type SendEmailInput = {
   to: string;
@@ -15,98 +14,138 @@ export type SendEmailInput = {
   }>;
 };
 
-let smtpTransporter: Transporter | null = null;
-let smtpTransporterConfig: EmailConfig | null = null;
+export class EmailDeliveryError extends Error {
+  readonly code: string;
+  constructor(code: string) {
+    super(code);
+    this.code = code;
+    this.name = "EmailDeliveryError";
+  }
+}
 
-export async function sendTransactionalEmail(input: SendEmailInput) {
+export function sendTransactionalEmail(input: SendEmailInput) {
+  return sendEmail(input, "transactional");
+}
+
+export function sendBroadcastEmail(input: SendEmailInput) {
+  return sendEmail(input, "broadcast");
+}
+
+async function sendEmail(input: SendEmailInput, kind: "transactional" | "broadcast") {
   const config = getEmailConfig();
-
+  // Each call represents exactly one recipient. Prevent accidental recipient expansion.
+  if (!/^[^\s,;<>@]+@[^\s,;<>@]+$/.test(input.to)) {
+    throw new EmailDeliveryError("invalid_recipient");
+  }
   if (config.deliveryMode === "log") {
-    console.info("[email:log]", {
-      to: input.to,
-      from: config.from,
-      subject: input.subject,
-      text: input.text,
-      attachments: input.attachments?.map((attachment) => ({
-        filename: attachment.filename,
-        contentType: attachment.contentType,
-        cid: attachment.cid,
-        size: attachment.content.length,
-      })),
+    // Never log magic links, email bodies, recipient addresses or attachments.
+    console.info("[email:log]", { kind, attachments: input.attachments?.length || 0 });
+    return { messageId: `log-${crypto.randomUUID()}` };
+  }
+  let response: Response;
+  try {
+    response = await fetch("https://api.postmarkapp.com/email", {
+      method: "POST",
+      redirect: "error",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Postmark-Server-Token": config.serverToken,
+      },
+      body: JSON.stringify(postmarkPayload(input, kind, config)),
+      signal: AbortSignal.timeout(10_000),
     });
-
-    return {
-      messageId: `log-${Date.now()}`,
-    };
+  } catch {
+    // The provider may have accepted the message before the connection failed.
+    // Do not retry automatically, either here or using another provider.
+    throw new EmailDeliveryError("postmark_delivery_unknown");
   }
-
-  const transporter = getSmtpTransporter(config);
-
-  return transporter.sendMail({
-    from: config.from,
-    to: input.to,
-    subject: input.subject,
-    text: input.text,
-    html: input.html,
-    attachments: input.attachments,
-  });
+  let result: { ErrorCode?: number; MessageID?: string };
+  try { result = await response.json(); }
+  catch { throw new EmailDeliveryError("postmark_response_unknown"); }
+  if (!response.ok || result?.ErrorCode !== 0) {
+    const code = Number.isInteger(result?.ErrorCode) ? result.ErrorCode : response.status;
+    throw new EmailDeliveryError(`postmark_${code}`);
+  }
+  if (typeof result.MessageID !== "string" || !result.MessageID.trim()) {
+    throw new EmailDeliveryError("postmark_response_unknown");
+  }
+  return { messageId: result.MessageID };
 }
 
-export function closeEmailTransport(): void {
-  smtpTransporter?.close();
-  smtpTransporter = null;
-  smtpTransporterConfig = null;
+// Compatibility for operational scripts: HTTP has no SMTP pool to close.
+export function closeEmailTransport(): void {}
+
+function postmarkPayload(input: SendEmailInput, kind: "transactional" | "broadcast", config: ReturnType<typeof getEmailConfig>) {
+  return {
+        From: config.from,
+        ReplyTo: config.replyTo,
+        To: input.to,
+        Subject: input.subject,
+        TextBody: input.text,
+        HtmlBody: input.html,
+        MessageStream: kind === "broadcast" ? config.broadcastStream : config.transactionalStream,
+        TrackOpens: false,
+        TrackLinks: "None",
+        Attachments: input.attachments?.map(attachment => ({
+          Name: attachment.filename,
+          Content: attachment.content.toString("base64"),
+          ContentType: attachment.contentType,
+          ...(attachment.cid ? { ContentID: `cid:${attachment.cid.replace(/^cid:/, "")}` } : {}),
+        })),
+      };
 }
 
-function getSmtpTransporter(config: EmailConfig): Transporter {
-  if (
-    smtpTransporter &&
-    smtpTransporterConfig &&
-    hasSameTransportConfiguration(smtpTransporterConfig, config)
-  ) {
-    return smtpTransporter;
-  }
+export type BatchEmailResult = { messageId: string; errorCode?: never } | { errorCode: string; messageId?: never };
 
-  closeEmailTransport();
-  smtpTransporter = config.pool
-    ? nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        pool: true,
-        maxConnections: config.maxConnections,
-        maxMessages: config.maxMessages,
-        auth: {
-          user: config.user,
-          pass: config.password,
-        },
-      })
-    : nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: {
-          user: config.user,
-          pass: config.password,
-        },
+// Bound encoded JSON bytes as well as message count (attachments expand in base64).
+export async function sendBroadcastBatch(inputs: SendEmailInput[]): Promise<BatchEmailResult[]> {
+  const config = getEmailConfig();
+  const results: BatchEmailResult[] = [];
+  let pending: string[] = [];
+  let indexes: number[] = [];
+  let bytes = 2;
+  async function flush() {
+    if (!pending.length) return;
+    let values: BatchEmailResult[];
+    try {
+      const response = await fetch("https://api.postmarkapp.com/email/batch", {
+        method: "POST", redirect: "error",
+        headers: { "Content-Type": "application/json", Accept: "application/json", "X-Postmark-Server-Token": config.serverToken },
+        body: `[${pending.join(",")}]`, signal: AbortSignal.timeout(20_000),
       });
-  smtpTransporterConfig = config;
-
-  return smtpTransporter;
-}
-
-function hasSameTransportConfiguration(
-  previous: EmailConfig,
-  current: EmailConfig
-): boolean {
-  return (
-    previous.host === current.host &&
-    previous.port === current.port &&
-    previous.secure === current.secure &&
-    previous.user === current.user &&
-    previous.password === current.password &&
-    previous.pool === current.pool &&
-    previous.maxConnections === current.maxConnections &&
-    previous.maxMessages === current.maxMessages
-  );
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        const code = Number.isInteger(data?.ErrorCode) ? data.ErrorCode : response.status;
+        values = indexes.map(() => ({ errorCode: `postmark_${code}` }));
+      } else if (!Array.isArray(data) || data.length !== indexes.length) {
+        values = indexes.map(() => ({ errorCode: "postmark_response_unknown" }));
+      } else {
+        values = data.map(item => item?.ErrorCode === 0 && typeof item.MessageID === "string" && item.MessageID.trim()
+          ? { messageId: item.MessageID }
+          : { errorCode: Number.isInteger(item?.ErrorCode) && item.ErrorCode !== 0 ? `postmark_${item.ErrorCode}` : "postmark_response_unknown" });
+      }
+    } catch {
+      // Never resubmit an ambiguous request: some or all messages may be accepted.
+      values = indexes.map(() => ({ errorCode: "postmark_delivery_unknown" }));
+    }
+    indexes.forEach((index, offset) => { results[index] = values[offset]; });
+    pending = []; indexes = []; bytes = 2;
+  }
+  for (const [index, input] of inputs.entries()) {
+    if (!/^[^\s,;<>@]+@[^\s,;<>@]+$/.test(input.to)) {
+      results[index] = { errorCode: "invalid_recipient" }; continue;
+    }
+    if (config.deliveryMode === "log") {
+      results[index] = await sendBroadcastEmail(input); continue;
+    }
+    const payload = JSON.stringify(postmarkPayload(input, "broadcast", config));
+    const size = Buffer.byteLength(payload);
+    // Conservative margin below Postmark's per-message and 50 MB batch limits.
+    if (size > 9_000_000) { results[index] = { errorCode: "postmark_message_too_large" }; continue; }
+    if (pending.length && (pending.length === 500 || bytes + size + 1 > 10_000_000)) await flush();
+    pending.push(payload); indexes.push(index); bytes += size + 1;
+  }
+  await flush();
+  return results;
 }

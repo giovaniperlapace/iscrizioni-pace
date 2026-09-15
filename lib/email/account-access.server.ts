@@ -38,7 +38,7 @@ export async function sendAccountAccessEmail(
     await sendTransactionalEmail({ to: input.email, ...renderAccountAccessEmail({ ...input, locale: language.locale }) });
     sent = true;
   } catch {
-    // SMTP errors can contain recipient addresses. Keep only operational metadata.
+    // Provider errors can contain recipient addresses. Keep only operational metadata.
     console.warn("email.account_access_failed", { entityId: input.entityId });
   }
   try {
@@ -52,7 +52,7 @@ export async function sendAccountAccessEmail(
     });
     if (error) throw error;
   } catch {
-    // An audit failure after SMTP acceptance must not encourage another send.
+    // An audit failure after provider acceptance must not encourage another send.
     console.warn("email.account_access_audit_failed", { entityId: input.entityId, sent });
   }
   return sent;

@@ -1,5 +1,6 @@
+import { getEmailConfig } from "@/lib/email/config";
 import { randomUUID } from "node:crypto";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { resolveSelectedCampaignRecipientIds } from "@/lib/email/campaign-selection";
 import { renderCampaignTemplate, validateCampaignTemplate } from "@/lib/email/campaign-templates";
@@ -23,7 +24,7 @@ import {
   type CampaignRecipient as Recipient,
   type CampaignRecipientPreview as RecipientPreview,
 } from "@/lib/email/campaign-recipients.server";
-import { sendTransactionalEmail } from "@/lib/email/smtp";
+import { sendBroadcastEmail } from "@/lib/email/smtp";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -365,7 +366,7 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
       renderSafeCampaignHtml(campaign.body_template, sample.templateData),
       attachments
     );
-    const result = await sendTransactionalEmail({
+    const result = await sendBroadcastEmail({
       to: testEmail,
       subject: `[TEST] ${renderCampaignTemplate(campaign.subject_template, sample.templateData)}`,
       text: campaignHtmlToText(html),
@@ -373,10 +374,11 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
       attachments: attachments.map(emailAttachmentInput),
     });
     await service.from("email_campaigns").update({ test_sent_at: new Date().toISOString(), test_sent_to_user_id: userId, status: "ready" }).eq("id", campaignId);
-    await audit(service, campaign.event_id, userId, campaignId, "email_campaign.test_sent", { delivery_mode: process.env.EMAIL_DELIVERY_MODE === "log" ? "log" : "smtp" });
+    await audit(service, campaign.event_id, userId, campaignId, "email_campaign.test_sent", { delivery_mode: process.env.EMAIL_DELIVERY_MODE === "log" ? "log" : "postmark" });
     return NextResponse.json({ ok: true, messageId: result.messageId });
   }
   if (!campaign.test_sent_at) throw new Error("Prima dell'invio definitivo è obbligatorio inviare il test.");
+  getEmailConfig();
   const { data: claimed } = await service
     .from("email_campaigns")
     .update({ status: "sending" })
@@ -395,9 +397,13 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
       .eq("status", "sending");
     throw cause;
   }
-  const result = await processDueCampaignDeliveries({
-    campaignId,
-    actorUserId: userId,
+  after(async () => {
+    try {
+      await processDueCampaignDeliveries({ campaignId, actorUserId: userId });
+    } catch {
+      // The durable queue remains the source of truth; never log recipient data.
+      console.error("[email-campaign] background_processing_failed", { campaignId });
+    }
   });
   await audit(service, campaign.event_id, userId, campaignId, "email_campaign.queued", {
     recipient_count: campaign.recipient_count,
@@ -406,7 +412,12 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
     last_scheduled_for: reservation.lastScheduledFor,
   });
   return NextResponse.json({
-    ...result,
+    ok: true,
+    queued: true,
+    sent: 0,
+    failed: 0,
+    scheduled: reservation.scheduledToday + reservation.scheduledLater,
+    status: "scheduled",
     scheduledLater: reservation.scheduledLater,
     lastScheduledFor: reservation.lastScheduledFor,
   });

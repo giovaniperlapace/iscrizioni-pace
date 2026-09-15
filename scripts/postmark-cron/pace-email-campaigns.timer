@@ -1,0 +1,11 @@
+[Unit]
+Description=Resume Iscrizioni Pace email queue
+
+[Timer]
+OnBootSec=60
+OnUnitInactiveSec=60
+AccuracySec=5
+Unit=pace-email-campaigns.service
+
+[Install]
+WantedBy=timers.target

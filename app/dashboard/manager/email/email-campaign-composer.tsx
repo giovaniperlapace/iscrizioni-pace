@@ -338,14 +338,7 @@ export function EmailCampaignComposer({
     });
     if (data) {
       setShowSendConfirmation(false);
-      setNotice(
-        (data.scheduled > 0
-          ? `Prima tranche conclusa: ${data.sent} inviate, ${data.failed} non riuscite. ${data.scheduled} email sono programmate per i prossimi giorni, fino a 300 al giorno.`
-          : `Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`) +
-        (data.sent > 0
-          ? ` Ricorda ai destinatari: «${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}»`
-          : "")
-      );
+      setNotice(`Campagna presa in carico: ${data.scheduled} email in coda. L’invio prosegue automaticamente; puoi chiudere questa pagina e consultare gli esiti nell’elenco campagne.`);
       resetPreview();
     }
   }
@@ -555,8 +548,8 @@ export function EmailCampaignComposer({
             </p>
           </div>
           <span className="max-w-sm rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-3 py-2 text-xs font-semibold text-[var(--peace-muted)]">
-            Nessun limite di selezione. L’invio usa tranche automatiche fino a
-            300 email al giorno.
+            Nessun limite di selezione. L’invio prosegue automaticamente
+            in piccoli gruppi.
           </span>
         </div>
         <div
@@ -1093,11 +1086,10 @@ export function EmailCampaignComposer({
                     ? `${preview.recipientCount} email ai capigruppo.`
                     : `${preview.recipientCount} destinatari: ${preview.directCount} email ai partecipanti e ${preview.delegatedCount} ai referenti.`}
                 </p>
-                {preview.recipientCount > 300 ? (
+                {preview.recipientCount > 25 ? (
                   <p className="mt-2 text-sm font-semibold text-[var(--peace-blue-800)]">
-                    Le prime 300 email compatibili con la quota giornaliera
-                    partiranno oggi; le altre saranno programmate
-                    automaticamente nei giorni successivi, fino a 300 al giorno.
+                    L’invio inizierà dopo la conferma e proseguirà automaticamente
+                    fino a completare la coda.
                   </p>
                 ) : null}
               </div>
@@ -1234,12 +1226,12 @@ export function EmailCampaignComposer({
                 </h3>
                 <p id="campaign-send-confirmation-description" className="mt-3 text-sm text-[var(--peace-muted)]">
                   Stai per inviare “{preview.previewSubject}” a {preview.recipientCount} destinatari.
-                  L’invio e la pianificazione delle tranche successive non possono
-                  essere annullati dopo la conferma.
+                  L’invio non può
+                  essere annullato dopo la conferma.
                 </p>
-                {preview.recipientCount > 300 ? (
+                {preview.recipientCount > 25 ? (
                   <p className="mt-2 text-sm font-semibold text-[var(--peace-blue-800)]">
-                    Saranno accodate tranche fino a 300 email al giorno.
+                    Le email saranno inviate progressivamente fino a completare la coda.
                   </p>
                 ) : null}
                 {preview.attachments.length ? (

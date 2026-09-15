@@ -1,5 +1,54 @@
 # AGENTS.md
 
+## Rilascio Postmark — 2026-09-15
+
+- Pubblicazione autorizzata dall’utente. Scope Vercel reale:
+  `giovaniperlapaces-projects`, progetto `iscrizioni-pace`, piano Hobby.
+  Lo scope storico stefano-orlandos-projects-de2d57cb non è più accessibile.
+- Cron Vercel rimosso: Hobby non permette frequenza al minuto. Richiamo
+  autenticato mediante timer systemd sul server DB esistente, definizioni
+  in `scripts/postmark-cron/`. Config riservata `/etc/iscrizioni-pace/email-cron.conf`,
+  root 0600; token CRON_SECRET condiviso con produzione, mai in Git.
+  Timer dopo 60 secondi dal completamento, niente esecuzioni sovrapposte.
+- SMTP precedente conservato nelle env per rollback ma ignorato dal nuovo codice.
+  Nuove env Postmark in produzione e sviluppo. Backup RPC precedenti locale
+  `/tmp/pace-postmark-release/rollback-queue.sql`. Coordinare deployment,
+  migration atomica e avvio timer; nessuna riscrittura destinatari.
+
+
+## Postmark — ripresa 2026-09-15
+
+- Account approvato; pagamento ancora da completare. Integrazione recuperata dallo
+  stash `e96c3ee21bdde047fbffb25fb145fcf65a877b61`, conservato. Sostituisce lo standby
+  precedente: codice locale usa Postmark, produzione ancora Gmail.
+- Configurazione locale riservata in `.env.postmark.local` (0600, esclusa da Git).
+  Caricare l'override per test; normale `.env.local` e Vercel restano invariati.
+  Nuova modalità `postmark|log`, `POSTMARK_SERVER_TOKEN`, `EMAIL_REPLY_TO`;
+  stream separati outbound/broadcast. Nessun fallback Gmail o Nodemailer.
+- Due prove reali a registrationspeace@santegidio.org consegnate con SMTP Google
+  250 OK, QR sintetico e allegato. From/Reply-To, CID e tracking verificati.
+  Nessuna iscrizione/account modificato; callback login reale non collaudata.
+- Quota Gmail 300/giorno rimossa nella migration locale; claim 25 atomico,
+  inoltro `/email/batch` e blocchi consecutivi senza pausa per budget 180 secondi.
+  Avvio in background con Next after; cron al minuto riprende scheduled residui.
+  Nessun tetto 25/minuto. Esiti per destinatario, payload limitati per byte,
+  nessun retry incerto; errori DB dopo accettazione lasciano sending da verificare. Migration NON applicata in produzione: coordinare col rilascio e
+  verificare piano Vercel/CRON_SECRET. Non eseguire la nuova coda su Gmail.
+- Backup locale precedente e copie duplicate nello stash
+  `backup-pre-postmark-2026-09-15-local-changes-and-duplicates`; codice già pubblicato
+  riallineato a origin/main. Conservata la rimozione locale del dettaglio errore
+  in registration-page-content.tsx (estranea a Postmark).
+- Lockfile recuperato dalla versione corrente rimuovendo solo Nodemailer e tipi.
+  Dettagli e passi di rilascio in `docs/postmark.md`. Nessuna pubblicazione eseguita.
+- Verifiche finali dopo ottimizzazione batch: 310 test, lint, typecheck e build superati; SQL PGlite con 1.205
+  destinatari. Allineato il test del messaggio gruppo al testo generico già scelto
+  localmente, conservando il controllo di assenza del fallback.
+- `npm run dev:postmark` carica l'override locale; `npm run email:verify:postmark`
+  controlla provider senza invio. Piano Postmark Basic 50.000 rilevato; 4 prove
+  consumate, incluse due batch con Delivered/SMTP 250. Ultimo controllo fattura
+  insoluta precedente all’ottimizzazione; nessuna modifica al pagamento.
+
+
 ## Segnalazioni di appartenenza al gruppo — 2026-09-15
 
 - Il capogruppo usa il collegamento discreto `Segnala un problema di gruppo`,

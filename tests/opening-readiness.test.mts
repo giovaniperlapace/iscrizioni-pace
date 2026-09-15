@@ -17,12 +17,9 @@ const COMPLETE_PRODUCTION_ENV = {
   APP_URL: "https://registrationspeace.santegidio.org",
   PUBLIC_SITE_URL: "https://registrationspeace.santegidio.org",
   EMAIL_FROM: "registrationspeace@santegidio.org",
-  EMAIL_USER: "registrationspeace@santegidio.org",
-  EMAIL_PASSWORD: "password",
-  SMTP_HOST: "smtp.gmail.com",
-  SMTP_PORT: "465",
-  SMTP_SECURE: "true",
-  EMAIL_DELIVERY_MODE: "smtp",
+  EMAIL_REPLY_TO: "registrationspeace@santegidio.org",
+  POSTMARK_SERVER_TOKEN: "test-secret",
+  EMAIL_DELIVERY_MODE: "postmark",
 };
 
 test("opening readiness accepts complete production env", () => {
@@ -39,7 +36,7 @@ test("opening readiness rejects missing secrets without printing values", () => 
     {
       ...COMPLETE_PRODUCTION_ENV,
       SUPABASE_SERVICE_ROLE_KEY: "",
-      EMAIL_PASSWORD: "",
+      POSTMARK_SERVER_TOKEN: "",
     },
     { production: true }
   );
@@ -47,7 +44,7 @@ test("opening readiness rejects missing secrets without printing values", () => 
 
   assert.equal(result.ok, false);
   assert.match(report, /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(report, /EMAIL_PASSWORD/);
+  assert.match(report, /POSTMARK_SERVER_TOKEN/);
   assert.doesNotMatch(report, /service|password/);
 });
 
