@@ -885,7 +885,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   if (intent === "reject") {
-    const { error } = await serviceSupabase.rpc("reject_group_assignment", {
+    const { error } = await serviceSupabase.rpc("report_group_assignment", {
       p_assignment_id: assignmentRow.id,
       p_actor_user_id: auth.user.id,
       p_note: note,
@@ -898,7 +898,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     revalidatePath("/dashboard/capogruppo");
     revalidatePath("/dashboard/manager");
     revalidatePath("/dashboard/admin");
-    redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId: null, saved: "1" }));
+    redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId: null, saved: "reported" }));
   }
 
   return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");

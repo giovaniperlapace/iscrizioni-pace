@@ -1,3 +1,4 @@
+import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
 import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
 import { groupLeaderSummaries, type GroupLeaderSummary } from "@/lib/groups/leader-summary";
 import { loadEventStatisticsSnapshot } from "@/lib/registrations/event-statistics.server";
@@ -432,6 +433,7 @@ export default async function ManagerDashboardPage({
           <ManagerSidebar activeSection={activeSection} navMode={navMode} />
 
           <div className="grid min-w-0 gap-6">
+            <GroupAssignmentReports dashboard="manager" eventId={currentEventId} />
             <StatusMessage
               error={params.openingError}
               saved={params.openingSaved}

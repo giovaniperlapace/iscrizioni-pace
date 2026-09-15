@@ -12,7 +12,7 @@ test("leaders load all current assignments in their subtree without confirmation
 });
 test("ordinary confirmation commands and per-assignment notifications are retired", () => {
   assert.match(assignmentAction, /intent !== "note" && intent !== "reject"/);
-  assert.match(assignmentAction, /rpc\("reject_group_assignment"/);
+  assert.match(assignmentAction, /rpc\("report_group_assignment"/);
   assert.doesNotMatch(assignmentAction, /upsert|escalated_to|notifyGroup|intent === "confirm"/);
   assert.doesNotMatch(registration, /notifyGroupLeaders|leader_notification|status: "probable"/);
 });

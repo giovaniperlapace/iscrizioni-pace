@@ -1,5 +1,32 @@
 # AGENTS.md
 
+## Segnalazioni di appartenenza al gruppo — 2026-09-15
+
+- Il capogruppo usa il collegamento discreto `Segnala un problema di gruppo`,
+  con conferma e testi nelle sette lingue. `updateGroupLeaderAssignment` chiama
+  `report_group_assignment`: registra solo l'audit `group_leader.assignment_reported`,
+  senza modificare alcun campo dell'assegnazione, note incluse. Invii ripetuti
+  dello stesso referente sulla stessa assegnazione sono idempotenti.
+- `GroupAssignmentReports` mostra le segnalazioni nelle dashboard Manager/Admin
+  dell'evento, con collegamento alla scheda. Controlla i ruoli prima delle
+  letture; paginazione completa, blocchi da 100 ID, esclusione delle assegnazioni
+  non correnti e delle iscrizioni eliminate. Un errore mostra un avviso.
+  Le segnalazioni sono interne alla dashboard, senza invii email.
+- Migration `20260915160000_group_assignment_reports.sql`: la vecchia RPC
+  `reject_group_assignment` delega alla sola segnalazione, anche per vecchi client.
+  La policy UPDATE delle assegnazioni ammette solo Manager/Admin; le note del
+  capogruppo continuano tramite l'azione server con scope. RPC solo service_role,
+  con nuova verifica di membership, gruppo attivo, evento corrente e iscrizione.
+- Verifiche: `tests/sql/group-assignment-reports.sql` su PostgreSQL temporaneo
+  (PGlite), test del pannello in `tests/group-assignment-reports.test.mts`.
+  Migration applicata e registrata in produzione il 2026-09-15. Conteggio
+  e hash delle 396 assegnazioni invariati prima/dopo. Prova reale interamente
+  annullata: RPC nuova e storica, idempotenza, assegnazione invariata e blocco
+  UPDATE del capogruppo con ruolo SQL authenticated verificati. Nessuna
+  segnalazione di prova persistente. Rilascio: 307 test, lint mirato, typecheck
+  e build production superati nella copia isolata con npm ci dal lockfile.
+
+
 ## Rilascio correzioni iscrizione e referenti — 2026-09-15
 
 - Pacchetto integrato su `8062b90`: avvio iscrizione personale, conservazione

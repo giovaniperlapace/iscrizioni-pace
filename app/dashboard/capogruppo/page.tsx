@@ -135,17 +135,17 @@ type DashboardTool = "link" | "manual";
 
 type AssignmentSort = "name" | "updated" | "submitted" | "status";
 const GROUP_EXCEPTION_COPY = {
-  it: { reject: "Non appartiene al mio gruppo", help: "La persona verrà spostata in Senza gruppo e potrà essere riassegnata da admin o manager.", warning: (name: string) => `Spostare ${name} in Senza gruppo?` },
-  en: { reject: "Does not belong to my group", help: "The person will move to Without a group and can be reassigned by an admin or manager.", warning: (name: string) => `Move ${name} to Without a group?` },
-  fr: { reject: "Ne fait pas partie de mon groupe", help: "La personne sera déplacée dans Sans groupe et pourra être réaffectée par un administrateur ou un gestionnaire.", warning: (name: string) => `Déplacer ${name} dans Sans groupe ?` },
-  de: { reject: "Gehört nicht zu meiner Gruppe", help: "Die Person wird Ohne Gruppe zugeordnet und kann von Admin oder Manager neu zugewiesen werden.", warning: (name: string) => `${name} nach Ohne Gruppe verschieben?` },
-  es: { reject: "No pertenece a mi grupo", help: "La persona pasará a Sin grupo y podrá ser reasignada por un administrador o gestor.", warning: (name: string) => `¿Mover a ${name} a Sin grupo?` },
-  nl: { reject: "Hoort niet bij mijn groep", help: "De persoon gaat naar Zonder groep en kan door een beheerder of manager opnieuw worden toegewezen.", warning: (name: string) => `${name} naar Zonder groep verplaatsen?` },
-  uk: { reject: "Не належить до моєї групи", help: "Особу буде переміщено до категорії Без групи; адміністратор або менеджер зможе призначити їй групу.", warning: (name: string) => `Перемістити ${name} до категорії Без групи?` },
+  it: { reject: "Segnala un problema di gruppo", sent: "Segnalazione inviata a Manager e Admin. Il gruppo è rimasto invariato.", help: "Invia una segnalazione a Manager e Admin. Il gruppo della persona resterà invariato.", warning: (name: string) => `Segnalare che ${name} non appartiene al gruppo?` },
+  en: { reject: "Report a group issue", sent: "Report sent to Managers and Admins. The group is unchanged.", help: "Send a report to Managers and Admins. The person’s group will remain unchanged.", warning: (name: string) => `Report that ${name} does not belong to the group?` },
+  fr: { reject: "Signaler un problème de groupe", sent: "Signalement envoyé aux gestionnaires et administrateurs. Le groupe reste inchangé.", help: "Envoyez un signalement aux gestionnaires et administrateurs. Le groupe restera inchangé.", warning: (name: string) => `Signaler que ${name} ne fait pas partie du groupe ?` },
+  de: { reject: "Gruppenzuordnung melden", sent: "Meldung an Manager und Administratoren gesendet. Die Gruppe bleibt unverändert.", help: "Meldung an Manager und Administratoren senden. Die Gruppe bleibt unverändert.", warning: (name: string) => `Melden, dass ${name} nicht zur Gruppe gehört?` },
+  es: { reject: "Informar de un problema de grupo", sent: "Aviso enviado a gestores y administradores. El grupo no ha cambiado.", help: "Envía un aviso a gestores y administradores. El grupo no cambiará.", warning: (name: string) => `¿Informar de que ${name} no pertenece al grupo?` },
+  nl: { reject: "Probleem met groep melden", sent: "Melding verstuurd naar managers en beheerders. De groep is ongewijzigd.", help: "Stuur een melding naar managers en beheerders. De groep blijft ongewijzigd.", warning: (name: string) => `Melden dat ${name} niet bij de groep hoort?` },
+  uk: { reject: "Повідомити про проблему з групою", sent: "Повідомлення надіслано менеджерам та адміністраторам. Група залишилася без змін.", help: "Надішліть повідомлення менеджерам та адміністраторам. Група залишиться без змін.", warning: (name: string) => `Повідомити, що ${name} не належить до групи?` },
 };
 
 type GroupLeaderCopy = {
-  exception: { reject: string; help: string; warning: (name: string) => string };
+  exception: { reject: string; sent: string; help: string; warning: (name: string) => string };
   srTitle: string;
   areaDescription: string;
   saved: string;
@@ -2191,12 +2191,12 @@ function AssignmentDetailCard({
           <ReliableForm action={updateGroupLeaderAssignment} className="mt-3 grid gap-3" data-preserve-dashboard-scroll>
             <input type="hidden" name="returnTo" value={returnTo} />
             <input type="hidden" name="assignmentId" value={assignment.id} />
-            <p className="text-sm text-[var(--peace-muted)]">{copy.exception.help}</p>
+            <p className="text-xs text-[var(--peace-muted)]">{copy.exception.help}</p>
             <ConfirmSubmitButton
               name="intent"
               value="reject"
               confirmMessage={copy.exception.warning(assignment.participantName)}
-              className="min-h-10 w-fit rounded-md border border-[#d1a7a0] bg-white px-4 text-sm font-semibold text-[#8a3f35] hover:bg-[#fff0ee]"
+              className="min-h-10 w-fit text-left text-xs text-[var(--peace-muted)] underline decoration-dotted underline-offset-4 hover:text-[var(--peace-ink)]"
             >
               {copy.exception.reject}
             </ConfirmSubmitButton>
@@ -2381,7 +2381,7 @@ function StatusMessage({
   if (saved) {
     return (
       <SuccessMessage key={randomUUID()} clearQuery locale={locale} className="rounded-lg border border-[#bad2b8] bg-[#edf7ea] p-4 text-sm text-[#2f6541]">
-        {copy.saved}
+        {saved === "reported" ? copy.exception.sent : copy.saved}
       </SuccessMessage>
     );
   }
