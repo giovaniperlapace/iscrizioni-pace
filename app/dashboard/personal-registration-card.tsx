@@ -27,7 +27,7 @@ export function PersonalRegistrationCard({
           </p>
         </div>
         <Link
-          href={summary.hasRegistration ? "/dashboard/partecipante" : "/"}
+          href={summary.hasRegistration ? "/dashboard/partecipante" : "/registrazione"}
           className="btn-secondary inline-flex min-h-11 shrink-0 items-center justify-center px-4 text-sm"
         >
           {summary.hasRegistration ? "Apri la mia iscrizione" : "Completa iscrizione"}

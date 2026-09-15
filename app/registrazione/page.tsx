@@ -5,6 +5,7 @@ import {
 import {
   buildGroupRegistrationPath,
   isValidGroupRegistrationLinkToken,
+  isReservedGroupRegistrationLinkToken,
 } from "@/lib/groups/registration-links";
 import { permanentRedirect } from "next/navigation";
 
@@ -24,7 +25,8 @@ export default async function RegistrationPage({
 
   if (
     groupRegistrationLinkToken &&
-    isValidGroupRegistrationLinkToken(groupRegistrationLinkToken)
+    isValidGroupRegistrationLinkToken(groupRegistrationLinkToken) &&
+    !isReservedGroupRegistrationLinkToken(groupRegistrationLinkToken)
   ) {
     permanentRedirect(
       buildGroupRegistrationPath({

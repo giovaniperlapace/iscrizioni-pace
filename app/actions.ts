@@ -26,7 +26,7 @@ import {
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
 import {
-  buildGroupRegistrationPath,
+  buildRegistrationRetryPath,
   isValidGroupRegistrationLinkToken,
   hashGroupRegistrationLinkToken,
   isReservedGroupRegistrationLinkToken,
@@ -198,27 +198,19 @@ export async function startPublicEmailFlow(formData: FormData) {
 export async function submitPublicRegistration(formData: FormData) {
   const parsed = parseRegistrationForm(formData);
   const email = normalizeEmail(formData.get("email"));
-  const rawToken = formData.get("groupRegistrationLinkToken");
-  const token = typeof rawToken === "string" ? rawToken.trim() : "";
-  const errorPath = (error: string) => {
-    if (token && isValidGroupRegistrationLinkToken(token) && !isReservedGroupRegistrationLinkToken(token)) {
-      return buildGroupRegistrationPath({ token, email, error });
-    }
-    const query = new URLSearchParams({ email, error });
-    if (token) query.set("groupLink", token);
-    return `/registrazione?${query.toString()}`;
-  };
+  const rawGroupToken = formData.get("groupRegistrationLinkToken");
+  const groupToken = typeof rawGroupToken === "string" ? rawGroupToken.trim() || null : null;
   const ipAddress = await getIpAddress();
 
   if (!parsed.ok) {
     redirect(
-      errorPath(parsed.errors[0] ?? "invalid")
+      buildRegistrationRetryPath({ token: groupToken, email, error: parsed.errors[0] ?? "invalid" })
     );
   }
 
   if (!checkRateLimit(`registration:${ipAddress}:${parsed.value.email}`, REGISTRATION_RATE_LIMIT)) {
     redirect(
-      errorPath("rate-limit")
+      buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: "rate-limit" })
     );
   }
 
@@ -248,7 +240,7 @@ export async function submitPublicRegistration(formData: FormData) {
     const message = getPublicRegistrationErrorMessage(error);
 
     redirect(
-      errorPath(message)
+      buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: message })
     );
   }
 

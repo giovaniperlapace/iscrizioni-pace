@@ -117,7 +117,6 @@ type RegistrationFormCopy = {
   childBirthDate: string;
   accessibilityQuestion: string;
   accessibilityTitle: string;
-  accessibilityHelp: string;
   previousQuestion: string;
   externalGroupQuestion: string;
   externalGroupPlaceholder: string;
@@ -183,8 +182,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "Hai una disabilità, una condizione di salute o un bisogno di accessibilità che desideri segnalarci per organizzare meglio l'accoglienza?",
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
-    accessibilityHelp:
-      "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
     previousQuestion: "Hai partecipato ad altri eventi della Comunità di Sant’Egidio?",
     externalGroupQuestion: "Fai parte di qualche associazione?",
     externalGroupPlaceholder: "Nome dell’associazione (facoltativo)",
@@ -253,8 +250,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "Do you have a disability, health condition or accessibility need that you would like to tell us about so we can organise the welcome better?",
     accessibilityTitle: "Which aspects should we consider?",
-    accessibilityHelp:
-      "You can select one or more options that are useful for organising the welcome better.",
     previousQuestion: "Have you attended other events organised by the Community of Sant’Egidio?",
     externalGroupQuestion: "Are you a member of any association?",
     externalGroupPlaceholder: "Association name (optional)",
@@ -323,8 +318,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "As-tu un handicap, un problème de santé ou un besoin d'accessibilité que tu souhaites nous signaler pour mieux organiser l'accueil ?",
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
-    accessibilityHelp:
-      "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
     previousQuestion: "As-tu participé à d’autres événements de la Communauté de Sant’Egidio ?",
     externalGroupQuestion: "Fais-tu partie d’une association ?",
     externalGroupPlaceholder: "Nom de l’association (facultatif)",
@@ -393,8 +386,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "Hast du eine Behinderung, gesundheitliche Situation oder einen Barrierefreiheitsbedarf, den du uns mitteilen möchtest, damit wir den Empfang besser organisieren können?",
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
-    accessibilityHelp:
-      "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
     previousQuestion: "Hast du an anderen Veranstaltungen der Gemeinschaft Sant’Egidio teilgenommen?",
     externalGroupQuestion: "Gehörst du einem Verein an?",
     externalGroupPlaceholder: "Name des Vereins (optional)",
@@ -463,8 +454,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "¿Tienes una discapacidad, condición de salud o necesidad de accesibilidad que quieras comunicarnos para organizar mejor la acogida?",
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
-    accessibilityHelp:
-      "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
     previousQuestion: "¿Has participado en otros eventos de la Comunidad de Sant’Egidio?",
     externalGroupQuestion: "¿Formas parte de alguna asociación?",
     externalGroupPlaceholder: "Nombre de la asociación (opcional)",
@@ -533,8 +522,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "Heb je een handicap, gezondheidssituatie of toegankelijkheidsbehoefte die je ons wilt melden zodat we de ontvangst beter kunnen organiseren?",
     accessibilityTitle: "Waar moeten we rekening mee houden?",
-    accessibilityHelp:
-      "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
     previousQuestion: "Heb je aan andere evenementen van de Gemeenschap van Sant’Egidio deelgenomen?",
     externalGroupQuestion: "Ben je lid van een vereniging?",
     externalGroupPlaceholder: "Naam van de vereniging (optioneel)",
@@ -603,8 +590,6 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "Чи маєте ви інвалідність, стан здоров'я або потребу в доступності, про які хочете повідомити нам, щоб ми краще організували прийом?",
     accessibilityTitle: "Що нам потрібно врахувати?",
-    accessibilityHelp:
-      "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
     previousQuestion: "Чи брали ви участь в інших заходах Спільноти святого Егідія?",
     externalGroupQuestion: "Чи належите ви до якоїсь асоціації?",
     externalGroupPlaceholder: "Назва асоціації (необов’язково)",
@@ -1443,9 +1428,6 @@ export function RegistrationForm({
               <h2 className="text-lg font-semibold">
                 {copy.accessibilityTitle}
               </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-                {copy.accessibilityHelp}
-              </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (

@@ -24,8 +24,7 @@ export async function RegistrationPageContent({
   const locale = await getRequestLocale();
   const copy = getMessages(locale);
   const supabase = createSupabaseServiceClient();
-  let groupLinkError: string | null = null;
-  let options: PublicRegistrationOptions | null = null;
+  let options: PublicRegistrationOptions;
   const email = searchParams.email ?? "";
 
   try {
@@ -34,14 +33,29 @@ export async function RegistrationPageContent({
       groupRegistrationLinkToken
     );
   } catch (error) {
-    groupLinkError =
-      error instanceof Error
-        ? error.message
-        : copy.registrationClosed.groupLinkError;
     if (!groupRegistrationLinkToken) throw error;
+
+    // A failed group lookup must never turn a group invitation into a generic form.
+    return (
+      <main className="app-page px-5 py-10 text-[var(--peace-ink)]">
+        <section className="surface-card mx-auto max-w-3xl overflow-hidden">
+          <div className="event-gradient px-6 py-7">
+            <EventIdentity compact inverted />
+          </div>
+          <div className="p-6" role="alert">
+            <h2 className="text-2xl font-semibold">
+              {copy.registrationClosed.groupLinkError}
+            </h2>
+            {error instanceof Error ? (
+              <p className="mt-3 text-[var(--peace-muted)]">{error.message}</p>
+            ) : null}
+          </div>
+        </section>
+      </main>
+    );
   }
 
-  if (!options?.event) {
+  if (!options.event) {
     return (
       <main className="app-page px-5 py-10 text-[var(--peace-ink)]">
         <div className="surface-card mx-auto max-w-3xl overflow-hidden">
@@ -53,7 +67,7 @@ export async function RegistrationPageContent({
               {copy.registrationClosed.title}
             </h2>
             <p className="mt-3 text-[var(--peace-muted)]">
-              {groupLinkError ?? copy.registrationClosed.body}
+              {copy.registrationClosed.body}
             </p>
           </div>
         </div>
@@ -65,10 +79,8 @@ export async function RegistrationPageContent({
     <main className="app-page text-[var(--peace-ink)]">
       <RegistrationForm
         email={email}
-        error={searchParams.error ?? groupLinkError ?? undefined}
-        groupRegistrationLinkToken={
-          groupLinkError ? null : groupRegistrationLinkToken
-        }
+        error={searchParams.error}
+        groupRegistrationLinkToken={groupRegistrationLinkToken}
         identitySuggestion={
           email
             ? await getRegistrationIdentitySuggestionForEmail(supabase, email)

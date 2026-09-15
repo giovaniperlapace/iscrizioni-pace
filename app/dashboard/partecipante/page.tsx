@@ -169,7 +169,6 @@ type ParticipantDashboardCopy = {
   attendanceUnknownSummary: string;
   accessibilityRequest: string;
   accessibilityTitle: string;
-  accessibilityHelp: string;
   editClosed: string;
   notProvided: string;
   notAssigned: string;
@@ -205,7 +204,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Modifiche salvate.",
     noRegistrationTitle: "Nessuna iscrizione collegata",
     noRegistrationBody:
-      "Questa sessione non risulta collegata a un partecipante. Usa il magic link ricevuto via email o avvia di nuovo l'accesso dalla home.",
+      "Non risulta ancora un’iscrizione personale collegata al tuo account. Usa il pulsante qui sotto per avviarla.",
     startRegistration: "Avvia la mia iscrizione",
     qrTitle: "Il tuo QR code personale",
     qrBody:
@@ -236,8 +235,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Da comunicare",
     accessibilityRequest: "Desidero richiedere supporto per l'accessibilità all'evento.",
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
-    accessibilityHelp:
-      "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
     editClosed: "La finestra di modifica non è attiva per questa iscrizione.",
     notProvided: "Non indicata",
     notAssigned: "Non assegnato",
@@ -274,7 +271,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Changes saved.",
     noRegistrationTitle: "No linked registration",
     noRegistrationBody:
-      "This session is not linked to a participant. Use the magic link received by email or start access again from the home page.",
+      "Your account does not have a linked personal registration yet. Use the button below to start it.",
     startRegistration: "Start my registration",
     qrTitle: "Your personal QR code",
     qrBody:
@@ -305,8 +302,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "To be communicated",
     accessibilityRequest: "I would like to request accessibility support for the event.",
     accessibilityTitle: "Which aspects should we consider?",
-    accessibilityHelp:
-      "You can select one or more options that are useful for organising the welcome better.",
     editClosed: "The edit window is not active for this registration.",
     notProvided: "Not provided",
     notAssigned: "Not assigned",
@@ -343,7 +338,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Modifications enregistrées.",
     noRegistrationTitle: "Aucune inscription liée",
     noRegistrationBody:
-      "Cette session n'est pas liée à un participant. Utilise le magic link reçu par email ou recommence l'accès depuis l'accueil.",
+      "Ton compte n’a pas encore d’inscription personnelle liée. Utilise le bouton ci-dessous pour la commencer.",
     startRegistration: "Commencer mon inscription",
     qrTitle: "Ton QR code personnel",
     qrBody:
@@ -374,8 +369,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "À communiquer",
     accessibilityRequest: "Je souhaite demander un support d'accessibilité pour l'événement.",
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
-    accessibilityHelp:
-      "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
     editClosed: "La fenêtre de modification n'est pas active pour cette inscription.",
     notProvided: "Non indiqué",
     notAssigned: "Non attribué",
@@ -412,7 +405,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Änderungen gespeichert.",
     noRegistrationTitle: "Keine verknüpfte Anmeldung",
     noRegistrationBody:
-      "Diese Sitzung ist nicht mit einer teilnehmenden Person verknüpft. Nutze den Magic Link aus der E-Mail oder starte den Zugang erneut über die Startseite.",
+      "Mit deinem Konto ist noch keine persönliche Anmeldung verknüpft. Starte sie über die Schaltfläche unten.",
     startRegistration: "Meine Anmeldung starten",
     qrTitle: "Dein persönlicher QR-Code",
     qrBody:
@@ -443,8 +436,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Noch mitzuteilen",
     accessibilityRequest: "Ich möchte Unterstützung für Barrierefreiheit bei der Veranstaltung anfragen.",
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
-    accessibilityHelp:
-      "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
     editClosed: "Das Bearbeitungsfenster ist für diese Anmeldung nicht aktiv.",
     notProvided: "Nicht angegeben",
     notAssigned: "Nicht zugewiesen",
@@ -481,7 +472,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Cambios guardados.",
     noRegistrationTitle: "No hay inscripción vinculada",
     noRegistrationBody:
-      "Esta sesión no está vinculada a un participante. Usa el magic link recibido por email o inicia de nuevo el acceso desde el inicio.",
+      "Tu cuenta aún no tiene una inscripción personal vinculada. Usa el botón de abajo para iniciarla.",
     startRegistration: "Iniciar mi inscripción",
     qrTitle: "Tu código QR personal",
     qrBody:
@@ -512,8 +503,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Por comunicar",
     accessibilityRequest: "Quiero solicitar apoyo de accesibilidad para el evento.",
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
-    accessibilityHelp:
-      "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
     editClosed: "La ventana de modificación no está activa para esta inscripción.",
     notProvided: "No indicado",
     notAssigned: "No asignado",
@@ -550,7 +539,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Wijzigingen opgeslagen.",
     noRegistrationTitle: "Geen gekoppelde inschrijving",
     noRegistrationBody:
-      "Deze sessie is niet gekoppeld aan een deelnemer. Gebruik de magic link uit de e-mail of start de toegang opnieuw vanaf home.",
+      "Er is nog geen persoonlijke inschrijving aan je account gekoppeld. Gebruik de knop hieronder om te beginnen.",
     startRegistration: "Mijn inschrijving starten",
     qrTitle: "Je persoonlijke QR-code",
     qrBody:
@@ -581,8 +570,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Nog door te geven",
     accessibilityRequest: "Ik wil toegankelijkheidsondersteuning voor het evenement aanvragen.",
     accessibilityTitle: "Waar moeten we rekening mee houden?",
-    accessibilityHelp:
-      "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
     editClosed: "Het wijzigingsvenster is niet actief voor deze inschrijving.",
     notProvided: "Niet aangegeven",
     notAssigned: "Niet toegewezen",
@@ -619,7 +606,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Зміни збережено.",
     noRegistrationTitle: "Немає пов'язаної реєстрації",
     noRegistrationBody:
-      "Ця сесія не пов'язана з учасником. Скористайтеся magic link з електронного листа або почніть доступ знову з головної сторінки.",
+      "До вашого облікового запису ще не прив’язано особисту реєстрацію. Скористайтеся кнопкою нижче, щоб розпочати її.",
     startRegistration: "Почати мою реєстрацію",
     qrTitle: "Ваш персональний QR-код",
     qrBody:
@@ -650,8 +637,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Буде повідомлено",
     accessibilityRequest: "Я хочу попросити підтримку доступності для події.",
     accessibilityTitle: "Що нам потрібно врахувати?",
-    accessibilityHelp:
-      "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
     editClosed: "Вікно редагування для цієї реєстрації не активне.",
     notProvided: "Не вказано",
     notAssigned: "Не призначено",
@@ -1539,9 +1524,6 @@ export default async function PartecipanteDashboardPage({
                                 <h3 className="font-semibold">
                                   {copy.accessibilityTitle}
                                 </h3>
-                                <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-                                  {copy.accessibilityHelp}
-                                </p>
                               </div>
                               <div className="grid gap-3 sm:grid-cols-2">
                                 {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (

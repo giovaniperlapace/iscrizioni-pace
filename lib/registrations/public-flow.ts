@@ -339,6 +339,13 @@ export async function createPublicRegistration(
     throw new Error("Questa email risulta già iscritta all'evento.");
   }
 
+  // Reject an invalid invitation before creating a participant or registration.
+  const groupLink = await resolveActiveGroupRegistrationLink(
+    supabase,
+    event.id,
+    input.groupRegistrationLinkToken
+  );
+
   const geography = await resolveParticipantGeography(supabase, input);
 
   const { data: participant, error: participantError } = await supabase
@@ -411,11 +418,6 @@ export async function createPublicRegistration(
   const leaderGroupAssignment = authUserId
     ? await getConfirmedLeaderGroupAssignment(supabase, authUserId, event.id)
     : null;
-  const groupLink = await resolveActiveGroupRegistrationLink(
-    supabase,
-    event.id,
-    input.groupRegistrationLinkToken
-  );
   const selectedGroupId = resolveAllowedSelectedGroupId({
     groups,
     requestedGroupId: input.groupId,

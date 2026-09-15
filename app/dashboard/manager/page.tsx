@@ -1,3 +1,5 @@
+import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
+import { groupLeaderSummaries, type GroupLeaderSummary } from "@/lib/groups/leader-summary";
 import { loadEventStatisticsSnapshot } from "@/lib/registrations/event-statistics.server";
 import { participantGeography, type ParticipantGeography } from "@/lib/registrations/geography";
 import { randomUUID } from "node:crypto";
@@ -218,6 +220,7 @@ type ManagerGroupTreeRow = {
   isPublicCatalog: boolean | null;
   publicOrder: number | null;
   primaryLeaderName: string | null;
+  leaders: GroupLeaderSummary[];
   publicLabel: string | null;
 };
 
@@ -1194,6 +1197,7 @@ async function getManagerOperationsSnapshot(
       isPublicCatalog: group.is_public_catalog,
       publicOrder: group.public_order,
       primaryLeaderName: group.primary_leader_name,
+      leaders: groupLeaderSummaries(roleUsers, group.id, group.event_id),
       publicLabel: group.public_label,
     })),
     groupLinks: ((groupLinks ?? []) as ManagerGroupRegistrationLinkRow[]).map(
@@ -1345,7 +1349,7 @@ function ManagerGroupTreeSection({
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">Nodo</th>
                 <th className="py-3 pr-4 font-semibold">Età</th>
-                <th className="py-3 pr-4 font-semibold">Referente principale</th>
+                <th className="py-3 pr-4 font-semibold">Referenti</th>
                 <th className="py-3 pr-4 font-semibold">Accesso iscrizione</th>
                 <th className="py-3 text-right font-semibold">Azioni</th>
               </tr>
@@ -1428,7 +1432,7 @@ function ManagerGroupTreeSection({
                     {ageBandsLabel(group.ageBands)}
                   </td>
                   <td className="py-4 pr-4 text-[var(--peace-ink)]">
-                    {group.primaryLeaderName ?? "Da assegnare"}
+                    <GroupLeadersSummary leaders={group.leaders} legacyName={group.primaryLeaderName} />
                   </td>
                   <td className="py-4 pr-4">
                     <div className="grid gap-2">
@@ -2501,6 +2505,7 @@ function filterGroupRows(
       group.name,
       group.parentName,
       group.primaryLeaderName,
+      ...group.leaders.map((leader) => leader.name),
       group.publicLabel,
       group.eventTitle,
       groupNodeTypeLabel(group.nodeType),

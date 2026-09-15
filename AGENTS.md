@@ -1,5 +1,68 @@
 # AGENTS.md
 
+## Rilascio correzioni iscrizione e referenti — 2026-09-15
+
+- Pacchetto integrato su `8062b90`: avvio iscrizione personale, conservazione
+  del gruppo dopo errori, controllo link prima delle scritture, referenti
+  principali/secondari nelle tabelle e rimozione della frase guida sulle
+  disabilità in tutte le lingue, anche nella modifica personale.
+- Verifica finale in checkout isolato con dipendenze dal lockfile: 304 test,
+  lint e build production superati. Nessuna migration o modifica dati richiesta.
+- Pubblicazione autorizzata su `main` tramite integrazione Git Vercel; il lavoro
+  parallelo sulle segnalazioni di assegnazione resta separato da questo rilascio.
+  Le note sotto che descrivono patch non pubblicate si riferiscono ai controlli
+  locali precedenti a questo pacchetto. Nessun collaudo autenticato reale.
+
+## Referenti multipli nella gestione gruppi — 2026-09-15
+
+- Le tabelle gruppi admin/manager mostrano gli incarichi capogruppo del gruppo
+  e dell'evento correnti: tutti i principali e, sotto, tutti i secondari in
+  carattere più piccolo. Componente condiviso `GroupLeadersSummary`, colonna
+  Referenti, nomi a capo senza troncamento e ricerca estesa a tutti i referenti.
+- `groupLeaderSummaries` usa gli utenti operativi già caricati, deduplica per
+  account e conserva gli omonimi. Il campo storico `primary_leader_name` resta
+  soltanto come fallback quando non risultano membership; nessuna modifica
+  a dati, assegnazioni, ruoli o autorizzazioni.
+- Cinque test mirati su scope, principali multipli, secondari, omonimi,
+  fallback e markup; lint e typecheck in copia pulita superati.
+  Nessuna verifica visuale nel browser reale né deployment per questa patch.
+
+## Link di gruppo conservati dopo errori — 2026-09-15
+
+- `submitPublicRegistration` conserva il token originale del modulo nei ritorni
+  per validazione, rate limit ed errore di salvataggio. `buildRegistrationRetryPath`
+  torna al percorso personalizzato con email/errore codificati; token malformati
+  o riservati restano nel parametro `groupLink` della route registrazione.
+- `RegistrationPageContent` non ripiega più sul modulo generico se fallisce il
+  caricamento del link: mostra un errore senza form. La route storica con query
+  non reindirizza token riservati verso percorsi applicativi.
+- `createPublicRegistration` verifica il link prima di creare partecipante,
+  contatti o iscrizione; un link già scaduto/revocato non lascia per questo
+  motivo un'iscrizione senza assegnazione. Le scritture successive conservano
+  il workflow esistente, senza introdurre una transazione complessiva.
+- Test in `tests/group-registration-retry.test.mts`: errori e reinvio corretto,
+  URL sicuri, gruppo passato al form, nessun fallback generico e rifiuto prima
+  delle scritture. Suite completa: 289 test superati; lint mirato e typecheck
+  superati, quest'ultimo in copia pulita con `npm ci` dal lockfile.
+- Nessuna modifica ai dati storici, invio email o deployment. Non è stato
+  eseguito un collaudo autenticato reale; i test usano dati sintetici.
+
+## Avvio iscrizione personale da account operativo — 2026-09-15
+
+- Il pulsante della dashboard partecipante senza iscrizione apre direttamente
+  `/registrazione?email=...`, con email autenticata codificata; anche la card
+  personale usa `/registrazione`. Non usare la home: il proxy rimanda gli
+  utenti autenticati alla dashboard, producendo un ritorno alla stessa pagina.
+- Messaggio di iscrizione assente aggiornato nelle sette lingue. Salvataggio,
+  collegamento account, ruoli e controlli del modulo restano quelli esistenti.
+- Regressioni URL in `tests/personal-registration-navigation.test.mts`:
+  email semplice/speciale/assente e card con/senza iscrizione. Dieci test
+  mirati e lint superati. Il typecheck del workspace era bloccato da directory
+  duplicate preesistenti in `node_modules/@types` (`node 2`, `react 2`, ecc.);
+  verificato poi con successo in copia pulita con `npm ci`, insieme alla
+  correzione dei link di gruppo descritta sopra.
+  Nessun collaudo autenticato reale o deployment effettuato per questa patch.
+
 ## Errori iscrizione da link di gruppo — 2026-09-15
 
 - `submitPublicRegistration` conserva il token del gruppo nei ritorni per

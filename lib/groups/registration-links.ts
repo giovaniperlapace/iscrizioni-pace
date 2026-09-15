@@ -144,6 +144,26 @@ export function isReservedGroupRegistrationLinkToken(token: string): boolean {
   return GROUP_REGISTRATION_LINK_RESERVED_TOKENS.has(token.toLowerCase());
 }
 
+// Keep the original group context even when validation has not produced input.
+// Invalid tokens stay in a query parameter so they cannot become arbitrary paths.
+export function buildRegistrationRetryPath({
+  token,
+  email,
+  error,
+}: {
+  token: string | null;
+  email: string;
+  error: string;
+}): string {
+  if (token && isValidGroupRegistrationLinkToken(token) && !isReservedGroupRegistrationLinkToken(token)) {
+    return buildGroupRegistrationPath({ token, email, error });
+  }
+
+  const params = new URLSearchParams({ email, error });
+  if (token) params.set(GROUP_REGISTRATION_LINK_QUERY_PARAM, token);
+  return `/registrazione?${params.toString()}`;
+}
+
 export function getGroupRegistrationLinkStatus(
   input: GroupRegistrationLinkStateInput
 ): GroupRegistrationLinkStatus {
