@@ -1,3 +1,20 @@
+# Stato di produzione — 15 settembre 2026
+
+Postmark attivo con il rilascio `e74d395`, deployment Vercel
+`dpl_8mr9uuYWXvztxnV3yPEm1VxAwXvb` READY su registrationspeace.santegidio.org.
+Migration `20260912180000` applicata e registrata atomicamente; hash dei destinatari
+invariato e permessi RPC verificati (anon/authenticated negati, service_role sì).
+Timer systemd abilitato e prima chiamata riuscita senza destinatari in coda.
+Magic link richiesto dal browser dalla produzione a registrationspeace@santegidio.org:
+MessageID `6ed819e3-7469-4aaa-a752-c77f986d8ba7`, stream outbound, Delivered con
+SMTP Google 250. Callback del login non eseguita. Nessuna campagna reale avviata.
+310 test superati; build produzione Vercel riuscita. Pagamento non modificato:
+resta da regolarizzare la fattura segnalata in precedenza se ancora insoluta.
+
+Le sezioni seguenti conservano la preparazione e i test precedenti: le indicazioni
+"da pubblicare"/"produzione Gmail" sono storiche e superate da questo rilascio.
+Il richiamo periodico usa systemd sul server esistente, non Vercel Cron (piano Hobby).
+
 # Invio email con Postmark
 
 Implementazione del 2026-09-12, reintegrata sul codice aggiornato il 2026-09-15. Non ancora attivata in produzione.

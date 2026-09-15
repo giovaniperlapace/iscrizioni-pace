@@ -2,6 +2,13 @@
 
 ## Rilascio Postmark — 2026-09-15
 
+- Rilascio operativo `e74d395`, deployment Vercel READY
+  `dpl_8mr9uuYWXvztxnV3yPEm1VxAwXvb`, alias registrationspeace.santegidio.org.
+  Migration `20260912180000` applicata e registrata in transazione: hash dei
+  destinatari invariato, RPC solo service_role. Timer attivo, prima chiamata
+  HTTP riuscita con coda vuota. Magic link richiesto dal browser in produzione
+  alla casella di servizio: Postmark Delivered, Google SMTP 250, stream outbound.
+  Callback login non eseguita. 310 test e build Vercel superati.
 - Pubblicazione autorizzata dall’utente. Scope Vercel reale:
   `giovaniperlapaces-projects`, progetto `iscrizioni-pace`, piano Hobby.
   Lo scope storico stefano-orlandos-projects-de2d57cb non è più accessibile.
@@ -20,7 +27,7 @@
 
 - Account approvato; pagamento ancora da completare. Integrazione recuperata dallo
   stash `e96c3ee21bdde047fbffb25fb145fcf65a877b61`, conservato. Sostituisce lo standby
-  precedente: codice locale usa Postmark, produzione ancora Gmail.
+  precedente. Note preparatorie sotto; per lo stato attuale vedere Rilascio Postmark sopra.
 - Configurazione locale riservata in `.env.postmark.local` (0600, esclusa da Git).
   Caricare l'override per test; normale `.env.local` e Vercel restano invariati.
   Nuova modalità `postmark|log`, `POSTMARK_SERVER_TOKEN`, `EMAIL_REPLY_TO`;
