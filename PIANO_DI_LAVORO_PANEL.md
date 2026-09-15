@@ -79,7 +79,7 @@ Stato di partenza al 2026-08-04:
   completa iscrizioni/iscritti/gruppi/servizi/campagne/QR e P11-P16 realizzate,
   verifica RLS e concorrenza, inventario migration rispetto alla production,
   backup e piano di rollback. Restano le verifiche hardware P14-P16 e
-  l'approvazione separata dell'estensione opzionale P13.
+  la revisione del modello di incarichi P12/P13 descritto sotto.
 
 Sincronizzazione del 2026-09-12: incorporato `origin/main` a `0bc2997` nella
 base panel `39deb81`; esaminati tutti i 10 commit. Conflitti risolti conservando
@@ -220,6 +220,29 @@ estendere il modulo.
 
 ### 3.4 QR, presenze e badge
 
+- Requisito precisato nella revisione P11 del 2026-09-12: l'operatore svolge
+  un'azione già impostata e poi scansiona in sequenza. Non sceglie cosa fare
+  dopo aver identificato ogni persona. Fotocamera del cellulare come percorso
+  predefinito; codice manuale come alternativa, con identica azione e scope.
+- L'intestazione deve rendere sempre evidente l'incarico attivo, per esempio
+  `Registra ingresso evento` oppure `Registra ingresso · Panel X`. Un solo
+  incarico disponibile viene impostato automaticamente; più incarichi si
+  scelgono prima della scansione e si cambiano con un comando esplicito.
+  La scelta resta attiva tra scansioni, errori e fallback manuale.
+- Ingresso evento e ingresso panel sono operazioni distinte. L'addetto al
+  panel non può registrare implicitamente l'arrivo all'evento: in assenza
+  di accoglienza evento, il flusso deve indirizzare alla postazione competente.
+  La scansione al panel non genera né stampa automaticamente il badge evento.
+- Proposta di modello per P12/P13: incarichi operativi assegnati da admin/manager
+  nell'evento, distinti in accoglienza evento, accoglienza di panel assegnati e
+  assistenza in sala (maschere). Non moltiplicare automaticamente i ruoli
+  globali; definire schema e migrazione degli incarichi esistenti nella relativa
+  milestone. La UI propone solo incarichi autorizzati; server e DB verificano
+  nuovamente azione, evento e panel a ogni operazione, anche dopo una revoca.
+- Le maschere consultano soltanto le indicazioni disponibili per sala/settore
+  del panel assegnato, senza scrivere presenze o vedere recapiti/questionari.
+  Nessuna assegnazione di sedute numerate o piantina viene introdotta da questa
+  richiesta. Il dettaglio di questo incarico resta una proposta da revisionare.
 - Il QR personale continua a contenere soltanto un token opaco. Nome, email,
   ruolo e dati sensibili non devono comparire nel contenuto del codice.
 - Una scansione valida all'ingresso registra automaticamente la presenza
@@ -237,7 +260,8 @@ estendere il modulo.
 - Deve esistere un fallback manuale tramite codice partecipante o ricerca
   controllata per chi non ha il QR disponibile.
 - Correzione o annullamento di un check-in richiedono un'azione esplicita e
-  auditata.
+  auditata, in un percorso separato dalla scansione ordinaria. Non diventano
+  azioni distruttive ripetute automaticamente a ogni QR inquadrato.
 - Il QR stampato sull'etichetta e' lo stesso QR attivo della persona, non un
   nuovo identificativo. La stampa non deve revocare o rigenerare il token.
 - L'etichetta iniziale contiene QR ad alto contrasto, codice partecipante e il
@@ -275,7 +299,9 @@ Questa e' una direzione architetturale, non una migration gia' approvata.
 - Tutte le nuove tabelle devono avere RLS. Manager e admin gestiscono il
   catalogo; `manager_viewer` legge; partecipante legge e modifica soltanto le
   proprie scelte; docente legge e modifica soltanto la propria prenotazione;
-  accoglienza opera soltanto sui check-in dell'evento in scope.
+  accoglienza opera soltanto sui check-in dell'evento in scope. P12/P13 devono
+  restringere ulteriormente l'operatività agli incarichi evento/panel assegnati;
+  la P11 attuale non implementa ancora questa distinzione.
 
 Vincoli che devono vivere anche nel database o in funzioni transazionali, non
 solo nel browser:
@@ -641,6 +667,11 @@ privilegi/PostgREST e prova SQL famiglia/scuola con rollback verificati;
 conteggi/hash dei dati preesistenti invariati su 41 tabelle. Resta la revisione
 funzionale autenticata della preview prima della chiusura e del passaggio P12.
 Production invariata.
+Revisione funzionale del 2026-09-12: la console manuale attuale è uno strumento
+di collaudo del backend, non il flusso operativo definitivo. Recepito il
+requisito azione prima della scansione, con fotocamera predefinita e incarichi
+distinti; implementazione e verifiche previste in P12/P13. Questa annotazione
+non dichiara chiusa P11 né già disponibili scanner o nuovi permessi.
 Dettagli e limiti: `docs/panel-p11-reception.md`.
 
 Scopo: rendere sicura e corretta la registrazione della presenza prima di
@@ -665,31 +696,49 @@ minimi, anche prima dell'integrazione con la fotocamera.
 
 ### Milestone P12 - scanner e dashboard accoglienza
 
-Scopo: completare il flusso operativo di ingresso.
+Scopo: completare il flusso operativo di ingresso evento, principalmente
+dal cellulare, con azione e incarico stabiliti prima della scansione.
 
 Deliverable:
 
-- scanner fotocamera nella dashboard accoglienza su HTTPS;
-- stato chiaro di autorizzazione fotocamera e fallback manuale;
+- scanner fotocamera nella dashboard accoglienza su HTTPS, percorso predefinito
+  con preferenza per la fotocamera posteriore;
+- stato chiaro di autorizzazione fotocamera e codice manuale come alternativa;
+- incarico evento autorizzato impostato prima della scansione, titolo sempre
+  visibile e invariato fra persone successive; selezione iniziale solo quando
+  esistono più incarichi, senza selettore di azione dopo ogni codice;
+- definizione degli incarichi operativi e dei controlli server/DB per impedire
+  che un futuro incarico panel abiliti l'ingresso evento; nessun pannello
+  selezionabile deve abilitare operazioni non ancora implementate;
 - check-in automatico per persona singola;
 - conferma componenti presenti per nuclei con minori;
 - conferma quantita' effettive per scuole;
 - esito immediato valido, gia' presente, non valido o da verificare;
-- prevenzione di scansioni ripetute mentre la richiesta e' in corso;
-- ultima operazione visibile e possibilita' di correzione auditata;
+- prevenzione di scansioni ripetute mentre la richiesta e' in corso e finché
+  lo stesso QR rimane nell'inquadratura; ripresa per il codice successivo dopo
+  l'esito, conservando azione e incarico;
+- esito incerto: scansione sospesa e retry della stessa richiesta senza
+  cambiare azione o soggetto; nessuna presenza presentata come confermata
+  prima della risposta server;
+- ultima operazione visibile e correzione auditata in percorso separato;
 - interfaccia ad alto contrasto, grandi target touch e dati minimi.
 
 Verifiche: almeno due modelli reali di smartphone/tablet, fotocamera
 anteriore/posteriore, luce scarsa, QR su schermo, QR stampato, rete lenta,
 doppia scansione e sessione scaduta.
+Aggiungere prove su sequenze di persone singole senza scelta di azione,
+azione conservata dopo errore/fallback, famiglie parziali e quantità scuola,
+cambio incarico esplicito, revoca e tentativi di alterare lo scope dal client.
 
 Accettazione: un operatore registra rapidamente un ingresso senza poter
 accedere alla scheda completa del partecipante.
 
 ### Milestone P13 - presenza panel e quadro operativo dell'evento
 
-Scopo: collegare le presenze effettive a statistiche e, se approvato, agli
-accessi dei singoli panel.
+Scopo: collegare le presenze effettive a statistiche e agli accessi dei singoli
+panel. Il requisito di separazione degli accessi è stato espresso nella
+revisione del 2026-09-12; il dettaglio degli incarichi va revisionato nella
+milestone, senza anticiparne qui l'implementazione.
 
 Deliverable minimo:
 
@@ -698,12 +747,23 @@ Deliverable minimo:
   correzioni;
 - filtro per fascia oraria e punto di accoglienza quando disponibile.
 
-Estensione opzionale da approvare dopo il test ingresso:
+Accessi panel, da implementare dopo il test dell'ingresso evento:
 
-- scansione dello stesso QR all'accesso dei panel;
+- incarico e panel autorizzato stabiliti prima della scansione dello stesso QR;
+- azione ripetuta automaticamente a ogni codice, con lo stesso fallback manuale
+  e le stesse eccezioni per famiglie/scuole del flusso evento;
 - verifica che la persona o la scuola sia prenotata;
 - check-in specifico al panel e confronto con capienza/settore pubblico;
-- messaggio operativo per non prenotato senza esporre informazioni ulteriori.
+- messaggio operativo per non prenotato senza esporre informazioni ulteriori;
+- assenza di check-in evento: invio all'accoglienza evento, nessuna registrazione
+  implicita dell'arrivo o del panel; l'operatore panel non ottiene privilegi evento;
+- proposta assistenza in sala: consultazione minima del settore/sala pertinente
+  senza scritture su presenze, prenotazioni o assegnazioni di posti.
+
+Verifiche aggiuntive: operatore panel X rifiutato su panel Y e ingresso evento,
+maschera rifiutata su tutte le scritture, tentativi via API oltre la UI, revoca
+dell'incarico durante la scansione e nessun cambiamento dei conteggi evento
+come effetto collaterale di una scansione panel o di assistenza.
 
 Accettazione: il numero dei presenti effettivi e' disponibile ai manager e
 non deriva soltanto dalle intenzioni dichiarate nell'iscrizione.
@@ -790,7 +850,7 @@ Ordine raccomandato:
 2. P5-P6: programma pubblico e iscrizioni individuali.
 3. P7-P8: prenotazioni scuole.
 4. P9-P10: campagne e statistiche basate su dati ormai stabili.
-5. P11-P13: accesso QR, presenza effettiva e possibile controllo panel.
+5. P11-P13: accesso QR, presenza effettiva e accesso panel con incarichi distinti.
 6. P14-P15: prova hardware e stampa integrata.
 7. P16: hardening e prova generale.
 

@@ -4,6 +4,30 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Revisione accoglienza: azione prima della scansione — 2026-09-12
+
+- Requisito dell'utente: uso principale dal cellulare, QR tramite fotocamera
+  predefinito e codice manuale come alternativa. Azione e incarico definiti
+  prima della scansione e conservati tra persone, errori e fallback. Nessuna
+  scelta dell'operazione dopo ogni QR. Scanner previsto in P12, non ancora
+  disponibile nella console manuale P11 della preview.
+- Separare ingresso evento e ingresso panel: l'operatore panel non registra
+  l'arrivo all'evento, neppure implicitamente. In assenza di accoglienza evento
+  indirizzare alla relativa postazione. Il codice identifica il soggetto;
+  l'incarico autorizzato determina l'operazione, verificata anche da server/DB.
+- Proposta da dettagliare in P12/P13: incarichi per accoglienza evento, panel
+  assegnati e assistenza in sala (maschere), gestiti da admin/manager. Le
+  maschere consultano indicazioni sala/settore senza scritture sulle presenze;
+  nessuna nuova gestione di sedute numerate. Questi incarichi non sono ancora
+  ruoli o permessi implementati: la P11 conserva il modello autorizzativo esistente.
+- Singoli: scansione esegue l'ingresso. QR condivisi: si confermano soltanto
+  componenti realmente presenti o quantità scuola, senza cambiare l'azione.
+  Correzioni/annullamenti restano espliciti e separati dalla scansione continua;
+  esito incerto sospende lo scanner e conserva la stessa richiesta per il retry.
+- Aggiornate sezioni 3.4 e P11-P13 di `PIANO_DI_LAVORO_PANEL.md`. La revisione
+  non equivale alla chiusura P11 né al rilascio dello scanner. Nessuna modifica
+  a schema, ruoli, dati o deployment per questo aggiornamento dei requisiti.
+
 ## P11 — verifica QR e presenze effettive, 2026-09-12
 
 - Implementata localmente sul branch panel, con console manuale nella dashboard

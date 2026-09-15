@@ -11,6 +11,28 @@ Migration applicata e verificata nello staging il 2026-09-12. Resta il collaudo
 funzionale autenticato della preview prima della chiusura della milestone.
 Il passaggio a P12 è separato.
 
+## Revisione del flusso operativo — 2026-09-12
+
+L'utente ha precisato che l'operatore deve avere l'azione già impostata e
+scansionare i codici in sequenza, principalmente dalla fotocamera del cellulare.
+Il codice manuale è l'alternativa alla fotocamera e conserva la stessa azione.
+La console descritta sotto serve al collaudo P11: il suo ordine codice → scelta
+operazione non è il flusso definitivo da portare nell'uso operativo P12.
+
+P12 introduce lo scanner con incarico/azione visibili e stabiliti prima della
+scansione. Per i singoli la scansione registra l'ingresso; per famiglie e
+scuole si chiedono solo componenti/quantità effettivi. Correzioni e annullamenti
+restano separati dalla scansione continua. Un esito incerto sospende lo scanner
+e conserva la richiesta per il retry.
+
+L'ingresso a un panel P13 deve restare distinto dall'accoglienza evento: non
+registra automaticamente la presenza evento o la consegna del badge. In assenza
+di check-in evento indirizza alla relativa accoglienza. È proposta una distinzione
+fra incarichi evento, panel assegnati e assistenza sala (maschere), quest'ultima
+con sola consultazione di sala/settore. Scope verificato anche da server e DB;
+nessuna nuova gestione delle sedute numerate. Dettagli nel piano, sezione 3.4.
+Scanner e nuovi incarichi non sono implementati dalla migration P11.
+
 ## Flusso disponibile
 
 Dashboard accoglienza → codice partecipante esatto o contenuto opaco del QR →
@@ -174,6 +196,6 @@ storica. Le presenze già registrate restano conservate, non sono cancellate
 automaticamente dai cambi di stato delle prenotazioni.
 
 Restano P12 fotocamera/uso sui dispositivi reali, P13 statistiche effettive e
-l'eventuale accesso panel separatamente approvato, P14–P15 stampanti/etichette,
+accesso panel con incarichi distinti secondo la revisione sopra, P14–P15 stampanti/etichette,
 P16 prova sul campo e runbook. Nessun check-in offline o riconciliazione
 automatica della storia famiglia è introdotto qui.
