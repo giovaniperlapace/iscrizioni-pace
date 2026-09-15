@@ -26,6 +26,7 @@ import {
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
 import {
+  buildGroupRegistrationPath,
   isValidGroupRegistrationLinkToken,
   hashGroupRegistrationLinkToken,
   isReservedGroupRegistrationLinkToken,
@@ -197,19 +198,27 @@ export async function startPublicEmailFlow(formData: FormData) {
 export async function submitPublicRegistration(formData: FormData) {
   const parsed = parseRegistrationForm(formData);
   const email = normalizeEmail(formData.get("email"));
+  const rawToken = formData.get("groupRegistrationLinkToken");
+  const token = typeof rawToken === "string" ? rawToken.trim() : "";
+  const errorPath = (error: string) => {
+    if (token && isValidGroupRegistrationLinkToken(token) && !isReservedGroupRegistrationLinkToken(token)) {
+      return buildGroupRegistrationPath({ token, email, error });
+    }
+    const query = new URLSearchParams({ email, error });
+    if (token) query.set("groupLink", token);
+    return `/registrazione?${query.toString()}`;
+  };
   const ipAddress = await getIpAddress();
 
   if (!parsed.ok) {
     redirect(
-      `/registrazione?email=${encodeURIComponent(email)}&error=${encodeURIComponent(
-        parsed.errors[0] ?? "invalid"
-      )}`
+      errorPath(parsed.errors[0] ?? "invalid")
     );
   }
 
   if (!checkRateLimit(`registration:${ipAddress}:${parsed.value.email}`, REGISTRATION_RATE_LIMIT)) {
     redirect(
-      `/registrazione?email=${encodeURIComponent(parsed.value.email)}&error=rate-limit`
+      errorPath("rate-limit")
     );
   }
 
@@ -239,9 +248,7 @@ export async function submitPublicRegistration(formData: FormData) {
     const message = getPublicRegistrationErrorMessage(error);
 
     redirect(
-      `/registrazione?email=${encodeURIComponent(parsed.value.email)}&error=${encodeURIComponent(
-        message
-      )}`
+      errorPath(message)
     );
   }
 

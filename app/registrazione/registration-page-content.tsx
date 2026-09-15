@@ -25,7 +25,7 @@ export async function RegistrationPageContent({
   const copy = getMessages(locale);
   const supabase = createSupabaseServiceClient();
   let groupLinkError: string | null = null;
-  let options: PublicRegistrationOptions;
+  let options: PublicRegistrationOptions | null = null;
   const email = searchParams.email ?? "";
 
   try {
@@ -38,10 +38,10 @@ export async function RegistrationPageContent({
       error instanceof Error
         ? error.message
         : copy.registrationClosed.groupLinkError;
-    options = await getPublicRegistrationOptions(supabase);
+    if (!groupRegistrationLinkToken) throw error;
   }
 
-  if (!options.event) {
+  if (!options?.event) {
     return (
       <main className="app-page px-5 py-10 text-[var(--peace-ink)]">
         <div className="surface-card mx-auto max-w-3xl overflow-hidden">
@@ -53,7 +53,7 @@ export async function RegistrationPageContent({
               {copy.registrationClosed.title}
             </h2>
             <p className="mt-3 text-[var(--peace-muted)]">
-              {copy.registrationClosed.body}
+              {groupLinkError ?? copy.registrationClosed.body}
             </p>
           </div>
         </div>

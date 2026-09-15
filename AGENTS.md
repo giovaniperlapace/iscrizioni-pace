@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Errori iscrizione da link di gruppo — 2026-09-15
+
+- `submitPublicRegistration` conserva il token del gruppo nei ritorni per
+  validazione, rate limit ed errore di salvataggio, usando il percorso breve
+  del gruppo con email ed errore codificati. Legge il token dal form anche
+  quando la validazione non produce un input valido.
+- Se il link non è disponibile, `RegistrationPageContent` mostra l'errore
+  senza ripiegare sulle opzioni e sul modulo generali. I controlli server
+  sul link e sull'assegnazione restano invariati.
+- Regressioni in `tests/registration-error-routing.test.mts`: tre percorsi
+  di errore, iscrizione generale, token manipolato e link non disponibile.
+
+## Avvio iscrizione personale degli utenti operativi — 2026-09-15
+
+- Il pulsante `Avvia la mia iscrizione` nella dashboard senza iscrizione
+  collegata apre direttamente `/registrazione`, con email della sessione
+  codificata nella query. Non puntare alla home: il proxy rimanda gli utenti
+  autenticati alla dashboard, impedendo di raggiungere il modulo.
+- Riusa il flusso pubblico esistente, anche per i capigruppo creati prima
+  della propria iscrizione. Nessuna modifica a ruoli, database o invii email.
+
 ## Statistiche e geografia complete — 2026-09-14
 
 - `lib/registrations/event-statistics.server.ts` carica le statistiche comuni

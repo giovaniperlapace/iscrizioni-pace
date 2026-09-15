@@ -1194,7 +1194,7 @@ export default async function PartecipanteDashboardPage({
               {copy.noRegistrationBody}
             </p>
             <Link
-              href={`/${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
+              href={`/registrazione${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
               className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
               {copy.startRegistration}
