@@ -35,6 +35,7 @@ export async function ManagerEmailSection({
     { data: eventServices },
     { data: templates },
     { data: campaigns },
+    deliveryControl,
   ] = await Promise.all([
     service
       .from("groups")
@@ -67,6 +68,7 @@ export async function ManagerEmailSection({
       .not("sent_at", "is", null)
       .order("sent_at", { ascending: false })
       .limit(8),
+    loadDeliveryControl(service),
   ]);
   const [participantCandidates, groupLeaderCandidates] = await Promise.all([
     resolveCampaignRecipients(eventId, {
@@ -91,6 +93,14 @@ export async function ManagerEmailSection({
   );
 
   return (
+    <>
+    {deliveryControl.error ? (
+      <p role="alert" className="status-error mb-4 rounded-lg p-4">Non è possibile verificare lo stato della coda email. Riprova tra poco.</p>
+    ) : deliveryControl.data?.blocked ? (
+      <p role="alert" className="status-error mb-4 rounded-lg p-4">L’invio delle campagne è sospeso. Contatta l’amministratore per verificare il servizio email e riattivare la coda. I messaggi in attesa sono conservati.</p>
+    ) : deliveryControl.paused ? (
+      <p role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">Il servizio email è temporaneamente in pausa. L’invio dei messaggi in attesa riprenderà automaticamente. Gli esiti da verificare non saranno reinviati.</p>
+    ) : null}
     <EmailCampaignComposer
       groups={(groups ?? []).map((row) => ({ id: row.id, label: row.name }))}
       tags={(tags ?? []).map((row) => ({ id: row.id, label: row.label }))}
@@ -111,5 +121,12 @@ export async function ManagerEmailSection({
         date: row.sent_at ?? row.created_at,
       }))}
     />
+    </>
   );
+}
+
+async function loadDeliveryControl(service: ReturnType<typeof createSupabaseServiceClient>) {
+  const result = await service.from("email_campaign_delivery_control")
+    .select("blocked,paused_until").eq("id", true).single();
+  return { ...result, paused: Boolean(result.data && Date.parse(result.data.paused_until) > Date.now()) };
 }

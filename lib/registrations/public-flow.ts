@@ -306,10 +306,9 @@ export async function sendMagicLinkEmail(
     },
   });
 
-  const actionLink = data.properties?.action_link;
   const hashedToken = data.properties?.hashed_token;
 
-  if (error || (!actionLink && !hashedToken)) {
+  if (error || !hashedToken) {
     throw error ?? new Error("Supabase did not return a magic link");
   }
 
@@ -317,7 +316,7 @@ export async function sendMagicLinkEmail(
     to: email,
     ...renderMagicLinkEmail({
       actionLink:
-        buildAppMagicLink(redirectTo, hashedToken ?? null) ?? actionLink ?? "",
+        buildAppMagicLink(redirectTo, hashedToken)!,
     }),
   });
 }

@@ -1,3 +1,90 @@
+# Recupero campagne e conferma accesso — rilascio 16 settembre 2026
+
+Rilascio autorizzato dall’utente tramite push su main e integrazione Git Vercel.
+Migration `20260916120000_email_campaign_recovery.sql` applicata e registrata
+in produzione in un’unica transazione: conteggio (3.324) e impronta dei
+destinatari invariati. I dati e gli esiti delle campagne precedenti non vengono
+riclassificati automaticamente. Il timer viene riattivato dopo la verifica
+del nuovo deployment; nessun invio di prova o reinvio storico.
+Al rilascio sospendere lo scheduler e lasciare terminare i worker precedenti,
+poi applicare la migration, pubblicare il nuovo codice e riattivare lo scheduler.
+Non sovrapporre worker vecchi e nuovi: i vecchi non conoscono gli esiti `unknown`.
+
+## Comportamento della coda
+
+- HTTP 429 e manutenzione esplicita Postmark (ErrorCode 100): messaggi rifiutati
+  tornano `scheduled`, con pausa globale persistente. Backoff da 60 secondi
+  a un'ora; eventuale Retry-After prevale, con massimo 24 ore. Il contatore
+  delle pause riparte dopo un giorno senza errori oppure alla ripresa manuale.
+- Credenziali, account o stream non validi: `blocked`, nessun tentativo
+  automatico finché l'operatore non corregge la causa e riattiva la coda.
+- Timeout, errore di rete, risposta incompleta e 5xx senza conferma esplicita
+  di manutenzione: destinatari `unknown`, mai riacquisiti dal cron. La pausa
+  globale dura almeno cinque minuti; dopo, riprendono solo gli altri messaggi.
+- Errori definitivi del singolo destinatario, inclusa suppression 406:
+  `failed`, nessun retry né aggiramento sullo stream transazionale.
+- Ogni risposta mista conserva gli esiti individuali. Al primo problema
+  generale si fermano i sottobatch e i claim successivi. Messaggi non ancora
+  sottoposti restano riprogrammabili. Richieste già in volo possono terminare.
+- La pausa si registra prima di rilasciare le righe per retry. Se questa
+  scrittura fallisce, le righe rimangono `sending`; i successi già accettati
+  vengono comunque salvati. Nessuna ripetizione automatica di esiti incerti.
+- La dashboard mostra una pausa temporanea o un blocco del servizio; una
+  campagna con destinatari `unknown` mostra `Esiti da verificare`.
+
+## Operazioni dopo un'interruzione
+
+Consultare `email_campaign_delivery_control` tramite accesso amministrativo
+autorizzato: `blocked`, `paused_until`, `error_code`, `last_failure_at`.
+La tabella e le RPC di controllo sono riservate a service_role; non contengono
+destinatari, corpi email o token. Dopo aver corretto una configurazione non
+valida, una ripresa esplicita usa:
+
+```sql
+select public.resume_email_campaign_delivery();
+```
+
+Questa RPC NON riaccoda `unknown`, `sending` o `failed`. Prima di recuperare
+singoli destinatari in tali stati, riconciliare l'accettazione con Postmark;
+il recupero è un'operazione amministrativa separata, mai un reinvio alla cieca.
+Le campagne `unknown` possono coesistere con messaggi ancora programmati.
+
+## Conferma dei magic link
+
+La richiesta GET alla callback (incluso HEAD gestito dal framework) non chiama
+Supabase e mostra un modulo nativo con un solo pulsante di conferma. Nessun
+script, prefetch o verifica automatica; apertura e scansioni ripetute non
+consumano OTP o codici PKCE. Il POST richiede lo stesso origin e usa il flusso
+di verifica, profilo e assegnazione dashboard già esistente, con redirect 303.
+Pagina non memorizzabile, referrer limitato all’origine (mai token/query),
+CSP restrittiva; testi nelle sette lingue.
+Funziona anche senza JavaScript. Non protegge da scanner che inviano attivamente
+il modulo POST come un utente; nessuna promessa di riconoscere tutti i bot.
+
+La generazione richiede hashed_token; non usa più action_link come fallback,
+per evitare la verifica preventiva sull'endpoint Supabase. I link applicativi
+già inviati alla callback acquisiscono anch'essi la conferma. Link Supabase
+diretti eventualmente già spediti non possono essere protetti retroattivamente.
+
+## Verifiche locali
+
+Test `postmark-recovery`, `postmark-batch`, `postmark-worker` e
+`magic-link-confirmation`: pause, risposte miste, split interrotto, errori DB,
+GET ripetuti senza Auth, POST esplicito, PKCE, token scaduto, origin e sette lingue.
+SQL: eseguire su database temporaneo fixture `postmark-campaign-queue.sql`,
+migration `20260912180000`, migration `20260916120000`, quindi
+`postmark-campaign-queue-assertions.sql` e `email-campaign-recovery.sql`.
+Copre 1.205 destinatari, pause globali, backoff, ripresa e privilegi;
+PGlite non sostituisce una prova concorrente multi-sessione in produzione.
+Verifiche finali: 322 test, lint, typecheck e build production superati.
+Browser `tests/browser/magic-link-confirmation.mjs`: build locale con backend
+Auth simulato, GET/HEAD senza verifica, sette lingue, desktop/mobile e POST
+esplicito con token scaduto. Nessun login o invio reale. La policy strict-origin
+evita la perdita dell'header Origin che no-referrer causa nei POST nativi.
+
+Fonti: [errori Postmark](https://postmarkapp.com/developer/api/overview),
+[prefetch dei link Supabase](https://supabase.com/docs/guides/auth/auth-email-templates#email-prefetching).
+
 # Stato di produzione — 15 settembre 2026
 
 Postmark attivo con il rilascio `e74d395`, deployment Vercel

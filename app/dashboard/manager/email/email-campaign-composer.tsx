@@ -1336,6 +1336,7 @@ function campaignStatusLabel(status: string) {
     case "completed": return "Completata";
     case "partial": return "Parziale";
     case "failed": return "Non riuscita";
+    case "attention": return "Esiti da verificare";
     case "scheduled": return "Programmata";
     case "sending": return "In invio";
     case "ready": return "Test inviato";

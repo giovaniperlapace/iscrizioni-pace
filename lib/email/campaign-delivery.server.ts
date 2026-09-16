@@ -96,7 +96,7 @@ async function processCampaignBlock(options: {
   if (dueError) throw new Error(dueError.message);
   const recipients = (dueRows ?? []) as RecipientDatabaseRow[];
   if (!recipients.length) {
-    return { ...await summarizeDeliveryResult(service, options.campaignId, 0, 0), claimed: 0 };
+    return { ...await summarizeDeliveryResult(service, options.campaignId, 0, 0), claimed: 0, paused: false };
   }
 
   const campaignIds = [...new Set(recipients.map((row) => row.campaign_id))];
@@ -166,9 +166,40 @@ async function processCampaignBlock(options: {
   });
 
   const results = await sendBroadcastBatch(prepared.map(item => item.input));
+  const interrupted = results.filter(result => result.disposition);
+  let pauseError: unknown;
+  if (interrupted.length) {
+    // Pause globally before releasing safe-to-retry rows. Other cron instances
+    // use the same durable gate; requests already in flight still save results.
+    const cause = interrupted.find(result => result.disposition === "blocked")
+      ?? interrupted.find(result => result.disposition === "unknown") ?? interrupted[0];
+    try {
+      const { error } = await service.rpc("pause_email_campaign_delivery", {
+        p_error_code: cause.errorCode,
+        p_blocked: interrupted.some(result => result.disposition === "blocked"),
+        p_retry_after_seconds: Math.max(
+          cause.disposition === "unknown" ? 300 : 60,
+          ...interrupted.map(result => result.retryAfterSeconds ?? 0)
+        ),
+      });
+      if (error) throw new Error(error.message);
+    } catch (error) { pauseError = error; }
+  }
   const persisted = await Promise.allSettled(prepared.map(async ({ row, recipient }, index) => {
     const result = results[index];
     if (result.errorCode) {
+      if (result.disposition) {
+        // No retry of unknown acceptance, even after the shared pause expires.
+        // If the pause could not be persisted, keep retryable rows locked.
+        if (pauseError && result.disposition !== "unknown") return;
+        const { error } = await service.from("email_campaign_recipients").update({
+          status: result.disposition === "unknown" ? "unknown" : "scheduled",
+          error_code: result.errorCode,
+          processing_started_at: null,
+        }).eq("id", row.id).eq("status", "sending");
+        if (error) throw new Error(error.message);
+        return;
+      }
       await markDeliveryFailed(service, row.id, result.errorCode);
       incrementCount(failedByCampaign, row.campaign_id); failed++;
       return;
@@ -180,6 +211,7 @@ async function processCampaignBlock(options: {
           delivery_kind: recipient.deliveryKind,
           delegate_user_id: recipient.delegateUserId,
           provider_message_id: hashMessageId(result.messageId!),
+          error_code: null,
           sent_at: new Date().toISOString(),
           processing_started_at: null,
         })
@@ -192,6 +224,7 @@ async function processCampaignBlock(options: {
   // rows remain sending, so a later invocation cannot send them again.
   const persistenceFailure = persisted.find(result => result.status === "rejected");
   if (persistenceFailure?.status === "rejected") throw persistenceFailure.reason;
+  if (pauseError) throw pauseError;
 
   await Promise.all(
     campaignIds.map(async (campaignId) => {
@@ -214,7 +247,7 @@ async function processCampaignBlock(options: {
     })
   );
 
-  return { ...await summarizeDeliveryResult(service, options.campaignId, sent, failed), claimed: recipients.length };
+  return { ...await summarizeDeliveryResult(service, options.campaignId, sent, failed), claimed: recipients.length, paused: interrupted.length > 0 };
 }
 
 export async function loadCampaignDeliveryData(
@@ -412,15 +445,15 @@ async function summarizeDeliveryResult(
 }
 
 async function refreshCampaignStatus(service: ServiceClient, campaignId: string) {
-  const counts = await Promise.all(["pending", "scheduled", "sending", "sent", "failed"].map(async status => {
+  const counts = await Promise.all(["pending", "scheduled", "sending", "sent", "failed", "unknown"].map(async status => {
     const { count, error } = await service.from("email_campaign_recipients")
       .select("id", { count: "exact", head: true })
       .eq("campaign_id", campaignId).eq("status", status);
     if (error) throw new Error(error.message);
     return count ?? 0;
   }));
-  const [pending, scheduled, sending, sent, failed] = counts;
-  const status = pending + scheduled + sending > 0
+  const [pending, scheduled, sending, sent, failed, unknown] = counts;
+  const status = unknown > 0 ? "attention" : pending + scheduled + sending > 0
     ? "scheduled"
     : failed === 0 ? "completed" : sent === 0 ? "failed" : "partial";
   const { error: updateError } = await service
@@ -516,6 +549,6 @@ export async function processDueCampaignDeliveries(options: { campaignId?: strin
   do {
     result = await processCampaignBlock(options);
     sent += result.sent; failed += result.failed;
-  } while (result.claimed > 0 && Date.now() < deadline);
+  } while (result.claimed > 0 && !result.paused && Date.now() < deadline);
   return { ...result, sent, failed };
 }

@@ -1,5 +1,6 @@
 // Historical module path retained for existing callers; all delivery uses Postmark.
 import { getEmailConfig } from "./config.ts";
+import { batchFailure, retryAfterSeconds, type BatchFailure } from "./batch-outcome.ts";
 
 export type SendEmailInput = {
   to: string;
@@ -96,7 +97,7 @@ function postmarkPayload(input: SendEmailInput, kind: "transactional" | "broadca
       };
 }
 
-export type BatchEmailResult = { messageId: string; errorCode?: never } | { errorCode: string; messageId?: never };
+export type BatchEmailResult = { messageId: string; errorCode?: never; disposition?: never; retryAfterSeconds?: never } | BatchFailure;
 
 // Bound encoded JSON bytes as well as message count (attachments expand in base64).
 export async function sendBroadcastBatch(inputs: SendEmailInput[]): Promise<BatchEmailResult[]> {
@@ -105,6 +106,7 @@ export async function sendBroadcastBatch(inputs: SendEmailInput[]): Promise<Batc
   let pending: string[] = [];
   let indexes: number[] = [];
   let bytes = 2;
+  let stopped = false;
   async function flush() {
     if (!pending.length) return;
     let values: BatchEmailResult[];
@@ -116,23 +118,30 @@ export async function sendBroadcastBatch(inputs: SendEmailInput[]): Promise<Batc
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        const code = Number.isInteger(data?.ErrorCode) ? data.ErrorCode : response.status;
-        values = indexes.map(() => ({ errorCode: `postmark_${code}` }));
+        const failure = batchFailure(response.status, data?.ErrorCode);
+        const delay = retryAfterSeconds(response.headers.get("retry-after"));
+        values = indexes.map(() => ({ ...failure, ...(delay ? { retryAfterSeconds: delay } : {}) }));
       } else if (!Array.isArray(data) || data.length !== indexes.length) {
-        values = indexes.map(() => ({ errorCode: "postmark_response_unknown" }));
+        values = indexes.map(() => ({ errorCode: "postmark_response_unknown", disposition: "unknown" }));
       } else {
         values = data.map(item => item?.ErrorCode === 0 && typeof item.MessageID === "string" && item.MessageID.trim()
           ? { messageId: item.MessageID }
-          : { errorCode: Number.isInteger(item?.ErrorCode) && item.ErrorCode !== 0 ? `postmark_${item.ErrorCode}` : "postmark_response_unknown" });
+          : Number.isInteger(item?.ErrorCode) && item.ErrorCode !== 0
+            ? batchFailure(response.status, item.ErrorCode)
+            : { errorCode: "postmark_response_unknown", disposition: "unknown" });
       }
     } catch {
       // Never resubmit an ambiguous request: some or all messages may be accepted.
-      values = indexes.map(() => ({ errorCode: "postmark_delivery_unknown" }));
+      values = indexes.map(() => ({ errorCode: "postmark_delivery_unknown", disposition: "unknown" }));
     }
     indexes.forEach((index, offset) => { results[index] = values[offset]; });
+    stopped ||= values.some(value => Boolean(value.disposition));
     pending = []; indexes = []; bytes = 2;
   }
   for (const [index, input] of inputs.entries()) {
+    if (stopped) {
+      results[index] = { errorCode: "postmark_batch_deferred", disposition: "retry" }; continue;
+    }
     if (!/^[^\s,;<>@]+@[^\s,;<>@]+$/.test(input.to)) {
       results[index] = { errorCode: "invalid_recipient" }; continue;
     }
@@ -144,6 +153,9 @@ export async function sendBroadcastBatch(inputs: SendEmailInput[]): Promise<Batc
     // Conservative margin below Postmark's per-message and 50 MB batch limits.
     if (size > 9_000_000) { results[index] = { errorCode: "postmark_message_too_large" }; continue; }
     if (pending.length && (pending.length === 500 || bytes + size + 1 > 10_000_000)) await flush();
+    if (stopped) {
+      results[index] = { errorCode: "postmark_batch_deferred", disposition: "retry" }; continue;
+    }
     pending.push(payload); indexes.push(index); bytes += size + 1;
   }
   await flush();

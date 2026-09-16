@@ -1,5 +1,42 @@
 # AGENTS.md
 
+## Recupero campagne e conferma magic link — rilascio 2026-09-16
+
+- Batch Postmark distingue rifiuti definitivi, `retry`, `blocked` e `unknown`.
+  HTTP 429 e manutenzione dichiarata (ErrorCode 100) sono riprogrammabili;
+  rete, risposte malformate e HTTP 5xx non confermati restano incerti, senza
+  retry. Errori di configurazione/account sospendono fino a ripresa manuale.
+  Dopo un errore generale nessun altro sottobatch viene inviato; i messaggi
+  non ancora sottoposti tornano scheduled. Successi misti vengono salvati.
+- Migration `20260916120000_email_campaign_recovery.sql` applicata e registrata
+  atomicamente il 16 settembre prima del nuovo worker: stato destinatario `unknown`, campagna `attention`,
+  controllo globale service_role-only con pausa persistente, backoff 60s–1h
+  e Retry-After fino a 24h. Claim e pausa condividono il lock; le richieste
+  già in volo possono terminare. Nessuna riscrittura dei destinatari storici.
+  `resume_email_campaign_delivery()` rimuove la pausa dopo correzione della
+  configurazione, ma non riaccoda unknown/sending/failed. Dashboard mostra
+  pausa/blocco ed Esiti da verificare. Non riavviare esiti incerti senza
+  riconciliazione con Postmark. Dettagli in `docs/postmark.md`.
+- GET `/auth/callback` mostra soltanto la conferma, in sette lingue, senza
+  client Auth né consumo di token, anche per vecchi link token/code. Solo
+  POST dal medesimo origin verifica OTP/PKCE e conclude il flusso esistente;
+  redirect 303, no-store e referrer limitato all’origine (mai token/query),
+  nessun JS o prefetch automatico. I nuovi
+  magic link richiedono hashed_token: niente fallback al link Supabase che
+  consumerebbe il token prima della conferma. Scope limitato ai punti 3 e 5
+  della revisione: altri rilievi esplicitamente rinviati dall'utente.
+- Test trasporto/worker e callback con provider/Auth simulati; SQL su PGlite
+  temporaneo, fixture `tests/sql/email-campaign-recovery.sql`. Rilascio
+  autorizzato tramite push main/Vercel; timer sospeso e controllo globale
+  bloccato durante il passaggio. Conteggio e hash dei 3.324 destinatari
+  invariati nella migration; nessun invio di prova o reinvio storico.
+- Verifiche finali: 322 test, lint, typecheck e build production; dipendenze
+  dal lockfile in copia pulita per evitare directory duplicate preesistenti.
+  Browser sintetico desktop/mobile: GET/HEAD ripetuti, sette lingue, nessuna
+  chiamata Auth prima del clic, POST unico verso Auth locale simulato e ritorno
+  a login per token scaduto. Referrer strict-origin: no-referrer produrrebbe
+  Origin:null sul POST nativo Chromium e verrebbe respinto dal controllo CSRF.
+
 ## Rilascio Postmark — 2026-09-15
 
 - Rilascio operativo `e74d395`, deployment Vercel READY

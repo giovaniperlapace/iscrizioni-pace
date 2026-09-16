@@ -31,14 +31,14 @@ test("batch preserves per-recipient results, count/byte bounds and never retries
     ]);
     for (const data of [[], null, [{ErrorCode:0}]]) {
       globalThis.fetch = async () => Response.json(data);
-      assert.deepEqual(await sendBroadcastBatch([mail]), [{errorCode:"postmark_response_unknown"}]);
+      assert.deepEqual(await sendBroadcastBatch([mail]), [{errorCode:"postmark_response_unknown",disposition:"unknown"}]);
     }
     let calls = 0;
     globalThis.fetch = async () => { calls++; throw Error("connection lost after acceptance"); };
-    assert.deepEqual(await sendBroadcastBatch([mail,mail]), [{errorCode:"postmark_delivery_unknown"},{errorCode:"postmark_delivery_unknown"}]);
+    assert.deepEqual(await sendBroadcastBatch([mail,mail]), [{errorCode:"postmark_delivery_unknown",disposition:"unknown"},{errorCode:"postmark_delivery_unknown",disposition:"unknown"}]);
     assert.equal(calls,1);
     globalThis.fetch = async () => Response.json({ErrorCode:429,Message:"private"},{status:429});
-    assert.deepEqual(await sendBroadcastBatch([mail]), [{errorCode:"postmark_429"}]);
+    assert.deepEqual(await sendBroadcastBatch([mail]), [{errorCode:"postmark_429",disposition:"retry"}]);
   } finally {
     globalThis.fetch = fetchBefore;
     for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key];

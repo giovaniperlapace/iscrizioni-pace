@@ -9,6 +9,8 @@ import { isDashboardRole } from "@/lib/auth/roles";
 import { linkParticipantsToUserByEmail } from "@/lib/registrations/public-flow";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { MAGIC_LINK_RESPONSE_HEADERS, renderMagicLinkConfirmation } from "@/lib/auth/magic-link-confirmation";
+import { LOCALE_COOKIE_NAME, normalizeLocale, pickLocaleFromAcceptLanguage } from "@/lib/i18n/config";
 
 const OTP_TYPES = [
   "signup",
@@ -32,13 +34,44 @@ function getOtpTypesToTry(otpType: EmailOtpType): EmailOtpType[] {
 }
 
 export async function GET(request: NextRequest) {
+  const params = new URL(request.url).searchParams;
+  if (params.get("code") || params.get("token_hash") || params.get("token")) {
+    const locale = normalizeLocale(request.cookies.get(LOCALE_COOKIE_NAME)?.value)
+      ?? pickLocaleFromAcceptLanguage(request.headers.get("accept-language"));
+    return new NextResponse(renderMagicLinkConfirmation(params, locale), {
+      headers: { ...MAGIC_LINK_RESPONSE_HEADERS, "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+  return redirectWithError(new URL(request.url), "session");
+}
+
+export async function POST(request: NextRequest) {
+  // Prevent a third-party site from submitting a login on someone's behalf.
+  if (request.headers.get("origin") !== new URL(request.url).origin) {
+    return new NextResponse(null, { status: 403, headers: MAGIC_LINK_RESPONSE_HEADERS });
+  }
+  if (!request.headers.get("content-type")?.startsWith("application/x-www-form-urlencoded")) {
+    return new NextResponse(null, { status: 415, headers: MAGIC_LINK_RESPONSE_HEADERS });
+  }
+  const body = await request.text();
+  if (body.length > 8192) return new NextResponse(null, { status: 413, headers: MAGIC_LINK_RESPONSE_HEADERS });
+  const params = new URLSearchParams(body);
+  if (!params.get("code") && !(params.get("token_hash") || params.get("token"))) {
+    return redirectWithError(new URL(request.url), "session");
+  }
+  const response = await completeAuthentication(request, params);
+  for (const [name, value] of Object.entries(MAGIC_LINK_RESPONSE_HEADERS)) response.headers.set(name, value);
+  return response;
+}
+
+async function completeAuthentication(request: NextRequest, params: URLSearchParams) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
+  const code = params.get("code");
   const tokenHash =
-    requestUrl.searchParams.get("token_hash") ?? requestUrl.searchParams.get("token");
-  const otpType = requestUrl.searchParams.get("type");
-  const requestedRole = requestUrl.searchParams.get("role");
-  const redirectTo = requestUrl.searchParams.get("redirect_to");
+    params.get("token_hash") ?? params.get("token");
+  const otpType = params.get("type");
+  const requestedRole = params.get("role");
+  const redirectTo = params.get("redirect_to");
 
   const supabase = await createSupabaseServerClient();
   let verificationError: unknown = null;
@@ -129,7 +162,7 @@ export async function GET(request: NextRequest) {
     sanitizeRedirectPath(redirectTo) ?? authContext.dashboardPath,
     requestUrl.origin
   );
-  const response = NextResponse.redirect(responseUrl);
+  const response = NextResponse.redirect(responseUrl, 303);
 
   if (isDashboardRole(requestedRole)) {
     response.cookies.set("iscrizioni_requested_role", requestedRole, {
@@ -145,7 +178,7 @@ export async function GET(request: NextRequest) {
 function redirectWithError(requestUrl: URL, reason: string): NextResponse {
   const loginUrl = new URL("/login", requestUrl.origin);
   loginUrl.searchParams.set("error", reason);
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.redirect(loginUrl, 303);
 }
 
 function sanitizeRedirectPath(path: string | null): string | null {
