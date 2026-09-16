@@ -1,3 +1,4 @@
+import { inheritGroupTerritories } from "../groups/territory.ts";
 import { countryName, findCountryId } from "./country-names.ts";
 import { loadAllRows } from "../supabase/all-rows.ts";
 import { participantQrFilename } from "@/lib/qrcode/filename";
@@ -157,19 +158,7 @@ export async function getPublicRegistrationOptions(
       .select("id,country_id,name")
       .eq("is_active", true)
       .order("name"),
-    event
-      ? supabase
-          .from("groups")
-          .select(
-            "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
-          )
-          .eq("event_id", event.id)
-          .eq("is_active", true)
-          .eq("is_public_catalog", true)
-          .eq("is_assignable", true)
-          .in("node_type", ["area", "group"])
-          .order("name")
-      : Promise.resolve({ data: [], error: null }),
+    event ? getEventGroupCandidates(supabase, event.id) : Promise.resolve([]),
     event
       ? supabase
           .from("event_moments")
@@ -184,7 +173,11 @@ export async function getPublicRegistrationOptions(
     event,
     countries: countries.data ?? [],
     cities: cities.data ?? [],
-    groups: ((groups.data ?? []) as PublicGroupRow[]).map(mapGroupRow),
+    // Resolve against the complete active tree, then expose only public choices.
+    groups: inheritGroupTerritories(groups).filter(group =>
+      group.isPublicCatalog && group.isAssignable &&
+      (group.nodeType === "area" || group.nodeType === "group")
+    ),
     groupLink: groupLink
       ? {
           id: groupLink.id,
@@ -747,17 +740,15 @@ async function getEventGroupCandidates(
   supabase: SupabaseClient,
   eventId: string
 ): Promise<GroupMatchCandidate[]> {
-  const { data, error } = await supabase
+  const { data } = await loadAllRows<PublicGroupRow>((from, to) => supabase
     .from("groups")
     .select(
       "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
     )
     .eq("event_id", eventId)
-    .eq("is_active", true);
-
-  if (error) {
-    throw error;
-  }
+    .eq("is_active", true)
+    .order("id")
+    .range(from, to));
 
   return ((data ?? []) as PublicGroupRow[]).map(mapGroupRow);
 }

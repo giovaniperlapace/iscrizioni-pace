@@ -1,5 +1,30 @@
 # AGENTS.md
 
+## Territorio ereditato nei suggerimenti di gruppo — 2026-09-16
+
+- Il catalogo pubblico carica con paginazione stabile tutti i gruppi attivi
+  dell'evento, inclusi gli antenati non pubblici/non assegnabili. Solo dopo
+  la risoluzione espone al browser i gruppi e le aree pubblici assegnabili.
+- `lib/groups/territory.ts` integra paese e città mancanti dal più vicino
+  antenato valorizzato, senza riscrivere i dati. La città esplicita prevale;
+  cicli, antenati mancanti/inattivi/di altro evento e paesi contraddittori
+  interrompono il caricamento. Non dedurre territori dai nomi dei gruppi.
+- Il matching mantiene la precedenza della città sul paese, poi specificità
+  del nodo e ordine pubblico; conserva filtri età, tipologia e visibilità.
+  Gruppi di altre città sono esclusi se la città personale è riconosciuta;
+  senza città riconosciuta resta il fallback del paese. Nessuna assegnazione
+  automatica né modifica a link riservati, ruoli, database o RLS.
+- Diagnosi in sola lettura: Varsavia e Poznan Chojna hanno territorio diretto
+  vuoto e padre Polonia. La nuova risoluzione sui 112 gruppi attivi li propone
+  entrambi come gruppi nazionali; una precedenza per città richiede una città
+  associata al gruppo o a un suo antenato.
+- Regressioni in `tests/group-territory-inheritance.test.mts`: caso Polonia,
+  ereditarietà multilivello, ordine città/paese, filtri, gerarchie invalide,
+  oltre 1.000 nodi e interruzione su errore nelle pagine successive.
+  Verificati 336 test, lint, typecheck e build con dipendenze da `npm ci`.
+- Prima della modifica, `main` riallineato con pull fast-forward da `8062b90`
+  a `5e6d3ff`; cartella locale `output/` conservata. Modifica non pubblicata.
+
 ## Normalizzazione multilingue dei paesi — 2026-09-16
 
 - `country-names.ts` riconduce i nomi nelle sette lingue allo stesso codice ISO,
