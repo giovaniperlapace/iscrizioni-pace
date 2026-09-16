@@ -1,3 +1,4 @@
+import { countryName } from "./country-names.ts";
 import {
   DEFAULT_LOCALE,
   type SupportedLocale,
@@ -124,7 +125,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     nationality,
     preferredLocale: DEFAULT_LOCALE,
     countryId: null,
-    countryOther: optionalText(formData.get("countryOther")),
+    countryOther: countryName(optionalText(formData.get("countryOther"))),
     cityId: null,
     cityOther: optionalText(formData.get("cityOther")),
     hasPreviousSantegidioParticipation,

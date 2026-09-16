@@ -1,5 +1,31 @@
 # AGENTS.md
 
+## Normalizzazione multilingue dei paesi — 2026-09-16
+
+- `country-names.ts` riconduce i nomi nelle sette lingue allo stesso codice ISO,
+  con alias espliciti e confronto senza accenti, mai approssimativo. Conserva
+  le etichette italiane già usate dal catalogo e dalle città. Valori storici
+  sconosciuti restano visibili; corrispondenze multiple non scelgono un ID.
+- Il modulo pubblico mostra e cerca le etichette nella lingua dell'interfaccia,
+  mantenendo le chiavi canoniche per città e gruppi. Anche `Altro / non in lista`
+  passa dalla stessa validazione. Parser e salvataggio normalizzano il paese;
+  il resolver cerca l'ID tramite `countries.iso2` e interrompe il salvataggio
+  se fallisce la lettura del catalogo, paginata. Paesi validi non presenti nel
+  catalogo restano ammessi come testo canonico, senza creare nuove righe.
+- `participantGeography` normalizza anche i dati preesistenti per elenchi,
+  statistiche ed export. Il paese della scheda capogruppo usa lo stesso helper.
+  Testo esplicito mantiene precedenza su collegamenti di catalogo obsoleti;
+  gerarchia territoriale del gruppo e assegnazioni restano invariate.
+- Verifica in sola lettura della scheda 5H5R: `España` risolve `ES` e si mostra
+  come `Spagna`. Nessuna riscrittura dati storici, migration o modifica RLS.
+  Rilascio autorizzato tramite push main/Vercel il 16 settembre.
+  Test in `tests/country-normalization.test.mts`
+  e fixture browser `tests/browser/country-normalization.mjs`. Verificati 330
+  test, lint, typecheck e build in copia pulita con `npm ci`; browser nelle
+  sette lingue, desktop/mobile, nessun invio. Eseguire la fixture browser
+  separatamente dalla suite: monta temporaneamente una route di collaudo.
+
+
 ## Recupero campagne e conferma magic link — rilascio 2026-09-16
 
 - Batch Postmark distingue rifiuti definitivi, `retry`, `blocked` e `unknown`.

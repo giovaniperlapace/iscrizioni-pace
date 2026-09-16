@@ -23,6 +23,7 @@ import {
 } from "@/lib/questionnaire/registration";
 import type { PublicRegistrationOptions } from "@/lib/registrations/public-flow";
 import type { SupportedLocale } from "@/lib/i18n/config";
+import { countryName, findCountryId } from "@/lib/registrations/country-names";
 import { isCountryName, COUNTRY_VALIDATION_MESSAGE } from "@/lib/registrations/country-validation";
 import {
   ATTENDANCE_PARTS,
@@ -685,7 +686,9 @@ export function RegistrationForm({
     locale
   );
   const filteredCountries = EUROPEAN_COUNTRIES.filter((country) =>
-    normalizeSearchText(country).includes(normalizeSearchText(countrySearch))
+    [country, countryName(country, locale) ?? country].some(name =>
+      normalizeSearchText(name).includes(normalizeSearchText(countrySearch))
+    )
   );
   const countryValue =
     selectedCountry === OTHER_COUNTRY ? customCountry : selectedCountry;
@@ -1041,13 +1044,13 @@ export function RegistrationForm({
                       }
 
                       setSelectedCountry(country);
-                      setCountrySearch(country);
+                      setCountrySearch(countryName(country, locale) ?? country);
                       setCustomCountry("");
                       clearCitySelection();
                       setShowCountryOptions(false);
                     }}
                   >
-                    {country}
+                    {countryName(country, locale)}
                   </button>
                 ))}
                 <button
@@ -2125,25 +2128,6 @@ function focusField(form: HTMLFormElement | null, field: string) {
 
   element.focus({ preventScroll: true });
   element.scrollIntoView({ block: "center", behavior: "smooth" });
-}
-
-function findCountryId(
-  countries: PublicRegistrationOptions["countries"],
-  value: string
-): string | null {
-  const normalized = normalizeMatchText(value);
-
-  if (!normalized) {
-    return null;
-  }
-
-  return (
-    countries.find(
-      (country) =>
-        normalizeMatchText(country.name_it) === normalized ||
-        normalizeMatchText(country.name_en) === normalized
-    )?.id ?? null
-  );
 }
 
 function findCityId(

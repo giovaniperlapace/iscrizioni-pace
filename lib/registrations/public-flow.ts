@@ -1,3 +1,5 @@
+import { countryName, findCountryId } from "./country-names.ts";
+import { loadAllRows } from "../supabase/all-rows.ts";
 import { participantQrFilename } from "@/lib/qrcode/filename";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -63,6 +65,7 @@ type CreatedParticipant = {
 };
 
 type PublicCountryRow = {
+  iso2?: string | null;
   id: string;
   name_it: string;
   name_en: string;
@@ -104,7 +107,7 @@ type PublicGroupRegistrationLinkRow = {
 
 export type PublicRegistrationOptions = {
   event: PublicEvent | null;
-  countries: Array<{ id: string; name_it: string; name_en: string }>;
+  countries: Array<{ id: string; iso2?: string | null; name_it: string; name_en: string }>;
   cities: Array<{ id: string; country_id: string; name: string }>;
   groups: Array<{
     id: string;
@@ -146,7 +149,7 @@ export async function getPublicRegistrationOptions(
   const [countries, cities, groups, moments] = await Promise.all([
     supabase
       .from("countries")
-      .select("id,name_it,name_en")
+      .select("id,iso2,name_it,name_en")
       .eq("is_active", true)
       .order("name_it"),
     supabase
@@ -357,7 +360,7 @@ export async function createPublicRegistration(
       preferred_locale: input.preferredLocale,
       country_id: geography.countryId,
       city_id: geography.cityId,
-      country_other: input.countryOther,
+      country_other: countryName(input.countryOther),
       city_other: input.cityOther,
       has_previous_santegidio_participation:
         input.hasPreviousSantegidioParticipation,
@@ -711,19 +714,14 @@ async function findCountryIdByName(
   supabase: SupabaseClient,
   countryName: string
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await loadAllRows<PublicCountryRow>((from, to) => supabase
     .from("countries")
-    .select("id,name_it,name_en")
-    .eq("is_active", true);
+    .select("id,iso2,name_it,name_en")
+    .eq("is_active", true)
+    .order("id")
+    .range(from, to));
 
-  const normalizedCountry = normalizeMatchText(countryName);
-  const match = ((data ?? []) as PublicCountryRow[]).find(
-    (country) =>
-      normalizeMatchText(country.name_it) === normalizedCountry ||
-      normalizeMatchText(country.name_en) === normalizedCountry
-  );
-
-  return match?.id ?? null;
+  return findCountryId(data, countryName);
 }
 
 async function findCityIdByName(

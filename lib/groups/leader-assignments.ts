@@ -1,3 +1,4 @@
+import { participantGeography } from "../registrations/geography.ts";
 import type { ParticipantOperationalTag } from "../registrations/operational-tags.ts";
 import type { ParticipantEventService } from "../registrations/event-services.ts";
 export type AssignmentCopy = {
@@ -331,10 +332,10 @@ export function toAssignmentView(
     participantCity:
       relatedOne(participant.cities)?.name ?? participant.city_other,
     participantCountry:
-      relatedOne(participant.countries)?.name_it ?? participant.country_other,
+      participantGeography(participant).country,
     participantPlace: formatPlace(
       relatedOne(participant.cities)?.name ?? participant.city_other,
-      relatedOne(participant.countries)?.name_it ?? participant.country_other,
+      participantGeography(participant).country,
       copy,
     ),
     birthDate: participant.birth_date,

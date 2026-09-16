@@ -1,3 +1,4 @@
+import { countryName } from "./country-names.ts";
 type Relation<T> = T | T[] | null;
 export type ParticipantGeography = {
   country_other?: string | null;
@@ -11,7 +12,7 @@ export function participantGeography(participant: ParticipantGeography | null | 
   const country = one(participant?.countries);
   const city = one(participant?.cities);
   return {
-    country: participant?.country_other?.trim() || country?.name_it?.trim() || null,
+    country: countryName(participant?.country_other?.trim() || country?.name_it),
     city: participant?.city_other?.trim() || city?.name?.trim() || null,
   };
 }
