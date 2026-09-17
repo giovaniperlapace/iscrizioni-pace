@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
 import { OTHER_PHONE_PREFIX, PHONE_PREFIX_OPTIONS } from "@/lib/registrations/phone-prefixes";
 
 import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
@@ -216,66 +217,66 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
   en: {
     newRegistration: "New registration",
     intro:
-      "This is your first registration for the event. After submitting it, you will be able to access your dashboard, download the QR code for entry and, when the full programme is published, choose the moments you want to attend, such as thematic panels and events.",
-    groupLinkPrefix: "This link registers you with the group",
+      "Complete this form to register for the event. Once you have submitted your registration, you will be able to access your dashboard and download your entry QR code. When the full programme is published, you will also be able to choose which panel discussions and other events to attend.",
+    groupLinkPrefix: "Use this link to register as part of the group",
     groupLinkSuffix: ".",
     firstName: "First name",
     lastName: "Last name",
-    country: "Country where you usually live",
+    country: "Country of residence",
     countryPlaceholder: "Search for the country where you live",
-    countryOtherPlaceholder: "Write the country where you live",
+    countryOtherPlaceholder: "Enter the country where you live",
     noCountry: "No country found",
-    city: "City where you usually live",
+    city: "City of residence",
     cityPlaceholder: "Search for the city where you live",
     cityDisabledPlaceholder: "Select the country first",
-    cityOtherPlaceholder: "Write the city where you live",
+    cityOtherPlaceholder: "Enter the city where you live",
     noCity: "No city found",
     birthDate: "Date of birth",
     birthPlace: "Place of birth (country and city)",
     birthPlacePlaceholder: "For example: Italy, Rome",
     nationality: "Nationality",
-    nationalityPlaceholder: "Search nationality",
+    nationalityPlaceholder: "Search for your nationality",
     noNationality: "No nationality found",
-    phone: "Phone (optional)",
-    phonePrefixLabel: "International prefix",
+    phone: "Phone number (optional)",
+    phonePrefixLabel: "Country calling code",
     phoneOther: "Other",
-    phoneNumberPlaceholder: "Number",
-    phonePrefixPlaceholder: "Write the prefix, for example +234",
-    phoneTitle: "Use only digits, spaces, dots, brackets or hyphens.",
-    childrenQuestion: "Will you attend the event with one or more children?",
-    childrenCount: "How many children will attend with you?",
+    phoneNumberPlaceholder: "Phone number",
+    phonePrefixPlaceholder: "Enter the country calling code, e.g. +234",
+    phoneTitle: "Use only digits, spaces, full stops, parentheses or hyphens.",
+    childrenQuestion: "Will any of your children be attending the event with you?",
+    childrenCount: "How many of your children will be attending with you?",
     childCard: (index) => `Child ${index}`,
     childFirstName: "First name",
     childLastName: "Last name",
     childBirthDate: "Date of birth",
     accessibilityQuestion:
-      "Do you have a disability, health condition or accessibility need that you would like to tell us about so we can organise the welcome better?",
-    accessibilityTitle: "Which aspects should we consider?",
+      "Do you have a disability, health condition or accessibility need that you would like us to know about so we can better support you at the event?",
+    accessibilityTitle: "What should we take into account?",
     previousQuestion: "Have you attended other events organised by the Community of Sant’Egidio?",
-    externalGroupQuestion: "Are you a member of any association?",
+    externalGroupQuestion: "Are you a member of an association?",
     externalGroupPlaceholder: "Association name (optional)",
     groupQuestion: "Will you attend the Prayer for Peace with a group from the Community?",
     groupLabel: "Group",
-    groupPlaceholder: "Search by group",
-    groupDisabledPlaceholder: "Enter country, city and date of birth first",
+    groupPlaceholder: "Search for your group",
+    groupDisabledPlaceholder: "Enter your country, city and date of birth first",
     noMatchingLeader: "No matching group found",
     cannotFindLeader: "I cannot find my group",
-    daysTitle: "Which days do you think you will attend?",
+    daysTitle: "Which days do you plan to attend?",
     daysHelp:
-      "You can select one or more event days, or say that you will communicate this later.",
-    daysUnknown: "I do not know yet; I will communicate it later",
+      "Select the mornings and afternoons you plan to attend, or let us know later if you are not yet sure.",
+    daysUnknown: "I am not sure yet; I will let you know later",
     privacyTitle: "Privacy and data processing",
     privacyBody:
-      "I confirm that I have read the event privacy notice and authorise the processing of the data entered to manage the registration, identify the participant, send organisational communications, organise welcome arrangements, handle any accessibility needs and fulfil safety and legal requirements connected with the event. The data will be processed under EU Regulation 2016/679 (GDPR), with appropriate confidentiality measures, access limited to authorised staff and storage only for the time needed for the stated purposes. I know that I may exercise the rights of access, rectification, erasure, restriction, objection and withdrawal of consent, without affecting the lawfulness of processing already carried out.",
+      "I confirm that I have read the event privacy notice and authorise the processing of the data entered to manage the registration, identify the participant, send organisational communications, make arrangements to welcome participants, address any accessibility needs and fulfil safety and legal requirements connected with the event. The data will be processed under EU Regulation 2016/679 (GDPR), with appropriate confidentiality measures, access limited to authorised staff and storage only for the time needed for the stated purposes. I know that I may exercise the rights of access, rectification, erasure, restriction, objection and withdrawal of consent, without affecting the lawfulness of processing already carried out.",
     privacyConsent:
       "I accept the privacy notice and authorise the processing of the data needed to manage the registration and the event. If I register one or more children, I confirm that I have parental responsibility or am authorised to provide their data.",
     sensitiveConsent:
-      "I consent to the processing of the information provided about disability, health or accessibility needs, so that welcome and support measures can be prepared during the event.",
+      "I consent to the processing of the information provided about disability, health or accessibility needs, so that appropriate arrangements can be made to welcome and support me during the event.",
     futureEventsConsent:
       "I agree to receive information about future events and initiatives of the Community of Sant'Egidio. This consent is optional and may be withdrawn at any time.",
     requiredChoice: "Select an answer to continue.",
     requiredGroup: "Select a group or indicate that you cannot find it.",
-    requiredDays: "Select at least one day or indicate that you will communicate it later.",
+    requiredDays: "Select at least one morning or afternoon, or indicate that you will let us know later.",
     yes: "Yes",
     no: "No",
     submit: "Submit registration",
@@ -974,8 +975,10 @@ export function RegistrationForm({
         </div>
       </header>
 
+      <RequiredFieldsNote locale={locale} />
+
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5 sm:grid-cols-2">
-        <Field label="Email" className="sm:col-span-2">
+        <Field required label="Email" className="sm:col-span-2">
           <input
             name="email"
             type="email"
@@ -986,7 +989,7 @@ export function RegistrationForm({
             data-field="email"
           />
         </Field>
-        <Field label={copy.firstName}>
+        <Field required label={copy.firstName}>
           <input
             name="firstName"
             required
@@ -996,7 +999,7 @@ export function RegistrationForm({
             data-field="firstName"
           />
         </Field>
-        <Field label={copy.lastName}>
+        <Field required label={copy.lastName}>
           <input
             name="lastName"
             required
@@ -1007,7 +1010,7 @@ export function RegistrationForm({
           />
         </Field>
         <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.country}</span>
+          <span>{copy.country}<RequiredIndicator /></span>
           <input type="hidden" name="countryOther" value={countryValue} />
           <div className="relative">
             <input
@@ -1088,7 +1091,7 @@ export function RegistrationForm({
           ) : null}
         </div>
         <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.city}</span>
+          <span>{copy.city}<RequiredIndicator /></span>
           <input type="hidden" name="cityOther" value={cityValue} />
           {selectedCountry === OTHER_COUNTRY ? (
             <input
@@ -1182,7 +1185,7 @@ export function RegistrationForm({
             />
           ) : null}
         </div>
-        <Field label={copy.birthDate}>
+        <Field required label={copy.birthDate}>
           <input
             name="birthDate"
             type="date"
@@ -1193,7 +1196,7 @@ export function RegistrationForm({
             onChange={(event) => setBirthDate(event.target.value)}
           />
         </Field>
-        <Field label={copy.birthPlace}>
+        <Field required label={copy.birthPlace}>
           <input
             name="birthPlace"
             required
@@ -1204,7 +1207,7 @@ export function RegistrationForm({
           />
         </Field>
         <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.nationality}</span>
+          <span>{copy.nationality}<RequiredIndicator /></span>
           <input type="hidden" name="nationality" value={selectedNationality} />
           <div className="relative">
             <input
@@ -1288,17 +1291,19 @@ export function RegistrationForm({
             />
           </div>
           {phonePrefix === OTHER_PHONE_PREFIX ? (
-            <input
-              className="field"
-              inputMode="tel"
-              pattern="\\+[1-9][0-9]{0,3}"
-              placeholder={copy.phonePrefixPlaceholder}
-              required={phoneNumber.length > 0}
-              title={copy.phonePrefixLabel}
-              value={customPhonePrefix}
-              data-field="phone"
-              onChange={(event) => setCustomPhonePrefix(event.target.value)}
-            />
+            <Field label={copy.phonePrefixLabel} required={phoneNumber.length > 0}>
+              <input
+                className="field"
+                inputMode="tel"
+                pattern="\\+[1-9][0-9]{0,3}"
+                placeholder={copy.phonePrefixPlaceholder}
+                required={phoneNumber.length > 0}
+                title={copy.phonePrefixLabel}
+                value={customPhonePrefix}
+                data-field="phone"
+                onChange={(event) => setCustomPhonePrefix(event.target.value)}
+              />
+            </Field>
           ) : null}
         </div>
       </section>
@@ -1329,7 +1334,7 @@ export function RegistrationForm({
 
         {participatesWithChildren === "yes" ? (
           <div className="grid gap-4">
-            <Field label={copy.childrenCount}>
+            <Field required label={copy.childrenCount}>
               <select
                 name="childrenCount"
                 className="field"
@@ -1355,7 +1360,7 @@ export function RegistrationForm({
                   <legend className="px-2 text-sm font-semibold text-[var(--peace-blue-900)]">
                     {copy.childCard(index + 1)}
                   </legend>
-                  <Field label={copy.childFirstName}>
+                  <Field required label={copy.childFirstName}>
                     <input
                       name={`child_${index}_firstName`}
                       required
@@ -1364,7 +1369,7 @@ export function RegistrationForm({
                       data-field="children"
                     />
                   </Field>
-                  <Field label={copy.childLastName}>
+                  <Field required label={copy.childLastName}>
                     <input
                       name={`child_${index}_lastName`}
                       required
@@ -1373,7 +1378,7 @@ export function RegistrationForm({
                       data-field="children"
                     />
                   </Field>
-                  <Field label={copy.childBirthDate} className="sm:col-span-2">
+                  <Field required label={copy.childBirthDate} className="sm:col-span-2">
                     <input
                       name={`child_${index}_birthDate`}
                       type="date"
@@ -1392,7 +1397,7 @@ export function RegistrationForm({
 
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.accessibilityQuestion}</span>
+          <span>{copy.accessibilityQuestion}<RequiredIndicator /></span>
           <input
             name="hasAccessibilityNeeds"
             type="hidden"
@@ -1429,7 +1434,7 @@ export function RegistrationForm({
           <div className="grid gap-4">
             <div>
               <h2 className="text-lg font-semibold">
-                {copy.accessibilityTitle}
+                {copy.accessibilityTitle}<RequiredIndicator />
               </h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1463,7 +1468,7 @@ export function RegistrationForm({
         />
         {!hasGroupLink ? (
           <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-            <span>{copy.previousQuestion}</span>
+            <span>{copy.previousQuestion}<RequiredIndicator /></span>
             <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
               <ChoiceButton
                 active={hasPreviousParticipation === "yes"}
@@ -1505,7 +1510,7 @@ export function RegistrationForm({
         />
         {!hasGroupLink && hasPreviousParticipation === "yes" ? (
           <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-            <span>{copy.groupQuestion}</span>
+            <span>{copy.groupQuestion}<RequiredIndicator /></span>
             <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
               <ChoiceButton
                 active={participatesWithGroup === "yes"}
@@ -1551,7 +1556,7 @@ export function RegistrationForm({
         ) : null}
 
         {effectiveParticipatesWithGroup === "yes" ? (
-          <Field label={copy.groupLabel}>
+          <Field required={!hasGroupLink && !cannotFindLeader} label={copy.groupLabel}>
             <input
               name={hasRealGroups ? "groupId" : "groupName"}
               value={selectedGroupValue}
@@ -1661,7 +1666,7 @@ export function RegistrationForm({
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div>
           <h2 className="text-lg font-semibold">
-            {copy.daysTitle}
+            {copy.daysTitle}<RequiredIndicator />
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
             {copy.daysHelp}
@@ -1721,7 +1726,7 @@ export function RegistrationForm({
             data-field="consents"
           />
           <span>
-            {copy.privacyConsent}
+            {copy.privacyConsent}<RequiredIndicator />
           </span>
         </label>
         {hasAccessibilityNeeds === "yes" ? (
@@ -1734,7 +1739,7 @@ export function RegistrationForm({
               data-field="consents"
             />
             <span>
-              {copy.sensitiveConsent}
+              {copy.sensitiveConsent}<RequiredIndicator />
             </span>
           </label>
         ) : null}
@@ -1766,14 +1771,16 @@ function Field({
   label,
   children,
   className = "",
+  required = false,
 }: {
+  required?: boolean;
   label: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <label className={`grid gap-2 text-sm font-medium text-[var(--peace-ink)] ${className}`}>
-      <span>{label}</span>
+      <span>{label}{required ? <RequiredIndicator /> : null}</span>
       {children}
     </label>
   );

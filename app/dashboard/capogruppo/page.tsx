@@ -1,3 +1,4 @@
+import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
 import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
@@ -1848,8 +1849,9 @@ function ManualRegistrationSection({
           locale={locale}
           className="mt-5 grid gap-4 lg:grid-cols-2"
         >
+          <div className="lg:col-span-2"><RequiredFieldsNote locale={locale} /></div>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
-            {copy.group}
+            <span>{copy.group}<RequiredIndicator /></span>
             <select name="groupId" required className="field" defaultValue={defaultGroupId}>
               <option value="">{copy.selectGroup}</option>
               {assignableGroups.map((group) => (
@@ -1861,11 +1863,11 @@ function ManualRegistrationSection({
           </label>
 
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.firstName}
+            <span>{copy.firstName}<RequiredIndicator /></span>
             <input name="firstName" required minLength={2} className="field" />
           </label>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.lastName}
+            <span>{copy.lastName}<RequiredIndicator /></span>
             <input name="lastName" required minLength={2} className="field" />
           </label>
           <ManualEmailFields locale={locale} emailLabel={copy.email} />
@@ -1895,7 +1897,7 @@ function ManualRegistrationSection({
               required
               className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
             />
-            {copy.consent}
+            <span>{copy.consent}<RequiredIndicator /></span>
           </label>
           <label className="grid gap-1 text-sm lg:col-span-2">
             {MANUAL_DUPLICATE_COPY[locale]}

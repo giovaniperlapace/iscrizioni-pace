@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredIndicator } from "@/components/required-indicator";
 import { useState } from "react";
 
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -149,7 +150,7 @@ export function ManualChildrenFields({
       {participatesWithChildren ? (
         <>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.count}
+            <span>{copy.count}<RequiredIndicator /></span>
             <select
               name="childrenCount"
               className="field"
@@ -179,7 +180,7 @@ export function ManualChildrenFields({
                   {copy.child} {index + 1}
                 </legend>
                 <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                  {copy.firstName}
+                  <span>{copy.firstName}<RequiredIndicator /></span>
                   <input
                     name={`child_${index}_firstName`}
                     required
@@ -189,7 +190,7 @@ export function ManualChildrenFields({
                   />
                 </label>
                 <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-                  {copy.lastName}
+                  <span>{copy.lastName}<RequiredIndicator /></span>
                   <input
                     name={`child_${index}_lastName`}
                     required
@@ -199,7 +200,7 @@ export function ManualChildrenFields({
                   />
                 </label>
                 <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] sm:col-span-2">
-                  {copy.birthDate}
+                  <span>{copy.birthDate}<RequiredIndicator /></span>
                   <input
                     name={`child_${index}_birthDate`}
                     type="date"

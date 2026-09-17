@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredIndicator } from "@/components/required-indicator";
 import { useId, useState } from "react";
 import type { SupportedLocale } from "@/lib/i18n/config";
 
@@ -56,7 +57,7 @@ export function ManualEmailFields({ locale, emailLabel }: {
       </p>
       {!useLeaderEmail ? (
         <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-          {emailLabel}
+          <span>{emailLabel}<RequiredIndicator /></span>
           <input name="email" type="email" required className="field" aria-describedby={helpId} />
         </label>
       ) : null}
