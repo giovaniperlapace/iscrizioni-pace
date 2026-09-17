@@ -1,3 +1,4 @@
+import { AdminGroupsTable } from "@/app/dashboard/admin/admin-groups-table";
 import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
 import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
 import { groupLeaderSummaries, type GroupLeaderSummary } from "@/lib/groups/leader-summary";
@@ -39,7 +40,6 @@ import {
   DashboardAreaDescription,
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
-import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { GroupPublicCatalogSwitch } from "@/app/dashboard/group-public-catalog-switch";
 import {
   GroupAgeBandFields,
@@ -1816,7 +1816,6 @@ function AdminGroupTreeSection({
   createdUrl: string | null;
   navMode: AdminNavMode;
 }) {
-  const filteredGroups = filterGroupRows(groups, filters);
   const linksByGroupId = groupLinksByGroupId(links);
   const eventOptions = currentEventOption
     ? [currentEventOption]
@@ -1840,97 +1839,23 @@ function AdminGroupTreeSection({
         </Link>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-4">
-        <EventValue label="Gruppi visibili" value={filteredGroups.length} />
-        <EventValue label="Iscrivibili" value={filteredGroups.filter((group) => group.isAssignable).length} />
-        <EventValue label="Nel form pubblico" value={filteredGroups.filter((group) => group.isPublicCatalog).length} />
-        <EventValue label="Link attivi" value={links.length} />
-      </div>
-
-      <div className="mt-5 overflow-x-auto">
-        <AutoFilterForm
-          action="/dashboard/admin"
-          blockWhilePending={false}
-          defaults={{
-            groupQ: "",
-            groupType: "all",
-            groupVisibility: "all",
-          }}
-        >
-          <input type="hidden" name="section" value="gruppi" />
-          <input type="hidden" name="nav" value={navMode} />
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="py-3 pr-4 font-semibold">Nodo</th>
-                <th className="py-3 pr-4 font-semibold">Età</th>
-                <th className="py-3 pr-4 font-semibold">Referenti</th>
-                <th className="py-3 pr-4 font-semibold">Accesso iscrizione</th>
-                <th className="py-3 text-right font-semibold">Azioni</th>
-              </tr>
-              <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-group-q">Cerca gruppo</label>
-                  <input
-                    id="admin-group-q"
-                    name="groupQ"
-                    defaultValue={filters.q}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                    placeholder="Nome, referente, label"
-                  />
-                </th>
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-group-type">Tipo nodo</label>
-                  <select
-                    id="admin-group-type"
-                    name="groupType"
-                    defaultValue={filters.nodeType}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                  >
-                    <option value="all">Tutti i tipi</option>
-                    <option value="country">Paese</option>
-                    <option value="city">Città</option>
-                    <option value="area">Area</option>
-                    <option value="group">Gruppo</option>
-                    <option value="newcomers">Nuovi partecipanti</option>
-                  </select>
-                </th>
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-group-visibility">Accesso iscrizione</label>
-                  <select
-                    id="admin-group-visibility"
-                    name="groupVisibility"
-                    defaultValue={filters.visibility}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                  >
-                    <option value="all">Tutti</option>
-                    <option value="public">Nel form pubblico</option>
-                    <option value="reserved">Solo con link</option>
-                    <option value="not-assignable">Non iscrivibile</option>
-                  </select>
-                </th>
-                <th className="py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    {filters.q ||
-                    filters.eventId !== "all" ||
-                    filters.nodeType !== "all" ||
-                    filters.visibility !== "all" ? (
-                      <Link
-                        href={adminPath("gruppi", navMode)}
-                        className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"
-                      >
-                        Reset
-                      </Link>
-                    ) : null}
-                  </div>
-                </th>
-              </tr>
-            </thead>
-          <tbody>
-            {filteredGroups.map((group) => {
-              const isPublicCatalog = Boolean(group.isPublicCatalog);
-
-              return (
+      <AdminGroupsTable
+        key={JSON.stringify(filters)}
+        initialFilters={filters}
+        linkCount={links.length}
+        rows={groups.map((group) => {
+          const isPublicCatalog = Boolean(group.isPublicCatalog);
+          return {
+            id: group.id,
+            eventId: group.eventId,
+            nodeType: group.nodeType,
+            isAssignable: group.isAssignable,
+            isPublicCatalog: group.isPublicCatalog,
+            searchText: [group.name, group.parentName, group.primaryLeaderName,
+              ...group.leaders.map((leader) => leader.name), group.publicLabel,
+              group.eventTitle, groupNodeTypeLabel(group.nodeType)]
+              .filter(Boolean).join(" ").toLowerCase(),
+            content: (
                 <tr
                   key={group.id}
                   className="border-b border-[var(--peace-border)] align-top last:border-b-0"
@@ -2004,42 +1929,32 @@ function AdminGroupTreeSection({
                     </div>
                   </td>
                 </tr>
-              );
-            })}
-            </tbody>
-          </table>
-        </AutoFilterForm>
-        {filteredGroups.map((group) => {
-          const isPublicCatalog = Boolean(group.isPublicCatalog);
-
-          if (!group.isAssignable) {
-            return null;
-          }
-
-          return (
-            <ReliableForm
-              key={group.id}
-              id={`admin-public-catalog-${group.id}`}
-              action={updateGroupPublicCatalogVisibility}
-              data-preserve-dashboard-scroll
-              className="hidden"
-            >
-              <input type="hidden" name="sourceDashboard" value="admin" />
-              <input type="hidden" name="groupId" value={group.id} />
-              <input type="hidden" name="nav" value={navMode} />
-              {!isPublicCatalog ? (
-                <input type="hidden" name="isPublicCatalog" value="on" />
-              ) : null}
-            </ReliableForm>
-          );
+            ),
+          };
         })}
-      </div>
-
-      {filteredGroups.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          Nessun gruppo corrisponde ai filtri correnti.
-        </p>
-      ) : null}
+      />
+      {groups.map((group) => {
+        const isPublicCatalog = Boolean(group.isPublicCatalog);
+        if (!group.isAssignable) {
+          return null;
+        }
+        return (
+          <ReliableForm
+            key={group.id}
+            id={`admin-public-catalog-${group.id}`}
+            action={updateGroupPublicCatalogVisibility}
+            data-preserve-dashboard-scroll
+            className="hidden"
+          >
+            <input type="hidden" name="sourceDashboard" value="admin" />
+            <input type="hidden" name="groupId" value={group.id} />
+            <input type="hidden" name="nav" value={navMode} />
+            {!isPublicCatalog ? (
+              <input type="hidden" name="isPublicCatalog" value="on" />
+            ) : null}
+          </ReliableForm>
+        );
+      })}
 
       {selectedTool === "edit" ? (
         <AdminGroupEditOverlay
@@ -2590,7 +2505,7 @@ function parseGroupTableFilters(input: {
     q: (input.groupQ ?? "").replace(/\s+/g, " ").trim().slice(0, 80),
     eventId: input.groupEvent?.trim() || "all",
     nodeType: isGroupNodeTypeFilter(input.groupType) ? input.groupType ?? "all" : "all",
-    visibility: isGroupVisibilityFilter(input.groupVisibility)
+    visibility: input.groupVisibility === "not-assignable" ? "internal" : isGroupVisibilityFilter(input.groupVisibility)
       ? input.groupVisibility ?? "all"
       : "all",
   };
@@ -2727,60 +2642,6 @@ function operationalRowsForGroupEdit(
         row.eventRoles[0]?.eventId ??
         null,
     }));
-}
-
-function filterGroupRows(
-  groups: AdminGroupTreeRow[],
-  filters: GroupTableFilters
-): AdminGroupTreeRow[] {
-  return groups.filter((group) => {
-    if (filters.eventId !== "all" && group.eventId !== filters.eventId) {
-      return false;
-    }
-
-    if (filters.nodeType !== "all" && group.nodeType !== filters.nodeType) {
-      return false;
-    }
-
-    if (!matchesGroupVisibility(group, filters.visibility)) {
-      return false;
-    }
-
-    if (!filters.q) {
-      return true;
-    }
-
-    const haystack = [
-      group.name,
-      group.parentName,
-      group.primaryLeaderName,
-      ...group.leaders.map((leader) => leader.name),
-      group.publicLabel,
-      group.eventTitle,
-      groupNodeTypeLabel(group.nodeType),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(filters.q.toLowerCase());
-  });
-}
-
-function matchesGroupVisibility(
-  group: AdminGroupTreeRow,
-  visibility: string
-): boolean {
-  switch (visibility) {
-    case "public":
-      return Boolean(group.isAssignable && group.isPublicCatalog);
-    case "reserved":
-      return Boolean(group.isAssignable && !group.isPublicCatalog);
-    case "internal":
-      return !group.isAssignable;
-    default:
-      return true;
-  }
 }
 
 function groupLinksByGroupId(
