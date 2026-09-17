@@ -8,7 +8,7 @@ export function isCountryName(value: string): boolean {
 export const COUNTRY_VALIDATION_MESSAGE: Record<SupportedLocale, string> = {
   it: "Indica un paese valido, ad esempio Italia. Non inserire una città o una provincia.",
   en: "Enter a valid country, such as Italy. Do not enter a city or province.",
-  fr: "Indiquez un pays valide, par exemple Italie. Ne saisissez pas une ville ou une province.",
+  fr: "Indique un pays valide, par exemple l’Italie. Ne saisis pas de ville ni de province.",
   de: "Gib ein gültiges Land ein, zum Beispiel Italien. Gib keine Stadt oder Provinz ein.",
   es: "Indica un país válido, por ejemplo Italia. No introduzcas una ciudad o provincia.",
   nl: "Vul een geldig land in, bijvoorbeeld Italië. Vul geen stad of provincie in.",
