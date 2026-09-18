@@ -12,3 +12,5 @@ export async function loadOperationsAttendance(db: SupabaseClient, registrationI
   if (event.error || attendance.error) throw new Error("Attendance read failed");
   return { ...leaderAttendanceDefaults(attendance.data as AttendanceChoice[]), startsOn: event.data.starts_on as string | null, endsOn: event.data.ends_on as string | null };
 }
+
+export type OperationsAttendanceData = Awaited<ReturnType<typeof loadOperationsAttendance>>;

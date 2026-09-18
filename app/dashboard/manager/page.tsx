@@ -1,3 +1,4 @@
+import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
 import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
 import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
 import { groupLeaderSummaries, type GroupLeaderSummary } from "@/lib/groups/leader-summary";
@@ -365,13 +366,14 @@ export default async function ManagerDashboardPage({
   );
   const currentEventId = currentEvent?.id ?? null;
   const managerOperations =
-    activeSection === "email"
+    !dashboardLoadPlan(activeSection).operations
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
       : await getManagerOperationsSnapshot(
           serviceSupabase,
           scope,
           filters,
-          currentEventId
+          currentEventId,
+          activeSection
         );
   const statisticsDrilldown =
     activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
@@ -930,7 +932,8 @@ async function getManagerOperationsSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   scope: ReturnType<typeof getManagerEventScope>,
   filters: OperationsDashboardFilters,
-  currentEventId: string | null
+  currentEventId: string | null,
+  section: ManagerSection = "iscritti"
 ): Promise<ManagerOperationsSnapshot> {
   if (
     !currentEventId ||
@@ -950,7 +953,9 @@ async function getManagerOperationsSnapshot(
     };
   }
 
-  const registrationsQuery = loadAllRows((from, to) => supabase
+  const loadPlan = dashboardLoadPlan(section);
+  const empty = { data: [], error: null };
+  const registrationsQuery = () => loadAllRows((from, to) => supabase
     .from("registrations")
     .select(
       "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)"
@@ -1016,14 +1021,14 @@ async function getManagerOperationsSnapshot(
     { data: eventRoles },
     { data: groupMemberships },
   ] = await Promise.all([
-    registrationsQuery,
-    groupsQuery,
-    groupTreeQuery,
-    groupLinksQuery,
-    operationalTagsQuery,
-    eventServicesQuery,
-    eventRolesQuery,
-    groupMembershipsQuery,
+    loadPlan.participants ? registrationsQuery() : Promise.resolve(empty),
+    loadPlan.groups ? groupsQuery : Promise.resolve(empty),
+    loadPlan.groupTree ? groupTreeQuery : Promise.resolve(empty),
+    loadPlan.groupLinks ? groupLinksQuery : Promise.resolve(empty),
+    loadPlan.tags ? operationalTagsQuery : Promise.resolve(empty),
+    loadPlan.services ? eventServicesQuery : Promise.resolve(empty),
+    loadPlan.roles ? eventRolesQuery : Promise.resolve(empty),
+    loadPlan.roles ? groupMembershipsQuery : Promise.resolve(empty),
   ]);
 
   if (groupLinksError) {

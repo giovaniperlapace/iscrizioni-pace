@@ -1,5 +1,7 @@
 "use client";
 
+import { LocalQueryLink } from "@/components/local-query-link";
+import { OperationsAttendance } from "./operations-attendance";
 import { PendingDownload } from "@/components/pending-download";
 import { SuccessMessage } from "@/components/success-message";
 
@@ -62,6 +64,7 @@ export function OperationsParticipantsTable({
   eventId,
   eventStartsOn,
   dialogOnly = false,
+  dataVersion = "",
 }: {
   snapshot: OperationsParticipantsSnapshot;
   selectedParticipant: Row | null;
@@ -74,6 +77,7 @@ export function OperationsParticipantsTable({
   eventId: string | null;
   eventStartsOn: string | null;
   dialogOnly?: boolean;
+  dataVersion?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -127,7 +131,10 @@ export function OperationsParticipantsTable({
     changes[row.registrationId]?.original === row
       ? changes[row.registrationId].next
       : row;
-  const selected = selectedParticipant ? current(selectedParticipant) : null;
+  const selectedId = searchParams.get("edit");
+  const selectedRow = snapshot.allParticipants.find((row) => row.registrationId === selectedId)
+    ?? (selectedParticipant?.registrationId === selectedId ? selectedParticipant : null);
+  const selected = selectedRow ? current(selectedRow) : null;
   const paramsFor = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", "iscritti");
@@ -813,15 +820,14 @@ export function OperationsParticipantsTable({
                   >
                     {column === "name" ? (
                       <div className="min-w-40 max-w-72">
-                        <Link
-                          prefetch={false}
+                        <LocalQueryLink
                           id={`participant-${row.registrationId}`}
                           className="inline-flex min-h-11 items-center font-semibold text-[var(--peace-blue-800)] underline decoration-dotted underline-offset-4"
                           href={paramsFor({ edit: row.registrationId })}
                           scroll={false}
                         >
                           {row.name}
-                        </Link>
+                        </LocalQueryLink>
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
@@ -887,8 +893,10 @@ export function OperationsParticipantsTable({
       </div>
     </section>}
       {selected && (
-        <ParticipantDialog participant={selected} closePath={closePath}>
-          {attendancePanel}
+        <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath}>
+          {attendancePanel ?? (!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
+            <OperationsAttendance key={`${selected.registrationId}:${dataVersion}`} registrationId={selected.registrationId} dashboard={dashboard} returnTo={returnTo} />
+          ) : null)}
           {selected.deletedAt ? (
             <div className="grid gap-2 rounded-md bg-red-50 p-4 text-sm">
               <p>Eliminata il {formatDate(selected.deletedAt)}.</p>
@@ -1060,7 +1068,6 @@ function ParticipantDialog({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const router = useRouter();
   useEffect(() => {
     const dialog = ref.current!;
     dialog.showModal();
@@ -1081,7 +1088,7 @@ function ParticipantDialog({
       className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-lg bg-white p-0 text-[var(--peace-ink)] shadow-xl backdrop:bg-black/40"
       onCancel={(event) => {
         event.preventDefault();
-        router.replace(closePath, { scroll: false });
+        window.history.replaceState(null, "", closePath);
       }}
     >
       <div className="flex items-start justify-between gap-3 border-b p-5">
@@ -1091,15 +1098,15 @@ function ParticipantDialog({
           </h3>
           <p>{participant.name}</p>
         </div>
-        <Link
-          prefetch={false}
+        <LocalQueryLink
+          replace
           href={closePath}
           scroll={false}
           className={buttonClass}
           aria-label="Chiudi scheda partecipante"
         >
           <X size={18} />
-        </Link>
+        </LocalQueryLink>
       </div>
       <div className="grid max-h-[calc(90dvh-7rem)] gap-6 overflow-y-auto p-5">
         {children}

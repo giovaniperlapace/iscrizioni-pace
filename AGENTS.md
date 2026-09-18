@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Prestazioni dashboard — 2026-09-18
+
+- Apertura/chiusura schede Admin/Manager (anche Duplicati) tramite dati già
+  caricati e `LocalQueryLink`/cronologia nativa; selezione da `useSearchParams`,
+  URL diretto, filtri, colonne e cronologia conservati. Testi e grafica invariati.
+- Presenze caricate separatamente dal GET privato autenticato
+  `/dashboard/participants/attendance`: admin globale o manager dell’evento,
+  iscrizione attiva, no-store, annullamento richieste alla chiusura. Salvataggio
+  tramite azione esistente; versione del pannello rinnovata a ogni risposta server.
+- Scheda capogruppo chiudibile localmente; apertura continua a controllare
+  scope/QR/presenze sul server. Link di gruppo caricati solo nello strumento link.
+- `dashboardLoadPlan` limita i dati alla sezione visibile. `loadRowsForIds`
+  esegue ondate di tre blocchi da 100, mantenendo paginazione, ordine, deduplica
+  e interruzione senza risultati parziali. Nessuna cache di dati o autorizzazioni.
+- `vercel.json` fissa la regione delle funzioni a `fra1` (Francoforte): il
+  database Hetzner è in `fsn1-dc14`, verificato dai metadata della VM. Il
+  deployment precedente usava `iad1` (USA). Verificare la regione nel rilascio.
+- Attività sessione forzata solo quando cambia il percorso stabile memorizzabile;
+  interazioni restano sincronizzate al minuto, con lo stesso timeout di 24 ore.
+- Diagnosi, misure e collaudo in `docs/performance-2026-09-18.md`. Nessuna
+  migration, modifica RLS o scrittura di collaudo sui partecipanti reali.
+
 ## Territorio ereditato nei suggerimenti di gruppo — 2026-09-16
 
 - Il catalogo pubblico carica con paginazione stabile tutti i gruppi attivi

@@ -1,3 +1,5 @@
+import { LocalOverlay } from "@/app/dashboard/local-overlay";
+import { LocalQueryLink } from "@/components/local-query-link";
 import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
 import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
 import { randomUUID } from "node:crypto";
@@ -1300,7 +1302,7 @@ export default async function CapogruppoDashboardPage({
     await Promise.all([
       getAssignments([...scopedGroupIds]),
       getOperationalTags(),
-      getGroupLinks([...scopedGroupIds]),
+      activeTool === "link" ? getGroupLinks([...scopedGroupIds]) : Promise.resolve([]),
     ]);
   const assignedGroups = groupRows
     .filter((group) => rootGroupIds.includes(group.id))
@@ -1425,18 +1427,20 @@ export default async function CapogruppoDashboardPage({
         ) : null}
 
         {selectedAssignment ? (
-          <DashboardToolOverlay title={copy.detail.title} copy={copy} closePath={leaderReturnPath(returnTo, { assignmentId: null })}>
-            <AssignmentDetailCard
-              returnTo={returnTo}
-              qr={selectedQr}
-              attendance={selectedAttendance}
-              attendanceSaved={params.saved === "attendance"}
-              locale={locale}
-              assignment={selectedAssignment}
-              tagOptions={operationalTags}
-              copy={copy}
-            />
-          </DashboardToolOverlay>
+          <LocalOverlay parameter="assignmentId" value={selectedAssignment.id}>
+            <DashboardToolOverlay localClose title={copy.detail.title} copy={copy} closePath={leaderReturnPath(returnTo, { assignmentId: null })}>
+              <AssignmentDetailCard
+                returnTo={returnTo}
+                qr={selectedQr}
+                attendance={selectedAttendance}
+                attendanceSaved={params.saved === "attendance"}
+                locale={locale}
+                assignment={selectedAssignment}
+                tagOptions={operationalTags}
+                copy={copy}
+              />
+            </DashboardToolOverlay>
+          </LocalOverlay>
         ) : null}
 
       </section>
@@ -1628,28 +1632,31 @@ function AssignedScopeSection({
 
 function DashboardToolOverlay({
   closePath = "/dashboard/capogruppo",
+  localClose = false,
   title,
   copy,
   children,
 }: {
   title: string;
   closePath?: string;
+  localClose?: boolean;
   copy: GroupLeaderCopy;
   children: ReactNode;
 }) {
+  const CloseLink = localClose ? LocalQueryLink : Link;
   return (
     <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center modal-backdrop px-4 py-6">
       <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-[var(--peace-border)] bg-white p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-xl font-semibold text-[var(--peace-ink)]">{title}</h2>
-          <Link
+          <CloseLink
             href={closePath}
             scroll={false}
             className="inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label={copy.close}
           >
             {copy.close}
-          </Link>
+          </CloseLink>
         </div>
         {children}
       </div>

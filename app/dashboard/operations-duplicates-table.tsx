@@ -1,3 +1,4 @@
+import { LocalQueryLink } from "@/components/local-query-link";
 import Link from "@/components/pending-link";
 import {
   DUPLICATE_LABELS,
@@ -79,7 +80,7 @@ export function OperationsDuplicatesTable({
                 className={`border-t border-[var(--peace-border)] bg-white ${index === 0 ? "border-t-2" : ""}`}
               >
                 <td className="px-4 py-4">
-                  <Link
+                  <LocalQueryLink
                     id={
                       firstPairByPerson.get(person.id) === match
                         ? `participant-${person.id}`
@@ -91,7 +92,7 @@ export function OperationsDuplicatesTable({
                     prefetch={false}
                   >
                     {person.name}
-                  </Link>
+                  </LocalQueryLink>
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {person.publicCode}
                   </p>

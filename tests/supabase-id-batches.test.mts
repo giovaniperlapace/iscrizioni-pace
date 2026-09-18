@@ -44,5 +44,28 @@ test("a later batch error rejects the whole read instead of returning partial da
       ? { data: null, error: { message: "database unavailable" } }
       : { data: batch, error: null };
   }), /database unavailable/);
-  assert.equal(calls, 2);
+  assert.equal(calls, 3, "only the in-flight wave may finish after a failure");
+});
+
+
+test("parallel batches are bounded and preserve input order despite out-of-order completion", async () => {
+  let active = 0;
+  let peak = 0;
+  const completed: string[] = [];
+  const { data } = await loadRowsForIds(ids, async (batch) => {
+    active++;
+    peak = Math.max(peak, active);
+    await new Promise(resolve => setTimeout(resolve, batch[0] === ids[0] ? 30 : 1));
+    active--;
+    completed.push(batch[0]);
+    return { data: batch, error: null };
+  });
+  assert.equal(peak, 3);
+  assert.notEqual(completed[0], ids[0]);
+  assert.deepEqual(data, ids);
+});
+
+test("empty IDs perform no query", async () => {
+  const result = await loadRowsForIds([], () => { throw new Error("unexpected query"); });
+  assert.deepEqual(result.data, []);
 });

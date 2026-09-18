@@ -28,9 +28,18 @@ export async function loadRowsForIds<T>(
   // Encoded UUID filters must fit Kong's request-line limit (8 KiB).
   // 300 UUIDs produce an ~12 KiB URL; 100 leave room for selects and filters.
   const batchSize = 100;
-  for (let index = 0; index < unique.length; index += batchSize) {
-    const chunk = unique.slice(index, index + batchSize);
-    rows.push(...(await loadAllRows((from, to) => load(chunk, from, to))).data);
+  // Bound concurrent reads, retain input order and stop scheduling on failure.
+  // Pages within each batch remain sequential; no partial result is returned.
+  const concurrency = 3;
+  for (let index = 0; index < unique.length; index += batchSize * concurrency) {
+    const chunks: string[][] = [];
+    for (let offset = index; offset < Math.min(unique.length, index + batchSize * concurrency); offset += batchSize) {
+      chunks.push(unique.slice(offset, offset + batchSize));
+    }
+    const results = await Promise.all(chunks.map((chunk) =>
+      loadAllRows((from, to) => load(chunk, from, to))
+    ));
+    for (const result of results) rows.push(...result.data);
   }
   return { data: rows, error: null };
 }

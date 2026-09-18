@@ -3,13 +3,16 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
-import { SESSION_IDLE_TIMEOUT_MS } from "@/lib/auth/session-persistence";
+import { sanitizeLastDashboardPath, SESSION_IDLE_TIMEOUT_MS } from "@/lib/auth/session-persistence";
 
 const ACTIVITY_SYNC_INTERVAL_MS = 60_000;
 
 export function SessionActivity() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Dialog/filter changes do not change the remembered dashboard. Pointer and
+  // keyboard activity still sync on the existing one-minute interval.
+  const rememberedPath = sanitizeLastDashboardPath(`${pathname}?${searchParams}`) ?? pathname;
   const lastSyncRef = useRef(0);
   const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -47,7 +50,7 @@ export function SessionActivity() {
   useEffect(() => {
     void syncActivity(true);
     scheduleAutomaticLogout();
-  }, [pathname, searchParams, scheduleAutomaticLogout, syncActivity]);
+  }, [rememberedPath, scheduleAutomaticLogout, syncActivity]);
 
   useEffect(() => {
     const recordActivity = () => {

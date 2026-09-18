@@ -1,5 +1,5 @@
+import { randomUUID } from "node:crypto";
 import { Suspense } from "react";
-import { OperationsAttendance } from "./operations-attendance";
 import { OperationsParticipantsNavigation } from "@/app/dashboard/operations-participants-navigation";
 import { OperationsDuplicatesSection } from "@/app/dashboard/operations-duplicates-section";
 import { OperationsParticipantsTable } from "@/app/dashboard/operations-participants-table";
@@ -39,42 +39,34 @@ export function OperationsParticipantsSection({
         dashboard={dashboard}
         navMode={navMode}
       />
-      {(!duplicatesView || selectedParticipant) && (
-        <OperationsParticipantsTable
-          dialogOnly={duplicatesView}
-          snapshot={{
-            participants: snapshot.participants,
-            allParticipants: snapshot.allParticipants,
-            groupOptions: snapshot.groupOptions,
-            operationalTags: snapshot.operationalTags,
-            eventServices: snapshot.eventServices,
-            filters: snapshot.filters,
-            statisticsFilter: snapshot.statisticsFilter,
-          }}
-          selectedParticipant={selectedParticipant}
-          attendancePanel={selectedParticipant && !selectedParticipant.deletedAt && canManageEvent(selectedParticipant.eventId) ? (
-            <Suspense fallback={<p role="status">Caricamento presenze…</p>}>
-              <OperationsAttendance registrationId={selectedParticipant.registrationId} dashboard={dashboard}
-                canManageEvent={canManageEvent}
-                returnTo={`/dashboard/${dashboard}?${new URLSearchParams(Object.entries(searchParams ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string"))}`} />
-            </Suspense>
-          ) : null}
-          editableEventIds={[
-            ...new Set(
-              snapshot.groupOptions
-                .map((group) => group.eventId)
-                .concat(eventId ?? [])
-                .filter(canManageEvent),
-            ),
-          ]}
-          dashboard={dashboard}
-          navMode={navMode}
-          canDeleteRegistration={canDeleteRegistration}
-          operatorId={operatorId}
-          eventId={eventId}
-          eventStartsOn={eventStartsOn}
-        />
-      )}
+      <OperationsParticipantsTable
+        dataVersion={randomUUID()}
+        dialogOnly={duplicatesView}
+        snapshot={{
+          participants: snapshot.participants,
+          allParticipants: snapshot.allParticipants,
+          groupOptions: snapshot.groupOptions,
+          operationalTags: snapshot.operationalTags,
+          eventServices: snapshot.eventServices,
+          filters: snapshot.filters,
+          statisticsFilter: snapshot.statisticsFilter,
+        }}
+        selectedParticipant={selectedParticipant}
+        editableEventIds={[
+          ...new Set(
+            snapshot.groupOptions
+              .map((group) => group.eventId)
+              .concat(eventId ?? [])
+              .filter(canManageEvent),
+          ),
+        ]}
+        dashboard={dashboard}
+        navMode={navMode}
+        canDeleteRegistration={canDeleteRegistration}
+        operatorId={operatorId}
+        eventId={eventId}
+        eventStartsOn={eventStartsOn}
+      />
       {duplicatesView && eventId && (
         <Suspense
           fallback={

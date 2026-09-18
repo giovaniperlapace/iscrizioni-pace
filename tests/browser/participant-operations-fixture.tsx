@@ -304,6 +304,7 @@ export default function Fixture() {
         )}
         {(!duplicatesView || params.has("edit")) && (
           <OperationsParticipantsTable
+            attendancePanel={<></>}
             dialogOnly={duplicatesView}
             snapshot={snapshot}
             selectedParticipant={

@@ -1,3 +1,4 @@
+import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
 import { AdminGroupsTable } from "@/app/dashboard/admin/admin-groups-table";
 import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
 import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
@@ -405,6 +406,7 @@ export default async function AdminDashboardPage({
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveAdminSection(params);
   const needsAdminOperations = activeSection !== "impostazioni";
+  const loadPlan = dashboardLoadPlan(activeSection);
   const currentEvent = needsAdminOperations
     ? await getCurrentOperationalEvent(
         serviceSupabase,
@@ -414,7 +416,7 @@ export default async function AdminDashboardPage({
   const currentEventId = currentEvent?.id ?? null;
   const [snapshots, adminOperations] = await Promise.all([
     activeSection === "impostazioni" ? getOpeningSnapshots() : Promise.resolve([]),
-    needsAdminOperations
+    needsAdminOperations && loadPlan.operations
       ? getAdminOperationsSnapshot(filters, currentEventId)
       : getAdminOperationsSnapshot(filters, null),
   ]);
@@ -596,6 +598,7 @@ export default async function AdminDashboardPage({
       };
     }
 
+    const empty = { data: [], error: null };
     const [
       { data: registrations },
       { data: groups },
@@ -606,7 +609,7 @@ export default async function AdminDashboardPage({
       { data: eventRoles },
       { data: groupMemberships },
     ] = await Promise.all([
-      loadAllRows((from, to) => serviceSupabase
+      loadPlan.participants ? loadAllRows((from, to) => serviceSupabase
         .from("registrations")
         .select(
           "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)"
@@ -614,49 +617,49 @@ export default async function AdminDashboardPage({
         .filter("deleted_at", activeSection === "iscritti" && params.view === "deleted" ? "not.is" : "is", "null")
         .eq("event_id", currentEventId)
         .order("submitted_at", { ascending: false })
-        .order("id").range(from, to)),
-      serviceSupabase
+        .order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.groups ? serviceSupabase
         .from("groups")
         .select("id,event_id,name,is_assignable,is_active")
         .eq("event_id", currentEventId)
         .eq("is_active", true)
         .eq("is_assignable", true)
-        .order("name", { ascending: true }),
-      serviceSupabase
+        .order("name", { ascending: true }) : Promise.resolve(empty),
+      loadPlan.groupTree ? serviceSupabase
         .from("groups")
         .select(
           "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
         )
         .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
-        .order("name", { ascending: true }),
-      serviceSupabase
+        .order("name", { ascending: true }) : Promise.resolve(empty),
+      loadPlan.groupLinks ? serviceSupabase
         .from("group_registration_links")
         .select(
           "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
         )
         .eq("event_id", currentEventId)
         .eq("is_canonical", true)
-        .order("created_at", { ascending: false }),
-      serviceSupabase
+        .order("created_at", { ascending: false }) : Promise.resolve(empty),
+      loadPlan.tags ? serviceSupabase
         .from("operational_tags")
         .select("id,event_id,label,color")
         .eq("event_id", currentEventId)
-        .order("label", { ascending: true }),
-      serviceSupabase
+        .order("label", { ascending: true }) : Promise.resolve(empty),
+      loadPlan.services ? serviceSupabase
         .from("event_services")
         .select("id,event_id,label,description,is_active,public_order")
         .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
-        .order("label", { ascending: true }),
-      serviceSupabase
+        .order("label", { ascending: true }) : Promise.resolve(empty),
+      loadPlan.roles ? serviceSupabase
         .from("event_user_roles")
         .select("user_id,role,event_id,events(title)")
-        .or(`event_id.is.null,event_id.eq.${currentEventId}`),
-      serviceSupabase
+        .or(`event_id.is.null,event_id.eq.${currentEventId}`) : Promise.resolve(empty),
+      loadPlan.roles ? serviceSupabase
         .from("group_memberships")
         .select("user_id,role,is_primary,group_id,groups!inner(id,name,event_id,events(title))")
-        .eq("groups.event_id", currentEventId),
+        .eq("groups.event_id", currentEventId) : Promise.resolve(empty),
     ]);
 
     if (groupLinksError) {
