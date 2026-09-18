@@ -969,14 +969,21 @@ export default async function PartecipanteDashboardPage({
     redirect("/login");
   }
 
-  const { data: registrationData } = await supabase
+  const { data: registrationData, error: registrationError } = await supabase
     .from("registrations")
     .select(
       "id,event_id,participant_id,status,submitted_at,events!inner(id,title,slug,city,country,starts_on,ends_on,registration_closes_at,is_current),participants!inner(auth_user_id,first_name,last_name,birth_date,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
     )
     .is("deleted_at", null)
     .eq("events.is_current", true)
-    .order("submitted_at", { ascending: false });
+    .eq("participants.auth_user_id", auth.user.id)
+    .order("submitted_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1);
+
+  if (registrationError) {
+    throw new Error("Unable to load personal registration", { cause: registrationError });
+  }
 
   const registrations = ((registrationData ?? []) as RegistrationRow[]).filter(
     (registration) => relatedOne(registration.participants)?.auth_user_id === auth.user.id

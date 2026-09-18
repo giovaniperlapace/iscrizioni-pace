@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Iscrizione personale e limite righe per Admin — 2026-09-18
+
+- La dashboard partecipante filtra `participants.auth_user_id` con l'account
+  autenticato direttamente nella query `registrations` con join interno,
+  prima del limite. Mantiene evento corrente, esclusione degli eliminati e
+  controllo difensivo del proprietario; seleziona l'ultima iscrizione con
+  ordine stabile `submitted_at DESC, id DESC` e `limit(1)`.
+- Il vecchio filtro solo in memoria perdeva le iscrizioni più vecchie degli
+  Admin quando le righe visibili superavano il massimo PostgREST di 1.000.
+  Riprodotto su Stefano e Daniela: iscrizioni e QR presenti e attivi. Il
+  partecipante ordinario verificato vede una sola riga tramite RLS. Nessuna
+  modifica a dati, ruoli, QR o testi/interfaccia ordinaria.
+- Gli errori della query interrompono il caricamento usando il boundary già
+  condiviso, anziché apparire come assenza di iscrizione.
+- Regressioni in `tests/personal-registration-scope.test.mts`: query reale
+  del componente con builder Supabase, oltre 1.000 righe, Admin/Manager,
+  partecipante, eliminati/altro evento, assenza, proprietà ed errore DB.
+  Verificati 345 test, lint, typecheck e build in export pulito con npm ci;
+  query aggiornata verificata in sola lettura su entrambi gli account e un
+  partecipante ordinario, permessi authenticated verificati via SQL readonly.
+
+
 ## Prestazioni dashboard — 2026-09-18
 
 - Apertura/chiusura schede Admin/Manager (anche Duplicati) tramite dati già
