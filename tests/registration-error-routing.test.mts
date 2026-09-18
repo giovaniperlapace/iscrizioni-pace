@@ -68,6 +68,7 @@ test("unavailable group link never falls back to general registration options", 
   }, exports);
   const result = JSON.stringify(await exports.RegistrationPageContent({ searchParams: {}, groupRegistrationLinkToken: "gruppo_roma" }));
   assert.deepEqual(calls, ["gruppo_roma"]);
-  assert.ok(result.includes("Link expired"));
+  assert.ok(result.includes("Link unavailable"));
+  assert.ok(!result.includes("Link expired"));
   assert.ok(!result.includes('"type":"RegistrationForm"'));
 });

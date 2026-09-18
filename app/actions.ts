@@ -285,33 +285,28 @@ export async function updateParticipantDashboard(formData: FormData) {
     return formFailureFromRedirect("/dashboard/partecipante?error=not-found");
   }
 
+  type RegistrationEvent = {
+    starts_on: string | null;
+    ends_on: string | null;
+    registration_closes_at: string | null;
+  };
+  type RegistrationOwner = {
+    auth_user_id: string | null;
+    first_name: string;
+    last_name: string;
+  };
   const rawRegistration = registration as unknown as {
     id: string;
     event_id: string;
     participant_id: string;
     status: string | null;
-    events:
-      | Array<{
-          starts_on: string | null;
-          ends_on: string | null;
-          registration_closes_at: string | null;
-        }>
-      | null;
-    participants:
-      | Array<{
-          auth_user_id: string | null;
-          first_name: string;
-          last_name: string;
-        }>
-      | null;
+    events: RegistrationEvent | RegistrationEvent[] | null;
+    participants: RegistrationOwner | RegistrationOwner[] | null;
   };
   const registrationRow = {
-    id: rawRegistration.id,
-    event_id: rawRegistration.event_id,
-    participant_id: rawRegistration.participant_id,
-    status: rawRegistration.status,
-    events: rawRegistration.events?.[0] ?? null,
-    participants: rawRegistration.participants?.[0] ?? null,
+    ...rawRegistration,
+    events: relatedOne(rawRegistration.events),
+    participants: relatedOne(rawRegistration.participants),
   };
 
   if (registrationRow.participants?.auth_user_id !== auth.user.id) {
@@ -336,13 +331,7 @@ export async function updateParticipantDashboard(formData: FormData) {
     return formFailureFromRedirect("/dashboard/partecipante?error=invalid-days");
   }
 
-  const [
-    { data: contacts },
-    { data: attendanceChoices },
-    { data: momentChoices },
-    { data: accessibility },
-    { data: children },
-  ] = await Promise.all([
+  const previousResults = await Promise.all([
     supabase
       .from("participant_contacts")
       .select("id,phone,is_primary")
@@ -368,6 +357,17 @@ export async function updateParticipantDashboard(formData: FormData) {
       .eq("registration_id", registrationRow.id)
       .order("position"),
   ]);
+
+  if (previousResults.some((result) => result.error)) {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  const [
+    { data: contacts },
+    { data: attendanceChoices },
+    { data: momentChoices },
+    { data: accessibility },
+    { data: children },
+  ] = previousResults;
 
   const primaryContact = contacts?.[0] as
     | { id: string; phone: string | null }

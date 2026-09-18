@@ -909,7 +909,7 @@ export function OperationsParticipantsTable({
             </div>
           ) : null}
           <ReliableForm
-            action="/dashboard/admin/participants/update"
+            action="/dashboard/participants/update"
             method="post"
             data-preserve-dashboard-scroll
             className="grid gap-3"

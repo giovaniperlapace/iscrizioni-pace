@@ -10,7 +10,7 @@ mkdirSync(route, { recursive: true });
 copyFileSync(new URL("./form-fixture.tsx", import.meta.url), new URL("page.tsx", route));
 const postRoute = new URL("post/", route);
 mkdirSync(postRoute, { recursive: true });
-writeFileSync(new URL("route.ts", postRoute), 'export { POST } from "@/app/dashboard/admin/participants/update/route";\n');
+writeFileSync(new URL("route.ts", postRoute), 'export { POST } from "@/app/dashboard/participants/update/route";\n');
 const ab = (...args) => execFileSync("npx", ["--yes", "agent-browser", "--session", "form-affidabili", ...args], { encoding: "utf8", timeout: 60000 });
 const evaluate = (code) => ab("eval", code);
 function check(code, label) {

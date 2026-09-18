@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Salvataggio schede personali e operative — 2026-09-18
+
+- `updateParticipantDashboard` normalizza `participants` ed `events` con
+  `relatedOne`: PostgREST restituisce oggetti per le relazioni molti-a-uno.
+  Non usare solo `[0]`: respinge il proprietario legittimo prima del salvataggio.
+  Le letture dei dati da conservare devono riuscire prima di qualsiasi scrittura.
+- Il modulo identità/contatti Admin/Manager usa `/dashboard/participants/update`.
+  Non spostarlo sotto `/dashboard/admin`: il proxy reindirizza i manager con 307
+  prima del handler. Vecchia route admin conservata come alias. Autenticazione,
+  origine, validazione e verifica Admin globale/Manager nel handler; scope evento,
+  iscrizione/partecipante e transazione restano nella RPC esistente.
+- Test completi delle azioni personale e capogruppo, route operativa e proxy;
+  SQL temporaneo per operazioni/presenze e scope. Diagnosi e limiti in
+  `docs/incident-2026-09-18-participant-save.md`. Nessuna modifica dati/RLS o invio.
+  Pubblicazione in produzione autorizzata il 18 settembre; rilascio tramite main/Vercel.
+
+
 ## Lingua delle email pubbliche — 2026-09-18
 
 - `submitPublicRegistration` risolve la lingua lato server con `getRequestLocale`

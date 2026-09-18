@@ -46,9 +46,6 @@ export async function RegistrationPageContent({
             <h2 className="text-2xl font-semibold">
               {copy.registrationClosed.groupLinkError}
             </h2>
-            {error instanceof Error ? (
-              <p className="mt-3 text-[var(--peace-muted)]">{error.message}</p>
-            ) : null}
           </div>
         </section>
       </main>

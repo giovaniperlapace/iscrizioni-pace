@@ -67,3 +67,29 @@ for (const ownRole of ["admin", "manager", null]) {
     }
   });
 }
+
+for (const ownRole of ["admin", "manager"]) {
+  test(`${ownRole} save endpoint reaches its handler without a dashboard redirect`, async () => {
+    const table = readFileSync(new URL("../app/dashboard/operations-participants-table.tsx", import.meta.url), "utf8");
+    const endpoint = table.match(/action="([^"]*participants\/update)"/)?.[1];
+    assert.equal(endpoint, "/dashboard/participants/update");
+    const response = (url?: URL) => ({ url: url?.pathname, cookies: { getAll: () => [], set() {} } });
+    const proxy = loadModule<{ proxy: (request: unknown) => Promise<{ url?: string }> }>("../proxy.ts", {
+      "@supabase/ssr": { createServerClient: () => database(ownRole) },
+      "next/server": { NextResponse: { next: () => response(), redirect: (url: URL) => response(url) } },
+      "@/lib/auth/roles": roles,
+      "@/lib/auth/session-persistence": persistence,
+    });
+    const previous = [process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY];
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.test";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test";
+    try {
+      const url = `https://example.test${endpoint}`;
+      assert.equal((await proxy.proxy({ method: "POST", url, nextUrl: new URL(url), cookies: { getAll: () => [], get: () => undefined } })).url, undefined);
+    } finally {
+      for (const [i, key] of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"].entries()) {
+        if (previous[i] === undefined) delete process.env[key]; else process.env[key] = previous[i];
+      }
+    }
+  });
+}
