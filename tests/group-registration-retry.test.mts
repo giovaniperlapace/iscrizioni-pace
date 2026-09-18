@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { SUPPORTED_LOCALES, type SupportedLocale } from "../lib/i18n/config.ts";
 import { buildRegistrationRetryPath } from "../lib/groups/registration-links.ts";
 import { normalizeEmail, parseRegistrationForm } from "../lib/registrations/validation.ts";
 
@@ -34,16 +35,17 @@ function validForm(token: string | null) {
   return data;
 }
 
-function actionHarness(mode: "validation" | "rate-limit" | "save-error" | "success") {
-  const saved: Array<{ groupRegistrationLinkToken: string | null }> = [];
+function actionHarness(mode: "validation" | "rate-limit" | "save-error" | "success", locale: SupportedLocale = "fr") {
+  const saved: Array<{ groupRegistrationLinkToken: string | null; preferredLocale: SupportedLocale }> = [];
   const action = loadFunction("../app/actions.ts", "submitPublicRegistration", {
     parseRegistrationForm, normalizeEmail, buildRegistrationRetryPath,
+    getRequestLocale: async () => locale,
     getIpAddress: async () => "local", REGISTRATION_RATE_LIMIT: {},
     checkRateLimit: () => mode !== "rate-limit",
     headers: async () => ({ get: () => null }),
     createSupabaseServiceClient: () => ({}),
     createSupabaseServerClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
-    createPublicRegistration: async (_db: unknown, input: { groupRegistrationLinkToken: string | null }) => {
+    createPublicRegistration: async (_db: unknown, input: { groupRegistrationLinkToken: string | null; preferredLocale: SupportedLocale }) => {
       if (mode === "save-error") throw new Error("Errore di salvataggio & riprova");
       saved.push(input);
     },
@@ -150,3 +152,14 @@ test("invalid invitation is rejected before any participant or registration writ
   await assert.rejects(create({ from: () => { writes++; throw new Error("Unexpected write"); } }, { email: "x@example.org", groupRegistrationLinkToken: "expired" }), /Invalid invitation/);
   assert.equal(writes, 0);
 });
+
+for (const locale of SUPPORTED_LOCALES) {
+  test(`public submission saves the interface locale ${locale} even if form data disagrees`, async () => {
+    const harness = actionHarness("success", locale);
+    const form = validForm(null);
+    form.set("preferredLocale", locale === "it" ? "fr" : "it");
+    const url = await destination(harness.action, form);
+    assert.equal(url.pathname, "/registrazione/conferma");
+    assert.equal(harness.saved[0].preferredLocale, locale);
+  });
+}

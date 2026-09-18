@@ -16,6 +16,7 @@ for (const token of ["gruppo_roma", "", "//external.test"]) {
         ...links,
         parseRegistrationForm: () => failure === "validation" ? { ok: false, errors: ["Invalid data"] } : { ok: true, value: { email } },
         normalizeEmail: () => email,
+        getRequestLocale: async () => "fr",
         getIpAddress: async () => "local",
         checkRateLimit: () => failure !== "rate-limit",
         REGISTRATION_RATE_LIMIT: {},

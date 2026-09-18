@@ -589,6 +589,7 @@ test("app magic links verify token hashes as email OTPs", () => {
 
 test("registration confirmation includes the short participant code", () => {
   const rendered = renderRegistrationConfirmationEmail({
+    locale: "it",
     firstName: "Maria",
     lastName: "Rossi",
     participantCode: "A7K2",

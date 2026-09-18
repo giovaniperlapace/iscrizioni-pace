@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Lingua delle email pubbliche — 2026-09-18
+
+- `submitPublicRegistration` risolve la lingua lato server con `getRequestLocale`
+  (cookie del selettore, poi lingua browser, fallback inglese). La passa alla
+  creazione come `preferredLocale`: viene salvata sul partecipante e usata dalla
+  conferma, anziché conservare il default inglese del parser.
+- `registration-confirmation-copy.ts` contiene oggetto, corpo e testo alternativo
+  QR nelle sette lingue. Testo semplice e HTML condividono gli stessi messaggi;
+  il titolo ufficiale dell'evento resta quello del catalogo, anche se bilingue.
+- Magic Link italiano/inglese nello stesso messaggio, con identico URL in entrambe
+  le sezioni. Token, callback e trasporto Postmark invariati.
+- Notifiche per inserimenti assistiti e ruoli continuano a usare la lingua del
+  paese del gruppo. Nessun aggiornamento delle preferenze storiche o reinvio.
+- Regressioni in `tests/registration-email-locales.test.mts` e nel test dell'azione
+  pubblica: scelta lingua, sette template, escaping, QR e Magic Link bilingue.
+
+
 ## Audit oltre 1.000 iscritti — 2026-09-18
 
 - Monitoraggio Admin, campagne, identità operative, cataloghi/gerarchie e letture

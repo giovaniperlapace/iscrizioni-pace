@@ -1,5 +1,7 @@
 "use server";
 
+import { getRequestLocale } from "@/lib/i18n/server";
+
 import { findAuthUserByEmail } from "@/lib/operational-users/auth-user.server";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 
@@ -231,7 +233,7 @@ export async function submitPublicRegistration(formData: FormData) {
   try {
     await createPublicRegistration(
       supabase,
-      parsed.value,
+      { ...parsed.value, preferredLocale: await getRequestLocale() },
       {
         ipAddress: ipAddress === "local" ? null : ipAddress,
         userAgent: headerStore.get("user-agent"),

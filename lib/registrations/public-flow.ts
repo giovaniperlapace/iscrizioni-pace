@@ -605,6 +605,7 @@ export async function createPublicRegistration(
     await sendTransactionalEmail({
       to: input.email,
       ...renderRegistrationConfirmationEmail({
+        locale: input.preferredLocale,
         firstName: input.firstName,
         lastName: input.lastName,
         participantCode: createdParticipant.public_code,
