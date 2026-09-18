@@ -1,3 +1,4 @@
+import { loadAllRows, writeRowsForIds } from "@/lib/supabase/all-rows";
 import { getEmailConfig } from "@/lib/email/config";
 import { randomUUID } from "node:crypto";
 import { after, NextResponse } from "next/server";
@@ -251,11 +252,10 @@ async function updateCampaignRecipients(
     throw new Error("La lista destinatari non è più modificabile.");
   }
 
-  const { data: rows, error: rowsError } = await service
+  const { data: rows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
     .select("recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id")
-    .eq("campaign_id", campaignId);
-  if (rowsError) throw new Error(rowsError.message);
+    .eq("campaign_id", campaignId).order("id").range(from, to));
 
   const recipients = (rows ?? []).map<Recipient>((row) => ({
     recipientKey: row.recipient_key,
@@ -272,20 +272,22 @@ async function updateCampaignRecipients(
 
   const includedIds = [...selectedIds];
   const excludedIds = [...availableIds].filter((id) => !selectedIds.has(id));
-  const { error: includedError } = await service
+  // Invalidate the previous test before the first batch. If a later write
+  // fails, a partially updated selection must not remain ready to send.
+  const { error: resetError } = await service.from("email_campaigns")
+    .update({ status: "draft", test_sent_at: null, test_sent_to_user_id: null })
+    .eq("id", campaignId);
+  if (resetError) throw new Error(resetError.message);
+  await writeRowsForIds(includedIds, ids => service
     .from("email_campaign_recipients")
     .update({ status: "pending", error_code: null })
     .eq("campaign_id", campaignId)
-    .in("recipient_key", includedIds);
-  if (includedError) throw new Error(includedError.message);
-  if (excludedIds.length) {
-    const { error: excludedError } = await service
-      .from("email_campaign_recipients")
-      .update({ status: "skipped", error_code: null })
-      .eq("campaign_id", campaignId)
-      .in("recipient_key", excludedIds);
-    if (excludedError) throw new Error(excludedError.message);
-  }
+    .in("recipient_key", ids));
+  await writeRowsForIds(excludedIds, ids => service
+    .from("email_campaign_recipients")
+    .update({ status: "skipped", error_code: null })
+    .eq("campaign_id", campaignId)
+    .in("recipient_key", ids));
 
   const { error: campaignError } = await service
     .from("email_campaigns")
@@ -334,13 +336,13 @@ async function deliverCampaign(userId: string, testEmail: string, campaignId: st
   if (!campaign || !["draft", "ready", "partial"].includes(campaign.status)) {
     throw new Error("Campagna non disponibile o già inviata.");
   }
-  const { data: recipientRows } = await service
+  const { data: recipientRows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
     .select(
       "id,campaign_id,recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,status"
     )
     .eq("campaign_id", campaignId)
-    .eq("status", "pending");
+    .eq("status", "pending").order("id").range(from, to));
   const recipients = (recipientRows ?? []).map((row) =>
     campaignRecipientFromDatabaseRow({
       ...row,

@@ -1,3 +1,4 @@
+import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { LocalOverlay } from "@/app/dashboard/local-overlay";
 import { LocalQueryLink } from "@/components/local-query-link";
 import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
@@ -1466,23 +1467,15 @@ export default async function CapogruppoDashboardPage({
       return [];
     }
 
-    const { data, error } = await serviceSupabase
+    const { data } = await loadRowsForIds(groupIds, (batch, from, to) => serviceSupabase
       .from("group_registration_links")
       .select(
         "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
       )
-      .in("group_id", groupIds)
+      .in("group_id", batch)
       .eq("event_id", currentEventId)
       .eq("is_canonical", true)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[capogruppo:group-registration-links]", {
-        code: error.code,
-        message: error.message,
-      });
-      return [];
-    }
+      .order("created_at", { ascending: false }).order("id").range(from, to));
 
     return ((data ?? []) as GroupLinkRow[]).map((link) => ({
       id: link.id,
@@ -1500,11 +1493,11 @@ export default async function CapogruppoDashboardPage({
   }
 
   async function getOperationalTags(): Promise<OperationalTagOption[]> {
-    const { data } = await serviceSupabase
+    const { data } = await loadAllRows((from, to) => serviceSupabase
       .from("operational_tags")
       .select("id,event_id,label,color")
       .eq("event_id", currentEventId)
-      .order("label", { ascending: true });
+      .order("label", { ascending: true }).order("id").range(from, to));
 
     return ((data ?? []) as Array<{
       id: string;

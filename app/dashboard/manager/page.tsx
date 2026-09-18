@@ -964,15 +964,15 @@ async function getManagerOperationsSnapshot(
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
     .order("id").range(from, to));
-  const groupsQuery = supabase
+  const groupsQuery = () => loadAllRows((from, to) => supabase
     .from("groups")
     .select("id,event_id,name,is_assignable,is_active")
     .eq("event_id", currentEventId)
     .eq("is_active", true)
     .eq("is_assignable", true)
-    .order("name", { ascending: true });
+    .order("name", { ascending: true }).order("id").range(from, to));
 
-  const groupTreeQuery = supabase
+  const groupTreeQuery = () => loadAllRows((from, to) => supabase
     .from("groups")
     .select(
       "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
@@ -980,63 +980,57 @@ async function getManagerOperationsSnapshot(
     .eq("event_id", currentEventId)
     .eq("is_active", true)
     .order("public_order", { ascending: true })
-    .order("name", { ascending: true });
+    .order("name", { ascending: true }).order("id").range(from, to));
 
-  const groupLinksQuery = supabase
+  const groupLinksQuery = () => loadAllRows((from, to) => supabase
     .from("group_registration_links")
     .select(
       "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
     )
     .eq("event_id", currentEventId)
     .eq("is_canonical", true)
-    .order("created_at", { ascending: false });
-  const operationalTagsQuery = supabase
+    .order("created_at", { ascending: false }).order("id").range(from, to));
+  const operationalTagsQuery = () => loadAllRows((from, to) => supabase
     .from("operational_tags")
     .select("id,event_id,label,color")
     .eq("event_id", currentEventId)
-    .order("label", { ascending: true });
-  const eventServicesQuery = supabase
+    .order("label", { ascending: true }).order("id").range(from, to));
+  const eventServicesQuery = () => loadAllRows((from, to) => supabase
     .from("event_services")
     .select("id,event_id,label,description,is_active,public_order")
     .eq("event_id", currentEventId)
     .order("public_order", { ascending: true })
-    .order("label", { ascending: true });
+    .order("label", { ascending: true }).order("id").range(from, to));
 
-  const eventRolesQuery = supabase
+  const eventRolesQuery = () => loadAllRows((from, to) => supabase
     .from("event_user_roles")
     .select("user_id,role,event_id,events(title)")
-    .eq("event_id", currentEventId);
-  const groupMembershipsQuery = supabase
+    .eq("event_id", currentEventId).order("id").range(from, to));
+  const groupMembershipsQuery = () => loadAllRows((from, to) => supabase
     .from("group_memberships")
     .select("user_id,role,is_primary,group_id,groups!inner(id,name,event_id,events(title))")
-    .eq("groups.event_id", currentEventId);
+    .eq("groups.event_id", currentEventId).order("id").range(from, to));
 
   const [
     { data: registrations },
     { data: groups },
     { data: groupTree },
-    { data: groupLinks, error: groupLinksError },
+    { data: groupLinks },
     { data: operationalTags },
     { data: eventServices },
     { data: eventRoles },
     { data: groupMemberships },
   ] = await Promise.all([
     loadPlan.participants ? registrationsQuery() : Promise.resolve(empty),
-    loadPlan.groups ? groupsQuery : Promise.resolve(empty),
-    loadPlan.groupTree ? groupTreeQuery : Promise.resolve(empty),
-    loadPlan.groupLinks ? groupLinksQuery : Promise.resolve(empty),
-    loadPlan.tags ? operationalTagsQuery : Promise.resolve(empty),
-    loadPlan.services ? eventServicesQuery : Promise.resolve(empty),
-    loadPlan.roles ? eventRolesQuery : Promise.resolve(empty),
-    loadPlan.roles ? groupMembershipsQuery : Promise.resolve(empty),
+    loadPlan.groups ? groupsQuery() : Promise.resolve(empty),
+    loadPlan.groupTree ? groupTreeQuery() : Promise.resolve(empty),
+    loadPlan.groupLinks ? groupLinksQuery() : Promise.resolve(empty),
+    loadPlan.tags ? operationalTagsQuery() : Promise.resolve(empty),
+    loadPlan.services ? eventServicesQuery() : Promise.resolve(empty),
+    loadPlan.roles ? eventRolesQuery() : Promise.resolve(empty),
+    loadPlan.roles ? groupMembershipsQuery() : Promise.resolve(empty),
   ]);
 
-  if (groupLinksError) {
-    console.error("[manager:group-registration-links]", {
-      code: groupLinksError.code,
-      message: groupLinksError.message,
-    });
-  }
   const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
   const registrationIds = registrationRows.map((row) => row.id);
   const participantIds = registrationRows.map((row) => row.participant_id);

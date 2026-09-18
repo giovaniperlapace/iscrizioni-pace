@@ -1,5 +1,8 @@
 "use server";
 
+import { findAuthUserByEmail } from "@/lib/operational-users/auth-user.server";
+import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
+
 import { sendAccountAccessEmail } from "@/lib/email/account-access.server";
 
 import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
@@ -792,11 +795,11 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   if (!currentEventId) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=scope");
   }
-  const { data: memberships, error: membershipError } = await serviceSupabase
+  const { data: memberships, error: membershipError } = await loadAllRows((from, to) => serviceSupabase
     .from("group_memberships")
     .select("group_id")
     .eq("user_id", auth.user.id)
-    .eq("role", "capogruppo");
+    .eq("role", "capogruppo").order("id").range(from, to));
 
   if (membershipError || !memberships?.length) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=scope");
@@ -805,11 +808,11 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   const rootGroupIds = (memberships as Array<{ group_id: string | null }>)
     .map((membership) => membership.group_id)
     .filter((groupId): groupId is string => Boolean(groupId));
-  const { data: groups, error: groupsError } = await serviceSupabase
+  const { data: groups, error: groupsError } = await loadAllRows((from, to) => serviceSupabase
     .from("groups")
     .select("id,parent_group_id")
     .eq("event_id", currentEventId)
-    .eq("is_active", true);
+    .eq("is_active", true).order("id").range(from, to));
 
   if (groupsError) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=groups");
@@ -1221,14 +1224,10 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
   }
 
-  const { data: tags, error: tagsError } = await serviceSupabase
+  const { data: tags } = await loadAllRows((from, to) => serviceSupabase
     .from("operational_tags")
     .select("id")
-    .eq("event_id", eventId);
-
-  if (tagsError) {
-    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(tagsError.message)}`);
-  }
+    .eq("event_id", eventId).order("id").range(from, to));
 
   const eventTagIds = ((tags ?? []) as Array<{ id: string }>).map((tag) => tag.id);
   const eventTagIdSet = new Set(eventTagIds);
@@ -1237,12 +1236,12 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
   }
 
-  if (eventTagIds.length > 0) {
+  for (let offset = 0; offset < eventTagIds.length; offset += 100) {
     const { error: deleteError } = await serviceSupabase
       .from("participant_operational_tags")
       .delete()
       .eq("participant_id", participantId)
-      .in("tag_id", eventTagIds);
+      .in("tag_id", eventTagIds.slice(offset, offset + 100));
 
     if (deleteError) {
       return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(deleteError.message)}`);
@@ -1561,12 +1560,12 @@ async function canGroupLeaderTagParticipant(
   assignmentId: string | null
 ): Promise<boolean> {
   const [{ data: memberships }, { data: groups }] = await Promise.all([
-    supabase.from("group_memberships").select("group_id").eq("user_id", userId),
-    supabase
+    loadAllRows((from, to) => supabase.from("group_memberships").select("group_id").eq("user_id", userId).order("id").range(from, to)),
+    loadAllRows((from, to) => supabase
       .from("groups")
       .select("id,parent_group_id")
       .eq("event_id", eventId)
-      .eq("is_active", true),
+      .eq("is_active", true).order("id").range(from, to)),
   ]);
   const rootGroupIds = ((memberships ?? []) as Array<{ group_id: string | null }>)
     .map((membership) => membership.group_id)
@@ -1584,23 +1583,19 @@ async function canGroupLeaderTagParticipant(
     return false;
   }
 
-  let query = supabase
-    .from("participant_group_assignments")
-    .select("id,group_id,registrations!inner(event_id,participant_id)")
-    .eq("is_current", true)
-    .eq("registrations.event_id", eventId)
-    .eq("registrations.participant_id", participantId)
-    .is("registrations.deleted_at", null)
-    .in("group_id", [...scopedGroupIds])
-    .limit(1);
+  const { data } = await loadAllRows((from, to) => {
+    let query = supabase
+      .from("participant_group_assignments")
+      .select("id,group_id,registrations!inner(event_id,participant_id)")
+      .eq("is_current", true)
+      .eq("registrations.event_id", eventId)
+      .eq("registrations.participant_id", participantId)
+      .is("registrations.deleted_at", null);
+    if (assignmentId) query = query.eq("id", assignmentId);
+    return query.order("id").range(from, to);
+  });
 
-  if (assignmentId) {
-    query = query.eq("id", assignmentId);
-  }
-
-  const { data, error } = await query;
-
-  return !error && Boolean(data?.length);
+  return data.some(row => scopedGroupIds.has(row.group_id));
 }
 
 export async function createGroupLeaderManualRegistration(formData: FormData) {
@@ -2049,8 +2044,8 @@ export async function saveOperationsGroup(formData: FormData) {
     }
   }
 
-  const { data: tree, error: treeError } = await serviceSupabase
-    .from("groups").select("id,parent_group_id,node_type").eq("event_id", eventId);
+  const { data: tree, error: treeError } = await loadAllRows((from, to) => serviceSupabase
+    .from("groups").select("id,parent_group_id,node_type").eq("event_id", eventId).order("id").range(from, to));
   const parent = tree?.find((row) => row.id === parentGroupId);
   const descendants = collectDescendantGroupIds((tree ?? []).map((row) => ({
     id: row.id, parentGroupId: row.parent_group_id,
@@ -2716,10 +2711,10 @@ export async function updateOperationalUserRole(formData: FormData) {
   });
 
   if (role === "capogruppo" && selectedGroupIds.length > 0) {
-    const { data: selectedGroups, error: selectedGroupsError } = await serviceSupabase
+    const { data: selectedGroups, error: selectedGroupsError } = await loadRowsForIds(selectedGroupIds, (batch, from, to) => serviceSupabase
       .from("groups")
       .select("id,event_id")
-      .in("id", selectedGroupIds);
+      .in("id", batch).order("id").range(from, to));
     const selectedGroupRows = (selectedGroups ?? []) as Array<{
       id: string;
       event_id: string;
@@ -2743,11 +2738,11 @@ export async function updateOperationalUserRole(formData: FormData) {
       return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
     }
 
-    const { data: existingMemberships } = await serviceSupabase
+    const { data: existingMemberships } = await loadAllRows((from, to) => serviceSupabase
       .from("group_memberships")
       .select("group_id,is_primary,groups!inner(id,event_id)")
       .eq("user_id", targetUserId)
-      .eq("role", "capogruppo");
+      .eq("role", "capogruppo").order("id").range(from, to));
     const manageableExistingMemberships = ((existingMemberships ?? []) as Array<{
       group_id: string | null;
       is_primary: boolean | null;
@@ -2775,15 +2770,17 @@ export async function updateOperationalUserRole(formData: FormData) {
       const removedGroupIds = removedMemberships
         .map((membership) => membership.group_id)
         .filter((removedGroupId): removedGroupId is string => Boolean(removedGroupId));
-      const { error: removeError } = await serviceSupabase
-        .from("group_memberships")
-        .delete()
-        .eq("user_id", targetUserId)
-        .eq("role", "capogruppo")
-        .in("group_id", removedGroupIds);
+      for (let offset = 0; offset < removedGroupIds.length; offset += 100) {
+        const { error: removeError } = await serviceSupabase
+          .from("group_memberships")
+          .delete()
+          .eq("user_id", targetUserId)
+          .eq("role", "capogruppo")
+          .in("group_id", removedGroupIds.slice(offset, offset + 100));
 
-      if (removeError) {
-        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError.message)}`);
+        if (removeError) {
+          return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError.message)}`);
+        }
       }
 
       for (const membership of removedMemberships) {
@@ -3313,18 +3310,7 @@ async function ensureAuthUserForGroupLeader(
     return null;
   }
 
-  const { data: users, error: listError } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-
-  if (listError) {
-    return null;
-  }
-
-  const existing = users.users.find(
-    (user) => user.email?.toLowerCase() === input.email
-  );
+  const existing = await findAuthUserByEmail(supabase, input.email);
 
   if (!existing) {
     return null;
@@ -4108,8 +4094,8 @@ async function canManageGroupRegistrationLink(
   }
 
   const [{ data: memberships }, { data: groups }] = await Promise.all([
-    supabase.from("group_memberships").select("group_id").eq("user_id", userId),
-    supabase.from("groups").select("id,parent_group_id").eq("is_active", true),
+    loadAllRows((from, to) => supabase.from("group_memberships").select("group_id").eq("user_id", userId).order("id").range(from, to)),
+    loadAllRows((from, to) => supabase.from("groups").select("id,parent_group_id").eq("is_active", true).order("id").range(from, to)),
   ]);
   const rootGroupIds = ((memberships ?? []) as Array<{ group_id: string | null }>)
     .map((membership) => membership.group_id)

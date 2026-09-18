@@ -1,3 +1,4 @@
+import { loadAllRows } from "@/lib/supabase/all-rows";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
   loadCampaignRecipientPreviews,
@@ -37,30 +38,30 @@ export async function ManagerEmailSection({
     { data: campaigns },
     deliveryControl,
   ] = await Promise.all([
-    service
+    loadAllRows((from, to) => service
       .from("groups")
       .select("id,name")
       .eq("event_id", eventId)
       .eq("is_active", true)
-      .order("name"),
-    service
+      .order("name").order("id").range(from, to)),
+    loadAllRows((from, to) => service
       .from("operational_tags")
       .select("id,label")
       .eq("event_id", eventId)
-      .order("label"),
-    service
+      .order("label").order("id").range(from, to)),
+    loadAllRows((from, to) => service
       .from("event_services")
       .select("id,label")
       .eq("event_id", eventId)
       .eq("is_active", true)
       .order("public_order")
-      .order("label"),
-    service
+      .order("label").order("id").range(from, to)),
+    loadAllRows((from, to) => service
       .from("email_templates")
       .select("id,name,subject,body_text,current_version")
       .eq("event_id", eventId)
       .eq("is_active", true)
-      .order("updated_at", { ascending: false }),
+      .order("updated_at", { ascending: false }).order("id").range(from, to)),
     service
       .from("email_campaigns")
       .select("id,name,status,recipient_count,sent_at,created_at")

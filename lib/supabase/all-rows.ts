@@ -43,3 +43,16 @@ export async function loadRowsForIds<T>(
   }
   return { data: rows, error: null };
 }
+
+/** Bound write filters too: mutations are not limited by returned row caps,
+ * but long ID lists still exceed the proxy's request-line limit. */
+export async function writeRowsForIds(
+  ids: string[],
+  write: (ids: string[]) => PromiseLike<{ error: { message: string } | null }>,
+): Promise<void> {
+  const unique = [...new Set(ids)];
+  for (let index = 0; index < unique.length; index += 100) {
+    const { error } = await write(unique.slice(index, index + 100));
+    if (error) throw new Error(error.message);
+  }
+}

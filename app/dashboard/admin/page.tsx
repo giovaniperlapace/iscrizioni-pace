@@ -603,7 +603,7 @@ export default async function AdminDashboardPage({
       { data: registrations },
       { data: groups },
       { data: groupTree },
-      { data: groupLinks, error: groupLinksError },
+      { data: groupLinks },
       { data: operationalTags },
       { data: eventServices },
       { data: eventRoles },
@@ -618,56 +618,51 @@ export default async function AdminDashboardPage({
         .eq("event_id", currentEventId)
         .order("submitted_at", { ascending: false })
         .order("id").range(from, to)) : Promise.resolve(empty),
-      loadPlan.groups ? serviceSupabase
+      loadPlan.groups ? loadAllRows((from, to) => serviceSupabase
         .from("groups")
         .select("id,event_id,name,is_assignable,is_active")
         .eq("event_id", currentEventId)
         .eq("is_active", true)
         .eq("is_assignable", true)
-        .order("name", { ascending: true }) : Promise.resolve(empty),
-      loadPlan.groupTree ? serviceSupabase
+        .order("name", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.groupTree ? loadAllRows((from, to) => serviceSupabase
         .from("groups")
         .select(
           "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
         )
         .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
-        .order("name", { ascending: true }) : Promise.resolve(empty),
-      loadPlan.groupLinks ? serviceSupabase
+        .order("name", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.groupLinks ? loadAllRows((from, to) => serviceSupabase
         .from("group_registration_links")
         .select(
           "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
         )
         .eq("event_id", currentEventId)
         .eq("is_canonical", true)
-        .order("created_at", { ascending: false }) : Promise.resolve(empty),
-      loadPlan.tags ? serviceSupabase
+        .order("created_at", { ascending: false }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.tags ? loadAllRows((from, to) => serviceSupabase
         .from("operational_tags")
         .select("id,event_id,label,color")
         .eq("event_id", currentEventId)
-        .order("label", { ascending: true }) : Promise.resolve(empty),
-      loadPlan.services ? serviceSupabase
+        .order("label", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.services ? loadAllRows((from, to) => serviceSupabase
         .from("event_services")
         .select("id,event_id,label,description,is_active,public_order")
         .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
-        .order("label", { ascending: true }) : Promise.resolve(empty),
-      loadPlan.roles ? serviceSupabase
+        .order("label", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.roles ? loadAllRows((from, to) => serviceSupabase
         .from("event_user_roles")
         .select("user_id,role,event_id,events(title)")
-        .or(`event_id.is.null,event_id.eq.${currentEventId}`) : Promise.resolve(empty),
-      loadPlan.roles ? serviceSupabase
+        .or(`event_id.is.null,event_id.eq.${currentEventId}`).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.roles ? loadAllRows((from, to) => serviceSupabase
         .from("group_memberships")
         .select("user_id,role,is_primary,group_id,groups!inner(id,name,event_id,events(title))")
-        .eq("groups.event_id", currentEventId) : Promise.resolve(empty),
+        .eq("groups.event_id", currentEventId).order("id").range(from, to)) : Promise.resolve(empty),
     ]);
 
-    if (groupLinksError) {
-      console.error("[admin:group-registration-links]", {
-        code: groupLinksError.code,
-        message: groupLinksError.message,
-      });
-    }
+
     const registrationRows = (registrations ?? []) as AdminRegistrationRow[];
     const deletedActorIdentities = await getOperationalUserIdentities(serviceSupabase,
       registrationRows.flatMap(row => row.deleted_by ? [row.deleted_by] : []));
@@ -906,25 +901,25 @@ export default async function AdminDashboardPage({
   }
 
   async function getOpeningSnapshots(): Promise<EventSnapshot[]> {
-    const { data: events } = await serviceSupabase
+    const { data: events } = await loadAllRows((from, to) => serviceSupabase
       .from("events")
       .select(
         "id,slug,title,status,is_current,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
       )
-      .order("starts_on", { ascending: false });
+      .order("starts_on", { ascending: false }).order("id").range(from, to));
 
     return Promise.all(((events ?? []) as EventRow[]).map(getEventSnapshot));
   }
 
   async function getEventSnapshot(event: EventRow): Promise<EventSnapshot> {
-    const { data: registrations } = await serviceSupabase
+    const { data: registrations } = await loadAllRows((from, to) => serviceSupabase
       .from("registrations")
       .select(
         "id,participant_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position)"
       )
       .is("deleted_at", null)
       .eq("event_id", event.id)
-      .order("submitted_at", { ascending: false });
+      .order("submitted_at", { ascending: false }).order("id").range(from, to));
     const registrationRows = (registrations ?? []) as RegistrationRow[];
     const registrationIds = registrationRows.map((row) => row.id);
     const participantIds = registrationRows.map((row) => row.participant_id);
@@ -939,32 +934,32 @@ export default async function AdminDashboardPage({
       { data: emailErrors },
     ] = await Promise.all([
       registrationIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(registrationIds, (batch, from, to) => serviceSupabase
             .from("participant_group_assignments")
             .select("registration_id,status,source,is_current,assignment_reason")
-            .in("registration_id", registrationIds)
-            .eq("is_current", true)
+            .in("registration_id", batch)
+            .eq("is_current", true).order("id").range(from, to))
         : Promise.resolve(emptyResult),
       registrationIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(registrationIds, (batch, from, to) => serviceSupabase
             .from("qr_tokens")
             .select("registration_id")
-            .in("registration_id", registrationIds)
+            .in("registration_id", batch).order("id").range(from, to))
         : Promise.resolve(emptyResult),
       registrationIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(registrationIds, (batch, from, to) => serviceSupabase
             .from("accessibility_needs")
             .select("registration_id,needs_operational_support")
-            .in("registration_id", registrationIds)
+            .in("registration_id", batch).order("id").range(from, to))
         : Promise.resolve(emptyResult),
       participantIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(participantIds, (batch, from, to) => serviceSupabase
             .from("participant_contacts")
             .select("participant_id,email")
-            .in("participant_id", participantIds)
-            .eq("is_primary", true)
+            .in("participant_id", batch)
+            .eq("is_primary", true).order("id").range(from, to))
         : Promise.resolve(emptyResult),
-      serviceSupabase
+      loadAllRows((from, to) => serviceSupabase
         .from("audit_logs")
         .select("id")
         .eq("event_id", event.id)
@@ -972,7 +967,7 @@ export default async function AdminDashboardPage({
           "email.magic_link_failed",
           "email.registration_confirmation_failed",
         ])
-        .gte("created_at", since),
+        .gte("created_at", since).order("id").range(from, to)),
     ]);
     const assignmentByRegistrationId = new Map(
       ((assignments ?? []) as AssignmentRow[]).map((row) => [

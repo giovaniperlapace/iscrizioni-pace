@@ -148,24 +148,24 @@ export async function getPublicRegistrationOptions(
     : null;
 
   const [countries, cities, groups, moments] = await Promise.all([
-    supabase
+    loadAllRows((from, to) => supabase
       .from("countries")
       .select("id,iso2,name_it,name_en")
       .eq("is_active", true)
-      .order("name_it"),
-    supabase
+      .order("name_it").order("id").range(from, to)),
+    loadAllRows((from, to) => supabase
       .from("cities")
       .select("id,country_id,name")
       .eq("is_active", true)
-      .order("name"),
+      .order("name").order("id").range(from, to)),
     event ? getEventGroupCandidates(supabase, event.id) : Promise.resolve([]),
     event
-      ? supabase
+      ? loadAllRows((from, to) => supabase
           .from("event_moments")
           .select("id,title,starts_at")
           .eq("event_id", event.id)
           .eq("is_public", true)
-          .order("starts_at")
+          .order("starts_at").order("id").range(from, to))
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -722,11 +722,11 @@ async function findCityIdByName(
   countryId: string,
   cityName: string
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await loadAllRows((from, to) => supabase
     .from("cities")
     .select("id,country_id,name")
     .eq("country_id", countryId)
-    .eq("is_active", true);
+    .eq("is_active", true).order("id").range(from, to));
 
   const normalizedCity = normalizeMatchText(cityName);
   const match = ((data ?? []) as PublicCityRow[]).find(

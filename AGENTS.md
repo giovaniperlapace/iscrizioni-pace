@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## Audit oltre 1.000 iscritti — 2026-09-18
+
+- Monitoraggio Admin, campagne, identità operative, cataloghi/gerarchie e letture
+  di ruoli/link usano pagine da 500 con ordine stabile; filtri estesi suddivisi
+  in blocchi da 100. Anche le relazioni uno-a-molti vanno paginate dentro ciascun
+  blocco. Non sostituire paginazione con aumento del limite PostgREST.
+- `writeRowsForIds` limita i filtri delle scritture e interrompe al primo errore.
+  La modifica dei destinatari invalida prima il precedente test della campagna:
+  un errore intermedio non può lasciare una selezione parziale pronta all'invio.
+- `findAuthUserByEmail` scorre Auth Admin in pagine da 500: niente ricerca solo
+  nella prima pagina. Errori non equivalgono ad account assente.
+- Conservare le factory lazy dei loader Manager per rispettare `dashboardLoadPlan`.
+- Audit, percorsi già protetti e limiti in `docs/row-cap-audit-2026-09-18.md`;
+  regressioni in `tests/row-cap-audit.test.mts`. Nessuna modifica dati/RLS/invii.
+
+
 ## Iscrizione personale e limite righe per Admin — 2026-09-18
 
 - La dashboard partecipante filtra `participants.auth_user_id` con l'account

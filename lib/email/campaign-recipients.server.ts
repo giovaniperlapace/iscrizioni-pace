@@ -1,5 +1,5 @@
 import { explicitParticipantDelegate, groupAndAncestorIds, chooseParticipantDelegate } from "./participant-delegate";
-import { loadAllRows } from "@/lib/supabase/all-rows";
+import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { getOperationalUserIdentities } from "@/lib/operational-users/identity";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -68,12 +68,11 @@ async function resolveParticipantRecipients(eventId: string, status: string, reg
 
   const participantIds = registrations.map((row) => row.participant_id);
   const contacts = await loadInChunks(participantIds, async (ids) => {
-    const { data, error } = await service
+    const { data } = await loadAllRows((from, to) => service
       .from("participant_contacts")
       .select("participant_id,email,is_primary")
       .in("participant_id", ids)
-      .order("is_primary", { ascending: false });
-    if (error) throw new Error(error.message);
+      .order("is_primary", { ascending: false }).order("id").range(from, to));
     return data ?? [];
   });
   const deletedUserIds = await loadDeletedUserIds(eventId);
@@ -91,12 +90,11 @@ async function resolveParticipantRecipients(eventId: string, status: string, reg
     const assignments = await loadInChunks(
       missingRegistrations.map((row) => row.id),
       async (ids) => {
-        const { data, error } = await service
+        const { data } = await loadAllRows((from, to) => service
           .from("participant_group_assignments")
           .select("registration_id,group_id")
           .eq("is_current", true)
-          .in("registration_id", ids);
-        if (error) throw new Error(error.message);
+          .in("registration_id", ids).order("id").range(from, to));
         return data ?? [];
       }
     );
@@ -106,9 +104,8 @@ async function resolveParticipantRecipients(eventId: string, status: string, reg
     );
     const groupsById = new Map(groups.map(group => [group.id, group]));
     const snapshots = await loadInChunks(missingRegistrations.map(row => row.id), async ids => {
-      const { data, error } = await service.from("registration_questionnaire_answers")
-        .select("registration_id,answers").eq("event_id", eventId).in("registration_id", ids);
-      if (error) throw new Error(error.message);
+      const { data } = await loadAllRows((from, to) => service.from("registration_questionnaire_answers")
+        .select("registration_id,answers").eq("event_id", eventId).in("registration_id", ids).order("id").range(from, to));
       return data ?? [];
     });
     // Keep the original explicit delegation even if later questionnaire
@@ -119,21 +116,19 @@ async function resolveParticipantRecipients(eventId: string, status: string, reg
     const memberships = await loadInChunks(
       [...new Set(assignments.flatMap(row => groupAndAncestorIds(row.group_id, groupsById)))],
       async (ids) => {
-        const { data, error } = await service
+        const { data } = await loadAllRows((from, to) => service
           .from("group_memberships")
           .select("group_id,user_id,is_primary")
           .eq("role", "capogruppo")
           .in("group_id", ids)
-          .order("is_primary", { ascending: false });
-        if (error) throw new Error(error.message);
+          .order("is_primary", { ascending: false }).order("id").range(from, to));
         return data ?? [];
       }
     );
     const userIds = [...new Set(memberships.map((row) => row.user_id))];
-    const { data: profiles, error: profilesError } = userIds.length
-      ? await service.from("profiles").select("id,email").in("id", userIds)
-      : { data: [], error: null };
-    if (profilesError) throw new Error(profilesError.message);
+    const { data: profiles } = userIds.length
+      ? await loadRowsForIds(userIds, (batch, from, to) => service.from("profiles").select("id,email").in("id", batch).order("id").range(from, to))
+      : { data: [] };
     const validUsers = new Set(
       (profiles ?? [])
         .filter((row) => Boolean(row.email?.trim()))
@@ -192,14 +187,13 @@ async function resolveParticipantRecipients(eventId: string, status: string, reg
 
 async function resolveGroupLeaderRecipients(eventId: string) {
   const service = createSupabaseServiceClient();
-  const { data: memberships, error } = await service
+  const { data: memberships } = await loadAllRows((from, to) => service
     .from("group_memberships")
     .select("group_id,user_id,is_primary,groups!inner(event_id,is_active)")
     .eq("role", "capogruppo")
     .eq("groups.event_id", eventId)
     .eq("groups.is_active", true)
-    .order("is_primary", { ascending: false });
-  if (error) throw new Error(error.message);
+    .order("is_primary", { ascending: false }).order("id").range(from, to));
 
   const deletedUserIds = await loadDeletedUserIds(eventId);
   const userIds = [...new Set((memberships ?? []).map((row) => row.user_id))].filter(id => !deletedUserIds.has(id));
@@ -265,57 +259,51 @@ export async function loadCampaignRecipientPreviews(
     participantServices,
   ] = await Promise.all([
     loadInChunks(participantIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("participants")
         .select("id,first_name,last_name")
-        .in("id", ids);
-      if (error) throw new Error(error.message);
+        .in("id", ids).order("id").range(from, to));
       return data ?? [];
     }),
     loadInChunks(participantIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("participant_contacts")
         .select("participant_id,email,is_primary")
         .in("participant_id", ids)
-        .order("is_primary", { ascending: false });
-      if (error) throw new Error(error.message);
+        .order("is_primary", { ascending: false }).order("id").range(from, to));
       return data ?? [];
     }),
     getOperationalUserIdentities(service, delegateUserIds),
     getOperationalUserIdentities(service, leaderUserIds),
     loadInChunks(registrationIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("participant_group_assignments")
         .select("registration_id,group_id")
         .eq("is_current", true)
-        .in("registration_id", ids);
-      if (error) throw new Error(error.message);
+        .in("registration_id", ids).order("id").range(from, to));
       return data ?? [];
     }),
     loadInChunks(leaderUserIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("group_memberships")
         .select("user_id,group_id,groups!inner(event_id)")
         .eq("role", "capogruppo")
         .eq("groups.event_id", eventId)
-        .in("user_id", ids);
-      if (error) throw new Error(error.message);
+        .in("user_id", ids).order("id").range(from, to));
       return data ?? [];
     }),
     loadInChunks(participantIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("participant_operational_tags")
         .select("participant_id,tag_id")
-        .in("participant_id", ids);
-      if (error) throw new Error(error.message);
+        .in("participant_id", ids).order("participant_id").order("tag_id").range(from, to));
       return data ?? [];
     }),
     loadInChunks(participantIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("participant_event_services")
         .select("participant_id,service_id")
-        .in("participant_id", ids);
-      if (error) throw new Error(error.message);
+        .in("participant_id", ids).order("id").range(from, to));
       return data ?? [];
     }),
   ]);
@@ -409,7 +397,7 @@ async function loadEventRegistrations(eventId: string, status: string, registrat
       .select("id,participant_id,status,source,created_by")
       .is("deleted_at", null)
       .eq("event_id", eventId)
-      .order("submitted_at", { ascending: true });
+      .order("submitted_at", { ascending: true }).order("id");
     if (registrationId) query = query.eq("id", registrationId);
     if (status !== "all") {
       query =

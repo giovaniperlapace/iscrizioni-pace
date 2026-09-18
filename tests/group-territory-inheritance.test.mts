@@ -64,7 +64,7 @@ const mapGroupRow = loadFunction("mapGroupRow", Object.fromEntries(["parseNodeTy
 const getEventGroupCandidates = loadFunction("getEventGroupCandidates", { loadAllRows, mapGroupRow });
 const getOptions = loadFunction("getPublicRegistrationOptions", {
   getCurrentPublicEvent: async () => ({ id: "event" }), resolveActiveGroupRegistrationLink: async () => null,
-  getEventGroupCandidates, inheritGroupTerritories,
+  getEventGroupCandidates, inheritGroupTerritories, loadAllRows,
 });
 function database(fail = false) {
   const calls: URL[] = [];
