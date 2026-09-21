@@ -9,7 +9,7 @@ const uuid = (i: number) => `00000000-0000-4000-8000-${String(i).padStart(12, "0
 const eventId = uuid(9000);
 const dates = { eventStartsOn: "2026-10-25", eventEndsOn: "2026-10-27" };
 const registrations = Array.from({ length: 1201 }, (_, i) => ({
-  id: uuid(i), event_id: eventId, events: { title: "Assisi" },
+  submitted_at: "2026-09-07T10:00:00Z", id: uuid(i), event_id: eventId, events: { title: "Assisi" },
   participants: { first_name: "Persona", last_name: String(i), birth_date: "1990-01-01",
     country_other: null, city_other: null, countries: { name_it: "Italia" }, cities: { name: "Roma" } },
   registration_children: i === 0 ? [{ id: uuid(8000), position: 1, first_name: "Figlio", last_name: "Prova", birth_date: "2020-01-01" }] : [],
@@ -54,6 +54,8 @@ test("statistics paginate all sources, batch UUIDs and preserve family counts an
   const { client, calls, urls } = fixture();
   const result = await loadEventStatisticsSnapshot(client, eventId, dates);
   assert.equal(result.summary.totalPeople, 1202);
+  assert.equal(result.registrationTimeline.weeks.reduce((sum, week) => sum + week.count, 0), 1201);
+  assert.ok(urls.filter(url => url.pathname.endsWith("/registrations")).every(url => url.searchParams.get("select")?.includes("submitted_at")));
   assert.equal(result.summary.accompanyingChildren, 1);
   assert.equal(result.summary.withoutAttendance, 0);
   assert.equal(result.summary.attendanceSlotCounts["2026-10-27__afternoon"], 1202);

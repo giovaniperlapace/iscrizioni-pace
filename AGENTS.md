@@ -3474,3 +3474,19 @@ Quando il piano verrà cancellato:
   errori lettura, date, audit atomico e privilegi RPC. Verificati anche i test
   SQL preesistenti del capogruppo. In copia pulita dal lockfile: 270 test,
   typecheck, lint e build superati.
+
+
+## Andamento settimanale iscrizioni — 2026-09-21
+
+- Le statistiche condivise Admin/Manager terminano con un grafico a barre delle
+  schede non eliminate per `registrations.submitted_at`, senza sommare i minori.
+  Il loader esistente conserva scope evento, paginazione ed errori bloccanti.
+- `weekly-registrations.ts` raggruppa lunedì–domenica in Europe/Rome, include
+  settimane a zero fino a quella corrente e segnala date mancanti/non valide.
+  Dal 31 agosto 2026 le colonne sono settimanali; tutte le iscrizioni precedenti
+  sono aggregate in una colonna storica esclusa dal confronto. Barre adiacenti
+  con etichette giorno/mese inclinate di 45 gradi.
+  Settimana corrente distinta e incompleta; confronto assoluto/percentuale
+  limitato alle ultime due settimane concluse, senza percentuale su base zero.
+- Test su confini temporali, ora legale, cambio anno, settimane vuote e loader
+  oltre 1.000 schede. Nessuna migration o modifica dei dati richiesta.

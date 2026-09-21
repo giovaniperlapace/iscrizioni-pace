@@ -107,6 +107,10 @@ export function StatisticsSection({
           participantHref={participantHref}
         />
       </ReportBlock>
+
+      <ReportBlock name="registrations" title="Iscrizioni per settimana">
+        <WeeklyRegistrations statistics={statistics} />
+      </ReportBlock>
     </section>
   );
 }
@@ -116,7 +120,7 @@ function ReportBlock({
   title,
   children,
 }: {
-  name: "territory" | "attendance" | "age";
+  name: "territory" | "attendance" | "age" | "registrations";
   title: string;
   children: ReactNode;
 }) {
@@ -792,4 +796,48 @@ function formatDate(value: string, options: Intl.DateTimeFormatOptions): string 
     ...options,
     timeZone: "UTC",
   }).format(date);
+}
+
+function WeeklyRegistrations({ statistics }: { statistics: EventStatisticsSnapshot }) {
+  const { weeks, undated } = statistics.registrationTimeline;
+  const maximum = Math.max(1, ...weeks.map((week) => week.count));
+  const completed = weeks.filter((week) => !week.current && !week.historical);
+  const latest = completed.at(-1);
+  const previous = completed.at(-2);
+  const delta = latest && previous ? latest.count - previous.count : null;
+  const label = (date: string) => formatDate(date, { day: "2-digit", month: "2-digit" });
+
+  return (
+    <article className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <p className="text-sm leading-6 text-[var(--peace-muted)]">
+        Nuove iscrizioni per settimana, da lunedì a domenica (ora italiana).
+        Ogni scheda vale un’iscrizione; minori accompagnati esclusi. Sono conteggiate le iscrizioni non eliminate.
+        Le iscrizioni precedenti al 31/08/2026 sono riunite nella prima colonna.
+        La settimana in corso è incompleta; questa e la colonna storica sono escluse dal confronto.
+      </p>
+      {delta !== null && latest && previous ? (
+        <p className="mt-3 text-sm font-semibold text-[var(--peace-blue-900)]">
+          Ultima settimana conclusa ({label(latest.start)} – {label(latest.end)}): {latest.count} iscrizioni.
+          {" "}{delta > 0 ? "In aumento" : delta < 0 ? "In diminuzione" : "Stabili"} rispetto alla precedente
+          {delta !== 0 ? `: ${delta > 0 ? "+" : ""}${delta}${previous.count > 0 ? ` (${delta > 0 ? "+" : ""}${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 }).format(delta / previous.count * 100)}%)` : ""}` : ""}.
+        </p>
+      ) : <p className="mt-3 text-sm text-[var(--peace-muted)]">Il confronto sarà disponibile dopo due settimane concluse.</p>}
+      {weeks.length ? (
+        <div className="mt-6 overflow-x-auto overscroll-x-contain" tabIndex={0} role="region" aria-label="Grafico iscrizioni settimanali, scorrimento orizzontale">
+          <div className="flex w-max gap-px pb-3 pr-3">
+            {weeks.map((week) => (
+              <div key={week.start} className="w-14 shrink-0 text-center" aria-label={`${week.historical ? "Prima del 31/08" : `${label(week.start)} – ${label(week.end)}`}: ${week.count} iscrizioni${week.current ? ", settimana in corso incompleta" : ""}`}>
+                <div className="flex h-56 flex-col justify-end border-b border-[var(--peace-border)]" aria-hidden="true">
+                  <span className="mb-1 text-sm font-semibold tabular-nums">{week.count}</span>
+                  <div className={`w-full rounded-t-sm ${week.current ? "border-2 border-dashed border-[var(--peace-blue-800)] bg-[#cce3f2]" : week.historical ? "bg-slate-400" : "bg-[var(--peace-blue-800)]"}`} style={{ height: `${week.count / maximum * 180}px` }} />
+                </div>
+                <div className="relative h-24"><p className="absolute left-7 top-2 origin-top-left rotate-45 whitespace-nowrap text-[10px]">{week.historical ? "Prima del 31/08" : `${label(week.start)} – ${label(week.end)}`}{week.current ? " · In corso" : ""}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : <p className="mt-5 text-sm">Nessuna iscrizione con data disponibile.</p>}
+      {undated > 0 ? <p className="mt-3 text-sm text-[var(--peace-muted)]">Iscrizioni senza data valida, escluse dal grafico: {undated}.</p> : null}
+    </article>
+  );
 }

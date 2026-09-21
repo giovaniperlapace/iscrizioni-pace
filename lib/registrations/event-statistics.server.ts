@@ -5,6 +5,7 @@ import { buildEventStatisticsSnapshot, type StatisticsChild } from "./event-stat
 
 type Registration = {
   id: string;
+  submitted_at: string;
   event_id: string;
   events: { title: string | null } | null;
   participants: (ParticipantGeography & {
@@ -30,7 +31,7 @@ export async function loadEventStatisticsSnapshot(
 ) {
   const [{ data: registrations }, { data: groups }] = await Promise.all([
     loadAllRows((from, to) => db.from("registrations")
-      .select("id,event_id,events(title),participants(first_name,last_name,birth_date,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)")
+      .select("id,submitted_at,event_id,events(title),participants(first_name,last_name,birth_date,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)")
       .eq("event_id", eventId).is("deleted_at", null).order("id").range(from, to)),
     loadAllRows((from, to) => db.from("groups")
       .select("id,event_id,name,parent_group_id,node_type")
@@ -78,6 +79,7 @@ export async function loadEventStatisticsSnapshot(
         birthDate: child.birth_date, position: child.position,
       }));
       return {
+        submittedAt: row.submitted_at,
         registrationId: row.id, eventId: row.event_id, eventTitle: row.events?.title ?? "Evento",
         name: [participant.first_name, participant.last_name].filter(Boolean).join(" "),
         birthDate: participant.birth_date,

@@ -1,3 +1,4 @@
+import { buildRegistrationWeeks } from "./weekly-registrations.ts";
 import {
   buildAttendanceDayColumns,
   parseDateOnly,
@@ -5,6 +6,7 @@ import {
 } from "./attendance-slots.ts";
 
 export type StatisticsParticipant = {
+  submittedAt?: string | null;
   registrationId: string;
   eventId: string;
   eventTitle: string;
@@ -107,6 +109,7 @@ export type EventStatisticsSummary = {
 };
 
 export type EventStatisticsSnapshot = {
+  registrationTimeline: ReturnType<typeof buildRegistrationWeeks>;
   participantBreakdowns: Record<ParticipantBreakdownLevel, ParticipantBreakdownRow[]>;
   attendanceByDay: AttendanceDayRow[];
   people: StatisticsPersonRow[];
@@ -295,6 +298,7 @@ export function buildEventStatisticsSnapshot({
   );
 
   return {
+    registrationTimeline: buildRegistrationWeeks(participants.map((p) => p.submittedAt), new Date(), "2026-08-31"),
     participantBreakdowns: {
       country: buildParticipantBreakdown(participants, groups, "country"),
       city: buildParticipantBreakdown(participants, groups, "city"),
