@@ -16,6 +16,7 @@ test("public form rejects a city/province as country before any database write",
   })) data.set(key, value);
   for (const country of ["RM", "Roma", "Italia", "Malawi"]) {
     data.set("countryOther", country);
+    data.set("emailConfirmation", String(data.get("email") ?? ""));
     const parsed = parseRegistrationForm(data);
     assert.equal(parsed.ok, ["Italia", "Malawi"].includes(country));
     if (!parsed.ok) assert.ok(parsed.errors.some(error => error.includes("paese valido")));

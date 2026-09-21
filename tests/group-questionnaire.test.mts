@@ -21,6 +21,7 @@ for (const previous of ["yes", "no"]) {
       const data = form(previous, withGroup);
       data.set("groupRegistrationLinkToken", "synthetic-link");
       data.set("groupName", "Stale group");
+      data.set("emailConfirmation", String(data.get("email") ?? ""));
       const parsed = parseRegistrationForm(data);
       if (previous === "yes" && !withGroup) {
         assert.ok(!parsed.ok);
@@ -47,6 +48,7 @@ test("first No skips the group question and clears the missing-leader flag", () 
   const data = form("no", "yes");
   data.delete("participatesWithGroup");
   data.set("cannotFindLeader", "on");
+  data.set("emailConfirmation", String(data.get("email") ?? ""));
   const parsed = parseRegistrationForm(data);
   assert.ok(parsed.ok);
   assert.equal(parsed.value.participatesWithGroup, false);
@@ -56,6 +58,7 @@ test("association is optional and old hidden group values cannot override No", (
   const data = form("yes", "no");
   data.delete("externalGroupAssociation");
   data.set("cannotFindLeader", "on");
+  data.set("emailConfirmation", String(data.get("email") ?? ""));
   const parsed = parseRegistrationForm(data);
   assert.ok(parsed.ok);
   assert.equal(parsed.value.groupId, null);

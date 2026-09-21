@@ -1,5 +1,7 @@
 "use client";
 
+import { publicChildBirthDateBounds } from "@/lib/registrations/public-child-age";
+
 import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
 import { OTHER_PHONE_PREFIX, PHONE_PREFIX_OPTIONS } from "@/lib/registrations/phone-prefixes";
 
@@ -84,6 +86,9 @@ type StoredRegistrationForm = {
 };
 
 type RegistrationFormCopy = {
+  emailConfirmation: string;
+  emailMismatch: string;
+  childrenHelp: string;
   newRegistration: string;
   intro: string;
   groupLinkPrefix: string;
@@ -147,6 +152,9 @@ type RegistrationFormCopy = {
 
 const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
   it: {
+    emailConfirmation: "Conferma email",
+    emailMismatch: "Gli indirizzi email devono coincidere.",
+    childrenHelp: "Questa funzione è pensata per iscrivere i bambini accompagnati, da 0 a 17 anni compiuti alla data di iscrizione. I figli iscritti qui resteranno sempre collegati alla tua iscrizione per i panel e gli altri eventi. Se entrambi i genitori si iscrivono alla preghiera, inserite i figli nell’iscrizione di un solo genitore.",
     newRegistration: "Nuova iscrizione",
     intro:
       "Compila questo modulo per iscriverti all'evento. Dopo l'invio potrai accedere alla tua area personale e scaricare il QR code per l'ingresso. Quando sarà pubblicato il programma completo, potrai anche scegliere a quali incontri tematici e altri eventi partecipare.",
@@ -215,6 +223,9 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     submitting: "Invio iscrizione...",
   },
   en: {
+    emailConfirmation: "Confirm email",
+    emailMismatch: "The email addresses must match.",
+    childrenHelp: "This feature is intended for registering accompanied children aged 0 to 17 on the registration date. Children registered here will always remain linked to your registration for panels and other events. If both parents register for the prayer, include the children in only one parent’s registration.",
     newRegistration: "New registration",
     intro:
       "Complete this form to register for the event. Once you have submitted your registration, you will be able to access your dashboard and download your entry QR code. When the full programme is published, you will also be able to choose which panel discussions and other events to attend.",
@@ -283,6 +294,9 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     submitting: "Submitting registration...",
   },
   fr: {
+    emailConfirmation: "Confirmer l’adresse e-mail",
+    emailMismatch: "Les adresses e-mail doivent être identiques.",
+    childrenHelp: "Cette fonction est destinée à inscrire les enfants accompagnés, âgés de 0 à 17 ans à la date d’inscription. Les enfants inscrits ici resteront toujours liés à ton inscription pour les panels et les autres événements. Si les deux parents s’inscrivent à la prière, inscrivez les enfants avec un seul parent.",
     newRegistration: "Nouvelle inscription",
     intro:
       "Remplis ce formulaire pour t'inscrire à l'événement. Une fois ton inscription envoyée, tu pourras accéder à ton espace personnel et télécharger ton QR code d'entrée. Lorsque le programme complet sera publié, tu pourras aussi choisir les tables rondes thématiques et les autres événements auxquels tu souhaites participer.",
@@ -351,6 +365,9 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     submitting: "Envoi de l'inscription...",
   },
   de: {
+    emailConfirmation: "E-Mail bestätigen",
+    emailMismatch: "Die E-Mail-Adressen müssen übereinstimmen.",
+    childrenHelp: "Diese Funktion ist für die Anmeldung begleiteter Kinder gedacht, die am Tag der Anmeldung 0 bis 17 Jahre alt sind. Hier angemeldete Kinder bleiben für Podiumsgespräche und andere Veranstaltungen immer mit deiner Anmeldung verbunden. Wenn sich beide Eltern zum Gebet anmelden, tragt die Kinder nur bei einem Elternteil ein.",
     newRegistration: "Neue Anmeldung",
     intro:
       "Fülle dieses Formular aus, um dich für die Veranstaltung anzumelden. Nach dem Absenden kannst du deinen persönlichen Bereich öffnen und deinen QR-Code für den Einlass herunterladen. Sobald das vollständige Programm veröffentlicht ist, kannst du auch auswählen, an welchen Podiumsdiskussionen und weiteren Veranstaltungen du teilnehmen möchtest.",
@@ -419,6 +436,9 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     submitting: "Anmeldung wird gesendet...",
   },
   es: {
+    emailConfirmation: "Confirmar correo electrónico",
+    emailMismatch: "Las direcciones de correo electrónico deben coincidir.",
+    childrenHelp: "Esta función está pensada para inscribir a niños acompañados de entre 0 y 17 años cumplidos en la fecha de inscripción. Los hijos inscritos aquí permanecerán siempre vinculados a tu inscripción para los paneles y otros eventos. Si ambos progenitores se inscriben en la oración, incluid a los hijos en la inscripción de uno solo.",
     newRegistration: "Nueva inscripción",
     intro:
       "Completa este formulario para inscribirte en el evento. Una vez enviada la inscripción, podrás acceder a tu área personal y descargar tu código QR de entrada. Cuando se publique el programa completo, también podrás elegir las mesas redondas temáticas y los demás eventos en los que quieras participar.",
@@ -487,6 +507,9 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     submitting: "Enviando inscripción...",
   },
   nl: {
+    emailConfirmation: "E-mailadres bevestigen",
+    emailMismatch: "De e-mailadressen moeten overeenkomen.",
+    childrenHelp: "Deze functie is bedoeld voor het inschrijven van kinderen onder begeleiding die op de inschrijfdatum 0 tot en met 17 jaar oud zijn. Kinderen die je hier inschrijft, blijven voor panels en andere evenementen altijd aan jouw inschrijving gekoppeld. Als beide ouders zich voor het gebed inschrijven, vermeld de kinderen dan bij slechts één ouder.",
     newRegistration: "Nieuwe inschrijving",
     intro:
       "Vul dit formulier in om je aan te melden voor het evenement. Nadat je je inschrijving hebt verzonden, kun je je persoonlijke pagina openen en je QR-code voor toegang downloaden. Zodra het volledige programma is gepubliceerd, kun je ook kiezen aan welke panelgesprekken en andere evenementen je wilt deelnemen.",
@@ -555,6 +578,9 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     submitting: "Inschrijving wordt verzonden...",
   },
   uk: {
+    emailConfirmation: "Підтвердьте електронну адресу",
+    emailMismatch: "Електронні адреси мають збігатися.",
+    childrenHelp: "Ця функція призначена для реєстрації дітей у супроводі дорослих віком від 0 до 17 повних років на дату реєстрації. Діти, зареєстровані тут, завжди залишатимуться пов’язаними з вашою реєстрацією на панельні дискусії та інші заходи. Якщо обоє батьків реєструються на молитву, додайте дітей до реєстрації лише одного з батьків.",
     newRegistration: "Нова реєстрація",
     intro:
       "Заповніть цю форму, щоб зареєструватися на захід. Після надсилання форми ви зможете відкрити особистий кабінет і завантажити QR-код для входу. Коли буде опубліковано повну програму, ви також зможете вибрати тематичні дискусії та інші заходи, у яких хочете взяти участь.",
@@ -633,6 +659,7 @@ export function RegistrationForm({
   options,
 }: RegistrationFormProps) {
   const copy = REGISTRATION_FORM_COPY[locale] ?? REGISTRATION_FORM_COPY.en;
+  const childDateBounds = publicChildBirthDateBounds();
   const formRef = useRef<HTMLFormElement>(null);
   const submittedRef = useRef(false);
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("");
@@ -879,6 +906,18 @@ export function RegistrationForm({
     return () => window.clearTimeout(restoreTimer);
   }, [email, error, options.groupLink]);
 
+  function validateEmailConfirmation() {
+    const form = formRef.current;
+    const first = form?.elements.namedItem("email") as HTMLInputElement | null;
+    const confirmation = form?.elements.namedItem("emailConfirmation") as HTMLInputElement | null;
+    if (first && confirmation) {
+      confirmation.setCustomValidity(
+        confirmation.value && first.value.trim().toLowerCase() !== confirmation.value.trim().toLowerCase()
+          ? copy.emailMismatch : ""
+      );
+    }
+  }
+
   function clearCitySelection() {
     setCitySearch("");
     setSelectedCity("");
@@ -904,6 +943,11 @@ export function RegistrationForm({
           return;
         }
 
+        validateEmailConfirmation();
+        if (!event.currentTarget.reportValidity()) {
+          event.preventDefault();
+          return;
+        }
         saveCurrentForm();
 
         if (
@@ -986,7 +1030,19 @@ export function RegistrationForm({
             defaultValue={email}
             className="field"
             autoComplete="email"
+            onInput={validateEmailConfirmation}
             data-field="email"
+          />
+        </Field>
+        <Field required label={copy.emailConfirmation} className="sm:col-span-2">
+          <input
+            name="emailConfirmation"
+            type="email"
+            required
+            className="field"
+            autoComplete="off"
+            onInput={validateEmailConfirmation}
+            data-field="emailConfirmation"
           />
         </Field>
         <Field required label={copy.firstName}>
@@ -1334,6 +1390,7 @@ export function RegistrationForm({
 
         {participatesWithChildren === "yes" ? (
           <div className="grid gap-4">
+            <p id="children-help" className="text-sm text-[var(--peace-muted)]">{copy.childrenHelp}</p>
             <Field required label={copy.childrenCount}>
               <select
                 name="childrenCount"
@@ -1382,6 +1439,9 @@ export function RegistrationForm({
                     <input
                       name={`child_${index}_birthDate`}
                       type="date"
+                      min={childDateBounds.min}
+                      max={childDateBounds.max}
+                      aria-describedby="children-help"
                       required
                       className="field bg-white"
                       autoComplete="off"

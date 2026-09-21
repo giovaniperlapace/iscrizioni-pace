@@ -1,3 +1,4 @@
+import { OperationalChildrenEditor } from "@/app/dashboard/operational-children-editor";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { LocalOverlay } from "@/app/dashboard/local-overlay";
 import { LocalQueryLink } from "@/components/local-query-link";
@@ -1876,7 +1877,7 @@ function ManualRegistrationSection({
             {copy.birthDate}
             <input name="birthDate" type="date" className="field" />
           </label>
-          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} />
+          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} initialUnknown={false} />
           <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields
             locale={locale}
@@ -2166,24 +2167,7 @@ function AssignmentDetailCard({
         </DetailBlock>
 
         <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
-          {assignment.children.length > 0 ? (
-            <div className="grid gap-2">
-              {assignment.children.map((child) => (
-                <div key={child.id} className="text-sm">
-                  <p className="font-semibold">
-                    {child.first_name} {child.last_name}
-                  </p>
-                  <p className="text-[var(--peace-muted)]">
-                    Data di nascita: {child.birth_date}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--peace-muted)]">
-              Nessun figlio associato all&apos;iscrizione.
-            </p>
-          )}
+          <OperationalChildrenEditor records={assignment.children} locale={locale} editable={assignment.isCurrent} />
         </DetailBlock>
       </div>
 

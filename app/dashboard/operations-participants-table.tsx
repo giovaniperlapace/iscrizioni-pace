@@ -1,5 +1,7 @@
 "use client";
 
+import { OperationalChildrenEditor } from "./operational-children-editor";
+
 import { LocalQueryLink } from "@/components/local-query-link";
 import { OperationsAttendance } from "./operations-attendance";
 import { PendingDownload } from "@/components/pending-download";
@@ -990,13 +992,7 @@ export function OperationsParticipantsTable({
             <h4 className="font-semibold">
               Figli partecipanti ({selected.childrenCount})
             </h4>
-            {selected.children.map((child) => (
-              <p key={child.id}>
-                {child.first_name} {child.last_name} ·{" "}
-                {formatDate(child.birth_date)}
-              </p>
-            ))}
-            {!selected.childrenCount && <p>Nessun figlio associato.</p>}
+            <OperationalChildrenEditor records={selected.children} editable={editableEventIds.includes(selected.eventId) && !selected.deletedAt} />
           </section>
           {(selected.deletedAt
             ? dashboard === "admin"

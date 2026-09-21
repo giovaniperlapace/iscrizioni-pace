@@ -63,6 +63,7 @@ test("public parser canonicalizes accepted country names", () => {
     birthPlace: "Madrid", nationality: "Spanish (Spain)", cityOther: "Madrid", countryOther: "España",
     hasAccessibilityNeeds: "no", hasPreviousSantegidioParticipation: "no", availabilityUnknown: "on", privacyAccepted: "on",
   })) form.set(key, value);
+  form.set("emailConfirmation", String(form.get("email") ?? ""));
   const parsed = parseRegistrationForm(form);
   assert.ok(parsed.ok);
   assert.equal(parsed.value.countryOther, "Spagna");

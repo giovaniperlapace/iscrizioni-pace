@@ -31,6 +31,7 @@ function validForm(token: string | null) {
     availabilityUnknown: "on", privacyAccepted: "on", dataProcessingAccepted: "on",
     groupId: "11111111-1111-4111-8111-111111111111",
   })) data.set(key, value);
+  data.set("emailConfirmation", String(data.get("email")));
   if (token) data.set("groupRegistrationLinkToken", token);
   return data;
 }

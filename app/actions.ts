@@ -44,6 +44,7 @@ import {
   preserveAccessibilityUnlessEdited,
   preserveChildrenUnlessEdited,
 } from "@/lib/registrations/participant-dashboard";
+import { parseOperationalChild } from "@/lib/registrations/operational-child";
 import { toRegistrationChildRows } from "@/lib/registrations/registration-children";
 import {
   buildManualRegistrationQuestionnaireAnswers,
@@ -907,6 +908,26 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
+}
+
+export async function updateOperationalChild(formData: FormData) {
+  const auth = await getCurrentAuthContext(await createSupabaseServerClient());
+  if (!auth) return formFailure([{ field: null, code: "forbidden" }]);
+  const parsed = parseOperationalChild(formData);
+  if ("status" in parsed) return parsed;
+  try {
+    // The service-only RPC repeats current event/group/role checks in the same
+    // transaction as the child edit and audit. Actor always comes from Auth.
+    const { error } = await createSupabaseServiceClient().rpc("update_operational_child", {
+      p_child_id: parsed.childId, p_actor_user_id: auth.user.id,
+      p_expected: parsed.expected, p_child: parsed.child,
+    });
+    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : error.code === "40001" ? "conflict" : "failed" }]);
+  } catch {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  for (const path of ["/dashboard/admin", "/dashboard/manager", "/dashboard/capogruppo", "/dashboard/partecipante"]) revalidatePath(path);
+  return { status: "success" as const };
 }
 
 export async function updateOperationsAttendance(formData: FormData) {

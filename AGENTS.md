@@ -1,5 +1,61 @@
 # AGENTS.md
 
+## Modifica figli nelle schede operative — 2026-09-21
+
+- `OperationalChildrenEditor` permette a Manager/Admin e capogruppo di modificare
+  nome, cognome e data di nascita o rimuovere singoli figli con conferma. Moduli
+  separati per salvataggio/rimozione: dati errati nei campi non impediscono
+  l’eliminazione. Sette lingue, errori conservano gli inserimenti; refresh della
+  scheda mantiene filtri e selezione. Inserimento nuovi partecipanti invariato.
+- `updateOperationalChild` deriva l’attore dalla sessione e chiama la RPC
+  service_role-only `update_operational_child`: autorizza Manager dell’evento,
+  Admin globale oppure capogruppo nell’evento corrente e gerarchia attiva con
+  assegnazione corrente. Esclude iscrizioni eliminate, viewer e gruppi estranei.
+- RPC con lock iscrizione/figlio, confronto dei dati originari contro conflitti,
+  modifica puntuale e audit prima/dopo atomici. Mantiene ID e posizioni degli
+  altri figli; gruppo, presenze, QR e dati del genitore invariati. Nessun limite
+  di 17 anni sulle correzioni storiche, nessuna modifica alle policy RLS.
+- Migration `20260921120000_operational_children.sql` applicata e registrata
+  atomicamente in produzione il 21 settembre, prima del push autorizzato.
+  Conteggio/hash dei 73 figli invariati; privilegi solo service_role verificati.
+  Nessuna scrittura di collaudo su partecipanti reali. Test SQL su PostgreSQL temporaneo in
+  `tests/sql/operational-children.sql`, azione/parser in
+  `tests/operational-children.test.mts`, browser con azioni sintetiche in
+  `tests/browser/operational-children.mjs`. Verificati 419 test, lint, typecheck,
+  build production, SQL e browser nelle sette lingue/mobile senza azioni reali.
+
+## Presenze nuovi partecipanti capogruppo — 2026-09-21
+
+- Il solo modulo di inserimento nuovi partecipanti del capogruppo passa
+  `initialUnknown={false}` a `ManualAttendanceFields`: nessuna presenza né
+  «Non lo so ancora, lo comunicherò in seguito» preselezionata. L’opzione resta
+  disponibile; il validatore esistente richiede fasce oppure la scelta esplicita
+  di presenze da comunicare. Modifica delle presenze esistenti e altri utilizzi
+  del componente invariati. Nessuna modifica dati o schema.
+
+## Controlli nuove iscrizioni pubbliche — 2026-09-21
+
+- Il modulo pubblico condiviso dai link di gruppo richiede `emailConfirmation`;
+  confronto normalizzato nel browser e in `parseRegistrationForm`, prima delle
+  scritture. La conferma non entra in `RegistrationInput` né nel database.
+- Per scelta dell’utente niente slider: mantenuta la data di nascita dei figli.
+  `public-child-age.ts` calcola i limiti inclusivi per 0–17 anni compiuti alla
+  data di iscrizione (giorno UTC, coerente con il validatore esistente), usati
+  dal campo data e dal solo parser pubblico. Date future e diciottesimo
+  compleanno esclusi; gestiti anni bisestili. Validatori condivisi con modifiche
+  storiche e inserimenti assistiti invariati.
+- Testo nelle sette lingue: funzione per bambini accompagnati, sempre collegati
+  all’iscrizione del genitore per panel/altri eventi; se entrambi i genitori si
+  iscrivono alla preghiera, inserire i figli con un solo genitore.
+- Accesso, modali operative, dati storici, schema e RLS invariati. Modifiche
+  autorizzate per il rilascio tramite main/Vercel il 21 settembre.
+  Test in `tests/public-email-confirmation.test.mts`,
+  `tests/public-child-age.test.mts`; fixture browser separata in
+  `tests/browser/public-registration-controls.mjs` (route temporanea, nessun invio).
+  Verificati 415 test, lint, typecheck, build e browser nelle sette lingue,
+  modulo generale/link di gruppo e layout mobile; nessun errore browser.
+
+
 ## Salvataggio schede personali e operative — 2026-09-18
 
 - `updateParticipantDashboard` normalizza `participants` ed `events` con
