@@ -922,7 +922,7 @@ export async function updateOperationalChild(formData: FormData) {
       p_child_id: parsed.childId, p_actor_user_id: auth.user.id,
       p_expected: parsed.expected, p_child: parsed.child,
     });
-    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : error.code === "40001" ? "conflict" : "failed" }]);
+    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : (error.code === "PT409" || error.code === "40001") ? "conflict" : "failed" }]);
   } catch {
     return formFailure([{ field: null, code: "failed" }]);
   }

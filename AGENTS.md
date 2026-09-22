@@ -1,5 +1,40 @@
 # AGENTS.md
 
+## Saturazione API per conflitti obsoleti — 2026-09-22
+
+- PostgREST 14.6 ritenta indefinitamente SQLSTATE `40001`: non usarlo per
+  conflitti applicativi deterministici. Alle 16:54:58 Europe/Rome annullate
+  con `pg_cancel_backend` dieci richieste `review_participant_duplicate` in
+  ciclo, che occupavano tutte le connessioni e causavano `PGRST003`/HTTP 504
+  anche su ruoli, dashboard e modulo pubblico. Nessun riavvio del database.
+- Migration `20260922153000_nonretryable_stale_conflicts.sql` applicata e
+  registrata atomicamente in produzione: revisioni duplicati, importazioni
+  e modifiche figli restituiscono `PT409` per versioni obsolete. Cambiano solo
+  i codici, preservando corpo delle funzioni, lock, controlli e grant verificati.
+  L'app riconosce PT409 e il precedente 40001 come conflitti da ricaricare.
+- Regressione SQL `tests/sql/nonretryable-stale-conflicts.sql`, regressioni
+  azione figli e mapper qualità. Prova HTTP reale con ID sintetici e versione
+  deliberatamente obsoleta: 409/PT409 in 182 ms prima di qualsiasi scrittura,
+  successiva lettura HTTP 200. Diagnosi e limiti in
+  `docs/incident-2026-09-22-postgrest-retries.md`.
+
+## Iscrizioni nelle sette lingue — 2026-09-22
+
+- La lingua selezionata viene salvata da `submitPublicRegistration`, ma il
+  vincolo storico `participants_preferred_locale_check` ammetteva solo it/en:
+  fr/de/es/nl/uk fallivano alla prima INSERT del partecipante (SQLSTATE 23514).
+- Migration `20260922120000_participant_supported_locales.sql` applicata e
+  registrata atomicamente in produzione il 22 settembre: il solo vincolo dei
+  partecipanti ora ammette le sette lingue di `SUPPORTED_LOCALES`. Default,
+  dati storici, grant, RLS e altri vincoli invariati. Conteggio e hash dei 1.919
+  partecipanti verificati invariati nella transazione protetta da lock.
+- Regressione su PostgreSQL temporaneo in
+  `tests/sql/participant-supported-locales.mts`: riproduce i cinque errori
+  originali, verifica INSERT/UPDATE nelle sette lingue, conservazione dei dati
+  e default, rifiuto di valori sconosciuti e null. Dettagli e comando in
+  `docs/incident-2026-09-22-registration-locales.md`. Nessuna iscrizione reale
+  di collaudo o email inviata; correzione DB immediatamente attiva senza build.
+
 ## Modifica figli nelle schede operative — 2026-09-21
 
 - `OperationalChildrenEditor` permette a Manager/Admin e capogruppo di modificare

@@ -43,7 +43,7 @@ async function version(eventId: string, actor: string) {
   return data;
 }
 function rpcError(code: string) {
-  if (code === "40001")
+  if (code === "PT409" || code === "40001")
     return new Error(
       "I dati sono cambiati. Ricarica e genera una nuova anteprima.",
     );

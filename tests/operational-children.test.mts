@@ -66,7 +66,7 @@ test("unauthenticated/invalid requests never call RPC; errors and conflicts neve
   assert.equal((await noAuth.action(form())).status, "error"); assert.equal(noAuth.calls.length, 0);
   const invalid = actionHarness();
   assert.equal((await invalid.action(form("bad"))).status, "error"); assert.equal(invalid.calls.length, 0);
-  for (const [failure, code] of [["42501", "forbidden"], ["40001", "conflict"], ["22023", "failed"], ["network", "failed"]]) {
+  for (const [failure, code] of [["42501", "forbidden"], ["40001", "conflict"], ["PT409", "conflict"], ["22023", "failed"], ["network", "failed"]]) {
     const h = actionHarness(true, failure);
     assert.deepEqual(await h.action(form()), formFailure([{ field: null, code }]));
     assert.equal(h.paths.length, 0);
