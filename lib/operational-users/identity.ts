@@ -1,3 +1,4 @@
+import { emailParticipantIds, reusableIdentityParticipantIds } from "../registrations/email-identity.ts";
 import { loadAllRows, loadRowsForIds, writeRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -105,6 +106,10 @@ export async function getOperationalUserIdentities(
       (participant) => [participant.id, participant]
     )
   );
+  const eligibleIds = new Set(await reusableIdentityParticipantIds(supabase, [...participantById.keys()]));
+  for (const id of participantById.keys()) {
+    if (!eligibleIds.has(id)) participantById.delete(id);
+  }
   const contactByParticipantId = pickPreferredContact(
     [...((linkedContacts ?? []) as ContactRow[]), ...((fallbackContacts ?? []) as ContactRow[])]
   );
@@ -163,6 +168,10 @@ export async function getOperationalRegistrationSuggestion(
     return null;
   }
 
+  const contactIds = await emailParticipantIds(supabase, normalizedEmail);
+  const eligibleIds = await reusableIdentityParticipantIds(supabase, contactIds);
+  if (contactIds.length && !eligibleIds.length) return null;
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name")
@@ -178,14 +187,7 @@ export async function getOperationalRegistrationSuggestion(
     }
   }
 
-  const { data: contact } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", normalizedEmail)
-    .order("is_primary", { ascending: false })
-    .limit(1);
-  const participantId =
-    ((contact ?? []) as Array<{ participant_id: string }>)[0]?.participant_id ?? null;
+  const participantId = eligibleIds[0];
 
   if (!participantId) {
     return null;
@@ -277,7 +279,8 @@ export async function syncOperationalIdentityByEmail(
     participantUpdates.auth_user_id = input.userId;
   }
 
-  await writeRowsForIds([...participantIds], ids => supabase
+  const eligibleIds = await reusableIdentityParticipantIds(supabase, [...participantIds]);
+  await writeRowsForIds(eligibleIds, ids => supabase
     .from("participants")
     .update(participantUpdates)
     .in("id", ids));

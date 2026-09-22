@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateOperationalChild } from "@/app/actions";
 import { ReliableForm } from "@/components/reliable-form";
@@ -9,6 +9,9 @@ import { SuccessMessage } from "@/components/success-message";
 import { ConfirmSubmitButton } from "./confirm-submit-button";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import type { RegistrationChildRow } from "@/lib/registrations/registration-children";
+
+import { addOperationalChild } from "./operational-registration-actions";
+import { OPERATIONAL_ADDITIONS_COPY } from "@/lib/registrations/operational-additions-copy";
 
 const COPY: Record<SupportedLocale, readonly string[]> = {
   it: ["Nome", "Cognome", "Data di nascita", "Salva figlio", "Rimuovi figlio", "Rimuovere questo figlio dall’iscrizione? L’iscrizione del genitore resterà invariata.", "Dati del figlio salvati.", "Figlio rimosso dall’iscrizione.", "Nessun figlio associato.", "Modifica i dati o rimuovi un figlio inserito per errore o duplicato."],
@@ -20,8 +23,8 @@ const COPY: Record<SupportedLocale, readonly string[]> = {
   uk: ["Ім’я", "Прізвище", "Дата народження", "Зберегти дитину", "Видалити дитину", "Видалити цю дитину з реєстрації? Реєстрація одного з батьків залишиться без змін.", "Дані дитини збережено.", "Дитину видалено з реєстрації.", "Немає пов’язаних дітей.", "Змініть дані або видаліть дитину, зареєстровану помилково чи двічі."],
 };
 
-export function OperationalChildrenEditor({ records, locale = "it", editable }: {
-  records: RegistrationChildRow[]; locale?: SupportedLocale; editable: boolean;
+export function OperationalChildrenEditor({ records, locale = "it", editable, registrationId }: {
+  records: RegistrationChildRow[]; locale?: SupportedLocale; editable: boolean; registrationId?: string;
 }) {
   const copy = COPY[locale];
   return <div className="grid gap-3">
@@ -30,6 +33,7 @@ export function OperationalChildrenEditor({ records, locale = "it", editable }: 
       <ChildEditor key={child.id} child={child} locale={locale} /> :
       <p key={child.id ?? child.position}>{child.first_name} {child.last_name} · {child.birth_date}</p>)}
     {!records.length ? <p>{copy[8]}</p> : null}
+    {editable && registrationId && records.length < 10 ? <ChildAddition registrationId={registrationId} locale={locale} /> : null}
   </div>;
 }
 
@@ -69,5 +73,31 @@ function ChildEditor({ child, locale }: { child: RegistrationChildRow; locale: S
         <ConfirmSubmitButton name="intent" value="delete" confirmMessage={`${child.first_name} ${child.last_name}: ${copy[5]}`} className="min-h-11 text-sm font-semibold text-red-700 underline">{copy[4]}</ConfirmSubmitButton>
       </ReliableForm>
     </> : null}
+  </div>;
+}
+
+function ChildAddition({ registrationId, locale }: { registrationId: string; locale: SupportedLocale }) {
+  const router = useRouter();
+  const requestId = useRef<string | null>(null);
+  const [version, setVersion] = useState(0);
+  const copy = COPY[locale];
+  const addition = OPERATIONAL_ADDITIONS_COPY[locale];
+  return <div className="grid gap-3 rounded-md border border-[var(--peace-border)] p-3">
+    <h5 className="font-semibold">{addition[6]}</h5>
+    {version ? <SuccessMessage key={`success-${version}`} locale={locale}>{addition[7]}</SuccessMessage> : null}
+    <ReliableForm key={`form-${version}`} locale={locale} className="grid gap-3" data-preserve-dashboard-scroll action={async form => {
+      requestId.current ??= crypto.randomUUID();
+      form.set("childId", requestId.current);
+      const result = await addOperationalChild(form);
+      if (result.status === "success") { requestId.current = null; setVersion(value => value + 1); router.refresh(); }
+      return result;
+    }}>
+      <input type="hidden" name="registrationId" value={registrationId} />
+      {(["firstName", "lastName", "birthDate"] as const).map((name, index) => <label key={name} className="grid gap-1 text-sm font-semibold">
+        {copy[index]}<input name={name} type={index === 2 ? "date" : "text"} required maxLength={index < 2 ? 120 : undefined}
+          max={index === 2 ? new Date().toISOString().slice(0, 10) : undefined} className="field bg-white font-normal" />
+      </label>)}
+      <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white">{addition[6]}</PendingSubmitButton>
+    </ReliableForm>
   </div>;
 }

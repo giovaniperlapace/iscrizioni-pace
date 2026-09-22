@@ -1,3 +1,4 @@
+import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
 import { OperationalChildrenEditor } from "@/app/dashboard/operational-children-editor";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { LocalOverlay } from "@/app/dashboard/local-overlay";
@@ -2166,8 +2167,9 @@ function AssignmentDetailCard({
           </ReliableForm>
         </DetailBlock>
 
+        {assignment.isCurrent ? <OperationalAccessibilityEditor key={assignment.registrationId} registrationId={assignment.registrationId} locale={locale} /> : null}
         <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
-          <OperationalChildrenEditor records={assignment.children} locale={locale} editable={assignment.isCurrent} />
+          <OperationalChildrenEditor registrationId={assignment.registrationId} records={assignment.children} locale={locale} editable={assignment.isCurrent} />
         </DetailBlock>
       </div>
 

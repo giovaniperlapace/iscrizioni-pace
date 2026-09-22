@@ -24,6 +24,7 @@ export type LeaderTableRow = Pick<
   | "groupName"
   | "submittedAt"
   | "tagIds"
+  | "children"
 > & {
   serviceLabel: string | null;
   serviceStatus?: keyof typeof LEADER_SERVICE_STATUS_COPY.it | null;
@@ -45,6 +46,7 @@ export function toLeaderTableRow(row: AssignmentView): LeaderTableRow {
     groupName: row.groupName,
     submittedAt: row.submittedAt,
     tagIds: row.tagIds,
+    children: row.children,
     serviceLabel: row.service?.serviceLabel ?? null,
     serviceStatus: row.service?.status ?? null,
     tags: row.tags.map(({ id, label, color }) => ({ id, label, color })),

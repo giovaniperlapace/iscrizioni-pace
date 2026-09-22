@@ -1,5 +1,8 @@
 "use client";
 
+import { AccompanyingChildrenList } from "./accompanying-children-list";
+import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
+
 import { OperationalChildrenEditor } from "./operational-children-editor";
 
 import { LocalQueryLink } from "@/components/local-query-link";
@@ -833,30 +836,7 @@ export function OperationsParticipantsTable({
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
-                        {showChildren && row.childrenCount > 0 && (
-                          <div className="mt-2">
-                            <span className="inline-flex rounded-md bg-[var(--peace-sky-100)] px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
-                              {row.childrenCount} {row.childrenCount === 1 ? "figlio accompagnato" : "figli accompagnati"}
-                            </span>
-                            <ul
-                              aria-label={`Figli accompagnati di ${row.name}`}
-                              className="mt-2 grid gap-1 border-l-2 border-[var(--peace-border-strong)] pl-2 text-xs leading-5 text-[var(--peace-muted)]"
-                            >
-                              {row.children.map((child) => {
-                                const age = calculateAgeAtDate(child.birth_date, eventStartsOn);
-                                return (
-                                  <li key={child.id} className="break-words">
-                                    <span className="font-medium text-[var(--peace-ink)]">{child.first_name} {child.last_name}</span>
-                                    {" · "}
-                                    <span title="Età all’inizio dell’evento">
-                                      {age === null ? "Età non disponibile" : age === 0 ? "meno di 1 anno" : `${age} ${age === 1 ? "anno" : "anni"}`}
-                                    </span>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                        )}
+                        {showChildren && <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} />}
                         {pending[row.registrationId] && (
                           <p role="status">Salvataggio…</p>
                         )}
@@ -988,11 +968,12 @@ export function OperationsParticipantsTable({
               </p>
             )}
           </section>
+          {editableEventIds.includes(selected.eventId) && !selected.deletedAt ? <OperationalAccessibilityEditor key={selected.registrationId} registrationId={selected.registrationId} /> : null}
           <section className="grid gap-2 text-sm">
             <h4 className="font-semibold">
               Figli partecipanti ({selected.childrenCount})
             </h4>
-            <OperationalChildrenEditor records={selected.children} editable={editableEventIds.includes(selected.eventId) && !selected.deletedAt} />
+            <OperationalChildrenEditor registrationId={selected.registrationId} records={selected.children} editable={editableEventIds.includes(selected.eventId) && !selected.deletedAt} />
           </section>
           {(selected.deletedAt
             ? dashboard === "admin"

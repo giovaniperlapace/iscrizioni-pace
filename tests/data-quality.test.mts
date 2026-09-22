@@ -172,11 +172,10 @@ test("preview detects existing and intra-file duplicates; errors and all skips r
     catalog,
     [{ ...person, lastName: "Rossi", deletedAt: "2026-01-01" }],
   );
-  assert.throws(() =>
-    validateDecisions(archived, [
-      { row: 2, action: "import", reason: "different" },
-    ]),
-  );
+  assert.deepEqual(archived[0].candidates, []);
+  assert.equal(validateDecisions(archived, [
+    { row: 2, action: "import", reason: "" },
+  ]).length, 1);
 });
 test("canonical template is empty with examples on a separate sheet; export roundtrip preserves text and all rows", async () => {
   const template = await writeWorkbook([], catalog);

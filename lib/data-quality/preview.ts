@@ -44,7 +44,7 @@ export function buildPreviewRows(
   return rows.map((row) => ({
     ...row,
     candidates: [
-      ...existing,
+      ...existing.filter(person => !person.deletedAt),
       ...rows
         .filter((other) => other.row !== row.row)
         .map((other) => other.identity),

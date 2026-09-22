@@ -1,3 +1,5 @@
+import { getRequestLocale } from "@/lib/i18n/server";
+import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
 import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
 import { AdminGroupsTable } from "@/app/dashboard/admin/admin-groups-table";
 import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
@@ -1789,7 +1791,7 @@ function AdminOperationalRoleEditOverlay({
   );
 }
 
-function AdminGroupTreeSection({
+async function AdminGroupTreeSection({
   groups,
   links,
   participants,
@@ -1814,6 +1816,7 @@ function AdminGroupTreeSection({
   createdUrl: string | null;
   navMode: AdminNavMode;
 }) {
+  const locale = await getRequestLocale();
   const linksByGroupId = groupLinksByGroupId(links);
   const eventOptions = currentEventOption
     ? [currentEventOption]
@@ -1821,6 +1824,7 @@ function AdminGroupTreeSection({
 
   return (
     <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <GroupDeletionNotice locale={locale} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Gruppi</h2>
@@ -1890,7 +1894,7 @@ function AdminGroupTreeSection({
                     </div>
                   </td>
                   <td className="py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <Link
                         href={adminPath(
                           "gruppi",
@@ -1924,6 +1928,7 @@ function AdminGroupTreeSection({
                       >
                         Capogruppo
                       </Link>
+                      <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} />
                     </div>
                   </td>
                 </tr>

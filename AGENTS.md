@@ -1,5 +1,111 @@
 # AGENTS.md
 
+## Rilascio integrato delle tre attività — 2026-09-22
+
+- Verificata la compatibilità di gestione/eliminazione gruppi e figli sempre
+  visibili, aggiunta figli/accessibilità operativa e riutilizzo email eliminate.
+  Test integrato `tests/sql/combined-operational-release.sql`: eliminazione gruppo
+  conserva figli/accessibilità e revoca lo scope capogruppo; il Manager mantiene
+  accesso, eliminazione iscrizione impedisce modifiche e scollega l’identità.
+- Migration `20260922180000`, `20260922190000`, `20260922200000` applicate e
+  registrate insieme in una transazione in produzione prima del push autorizzato.
+  Hash delle 13 tabelle operative invariati, RLS e grant della RPC ciclo vita
+  invariati; nuove RPC solo service_role e DELETE groups revocato come previsto.
+  Scollegate soltanto 11 identità con sole iscrizioni eliminate, con audit;
+  contenuto storico conservato. Backup riservato sul server in
+  `/root/pace-release-20260922-combined/`.
+- 439 test, lint, typecheck, build production, tre fixture SQL, test SQL integrato
+  e concorrenza gruppi superati. Browser sintetico gruppi, accessibilità/aggiunta
+  figli e tabella capogruppo nelle sette lingue e desktop/mobile superato.
+  Nessuna eliminazione di collaudo su dati reali né email inviata.
+- Pubblicazione autorizzata dall’utente tramite commit/push su main e Vercel.
+  La cancellazione locale della presentazione e `output/` sono estranei al rilascio.
+  Le note precedenti «non pubblicata/applicata» descrivono lo stato preparatorio.
+
+## Figli sempre visibili nella tabella capogruppo — 2026-09-22
+
+- `toLeaderTableRow` conserva i figli già caricati e ordinati dalla lettura
+  scoped delle iscrizioni del capogruppo. `LeaderParticipantsTable` li mostra
+  sempre sotto il genitore nella colonna nome, non nascondibile: badge con
+  numero, nomi/cognomi e età all’inizio dell’evento. Nessun interruttore.
+- `AccompanyingChildrenList` condivide il markup con la tabella Manager/Admin,
+  dove resta attivato soltanto da Mostra figli accompagnati. Etichette nelle
+  sette lingue, gestione di meno di un anno ed età non disponibile.
+- Nessuna modifica a query, permessi, schema, dati o colonne dell’export.
+  Regressione del mapper e fixture browser `leader-participants.mjs`: figli
+  collegati al genitore, ordinamento/colonne, desktop/mobile e sette lingue.
+  Verificati 439 test, lint, typecheck e build production.
+  Modifica locale, non pubblicata.
+
+
+## Riutilizzo email degli eliminati — 2026-09-22
+
+- Il controllo iscrizioni email ignora gli eliminati; il capogruppo può
+  ricreare anche la stessa persona senza deroga duplicati, anche da Excel. Email ancora usate
+  da iscrizioni attive dell'evento restano bloccate. Letture paginate e fail-closed.
+- `lib/registrations/email-identity.ts` esclude identità con sole iscrizioni
+  eliminate da sincronizzazione, login, referenti e modifica contatti, evitando
+  di riscrivere o ricollegare lo storico quando un indirizzo viene riutilizzato.
+  Identità operative senza iscrizione e persone attive in altri eventi conservate.
+- Migration `20260922200000_deleted_registration_email_reuse.sql` preparata,
+  NON applicata in produzione: scollega Auth dall'ultima iscrizione eliminata
+  dopo la cancellazione coda, con audit; include eliminazioni pregresse. Conserva
+  account Auth e ruoli. Ripristino rifiutato PT409 se email riutilizzata nell'evento.
+- Test `tests/deleted-email-reuse.test.mts`, regressione inserimento in
+  `tests/account-access.test.mts`, PostgreSQL temporaneo in
+  `tests/sql/deleted-email-reuse.sql`. Dettagli e limiti di rilascio in
+  `docs/deleted-registration-email-reuse.md`. Nessun invio o modifica dati reali.
+
+## Accessibilità e aggiunta figli nelle schede operative — 2026-09-22
+
+- Le modali capogruppo e Manager/Admin includono modifica delle tre opzioni
+  di accessibilità esistenti e inserimento figli, anche nelle schede senza figli.
+  Componenti condivisi, sette lingue, errori conservano i dati, refresh mantiene
+  la selezione. Nuovi figli fino a dieci, prima posizione libera senza rinumerare
+  i fratelli; UUID di richiesta rende idempotente il reinvio dello stesso inserimento.
+- `operational-registration-actions.ts` deriva l’attore dalla sessione. Migration
+  `20260922190000_operational_registration_additions.sql`: RPC solo service_role,
+  lock iscrizione, Admin globale/Manager evento/capogruppo con gerarchia attiva,
+  evento e assegnazione correnti; esclusi eliminati/viewer/gruppi estranei.
+  Accessibilità letta solo aprendo una scheda modificabile; errori non diventano
+  dati vuoti. Scrittura con snapshot/versione, conflitti PT409, audit atomico.
+- Chiavi storiche e richiesta distinta di ricontatto `needs_operational_support`
+  conservate. Nessun cambio RLS, consensi, QR, gruppi o presenze. Date dei figli
+  coerenti con inserimenti assistiti e correzioni storiche; limite 0–17 solo pubblico.
+- Migration e codice non ancora pubblicati/applicati in produzione: migration
+  prima del rilascio. Test azioni, SQL su PostgreSQL temporaneo e browser
+  sintetico nelle sette lingue/mobile; procedure in
+  `docs/operational-registration-additions.md`. Nessuna scrittura di collaudo
+  su persone reali o invio email.
+
+## Eliminazione gruppi e guida esterna — 2026-09-22
+
+- `GroupDeleteButton` nell’elenco Gruppi Admin/Manager: anteprima conteggi,
+  conferma esplicita, dialog accessibile, sette lingue, filtri conservati e
+  messaggio di successo. Il portal blocca la propagazione di onChange per non
+  attivare AutoFilterForm del Manager. Nessun comando per viewer/capogruppo.
+- Per richiesta esplicita, eliminare il gruppo NON elimina persone, account,
+  iscrizioni, figli, presenze o QR. Rimuove solo i collegamenti a quel gruppo:
+  gli iscritti correnti restano senza gruppo; i referenti mantengono account e
+  altri incarichi. I sottogruppi bloccano la rimozione, senza cascade gerarchico.
+- Migration locale `20260922180000_group_deletion.sql`: RPC service_role-only
+  `manage_group_deletion`, attore dalla sessione, Admin globale/Manager stesso
+  evento verificati nel DB, lock e impronta su gruppo/collegamenti, conflitti
+  PT409, audit atomico con snapshot dei collegamenti rimossi. Revoca solo
+  DELETE diretto di groups ad anon/authenticated; altre policy/grant invariati.
+  Hash dei link dismessi in tabella privata app, riuso impedito anche creando
+  un gruppo omonimo. Nessun hash/token/ciphertext nell’audit o nel browser.
+- Non ancora applicata in produzione né pubblicata: migration prima del codice.
+  Test SQL temporanei (anche 1.205 assegnazioni), concorrenza multi-sessione,
+  azione server e browser sintetico nelle sette lingue. Verificati 428 test,
+  lint, typecheck e build production. Procedure e limiti in
+  `docs/group-deletion.md`. Nessuna cancellazione o email reale di collaudo.
+- Tutorial esterno `docs/guida-gruppi.docx` e sorgente `.md`: esempi di gruppo
+  effettivo, paese, città e area, distinzione iscrivibilità/visibilità, referenti,
+  link ed eliminazione. Il modulo non imposta country_id/city_id dai nomi;
+  la guida spiega che la configurazione geografica del catalogo va verificata.
+
+
 ## Saturazione API per conflitti obsoleti — 2026-09-22
 
 - PostgREST 14.6 ritenta indefinitamente SQLSTATE `40001`: non usarlo per

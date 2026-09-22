@@ -1,3 +1,5 @@
+import { getRequestLocale } from "@/lib/i18n/server";
+import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
 import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
 import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
 import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
@@ -1272,7 +1274,7 @@ async function getManagerStatisticsSnapshot(
   return loadEventStatisticsSnapshot(supabase, currentEventId, { eventStartsOn, eventEndsOn });
 }
 
-function ManagerGroupTreeSection({
+async function ManagerGroupTreeSection({
   groups,
   links,
   participants,
@@ -1299,6 +1301,7 @@ function ManagerGroupTreeSection({
   createdUrl: string | null;
   navMode: ManagerNavMode;
 }) {
+  const locale = await getRequestLocale();
   const filteredGroups = filterGroupRows(groups, filters);
   const linksByGroupId = groupLinksByGroupId(links);
   const eventOptions = currentEventOption
@@ -1307,6 +1310,7 @@ function ManagerGroupTreeSection({
 
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <GroupDeletionNotice locale={locale} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Gruppi</h2>
@@ -1454,7 +1458,7 @@ function ManagerGroupTreeSection({
                     </div>
                   </td>
                   <td className="py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       {canManage ? (
                         <Link
                           href={`${managerPath("gruppi", navMode)}&groupTool=edit&groupId=${group.id}`}
@@ -1480,6 +1484,7 @@ function ManagerGroupTreeSection({
                           Capogruppo
                         </Link>
                       ) : null}
+                      {canManage ? <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} /> : null}
                     </div>
                   </td>
                 </tr>

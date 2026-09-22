@@ -1,5 +1,7 @@
 "use server";
 
+import { emailParticipantIds, reusableIdentityParticipantIds } from "@/lib/registrations/email-identity";
+
 import { getRequestLocale } from "@/lib/i18n/server";
 
 import { findAuthUserByEmail } from "@/lib/operational-users/auth-user.server";
@@ -1031,16 +1033,14 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
   if (email) {
     // An email enables personal access: never attach the operator's address or
     // an address already identifying a different participant.
-    const { data: otherContacts, error: emailLookupError } = await serviceSupabase
-      .from("participant_contacts")
-      .select("id")
-      .eq("email", email)
-      .neq("participant_id", participantId)
-      .limit(1);
-    if (emailLookupError) return formFailure([{ field: "email", code: "failed" }]);
-    if (otherContacts?.length) {
-      return formFailure([{ field: "email", code: "duplicateEmail" }]);
+    let otherIds: string[];
+    try {
+      otherIds = await reusableIdentityParticipantIds(serviceSupabase,
+        (await emailParticipantIds(serviceSupabase, email)).filter(id => id !== participantId));
+    } catch {
+      return formFailure([{ field: "email", code: "failed" }]);
     }
+    if (otherIds.length) return formFailure([{ field: "email", code: "duplicateEmail" }]);
     if (email === normalizeEmail(auth.user.email ?? null)) {
       const { data: participant, error } = await serviceSupabase.from("participants")
         .select("auth_user_id").eq("id", participantId).maybeSingle();
@@ -1698,13 +1698,12 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   const { compareIdentities, identityFingerprint } = await import("@/lib/data-quality/duplicates");
   const { hashIdentityFingerprint } = await import("@/lib/data-quality/fingerprint.server");
   const { loadQualityPeople } = await import("@/lib/data-quality/data.server");
-  const duplicateCandidates = (await loadQualityPeople(serviceSupabase, groupRow.event_id)).filter(person => compareIdentities({
+  const duplicateCandidates = (await loadQualityPeople(serviceSupabase, groupRow.event_id)).filter(person => !person.deletedAt && compareIdentities({
     id: "manual-entry", firstName: parsed.value.firstName, lastName: parsed.value.lastName,
     birthDate: parsed.value.birthDate, email: parsed.value.email, phone: parsed.value.phone,
     country: null, city: null,
   }, person));
   const duplicateReason = String(formData.get("duplicateReason") ?? "").trim();
-  if (duplicateCandidates.some(person => person.deletedAt)) return formFailure([{ field: null, code: "forbidden" }]);
   if (duplicateCandidates.length && (duplicateReason.length < 3 || duplicateReason.length > 500))
     return formFailure([{ field: "duplicateReason", code: "duplicate" }]);
   const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
@@ -3234,14 +3233,9 @@ async function getNewGroupLeaderTarget(
     return { ok: false, error: "auth-user" };
   }
 
-  const { data: existingContacts } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", input.email)
-    .limit(1);
-  const existingParticipantId = (
-    existingContacts as Array<{ participant_id: string }> | null
-  )?.[0]?.participant_id;
+  const existingParticipantId = (await reusableIdentityParticipantIds(
+    supabase, await emailParticipantIds(supabase, input.email)
+  ))[0];
 
   if (existingParticipantId) {
     const { error: updateError } = await supabase

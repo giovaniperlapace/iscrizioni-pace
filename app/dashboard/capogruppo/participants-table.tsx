@@ -1,5 +1,7 @@
 "use client";
 
+import { AccompanyingChildrenList } from "../accompanying-children-list";
+
 import Link from "@/components/pending-link";
 import { useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
@@ -232,7 +234,7 @@ export function LeaderParticipantsTable({
                   {preferences.columns.map((column) => (
                     <td key={column} className="whitespace-pre-line p-3">
                       {column === "name" ? (
-                        <>
+                        <div className="min-w-40 max-w-72">
                           <Link
                             scroll={false}
                             href={tablePath({ assignmentId: row.id })}
@@ -245,7 +247,8 @@ export function LeaderParticipantsTable({
                               .filter(Boolean)
                               .join(" · ")}
                           </p>
-                        </>
+                          <AccompanyingChildrenList records={row.children} participantName={row.participantName} startsOn={startsOn} locale={locale} />
+                        </div>
                       ) : column === "tags" && row.tags.length ? (
                         <div className="flex flex-wrap gap-1">
                           {row.tags.map((tag) => (

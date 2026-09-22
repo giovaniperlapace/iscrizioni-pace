@@ -1,6 +1,7 @@
 import { inheritGroupTerritories } from "../groups/territory.ts";
 import { countryName, findCountryId } from "./country-names.ts";
-import { loadAllRows } from "../supabase/all-rows.ts";
+import { emailParticipantIds, reusableIdentityParticipantIds } from "./email-identity.ts";
+import { loadRowsForIds, writeRowsForIds, loadAllRows } from "../supabase/all-rows.ts";
 import { participantQrFilename } from "@/lib/qrcode/filename";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -54,10 +55,6 @@ type PublicEvent = {
   country: string;
   starts_on: string | null;
   ends_on: string | null;
-};
-
-type ExistingContactRow = {
-  participant_id: string;
 };
 
 type CreatedParticipant = {
@@ -195,29 +192,13 @@ export async function hasExistingRegistrationForEmail(
   email: string,
   eventId: string
 ): Promise<boolean> {
-  const { data: contacts, error: contactError } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", email)
-    .limit(25);
-
-  if (contactError || !contacts?.length) {
-    return false;
-  }
-
-  const participantIds = (contacts as ExistingContactRow[]).map(
-    (contact) => contact.participant_id
-  );
-
-  const { data: registrations, error: registrationError } = await supabase
-    .from("registrations")
-    .select("id")
-    .eq("event_id", eventId)
-    .in("participant_id", participantIds)
-    .or("status.neq.cancelled,deleted_at.not.is.null")
-    .limit(1);
-
-  return !registrationError && Boolean(registrations?.length);
+  const participantIds = await emailParticipantIds(supabase, email);
+  const { data } = await loadRowsForIds(participantIds, (batch, from, to) => supabase
+    .from("registrations").select("id")
+    .eq("event_id", eventId).in("participant_id", batch)
+    .is("deleted_at", null).neq("status", "cancelled")
+    .order("id").range(from, to));
+  return data.length > 0;
 }
 
 export async function hasExistingAppAccessForEmail(
@@ -647,25 +628,12 @@ export async function linkParticipantsToUserByEmail(
   userId: string,
   email: string
 ): Promise<void> {
-  const { data: contacts, error } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", email)
-    .limit(50);
-
-  if (error || !contacts?.length) {
-    return;
-  }
-
-  const participantIds = (contacts as ExistingContactRow[]).map(
-    (contact) => contact.participant_id
+  const participantIds = await reusableIdentityParticipantIds(
+    supabase, await emailParticipantIds(supabase, email)
   );
-
-  await supabase
-    .from("participants")
-    .update({ auth_user_id: userId })
-    .in("id", participantIds)
-    .is("auth_user_id", null);
+  await writeRowsForIds(participantIds, ids => supabase
+    .from("participants").update({ auth_user_id: userId })
+    .in("id", ids).is("auth_user_id", null));
 }
 
 async function getCurrentPublicEvent(

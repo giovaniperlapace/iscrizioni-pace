@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { toAssignmentView } from "../lib/groups/leader-assignments.ts";
+import { type AssignmentView, toAssignmentView } from "../lib/groups/leader-assignments.ts";
 import { toLeaderTableRow } from "../lib/groups/leader-table.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -180,6 +180,7 @@ const row = (
   name: string,
   overrides: Partial<LeaderTableRow> = {},
 ): LeaderTableRow => ({
+  children: [],
   id,
   registrationId: id,
   groupId: "root",
@@ -439,4 +440,16 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
   const empty = new ExcelJS.Workbook();
   await empty.xlsx.load(Buffer.from(await filtered.arrayBuffer()) as never);
   assert.equal(empty.worksheets[0].rowCount, 1);
+});
+
+test("leader table mapping retains children with parent and their established order", () => {
+  const children = [
+    { id: "c1", first_name: "Sofia", last_name: "Bianchi", birth_date: "2020-10-25", position: 1 },
+    { id: "c2", first_name: "Luca", last_name: "Bianchi", birth_date: "2026-05-01", position: 2 },
+  ];
+  const parent = { ...row("parent", "Anna Bianchi"), children, service: null } as unknown as AssignmentView;
+  const tableRows = [toLeaderTableRow(parent), toLeaderTableRow({ ...parent, id: "other", children: [] })];
+  const sorted = sortLeaderRows(tableRows, leaderPreferences(new URLSearchParams()), "2026-10-25", "it");
+  assert.deepEqual(sorted.find(row => row.id === "parent")?.children, children);
+  assert.deepEqual(sorted.find(row => row.id === "other")?.children, []);
 });

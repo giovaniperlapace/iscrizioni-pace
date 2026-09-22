@@ -7,8 +7,9 @@ if (!/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(base)) throw new Error("Loca
 const route = new URL("../../app/operational-children-check/", import.meta.url);
 mkdirSync(route, { recursive: true });
 writeFileSync(new URL("editor.tsx", route), readFileSync(new URL("../../app/dashboard/operational-children-editor.tsx", import.meta.url), "utf8")
-  .replace('from "@/app/actions"', 'from "./action"').replace('from "./confirm-submit-button"', 'from "@/app/dashboard/confirm-submit-button"'));
+  .replace('from "@/app/actions"', 'from "./action"').replace('from "./operational-registration-actions"', 'from "./action"').replace('from "./confirm-submit-button"', 'from "@/app/dashboard/confirm-submit-button"'));
 writeFileSync(new URL("action.ts", route), `import type { FormFailure } from "@/lib/forms/result";
+export async function addOperationalChild(): Promise<{status: "success"}> { return {status:"success"}; }
 export async function updateOperationalChild(data: FormData): Promise<FormFailure | {status: "success"}> {
  document.body.dataset.childResult = JSON.stringify(Object.fromEntries(data));
  if (data.get("firstName") === "Conflict") return {status:"error",issues:[{field:null,code:"conflict"}]};

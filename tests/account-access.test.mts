@@ -94,7 +94,7 @@ test("SMTP success/failure is audited truthfully and audit failure never repeats
   }
 });
 
-function manualHarness(options: { delegated?: boolean; writeFails?: boolean; mailFails?: boolean; unauthorized?: boolean } = {}) {
+function manualHarness(options: { delegated?: boolean; writeFails?: boolean; mailFails?: boolean; unauthorized?: boolean; previousDeleted?: boolean } = {}) {
   const writes: string[] = []; const sends: Record<string, unknown>[] = [];
   const db = { from(table: string) {
     return { select() { return this; }, eq() { return this; },
@@ -119,7 +119,9 @@ function manualHarness(options: { delegated?: boolean; writeFails?: boolean; mai
     sendAccountAccessEmail: async (_db: unknown, input: Record<string, unknown>) => { sends.push(input); return !options.mailFails; },
     getAppUrl: () => "https://example.test", revalidatePath: () => {},
     redirect: (path: string) => { throw Error(`REDIRECT:${path}`); }, formFailureFromRedirect: (path: string) => path,
-    require: (id: string) => id.includes("data.server") ? { loadQualityPeople: async () => [] } : {},
+    require: (id: string) => id.includes("data.server")
+      ? { loadQualityPeople: async () => options.previousDeleted ? [{ id: "old", deletedAt: "2026-09-22" }] : [] }
+      : id.includes("duplicates") ? { compareIdentities: () => true } : {},
   };
   const source = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
   const code = source.slice(source.indexOf("export async function createGroupLeaderManualRegistration"), source.indexOf("export async function updateGroupRegistrationLink")).replace("export async", "async");
@@ -137,6 +139,13 @@ test("manual creation sends only after successful writes, never for delegation o
   const failed = manualHarness({ writeFails: true }); assert.match(await failed.action(new FormData()), /manualError/); assert.equal(failed.sends.length, 0);
   const denied = manualHarness({ unauthorized: true }); await assert.rejects(denied.action(new FormData()), /login/); assert.equal(denied.writes.length, 0); assert.equal(denied.sends.length, 0);
   const mailFailed = manualHarness({ mailFails: true }); await assert.rejects(mailFailed.action(new FormData()), /manualSaved=1&manualError=access-email/); assert.equal(mailFailed.sends.length, 1);
+});
+
+test("manual registration recreates a deleted person without a duplicate override", async () => {
+  const harness = manualHarness({ previousDeleted: true });
+  await assert.rejects(harness.action(new FormData()), /manualSaved=1$/);
+  assert.ok(harness.writes.includes("participants"));
+  assert.ok(harness.writes.includes("registrations"));
 });
 
 test("creating a leader from group management sends after membership success, never for an existing leader", async () => {
