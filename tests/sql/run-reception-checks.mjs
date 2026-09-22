@@ -45,6 +45,7 @@ try {
     end $$; drop table public.p11_legacy_before;`);
   console.log('PASS canonical migrations applied to disposable PostgreSQL; legacy check-in preserved');
   console.log(file(join(root,'tests/sql/reception-check-ins.sql')).trim());
+  console.log(file(join(root,'tests/sql/reception-event-duty.sql')).trim());
   // Separate connections compete for the same family, then same school booking.
   const concurrent=(sql)=>new Promise((resolve,reject)=>{
     const child=spawn(join(bin,'psql'),args,{stdio:['pipe','pipe','pipe']}); let out='',err='';
@@ -53,19 +54,19 @@ try {
   });
   for (const school of [false,true]) {
     const jobs=Array.from({length:8},(_,i)=>concurrent(`set role service_role;
-      select public.reception_check_in(f(1),f(30),'${school?'qr':'code'}','${school?'b'.repeat(64):'TST1'}','enter',f(${(school?800:700)+i}),${school?"'{}',8,1":"array[f(10)]"});`));
+      select public.reception_event_check_in('event_entry',f(1),f(30),'${school?'qr':'code'}','${school?'b'.repeat(64):'TST1'}','enter',f(${(school?800:700)+i}),${school?"'{}',8,1":"array[f(10)]"});`));
     await Promise.all(jobs);
     const count=psql(`select count(*) from check_ins where ${school?'school_booking_id=f(50)':'registration_id=f(10) and child_id is null'} and moment_id is null and cancelled_at is null;`);
     assert.match(count,/\b1\b/);
   }
   console.log('PASS 8 concurrent family entries and 8 concurrent school entries');
   const retryResults=await Promise.all(Array.from({length:8},()=>concurrent(`set role service_role;
-    select reception_check_in(f(1),f(30),'code','TST1','enter',f(900),array[f(41)])->>'outcome';`)));
+    select reception_event_check_in('event_entry',f(1),f(30),'code','TST1','enter',f(900),array[f(41)])->>'outcome';`)));
   assert.equal(retryResults.filter(x=>/saved/.test(x)).length,1);
   assert.equal(retryResults.filter(x=>/replayed/.test(x)).length,7);
   const rev=Number(execFileSync(join(bin,'psql'),[...args,'-tA','-c','select check_in_revision from registrations where id=f(10)'],{encoding:'utf8'}).trim());
   const corrections=await Promise.all([0,1].map(i=>concurrent(`set role service_role;
-    select reception_check_in(f(1),f(30),'code','TST1','correct',f(${910+i}),array[f(${i===0?40:10})],null,null,${rev},'selection_error')->>'status';`)));
+    select reception_event_check_in('event_entry',f(1),f(30),'code','TST1','correct',f(${910+i}),array[f(${i===0?40:10})],null,null,${rev},'selection_error')->>'status';`)));
   assert.equal(corrections.filter(x=>/valid/.test(x)).length,1);
   assert.equal(corrections.filter(x=>/conflict/.test(x)).length,1);
   console.log('PASS concurrent identical retries (1 saved/7 replayed), concurrent corrections (1 saved/1 conflict)');

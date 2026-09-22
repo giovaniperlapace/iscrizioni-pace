@@ -7,7 +7,7 @@ import { hashQrToken } from "../lib/qrcode/token.ts";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const token = "a".repeat(43);
-const inspect = { lookup: {kind:"qr",value:token}, action:"inspect" };
+const inspect = { duty:"event_entry", lookup: {kind:"qr",value:token}, action:"inspect" };
 const enter = { ...inspect, action:"enter",requestId:id,subjectIds:[id] };
 const family = {status:"valid",kind:"family",revision:0,outcome:"verified",registrationStatus:"confirmed",code:"AB12",
   persons:[{id,kind:"adult",firstName:"Synthetic",lastName:"Test",checkedInAt:null}]};
@@ -28,7 +28,7 @@ function fixture({role="accoglienza", roleEvent="event", user="operator", fail="
   const service=()=>{
     services++;
     return {rpc:async(name:string,args:Record<string,unknown>)=>{
-      assert.equal(name,"reception_check_in");rpcCalls.push(args);
+      assert.equal(name,"reception_event_check_in");rpcCalls.push(args);
       if(fail==="throw") throw new Error(`secret ${token}`);
       return {data:response,error:errorCode?{code:errorCode,message:`secret ${token}`,details:"private"}:null};
     }} as unknown as SupabaseClient;
@@ -38,11 +38,11 @@ function fixture({role="accoglienza", roleEvent="event", user="operator", fail="
 
 test("reception parser accepts bare opaque QR and normalizes exact public code",()=>{
   assert.deepEqual(parseReceptionCommand(inspect),inspect);
-  assert.deepEqual(parseReceptionCommand({lookup:{kind:"code",value:" ab12 "},action:"inspect"}),{lookup:{kind:"code",value:"AB12"},action:"inspect"});
+  assert.deepEqual(parseReceptionCommand({duty:"event_entry",lookup:{kind:"code",value:" ab12 "},action:"inspect"}),{duty:"event_entry",lookup:{kind:"code",value:"AB12"},action:"inspect"});
   assert.deepEqual(parseReceptionCommand(enter),enter);
 });
 test("reception rejects URLs, oversized values, forged identity and unsafe correction payloads",()=>{
-  for(const input of [null,{}, {...enter,action:["enter"]},{...enter,reason:["selection_error"]},{...inspect,lookup:{kind:["qr"],value:token}}, {...inspect,actorUserId:id}, {...inspect,eventId:id},
+  for(const input of [null,{}, {...inspect,duty:undefined},{...inspect,duty:"panel_entry"},{...inspect,duty:"room_assistance"},{...inspect,panelId:id}, {...enter,action:["enter"]},{...enter,reason:["selection_error"]},{...inspect,lookup:{kind:["qr"],value:token}}, {...inspect,actorUserId:id}, {...inspect,eventId:id},
     {...inspect,lookup:{kind:"qr",value:`https://example.invalid/${token}`}},
     {...inspect,lookup:{kind:"qr",value:"a".repeat(10000)}},
     {...inspect,lookup:{kind:"code",value:"A%"}}, {...inspect,reason:"private free text"},
@@ -58,6 +58,7 @@ test("reception derives verified actor/current event and hashes token before RPC
   assert.equal(f.services,1);
   assert.ok(f.calls.find(c=>c.table==="event_user_roles")?.filters.some(([k,v])=>k==="user_id"&&v==="operator"));
   assert.ok(f.calls.find(c=>c.table==="events")?.filters.some(([k,v])=>k==="is_current"&&v===true));
+  assert.equal(f.rpcCalls[0].p_duty,"event_entry");
   assert.equal(f.rpcCalls[0].p_actor_user_id,"operator");assert.equal(f.rpcCalls[0].p_event_id,"event");
   assert.equal(f.rpcCalls[0].p_lookup,hashQrToken(token));assert.ok(!JSON.stringify(f.rpcCalls).includes(token));
 });
@@ -100,4 +101,10 @@ test("correction/cancellation forward explicit revision, selected subjects and c
   await executeReceptionCommand(f.session,f.service,command);
   assert.equal(f.rpcCalls[0].p_expected_revision,3);assert.equal(f.rpcCalls[0].p_reason,"entry_cancelled");
   assert.deepEqual(f.rpcCalls[0].p_subject_ids,[id]);assert.equal(f.rpcCalls[0].p_request_id,id);
+});
+
+test("a station opened for a previous event cannot silently record another event",async()=>{
+  const f=fixture();
+  assert.deepEqual(await executeReceptionCommand(f.session,f.service,inspect,"previous-event"),{status:"forbidden"});
+  assert.equal(f.services,0);
 });

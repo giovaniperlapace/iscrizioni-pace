@@ -1,5 +1,6 @@
 export type ReceptionLookup = { kind: "qr" | "code"; value: string };
 export type ReceptionCommand = {
+  duty: "event_entry";
   lookup: ReceptionLookup;
   action: "inspect" | "enter" | "correct" | "cancel";
   requestId?: string;
@@ -40,8 +41,8 @@ const integer = (value: unknown, max: number) =>
 // This boundary is deliberately strict: never accept an actor, event or raw
 // database identifier for the lookup from a client.
 export function parseReceptionCommand(input: unknown): ReceptionCommand | null {
-  if (!record(input) || !record(input.lookup) ||
-    Object.keys(input).some(key => !["lookup","action","requestId","subjectIds","students","companions","expectedRevision","reason"].includes(key)) ||
+  if (!record(input) || input.duty !== "event_entry" || !record(input.lookup) ||
+    Object.keys(input).some(key => !["duty","lookup","action","requestId","subjectIds","students","companions","expectedRevision","reason"].includes(key)) ||
     Object.keys(input.lookup).some(key => !["kind","value"].includes(key)) ||
     (typeof input.action !== "string" || !["inspect","enter","correct","cancel"].includes(input.action)) ||
     (typeof input.lookup.kind !== "string" || !["qr","code"].includes(input.lookup.kind)) || typeof input.lookup.value !== "string") return null;
@@ -50,8 +51,8 @@ export function parseReceptionCommand(input: unknown): ReceptionCommand | null {
   const value = kind === "code" ? input.lookup.value.trim().toUpperCase() : input.lookup.value;
   if (!(kind === "qr" ? /^[A-Za-z0-9_-]{43}$/.test(value) : /^[A-Z0-9]{4}$/.test(value))) return null;
   if (input.action === "inspect") {
-    if (Object.keys(input).some(key => !["lookup","action"].includes(key))) return null;
-    return { lookup: { kind, value }, action: "inspect" };
+    if (Object.keys(input).some(key => !["duty","lookup","action"].includes(key))) return null;
+    return { duty: "event_entry", lookup: { kind, value }, action: "inspect" };
   }
   if (typeof input.requestId !== "string" || !uuid.test(input.requestId)) return null;
   if (input.subjectIds !== undefined && (!Array.isArray(input.subjectIds) || input.subjectIds.length > 11 ||

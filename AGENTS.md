@@ -4,6 +4,54 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## P12 — scanner e ingresso evento — 2026-09-22
+
+- Implementata localmente sul branch panel. Su richiesta dell’utente, revisione
+  funzionale P11 rinviata al collaudo del flusso completo su telefono; non è una
+  certificazione di chiusura P11/P12. Il 2026-09-22 l’utente ha poi richiesto
+  la preparazione della preview, autorizzando migration staging e pubblicazione panel.
+- `ReceptionConsole` usa `ReceptionStationSession`: incarico `event_entry`
+  impostato prima del QR e titolo persistente durante lo scroll; fotocamera
+  predefinita, avvio esplicito, posteriore preferita, cambio camera e codice
+  manuale. Il singolo entra automaticamente, famiglie/scuole richiedono solo
+  selezione dei presenti/quantità. Correzioni e annullamenti hanno percorso
+  manuale separato, nuova verifica e conferma esplicita.
+- `jsqr@1.4.0` caricato dinamicamente per decodifica locale, nessun fotogramma
+  trasmesso/salvato. Stream chiuso su uscita, cambio modalità/camera, background
+  ed errore; permesso tardivo rilasciato. Nessun audio. Un QR già letto resta
+  bloccato anche attraverso frame illeggibili e riavvii della camera, fino a
+  un codice diverso o nuova lettura esplicita confermata.
+- Interblocco sincrono tra verifica e ingresso; timeout 20 secondi/esito incerto
+  sospendono la scansione e conservano lo stesso comando/UUID per retry. Nessun
+  successo prima della risposta e nessun aggiornamento da risposte tardive.
+  La richiesta resta solo in memoria: non promettere recupero dopo chiusura
+  della scheda. Sessione scaduta/revoca fermano il flusso; conflitto richiede
+  nuova lettura. Uscire durante la verifica non avvia l’ingresso automatico.
+- Migration `20260922220000_reception_event_duty.sql`, applicata e registrata
+  **solo allo staging il 2026-09-22**: RPC `reception_event_check_in`, SECURITY INVOKER, solo
+  service_role, duty esclusivamente evento. Delega alle protezioni atomiche
+  P11, che rileggono ruoli e evento a ogni operazione, inclusi retry. Nessuna
+  riscrittura delle migration precedenti, ruoli, presenze o policy esistenti.
+- Il ruolo attuale `accoglienza` resta esplicitamente un incarico EVENTO.
+  P13 deve assegnare panel/sala separatamente senza concedere questo ruolo;
+  nessun selettore panel inattivo nella P12. La pagina filtra gli incarichi per
+  evento corrente e lega l’action all’evento visualizzato: un cambio di evento
+  richiede nuova apertura. Rimane la regola dashboard manager solo manager;
+  per collaudo della console usare admin globale o accoglienza.
+- Fetch: panel/upstream a `e13d95a`; `origin/main` a `9bdd098`, 25 commit/11
+  migration non incorporati. Cancellazione PPTX e `output/` preesistenti lasciati
+  intatti. Nessun pull necessario per l’allineamento; merge di main rinviato a
+  integrazione dedicata prima del rilascio, preservando la tutela P11 dei minori.
+- Verifiche: 345 test, lint/typecheck e build staging; PostgreSQL 17 temporaneo
+  con RLS, revoche, scope duty e concorrenza; browser desktop/mobile sintetico,
+  decoder QR reale su PNG. Procedura in `docs/panel-p12-reception.md`. Fixture
+  browser temporanea rimossa prima della build; nessun accesso di test pubblico
+  distribuito. SQL staging verificato: corpo funzione identico, privilegi solo
+  service_role, RPC PostgREST risolta e richieste non autorizzate rifiutate;
+  prova famiglia/scuola/retry/correzione/audit interamente annullata. Conteggi e
+  hash invariati su 42 tabelle. Script `tests/sql/reception-p12-staging-rollback-check.sql`.
+  Restano collaudo autenticato e almeno due dispositivi reali con QR a schermo/stampati.
+
 ## Revisione accoglienza: azione prima della scansione — 2026-09-12
 
 - Requisito dell'utente: uso principale dal cellulare, QR tramite fotocamera

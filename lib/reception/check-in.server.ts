@@ -8,6 +8,7 @@ export async function executeReceptionCommand(
   session: SupabaseClient,
   service: () => SupabaseClient,
   input: unknown,
+  expectedEventId?: string,
 ): Promise<ReceptionResult> {
   try {
     const { data: { user }, error: authError } = await session.auth.getUser();
@@ -16,11 +17,13 @@ export async function executeReceptionCommand(
     if (!command) return { status: "invalid_request" };
     const { data: event, error: eventError } = await session.from("events").select("id").eq("is_current",true).maybeSingle();
     if (eventError || !event) return { status: "unavailable" };
+    if (expectedEventId !== undefined && event.id !== expectedEventId) return { status: "forbidden" };
     const { data: roles, error: rolesError } = await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if (rolesError) return { status: "unavailable" };
     if (!roles?.some(row => (row.role === "admin" && row.event_id === null) ||
       (["manager","accoglienza"].includes(row.role) && row.event_id === event.id))) return { status: "forbidden" };
-    const { data, error } = await service().rpc("reception_check_in", {
+    const { data, error } = await service().rpc("reception_event_check_in", {
+      p_duty: command.duty,
       p_event_id: event.id, p_actor_user_id: user.id,
       p_lookup_kind: command.lookup.kind,
       p_lookup: command.lookup.kind === "qr" ? hashQrToken(command.lookup.value) : command.lookup.value,

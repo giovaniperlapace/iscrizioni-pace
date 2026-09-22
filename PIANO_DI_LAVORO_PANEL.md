@@ -81,6 +81,14 @@ Stato di partenza al 2026-08-04:
   backup e piano di rollback. Restano le verifiche hardware P14-P16 e
   la revisione del modello di incarichi P12/P13 descritto sotto.
 
+Verifica iniziale P12 del 2026-09-22: fetch eseguito, panel e upstream
+allineati a `e13d95a`. `origin/main` a `9bdd098` ha 25 commit e 11 migration
+non incorporati. Cancellazione PPTX e cartella `output/` preesistenti non
+modificate. Nessun pull da applicare; il merge di main resta da effettuare
+in un’integrazione dedicata prima del rilascio, con inventario migration e
+regressioni delle aree condivise. Non mescolare o pubblicare il lavoro locale
+estraneo alla milestone. Dettagli in `docs/panel-p12-reception.md`.
+
 Sincronizzazione del 2026-09-12: incorporato `origin/main` a `0bc2997` nella
 base panel `39deb81`; esaminati tutti i 10 commit. Conflitti risolti conservando
 le evoluzioni di entrambi i branch. Dettagli, adattamento del test campagne e
@@ -665,7 +673,8 @@ allo staging il 2026-09-12 su richiesta successiva, insieme all'autorizzazione
 al commit/push panel. Cinque funzioni confrontate con il file locale,
 privilegi/PostgREST e prova SQL famiglia/scuola con rollback verificati;
 conteggi/hash dei dati preesistenti invariati su 41 tabelle. Resta la revisione
-funzionale autenticata della preview prima della chiusura e del passaggio P12.
+funzionale autenticata della preview prima della chiusura. Il 2026-09-22
+l’utente ha autorizzato P12 rinviando questa revisione al flusso completo mobile.
 Production invariata.
 Revisione funzionale del 2026-09-12: la console manuale attuale è uno strumento
 di collaudo del backend, non il flusso operativo definitivo. Recepito il
@@ -695,6 +704,28 @@ Accettazione: il backend registra la presenza reale e restituisce solo i dati
 minimi, anche prima dell'integrazione con la fotocamera.
 
 ### Milestone P12 - scanner e dashboard accoglienza
+
+Stato al 2026-09-22: implementata localmente sul branch panel, con incarico
+`event_entry`, scanner mobile, fallback manuale, ingresso automatico del
+singolo, selezione famiglie/quantità scuole, correzioni separate e retry della
+stessa richiesta. Migration evento applicata e registrata soltanto allo staging
+il 2026-09-22, su successiva richiesta di preparazione preview. Corpo funzione,
+privilegi/PostgREST, prova SQL con rollback e dati invariati su 42 tabelle verificati. Superati 345 test, lint/typecheck, build staging, SQL/RLS e
+concorrenza su PostgreSQL temporaneo, browser desktop/mobile sintetico e
+decoder su QR reale generato. Pubblicazione del branch panel autorizzata dalla
+richiesta di preparazione preview; nessun rilascio production. Procedura:
+`docs/panel-p12-reception.md`.
+
+Su richiesta esplicita del 2026-09-22 si procede a P12 rinviando la revisione
+funzionale P11 al flusso completo sul cellulare. P11 non è dichiarata chiusa.
+Le prove locali non sostituiscono il collaudo autenticato su Preview e almeno
+due dispositivi reali; anche P12 resta da accettare sul campo.
+
+Decisione di implementazione: l’attuale ruolo `accoglienza` autorizza l’evento;
+nessuna migrazione automatica in incarichi panel. Il contratto e la nuova RPC
+rifiutano duty panel/sala. In P13 gli incarichi panel/sala vanno modellati come
+assegnazioni separate, senza concedere il ruolo di ingresso evento. In P12
+esiste un solo incarico autorizzato e viene impostato automaticamente.
 
 Scopo: completare il flusso operativo di ingresso evento, principalmente
 dal cellulare, con azione e incarico stabiliti prima della scansione.
