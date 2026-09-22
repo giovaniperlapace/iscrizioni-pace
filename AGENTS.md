@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Modale personale e annullamento autonomo — 2026-09-22
+
+- Scheda personale con icone Lucide, sezioni espandibili, dialog nativo accessibile
+  e conferma separata nelle sette lingue. Esc nella conferma non chiude la scheda;
+  focus iniziale su Mantieni iscrizione, errori conservati, invii duplicati bloccati.
+- `cancelOwnRegistration` ricava l’attore da Auth. Nuova RPC solo service_role
+  `cancel_own_registration`: lock e verifica proprietario/evento corrente anche per
+  account operativi; disponibile oltre la chiusura modifiche, reinvio idempotente.
+  Soft delete e revoca QR, audit atomico, conservazione storico/figli/account/ruoli,
+  scollegamento identità senza altre iscrizioni vive per consentire riuso email.
+  Annulla solo destinatari in coda della propria iscrizione, preservando deleghe
+  altrui; RPC operativa e RLS invariate.
+- Migration `20260922210000` applicata e registrata atomicamente in produzione
+  il 22 settembre prima del push autorizzato. Impronte delle 15 tabelle operative,
+  RLS e RPC operativa invariate; nuova RPC verificata solo service_role. Backup
+  schema riservato in `/root/pace-release-20260922-self-cancellation/`.
+  Test azione, PostgreSQL temporaneo e browser sintetico sette lingue/mobile;
+  447 test, lint, typecheck e build superati; procedure in
+  `docs/self-registration-cancellation.md`. Pubblicazione autorizzata tramite
+  commit/push su main e Vercel; nessuna modifica a persone reali o email di collaudo.
+
 ## Rilascio integrato delle tre attività — 2026-09-22
 
 - Verificata la compatibilità di gestione/eliminazione gruppi e figli sempre

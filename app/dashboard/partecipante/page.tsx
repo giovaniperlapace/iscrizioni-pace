@@ -1,3 +1,7 @@
+import { Accessibility, Baby, CalendarDays, ContactRound, Phone, Save, UserRound } from "lucide-react";
+import { EditableRegistrationInfo } from "./editable-registration-info";
+import { CancelRegistrationButton } from "./cancel-registration-button";
+import { SELF_CANCELLATION_COPY } from "@/lib/registrations/self-cancellation-copy";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { participantQrFilename } from "@/lib/qrcode/filename";
@@ -1167,6 +1171,11 @@ export default async function PartecipanteDashboardPage({
               />
             </div>
           </div>
+          {params.cancelled === "1" ? (
+            <SuccessMessage clearQuery locale={locale} className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+              {SELF_CANCELLATION_COPY[locale].success}
+            </SuccessMessage>
+          ) : null}
           {params.saved ? (
             <SuccessMessage key={randomUUID()} clearQuery locale={locale} className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
               {copy.saved}
@@ -1253,9 +1262,10 @@ export default async function PartecipanteDashboardPage({
               <ParticipantDashboardOverlay
                 closeHref="/dashboard/partecipante"
                 closeLabel={copy.close}
+                title={activeOverlay === "iscrizione" ? copy.registrationSummary : activeOverlay === "qr" ? copy.qrTitle : messageCopy.title}
               >
                 {activeOverlay === "qr" ? (
-                  <section className="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center">
+                  <section className="grid gap-4 pr-8 md:grid-cols-[14rem_1fr] md:items-center">
                     <QrPreview
                       participantCode={participant.public_code ?? ""}
                       qrDataUrl={qrDataUrl}
@@ -1292,20 +1302,24 @@ export default async function PartecipanteDashboardPage({
                 {activeOverlay === "iscrizione" ? (
                   <section className="grid gap-6">
                     <section className="flex flex-col gap-4">
-                      <div className="border-b border-[var(--peace-border)] pb-2">
-                        <h2 className="text-xl font-semibold">
-                          {copy.registrationSummary}
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
-                          {copy.registrationSummaryBody(
-                            event.title,
-                            formatDateRange(event.starts_on, event.ends_on, locale, copy)
-                          )}
-                        </p>
+                      <div className="flex items-start gap-4 border-b border-[var(--peace-border)] pb-5 pr-8">
+                        <span className="hidden size-12 shrink-0 place-items-center rounded-xl bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)] sm:grid"><ContactRound size={24} aria-hidden="true" /></span>
+                        <div>
+                          <h2 className="text-xl font-semibold">
+                            {copy.registrationSummary}
+                          </h2>
+                          <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
+                            {copy.registrationSummaryBody(
+                              event.title,
+                              formatDateRange(event.starts_on, event.ends_on, locale, copy)
+                            )}
+                          </p>
+                        </div>
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <EditableInfo
+                        <EditableRegistrationInfo
+                          icon={UserRound}
                           label={`${childrenCopy.firstName} / ${childrenCopy.lastName}`}
                           value={`${participant.first_name} ${participant.last_name}`.trim()}
                           editable={Boolean(editable)}
@@ -1351,7 +1365,7 @@ export default async function PartecipanteDashboardPage({
                             </div>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                           </ReliableForm>
-                        </EditableInfo>
+                        </EditableRegistrationInfo>
                         <Info
                           label={copy.submittedAt}
                           value={formatDateTime(selectedRegistration.submitted_at, locale, copy)}
@@ -1364,7 +1378,8 @@ export default async function PartecipanteDashboardPage({
                             copy.notProvided
                           }
                         />
-                        <EditableInfo
+                        <EditableRegistrationInfo
+                          icon={Phone}
                           label={copy.phone}
                           value={primaryContact?.phone ?? copy.notProvided}
                           editable={Boolean(editable)}
@@ -1393,7 +1408,7 @@ export default async function PartecipanteDashboardPage({
                             </Field>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                           </ReliableForm>
-                        </EditableInfo>
+                        </EditableRegistrationInfo>
                         <Info
                           label={copy.birthDate}
                           value={formatDate(participant.birth_date, locale, copy)}
@@ -1408,7 +1423,8 @@ export default async function PartecipanteDashboardPage({
                         />
                       </div>
 
-                      <EditableInfo
+                      <EditableRegistrationInfo
+                        icon={Baby}
                         label={childrenCopy.section}
                         value={childrenSummary}
                         editable={Boolean(editable)}
@@ -1443,9 +1459,10 @@ export default async function PartecipanteDashboardPage({
                             save: copy.save,
                           }}
                         />
-                      </EditableInfo>
+                      </EditableRegistrationInfo>
 
-                      <EditableInfo
+                      <EditableRegistrationInfo
+                        icon={CalendarDays}
                         label={copy.expectedPresence}
                         value={attendanceSummary}
                         editable={Boolean(editable)}
@@ -1483,9 +1500,10 @@ export default async function PartecipanteDashboardPage({
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                         </ReliableForm>
-                      </EditableInfo>
+                      </EditableRegistrationInfo>
 
-                      <EditableInfo
+                      <EditableRegistrationInfo
+                        icon={Accessibility}
                         label={copy.accessibilitySupport}
                         value={supportSummary}
                         editable={Boolean(editable)}
@@ -1559,7 +1577,11 @@ export default async function PartecipanteDashboardPage({
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                         </ReliableForm>
-                      </EditableInfo>
+                      </EditableRegistrationInfo>
+
+                      <div className="flex justify-start border-t border-[var(--peace-border)] pt-5">
+                        <CancelRegistrationButton registrationId={selectedRegistration.id} locale={locale} />
+                      </div>
 
                       {!editable ? (
                         <p className="text-sm text-[#6f7f91]">
@@ -1572,7 +1594,7 @@ export default async function PartecipanteDashboardPage({
 
                 {activeOverlay === "messaggio" ? (
                   <section className="grid gap-5">
-                    <div className="border-b border-[var(--peace-border)] pb-4">
+                    <div className="border-b border-[var(--peace-border)] pb-4 pr-8">
                       <h2 className="text-xl font-semibold">
                         {messageCopy.title}
                       </h2>
@@ -1641,41 +1663,6 @@ function QrPreview({
         <span className="font-mono">{participantCode || "QR"}</span>
       </p>
     </div>
-  );
-}
-
-function EditableInfo({
-  label,
-  value,
-  editable,
-  copy,
-  children,
-}: {
-  label: string;
-  value: string;
-  editable: boolean;
-  copy: ParticipantDashboardCopy;
-  children: React.ReactNode;
-}) {
-  return (
-    <details className="group rounded-md border border-[var(--peace-border)] p-4 sm:col-span-2">
-      <summary className="grid cursor-pointer list-none gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-            {label}
-          </p>
-          <p className="mt-1 text-sm leading-6">{value}</p>
-        </div>
-        <span
-          className="grid size-8 place-items-center rounded-full border border-[var(--peace-border-strong)] text-lg text-[var(--peace-blue-800)] group-open:bg-[var(--peace-sky-100)]"
-          aria-hidden="true"
-          title={editable ? copy.edit : copy.editUnavailable}
-        >
-          &#9998;
-        </span>
-      </summary>
-      <div className="mt-4 border-t border-[var(--peace-border)] pt-4">{children}</div>
-    </details>
   );
 }
 
@@ -1821,9 +1808,9 @@ function SaveInlineButton({
   return (
     <PendingSubmitButton
       disabled={!editable}
-      className="w-fit rounded-md bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--peace-blue-900)] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
+      className="btn-primary inline-flex min-h-11 w-fit items-center gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {copy.save}
+      <Save size={16} aria-hidden="true" />{copy.save}
     </PendingSubmitButton>
   );
 }

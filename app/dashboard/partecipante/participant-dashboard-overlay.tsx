@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "@/components/pending-link";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -27,13 +28,26 @@ export function useParticipantDashboardOverlay() {
 export function ParticipantDashboardOverlay({
   closeHref,
   closeLabel,
+  title,
   children,
 }: {
   closeHref: string;
   closeLabel: string;
+  title: string;
   children: ReactNode;
 }) {
   const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog?.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
   const [closing, setClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,27 +84,23 @@ export function ParticipantDashboardOverlay({
 
   return (
     <OverlayContext.Provider value={contextValue}>
-      <div
-        className={`dashboard-modal participant-dashboard-overlay fixed inset-0 z-50 grid place-items-center modal-backdrop px-4 py-5 backdrop-blur-sm sm:px-6${
-          closing ? " dashboard-modal-closing" : ""
-        }`}
+      <dialog
+        ref={dialogRef}
+        aria-label={title}
+        onCancel={event => { event.preventDefault(); router.replace(closeHref, { scroll: false }); }}
+        className={`participant-dashboard-overlay fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-4xl overflow-y-auto rounded-2xl border border-[var(--peace-border)] bg-white p-5 text-[var(--peace-ink)] shadow-2xl backdrop:bg-slate-950/45 backdrop:backdrop-blur-sm sm:p-7${closing ? " dashboard-modal-closing" : ""}`}
       >
-        <section
-          role="dialog"
-          aria-modal="true"
-          className="relative mx-auto grid max-h-[calc(100vh-2.5rem)] w-full max-w-4xl gap-5 overflow-y-auto rounded-lg border border-[var(--peace-border)] bg-white p-5 shadow-2xl sm:p-6"
+        <button
+          type="button"
+          onClick={() => router.replace(closeHref, { scroll: false })}
+          aria-label={closeLabel}
+          title={closeLabel}
+          className="absolute right-3 top-3 z-10 grid size-11 place-items-center rounded-full text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)] focus-visible:outline-2"
         >
-          <Link
-            href={closeHref}
-            aria-label={closeLabel}
-            title={closeLabel}
-            className="absolute right-3 top-3 grid size-9 place-items-center rounded-full border border-[var(--peace-border-strong)] text-xl font-semibold text-[var(--peace-ink)] hover:bg-[var(--peace-sky-100)]"
-          >
-            ×
-          </Link>
-          <div className="pr-9">{children}</div>
-        </section>
-      </div>
+          <X size={20} aria-hidden="true" />
+        </button>
+        {children}
+      </dialog>
     </OverlayContext.Provider>
   );
 }
