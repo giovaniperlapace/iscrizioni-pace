@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Dashboard per tutti i ruoli assegnati — 2026-09-23
+
+- I ruoli operativi si sommano: Manager/Manager Viewer non nascondono né
+  impediscono le dashboard Capogruppo e Accoglienza se assegnate allo stesso
+  account. Tab e autorizzazione condivisa da sessione/proxy seguono la stessa
+  regola; area personale sempre disponibile, deleghe Admin invariate.
+- Anche una membership capogruppo secondaria abilita la dashboard del gruppo.
+  Verifica produzione READ ONLY del caso segnalato: entrambi gli incarichi
+  presenti sullo stesso account e Fiumicino attivo nell'evento corrente.
+  Il blocco era nella precedenza esclusiva dei ruoli, non nei dati.
+- Viewer conserva Statistiche e Gestione iscritti in sola lettura; i permessi
+  capogruppo valgono solo nella propria gerarchia. Nessuna modifica a ruoli,
+  membership, dati, RLS o migration. Test di tutte le combinazioni dei ruoli,
+  sette lingue, sessione e proxy con capogruppo secondario.
+- Correzione del rilascio di produzione: 498 test, lint, TypeScript e build
+  con npm ci in copia pulita; browser sintetico sette lingue/desktop/mobile
+  superato. Pubblicazione tramite main/Vercel nel rilascio già autorizzato.
+
 ## Manager Viewer e iscrizione personale — 2026-09-23
 
 - Manager Viewer vede solo Statistiche e Gestione iscritti nella dashboard
@@ -1791,7 +1809,8 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
 - Dal 2026-09-23 `manager` e `manager_viewer` possono passare tra dashboard
   manager e Iscrizione e QR personale con lo stesso account. La precedente
   esclusione dell'area personale del 23 luglio è superata. Le altre dashboard
-  restano escluse per questi ruoli; Admin conserva tutte le aree delegate.
+  sono disponibili quando corrispondono a un ulteriore ruolo assegnato;
+  Admin conserva tutte le aree delegate.
   Manager Viewer ha soltanto Statistiche e Gestione iscritti nel menu operativo.
 - Dal 2026-07-26 la sessione autenticata viene ripristinata anche entrando da
   home o login: l'utente viene riportato all'ultima dashboard e, per

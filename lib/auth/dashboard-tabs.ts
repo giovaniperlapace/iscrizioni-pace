@@ -36,16 +36,10 @@ export function getDashboardRoleTabs(
 ): DashboardRoleTab[] {
   const available = new Set<DashboardTabRole>(["partecipante"]);
   const hasAdmin = eventRoles.some((role) => role.role === "admin");
-  const hasManagerDashboard = eventRoles.some(
-    (role) => role.role === "manager" || role.role === "manager_viewer"
-  );
-
   if (hasAdmin) {
     for (const role of ROLE_TAB_ORDER) {
       available.add(role);
     }
-  } else if (hasManagerDashboard) {
-    available.add("manager");
   } else {
     for (const eventRole of eventRoles) {
       available.add(normalizeDashboardTabRole(eventRole.role));

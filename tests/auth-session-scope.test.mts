@@ -16,14 +16,17 @@ function loadModule<T>(path: string, dependencies: Record<string, unknown>) {
   return exports as T;
 }
 
-function database(ownRole: string | null) {
+function database(ownRole: string | null, secondaryLeader = false) {
   const rows = {
     event_user_roles: [
       ...Array.from({ length: 1000 }, (_, i) => ({ user_id: `other-${i}`, role: "manager", event_id: "event" })),
       { user_id: "another-admin", role: "admin", event_id: null },
       ...(ownRole ? [{ user_id: "current", role: ownRole, event_id: ownRole === "admin" ? null : "event" }] : []),
     ],
-    group_memberships: [{ user_id: "other-leader", role: "capogruppo", groups: { event_id: "event" } }],
+    group_memberships: [
+      { user_id: "other-leader", role: "capogruppo", groups: { event_id: "event" } },
+      ...(secondaryLeader ? [{ user_id: "current", role: "capogruppo", is_primary: false, groups: { event_id: "event" } }] : []),
+    ],
   };
   return {
     auth: { getUser: async () => ({ data: { user: { id: "current" } }, error: null }) },
@@ -38,7 +41,7 @@ function database(ownRole: string | null) {
   };
 }
 
-const session = loadModule<{ getCurrentAuthContext: (db: ReturnType<typeof database>) => Promise<{ eventRoles: unknown[]; dashboardPath: string }> }>("../lib/auth/session.ts", { "./roles": roles });
+const session = loadModule<{ getCurrentAuthContext: (db: ReturnType<typeof database>, requestedRole?: string) => Promise<{ eventRoles: unknown[]; dashboardPath: string }> }>("../lib/auth/session.ts", { "./roles": roles });
 for (const ownRole of ["admin", "manager", null]) {
   test(`session resolves only the authenticated account's roles: ${ownRole}`, async () => {
     const result = await session.getCurrentAuthContext(database(ownRole));
@@ -86,6 +89,42 @@ for (const ownRole of ["admin", "manager"]) {
     try {
       const url = `https://example.test${endpoint}`;
       assert.equal((await proxy.proxy({ method: "POST", url, nextUrl: new URL(url), cookies: { getAll: () => [], get: () => undefined } })).url, undefined);
+    } finally {
+      for (const [i, key] of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"].entries()) {
+        if (previous[i] === undefined) delete process.env[key]; else process.env[key] = previous[i];
+      }
+    }
+  });
+}
+
+
+for (const managerRole of ["manager", "manager_viewer"]) {
+  test(`${managerRole} with a secondary leader assignment can select the leader dashboard`, async () => {
+    const result = await session.getCurrentAuthContext(database(managerRole, true), "capogruppo");
+    assert.deepEqual(result.eventRoles, [
+      { role: managerRole, eventId: "event" }, { role: "capogruppo", eventId: "event" },
+    ]);
+    assert.equal(result.dashboardPath, "/dashboard/capogruppo");
+  });
+
+  test(`proxy allows ${managerRole} into the leader dashboard only with its own membership`, async () => {
+    const previous = [process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY];
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.test";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test";
+    try {
+      for (const assigned of [false, true]) {
+        const response = (url?: URL) => ({ url: url?.pathname, cookies: { getAll: () => [], set() {} } });
+        const proxy = loadModule<{ proxy: (request: unknown) => Promise<{ url?: string }> }>("../proxy.ts", {
+          "@supabase/ssr": { createServerClient: () => database(managerRole, assigned) },
+          "next/server": { NextResponse: { next: () => response(), redirect: (url: URL) => response(url) } },
+          "@/lib/auth/roles": roles, "@/lib/auth/session-persistence": persistence,
+        });
+        for (const path of ["/dashboard/capogruppo", "/dashboard/capogruppo/export"]) {
+          const url = `https://example.test${path}`;
+          const result = await proxy.proxy({ url, nextUrl: new URL(url), cookies: { getAll: () => [], get: () => undefined } });
+          assert.equal(result.url, assigned ? undefined : "/dashboard/manager");
+        }
+      }
     } finally {
       for (const [i, key] of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"].entries()) {
         if (previous[i] === undefined) delete process.env[key]; else process.env[key] = previous[i];

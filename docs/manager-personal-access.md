@@ -15,6 +15,15 @@ tornare alla dashboard manager. La stessa autorizzazione condivisa è usata dal
 proxy e dalla scelta del ruolo di sessione. La vecchia esclusione dell'area
 personale è rimossa; non occorre un secondo indirizzo email.
 
+I ruoli si sommano: chi è anche Capogruppo o Accoglienza vede e può aprire tutte
+le relative dashboard. Vale anche per i capigruppo secondari. Il precedente
+blocco esclusivo di Manager/Manager Viewer è rimosso sia dalle tab sia dal
+controllo condiviso di sessione e proxy. La verifica in produzione del caso
+segnalato ha confermato entrambi gli incarichi sull'account e il gruppo attivo:
+non occorre correggere alcuna assegnazione. I permessi di scrittura restano
+quelli di ciascun ruolo, con capogruppo limitato alla propria gerarchia e
+Manager Viewer in sola lettura nella dashboard manager.
+
 Un'iscrizione esistente collegata all'account mostra dati personali e QR. In
 assenza di iscrizione, **Avvia la mia iscrizione** apre il modulo con l'email
 della sessione. Il salvataggio esistente associa il nuovo partecipante all'ID
@@ -38,6 +47,16 @@ eseguite scritture sui dati reali né inviati messaggi.
 
 ## Verifica e rilascio
 
+- Correzione ruoli multipli: otto regressioni riproducevano il blocco prima
+  della modifica. `auth-roles.test.mts` verifica tutte le combinazioni dei
+  ruoli e le tab nelle sette lingue; `auth-session-scope.test.mts` esegue
+  sessione e proxy reali con assegnazione capogruppo secondaria sintetica,
+  consentendo l'accesso soltanto quando il ruolo è assegnato all'account.
+- `tests/browser/multi-role-navigation.mjs` verifica tab reali e controllo
+  dei ruoli con identità sintetiche, navigazione tra tutte le dashboard
+  assegnate, sette lingue e desktop/mobile. Nessun dato reale modificato.
+  Correzione verificata con npm ci: 498 test, lint, TypeScript, build e browser
+  superati; rilascio correttivo tramite main/Vercel.
 - Regressioni sui ruoli e sulle tab nelle sette lingue, sul confine server delle
   sezioni e sui menu effettivamente renderizzati, compresi URL impliciti/legacy
   e account con ruoli su eventi diversi.
