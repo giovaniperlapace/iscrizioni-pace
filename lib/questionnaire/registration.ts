@@ -354,7 +354,7 @@ export const NATIONALITY_OPTIONS = [
   "Zimbabwean (Zimbabwe)",
 ] as const;
 
-export const EUROPEAN_CITY_OPTIONS: Record<string, readonly string[]> = {
+export const RESIDENCE_CITY_OPTIONS: Record<string, readonly string[]> = {
   Albania: ["Tirana", "Durazzo", "Valona", "Scutari", "Elbasan", "Korça"],
   Andorra: ["Andorra la Vella", "Escaldes-Engordany", "Encamp", "La Massana"],
   Armenia: ["Yerevan", "Gyumri", "Vanadzor", "Vagharshapat", "Hrazdan"],
@@ -452,6 +452,18 @@ export const EUROPEAN_CITY_OPTIONS: Record<string, readonly string[]> = {
   Ucraina: ["Kyiv", "Kharkiv", "Odessa", "Dnipro", "Leopoli", "Zaporizhzhia"],
   Ungheria: ["Budapest", "Debrecen", "Szeged", "Miskolc", "Pecs", "Gyor"],
   Vaticano: ["Città del Vaticano"],
+  Cuba: ["L'Avana", "Santiago de Cuba", "Camagüey", "Holguín", "Santa Clara", "Guantánamo", "Bayamo", "Cienfuegos", "Pinar del Río", "Matanzas"],
+  Guatemala: ["Città del Guatemala", "Quetzaltenango", "Escuintla", "Mixco", "Villa Nueva", "Antigua Guatemala", "Cobán", "Huehuetenango", "Puerto Barrios", "Chiquimula"],
+  Colombia: ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Cúcuta", "Pereira", "Santa Marta", "Ibagué", "Manizales", "Pasto"],
+  Nicaragua: ["Managua", "León", "Masaya", "Matagalpa", "Chinandega", "Granada", "Estelí", "Jinotega", "Bluefields", "Rivas"],
+  Messico: ["Città del Messico", "Guadalajara", "Monterrey", "Puebla", "Tijuana", "León", "Ciudad Juárez", "Mérida", "Querétaro", "San Luis Potosí", "Cancún", "Toluca"],
+  "Costa d’Avorio": ["Abidjan", "Yamoussoukro", "Bouaké", "Daloa", "San-Pédro", "Korhogo", "Man", "Gagnoa", "Abengourou", "Divo"],
+  Nigeria: ["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt", "Benin City", "Kaduna", "Enugu", "Jos", "Ilorin", "Onitsha", "Maiduguri"],
+  Senegal: ["Dakar", "Touba", "Thiès", "Saint-Louis", "Kaolack", "Ziguinchor", "Rufisque", "Mbour", "Diourbel", "Tambacounda"],
+  Mozambico: ["Maputo", "Matola", "Nampula", "Beira", "Chimoio", "Nacala", "Quelimane", "Tete", "Pemba", "Xai-Xai", "Lichinga", "Inhambane"],
+  "Repubblica Democratica del Congo": ["Kinshasa", "Lubumbashi", "Mbuji-Mayi", "Kisangani", "Kananga", "Goma", "Bukavu", "Kolwezi", "Likasi", "Matadi", "Bunia", "Uvira"],
+  Malawi: ["Lilongwe", "Blantyre", "Mzuzu", "Zomba", "Kasungu", "Mangochi", "Salima", "Karonga"],
+  Uganda: ["Kampala", "Entebbe", "Gulu", "Lira", "Mbarara", "Jinja", "Mbale", "Arua", "Fort Portal", "Masaka", "Soroti", "Hoima"],
 };
 
 export const ACCESSIBILITY_DIFFICULTIES = [

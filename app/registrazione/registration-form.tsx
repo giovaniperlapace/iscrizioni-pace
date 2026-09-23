@@ -20,7 +20,7 @@ import {
 } from "@/lib/groups/matching";
 import {
   ACCESSIBILITY_DIFFICULTIES,
-  EUROPEAN_CITY_OPTIONS,
+  RESIDENCE_CITY_OPTIONS,
   RESIDENCE_COUNTRIES,
   NATIONALITY_OPTIONS,
   PLACEHOLDER_GROUPS,
@@ -723,7 +723,7 @@ export function RegistrationForm({
     selectedCountry === OTHER_COUNTRY ? customCountry : selectedCountry;
   const cityOptions =
     selectedCountry && selectedCountry !== OTHER_COUNTRY
-      ? EUROPEAN_CITY_OPTIONS[selectedCountry] ?? []
+      ? RESIDENCE_CITY_OPTIONS[selectedCountry] ?? []
       : [];
   const filteredCities = cityOptions.filter((city) =>
     normalizeSearchText(city).includes(normalizeSearchText(citySearch))
