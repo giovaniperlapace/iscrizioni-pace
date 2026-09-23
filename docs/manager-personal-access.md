@@ -54,5 +54,6 @@ eseguite scritture sui dati reali né inviati messaggi.
   completato per entrambi i ruoli, sette lingue, desktop/mobile, senza errori.
 
 Non serve una migration: RLS, dati e meccanismo di collegamento esistente non
-cambiano. L'utente ha autorizzato il commit locale senza pubblicazione.
-Non eseguire push su main: avvierebbe automaticamente il deployment Vercel.
+cambiano. Dopo il commit locale `2f44258`, l'utente ha autorizzato la
+pubblicazione in produzione tramite push su main e deployment automatico
+Vercel. La precedente richiesta di non pubblicare è superata.

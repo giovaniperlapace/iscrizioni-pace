@@ -14,11 +14,11 @@
   l'email coincide. Non creare iscrizioni vuote né inventare presenze/consensi.
 - Verifica produzione in sola lettura: 10 account dell'evento, 6 già collegati,
   4 senza iscrizione, nessuna associazione pendente o ambigua alla stessa email.
-  Nessuna modifica dati/RLS, migration o email. Codice locale, non pubblicato.
+  Nessuna modifica dati/RLS, migration o email.
   Verificati 493 test, lint, TypeScript e build con npm ci in copia pulita,
   browser sintetico sette lingue/desktop/mobile per entrambi i ruoli.
-  L'utente ha autorizzato il solo commit locale, senza pubblicazione: non fare
-  push su main, che avvierebbe automaticamente il deployment Vercel.
+  Pubblicazione in produzione autorizzata dall'utente tramite push su main
+  e deployment Vercel; superata la precedente richiesta di solo commit locale.
   Dettagli e collaudo in `docs/manager-personal-access.md`.
 
 ## Territorio modificabile da Manager/Admin — 2026-09-23
