@@ -114,7 +114,11 @@ export function findMatchingGroupCandidates(
         }
       }
 
-      if (group.communityKind !== communityKind) {
+      // Public, assignable territorial cities are explicit signup choices too.
+      // Keep the community filter unchanged for internal matching and newcomers.
+      const publicTerritorialCity = options.publicOnly && communityKind === "santegidio" &&
+        group.nodeType === "city" && group.communityKind === "territorial";
+      if (group.communityKind !== communityKind && !publicTerritorialCity) {
         return false;
       }
 

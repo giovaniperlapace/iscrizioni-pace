@@ -206,6 +206,7 @@ test("public suggestions include public assignable cities and exclude unavailabl
   const cityNode = group({
     id: "roma-city",
     name: "Roma",
+    communityKind: "territorial",
     countryId: ITALY,
     cityId: ROME,
     nodeType: "city",
@@ -244,7 +245,7 @@ test("public suggestions include public assignable cities and exclude unavailabl
     "santegidio"
   );
 
-  assert.equal(internalFallback?.id, "roma-city");
+  assert.equal(internalFallback, null);
 });
 
 test("participants without a selected group remain without a group", () => {

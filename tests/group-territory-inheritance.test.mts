@@ -75,7 +75,10 @@ function database(fail = false, cityChoices = false) {
     community_kind: i === 1000 ? "territorial" : "santegidio", age_brackets: [],
   }));
   if (cityChoices) {
-    for (let i = 0; i < 4; i++) rows[i].node_type = "city";
+    for (let i = 0; i < 4; i++) {
+      rows[i].node_type = "city";
+      rows[i].community_kind = "territorial";
+    }
     rows[1].is_public_catalog = false;
     rows[2].is_assignable = false;
     rows[3].is_public_catalog = false;
@@ -116,4 +119,23 @@ test("public loader exposes cities only when both public and assignable", async 
   const matches = findMatchingGroupCandidates(options.groups, criteria, { publicOnly: true });
   assert.ok(matches.some(g => g.id === "0"));
   for (const id of ["1", "2", "3"]) assert.ok(!matches.some(g => g.id === id));
+});
+
+
+test("Assisi territorial city inherits Italy and is suggested with a 2025 birth date", () => {
+  const italy = group("italy", { countryId: "IT", nodeType: "country", communityKind: "territorial", isPublicCatalog: false, isAssignable: false });
+  const assisi = group("assisi", { name: "Assisi", parentGroupId: "italy", nodeType: "city", communityKind: "territorial" });
+  const rows = inheritGroupTerritories([italy, assisi,
+    group("diocese", { name: "Diocesi di Assisi", parentGroupId: "assisi" }),
+    { ...assisi, id: "hidden", isPublicCatalog: false },
+    { ...assisi, id: "unassignable", isAssignable: false },
+    { ...assisi, id: "other-country", parentGroupId: null, countryId: "FR" },
+    { ...assisi, id: "other-city", cityId: "rome" },
+    { ...assisi, id: "adults-only", ageBands: ["adulti"] as GroupMatchCandidate["ageBands"] },
+    { ...assisi, id: "territorial-area", nodeType: "area" },
+  ]);
+  const matchCriteria = { countryId: "IT", cityId: "assisi-city", birthDate: "2025-06-15", eventStartsOn: "2026-10-25" };
+  assert.deepEqual(findMatchingGroupCandidates(rows, matchCriteria, { publicOnly: true }).map(g => g.id), ["diocese", "assisi"]);
+  assert.ok(!findMatchingGroupCandidates(rows, matchCriteria).some(g => g.id === "assisi"), "internal community matching unchanged");
+  assert.deepEqual(findMatchingGroupCandidates(rows, matchCriteria, { publicOnly: true, communityKind: "newcomers" }), []);
 });

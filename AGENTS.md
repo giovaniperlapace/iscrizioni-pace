@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Assisi: città territoriale nei suggerimenti pubblici — 2026-09-23
+
+- Il filtro `nodeType=city` non bastava: Assisi ha `communityKind=territorial`.
+  Il matching pubblico ora ammette anche le città territoriali pubbliche e
+  iscrivibili nel normale selettore; filtri età/geografici e matching interno
+  per tipologia invariati. Nessuna modifica al database o ai flag dei gruppi.
+- Diagnosi READ ONLY: Assisi è attiva/pubblica/iscrivibile senza fasce età,
+  eredita Italia dal padre; country_id/city_id propri vuoti. Non dedurre la
+  città dal nome. Test aggiornati con la tipologia reale, prima fallivano in
+  tre casi; fixture Assisi con nascita 2025, esclusioni e matching interno.
+- 463 test, lint, TypeScript e build superati. Browser sul modulo con catalogo
+  reale: Italia → Assisi, 15/06/2025; visibili e distinguibili Assisi e Diocesi
+  di Assisi, selezione del corretto ID verificata senza inviare iscrizioni.
+
 ## Avviso età sotto un anno senza conferma — 2026-09-23
 
 - Per richiesta dell’utente, l’avviso sotto un anno è solo informativo:
