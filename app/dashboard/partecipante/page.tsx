@@ -1147,29 +1147,24 @@ export default async function PartecipanteDashboardPage({
     <main className="app-page text-[var(--peace-ink)]">
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
-            {copy.area}
-          </p>
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
-            <div>
-              <h1 className="text-3xl font-semibold sm:text-4xl">
-                {participant
-                  ? `${participant.first_name} ${participant.last_name}`
-                  : copy.fallbackTitle}
-              </h1>
-              {!event ? (
-                <p className="mt-3 max-w-3xl text-[var(--peace-muted)]">
-                  {copy.verifiedAccess(auth.user.email ?? "")}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="lg:flex lg:justify-end">
-              <DashboardRoleTabs
-                activeRole="partecipante"
-                eventRoles={auth.eventRoles}
-              />
-            </div>
+          <DashboardRoleTabs
+            activeRole="partecipante"
+            eventRoles={auth.eventRoles}
+          />
+          <div className="grid gap-2">
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
+              {copy.area}
+            </p>
+            <h1 className="text-3xl font-semibold sm:text-4xl">
+              {participant
+                ? `${participant.first_name} ${participant.last_name}`
+                : copy.fallbackTitle}
+            </h1>
+            {!event ? (
+              <p className="mt-1 max-w-3xl text-[var(--peace-muted)]">
+                {copy.verifiedAccess(auth.user.email ?? "")}
+              </p>
+            ) : null}
           </div>
           {params.cancelled === "1" ? (
             <SuccessMessage clearQuery locale={locale} className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
