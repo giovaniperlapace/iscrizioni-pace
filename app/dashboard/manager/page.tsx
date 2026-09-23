@@ -1,3 +1,4 @@
+import { loadGroupGeographyCatalog } from "@/lib/groups/geography.server";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
 import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
@@ -214,6 +215,9 @@ type ManagerGroupTreeRow = {
   eventId: string;
   eventTitle: string;
   name: string;
+  countryId: string | null;
+  cityId: string | null;
+  updatedAt: string;
   parentGroupId: string | null;
   parentName: string | null;
   nodeType: string | null;
@@ -977,7 +981,7 @@ async function getManagerOperationsSnapshot(
   const groupTreeQuery = () => loadAllRows((from, to) => supabase
     .from("groups")
     .select(
-      "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
+      "id,event_id,name,public_label,country_id,city_id,updated_at,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
     )
     .eq("event_id", currentEventId)
     .eq("is_active", true)
@@ -1089,6 +1093,9 @@ async function getManagerOperationsSnapshot(
     id: string;
     event_id: string;
     name: string | null;
+    country_id: string | null;
+    city_id: string | null;
+    updated_at: string;
     parent_group_id: string | null;
     node_type: string | null;
     community_kind: string | null;
@@ -1188,6 +1195,9 @@ async function getManagerOperationsSnapshot(
       eventId: group.event_id,
       eventTitle: relatedOne(group.events)?.title ?? "Evento",
       name: group.name ?? "Gruppo senza nome",
+      countryId: group.country_id,
+      cityId: group.city_id,
+      updatedAt: group.updated_at,
       parentGroupId: group.parent_group_id,
       parentName: group.parent_group_id
         ? groupNameById.get(group.parent_group_id) ?? null
@@ -1560,7 +1570,7 @@ async function ManagerGroupTreeSection({
   );
 }
 
-function ManagerGroupEditOverlay({
+async function ManagerGroupEditOverlay({
   group,
   groups,
   eventOptions,
@@ -1573,6 +1583,7 @@ function ManagerGroupEditOverlay({
   leaders: OperationalUserRoleRow[];
   navMode: ManagerNavMode;
 }) {
+  const [geography, locale] = await Promise.all([loadGroupGeographyCatalog(createSupabaseServiceClient()), getRequestLocale()]);
   const selectedEventId = group?.eventId ?? eventOptions[0]?.id ?? "";
 
   return (
@@ -1591,6 +1602,8 @@ function ManagerGroupEditOverlay({
               group={group}
               groups={groups}
               eventId={selectedEventId}
+              geography={geography}
+              locale={locale}
             />
             <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] sm:col-span-2">
               Nome gruppo

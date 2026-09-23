@@ -9,6 +9,7 @@ export type SearchableSelectOption = {
 };
 
 type SearchableSelectFieldProps = {
+  onValueChange?: (value: string) => void;
   emptyMessage?: string;
   label: string;
   name: string;
@@ -21,6 +22,7 @@ type SearchableSelectFieldProps = {
 const MAX_RESULTS = 8;
 
 export function SearchableSelectField({
+  onValueChange,
   emptyMessage = "Nessuna opzione trovata.",
   label,
   name,
@@ -55,6 +57,7 @@ export function SearchableSelectField({
 
   function selectOption(option: SearchableSelectOption) {
     setSelectedValue(option.value);
+    onValueChange?.(option.value);
     setQuery(option.label);
     setShowOptions(false);
   }
@@ -76,6 +79,7 @@ export function SearchableSelectField({
             onChange={(event) => {
               setQuery(event.target.value);
               setSelectedValue("");
+              onValueChange?.("");
               setShowOptions(true);
             }}
             onFocus={() => setShowOptions(true)}

@@ -1,5 +1,7 @@
 "use server";
 
+import { parseGroupGeography } from "@/lib/groups/geography";
+
 import { emailParticipantIds, reusableIdentityParticipantIds } from "@/lib/registrations/email-identity";
 
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -2103,15 +2105,20 @@ export async function saveOperationsGroup(formData: FormData) {
   const isActive = formData.has("isActive")
     ? formData.get("isActive") === "on"
     : currentGroupRow?.is_active ?? true;
-  const publicOrder =
-    currentGroupRow?.public_order ??
-    (await getNextGroupPublicOrder(serviceSupabase, eventId, parentGroupId));
+
 
   if (
     !isValidGroupCommunityKind(communityKind) ||
     hasInvalidAgeBand
   ) {
     return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
+  }
+
+  const geography = parseGroupGeography(formData);
+  if (!geography.ok) return formFailure([{ field: geography.field, code: "invalid" }]);
+  const expectedUpdatedAt = optionalText(formData.get("groupExpectedUpdatedAt"));
+  if (groupId && (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt)))) {
+    return formFailure([{ field: null, code: "groupConflict" }]);
   }
 
   let assignedLeader: GroupLeaderTargetResult | null = null;
@@ -2121,12 +2128,14 @@ export async function saveOperationsGroup(formData: FormData) {
       serviceSupabase,
       primaryLeaderUserId
     );
-  } else if (primaryLeaderMode === "new") {
-    assignedLeader = await getNewGroupLeaderTarget(serviceSupabase, {
-      firstName: optionalText(formData.get("leaderFirstName")),
-      lastName: optionalText(formData.get("leaderLastName")),
-      email: normalizeEmail(formData.get("leaderEmail")),
-    });
+  }
+  const newLeaderInput = {
+    firstName: optionalText(formData.get("leaderFirstName")),
+    lastName: optionalText(formData.get("leaderLastName")),
+    email: normalizeEmail(formData.get("leaderEmail")),
+  };
+  if (primaryLeaderMode === "new" && (!newLeaderInput.firstName || !newLeaderInput.lastName || !newLeaderInput.email)) {
+    return formFailure([{ field: "primaryLeaderUserId", code: "invalid" }]);
   }
 
   if (assignedLeader && !assignedLeader.ok) {
@@ -2144,21 +2153,31 @@ export async function saveOperationsGroup(formData: FormData) {
     is_public_catalog: isPublicCatalog,
     is_active: isActive,
     public_label: normalizeGroupRegistrationPublicLabel(name),
-    public_order: publicOrder,
   };
-  const result = groupId
-    ? await serviceSupabase.from("groups").update(values).eq("id", groupId)
-    : await serviceSupabase.from("groups").insert(values).select("id").single();
-
+  const result = await serviceSupabase.rpc("save_operational_group", {
+    p_actor_user_id: auth.user.id,
+    p_event_id: eventId,
+    p_group_id: groupId,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_values: values,
+    p_geography: geography.value,
+  });
   if (result.error) {
-    return formFailureFromRedirect(`${dashboardPath}?groupError=${encodeURIComponent(result.error.message)}`);
+    const code = result.error.code;
+    return formFailure([{ field: code === "23505" ? "name" : null,
+      code: code === "PT409" ? "groupConflict" : code === "PT422" ? "groupTerritory" :
+        code === "42501" ? "forbidden" : code === "23505" ? "duplicate" : "failed" }]);
   }
-
-  const savedGroupId =
-    groupId || ((result.data as { id?: string } | null)?.id ?? null);
+  const savedGroupId = result.data as string | null;
 
   if (!savedGroupId) {
     return formFailureFromRedirect(`${dashboardPath}?groupError=create`);
+  }
+
+  // Do not touch identities until the geography and group transaction succeeds.
+  if (primaryLeaderMode === "new") {
+    assignedLeader = await getNewGroupLeaderTarget(serviceSupabase, newLeaderInput);
+    if (!assignedLeader.ok) return formFailureFromRedirect(`${dashboardPath}?groupError=${assignedLeader.error}`);
   }
 
   if (assignedLeader?.ok) {
@@ -2178,23 +2197,9 @@ export async function saveOperationsGroup(formData: FormData) {
     }
   }
 
-  await serviceSupabase.from("audit_logs").insert({
-    event_id: eventId,
-    actor_user_id: auth.user.id,
-    action: groupId ? "group.updated" : "group.created",
-    entity_table: "groups",
-    entity_id: savedGroupId,
-    metadata: {
-      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
-      is_assignable: isAssignable,
-      is_public_catalog: isPublicCatalog,
-      is_active: isActive,
-      assigned_primary_leader: Boolean(assignedLeader?.ok),
-    },
-  });
-
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
+  revalidatePath("/registrazione");
   redirect(`${dashboardPath}?groupSaved=1`);
 }
 
@@ -3363,30 +3368,6 @@ type GroupLeaderKind = "primary" | "secondary";
 
 function parseGroupLeaderKind(value: FormDataEntryValue | null): GroupLeaderKind {
   return value === "primary" ? "primary" : "secondary";
-}
-
-async function getNextGroupPublicOrder(
-  supabase: ReturnType<typeof createSupabaseServiceClient>,
-  eventId: string,
-  parentGroupId: string | null
-): Promise<number> {
-  let query = supabase
-    .from("groups")
-    .select("public_order")
-    .eq("event_id", eventId)
-    .order("public_order", { ascending: false })
-    .limit(1);
-
-  query = parentGroupId
-    ? query.eq("parent_group_id", parentGroupId)
-    : query.is("parent_group_id", null);
-
-  const { data } = await query;
-  const currentMax =
-    ((data ?? []) as Array<{ public_order: number | null }>)[0]?.public_order ??
-    90;
-
-  return currentMax + 10;
 }
 
 async function assignPrimaryGroupLeaderToGroup(

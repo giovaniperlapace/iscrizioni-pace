@@ -1,5 +1,33 @@
 # AGENTS.md
 
+## Territorio modificabile da Manager/Admin — 2026-09-23
+
+- Editor gruppi condiviso: paese e città facoltativa, catalogo esistente più
+  opzioni del modulo pubblico, altra città, territorio ereditato esplicito.
+  Cambio paese azzera la città; nessuna deduzione dai nomi. Nuovi testi nelle
+  sette lingue; dati conservati in caso di errore. Cataloghi caricati solo
+  aprendo l’editor, paginati e senza risultati parziali su errore.
+- Migration `20260923180000_operational_group_geography.sql`: nuova RPC
+  solo service_role, attore dalla sessione, Admin globale/Manager stesso evento,
+  coerenza paese/città/antenati/sottogruppi e versione `updated_at` con PT409.
+  Gruppo, eventuali cataloghi mancanti e audit atomici; RLS, iscrizioni e
+  assegnazioni invariati. Migration applicata e registrata atomicamente in
+  produzione il 23 settembre prima del push autorizzato: hash delle 15 tabelle
+  operative e 89 policy invariati, grant solo service_role e conflitto PT409
+  verificati senza scritture reali. Backup schema riservato in
+  `/root/pace-release-20260923-group-geography/`. Rilascio autorizzato su main
+  e Vercel. Dettagli in
+  `docs/operational-group-geography.md`; test azione/parser, SQL temporaneo e
+  browser sintetico sette lingue/desktop/mobile; 469 test, lint, TypeScript e
+  build superati con npm ci in copia pulita.
+- Precedente configurazione dati dei 12 paesi richiesta dall’utente già eseguita:
+  sei gruppi nuovi (Cuba, Guatemala, Colombia, Nicaragua, Messico, Uganda),
+  sei esistenti collegati (Costa d’Avorio, Nigeria, Senegal, Mozambico, Congo/RDC,
+  Malawi). Tutti effettivi/pubblici/iscrivibili, nessun limite età/città. Audit e
+  snapshot riservati in `output/country-groups-20260923/`; nessuna iscrizione
+  o referente modificato. Africa/America Latina non sono paesi nel catalogo.
+
+
 ## Assisi: città territoriale nei suggerimenti pubblici — 2026-09-23
 
 - Il filtro `nodeType=city` non bastava: Assisi ha `communityKind=territorial`.

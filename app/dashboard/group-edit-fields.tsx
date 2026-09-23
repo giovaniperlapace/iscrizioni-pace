@@ -1,5 +1,8 @@
 "use client";
 
+import { GroupGeographyFields } from "./group-geography-fields";
+import type { GroupGeographyCatalog } from "@/lib/groups/geography";
+import type { SupportedLocale } from "@/lib/i18n/config";
 import { useState } from "react";
 import { SearchableSelectField } from "@/app/dashboard/searchable-select-field";
 
@@ -10,6 +13,9 @@ export type GroupEditTreeRow = {
   parentGroupId: string | null;
   nodeType: string | null;
   isAssignable?: boolean | null;
+  countryId?: string | null;
+  cityId?: string | null;
+  updatedAt?: string | null;
 };
 
 export type GroupEditLeaderRow = {
@@ -21,6 +27,8 @@ export type GroupEditLeaderRow = {
 };
 
 type GroupPlacementFieldsProps = {
+  geography?: GroupGeographyCatalog;
+  locale?: SupportedLocale;
   group: GroupEditTreeRow | null;
   groups: GroupEditTreeRow[];
   eventId: string;
@@ -37,7 +45,10 @@ export function GroupPlacementFields({
   group,
   groups,
   eventId,
+  geography,
+  locale = "it",
 }: GroupPlacementFieldsProps) {
+  const [parentId, setParentId] = useState(group?.parentGroupId ?? "");
   const [nodeType, setNodeType] = useState(group?.nodeType ?? "group");
   const [assignable, setAssignable] = useState(group?.nodeType === "group" ? true : group?.isAssignable ?? true);
   const excluded = new Set(group ? [group.id] : []);
@@ -69,6 +80,7 @@ export function GroupPlacementFields({
         Tipo
         <select name="groupNodeType" className="field" value={nodeType} onChange={(event) => {
           setNodeType(event.target.value);
+          setParentId("");
           setAssignable(event.target.value === "group");
         }}>
           <option value="group">Gruppo effettivo</option>
@@ -81,14 +93,16 @@ export function GroupPlacementFields({
       {nodeType !== "country" ? (
         <SearchableSelectField
           key={nodeType}
+          onValueChange={setParentId}
           label="Appartiene a"
           name="parentGroupId"
           options={options}
           placeholder={nodeType === "group" ? "Nessun nodo superiore (facoltativo)" : "Seleziona il territorio"}
           required={nodeType === "city" || nodeType === "area"}
-          value={allowedParents.some((row) => row.id === group?.parentGroupId) ? group?.parentGroupId ?? "" : ""}
+          value={allowedParents.some((row) => row.id === parentId) ? parentId : ""}
         />
       ) : <input type="hidden" name="parentGroupId" value="" />}
+      {geography ? <GroupGeographyFields group={group} groups={groups.filter(row => row.eventId === eventId)} parentId={nodeType === "country" ? "" : parentId} catalog={geography} locale={locale} /> : null}
       <div className="grid gap-2 sm:col-span-2">
         <input type="hidden" name="isAssignable" value={assignable ? "on" : "off"} />
         <label className="flex items-center gap-3 text-sm font-semibold">
