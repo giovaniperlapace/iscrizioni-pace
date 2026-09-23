@@ -87,3 +87,33 @@ test("editing keeps explicit catalog IDs and the exact version; missing geograph
     assert.equal((await invalid.action(copy)).status,'error');assert.equal(invalid.calls.length,0);
   }
 });
+
+test("multiple cities validate every entry, deduplicate names and require an explicit scope", () => {
+  const data = form(id, '');data.delete('groupCity');data.set('groupCityScope','cities');
+  data.append('groupCities',cityId);data.append('groupCities','name:Perugia');data.append('groupCities','name:Pérugia');
+  const parsed=parseGroupGeography(data);assert.ok(parsed.ok);
+  assert.equal(parsed.value.city_scope,'cities');assert.equal(parsed.value.cities?.length,2);
+  data.append('groupCities','forged');assert.equal(parseGroupGeography(data).ok,false);
+  data.delete('groupCities');assert.equal(parseGroupGeography(data).ok,false);
+  for(const scope of ['country','inherit']) {
+    data.set('groupCityScope',scope);const clean=parseGroupGeography(data);assert.ok(clean.ok);assert.deepEqual(clean.value.cities,[]);
+    data.append('groupCities',cityId);assert.equal(parseGroupGeography(data).ok,false);data.delete('groupCities');
+  }
+  data.set('groupCityScope','cities');for(let i=0;i<101;i++)data.append('groupCities',cityId);
+  assert.equal(parseGroupGeography(data).ok,false);
+});
+
+test("city links are paginated within group batches and later-page errors fail closed", async () => {
+  const { loadGroupCityLinks } = await import('../lib/groups/geography.server.ts');
+  for(const fail of [false,true]) {
+    const calls: URL[]=[];
+    const db=createClient('https://example.test','test',{auth:{persistSession:false},global:{fetch:async input=>{
+      const url=new URL(String(input));calls.push(url);const offset=Number(url.searchParams.get('offset'));
+      if(fail && offset===500)return Response.json({message:'failed links'},{status:500});
+      const rows=Array.from({length:1201},(_,i)=>({group_id:id,city_id:String(i)}));
+      return Response.json(rows.slice(offset,offset+500));
+    }}});
+    if(fail) await assert.rejects(loadGroupCityLinks(db,[id]),/failed links/);
+    else {assert.equal((await loadGroupCityLinks(db,[id])).get(id)?.length,1201);assert.equal(calls.length,3);}
+  }
+});

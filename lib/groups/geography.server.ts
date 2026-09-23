@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadAllRows } from "../supabase/all-rows.ts";
+import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { GroupGeographyCatalog } from "./geography.ts";
 
 export async function loadGroupGeographyCatalog(db: SupabaseClient): Promise<GroupGeographyCatalog> {
@@ -9,4 +9,14 @@ export async function loadGroupGeographyCatalog(db: SupabaseClient): Promise<Gro
   ]);
   if (countries.error || cities.error) throw new Error("Unable to load group geography catalog");
   return { countries: countries.data ?? [], cities: cities.data ?? [] };
+}
+
+/** Paginate links too: a country's groups may have well over 1,000 city links. */
+export async function loadGroupCityLinks(db: SupabaseClient, groupIds: string[]): Promise<Map<string, string[]>> {
+  const { data } = await loadRowsForIds<{ group_id: string; city_id: string }>(groupIds, (ids, from, to) => db
+    .from("group_suggestion_cities").select("group_id,city_id").in("group_id", ids)
+    .order("group_id").order("city_id").range(from, to));
+  const byGroup = new Map<string, string[]>();
+  for (const row of data) byGroup.set(row.group_id, [...(byGroup.get(row.group_id) ?? []), row.city_id]);
+  return byGroup;
 }

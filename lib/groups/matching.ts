@@ -1,4 +1,4 @@
-export const GROUP_MATCHER_VERSION = "2026-09-05-operative-groups-v5";
+export const GROUP_MATCHER_VERSION = "2026-09-23-multiple-cities-v6";
 
 export type GroupAgeBand = "giovani" | "adulti" | "anziani";
 export type GroupCommunityKind = "santegidio" | "newcomers" | "territorial";
@@ -12,6 +12,8 @@ export type GroupMatchCandidate = {
   primaryLeaderName: string | null;
   countryId: string | null;
   cityId: string | null;
+  cityIds?: string[];
+  cityScope?: "inherit" | "country";
   parentGroupId: string | null;
   nodeType: GroupNodeType;
   communityKind: GroupCommunityKind;
@@ -238,15 +240,19 @@ function matchesAgeBands(
   return bands.some((band) => tracks.has(band));
 }
 
+export function groupCityIds(group: { cityId?: string | null; cityIds?: string[] }): string[] {
+  return [...new Set([...(group.cityId ? [group.cityId] : []), ...(group.cityIds ?? [])])];
+}
+
 function hasTerritorialMatch(
   group: GroupMatchCandidate,
   criteria: GroupMatchCriteria
 ): boolean {
-  if (criteria.cityId && group.cityId === criteria.cityId) {
+  if (criteria.cityId && groupCityIds(group).includes(criteria.cityId)) {
     return true;
   }
 
-  if (criteria.countryId && group.countryId === criteria.countryId && !group.cityId) {
+  if (criteria.countryId && group.countryId === criteria.countryId && groupCityIds(group).length === 0) {
     return true;
   }
 
@@ -274,7 +280,7 @@ function scoreTerritory(
   group: GroupMatchCandidate,
   criteria: GroupMatchCriteria
 ): number {
-  if (criteria.cityId && group.cityId === criteria.cityId) {
+  if (criteria.cityId && groupCityIds(group).includes(criteria.cityId)) {
     return CITY_SCORE + COUNTRY_SCORE;
   }
 

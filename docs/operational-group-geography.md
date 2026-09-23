@@ -91,3 +91,52 @@ sei gruppi creati e sei conservati/collegati, con paese esplicito e senza città
   build production superati. La directory originale contiene Next 16.3.0 mentre
   il progetto richiede 16.2.9, oltre a tipi `.next` obsoleti: non usarla come
   riferimento per il collaudo del rilascio.
+
+## Estensione a più città — rilascio autorizzato il 23 settembre
+
+Il form conserva la disposizione precedente **Paese → Città (facoltativa)**.
+Dopo la prima scelta, **Aggiungi un’altra città** aggiunge un altro selettore;
+le righe possono essere rimosse e ogni riga consente **Altra città**.
+Non c’è un passaggio aggiuntivo per scegliere una modalità geografica.
+La scelta vuota mantiene il territorio ereditato o tutto il paese, come prima;
+se il padre ha città collegate, il primo selettore offre anche **Tutte le città
+del paese** per interrompere esplicitamente quel vincolo ereditato.
+Cambiare paese azzera l’elenco; selezionare l’opzione generale lo svuota.
+
+Le città selezionate sono alternative: un gruppo Umbria collegato a Perugia,
+Terni, Assisi e Foligno viene proposto per ciascuna. Una città riconosciuta
+estranea viene esclusa; il fallback per città non riconosciuta resta quello
+esistente. Visibilità, iscrivibilità, età e scelta volontaria del gruppo restano
+invariate. I sottogruppi ereditano l’intero insieme dal più vicino antenato
+valorizzato; una scelta diretta lo sostituisce, senza unire territori impliciti.
+
+La migration `20260923210000_group_multiple_cities.sql` aggiunge `city_scope`
+e `group_suggestion_cities`, con chiavi esterne e RLS di lettura subordinata
+alla visibilità del gruppo. Scritture soltanto service_role tramite la RPC
+esistente, che conserva scope, lock, versione e audit atomico e valida ogni città.
+Una sola città resta in `groups.city_id`; con più città questo campo è nullo e
+tutte le città sono nella relazione: l’inserimento assistito non attribuisce
+arbitrariamente agli iscritti la prima città di un gruppo regionale.
+La relazione si elimina col gruppo e impedisce di cancellare città collegate.
+Nessuna riscrittura di persone o assegnazioni. Limite 100 città per gruppo;
+deduplicazione su ID e nomi normalizzati; letture paginate anche della relazione.
+Un vecchio editor non può cancellare silenziosamente una configurazione multipla.
+
+Test: parser e azione, caricamento oltre 1.000 collegamenti, matching di ogni
+città/ereditarietà/precedenza, SQL su PostgreSQL temporaneo con rollback e vecchio
+contratto a città singola; fixture browser in sette lingue e mobile a 390 px.
+Per il rilascio applicare e registrare la nuova migration **prima** del codice;
+verificare privilegi, dati esistenti e backup come nel rilascio precedente.
+La migration è stata applicata e registrata atomicamente in produzione prima
+del push autorizzato. Conteggi/impronte delle 15 tabelle operative invariati
+(confrontando sui gruppi le colonne preesistenti); le 89 policy e i grant delle
+36 tabelle preesistenti sono invariati. Nessun collegamento multiplo aggiunto
+a gruppi reali durante il rilascio. Verificati rifiuto di attore non autorizzato
+e PT409 per versione obsoleta prima delle scritture. Backup schema riservato:
+`/root/pace-release-20260923-multiple-cities/schema-before.sql`.
+
+Verifica finale dell’estensione: 502 test, lint, TypeScript e build production
+superati in copia pulita con dipendenze del lockfile. Browser nelle sette lingue
+e a 390 px: selezione multipla, aggiunta/rimozione, città fuori catalogo, cambio
+paese, ritorno al territorio ereditato/tutto il paese ed errori conservativi;
+nessun errore browser o overflow. Anteprima locale aggiornata al form semplificato.

@@ -1,3 +1,4 @@
+import { loadGroupCityLinks } from "../lib/groups/geography.server.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -40,6 +41,7 @@ test("dashboard sections execute only the queries needed by their visible conten
         "node:crypto": { randomUUID: () => "version" },
         "@/lib/registrations/dashboard-load-plan": { dashboardLoadPlan },
         "@/lib/supabase/all-rows": { loadAllRows, loadRowsForIds },
+        "@/lib/groups/geography.server": { loadGroupCityLinks },
         "@/lib/registrations/operations-dashboard": operations,
         "@/lib/registrations/event-statistics": statistics,
         "@/lib/registrations/event-statistics.server": { loadEventStatisticsSnapshot: async () => { reads.push("statistics"); return {}; } },

@@ -1,3 +1,4 @@
+import { loadGroupCityLinks } from "../groups/geography.server.ts";
 import { inheritGroupTerritories } from "../groups/territory.ts";
 import { countryName, findCountryId } from "./country-names.ts";
 import { emailParticipantIds, reusableIdentityParticipantIds } from "./email-identity.ts";
@@ -82,6 +83,7 @@ type PublicGroupRow = {
   primary_leader_name: string | null;
   country_id: string | null;
   city_id: string | null;
+  city_scope?: "inherit" | "country";
   parent_group_id: string | null;
   node_type: string | null;
   community_kind: string | null;
@@ -114,6 +116,8 @@ export type PublicRegistrationOptions = {
     primaryLeaderName: string | null;
     countryId: string | null;
     cityId: string | null;
+    cityScope?: "inherit" | "country";
+    cityIds?: string[];
     parentGroupId: string | null;
     nodeType: GroupNodeType;
     communityKind: GroupCommunityKind;
@@ -712,14 +716,15 @@ async function getEventGroupCandidates(
   const { data } = await loadAllRows<PublicGroupRow>((from, to) => supabase
     .from("groups")
     .select(
-      "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
+      "id,name,public_label,primary_leader_name,country_id,city_id,city_scope,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
     )
     .eq("event_id", eventId)
     .eq("is_active", true)
     .order("id")
     .range(from, to));
 
-  return ((data ?? []) as PublicGroupRow[]).map(mapGroupRow);
+  const links = await loadGroupCityLinks(supabase, (data ?? []).map(row => row.id));
+  return ((data ?? []) as PublicGroupRow[]).map(row => ({ ...mapGroupRow(row), cityIds: links.get(row.id) ?? [] }));
 }
 
 function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
@@ -730,6 +735,7 @@ function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
     primaryLeaderName: row.primary_leader_name,
     countryId: row.country_id,
     cityId: row.city_id,
+    cityScope: row.city_scope,
     parentGroupId: row.parent_group_id,
     nodeType: parseNodeType(row.node_type),
     communityKind: parseCommunityKind(row.community_kind),
@@ -765,7 +771,7 @@ async function resolveActiveGroupRegistrationLink(
   const { data, error } = await supabase
     .from("group_registration_links")
     .select(
-      "id,event_id,group_id,public_label,max_uses,use_count,expires_at,revoked_at,groups!inner(id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order)"
+      "id,event_id,group_id,public_label,max_uses,use_count,expires_at,revoked_at,groups!inner(id,name,public_label,primary_leader_name,country_id,city_id,city_scope,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order)"
     )
     .eq("event_id", eventId)
     .eq("token_hash", hashGroupRegistrationLinkToken(token))
@@ -782,7 +788,8 @@ async function resolveActiveGroupRegistrationLink(
     throw new Error("Link gruppo non valido o non più attivo.");
   }
 
-  const group = mapGroupRow(groupRow);
+  const links = await loadGroupCityLinks(supabase, [groupRow.id]);
+  const group = { ...mapGroupRow(groupRow), cityIds: links.get(groupRow.id) ?? [] };
   const status = getGroupRegistrationLinkStatus({
     expiresAt: link.expires_at,
     revokedAt: link.revoked_at,

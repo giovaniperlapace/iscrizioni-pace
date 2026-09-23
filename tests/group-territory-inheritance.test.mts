@@ -1,3 +1,4 @@
+import { loadGroupCityLinks } from "../lib/groups/geography.server.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -61,7 +62,7 @@ function loadFunction(name: string, deps: Record<string, unknown>) {
   return new Function(...Object.keys(deps), `${js}; return ${name}`)(...Object.values(deps));
 }
 const mapGroupRow = loadFunction("mapGroupRow", Object.fromEntries(["parseNodeType", "parseCommunityKind", "parseAgeBands"].map(name => [name, loadFunction(name, {})])));
-const getEventGroupCandidates = loadFunction("getEventGroupCandidates", { loadAllRows, mapGroupRow });
+const getEventGroupCandidates = loadFunction("getEventGroupCandidates", { loadAllRows, mapGroupRow, loadGroupCityLinks });
 const getOptions = loadFunction("getPublicRegistrationOptions", {
   getCurrentPublicEvent: async () => ({ id: "event" }), resolveActiveGroupRegistrationLink: async () => null,
   getEventGroupCandidates, inheritGroupTerritories, loadAllRows,
@@ -138,4 +139,32 @@ test("Assisi territorial city inherits Italy and is suggested with a 2025 birth 
   assert.deepEqual(findMatchingGroupCandidates(rows, matchCriteria, { publicOnly: true }).map(g => g.id), ["diocese", "assisi"]);
   assert.ok(!findMatchingGroupCandidates(rows, matchCriteria).some(g => g.id === "assisi"), "internal community matching unchanged");
   assert.deepEqual(findMatchingGroupCandidates(rows, matchCriteria, { publicOnly: true, communityKind: "newcomers" }), []);
+});
+
+test("regional groups match every selected city, inherit the complete set, and allow a national override", () => {
+  const regional=group('region',{countryId:'IT',cityId:'perugia',cityIds:['terni','assisi','foligno']});
+  const children=[group('child',{parentGroupId:'region'}),group('national',{parentGroupId:'region',cityScope:'country'}),group('local',{parentGroupId:'region',cityId:'assisi'}),group('grandchild',{parentGroupId:'national'})];
+  const rows=inheritGroupTerritories([regional,...children]);
+  const find=(cityId:string|null)=>findMatchingGroupCandidates(rows,{...criteria,countryId:'IT',cityId},{publicOnly:true});
+  for(const city of ['perugia','terni','assisi','foligno']) {
+    assert.ok(find(city).some(g=>g.id==='region'));
+    assert.ok(find(city).some(g=>g.id==='child'));
+    assert.ok(find(city).findIndex(g=>g.id==='region')<find(city).findIndex(g=>g.id==='national'));
+  }
+  assert.deepEqual(find('roma').map(g=>g.id).sort(),['grandchild','national']);
+  assert.ok(!find('terni').some(g=>g.id==='local'));
+  assert.equal(find(null).length,5); // Preserve the existing unknown-city country fallback.
+  assert.equal(findMatchingGroupCandidates(rows,{...criteria,countryId:'CU',cityId:'havana'},{publicOnly:true}).length,0);
+  assert.deepEqual(regional.cityIds,['terni','assisi','foligno']); // no mutation
+});
+
+test("public loader connects paginated city links to the correct group",async()=>{
+ const db=createClient('https://example.test','synthetic',{auth:{persistSession:false},global:{fetch:async input=>{
+  const url=new URL(String(input));
+  if(url.pathname.endsWith('/groups'))return Response.json([{id:'regional',name:'Umbria',country_id:'IT',city_id:'perugia',node_type:'group',community_kind:'santegidio',is_assignable:true,is_public_catalog:true}]);
+  if(url.pathname.endsWith('/group_suggestion_cities'))return Response.json([{group_id:'regional',city_id:'terni'}]);
+  return Response.json([]);
+ }}});
+ const options=await getOptions(db);
+ assert.deepEqual(findMatchingGroupCandidates(options.groups,{...criteria,countryId:'IT',cityId:'terni'},{publicOnly:true}).map(g=>g.id),['regional']);
 });

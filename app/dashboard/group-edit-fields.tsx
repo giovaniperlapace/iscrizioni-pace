@@ -15,6 +15,8 @@ export type GroupEditTreeRow = {
   isAssignable?: boolean | null;
   countryId?: string | null;
   cityId?: string | null;
+  cityIds?: string[];
+  cityScope?: "inherit" | "country";
   updatedAt?: string | null;
 };
 

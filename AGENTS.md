@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Più città nei suggerimenti dei gruppi — 2026-09-23
+
+- Editor Manager/Admin mantiene Paese → Città facoltativa; Aggiungi un’altra
+  città aggiunge righe rimovibili. Sette lingue e città fuori catalogo.
+  La scelta generale conserva l’eredità o tutto il paese; l’opzione Tutte le
+  città del paese può interrompere un vincolo urbano ereditato.
+- Matching su qualunque città collegata, eredità dell’insieme più vicino,
+  override esplicito e priorità urbana; fallback su paese per città non
+  riconosciuta invariato. Relazione caricata con paginazione e fail-closed.
+- Migration `20260923210000_group_multiple_cities.sql`: city_scope,
+  relazione con FK/RLS subordinata al gruppo, RPC service_role con salvataggio
+  e audit atomici, scope/versione/gerarchia e tutte le città validate. Singola
+  città conserva city_id; gruppi regionali hanno city_id nullo per non dedurre
+  arbitrariamente la residenza negli inserimenti assistiti. Nessuna modifica
+  di persone, ruoli o assegnazioni. Migration applicata e registrata atomicamente
+  in produzione il 23 settembre prima del push autorizzato. Dati delle 15
+  tabelle operative, 89 policy e grant delle 36 tabelle preesistenti invariati;
+  nuova relazione vuota e city_scope ereditato per tutti i gruppi.
+- SQL temporaneo, parser, caricamenti paginati e matching collaudati; fixture
+  browser in sette lingue/mobile. 502 test, lint, TypeScript e build superati.
+  Dettagli in docs/operational-group-geography.md.
+
 ## Dashboard per tutti i ruoli assegnati — 2026-09-23
 
 - I ruoli operativi si sommano: Manager/Manager Viewer non nascondono né

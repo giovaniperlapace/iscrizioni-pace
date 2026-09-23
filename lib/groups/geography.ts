@@ -35,7 +35,9 @@ export function groupCityOptions(catalog: GroupGeographyCatalog, country: string
 }
 
 // Server-side parsing: labels are derived here, never trusted from hidden inputs.
-export function parseGroupGeography(form: FormData) {
+type CityInput = { city_id?: string; city_name?: string; city_normalized_name?: string };
+type GeographyInput = CityInput & { country_id?: string; country_code?: string; country_name_it?: string; country_name_en?: string; city_scope?: string; cities?: CityInput[] };
+export function parseGroupGeography(form: FormData): { ok: false; field: string | null } | { ok: true; value: GeographyInput } {
   if (form.get("groupGeographyPresent") !== "1") return { ok: false as const, field: null };
   const country = String(form.get("groupCountry") ?? "");
   const city = String(form.get("groupCity") ?? "");
@@ -48,6 +50,24 @@ export function parseGroupGeography(form: FormData) {
   } else if (country) {
     if (!uuid.test(country)) return { ok: false as const, field: "groupCountry" };
     countryData = { country_id: country };
+  }
+  const scope = form.get("groupCityScope");
+  if (scope !== null) {
+    if (!["inherit", "country", "cities"].includes(String(scope))) return { ok: false as const, field: "groupCityScope" };
+    const entries = form.getAll("groupCities");
+    if (entries.length > 100 || (scope === "cities" ? entries.length === 0 : entries.length !== 0)) return { ok: false as const, field: "groupCityScope" };
+    const cities: Array<{ city_id?: string; city_name?: string; city_normalized_name?: string }> = [];
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      const item = new FormData();
+      item.set("groupGeographyPresent", "1");
+      item.set("groupCity", String(entry));
+      const parsed = parseGroupGeography(item);
+      if (!parsed.ok || (!parsed.value.city_id && !parsed.value.city_name)) return { ok: false as const, field: "groupCityScope" };
+      const key = parsed.value.city_id?.toLowerCase() ?? parsed.value.city_normalized_name!;
+      if (!seen.has(key)) { cities.push(parsed.value); seen.add(key); }
+    }
+    return { ok: true as const, value: { ...countryData, city_scope: String(scope), cities } };
   }
   let cityData: { city_id?: string; city_name?: string; city_normalized_name?: string } = {};
   if (city === "__other__" || city.startsWith("name:")) {

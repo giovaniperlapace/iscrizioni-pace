@@ -1,4 +1,4 @@
-import { loadGroupGeographyCatalog } from "@/lib/groups/geography.server";
+import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
 import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
@@ -289,6 +289,8 @@ type AdminGroupTreeRow = {
   name: string;
   countryId: string | null;
   cityId: string | null;
+  cityScope?: "inherit" | "country";
+  cityIds?: string[];
   updatedAt: string;
   parentGroupId: string | null;
   parentName: string | null;
@@ -634,7 +636,7 @@ export default async function AdminDashboardPage({
       loadPlan.groupTree ? loadAllRows((from, to) => serviceSupabase
         .from("groups")
         .select(
-          "id,event_id,name,public_label,country_id,city_id,updated_at,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
+          "id,event_id,name,public_label,country_id,city_id,city_scope,updated_at,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
         )
         .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
@@ -780,12 +782,14 @@ export default async function AdminDashboardPage({
       participantRows,
       filters
     );
+    const cityLinks = await loadGroupCityLinks(serviceSupabase, (groupTree ?? []).map(group => group.id));
     const groupTreeRows = (groupTree ?? []) as Array<{
       id: string;
       event_id: string;
       name: string | null;
       country_id: string | null;
       city_id: string | null;
+      city_scope?: "inherit" | "country";
       updated_at: string;
       parent_group_id: string | null;
       node_type: string | null;
@@ -830,6 +834,8 @@ export default async function AdminDashboardPage({
         name: group.name ?? "Gruppo senza nome",
         countryId: group.country_id,
         cityId: group.city_id,
+        cityScope: group.city_scope,
+        cityIds: cityLinks.get(group.id) ?? [],
         updatedAt: group.updated_at,
         parentGroupId: group.parent_group_id,
         parentName: group.parent_group_id

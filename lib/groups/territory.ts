@@ -1,11 +1,12 @@
-import type { GroupMatchCandidate } from "./matching.ts";
+import { groupCityIds, type GroupMatchCandidate } from "./matching.ts";
 
 /** Resolve missing geography without changing persisted groups or public visibility. */
 export function inheritGroupTerritories(groups: GroupMatchCandidate[]): GroupMatchCandidate[] {
   const byId = new Map(groups.map(group => [group.id, group]));
   return groups.map(group => {
     let countryId = group.countryId;
-    let cityId = group.cityId;
+    let cityIds = groupCityIds(group);
+    let citiesResolved = cityIds.length > 0 || group.cityScope === "country";
     const visited = new Set([group.id]);
     let parentId = group.parentGroupId;
     while (parentId) {
@@ -18,9 +19,12 @@ export function inheritGroupTerritories(groups: GroupMatchCandidate[]): GroupMat
         throw new Error("Conflicting group territory hierarchy");
       }
       countryId ??= parent.countryId;
-      cityId ??= parent.cityId;
+      if (!citiesResolved) {
+        cityIds = groupCityIds(parent);
+        citiesResolved = cityIds.length > 0 || parent.cityScope === "country";
+      }
       parentId = parent.parentGroupId;
     }
-    return { ...group, countryId, cityId };
+    return { ...group, countryId, cityId: cityIds[0] ?? null, cityIds };
   });
 }
