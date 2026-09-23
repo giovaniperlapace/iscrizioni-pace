@@ -1,3 +1,4 @@
+import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
 import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
@@ -107,6 +108,9 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type AdminPageProps = {
   searchParams: Promise<{
+    manual?: string;
+    manualSaved?: string;
+    manualError?: string;
     openingError?: string;
     openingSaved?: string;
     adminError?: string;
@@ -727,6 +731,7 @@ export default async function AdminDashboardPage({
     );
     const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
     const serviceByParticipantId = mapParticipantEventServices(participantServices);
+    const attendanceByRegistration = activeSection === "iscritti" ? await loadAttendanceSummaries(serviceSupabase, registrationIds) : new Map();
     const participantRows = registrationRows.map((registration) => {
         const participant = relatedOne(registration.participants);
         const geography = participantGeography(participant);
@@ -742,6 +747,7 @@ export default async function AdminDashboardPage({
           deletedBy: registration.deleted_by,
           deletedByName: registration.deleted_by ? deletedActorIdentities.get(registration.deleted_by)?.fullName ?? deletedActorIdentities.get(registration.deleted_by)?.email ?? null : null,
           deletionReason: registration.deletion_reason,
+          attendance: attendanceByRegistration.get(registration.id) ?? [],
           registrationId: registration.id,
           eventId: registration.event_id,
           eventTitle: event?.title ?? "Evento",

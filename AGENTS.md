@@ -1,5 +1,41 @@
 # AGENTS.md
 
+## Riepilogo personale e annullamento — 2026-09-23
+
+- Riepilogo allineato alla scheda di modifica con icone Lucide, riquadri e
+  spaziature condivisi. Annulla la mia iscrizione in basso a destra nel
+  riepilogo, fuori dalla modale di modifica; conferma separata e focus/Esc
+  conservati. Rimossa dalle sette lingue la frase su account e incarichi.
+- Nessuna modifica alla logica di annullamento o ai dati. Modifica locale,
+  non pubblicata. Fixture browser aggiornata per la nuova posizione.
+
+## Colonna giorni di presenza — 2026-09-23
+
+- Colonna facoltativa `attendance` in Gestione iscritti Manager/Admin e nella
+  tabella Capogruppo, conservata nelle preferenze e inclusa nell’Excel.
+  Date ordinate, mattina/pomeriggio, sette lingue nel formatter; righe storiche
+  senza fascia valgono per l’intera giornata. Nessuna riga indica Da comunicare;
+  dati non caricati non sono convertiti in presenze assenti.
+- Letture correnti per gli ID già autorizzati, paginate e bloccanti su errore;
+  riepilogo operativo caricato soltanto nella sezione iscritti. Nessuna
+  migration, modifica dei dati o pubblicazione. Test in
+  `tests/attendance-summary.test.mts` includono paginazione ed Excel.
+
+
+## Inserimento singolo in overlay — 2026-09-23
+
+- Inserisci partecipante è accanto a Importa iscritti da Excel nella toolbar
+  condivisa Manager/Admin. `manual=1` apre una modale nativa sopra l’elenco;
+  catalogo ancora caricato solo all’apertura, Viewer escluso. Il vecchio URL
+  `/dashboard/manager/nuovo` reindirizza alla dashboard con la modale aperta.
+- X/Esc chiudono localmente e restituiscono il focus; scorrimento interno e
+  sfondo bloccato. Form e azione conservano il contesto della dashboard con
+  indirizzo di ritorno validato: filtri, colonne, ordine e menu. Dopo il
+  salvataggio, conferma e nuovo modulo nella stessa modale. Nessuna variazione
+  a scritture, permessi, dati o migration. Verificati 512 test, lint, TypeScript
+  e build in copia isolata; browser sintetico sette lingue, desktop/mobile,
+  Manager/Admin e Viewer. Modifica locale, non pubblicata.
+
 ## Inserimento singolo Manager/Admin — 2026-09-23
 
 - Gestione iscritti offre Inserisci partecipante per Manager dell’evento corrente
@@ -3807,3 +3843,13 @@ Quando il piano verrà cancellato:
   limitato alle ultime due settimane concluse, senza percentuale su base zero.
 - Test su confini temporali, ora legale, cambio anno, settimane vuote e loader
   oltre 1.000 schede. Nessuna migration o modifica dei dati richiesta.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

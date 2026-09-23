@@ -1,3 +1,4 @@
+import { loadAttendanceSummaries } from "../lib/registrations/attendance-summary.server.ts";
 import { loadGroupCityLinks } from "../lib/groups/geography.server.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -42,6 +43,7 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/registrations/dashboard-load-plan": { dashboardLoadPlan },
         "@/lib/supabase/all-rows": { loadAllRows, loadRowsForIds },
         "@/lib/groups/geography.server": { loadGroupCityLinks },
+        "@/lib/registrations/attendance-summary.server": { loadAttendanceSummaries },
         "@/lib/registrations/operations-dashboard": operations,
         "@/lib/registrations/event-statistics": statistics,
         "@/lib/registrations/event-statistics.server": { loadEventStatisticsSnapshot: async () => { reads.push("statistics"); return {}; } },

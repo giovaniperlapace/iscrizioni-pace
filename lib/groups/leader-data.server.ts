@@ -1,3 +1,4 @@
+import { loadAttendanceSummaries } from "../registrations/attendance-summary.server.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import { collectDescendantGroupIds } from "./capogruppo-dashboard.ts";
@@ -84,5 +85,7 @@ export async function loadLeaderAssignmentRows(
       .order("id")
       .range(from, to),
   );
-  return data as unknown as AssignmentRow[];
+  const rows = data as unknown as AssignmentRow[];
+  const attendance = await loadAttendanceSummaries(db, rows.map(row => row.registration_id));
+  return rows.map(row => ({ ...row, attendance: attendance.get(row.registration_id) ?? [] }));
 }

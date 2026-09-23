@@ -16,6 +16,7 @@ import {
 } from "../registrations/event-statistics.ts";
 
 export type QualityPerson = Identity & {
+  attendance?: import("../registrations/attendance-summary.ts").SummaryAttendanceChoice[];
   participantId: string;
   eventId: string;
   eventTitle: string;
@@ -325,8 +326,14 @@ export async function filteredExportPeople(
       drilldown,
     ).participants;
   }
+  const attendanceByRegistration = new Map<string, StatisticsAttendanceChoice[]>();
+  for (const choice of attendance) {
+    const choices = attendanceByRegistration.get(choice.registration_id) ?? [];
+    choices.push(choice);
+    attendanceByRegistration.set(choice.registration_id, choices);
+  }
   return {
-    people,
+    people: people.map(person => ({ ...person, attendance: attendanceByRegistration.get(person.id) ?? [] })),
     attendance: attendance.filter((choice) =>
       people.some((person) => person.id === choice.registration_id),
     ),

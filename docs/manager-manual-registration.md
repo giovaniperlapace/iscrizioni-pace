@@ -1,7 +1,10 @@
 # Inserimento singolo Manager/Admin
 
-Da **Gestione iscritti → Inserisci partecipante** si apre
-`/dashboard/manager/nuovo`. La funzione è disponibile ai Manager dell’evento
+In **Gestione iscritti**, **Inserisci partecipante** è affiancato a
+**Importa iscritti da Excel** nella stessa barra degli strumenti. Apre una
+modale in overlay sulla dashboard corrente (`manual=1`), sia Manager sia Admin.
+Il precedente indirizzo `/dashboard/manager/nuovo` reindirizza alla modale.
+La funzione è disponibile ai Manager dell’evento
 corrente e agli Admin globali. Il Manager Viewer non vede il comando e viene
 respinto sia dall’URL diretto sia dall’azione server, anche con un incarico
 capogruppo aggiuntivo.
@@ -17,7 +20,11 @@ anagrafica, nascita obbligatoria/reale/non futura, contatti, presenze esplicite,
 figli, accessibilità, nota e conferma del consenso. Nessuna presenza è
 preselezionata. Il partecipante viene confermato nel gruppo scelto. Gli errori
 lasciano compilato il modulo; un inserimento riuscito mostra la conferma e un
-nuovo modulo vuoto. Il controllo duplicati e la motivazione di deroga restano
+nuovo modulo vuoto nella stessa modale. Chiusura con X o Esc, focus restituito
+al pulsante di apertura, sfondo non interattivo e scorrimento interno. Il
+contesto dell’elenco (filtri, colonne, ordinamento, menu e scorrimento) resta
+disponibile anche dopo il salvataggio. L’indirizzo di ritorno è limitato alle
+dashboard autorizzate e ai parametri dell’elenco. Il controllo duplicati e la motivazione di deroga restano
 quelli esistenti.
 
 Per chi non ha email personale, il Manager sceglie l’apposita opzione: le
@@ -52,12 +59,16 @@ persone reali o invio email di collaudo.
 - `tests/browser/operations-manual-registration.mjs`: pagina e componenti reali
   con sessione/catalogo/azione sintetici in una route temporanea locale; accesso
   da Gestione iscritti, desktop/mobile, sette lingue, errori conservano campi,
-  successo e rifiuto Viewer. Nessuna chiamata al database reale.
+  successo nella modale, pulsanti affiancati, X/Esc/Indietro, ritorno del focus,
+  filtri conservati e rifiuto Viewer. Nessuna chiamata al database reale.
 - Dipendenze dalla versione di `package-lock.json` (`npm ci` in copia pulita).
 
-Esito: 510 test, lint senza avvisi, TypeScript e build di produzione superati
-in copia pulita con `npm ci`; browser sintetico nelle sette lingue,
+Esito della versione con overlay: 512 test, lint senza avvisi, TypeScript e build di produzione superati
+in copia isolata con le dipendenze di `npm ci`; browser sintetico nelle sette lingue,
 desktop/mobile e controlli Viewer superati.
 
 Rilascio autorizzato dall’utente il 23 settembre 2026 tramite commit/push su
 `main` e normale deployment Vercel. Nessuna migration da applicare.
+
+Il successivo adeguamento del pulsante e della modale è locale, non ancora
+committato o pubblicato. Nessuna modifica a dati, permessi o migration.

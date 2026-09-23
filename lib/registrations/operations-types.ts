@@ -26,6 +26,7 @@ export type OperationsGroupOption = {
 };
 
 export type OperationsParticipantRow = {
+  attendance?: import("../groups/leader-attendance.ts").AttendanceChoice[];
   deletedAt?: string | null;
   deletedBy?: string | null;
   deletedByName?: string | null;

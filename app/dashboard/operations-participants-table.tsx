@@ -1,5 +1,9 @@
 "use client";
 
+import { attendanceSummary } from "@/lib/registrations/attendance-summary";
+import { MANUAL_REGISTRATION_COPY } from "@/lib/registrations/manual-registration-copy";
+import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
+import type { SupportedLocale } from "@/lib/i18n/config";
 import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { AccompanyingChildrenList } from "./accompanying-children-list";
 import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
@@ -21,7 +25,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { ArrowDown, ArrowUp, Columns3, Download, Pencil, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Download, Pencil, UserPlus, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ReliableForm } from "@/components/reliable-form";
@@ -71,6 +75,7 @@ export function OperationsParticipantsTable({
   eventStartsOn,
   dialogOnly = false,
   dataVersion = "",
+  locale = "it",
 }: {
   snapshot: OperationsParticipantsSnapshot;
   selectedParticipant: Row | null;
@@ -84,6 +89,7 @@ export function OperationsParticipantsTable({
   eventStartsOn: string | null;
   dialogOnly?: boolean;
   dataVersion?: string;
+  locale?: SupportedLocale;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -177,6 +183,8 @@ export function OperationsParticipantsTable({
     column: ParticipantColumn,
   ): string | number | null {
     switch (column) {
+      case "attendance":
+        return attendanceSummary(row.attendance, locale);
       case "age":
         return calculateAgeAtDate(row.birthDate, eventStartsOn);
       case "group":
@@ -491,9 +499,16 @@ export function OperationsParticipantsTable({
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <h2 className="text-lg font-semibold">{view === "without-group" ? "Senza gruppo" : view === "deleted" ? "Iscrizioni eliminate" : "Gestione iscritti"}</h2>
             {canManage && (
-              <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null })} scroll={false}>
-                Importa iscritti da Excel
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link id="manual-participant-trigger" className={buttonClass}
+                  href={manualRegistrationPath(`/dashboard/${dashboard}?${searchParams}`, dashboard, true)}
+                  prefetch={false} scroll={false}>
+                  <UserPlus size={18} aria-hidden />{MANUAL_REGISTRATION_COPY[locale].addParticipant}
+                </Link>
+                <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null, manual: null, manualSaved: null, manualError: null })} scroll={false}>
+                  Importa iscritti da Excel
+                </Link>
+              </div>
             )}
           </div>
           <p className="mt-1 text-sm text-[var(--peace-muted)]">

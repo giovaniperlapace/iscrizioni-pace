@@ -1,3 +1,4 @@
+import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
 import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
@@ -99,6 +100,9 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type ManagerPageProps = {
   searchParams: Promise<{
+    manual?: string;
+    manualSaved?: string;
+    manualError?: string;
     openingError?: string;
     openingSaved?: string;
     managerError?: string;
@@ -1141,7 +1145,8 @@ async function getManagerOperationsSnapshot(
     scope.eventIds
   );
 
-  const participantRows = registrationRows.map((registration) => {
+  const attendanceByRegistration = section === "iscritti" ? await loadAttendanceSummaries(supabase, registrationIds) : new Map();
+    const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
       const geography = participantGeography(participant);
       const event = relatedOne(registration.events);
@@ -1155,7 +1160,8 @@ async function getManagerOperationsSnapshot(
         deletedAt: registration.deleted_at,
         deletedBy: registration.deleted_by,
         deletionReason: registration.deletion_reason,
-        registrationId: registration.id,
+        attendance: attendanceByRegistration.get(registration.id) ?? [],
+          registrationId: registration.id,
         eventId: registration.event_id,
         eventTitle: event?.title ?? "Evento",
         participantId: registration.participant_id,

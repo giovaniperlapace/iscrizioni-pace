@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import * as forms from '../lib/forms/result.ts';
 import { parseManualRegistrationForm, buildManualRegistrationQuestionnaireAnswers } from '../lib/registrations/manual-registration.ts';
+import { manualRegistrationPath } from '../lib/registrations/manual-registration-navigation.ts';
 import { canCreateOperationsRegistration } from '../lib/registrations/manual-registration-access.ts';
 import { explicitParticipantDelegate, chooseParticipantDelegate } from '../lib/email/participant-delegate.ts';
 import { normalizeEmail } from '../lib/registrations/validation.ts';
@@ -29,7 +30,7 @@ function harness(options: Options = {}) {
       then(resolve: (result: unknown) => unknown) { return Promise.resolve({ error: options.failedWrite === table ? { message: 'failed' } : null }).then(resolve); },
     };
   } };
-  const deps = { ...forms, parseManualRegistrationForm, buildManualRegistrationQuestionnaireAnswers, canCreateOperationsRegistration, normalizeEmail, attendanceSlotKey, buildAllowedAttendanceSlotKeys,
+  const deps = { ...forms, parseManualRegistrationForm, buildManualRegistrationQuestionnaireAnswers, canCreateOperationsRegistration, manualRegistrationPath, normalizeEmail, attendanceSlotKey, buildAllowedAttendanceSlotKeys,
     createSupabaseServerClient: async () => db, createSupabaseServiceClient: () => db,
     getCurrentAuthContext: async () => options.unauthenticated ? null : ({ dashboardRole: 'manager', user: { id: 'operator', email: 'operator@example.test' }, eventRoles: options.roles ?? [{ role: 'manager', eventId: 'event' }] }),
     getCurrentOperationalEventId: async () => options.current === undefined ? 'event' : options.current,
@@ -70,7 +71,7 @@ test('Manager and Admin create in unassigned hidden groups, recording actual pro
     form.set('created_by', 'forged'); form.set('eventId', 'forged');
     form.set('participatesWithChildren', 'yes'); form.set('childrenCount', '1');
     form.set('child_0_firstName', 'Test'); form.set('child_0_lastName', 'Child'); form.set('child_0_birthDate', '2020-02-02');
-    await assert.rejects(h.action(form), /REDIRECT:\/dashboard\/manager\/nuovo\?manualSaved=1$/);
+    await assert.rejects(h.action(form), /REDIRECT:\/dashboard\/manager\?.*manual=1&manualSaved=1$/);
     const row = (table: string) => h.writes.find(w => w.table === table)!.row;
     assert.equal(row('registrations').source, 'admin'); assert.equal(row('registrations').created_by, 'operator');
     assert.equal(row('registrations').event_id, 'event');
@@ -136,7 +137,7 @@ async function pageHarness(options: { role?: string; eventId?: string; failPage?
       range(from: number, to: number) { ranges.push(from); return Promise.resolve({ data: rows.slice(from, to + 1), error: options.failPage && from > 0 ? { message: 'page failed' } : null }); },
     };
   } };
-  const source = readFileSync(new URL('../app/dashboard/manager/nuovo/page.tsx', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../app/dashboard/operations-manual-registration.tsx', import.meta.url), 'utf8');
   const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const exports: Record<string, (props: unknown) => Promise<unknown>> = {};
   new Function('require', 'exports', js)((id: string) => {
@@ -148,6 +149,7 @@ async function pageHarness(options: { role?: string; eventId?: string; failPage?
     if (id.endsWith('supabase/service')) return { createSupabaseServiceClient: () => db };
     if (id.endsWith('events/current')) return { getCurrentOperationalEvent: async () => ({ id: 'event', title: 'Synthetic event' }) };
     if (id.endsWith('all-rows')) return { loadAllRows };
+    if (id.endsWith('manual-registration-navigation')) return { manualRegistrationPath };
     if (id.endsWith('manual-registration-access')) return { canCreateOperationsRegistration };
     if (id.endsWith('i18n/server')) return { getRequestLocale: async () => 'it' };
     if (id.endsWith('manual-registration-copy')) return { MANUAL_REGISTRATION_COPY: { it: { addParticipant: 'Add' } } };
@@ -156,7 +158,7 @@ async function pageHarness(options: { role?: string; eventId?: string; failPage?
     if (id.endsWith('manual-registration-section')) return { ManualRegistrationSection: 'ManualRegistrationSection' };
     return {};
   }, exports);
-  return { page: () => exports.default({ searchParams: Promise.resolve({}) }), filters, ranges };
+  return { page: () => exports.OperationsManualRegistration({ dashboard: 'manager', searchParams: {} }), filters, ranges };
 }
 
 test('direct new-participant URL denies Viewer and wrong-event Manager before loading groups', async () => {
@@ -177,4 +179,38 @@ test('new-participant catalogue is paginated, scoped and includes private groups
   assert.ok(h.filters.some(([key, value]) => key === 'is_assignable' && value === true));
   assert.ok(!h.filters.some(([key]) => key === 'is_public_catalog'));
   const failure = await pageHarness({ failPage: true }); await assert.rejects(failure.page(), /page failed/);
+});
+
+test('overlay navigation preserves filters and display preferences, strips other dialogs and rejects external destinations', () => {
+  for (const dashboard of ['manager', 'admin'] as const) for (const nav of ['full', 'mini']) {
+    const query = new URLSearchParams({ q: 'Anna & Rossi', contact: 'email', group: 'group', tag: 'tag', service: 'service', status: 'submitted', stat: 'stat', view: 'without-group', sort: 'name', direction: 'desc', columns: 'name,group', nav, edit: 'person', import: 'excel', manualSaved: '1', manualError: 'access-email' });
+    const opened = new URL(manualRegistrationPath(`/dashboard/${dashboard}?${query}`, dashboard, true), 'https://local.invalid');
+    for (const key of ['q', 'contact', 'group', 'tag', 'service', 'status', 'stat', 'view', 'sort', 'direction', 'columns', 'nav']) assert.equal(opened.searchParams.get(key), query.get(key));
+    for (const key of ['edit', 'import', 'manualSaved', 'manualError']) assert.equal(opened.searchParams.has(key), false);
+    assert.equal(opened.searchParams.get('manual'), '1');
+    assert.equal(opened.searchParams.get('section'), 'iscritti');
+    assert.equal(new URL(manualRegistrationPath(opened.pathname + opened.search, dashboard), opened).searchParams.has('manual'), false);
+  }
+  for (const value of ['https://evil.example/path', '//evil.example/path', '/dashboard/admin?section=ruoli', '/dashboard/manager/evil?nav=full', null]) {
+    assert.equal(manualRegistrationPath(value, 'manager', true), '/dashboard/manager?section=iscritti&nav=mini&manual=1');
+  }
+});
+
+test('successful insertion returns to the same authorized dashboard overlay with filters and email warning', async () => {
+  for (const dashboard of ['manager', 'admin'] as const) {
+    const h = harness({ roles: [{ role: dashboard, eventId: dashboard === 'admin' ? null : 'event' }], mailFails: true });
+    const form = data(); form.set('returnTo', `/dashboard/${dashboard}?section=iscritti&q=Rossi&group=private&nav=full&manualSaved=old&edit=someone`);
+    await assert.rejects(h.action(form), (error: Error) => {
+      const destination = new URL(error.message.replace('REDIRECT:', ''), 'https://local.invalid');
+      assert.equal(destination.pathname, `/dashboard/${dashboard}`);
+      assert.equal(destination.searchParams.get('q'), 'Rossi');
+      assert.equal(destination.searchParams.get('group'), 'private');
+      assert.equal(destination.searchParams.get('nav'), 'full');
+      assert.equal(destination.searchParams.get('manual'), '1');
+      assert.equal(destination.searchParams.get('manualSaved'), '1');
+      assert.equal(destination.searchParams.get('manualError'), 'access-email');
+      assert.equal(destination.searchParams.has('edit'), false);
+      return true;
+    });
+  }
 });

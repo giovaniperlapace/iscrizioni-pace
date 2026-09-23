@@ -1,5 +1,6 @@
 "use server";
 
+import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
 import { canCreateOperationsRegistration } from "@/lib/registrations/manual-registration-access";
 
 import { parseGroupGeography } from "@/lib/groups/geography";
@@ -1924,6 +1925,12 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   if (operational) {
     revalidatePath("/dashboard/manager");
     revalidatePath("/dashboard/admin");
+    const returnTo = formData.get("returnTo");
+    const dashboard = actorRole === "admin" && typeof returnTo === "string" && returnTo.startsWith("/dashboard/admin?") ? "admin" : "manager";
+    const destination = new URL(manualRegistrationPath(returnTo, dashboard, true), "https://local.invalid");
+    destination.searchParams.set("manualSaved", "1");
+    if (!accessEmailSent) destination.searchParams.set("manualError", "access-email");
+    redirect(`${destination.pathname}?${destination.searchParams}`);
   }
   redirect(`${dashboardPath}?manualSaved=1${accessEmailSent ? "" : "&manualError=access-email"}`);
 }

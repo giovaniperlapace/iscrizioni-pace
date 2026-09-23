@@ -1,4 +1,4 @@
-import { Accessibility, Baby, CalendarDays, ContactRound, Phone, Save, UserRound } from "lucide-react";
+import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
 import { EditableRegistrationInfo } from "./editable-registration-info";
 import { CancelRegistrationButton } from "./cancel-registration-button";
 import { SELF_CANCELLATION_COPY } from "@/lib/registrations/self-cancellation-copy";
@@ -1218,6 +1218,7 @@ export default async function PartecipanteDashboardPage({
                   />
                 </div>
                 <RegistrationSummaryCard
+                  registrationId={selectedRegistration.id}
                   copy={copy}
                   participant={participant}
                   primaryContact={primaryContact}
@@ -1574,10 +1575,6 @@ export default async function PartecipanteDashboardPage({
                         </ReliableForm>
                       </EditableRegistrationInfo>
 
-                      <div className="flex justify-start border-t border-[var(--peace-border)] pt-5">
-                        <CancelRegistrationButton registrationId={selectedRegistration.id} locale={locale} />
-                      </div>
-
                       {!editable ? (
                         <p className="text-sm text-[#6f7f91]">
                           {copy.editClosed}
@@ -1885,6 +1882,7 @@ function QrActionButtons({
 }
 
 function RegistrationSummaryCard({
+  registrationId,
   copy,
   participant,
   primaryContact,
@@ -1895,6 +1893,7 @@ function RegistrationSummaryCard({
   active,
   locale,
 }: {
+  registrationId: string;
   copy: ParticipantDashboardCopy;
   participant: ParticipantRow;
   primaryContact: ContactRow | null;
@@ -1909,67 +1908,76 @@ function RegistrationSummaryCard({
     <details
       open
       data-testid="registration-summary-card"
-      className="group w-full rounded-lg border border-[var(--peace-border-strong)] bg-white shadow-sm"
+      className="group w-full rounded-xl border border-[var(--peace-border)] bg-white shadow-sm"
     >
       <summary
         data-testid="registration-summary-toggle"
-        className="grid cursor-pointer list-none gap-3 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center"
+        className="flex min-h-20 cursor-pointer list-none items-center gap-3 rounded-xl p-4 transition hover:bg-[var(--peace-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
       >
-        <div className="min-w-0">
+        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]"><ContactRound size={20} aria-hidden="true" /></span>
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold leading-tight text-[var(--peace-ink)] sm:text-xl">
             {copy.registrationSummary}
           </h2>
         </div>
         <span
-          className="inline-flex min-h-10 w-fit items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition group-open:bg-[var(--peace-sky-100)]"
+          className="inline-flex shrink-0 items-center justify-center gap-2 text-sm font-semibold text-[var(--peace-blue-800)]"
           aria-hidden="true"
         >
-          <span className="group-open:hidden">{copy.expand}</span>
-          <span className="hidden group-open:inline">{copy.collapse}</span>
+          <span className="hidden sm:inline group-open:sm:hidden">{copy.expand}</span>
+          <span className="hidden group-open:sm:inline">{copy.collapse}</span>
           <ChevronIcon />
         </span>
       </summary>
-      <div className="border-t border-[var(--peace-border)] px-4 pb-4 pt-3">
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+      <div className="border-t border-[var(--peace-border)] p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <SummaryInfo
+            icon={Mail}
             label="Email"
             value={primaryContact?.email ?? copy.notProvided}
-            className="col-span-2 xl:col-span-1"
+            className="sm:col-span-2 xl:col-span-1"
           />
           <SummaryInfo
+            icon={Phone}
             label={copy.phone}
             value={primaryContact?.phone ?? copy.notProvided}
           />
           <SummaryInfo
+            icon={CalendarDays}
             label={copy.birthDate}
             value={formatDate(participant.birth_date, locale, copy)}
           />
           <SummaryInfo
+            icon={MapPin}
             label={copy.birthPlace}
             value={questionnaire?.answers?.birthPlace ?? copy.notProvided}
           />
           <SummaryInfo
+            icon={Flag}
             label={copy.nationality}
             value={questionnaire?.answers?.nationality ?? copy.notProvided}
           />
-          <SummaryInfo label={copy.expectedPresence} value={attendanceSummary} />
-          <SummaryInfo label={copy.accessibilitySupport} value={supportSummary} />
+          <SummaryInfo icon={CalendarDays} label={copy.expectedPresence} value={attendanceSummary} />
+          <SummaryInfo icon={Accessibility} label={copy.accessibilitySupport} value={supportSummary} />
           {serviceLabel ? (
             <SummaryInfo label={copy.eventService} value={serviceLabel} />
           ) : null}
         </div>
-        <div className="mt-3 flex flex-wrap justify-start gap-2">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--peace-border)] pt-4">
           <Link
             href="/dashboard/partecipante?overlay=iscrizione"
             className={
               active
-                ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white"
-                : "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+                ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white"
+                : "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             }
           >
-            <ActionIcon icon="form" active={active} />
+            <Pencil size={18} aria-hidden="true" />
             {copy.edit}
           </Link>
+          <div className="ml-auto flex justify-end">
+            <CancelRegistrationButton registrationId={registrationId} locale={locale} />
+          </div>
         </div>
       </div>
     </details>
@@ -2009,22 +2017,25 @@ function ParticipantOrganizerContactCard({
 }
 
 function SummaryInfo({
+  icon: Icon,
   label,
   value,
   className = "",
 }: {
+  icon?: LucideIcon;
   label: string;
   value: string;
   className?: string;
 }) {
   return (
     <div
-      className={`min-w-0 rounded-md border border-[var(--peace-border)] bg-[var(--peace-soft)] px-3 py-1.5 ${className}`}
+      className={`min-w-0 rounded-xl border border-[var(--peace-border)] bg-white p-3 ${className}`}
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
+      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--peace-blue-900)]">
+        {Icon ? <Icon size={18} className="shrink-0 text-[var(--peace-blue-800)]" aria-hidden="true" /> : null}
         {label}
       </p>
-      <p className="mt-0.5 break-words text-sm leading-5 text-[var(--peace-ink)]">
+      <p className="mt-2 break-words text-sm leading-6 text-[var(--peace-muted)]">
         {value}
       </p>
     </div>

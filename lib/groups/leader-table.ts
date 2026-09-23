@@ -1,3 +1,4 @@
+import { attendanceSummary } from "../registrations/attendance-summary.ts";
 import { LEADER_SERVICE_STATUS_COPY } from "./leader-table-copy.ts";
 import type { AssignmentView } from "./leader-assignments.ts";
 import { calculateAgeAtDate } from "./matching.ts";
@@ -25,6 +26,7 @@ export type LeaderTableRow = Pick<
   | "submittedAt"
   | "tagIds"
   | "children"
+  | "attendance"
 > & {
   serviceLabel: string | null;
   serviceStatus?: keyof typeof LEADER_SERVICE_STATUS_COPY.it | null;
@@ -47,6 +49,7 @@ export function toLeaderTableRow(row: AssignmentView): LeaderTableRow {
     submittedAt: row.submittedAt,
     tagIds: row.tagIds,
     children: row.children,
+    attendance: row.attendance,
     serviceLabel: row.service?.serviceLabel ?? null,
     serviceStatus: row.service?.status ?? null,
     tags: row.tags.map(({ id, label, color }) => ({ id, label, color })),
@@ -58,6 +61,8 @@ export function leaderColumnValue(
   startsOn: string | null,
 ): string | number | null {
   switch (column) {
+    case "attendance":
+      return attendanceSummary(row.attendance);
     case "name":
       return row.participantName;
     case "email":
@@ -91,6 +96,7 @@ export function leaderCellText(
   startsOn: string | null,
   locale: SupportedLocale,
 ): string {
+  if (column === "attendance") return attendanceSummary(row.attendance, locale);
   const value = leaderColumnValue(row, column, startsOn);
   if (column === "service" && value && row.serviceStatus)
     return `${value}\n${LEADER_SERVICE_STATUS_COPY[locale][row.serviceStatus]}`;

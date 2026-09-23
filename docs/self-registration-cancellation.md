@@ -5,11 +5,13 @@ esplicite, pulsanti con area di clic adeguata e un dialog nativo con focus confi
 chiusura da tastiera e scorrimento mobile. I campi e il flusso di salvataggio esistenti
 restano gli stessi.
 
-Il comando **Annulla la mia iscrizione** apre una conferma distinta. Il focus iniziale
-è su **Mantieni la mia iscrizione**; Esc chiude soltanto la conferma, senza perdere
-le modifiche inserite nella scheda. La conferma spiega QR, figli collegati, storico,
-account e ruoli conservati e nuova iscrizione con la stessa email, durante l’apertura
-delle iscrizioni. Tutti i testi sono disponibili nelle sette lingue. Durante l’invio
+Il riepilogo usa icone Lucide, riquadri arrotondati e spaziature coerenti con la
+scheda di modifica. Il comando **Annulla la mia iscrizione** si trova in basso a
+destra nel riepilogo, fuori dalla modale di modifica, e apre una conferma distinta.
+Il focus iniziale è su **Mantieni la mia iscrizione**; Esc chiude la conferma e
+restituisce il focus al comando. La conferma spiega QR, figli collegati, storico
+e nuova iscrizione con la stessa email, durante l’apertura delle iscrizioni.
+Non mostra informazioni sulla conservazione di account e incarichi. Tutti i testi sono disponibili nelle sette lingue. Durante l’invio
 sono impedite conferme multiple. Un errore lascia la conferma aperta; il successo
 mostra l’esito e il normale accesso a una nuova iscrizione.
 

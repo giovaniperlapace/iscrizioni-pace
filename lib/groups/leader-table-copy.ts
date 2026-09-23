@@ -1,3 +1,4 @@
+import { ATTENDANCE_SUMMARY_COPY } from "../registrations/attendance-summary.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
 import type { ParticipantColumn } from "../registrations/operations-table.ts";
 type Copy = {
@@ -45,6 +46,7 @@ function copy(
       service,
       tags,
       submittedAt,
+      attendance: "",
     },
     visibleColumns,
     export: download,
@@ -244,3 +246,7 @@ export const LEADER_SERVICE_STATUS_COPY = {
     declined: "Відхилено",
   },
 } satisfies Record<SupportedLocale, Record<string, string>>;
+
+for (const locale of Object.keys(LEADER_TABLE_COPY) as SupportedLocale[]) {
+  LEADER_TABLE_COPY[locale].columns.attendance = ATTENDANCE_SUMMARY_COPY[locale][0];
+}

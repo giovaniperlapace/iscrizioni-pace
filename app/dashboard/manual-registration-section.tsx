@@ -15,6 +15,7 @@ import { ManualChildrenFields } from "@/app/dashboard/capogruppo/manual-children
 export function ManualRegistrationSection({
   action,
   sourceDashboard = "capogruppo",
+  returnTo,
   groups,
   selectedGroupId,
   eventDays,
@@ -23,6 +24,7 @@ export function ManualRegistrationSection({
 }: {
   action: (data: FormData) => Promise<unknown>;
   sourceDashboard?: "capogruppo" | "manager";
+  returnTo?: string;
   groups: Array<{ id: string; name: string; isAssignable: boolean }>;
   selectedGroupId: string | null;
   eventDays: AttendanceDayColumn[];
@@ -47,11 +49,13 @@ export function ManualRegistrationSection({
       {assignableGroups.length > 0 ? (
         <ReliableForm
           action={action}
+          data-preserve-dashboard-scroll={returnTo ? true : undefined}
           validation="manualRegistration"
           locale={locale}
           className="mt-5 grid gap-4 lg:grid-cols-2"
         >
           <input type="hidden" name="sourceDashboard" value={sourceDashboard} />
+          {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
           <div className="lg:col-span-2"><RequiredFieldsNote locale={locale} /></div>
           <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
             <span>{copy.group}<RequiredIndicator /></span>

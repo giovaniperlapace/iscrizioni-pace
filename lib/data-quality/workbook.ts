@@ -1,3 +1,4 @@
+import { attendanceSummary } from "../registrations/attendance-summary.ts";
 import ExcelJS from "exceljs";
 import yauzl from "yauzl";
 import { calculateAgeAtDate } from "../groups/matching.ts";
@@ -207,6 +208,8 @@ export async function writeVisibleParticipantsWorkbook(
   const rows = people.map((person) =>
     columns.map((column) => {
       switch (column) {
+        case "attendance":
+          return attendanceSummary(person.attendance);
         case "name":
           return person.name;
         case "email":

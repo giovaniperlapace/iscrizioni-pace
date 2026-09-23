@@ -53,33 +53,37 @@ function makeClient(cancelled:boolean) {
 }`);
 const ab = (...args) => execFileSync('npx', ['--yes','agent-browser','--session','pace-self',...args], {encoding:'utf8',timeout:60000});
 const check = (code,label) => { const value=ab('eval',code).trim(); assert.equal(value,'true',label+' '+value); console.log('PASS '+label); };
-const open = query => { ab('open',base+'/self-registration-check?overlay=iscrizione&'+query); ab('wait','dialog[open]'); ab('snapshot','-i'); };
+const open = query => { ab('open',base+'/self-registration-check?'+query); ab('wait','[data-testid=registration-summary-card]'); ab('snapshot','-i'); };
 try {
  for(const locale of (process.env.FOCUSED ? ['it'] : ['it','en','fr','de','es','nl','uk'])) {
-  ab('set','viewport','1280','900'); open('locale='+locale);
+  ab('set','viewport','1280','900'); open('overlay=iscrizione&locale='+locale);
   check('document.querySelectorAll("dialog[open] details").length===5','five editable sections '+locale);
   ab('click','dialog[open] details:first-of-type summary');
   ab('fill','input[name="firstName"]','Anna aggiornata');
   check('document.querySelector("input[name=firstName]").value === "Anna aggiornata"','identity form '+locale);
   if(locale==='it') ab('screenshot','/tmp/pace-self-desktop.png');
-  ab('click','dialog[open] button:has(svg.lucide-user-round-x)');
+  check('!document.querySelector("dialog[open] button svg.lucide-user-round-x")','cancellation outside edit modal '+locale);
+  open('locale='+locale);
+  if(locale==='it') ab('screenshot','/tmp/pace-self-summary-desktop.png');
+  ab('click','button:has(svg.lucide-user-round-x)');
   ab('wait','dialog[open][aria-describedby]');
-  check('document.querySelectorAll("dialog[open]").length===2 && !document.body.dataset.cancellations','confirmation before mutation '+locale);
+  check('document.querySelectorAll("dialog[open]").length===1 && !document.body.dataset.cancellations','confirmation before mutation '+locale);
   check('document.activeElement.textContent===document.querySelector("dialog[aria-describedby] button").textContent','safe initial focus '+locale);
   ab('set','viewport','390','844');
   check('document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll("dialog[open]")].every(d=>d.scrollWidth<=d.clientWidth)','mobile dialog fit '+locale);
   if(locale==='it') ab('screenshot','/tmp/pace-self-cancel-mobile.png');
   ab('press','Escape');
-  check('document.querySelectorAll("dialog[open]").length===1 && document.activeElement.querySelector("svg.lucide-user-round-x")!==null','escape returns focus '+locale);
+  check('document.querySelectorAll("dialog[open]").length===0 && document.activeElement.querySelector("svg.lucide-user-round-x")!==null','escape returns focus '+locale);
+  check('document.documentElement.scrollWidth<=innerWidth','mobile summary fit '+locale);
   ab('screenshot','/tmp/pace-self-mobile-'+locale+'.png');
  }
  open('locale=it&failure=1');
- ab('click','dialog[open] button:has(svg.lucide-user-round-x)');
+ ab('click','button:has(svg.lucide-user-round-x)');
  ab('click','dialog[aria-describedby] button:last-child'); ab('wait','[role=alert]');
- check('document.body.dataset.cancellations==="1" && document.querySelectorAll("dialog[open]").length===2','failed cancellation stays in confirmation');
+ check('document.body.dataset.cancellations==="1" && document.querySelectorAll("dialog[open]").length===1','failed cancellation stays in confirmation');
  ab('click','dialog[aria-describedby] button:first-child');
- check('document.querySelectorAll("dialog[open]").length===1','keep after failure');
- open('locale=it'); ab('click','dialog[open] button:has(svg.lucide-user-round-x)');
+ check('document.querySelectorAll("dialog[open]").length===0','keep after failure');
+ open('locale=it'); ab('click','button:has(svg.lucide-user-round-x)');
  ab('click','dialog[aria-describedby] button:last-child');
  ab('wait','--url','**cancelled=1'); ab('snapshot','-i');
  check('!document.querySelector("dialog[open]") && document.body.innerText.includes("è stata annullata") && [...document.querySelectorAll("a")].some(a=>new URL(a.href).pathname==="/registrazione")','success removes modal and offers registration');

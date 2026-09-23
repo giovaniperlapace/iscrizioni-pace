@@ -1,7 +1,5 @@
-import Link from "@/components/pending-link";
-import { UserPlus } from "lucide-react";
 import { getRequestLocale } from "@/lib/i18n/server";
-import { MANUAL_REGISTRATION_COPY } from "@/lib/registrations/manual-registration-copy";
+import { OperationsManualRegistration } from "@/app/dashboard/operations-manual-registration";
 import { randomUUID } from "node:crypto";
 import { Suspense } from "react";
 import { OperationsParticipantsNavigation } from "@/app/dashboard/operations-participants-navigation";
@@ -44,14 +42,8 @@ export async function OperationsParticipantsSection({
         dashboard={dashboard}
         navMode={navMode}
       />
-      {eventId && canManageEvent(eventId) ? (
-        <div className="flex justify-end">
-          <Link href="/dashboard/manager/nuovo" prefetch={false} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white">
-            <UserPlus size={18} aria-hidden />{MANUAL_REGISTRATION_COPY[locale].addParticipant}
-          </Link>
-        </div>
-      ) : null}
       <OperationsParticipantsTable
+        locale={locale}
         dataVersion={randomUUID()}
         dialogOnly={duplicatesView}
         snapshot={{
@@ -79,6 +71,9 @@ export async function OperationsParticipantsSection({
         eventId={eventId}
         eventStartsOn={eventStartsOn}
       />
+      {eventId && canManageEvent(eventId) && searchParams?.manual === "1" && (
+        <OperationsManualRegistration dashboard={dashboard} searchParams={searchParams} />
+      )}
       {duplicatesView && eventId && (
         <Suspense
           fallback={
