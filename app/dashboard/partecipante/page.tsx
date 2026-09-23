@@ -2097,55 +2097,6 @@ function ChevronIcon() {
   );
 }
 
-function ActionIcon({
-  icon,
-  active,
-}: {
-  icon: "qr" | "form";
-  active: boolean;
-}) {
-  if (icon === "qr") {
-    const activeCells = new Set([0, 1, 3, 4, 5, 6, 8, 9, 12, 15, 16, 18, 20, 21, 22, 24]);
-
-    return (
-      <span
-        aria-hidden="true"
-        className="grid size-6 shrink-0 grid-cols-5 gap-0.5 rounded-sm"
-      >
-        {Array.from({ length: 25 }, (_, cell) => (
-          <span
-            key={cell}
-            className={
-              activeCells.has(cell)
-                ? active
-                  ? "rounded-[1px] bg-white"
-                  : "rounded-[1px] bg-[var(--peace-blue-800)]"
-                : "rounded-[1px] bg-transparent"
-            }
-          />
-        ))}
-      </span>
-    );
-  }
-
-  return (
-    <span
-      aria-hidden="true"
-      className={
-        active
-          ? "grid size-6 shrink-0 gap-1 rounded-sm border border-white p-1"
-          : "grid size-6 shrink-0 gap-1 rounded-sm border border-[var(--peace-blue-800)] p-1"
-      }
-    >
-      <span className={active ? "h-0.5 w-3 bg-white" : "h-0.5 w-3 bg-[var(--peace-blue-800)]"} />
-      <span className={active ? "h-0.5 w-4 bg-white" : "h-0.5 w-4 bg-[var(--peace-blue-800)]"} />
-      <span
-        className={active ? "h-0.5 w-3.5 bg-white" : "h-0.5 w-3.5 bg-[var(--peace-blue-800)]"}
-      />
-    </span>
-  );
-}
-
 function MessageIcon({ active }: { active: boolean }) {
   return (
     <svg

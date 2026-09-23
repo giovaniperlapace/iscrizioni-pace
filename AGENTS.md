@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Compatibilità build della fixture router — 2026-09-23
+
+- Il deployment `0c632e4` è fallito: dipendenze locali Next 16.3 diverse dal
+  lockfile Next 16.2.9 usato da Vercel. `bfcacheId` richiesto dal primo era
+  rifiutato come proprietà extra nell’oggetto inline dal secondo.
+- Fixture compatibile con entrambe tramite spread della proprietà aggiuntiva;
+  mantenuti i controlli TypeScript. Rimossa anche la funzione ActionIcon inutilizzata.
+  Prima dei rilasci verificare con `npm ci` dal lockfile e controllare lo stato
+  effettivo del deployment: il solo push non conferma la pubblicazione.
+
+
 ## Riepilogo personale e annullamento — 2026-09-23
 
 - Riepilogo allineato alla scheda di modifica con icone Lucide, riquadri e

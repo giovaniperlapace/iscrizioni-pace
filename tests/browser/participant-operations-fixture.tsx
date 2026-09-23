@@ -226,7 +226,8 @@ export default function Fixture() {
   return (
     <AppRouterContext.Provider
       value={{
-        bfcacheId: "participant-operations-fixture",
+        // Keep the mock compatible with Next 16.2 and 16.3 router types.
+        ...{ bfcacheId: "participant-operations-fixture" },
         back() {},
         forward() {},
         refresh() {},
