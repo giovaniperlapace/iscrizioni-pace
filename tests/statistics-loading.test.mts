@@ -16,6 +16,7 @@ const registrations = Array.from({ length: 1201 }, (_, i) => ({
 }));
 const groups = Array.from({ length: 1001 }, (_, i) => ({
   id: uuid(5000 + i), event_id: eventId, name: i === 1000 ? "Italia" : i === 999 ? "Roma" : `Gruppo ${i}`,
+  is_assignable: true,
   node_type: i === 1000 ? "country" : i === 999 ? "city" : "group",
   parent_group_id: i === 1000 ? null : uuid(i === 999 ? 6000 : 5999),
 }));
@@ -54,6 +55,8 @@ test("statistics paginate all sources, batch UUIDs and preserve family counts an
   const { client, calls, urls } = fixture();
   const result = await loadEventStatisticsSnapshot(client, eventId, dates);
   assert.equal(result.summary.totalPeople, 1202);
+  assert.ok(urls.filter(url => url.pathname.endsWith("/groups")).every(url => url.searchParams.get("select")?.includes("is_assignable")));
+  assert.equal(result.people.find(person => person.registrationId === uuid(0))?.assignedGroupType, "Gruppo effettivo");
   assert.equal(result.registrationTimeline.weeks.reduce((sum, week) => sum + week.count, 0), 1201);
   assert.ok(urls.filter(url => url.pathname.endsWith("/registrations")).every(url => url.searchParams.get("select")?.includes("submitted_at")));
   assert.equal(result.summary.accompanyingChildren, 1);

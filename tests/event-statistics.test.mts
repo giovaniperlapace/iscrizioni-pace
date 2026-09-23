@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildEventStatisticsSnapshot,
+  buildAssignedGroupRows,
   filterStatisticsPeople,
   parseStatisticsDrilldown,
   serializeStatisticsDrilldown,
@@ -203,6 +204,9 @@ test("statistics drilldown round-trips compound pivot filters", () => {
     [
       {
         id: "person",
+        assignedGroupKey: "event:group",
+        assignedGroupLabel: "Trastevere & Centro",
+        assignedGroupType: "Gruppo effettivo",
         registrationId: "registration",
         name: "Mario Rossi",
         kind: "participant",
@@ -220,4 +224,38 @@ test("statistics drilldown round-trips compound pivot filters", () => {
   );
 
   assert.equal(matching.length, 1);
+});
+
+test("direct assigned nodes ignore residence and ancestors, separate namesakes and preserve drilldowns", () => {
+  const groups = [
+    { id: "country", name: "Italia", nodeType: "country", isAssignable: true },
+    { id: "city", name: "Roma", nodeType: "city", isAssignable: true },
+    { id: "area", name: "Centro", nodeType: "area", isAssignable: true },
+    { id: "one", name: "Omonimo", nodeType: "group", isAssignable: true },
+    { id: "two", name: "Omonimo", nodeType: "group", isAssignable: false },
+    { id: "closed", name: "Organizzazione", nodeType: "area", isAssignable: false },
+  ].map(g => ({ ...g, eventId: "event", parentGroupId: g.id === "country" ? null : "country" }));
+  const snapshot = buildEventStatisticsSnapshot({
+    groups,
+    participants: [...groups.map(g => g.id), null].map((id, i) => ({
+      registrationId: `r${i}`, eventId: "event", eventTitle: "Evento",
+      currentGroupId: id, currentGroupName: "Nome obsoleto", country: "Francia", city: "Parigi",
+      childrenCount: i === 0 ? 2 : 0,
+    })),
+    attendanceChoices: [{ registration_id: "r0", day: "2026-10-25", day_part: "morning", choice: "yes" }],
+  });
+  const rows = buildAssignedGroupRows(snapshot.people);
+  assert.equal(rows.length, 7);
+  assert.equal(rows.reduce((sum, row) => sum + row.people.length, 0), 9);
+  assert.equal(rows.find(r => r.label === "Italia")?.people.length, 3);
+  assert.equal(rows.find(r => r.label === "Roma")?.type, "Città");
+  assert.equal(rows.find(r => r.label === "Centro")?.type, "Area");
+  assert.equal(rows.find(r => r.label === "Organizzazione")?.type, "Nodo non iscrivibile");
+  assert.equal(rows.filter(r => r.label === "Omonimo").length, 2);
+  assert.ok(!rows.some(r => ["Francia", "Parigi", "Nome obsoleto"].includes(r.label)));
+  for (const row of rows) {
+    const filter = parseStatisticsDrilldown(serializeStatisticsDrilldown(row.filter))!;
+    assert.deepEqual(filterStatisticsPeople(snapshot.people, filter), row.people);
+    assert.equal(filterStatisticsPeople(snapshot.people, { ...filter, attendanceSlot: "2026-10-25__morning" }).length, row.label === "Italia" ? 3 : 0);
+  }
 });

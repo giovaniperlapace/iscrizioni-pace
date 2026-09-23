@@ -34,6 +34,7 @@ export type StatisticsGroup = {
   name: string;
   parentGroupId: string | null;
   nodeType: string | null;
+  isAssignable?: boolean | null;
 };
 
 export type StatisticsAttendanceChoice = {
@@ -77,6 +78,9 @@ export type StatisticsPersonRow = {
   country: string;
   city: string;
   group: string;
+  assignedGroupKey: string;
+  assignedGroupLabel: string;
+  assignedGroupType: string;
   birthDate: string | null;
   age: number | null;
   ageBand: StatisticsAgeBand;
@@ -95,6 +99,8 @@ export type StatisticsDrilldownFilter = {
   country?: string;
   city?: string;
   group?: string;
+  assignedGroupKey?: string;
+  assignedGroupLabel?: string;
   attendanceSlot?: string | "none";
   ageBand?: StatisticsAgeBand;
 };
@@ -131,6 +137,10 @@ export function serializeStatisticsDrilldown(
   if (filter.city) {
     params.set("city", filter.city);
   }
+  if (filter.assignedGroupKey) {
+    params.set("assignedGroup", filter.assignedGroupKey);
+    if (filter.assignedGroupLabel) params.set("assignedGroupLabel", filter.assignedGroupLabel);
+  }
   if (filter.group) {
     params.set("group", filter.group);
   }
@@ -160,6 +170,10 @@ export function parseStatisticsDrilldown(
   const kind = params.get("kind");
   const attendance = params.get("attendance");
   const age = params.get("age");
+  if (params.get("assignedGroup")) {
+    filter.assignedGroupKey = params.get("assignedGroup")!;
+    filter.assignedGroupLabel = params.get("assignedGroupLabel") ?? undefined;
+  }
 
   if (kind === "all" || kind === "participant" || kind === "child") {
     filter.personKind = kind;
@@ -204,6 +218,7 @@ export function filterStatisticsPeople(
     if (filter.city && person.city !== filter.city) {
       return false;
     }
+    if (filter.assignedGroupKey && person.assignedGroupKey !== filter.assignedGroupKey) return false;
     if (filter.group && person.group !== filter.group) {
       return false;
     }
@@ -233,6 +248,7 @@ export function describeStatisticsDrilldown(
   slots: StatisticsAttendanceSlot[]
 ): string {
   const parts: string[] = [];
+  if (filter.assignedGroupKey) parts.push(`Gruppo o nodo: ${filter.assignedGroupLabel ?? filter.assignedGroupKey}`);
 
   if (filter.personKind === "all") {
     parts.push("Tutte le persone");
@@ -489,6 +505,7 @@ function buildPeopleDetail(
     const attendance = attendanceByRegistrationId.get(participant.registrationId);
     const common = {
       registrationId: participant.registrationId,
+      ...assignedGroupBucket(participant, groupsById),
       country,
       city,
       group,
@@ -563,6 +580,9 @@ function buildStatisticsPersonRow({
   country,
   city,
   group,
+  assignedGroupKey,
+  assignedGroupLabel,
+  assignedGroupType,
   birthDate,
   ageReferenceDate,
   attendanceSlotKeys,
@@ -580,6 +600,9 @@ function buildStatisticsPersonRow({
     country,
     city,
     group,
+    assignedGroupKey,
+    assignedGroupLabel,
+    assignedGroupType,
     birthDate,
     age,
     ageBand: getStatisticsAgeBand(age),
@@ -810,4 +833,29 @@ function formatFilterDate(value: string): string {
     month: "long",
     timeZone: "UTC",
   }).format(date);
+}
+
+function assignedGroupBucket(participant: StatisticsParticipant, groups: Map<string, GroupNode>) {
+  const group = participant.currentGroupId ? groups.get(participant.currentGroupId) : null;
+  if (!group) return { assignedGroupKey: "missing-group", assignedGroupLabel: "Senza gruppo corrente", assignedGroupType: "Da assegnare" };
+  const types: Record<string, string> = { group: "Gruppo effettivo", country: "Nazione", city: "Città", area: "Area" };
+  const eligible = group.nodeType === "group" || (group.isAssignable === true && ["country", "city", "area"].includes(group.nodeType ?? ""));
+  return {
+    assignedGroupKey: `${group.eventId}:${group.id}`,
+    assignedGroupLabel: group.name,
+    assignedGroupType: eligible ? types[group.nodeType!] : "Nodo non iscrivibile",
+  };
+}
+
+export function buildAssignedGroupRows(people: StatisticsPersonRow[]) {
+  const rows = new Map<string, { key: string; label: string; type: string; people: StatisticsPersonRow[]; filter: StatisticsDrilldownFilter }>();
+  for (const person of people) {
+    let row = rows.get(person.assignedGroupKey);
+    if (!row) {
+      row = { key: person.assignedGroupKey, label: person.assignedGroupLabel, type: person.assignedGroupType, people: [], filter: { assignedGroupKey: person.assignedGroupKey, assignedGroupLabel: person.assignedGroupLabel } };
+      rows.set(row.key, row);
+    }
+    row.people.push(person);
+  }
+  return [...rows.values()].sort((a, b) => a.label.localeCompare(b.label, "it") || a.key.localeCompare(b.key));
 }

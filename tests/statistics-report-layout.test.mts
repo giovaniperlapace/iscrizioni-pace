@@ -23,26 +23,12 @@ test("statistics keep four focused reports and remove person-detail tables", () 
   assert.doesNotMatch(statisticsSection, /Cerca nella tabella/);
 });
 
-test("territory report uses an expandable country-city-group attendance pivot", () => {
-  for (const marker of [
-    "TerritoryAttendancePivot",
-    "buildTerritoryPivotRows",
-    'level: "country"',
-    'level: "city"',
-    'level: "group"',
-    "groups.size > 1",
-    "ChevronRight",
-    "ChevronDown",
-    "attendanceSlots.map",
-    "Totale",
-  ]) {
-    assert.ok(statisticsSection.includes(marker), `missing pivot marker: ${marker}`);
+test("group report uses direct assignments and preserves attendance columns", () => {
+  for (const marker of ["buildAssignedGroupRows", "row.type", "attendanceSlots.map", "Totale", "Gruppo o nodo"]) {
+    assert.ok(statisticsSection.includes(marker));
   }
-
-  assert.match(
-    statisticsSection,
-    /overflow-x-auto overscroll-x-contain/
-  );
+  assert.doesNotMatch(statisticsSection, /person\.country|person\.city|ChevronRight|territorySummary/);
+  assert.match(statisticsSection, /overflow-x-auto overscroll-x-contain/);
 });
 
 test("attendance summary groups only morning and afternoon by date", () => {

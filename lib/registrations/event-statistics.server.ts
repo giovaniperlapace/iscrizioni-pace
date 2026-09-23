@@ -34,7 +34,7 @@ export async function loadEventStatisticsSnapshot(
       .select("id,submitted_at,event_id,events(title),participants(first_name,last_name,birth_date,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)")
       .eq("event_id", eventId).is("deleted_at", null).order("id").range(from, to)),
     loadAllRows((from, to) => db.from("groups")
-      .select("id,event_id,name,parent_group_id,node_type")
+      .select("id,event_id,name,parent_group_id,node_type,is_assignable")
       .eq("event_id", eventId).order("id").range(from, to)),
   ]);
   const rows = registrations as unknown as Registration[];
@@ -65,7 +65,7 @@ export async function loadEventStatisticsSnapshot(
     ...dates,
     groups: groups.map((group) => ({
       id: group.id, eventId: group.event_id, name: group.name,
-      parentGroupId: group.parent_group_id, nodeType: group.node_type,
+      parentGroupId: group.parent_group_id, nodeType: group.node_type, isAssignable: group.is_assignable,
     })),
     attendanceChoices,
     participants: rows.map((row) => {

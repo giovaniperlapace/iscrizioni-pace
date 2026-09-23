@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Riepilogo per assegnazione corrente — 2026-09-23
+
+- Statistiche Manager/Admin: elenco piatto per ID del gruppo corrente, gruppo
+  effettivo oppure nodo Nazione/città/area iscrivibile. Nessun raggruppamento
+  per residenza o antenati; omonimi distinti anche nei filtri dei conteggi.
+  Figli e presenze conservati; senza gruppo e nodi non iscrivibili segnalati
+  per mantenere i totali. Loader paginato legge anche is_assignable.
+- Nessuna modifica dati, permessi o migration. Commit/push su main e rilascio
+  Vercel autorizzati dall’utente. Verificati 518 test, lint, TypeScript e build
+  in copia pulita con npm ci dal lockfile. Regressioni in event-statistics,
+  statistics-loading e statistics-report-layout.
+
+
 ## Presenze in colonne per momento — 2026-09-23
 
 - Selezionare Giorni di presenza espande la tabella Manager/Admin e Capogruppo

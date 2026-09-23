@@ -3,18 +3,16 @@
 import Link from "@/components/pending-link";
 import {
   Baby,
-  ChevronDown,
-  ChevronRight,
   UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { Fragment, type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo } from "react";
 
 import {
   serializeStatisticsDrilldown,
+  buildAssignedGroupRows,
   type EventStatisticsSnapshot,
-  type ParticipantBreakdownLevel,
   type StatisticsAgeBand,
   type StatisticsAttendanceSlot,
   type StatisticsDrilldownFilter,
@@ -30,21 +28,7 @@ type StatisticsSectionProps = {
   navMode: StatisticsNavMode;
 };
 
-type SummaryBreakdownRow = {
-  label: string;
-  count: number;
-};
-
-type PivotLevel = "country" | "city" | "group";
-
-type TerritoryPivotRow = {
-  key: string;
-  level: PivotLevel;
-  label: string;
-  people: StatisticsPersonRow[];
-  filter: StatisticsDrilldownFilter;
-  children: TerritoryPivotRow[];
-};
+type AssignedGroupRow = ReturnType<typeof buildAssignedGroupRows>[number];
 
 const AGE_BANDS: StatisticsAgeBand[] = [
   "0-14",
@@ -59,14 +43,6 @@ export function StatisticsSection({
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
-  const territorySummary = useMemo(
-    () => ({
-      country: summarizeLabels(statistics.people.map((person) => person.country)),
-      city: summarizeLabels(statistics.people.map((person) => person.city)),
-      group: summarizeLabels(statistics.people.map((person) => person.group)),
-    }),
-    [statistics.people]
-  );
   const participantHref = (filter: StatisticsDrilldownFilter) =>
     buildParticipantsHref(dashboard, navMode, filter);
 
@@ -80,10 +56,9 @@ export function StatisticsSection({
         </p>
       </div>
 
-      <ReportBlock name="territory" title="Territori e gruppi">
+      <ReportBlock name="territory" title="Partecipanti per gruppo o nodo">
         <TerritoryStatisticsSummary
           statistics={statistics}
-          territorySummary={territorySummary}
           participantHref={participantHref}
         />
 
@@ -149,18 +124,16 @@ function ReportBlock({
 
 function TerritoryStatisticsSummary({
   statistics,
-  territorySummary,
   participantHref,
 }: {
   statistics: EventStatisticsSnapshot;
-  territorySummary: Record<ParticipantBreakdownLevel, SummaryBreakdownRow[]>;
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
   return (
     <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
         <h3 className="text-base font-semibold">
-          Riepilogo persone, territori e gruppi
+          Riepilogo partecipanti
         </h3>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
           Ogni conteggio apre l’elenco delle iscrizioni corrispondenti.
@@ -188,43 +161,6 @@ function TerritoryStatisticsSummary({
         />
       </div>
 
-      <div className="mt-4">
-        <SummaryPanel
-          title="Territori e gruppi più rappresentati"
-          description="Le prime cinque voci per numero di persone; il riepilogo completo è nella tabella pivot successiva."
-        >
-          <div className="grid gap-4 lg:grid-cols-3">
-            {(
-              [
-                ["country", "Paesi"],
-                ["city", "Città"],
-                ["group", "Gruppi"],
-              ] as const
-            ).map(([level, title]) => (
-              <div key={level}>
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-                  {title}
-                </h4>
-                <div className="grid gap-2">
-                  {territorySummary[level].slice(0, 5).map((row) => (
-                    <SummaryFilterLink
-                      key={row.label}
-                      label={row.label}
-                      count={row.count}
-                      href={participantHref({ [level]: row.label })}
-                    />
-                  ))}
-                  {territorySummary[level].length === 0 ? (
-                    <p className="text-sm text-[var(--peace-muted)]">
-                      Nessun dato disponibile.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </SummaryPanel>
-      </div>
     </article>
   );
 }
@@ -238,31 +174,17 @@ function TerritoryAttendancePivot({
   attendanceSlots: StatisticsAttendanceSlot[];
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
-  const rows = useMemo(() => buildTerritoryPivotRows(people), [people]);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
-
-  function toggleRow(key: string) {
-    setExpandedRows((current) => {
-      const next = new Set(current);
-
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-
-      return next;
-    });
-  }
+  const rows = useMemo(() => buildAssignedGroupRows(people), [people]);
 
   return (
     <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
-        <h3 className="text-base font-semibold">Persone per territorio e gruppo</h3>
+        <h3 className="text-base font-semibold">Partecipanti per gruppo o nodo</h3>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Espandi un paese per vedere le città. Le città con più gruppi possono
-          essere aperte a loro volta. Le colonne mostrano le presenze previste
-          per mattina e pomeriggio.
+          Ogni riga conta le persone assegnate direttamente al gruppo effettivo
+          o al nodo iscrivibile (Nazione, città o area), inclusi i minori accompagnati.
+          Le colonne mostrano le presenze previste per mattina e pomeriggio.
+          Sono segnalate anche le persone senza gruppo o assegnate a nodi non iscrivibili.
         </p>
       </div>
 
@@ -272,7 +194,7 @@ function TerritoryAttendancePivot({
           <thead className="bg-[#f7fbfe]">
             <tr className="text-xs uppercase tracking-wide text-[#6f7f91] [&>th]:border-b [&>th]:border-[var(--peace-border)]">
               <th className="sticky left-0 z-20 min-w-64 bg-[#f7fbfe] px-4 py-3 font-semibold">
-                Territorio o gruppo
+                Gruppo o nodo
               </th>
               <th className="min-w-24 px-3 py-3 text-center font-semibold">
                 Totale
@@ -291,41 +213,8 @@ function TerritoryAttendancePivot({
             </tr>
           </thead>
           <tbody>
-            {rows.map((country) => (
-              <Fragment key={country.key}>
-                <TerritoryPivotTableRow
-                  row={country}
-                  attendanceSlots={attendanceSlots}
-                  expanded={expandedRows.has(country.key)}
-                  onToggle={() => toggleRow(country.key)}
-                  participantHref={participantHref}
-                />
-                {expandedRows.has(country.key)
-                  ? country.children.map((city) => (
-                      <Fragment key={city.key}>
-                        <TerritoryPivotTableRow
-                          row={city}
-                          attendanceSlots={attendanceSlots}
-                          expanded={expandedRows.has(city.key)}
-                          onToggle={() => toggleRow(city.key)}
-                          participantHref={participantHref}
-                        />
-                        {expandedRows.has(city.key)
-                          ? city.children.map((group) => (
-                              <TerritoryPivotTableRow
-                                key={group.key}
-                                row={group}
-                                attendanceSlots={attendanceSlots}
-                                expanded={false}
-                                onToggle={() => undefined}
-                                participantHref={participantHref}
-                              />
-                            ))
-                          : null}
-                      </Fragment>
-                    ))
-                  : null}
-              </Fragment>
+            {rows.map((row) => (
+              <TerritoryPivotTableRow key={row.key} row={row} attendanceSlots={attendanceSlots} participantHref={participantHref} />
             ))}
           </tbody>
         </table>
@@ -333,7 +222,7 @@ function TerritoryAttendancePivot({
 
       {rows.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          Nessun dato territoriale disponibile.
+          Nessuna assegnazione disponibile.
         </p>
       ) : null}
     </article>
@@ -343,54 +232,20 @@ function TerritoryAttendancePivot({
 function TerritoryPivotTableRow({
   row,
   attendanceSlots,
-  expanded,
-  onToggle,
   participantHref,
 }: {
-  row: TerritoryPivotRow;
+  row: AssignedGroupRow;
   attendanceSlots: StatisticsAttendanceSlot[];
-  expanded: boolean;
-  onToggle: () => void;
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
-  const canExpand = row.children.length > 0;
-  const rowTone =
-    row.level === "country"
-      ? "bg-white font-semibold"
-      : row.level === "city"
-        ? "bg-[#fbfdff] font-medium"
-        : "bg-[#f7fbfe]";
-  const indent =
-    row.level === "country" ? "pl-4" : row.level === "city" ? "pl-10" : "pl-16";
-
   return (
-    <tr className={`[&>th]:border-b [&>td]:border-b [&>th]:border-[var(--peace-border)] [&>td]:border-[var(--peace-border)] last:[&>th]:border-b-0 last:[&>td]:border-b-0 ${rowTone}`}>
+    <tr className={`[&>th]:border-b [&>td]:border-b [&>th]:border-[var(--peace-border)] [&>td]:border-[var(--peace-border)] last:[&>th]:border-b-0 last:[&>td]:border-b-0 bg-white`}>
       <th
         scope="row"
-        className={`sticky left-0 z-[5] min-w-64 py-3 pr-4 text-left ${indent} ${rowTone}`}
+        className={`sticky left-0 z-[5] min-w-64 py-3 pr-4 text-left pl-4 bg-white`}
       >
-        {canExpand ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            className="-ml-1 flex min-h-8 items-center gap-2 rounded-md pr-2 text-left transition hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--peace-blue-800)]"
-          >
-            <span className="grid size-8 shrink-0 place-items-center text-[var(--peace-blue-800)]">
-              {expanded ? (
-                <ChevronDown aria-hidden="true" size={18} />
-              ) : (
-                <ChevronRight aria-hidden="true" size={18} />
-              )}
-            </span>
-            <span>{row.label}</span>
-          </button>
-        ) : (
-          <span className="flex min-h-8 items-center gap-2">
-            <span aria-hidden="true" className="size-8 shrink-0" />
-            <span>{row.label}</span>
-          </span>
-        )}
+        <span className="block">{row.label}</span>
+        <span className="block text-xs font-normal text-[var(--peace-muted)]">{row.type}</span>
       </th>
       <td className="px-3 py-3 text-center">
         <CountLink
@@ -539,26 +394,6 @@ function SummaryKpi({
   );
 }
 
-function SummaryPanel({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="h-full rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
-      <h4 className="font-semibold text-[var(--peace-ink)]">{title}</h4>
-      <p className="mt-1 text-sm leading-5 text-[var(--peace-muted)]">
-        {description}
-      </p>
-      <div className="mt-3">{children}</div>
-    </section>
-  );
-}
-
 function SummaryFilterLink({
   label,
   count,
@@ -643,76 +478,6 @@ function buildParticipantsHref(
   return `/dashboard/${dashboard}?${params.toString()}`;
 }
 
-function buildTerritoryPivotRows(
-  people: StatisticsPersonRow[]
-): TerritoryPivotRow[] {
-  const countries = groupPeopleByLabel(people, (person) => person.country);
-
-  return sortedGroupEntries(countries).map(([country, countryPeople]) => {
-    const cities = groupPeopleByLabel(countryPeople, (person) => person.city);
-    const cityRows = sortedGroupEntries(cities).map(([city, cityPeople]) => {
-      const groups = groupPeopleByLabel(cityPeople, (person) => person.group);
-      const groupRows =
-        groups.size > 1
-          ? sortedGroupEntries(groups).map(([group, groupPeople]) => ({
-              key: pivotRowKey("group", country, city, group),
-              level: "group" as const,
-              label: group,
-              people: groupPeople,
-              filter: { country, city, group },
-              children: [],
-            }))
-          : [];
-
-      return {
-        key: pivotRowKey("city", country, city),
-        level: "city" as const,
-        label: city,
-        people: cityPeople,
-        filter: { country, city },
-        children: groupRows,
-      };
-    });
-
-    return {
-      key: pivotRowKey("country", country),
-      level: "country" as const,
-      label: country,
-      people: countryPeople,
-      filter: { country },
-      children: cityRows,
-    };
-  });
-}
-
-function groupPeopleByLabel(
-  people: StatisticsPersonRow[],
-  getLabel: (person: StatisticsPersonRow) => string
-): Map<string, StatisticsPersonRow[]> {
-  const grouped = new Map<string, StatisticsPersonRow[]>();
-
-  for (const person of people) {
-    const label = getLabel(person);
-    const current = grouped.get(label) ?? [];
-    current.push(person);
-    grouped.set(label, current);
-  }
-
-  return grouped;
-}
-
-function sortedGroupEntries(
-  grouped: Map<string, StatisticsPersonRow[]>
-): Array<[string, StatisticsPersonRow[]]> {
-  return [...grouped.entries()].sort(([first], [second]) =>
-    first.localeCompare(second, "it", { sensitivity: "base" })
-  );
-}
-
-function pivotRowKey(level: PivotLevel, ...labels: string[]): string {
-  return `${level}:${labels.map((label) => encodeURIComponent(label)).join(":")}`;
-}
-
 function countPeopleForSlot(
   people: StatisticsPersonRow[],
   slotKey: string
@@ -739,22 +504,6 @@ function groupAttendanceSlotsByDay(
         attendancePartOrder(first.dayPart) - attendancePartOrder(second.dayPart)
     ),
   }));
-}
-
-function summarizeLabels(values: string[]): SummaryBreakdownRow[] {
-  const countByLabel = new Map<string, number>();
-
-  for (const label of values) {
-    countByLabel.set(label, (countByLabel.get(label) ?? 0) + 1);
-  }
-
-  return [...countByLabel.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort(
-      (first, second) =>
-        second.count - first.count ||
-        first.label.localeCompare(second.label, "it", { sensitivity: "base" })
-    );
 }
 
 function ageBandLabel(ageBand: StatisticsAgeBand): string {
