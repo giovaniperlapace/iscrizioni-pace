@@ -7,6 +7,30 @@ import * as links from "../lib/groups/registration-links.ts";
 const source = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
 const action = source.slice(source.indexOf("export async function submitPublicRegistration("), source.indexOf("export async function updateParticipantDashboard("));
 
+for (const role of ["manager", "manager_viewer"]) {
+  for (const ownEmail of [true, false]) {
+    test(`${role} registration links only the authenticated account email: ${ownEmail}`, async () => {
+      const email = "operator@example.test";
+      const linked: unknown[] = [];
+      const deps = {
+        parseRegistrationForm: () => ({ ok: true, value: { email } }),
+        normalizeEmail: () => email, getIpAddress: async () => "local",
+        checkRateLimit: () => true, REGISTRATION_RATE_LIMIT: {},
+        headers: async () => ({ get: () => null }),
+        createSupabaseServiceClient: () => ({}),
+        createSupabaseServerClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: "existing-operator", email: ownEmail ? email.toUpperCase() : "other@example.test", app_metadata: { role } } } }) } }),
+        getRequestLocale: async () => "it", getPublicSiteUrl: () => "https://example.test",
+        createPublicRegistration: async (...args: unknown[]) => { linked.push(args[4]); },
+        redirect: (url: string) => { throw new Error(url); },
+      };
+      const js = ts.transpileModule(action.replace("export ", ""), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+      const submit = new Function(...Object.keys(deps), `${js}; return submitPublicRegistration;`)(...Object.values(deps));
+      await assert.rejects(submit(new FormData()), /\/registrazione\/conferma\?email=/);
+      assert.deepEqual(linked, [ownEmail ? "existing-operator" : null]);
+    });
+  }
+}
+
 for (const token of ["gruppo_roma", "", "//external.test"]) {
   for (const failure of ["validation", "rate-limit", "save"]) {
     test(`registration retains its entry point: ${token || "general"}, ${failure}`, async () => {

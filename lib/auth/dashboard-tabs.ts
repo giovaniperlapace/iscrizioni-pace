@@ -45,7 +45,6 @@ export function getDashboardRoleTabs(
       available.add(role);
     }
   } else if (hasManagerDashboard) {
-    available.clear();
     available.add("manager");
   } else {
     for (const eventRole of eventRoles) {

@@ -345,11 +345,6 @@ export default async function ManagerDashboardPage({
   searchParams,
 }: ManagerPageProps) {
   const params = await searchParams;
-  if (params.section === "servizi") {
-    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
-    legacy.set("section", "impostazioni");
-    permanentRedirect(`/dashboard/manager?${legacy}`);
-  }
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "manager");
 
@@ -371,6 +366,17 @@ export default async function ManagerDashboardPage({
     "id,title,starts_on,ends_on"
   );
   const currentEventId = currentEvent?.id ?? null;
+  const canManage = currentEventId ? scope.canManageEvent(currentEventId) : scope.isAdmin;
+  // Authorize the resolved section before any operational data is loaded,
+  // including legacy URLs, inferred sections and remembered navigation.
+  if (!canAccessManagerSection(activeSection, canManage)) {
+    redirect("/dashboard/manager?section=dashboard&nav=mini");
+  }
+  if (params.section === "servizi") {
+    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    legacy.set("section", "impostazioni");
+    permanentRedirect(`/dashboard/manager?${legacy}`);
+  }
   const managerOperations =
     !dashboardLoadPlan(activeSection).operations
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
@@ -438,7 +444,7 @@ export default async function ManagerDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <ManagerSidebar activeSection={activeSection} navMode={navMode} />
+          <ManagerSidebar activeSection={activeSection} navMode={navMode} canManage={canManage} />
 
           <div className="grid min-w-0 gap-6">
             <GroupAssignmentReports dashboard="manager" eventId={currentEventId} />
@@ -562,9 +568,11 @@ export default async function ManagerDashboardPage({
 function ManagerSidebar({
   activeSection,
   navMode,
+  canManage,
 }: {
   activeSection: ManagerSection;
   navMode: ManagerNavMode;
+  canManage: boolean;
 }) {
   const isMini = navMode === "mini";
   const nextMode = isMini ? "full" : "mini";
@@ -588,7 +596,7 @@ function ManagerSidebar({
       href: "/dashboard/manager?section=iscritti&nav=mini",
       Icon: Users,
       label: "Gestione iscritti",
-      help: "Elenco e modifiche",
+      help: canManage ? "Elenco e modifiche" : "Elenco partecipanti",
     },
     {
       key: "email",
@@ -636,7 +644,7 @@ function ManagerSidebar({
         </Link>
       </div>
       <nav aria-label="Sezioni dashboard manager" className="grid gap-1.5 p-2">
-        {items.map((item) => {
+        {items.filter((item) => canAccessManagerSection(item.key, canManage)).map((item) => {
           const isActive = item.key === activeSection;
           const Icon = item.Icon;
 
@@ -853,7 +861,7 @@ function deduplicateOperationalAssignments(
 }
 
 function getManagerEventScope(eventRoles: EventUserRole[]) {
-  const isAdmin = eventRoles.some((role) => role.role === "admin");
+  const isAdmin = eventRoles.some((role) => role.role === "admin" && role.eventId === null);
   const managerEventIds = new Set(
     eventRoles
       .filter((role) => role.role === "manager")
@@ -868,13 +876,19 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
   );
 
   return {
+    isAdmin,
     canSeeDashboard: isAdmin || visibleEventIds.size > 0,
     eventIds: isAdmin ? null : visibleEventIds,
     canManageEvent: (eventId: string) => isAdmin || managerEventIds.has(eventId),
   };
 }
 
+function canAccessManagerSection(section: ManagerSection, canManage: boolean): boolean {
+  return canManage || section === "dashboard" || section === "iscritti";
+}
+
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
+  if (params.section === "servizi") return "impostazioni";
   if (
     params.section === "dashboard" ||
     params.section === "iscritti" ||

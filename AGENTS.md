@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Manager Viewer e iscrizione personale — 2026-09-23
+
+- Manager Viewer vede solo Statistiche e Gestione iscritti nella dashboard
+  operativa, in entrambi i formati del menu. Le altre sezioni sono respinte
+  lato server prima dei loader, anche tramite URL diretto, vecchio alias
+  servizi, parametri impliciti o navigazione memorizzata. Permesso Manager
+  verificato sull'evento corrente; Admin globale conserva tutte le sezioni.
+- Manager e Manager Viewer possono passare a Iscrizione e QR personale,
+  nelle sette lingue. Superata la precedente esclusione dell'area personale:
+  si usa lo stesso account email. Chi non è iscritto usa Avvia la mia iscrizione;
+  il flusso esistente associa l'iscrizione all'account autenticato quando
+  l'email coincide. Non creare iscrizioni vuote né inventare presenze/consensi.
+- Verifica produzione in sola lettura: 10 account dell'evento, 6 già collegati,
+  4 senza iscrizione, nessuna associazione pendente o ambigua alla stessa email.
+  Nessuna modifica dati/RLS, migration o email. Codice locale, non pubblicato.
+  Verificati 493 test, lint, TypeScript e build con npm ci in copia pulita,
+  browser sintetico sette lingue/desktop/mobile per entrambi i ruoli.
+  L'utente ha autorizzato il solo commit locale, senza pubblicazione: non fare
+  push su main, che avvierebbe automaticamente il deployment Vercel.
+  Dettagli e collaudo in `docs/manager-personal-access.md`.
+
 ## Territorio modificabile da Manager/Admin — 2026-09-23
 
 - Editor gruppi condiviso: paese e città facoltativa, catalogo esistente più
@@ -1767,16 +1788,11 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
   panel. Usare le tabelle canoniche delle iscrizioni ai momenti/panel; non
   modellare i panel come tag operativi e non duplicarli nello snapshot della
   campagna.
-- Dal 2026-07-23 l'accesso alle dashboard per `manager` e `manager_viewer` e'
-  esclusivo: dopo il login questi ruoli entrano sempre nella dashboard manager
-  e non vedono né possono aprire la dashboard capogruppo o l'area personale,
-  anche quando l'account possiede una membership capogruppo o una scheda
-  partecipante. Un eventuale ruolo `admin` mantiene invece l'accesso completo
-  alle aree delegate. Dal 2026-07-26 questa distinzione vale anche dentro la
-  dashboard manager: il navigatore tra dashboard viene mostrato quando
-  l'utente e' admin, cosi' puo' tornare ad admin, accoglienza, capogruppo o area
-  personale durante test e assistenza; per `manager` e `manager_viewer` resta
-  nascosto e la dashboard manager continua a essere l'unica area accessibile.
+- Dal 2026-09-23 `manager` e `manager_viewer` possono passare tra dashboard
+  manager e Iscrizione e QR personale con lo stesso account. La precedente
+  esclusione dell'area personale del 23 luglio è superata. Le altre dashboard
+  restano escluse per questi ruoli; Admin conserva tutte le aree delegate.
+  Manager Viewer ha soltanto Statistiche e Gestione iscritti nel menu operativo.
 - Dal 2026-07-26 la sessione autenticata viene ripristinata anche entrando da
   home o login: l'utente viene riportato all'ultima dashboard e, per
   admin/manager, all'ultima sezione stabile del menu consultata. Parametri
@@ -3229,7 +3245,8 @@ Ruoli minimi da supportare:
   funzioni organizzative consentite. Non puo' creare eventi, cambiare evento
   corrente, aprire, sospendere o nascondere le iscrizioni, né nominare altri
   manager.
-- `manager_viewer`: vede ciò che vede il manager ma non modifica iscrizioni.
+- `manager_viewer`: consulta Statistiche e Gestione iscritti senza modifiche
+  operative; accede e modifica la propria iscrizione nell’area personale.
 - `accoglienza`: scansiona QR code e verifica iscrizioni/check-in vedendo solo dati minimi necessari.
 
 I ruoli devono vivere in profili o membership applicative, non solo nei metadata Supabase Auth. Dove serve, il ruolo deve essere scoperto da uno scope: evento, gruppo, funzione di accoglienza.

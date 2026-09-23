@@ -20,7 +20,7 @@ const rows = [
   { id: "own-other-event", submitted_at: "2026-09-20", deleted_at: null, events: { is_current: false }, participants: { auth_user_id: "self" } },
 ];
 
-for (const role of ["admin", "admin+manager", "partecipante"]) {
+for (const role of ["admin", "admin+manager", "manager", "manager_viewer", "partecipante"]) {
   test(`personal registration survives 1,000-row cap for ${role}`, async () => {
     const db = createClient("https://example.test", "test", { global: { fetch: async (input) => {
       const url = new URL(String(input));

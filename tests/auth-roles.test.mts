@@ -32,7 +32,7 @@ test("admin can access every dashboard", () => {
   assert.equal(isRoleAllowedForDashboard("capogruppo", roles), true);
 });
 
-test("manager and manager viewer can access only the manager dashboard", () => {
+test("manager and manager viewer can access the manager and personal dashboards", () => {
   assert.equal(
     isRoleAllowedForDashboard(
       "manager",
@@ -59,11 +59,11 @@ test("manager and manager viewer can access only the manager dashboard", () => {
       "partecipante",
       new Set<DashboardRole>(["manager", "partecipante"])
     ),
-    false
+    true
   );
 });
 
-test("dashboard tabs expose only the manager area to managers", () => {
+test("dashboard tabs expose the manager and personal areas to managers", () => {
   const tabs = getDashboardRoleTabs([
     { role: "manager", eventId: "event-1" },
     { role: "manager_viewer", eventId: "event-1" },
@@ -72,7 +72,7 @@ test("dashboard tabs expose only the manager area to managers", () => {
 
   assert.deepEqual(
     tabs.map((tab) => tab.key),
-    ["manager"]
+    ["manager", "partecipante"]
   );
 });
 
@@ -102,3 +102,15 @@ test("dashboardRoleFromPath maps protected route groups", () => {
   assert.equal(dashboardRoleFromPath("/dashboard/partecipante"), "partecipante");
   assert.equal(dashboardRoleFromPath("/dashboard"), null);
 });
+
+for (const role of ["manager", "manager_viewer"] as const) {
+  test(`${role} can select the personal area in every language without losing its operational area`, () => {
+    assert.equal(pickDashboardRole([role], "partecipante"), "partecipante");
+    for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"] as const) {
+      const tabs = getDashboardRoleTabs([{ role, eventId: "event" }], locale);
+      assert.deepEqual(tabs.map(tab => tab.key), ["manager", "partecipante"]);
+      assert.equal(tabs[1].href, "/dashboard/partecipante");
+      assert.ok(tabs[1].label.length > 0);
+    }
+  });
+}

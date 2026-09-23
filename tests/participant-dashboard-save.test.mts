@@ -56,7 +56,7 @@ function data(edit: string) {
   }
   return form;
 }
-for (const role of ["partecipante", "manager", "admin", "capogruppo"]) {
+for (const role of ["partecipante", "manager", "manager_viewer", "admin", "capogruppo"]) {
   for (const edit of ["identity", "phone", "attendance"]) test(`${role} can save own ${edit} with object relations`, async () => {
     const { save, writes, invalidated } = fixture({ role });
     await assert.rejects(save(data(edit)), /REDIRECT:\/dashboard\/partecipante\?saved=1/);
