@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Presenze in colonne per momento — 2026-09-23
+
+- Selezionare Giorni di presenza espande la tabella Manager/Admin e Capogruppo
+  in una colonna per giorno/fascia, nello stesso punto delle colonne scelte.
+  Calendario dell’evento completo, incluso il pomeriggio precedente l’inizio;
+  celle Sì/No nelle sette lingue. Per richiesta utente, presenze sconosciute o
+  non comunicate restano Da comunicare, senza convertirle in assenze.
+- Excel operativo e capogruppo usano le stesse intestazioni ordinate e celle.
+  Presenze storiche senza fascia valgono per entrambe; permessi, query e dati
+  invariati. Test calendario/celle/Excel e route capogruppo; fixture browser
+  `tests/browser/attendance-columns.mjs` per entrambe le tabelle e mobile.
+  Modifica locale, non pubblicata.
+
+
 ## Compatibilità build della fixture router — 2026-09-23
 
 - Il deployment `0c632e4` è fallito: dipendenze locali Next 16.3 diverse dal

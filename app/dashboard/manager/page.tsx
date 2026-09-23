@@ -484,6 +484,7 @@ export default async function ManagerDashboardPage({
                 operatorId={auth.user.id}
                 eventId={currentEventId}
                 eventStartsOn={currentEvent?.starts_on ?? null}
+                eventEndsOn={currentEvent?.ends_on ?? null}
                 selectedParticipant={selectedParticipant}
                 canManageEvent={scope.canManageEvent}
                 dashboard="manager"

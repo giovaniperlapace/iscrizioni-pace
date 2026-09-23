@@ -1,3 +1,4 @@
+import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -46,6 +47,8 @@ export async function GET(request: Request) {
     const startsOn =
       (Array.isArray(startsOnRelation) ? startsOnRelation[0] : startsOnRelation)
         ?.starts_on ?? null;
+    const endsOn = (Array.isArray(startsOnRelation) ? startsOnRelation[0] : startsOnRelation)?.ends_on ?? null;
+    const attendanceColumns = attendanceTableColumns(startsOn, endsOn, locale);
     const assignments = await loadLeaderAssignmentRows(db, eventId, [
       ...scopedGroupIds,
     ]);
@@ -63,10 +66,11 @@ export async function GET(request: Request) {
     );
     const buffer = await writeTableWorkbook(
       copy.sheet,
-      preferences.columns.map((column) => copy.columns[column]),
+      preferences.columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [copy.columns[column]]),
       sorted.map((row) =>
-        preferences.columns.map((column) =>
-          leaderCellText(row, column, startsOn, locale),
+        preferences.columns.flatMap((column) => column === "attendance"
+          ? attendanceColumns.map(slot => attendanceSlotText(row.attendance, slot, locale))
+          : [leaderCellText(row, column, startsOn, locale)],
         ),
       ),
     );

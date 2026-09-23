@@ -1,3 +1,4 @@
+import { attendanceTableColumns, attendanceSlotText } from "../lib/registrations/attendance-summary.ts";
 import ts from "typescript";
 import { type AssignmentView, toAssignmentView } from "../lib/groups/leader-assignments.ts";
 import { toLeaderTableRow } from "../lib/groups/leader-table.ts";
@@ -324,6 +325,8 @@ function exportHandler(
     leaderCellText,
     LEADER_TABLE_COPY,
     writeTableWorkbook,
+    attendanceTableColumns,
+    attendanceSlotText,
   };
   const handler = new Function(
     ...Object.keys(dependencies),
@@ -409,7 +412,8 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
     },
   });
   const db = database({
-    groups,
+    groups: groups.map(group => ({...group, events: {starts_on: "2026-10-01", ends_on: "2026-10-02"}})),
+    event_attendance_choices: [{registration_id: "Anna", day: "2026-10-01", day_part: "morning", choice: "yes"}],
     group_memberships: members,
     participant_group_assignments: [
       assignment("Anna", "child", "current"),
@@ -434,6 +438,14 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
   assert.equal(sheet.columnCount, 2);
   assert.equal(sheet.getCell("A2").value, "Zeno Prova");
   assert.equal(sheet.getCell("A3").value, "Anna Prova");
+  const moments = await route.handler(new Request("http://localhost/dashboard/capogruppo/export?columns=name,attendance,email"));
+  const momentBook = new ExcelJS.Workbook();
+  await momentBook.xlsx.load(Buffer.from(await moments.arrayBuffer()) as never);
+  assert.equal(momentBook.worksheets[0].columnCount, 7);
+  assert.equal(momentBook.worksheets[0].getCell("C1").value, "1 ottobre · Mattina");
+  assert.equal(momentBook.worksheets[0].getCell("C2").value, "Sì");
+  assert.equal(momentBook.worksheets[0].getCell("D2").value, "No");
+  assert.equal(momentBook.worksheets[0].getCell("C3").value, "Da comunicare");
   const filtered = await route.handler(
     new Request("http://localhost/dashboard/capogruppo/export?group=sibling"),
   );

@@ -531,6 +531,7 @@ export default async function AdminDashboardPage({
                 operatorId={auth.user.id}
                 eventId={currentEventId}
                 eventStartsOn={currentEvent?.starts_on ?? null}
+                eventEndsOn={currentEvent?.ends_on ?? null}
                 selectedParticipant={selectedAdminParticipant}
                 canManageEvent={() => true}
                 dashboard="admin"

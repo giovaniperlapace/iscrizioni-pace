@@ -1165,6 +1165,7 @@ export default async function CapogruppoDashboardPage({
             rows={tableAssignments.map(toLeaderTableRow)}
             operatorId={auth.user.id}
             startsOn={assignedGroups[0]?.eventStartsOn ?? null}
+            endsOn={assignedGroups[0]?.eventEndsOn ?? null}
             locale={locale}
           />
         </section>

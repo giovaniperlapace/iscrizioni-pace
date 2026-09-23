@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         catalog,
         columns,
         event.starts_on ?? null,
+        event.ends_on ?? null,
       );
       const { error } = await createSupabaseServiceClient()
         .from("audit_logs")

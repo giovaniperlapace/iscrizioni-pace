@@ -21,6 +21,7 @@ export async function OperationsParticipantsSection({
   operatorId,
   eventId,
   eventStartsOn,
+  eventEndsOn = null,
   searchParams,
 }: {
   snapshot: OperationsParticipantsSnapshot;
@@ -32,6 +33,7 @@ export async function OperationsParticipantsSection({
   operatorId: string;
   eventId: string | null;
   eventStartsOn: string | null;
+  eventEndsOn?: string | null;
   searchParams?: Record<string, string | undefined>;
 }) {
   const locale = await getRequestLocale();
@@ -70,6 +72,7 @@ export async function OperationsParticipantsSection({
         operatorId={operatorId}
         eventId={eventId}
         eventStartsOn={eventStartsOn}
+        eventEndsOn={eventEndsOn}
       />
       {eventId && canManageEvent(eventId) && searchParams?.manual === "1" && (
         <OperationsManualRegistration dashboard={dashboard} searchParams={searchParams} />

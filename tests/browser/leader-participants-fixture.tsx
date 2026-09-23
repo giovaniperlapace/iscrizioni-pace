@@ -6,6 +6,7 @@ import type { LeaderTableRow } from "@/lib/groups/leader-table";
 const rows: LeaderTableRow[] = Array.from({ length: 12 }, (_, i) => ({
   id: `assignment-${i}`,
   registrationId: `reg-${i}`,
+  attendance: i === 1 ? [] : [{ day: "2026-10-25", day_part: "morning", choice: "yes" }],
   groupId: "root",
   participantName: i ? `Persona Prova ${i}` : "Anna Bianchi",
   participantCode: `FIX${i}`,
@@ -45,6 +46,7 @@ export default function Fixture() {
         rows={rows}
         operatorId={operatorId}
         startsOn="2026-10-25"
+        endsOn="2026-10-27"
         locale={locale}
       />
     </main>

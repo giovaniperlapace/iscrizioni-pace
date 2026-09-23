@@ -22,6 +22,7 @@ import {
 
 const seed: Row[] = Array.from({ length: 12 }, (_, i) => ({
   registrationId: `reg-${i}`,
+  attendance: i === 1 ? [] : [{ day: "2026-10-25", day_part: "morning", choice: "yes" }],
   participantId: `person-${i}`,
   eventId: "event",
   eventTitle: "Fixture event",
@@ -321,6 +322,7 @@ export default function Fixture() {
             operatorId={operatorId}
             eventId="event"
             eventStartsOn="2026-10-25"
+            eventEndsOn="2026-10-27"
           />
         )}
       </main>

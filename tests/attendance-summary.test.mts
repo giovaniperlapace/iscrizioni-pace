@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { attendanceSummary, ATTENDANCE_SUMMARY_COPY } from "../lib/registrations/attendance-summary.ts";
+import { attendanceSummary, attendanceTableColumns, attendanceSlotText, ATTENDANCE_SUMMARY_COPY } from "../lib/registrations/attendance-summary.ts";
 import { parseTablePreferences } from "../lib/registrations/operations-table.ts";
 import { LEADER_TABLE_COPY } from "../lib/groups/leader-table-copy.ts";
 import { loadAttendanceSummaries } from "../lib/registrations/attendance-summary.server.ts";
@@ -40,13 +40,38 @@ test("attendance loader paginates relations and fails on a later page", async ()
   await assert.rejects(loadAttendanceSummaries(db as never, ["r"]), /read failed/);
 });
 
-test("visible-column Excel contains the attendance summary", async () => {
+test("visible-column Excel expands attendance in place into one column per moment", async () => {
   const { writeVisibleParticipantsWorkbook } = await import("../lib/data-quality/workbook.ts");
   const { default: ExcelJS } = await import("exceljs");
   const attendance = [{day: "2026-10-01", day_part: "morning", choice: "yes"}];
-  const buffer = await writeVisibleParticipantsWorkbook([{name: "Fixture", attendance}] as never, {services: [], tags: []} as never, ["name", "attendance"], null);
+  const buffer = await writeVisibleParticipantsWorkbook([{name: "Fixture", attendance}] as never, {services: [], tags: []} as never, ["name", "attendance", "email"], "2026-10-01", "2026-10-02");
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as never);
-  assert.equal(workbook.worksheets[0].getCell("B1").value, "Giorni di presenza");
-  assert.equal(workbook.worksheets[0].getCell("B2").value, attendanceSummary(attendance));
+  const sheet = workbook.worksheets[0];
+  assert.equal(sheet.getCell("B1").value, "30 settembre · Pomeriggio");
+  assert.equal(sheet.getCell("C1").value, "1 ottobre · Mattina");
+  assert.equal(sheet.getCell("F1").value, "2 ottobre · Pomeriggio");
+  assert.equal(sheet.getCell("G1").value, "Email");
+  assert.equal(sheet.getCell("B2").value, "No");
+  assert.equal(sheet.getCell("C2").value, "Sì");
+  assert.equal(sheet.getCell("D2").value, "No");
+});
+
+test("moment columns use the event calendar and preserve unknown and historical whole days", () => {
+  const columns = attendanceTableColumns("2026-10-01", "2026-10-02");
+  assert.equal(columns.length, 5);
+  assert.deepEqual(columns.map(slot => slot.key), ["2026-09-30__afternoon", "2026-10-01__morning", "2026-10-01__afternoon", "2026-10-02__morning", "2026-10-02__afternoon"]);
+  const wholeDay = [{day: "2026-10-01", day_part: null, choice: "yes"}];
+  assert.equal(attendanceSlotText(wholeDay, columns[1]), "Sì");
+  assert.equal(attendanceSlotText(wholeDay, columns[2]), "Sì");
+  assert.equal(attendanceSlotText(wholeDay, columns[3]), "No");
+  assert.equal(attendanceSlotText([], columns[0]), "Da comunicare");
+  assert.equal(attendanceSlotText([{day: null, choice: "unknown"}], columns[0]), "Da comunicare");
+  assert.equal(attendanceSlotText(undefined, columns[0]), "—");
+  assert.deepEqual(attendanceTableColumns(null, null), []);
+  for (const locale of Object.keys(ATTENDANCE_SUMMARY_COPY) as (keyof typeof ATTENDANCE_SUMMARY_COPY)[]) {
+    assert.equal(attendanceTableColumns("2026-10-01", "2026-10-02", locale).length, 5);
+    assert.equal(attendanceSlotText([], columns[0], locale), ATTENDANCE_SUMMARY_COPY[locale][3]);
+    assert.notEqual(attendanceSlotText(wholeDay, columns[1], locale), attendanceSlotText(wholeDay, columns[3], locale));
+  }
 });

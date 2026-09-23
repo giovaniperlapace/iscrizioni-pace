@@ -1,5 +1,6 @@
 "use client";
 
+import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { AccompanyingChildrenList } from "../accompanying-children-list";
 
 import Link from "@/components/pending-link";
@@ -37,13 +38,16 @@ export function LeaderParticipantsTable({
   rows,
   operatorId,
   startsOn,
+  endsOn = null,
   locale,
 }: {
   rows: LeaderTableRow[];
   operatorId: string;
   startsOn: string | null;
+  endsOn?: string | null;
   locale: SupportedLocale;
 }) {
+  const attendanceColumns = attendanceTableColumns(startsOn, endsOn, locale);
   const searchParams = useSearchParams();
   const copy = LEADER_TABLE_COPY[locale];
   const storageKey = `iscrizioni:leader-participants:v1:${operatorId}`;
@@ -185,7 +189,9 @@ export function LeaderParticipantsTable({
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
-                {preferences.columns.map((column) => (
+                {preferences.columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                  <th key={slot.key} scope="col" className="whitespace-nowrap p-3 text-center font-semibold">{slot.label}</th>
+                )) : (
                   <th
                     key={column}
                     className="whitespace-nowrap p-3 font-semibold"
@@ -231,7 +237,9 @@ export function LeaderParticipantsTable({
                   key={row.id}
                   className="border-b border-[var(--peace-border)] align-top hover:bg-[#f7fbfe] last:border-b-0"
                 >
-                  {preferences.columns.map((column) => (
+                  {preferences.columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                    <td key={slot.key} className="whitespace-nowrap p-3 text-center">{attendanceSlotText(row.attendance, slot, locale)}</td>
+                  )) : (
                     <td key={column} className="whitespace-pre-line p-3">
                       {column === "name" ? (
                         <div className="min-w-40 max-w-72">

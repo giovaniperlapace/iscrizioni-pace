@@ -1,6 +1,6 @@
 "use client";
 
-import { attendanceSummary } from "@/lib/registrations/attendance-summary";
+import { attendanceSummary, attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { MANUAL_REGISTRATION_COPY } from "@/lib/registrations/manual-registration-copy";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -73,6 +73,7 @@ export function OperationsParticipantsTable({
   operatorId,
   eventId,
   eventStartsOn,
+  eventEndsOn = null,
   dialogOnly = false,
   dataVersion = "",
   locale = "it",
@@ -87,10 +88,12 @@ export function OperationsParticipantsTable({
   operatorId: string;
   eventId: string | null;
   eventStartsOn: string | null;
+  eventEndsOn?: string | null;
   dialogOnly?: boolean;
   dataVersion?: string;
   locale?: SupportedLocale;
 }) {
+  const attendanceColumns = attendanceTableColumns(eventStartsOn, eventEndsOn, locale);
   const router = useRouter();
   const searchParams = useSearchParams();
   const storageKey = `iscrizioni:participants:v2:${operatorId}`;
@@ -764,7 +767,9 @@ export function OperationsParticipantsTable({
           </caption>
           <thead className="bg-[var(--peace-sky-100)]">
             <tr>
-              {columns.map((column) => (
+              {columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                <th key={slot.key} scope="col" className="whitespace-nowrap px-3 py-2 text-center font-semibold">{slot.label}</th>
+              )) : (
                 <th
                   key={column}
                   scope="col"
@@ -834,7 +839,9 @@ export function OperationsParticipantsTable({
                 aria-busy={pending[row.registrationId] || false}
                 className="border-t border-[var(--peace-border)] align-top hover:bg-[#f7fbfe]"
               >
-                {columns.map((column) => (
+                {columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                  <td key={slot.key} className="whitespace-nowrap px-3 py-3 text-center">{attendanceSlotText(row.attendance, slot, locale)}</td>
+                )) : (
                   <td
                     key={column}
                     className={`px-3 py-3 ${column === "name" ? "sticky left-0 z-10 bg-white" : ""}`}

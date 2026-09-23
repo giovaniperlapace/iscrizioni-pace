@@ -1,3 +1,4 @@
+import { buildAttendanceDayColumns, ATTENDANCE_PARTS, type AttendanceSlot } from "./attendance-slots.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
 export type SummaryAttendanceChoice = { day: string | null; day_part?: string | null; choice: string | null };
 
@@ -27,4 +28,25 @@ export function attendanceSummary(rows: SummaryAttendanceChoice[] | undefined, l
   );
   if (!rows.length || rows.some(row => row.choice === "unknown")) result.push(unknown);
   return result.join("; ") || "—";
+}
+
+export type AttendanceTableColumn = AttendanceSlot & { key: string; label: string };
+const ATTENDANCE_BOOLEAN_COPY = {
+  it: ["Sì", "No"], en: ["Yes", "No"], fr: ["Oui", "Non"],
+  de: ["Ja", "Nein"], es: ["Sí", "No"], nl: ["Ja", "Nee"], uk: ["Так", "Ні"],
+} satisfies Record<SupportedLocale, string[]>;
+
+export function attendanceTableColumns(startsOn: string | null, endsOn: string | null, locale: SupportedLocale = "it"): AttendanceTableColumn[] {
+  return buildAttendanceDayColumns(startsOn, endsOn, locale).flatMap(day => day.parts.map(part => ({
+    day: day.day, part, key: `${day.day}__${part}`,
+    label: `${day.label} · ${ATTENDANCE_PARTS.find(item => item.value === part)!.label[locale]}`,
+  })));
+}
+
+export function attendanceSlotText(rows: SummaryAttendanceChoice[] | undefined, slot: AttendanceSlot, locale: SupportedLocale = "it"): string {
+  if (!rows) return "—";
+  const match = rows.filter(row => row.day === slot.day && (!row.day_part || row.day_part === slot.part));
+  if (match.some(row => row.choice === "yes")) return ATTENDANCE_BOOLEAN_COPY[locale][0];
+  if (!rows.length || rows.some(row => row.choice === "unknown")) return ATTENDANCE_SUMMARY_COPY[locale][3];
+  return ATTENDANCE_BOOLEAN_COPY[locale][1];
 }

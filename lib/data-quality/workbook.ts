@@ -1,4 +1,4 @@
-import { attendanceSummary } from "../registrations/attendance-summary.ts";
+import { attendanceTableColumns, attendanceSlotText } from "../registrations/attendance-summary.ts";
 import ExcelJS from "exceljs";
 import yauzl from "yauzl";
 import { calculateAgeAtDate } from "../groups/matching.ts";
@@ -195,8 +195,10 @@ export async function writeVisibleParticipantsWorkbook(
   catalog: Catalog,
   selectedColumns: ParticipantColumn[],
   eventStartsOn: string | null,
+  eventEndsOn: string | null = null,
 ): Promise<Buffer> {
   const { columns } = parseTablePreferences({ columns: selectedColumns });
+  const attendanceColumns = attendanceTableColumns(eventStartsOn, eventEndsOn);
   const services = new Map(
     catalog.services.map((item) => [item.id, item.label]),
   );
@@ -206,10 +208,10 @@ export async function writeVisibleParticipantsWorkbook(
     timeZone: "Europe/Rome",
   });
   const rows = people.map((person) =>
-    columns.map((column) => {
+    columns.flatMap((column) => {
       switch (column) {
         case "attendance":
-          return attendanceSummary(person.attendance);
+          return attendanceColumns.map(slot => attendanceSlotText(person.attendance, slot));
         case "name":
           return person.name;
         case "email":
@@ -244,7 +246,7 @@ export async function writeVisibleParticipantsWorkbook(
       }
     }),
   );
-  return writeTableWorkbook("Iscritti", columns.map((column) => PARTICIPANT_COLUMNS[column]), rows);
+  return writeTableWorkbook("Iscritti", columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [PARTICIPANT_COLUMNS[column]]), rows);
 }
 
 export async function writeTableWorkbook(name: string, headers: string[], rows: string[][]): Promise<Buffer> {
