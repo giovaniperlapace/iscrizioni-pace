@@ -205,6 +205,7 @@ test("statistics drilldown round-trips compound pivot filters", () => {
       {
         id: "person",
         assignedGroupKey: "event:group",
+        assignedGroupPath: [],
         assignedGroupLabel: "Trastevere & Centro",
         assignedGroupType: "Gruppo effettivo",
         registrationId: "registration",

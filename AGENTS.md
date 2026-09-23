@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Statistiche con gerarchia espandibile — 2026-09-23
+
+- Riepilogo Manager/Admin dai collegamenti padre–figlio reali, anche per nodi
+  superiori non iscrivibili; solo rami con persone. Nodi inizialmente chiusi,
+  espansione ricorsiva, totali comprensivi dei discendenti e figli accompagnati.
+  Nessuna deduzione dalla residenza. Filtri per ID del sottoalbero o assegnazione
+  diretta; omonimi distinti. “Iscritti a … senza sottogruppo” compare solo per
+  assegnazioni dirette quando sono presenti anche sottogruppi occupati.
+- Nessuna modifica dati/permessi/migration. Test gerarchia, integrità e filtri in
+  statistics-hierarchy.test.mts; fixture browser statistics-hierarchy.mjs.
+  Verificati 522 test, lint, TypeScript e build in copia pulita con npm ci;
+  browser Manager/Admin desktop/mobile, espansione e tastiera superati.
+  Commit/push su main e pubblicazione Vercel autorizzati dopo anteprima approvata.
+
 ## Riepilogo per assegnazione corrente — 2026-09-23
 
 - Statistiche Manager/Admin: elenco piatto per ID del gruppo corrente, gruppo

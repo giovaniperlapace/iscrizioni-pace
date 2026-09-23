@@ -81,6 +81,7 @@ export type StatisticsPersonRow = {
   assignedGroupKey: string;
   assignedGroupLabel: string;
   assignedGroupType: string;
+  assignedGroupPath: { key: string; label: string; type: string }[];
   birthDate: string | null;
   age: number | null;
   ageBand: StatisticsAgeBand;
@@ -99,6 +100,7 @@ export type StatisticsDrilldownFilter = {
   country?: string;
   city?: string;
   group?: string;
+  subtreeGroupKey?: string;
   assignedGroupKey?: string;
   assignedGroupLabel?: string;
   attendanceSlot?: string | "none";
@@ -137,9 +139,10 @@ export function serializeStatisticsDrilldown(
   if (filter.city) {
     params.set("city", filter.city);
   }
+  if (filter.subtreeGroupKey) params.set("subtreeGroup", filter.subtreeGroupKey);
+  if (filter.assignedGroupLabel) params.set("assignedGroupLabel", filter.assignedGroupLabel);
   if (filter.assignedGroupKey) {
     params.set("assignedGroup", filter.assignedGroupKey);
-    if (filter.assignedGroupLabel) params.set("assignedGroupLabel", filter.assignedGroupLabel);
   }
   if (filter.group) {
     params.set("group", filter.group);
@@ -170,6 +173,10 @@ export function parseStatisticsDrilldown(
   const kind = params.get("kind");
   const attendance = params.get("attendance");
   const age = params.get("age");
+  if (params.get("subtreeGroup")) {
+    filter.subtreeGroupKey = params.get("subtreeGroup")!;
+    filter.assignedGroupLabel = params.get("assignedGroupLabel") ?? undefined;
+  }
   if (params.get("assignedGroup")) {
     filter.assignedGroupKey = params.get("assignedGroup")!;
     filter.assignedGroupLabel = params.get("assignedGroupLabel") ?? undefined;
@@ -218,6 +225,7 @@ export function filterStatisticsPeople(
     if (filter.city && person.city !== filter.city) {
       return false;
     }
+    if (filter.subtreeGroupKey && !person.assignedGroupPath.some(node => node.key === filter.subtreeGroupKey)) return false;
     if (filter.assignedGroupKey && person.assignedGroupKey !== filter.assignedGroupKey) return false;
     if (filter.group && person.group !== filter.group) {
       return false;
@@ -248,6 +256,7 @@ export function describeStatisticsDrilldown(
   slots: StatisticsAttendanceSlot[]
 ): string {
   const parts: string[] = [];
+  if (filter.subtreeGroupKey) parts.push(`Gruppo o nodo e sottogruppi: ${filter.assignedGroupLabel ?? filter.subtreeGroupKey}`);
   if (filter.assignedGroupKey) parts.push(`Gruppo o nodo: ${filter.assignedGroupLabel ?? filter.assignedGroupKey}`);
 
   if (filter.personKind === "all") {
@@ -583,6 +592,7 @@ function buildStatisticsPersonRow({
   assignedGroupKey,
   assignedGroupLabel,
   assignedGroupType,
+  assignedGroupPath,
   birthDate,
   ageReferenceDate,
   attendanceSlotKeys,
@@ -603,6 +613,7 @@ function buildStatisticsPersonRow({
     assignedGroupKey,
     assignedGroupLabel,
     assignedGroupType,
+    assignedGroupPath,
     birthDate,
     age,
     ageBand: getStatisticsAgeBand(age),
@@ -837,10 +848,11 @@ function formatFilterDate(value: string): string {
 
 function assignedGroupBucket(participant: StatisticsParticipant, groups: Map<string, GroupNode>) {
   const group = participant.currentGroupId ? groups.get(participant.currentGroupId) : null;
-  if (!group) return { assignedGroupKey: "missing-group", assignedGroupLabel: "Senza gruppo corrente", assignedGroupType: "Da assegnare" };
+  if (!group) return { assignedGroupKey: "missing-group", assignedGroupLabel: "Senza gruppo corrente", assignedGroupType: "Da assegnare", assignedGroupPath: [] };
   const types: Record<string, string> = { group: "Gruppo effettivo", country: "Nazione", city: "Città", area: "Area" };
   const eligible = group.nodeType === "group" || (group.isAssignable === true && ["country", "city", "area"].includes(group.nodeType ?? ""));
   return {
+    assignedGroupPath: assignedGroupPath(group, groups),
     assignedGroupKey: `${group.eventId}:${group.id}`,
     assignedGroupLabel: group.name,
     assignedGroupType: eligible ? types[group.nodeType!] : "Nodo non iscrivibile",
@@ -858,4 +870,65 @@ export function buildAssignedGroupRows(people: StatisticsPersonRow[]) {
     row.people.push(person);
   }
   return [...rows.values()].sort((a, b) => a.label.localeCompare(b.label, "it") || a.key.localeCompare(b.key));
+}
+
+function assignedGroupPath(group: GroupNode, groups: Map<string, GroupNode>) {
+  const path: StatisticsPersonRow["assignedGroupPath"] = [];
+  const visited = new Set<string>();
+  let current: GroupNode | undefined = group;
+  const types: Record<string, string> = { group: "Gruppo effettivo", country: "Nazione", city: "Città", area: "Area" };
+  while (current) {
+    if (visited.has(current.id)) throw new Error("Cyclic statistics group hierarchy");
+    if (current.eventId !== group.eventId) throw new Error("Cross-event statistics group hierarchy");
+    visited.add(current.id);
+    path.unshift({ key: `${current.eventId}:${current.id}`, label: current.name, type: types[current.nodeType ?? ""] ?? "Nodo" });
+    if (!current.parentGroupId) break;
+    current = groups.get(current.parentGroupId);
+    if (!current) throw new Error("Incomplete statistics group hierarchy");
+  }
+  return path;
+}
+
+export type StatisticsGroupTreeRow = {
+  key: string;
+  label: string;
+  type: string;
+  people: StatisticsPersonRow[];
+  filter: StatisticsDrilldownFilter;
+  children: StatisticsGroupTreeRow[];
+};
+
+// Only occupied branches are shown. Parent totals include each person once;
+// direct assignments become a child row only when occupied subgroups also exist.
+export function buildAssignedGroupTree(people: StatisticsPersonRow[]): StatisticsGroupTreeRow[] {
+  type Node = StatisticsGroupTreeRow & { direct: StatisticsPersonRow[] };
+  const nodes = new Map<string, Node>();
+  const roots: Node[] = [];
+  for (const person of people) {
+    const path = person.assignedGroupPath.length ? person.assignedGroupPath : [{ key: person.assignedGroupKey, label: person.assignedGroupLabel, type: person.assignedGroupType }];
+    let parent: Node | undefined;
+    for (const entry of path) {
+      let node = nodes.get(entry.key);
+      if (!node) {
+        node = { ...entry, people: [], direct: [], children: [], filter: person.assignedGroupPath.length ? { subtreeGroupKey: entry.key, assignedGroupLabel: entry.label } : { assignedGroupKey: entry.key, assignedGroupLabel: entry.label } };
+        nodes.set(entry.key, node);
+        if (parent) parent.children.push(node); else roots.push(node);
+      }
+      node.people.push(person);
+      parent = node;
+    }
+    parent!.direct.push(person);
+  }
+  const finish = (node: Node): StatisticsGroupTreeRow => {
+    const children = (node.children as Node[]).map(finish).sort(compare);
+    if (children.length && node.direct.length) {
+      const label = `Iscritti a ${node.label} senza sottogruppo`;
+      children.unshift({ key: `direct:${node.key}`, label, type: "", people: node.direct, children: [], filter: { assignedGroupKey: node.key, assignedGroupLabel: label } });
+    }
+    return { key: node.key, label: node.label, type: node.type, people: node.people, filter: node.filter, children };
+  };
+  function compare(a: StatisticsGroupTreeRow, b: StatisticsGroupTreeRow) {
+    return a.label.localeCompare(b.label, "it") || a.key.localeCompare(b.key);
+  }
+  return roots.map(finish).sort(compare);
 }

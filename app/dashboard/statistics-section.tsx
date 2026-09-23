@@ -3,15 +3,17 @@
 import Link from "@/components/pending-link";
 import {
   Baby,
+  ChevronRight,
+  ChevronDown,
   UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
+import { Fragment, type ReactNode, useMemo, useState } from "react";
 
 import {
   serializeStatisticsDrilldown,
-  buildAssignedGroupRows,
+  buildAssignedGroupTree,
   type EventStatisticsSnapshot,
   type StatisticsAgeBand,
   type StatisticsAttendanceSlot,
@@ -28,7 +30,7 @@ type StatisticsSectionProps = {
   navMode: StatisticsNavMode;
 };
 
-type AssignedGroupRow = ReturnType<typeof buildAssignedGroupRows>[number];
+type AssignedGroupRow = ReturnType<typeof buildAssignedGroupTree>[number];
 
 const AGE_BANDS: StatisticsAgeBand[] = [
   "0-14",
@@ -174,15 +176,27 @@ function TerritoryAttendancePivot({
   attendanceSlots: StatisticsAttendanceSlot[];
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
-  const rows = useMemo(() => buildAssignedGroupRows(people), [people]);
+  const rows = useMemo(() => buildAssignedGroupTree(people), [people]);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const toggle = (key: string) => setExpanded(current => {
+    const next = new Set(current);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+  const renderRow = (row: AssignedGroupRow, depth = 0): ReactNode => (
+    <Fragment key={row.key}>
+      <TerritoryPivotTableRow row={row} depth={depth} expanded={expanded.has(row.key)} onToggle={() => toggle(row.key)} attendanceSlots={attendanceSlots} participantHref={participantHref} />
+      {expanded.has(row.key) ? row.children.map(child => renderRow(child, depth + 1)) : null}
+    </Fragment>
+  );
 
   return (
     <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
         <h3 className="text-base font-semibold">Partecipanti per gruppo o nodo</h3>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Ogni riga conta le persone assegnate direttamente al gruppo effettivo
-          o al nodo iscrivibile (Nazione, città o area), inclusi i minori accompagnati.
+          Espandi i nodi per vedere i sottogruppi. Ogni totale include gli iscritti
+          al nodo e a tutti i suoi sottogruppi, inclusi i minori accompagnati.
           Le colonne mostrano le presenze previste per mattina e pomeriggio.
           Sono segnalate anche le persone senza gruppo o assegnate a nodi non iscrivibili.
         </p>
@@ -193,7 +207,7 @@ function TerritoryAttendancePivot({
         <table className="isolate w-full min-w-max border-separate border-spacing-0 text-left text-sm">
           <thead className="bg-[#f7fbfe]">
             <tr className="text-xs uppercase tracking-wide text-[#6f7f91] [&>th]:border-b [&>th]:border-[var(--peace-border)]">
-              <th className="sticky left-0 z-20 min-w-64 bg-[#f7fbfe] px-4 py-3 font-semibold">
+              <th className="sm:sticky left-0 z-20 min-w-48 sm:min-w-64 bg-[#f7fbfe] px-4 py-3 font-semibold">
                 Gruppo o nodo
               </th>
               <th className="min-w-24 px-3 py-3 text-center font-semibold">
@@ -213,9 +227,7 @@ function TerritoryAttendancePivot({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <TerritoryPivotTableRow key={row.key} row={row} attendanceSlots={attendanceSlots} participantHref={participantHref} />
-            ))}
+            {rows.map(row => renderRow(row))}
           </tbody>
         </table>
       </div>
@@ -231,10 +243,16 @@ function TerritoryAttendancePivot({
 
 function TerritoryPivotTableRow({
   row,
+  depth,
+  expanded,
+  onToggle,
   attendanceSlots,
   participantHref,
 }: {
   row: AssignedGroupRow;
+  depth: number;
+  expanded: boolean;
+  onToggle: () => void;
   attendanceSlots: StatisticsAttendanceSlot[];
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
@@ -242,10 +260,18 @@ function TerritoryPivotTableRow({
     <tr className={`[&>th]:border-b [&>td]:border-b [&>th]:border-[var(--peace-border)] [&>td]:border-[var(--peace-border)] last:[&>th]:border-b-0 last:[&>td]:border-b-0 bg-white`}>
       <th
         scope="row"
-        className={`sticky left-0 z-[5] min-w-64 py-3 pr-4 text-left pl-4 bg-white`}
+        className={`sm:sticky left-0 z-[5] min-w-48 sm:min-w-64 py-3 pr-4 text-left pl-4 bg-white`}
       >
-        <span className="block">{row.label}</span>
-        <span className="block text-xs font-normal text-[var(--peace-muted)]">{row.type}</span>
+        <div className="w-48 whitespace-normal sm:w-64" style={{ paddingLeft: Math.min(depth, 6) * 16 }}>
+          {row.children.length ? (
+            <button type="button" aria-expanded={expanded} onClick={onToggle} className="flex min-h-11 items-center gap-2 rounded-md text-left hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-2">
+              {expanded ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+              <span>{row.label}<span className="block text-xs font-normal text-[var(--peace-muted)]">{row.type}</span></span>
+            </button>
+          ) : (
+            <span className="block py-2 pl-[26px]">{row.label}{row.type ? <span className="block text-xs font-normal text-[var(--peace-muted)]">{row.type}</span> : null}</span>
+          )}
+        </div>
       </th>
       <td className="px-3 py-3 text-center">
         <CountLink

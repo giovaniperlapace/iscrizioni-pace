@@ -23,11 +23,11 @@ test("statistics keep four focused reports and remove person-detail tables", () 
   assert.doesNotMatch(statisticsSection, /Cerca nella tabella/);
 });
 
-test("group report uses direct assignments and preserves attendance columns", () => {
-  for (const marker of ["buildAssignedGroupRows", "row.type", "attendanceSlots.map", "Totale", "Gruppo o nodo"]) {
+test("group report uses expandable assignment hierarchy and preserves attendance columns", () => {
+  for (const marker of ["buildAssignedGroupTree", "row.type", "attendanceSlots.map", "Totale", "Gruppo o nodo"]) {
     assert.ok(statisticsSection.includes(marker));
   }
-  assert.doesNotMatch(statisticsSection, /person\.country|person\.city|ChevronRight|territorySummary/);
+  assert.doesNotMatch(statisticsSection, /person\.country|person\.city|territorySummary/);
   assert.match(statisticsSection, /overflow-x-auto overscroll-x-contain/);
 });
 
