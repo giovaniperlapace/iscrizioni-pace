@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Inserimento singolo Manager/Admin — 2026-09-23
+
+- Gestione iscritti offre Inserisci partecipante per Manager dell’evento corrente
+  e Admin globali. Nuova pagina `/dashboard/manager/nuovo`, gruppi attivi e
+  iscrivibili anche privati, nessuna membership richiesta. Catalogo paginato e
+  caricato solo all’apertura; Viewer escluso anche da URL/azione diretti.
+- Modulo e traduzioni condivisi col capogruppo, presenze non preselezionate,
+  controlli nascita/duplicati/consenso e figli conservati. Errori mantengono i
+  campi; successo apre un nuovo modulo. Senza email personale, il Manager usa
+  la consegna al referente del gruppo, non una delega esplicita a sé stesso.
+- Azione rilegge ruolo/evento/gruppo. Registrazione `source=admin` per il vincolo
+  esistente, assegnazione/snapshot/audit distinguono Manager e Admin reali.
+  Nessuna migration/RLS o scrittura di collaudo reale; resta il salvataggio
+  multi-scrittura del flusso assistito esistente. Dettagli e limiti in
+  `docs/manager-manual-registration.md`. Verificati 510 test, lint, TypeScript
+  e build in copia pulita con npm ci; browser sintetico sette lingue, desktop/
+  mobile e Viewer. Rilascio autorizzato dall’utente tramite commit/push su
+  main e normale deployment Vercel.
+
 ## Più città nei suggerimenti dei gruppi — 2026-09-23
 
 - Editor Manager/Admin mantiene Paese → Città facoltativa; Aggiungi un’altra

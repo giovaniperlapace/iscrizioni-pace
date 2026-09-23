@@ -44,12 +44,22 @@ export const MANUAL_EMAIL_COPY: Record<SupportedLocale, {
   },
 };
 
-export function ManualEmailFields({ locale, emailLabel }: {
-  locale: SupportedLocale; emailLabel: string;
+const GROUP_EMAIL_COPY: Record<SupportedLocale, { choice: string; delegated: string }> = {
+  it: { choice: "La persona non ha un’email personale", delegated: "Le comunicazioni saranno indirizzate al referente del gruppo scelto, se disponibile. La persona potrà accedere personalmente dopo l’aggiunta della propria email alla scheda." },
+  en: { choice: "The person has no personal email", delegated: "Communications will go to the selected group’s leader, if available. Personal access will be possible after adding the person’s own email to their record." },
+  fr: { choice: "La personne n’a pas d’email personnel", delegated: "Les communications seront adressées au responsable du groupe choisi, s’il est disponible. L’accès personnel sera possible après l’ajout de l’email de la personne à sa fiche." },
+  de: { choice: "Die Person hat keine eigene E-Mail-Adresse", delegated: "Mitteilungen gehen an die Leitung der gewählten Gruppe, sofern verfügbar. Ein persönlicher Zugang ist nach Ergänzung der eigenen E-Mail-Adresse möglich." },
+  es: { choice: "La persona no tiene correo personal", delegated: "Las comunicaciones se enviarán al responsable del grupo elegido, si está disponible. El acceso personal será posible al añadir el correo de la persona a su ficha." },
+  nl: { choice: "De persoon heeft geen eigen e-mailadres", delegated: "Berichten gaan naar de leider van de gekozen groep, indien beschikbaar. Eigen toegang is mogelijk na toevoeging van het persoonlijke e-mailadres." },
+  uk: { choice: "Людина не має особистої електронної пошти", delegated: "Повідомлення надходитимуть керівнику обраної групи, якщо він доступний. Особистий доступ стане можливим після додавання власної електронної адреси до картки." },
+};
+
+export function ManualEmailFields({ locale, emailLabel, delegation = "self" }: {
+  locale: SupportedLocale; emailLabel: string; delegation?: "self" | "group";
 }) {
   const [useLeaderEmail, setUseLeaderEmail] = useState(false);
   const helpId = useId();
-  const copy = MANUAL_EMAIL_COPY[locale];
+  const copy = { ...MANUAL_EMAIL_COPY[locale], ...(delegation === "group" ? GROUP_EMAIL_COPY[locale] : {}) };
   return (
     <div className="grid gap-3 lg:col-span-2">
       <p id={helpId} className="text-sm text-[var(--peace-muted)]">

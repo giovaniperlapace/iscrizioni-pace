@@ -1,5 +1,7 @@
 "use server";
 
+import { canCreateOperationsRegistration } from "@/lib/registrations/manual-registration-access";
+
 import { parseGroupGeography } from "@/lib/groups/geography";
 
 import { emailParticipantIds, reusableIdentityParticipantIds } from "@/lib/registrations/email-identity";
@@ -1637,18 +1639,27 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     return formFailure(parsed.errors.map(issueFromMessage));
   }
 
+  const operational = formData.get("sourceDashboard") === "manager";
+  const dashboardPath = operational ? "/dashboard/manager/nuovo" : "/dashboard/capogruppo";
   const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(supabase, "capogruppo");
+  const auth = await getCurrentAuthContext(supabase, operational ? "manager" : "capogruppo");
 
-  if (!auth || auth.dashboardRole !== "capogruppo") {
+  if (!auth || (!operational && auth.dashboardRole !== "capogruppo")) {
     redirect("/login");
   }
 
-  if (parsed.value.useLeaderEmail && !auth.user.email) {
+  if (!operational && parsed.value.useLeaderEmail && !auth.user.email) {
     return formFailure([{ field: "useLeaderEmail", code: "invalid" }]);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  const currentEventId = operational ? await getCurrentOperationalEventId(serviceSupabase) : null;
+  if (operational && (!currentEventId || !canCreateOperationsRegistration(auth.eventRoles, currentEventId))) {
+    return formFailure([{ field: null, code: "forbidden" }]);
+  }
+  const actorRole = operational
+    ? auth.eventRoles.some(role => role.role === "admin" && role.eventId === null) ? "admin" : "manager"
+    : "capogruppo";
   const { data: group, error: groupError } = await serviceSupabase
     .from("groups")
     .select("id,event_id,name,country_id,city_id,is_active,is_assignable,events(starts_on,ends_on)")
@@ -1672,16 +1683,17 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     !groupRow ||
     !groupRow.is_active ||
     !groupRow.is_assignable ||
+    (operational && groupRow.event_id !== currentEventId) ||
     !(await canManageGroupRegistrationLink(
       serviceSupabase,
       auth.user.id,
       auth.eventRoles,
       groupRow.id,
       groupRow.event_id,
-      "capogruppo"
+      operational ? "manager" : "capogruppo"
     ))
   ) {
-    return formFailureFromRedirect("/dashboard/capogruppo?manualError=forbidden");
+    return formFailureFromRedirect(`${dashboardPath}?manualError=forbidden`);
   }
 
   if (parsed.value.email && parsed.value.email === normalizeEmail(auth.user.email ?? null)) {
@@ -1696,7 +1708,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       groupRow.event_id
     ))
   ) {
-    return formFailureFromRedirect("/dashboard/capogruppo?manualError=duplicate-email");
+    return formFailureFromRedirect(`${dashboardPath}?manualError=duplicate-email`);
   }
 
   const eventDates = relatedOne(groupRow.events);
@@ -1722,7 +1734,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
     )
   ) {
-    return formFailureFromRedirect("/dashboard/capogruppo?manualError=invalid-days");
+    return formFailureFromRedirect(`${dashboardPath}?manualError=invalid-days`);
   }
 
 
@@ -1742,7 +1754,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     .single();
 
   if (participantError || !participant) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}?manualError=${encodeURIComponent(
         participantError?.message ?? "participant"
       )}`);
   }
@@ -1753,14 +1765,14 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     .insert({
       event_id: groupRow.event_id,
       participant_id: participantRow.id,
-      source: "capogruppo",
+      source: operational ? "admin" : "capogruppo",
       created_by: auth.user.id,
     })
     .select("id")
     .single();
 
   if (registrationError || !registration) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}?manualError=${encodeURIComponent(
         registrationError?.message ?? "registration"
       )}`);
   }
@@ -1787,7 +1799,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       answers: buildManualRegistrationQuestionnaireAnswers(parsed.value, {
         id: groupRow.id,
         name: groupRow.name,
-      }, auth.user.id),
+      }, auth.user.id, actorRole),
       visibility_summary: getQuestionnaireVisibilitySummary(),
     });
   if (questionnaireError) return formFailure([{ field: null, code: "failed" }]);
@@ -1833,15 +1845,15 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       registration_id: registrationId,
       group_id: groupRow.id,
       status: "confirmed",
-      source: "capogruppo",
+      source: actorRole,
       confidence: 1,
       is_current: true,
-      assignment_reason: "group_leader_manual_entry",
-      matcher_version: "group-leader-manual-v1",
+      assignment_reason: operational ? "operations_manual_entry" : "group_leader_manual_entry",
+      matcher_version: operational ? "operations-manual-v1" : "group-leader-manual-v1",
       confirmed_by: auth.user.id,
       confirmed_at: new Date().toISOString(),
-      leader_decision_by: auth.user.id,
-      leader_decision_at: new Date().toISOString(),
+      leader_decision_by: operational ? null : auth.user.id,
+      leader_decision_at: operational ? null : new Date().toISOString(),
 
       leader_internal_note: parsed.value.leaderNote,
       leader_note_updated_by: parsed.value.leaderNote ? auth.user.id : null,
@@ -1852,14 +1864,15 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     serviceSupabase.from("audit_logs").insert({
       event_id: groupRow.event_id,
       actor_user_id: auth.user.id,
-      action: "registration.created_by_group_leader",
+      action: operational ? `registration.created_by_${actorRole}` : "registration.created_by_group_leader",
       entity_table: "registrations",
       entity_id: registrationId,
       metadata: {
         group_id: groupRow.id,
-        source: "capogruppo",
+        source: actorRole,
         has_email: Boolean(parsed.value.email),
-        communication_delegate_user_id: parsed.value.useLeaderEmail ? auth.user.id : null,
+        communication_delegate_user_id: !operational && parsed.value.useLeaderEmail ? auth.user.id : null,
+        delivery_mode: parsed.value.useLeaderEmail ? operational ? "group_leader" : "actor" : "personal",
         has_phone: Boolean(parsed.value.phone),
         accompanying_children_count: parsed.value.children.length,
         participant_public_code: participantRow.public_code,
@@ -1892,7 +1905,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   const failedWrite = results.find((result) => result.error);
 
   if (failedWrite?.error) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}?manualError=${encodeURIComponent(
         failedWrite.error.message
       )}`);
   }
@@ -1908,7 +1921,11 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       })
     : true;
   revalidatePath("/dashboard/capogruppo");
-  redirect(`/dashboard/capogruppo?manualSaved=1${accessEmailSent ? "" : "&manualError=access-email"}`);
+  if (operational) {
+    revalidatePath("/dashboard/manager");
+    revalidatePath("/dashboard/admin");
+  }
+  redirect(`${dashboardPath}?manualSaved=1${accessEmailSent ? "" : "&manualError=access-email"}`);
 }
 
 export async function updateGroupRegistrationLink(formData: FormData) {

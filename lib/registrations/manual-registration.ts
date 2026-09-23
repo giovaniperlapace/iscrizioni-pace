@@ -128,10 +128,11 @@ export function validateManualRegistrationInput(
 export function buildManualRegistrationQuestionnaireAnswers(
   input: ManualRegistrationInput,
   group: { id: string; name: string | null },
-  actorUserId?: string
+  actorUserId?: string,
+  actorRole: "capogruppo" | "manager" | "admin" = "capogruppo",
 ) {
   return {
-    source: "capogruppo_manual",
+    source: `${actorRole}_manual`,
     identity: {
       firstName: input.firstName,
       lastName: input.lastName,
@@ -140,15 +141,15 @@ export function buildManualRegistrationQuestionnaireAnswers(
     contact: {
       hasEmail: Boolean(input.email),
       hasPhone: Boolean(input.phone),
-      useLeaderEmail: input.useLeaderEmail,
-      communicationDelegateUserId: input.useLeaderEmail ? actorUserId ?? null : null,
+      useLeaderEmail: actorRole === "capogruppo" && input.useLeaderEmail,
+      communicationDelegateUserId: actorRole === "capogruppo" && input.useLeaderEmail ? actorUserId ?? null : null,
     },
     groupParticipation: {
       hasPreviousSantegidioParticipation: true,
       participatesWithGroup: true,
       selectedGroupId: group.id,
       selectedGroupName: group.name,
-      enteredByGroupLeader: true,
+      enteredByGroupLeader: actorRole === "capogruppo",
     },
     attendance: {
       overallChoice: input.availabilityUnknown ? "unknown" : "yes",
@@ -160,7 +161,7 @@ export function buildManualRegistrationQuestionnaireAnswers(
       participatesWithChildren: input.participatesWithChildren,
       count: input.children.length,
       children: input.children,
-      enteredByGroupLeader: true,
+      enteredByGroupLeader: actorRole === "capogruppo",
     },
     accessibility: {
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
@@ -169,7 +170,8 @@ export function buildManualRegistrationQuestionnaireAnswers(
     consents: {
       privacyAccepted: true,
       dataProcessingAccepted: true,
-      acceptedByGroupLeader: true,
+      acceptedByGroupLeader: actorRole === "capogruppo",
+      acceptedByOperator: actorRole !== "capogruppo",
     },
   };
 }

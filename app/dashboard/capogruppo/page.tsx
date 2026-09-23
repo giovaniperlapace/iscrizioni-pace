@@ -1,23 +1,21 @@
+import { MANUAL_REGISTRATION_COPY, type ManualRegistrationCopy } from "@/lib/registrations/manual-registration-copy";
+import { ManualRegistrationSection } from "@/app/dashboard/manual-registration-section";
 import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
 import { OperationalChildrenEditor } from "@/app/dashboard/operational-children-editor";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { LocalOverlay } from "@/app/dashboard/local-overlay";
 import { LocalQueryLink } from "@/components/local-query-link";
-import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
 import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { LeaderParticipantAttendance } from "./participant-attendance";
 import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
-import { ManualPhoneFields } from "@/app/dashboard/capogruppo/manual-phone-fields";
-import { ManualEmailFields } from "./manual-email-fields";
 import { LeaderParticipantQr } from "./participant-qr";
 import { loadLeaderAssignmentQr } from "@/lib/groups/leader-qr.server";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
 import { LeaderParticipantsTable } from "./participants-table";
 import { filterLeaderRows, leaderReturnPath, toLeaderTableRow } from "@/lib/groups/leader-table";
-import { MANUAL_DUPLICATE_COPY } from "@/lib/data-quality/manual-copy";
 
 import { ReliableForm } from "@/components/reliable-form";
 import Link from "@/components/pending-link";
@@ -40,9 +38,6 @@ import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ConfirmSubmitButton } from "@/app/dashboard/confirm-submit-button";
 import { CopyLinkButton } from "@/app/dashboard/group-link-copy-tools";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
-import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
-import { ManualChildrenFields } from "@/app/dashboard/capogruppo/manual-children-fields";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
@@ -151,7 +146,7 @@ const GROUP_EXCEPTION_COPY = {
   uk: { reject: "Повідомити про проблему з групою", sent: "Повідомлення надіслано менеджерам та адміністраторам. Група залишилася без змін.", help: "Надішліть повідомлення менеджерам та адміністраторам. Група залишиться без змін.", warning: (name: string) => `Повідомити, що ${name} не належить до групи?` },
 };
 
-type GroupLeaderCopy = {
+type GroupLeaderCopy = ManualRegistrationCopy & {
   exception: { reject: string; sent: string; help: string; warning: (name: string) => string };
   srTitle: string;
   areaDescription: string;
@@ -169,8 +164,6 @@ type GroupLeaderCopy = {
   manageLinks: string;
   linkSlug: string;
   linkSlugHelp: string;
-
-  addParticipant: string;
   inactiveGroupHelp: string;
   noGroups: string;
   close: string;
@@ -200,18 +193,6 @@ type GroupLeaderCopy = {
   internalLabel: string;
   internalLabelPlaceholder: string;
   internalLabelHelp: string;
-  noRegistrableGroups: string;
-  manualTitle: string;
-  manualHelp: string;
-  group: string;
-  selectGroup: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  birthDate: string;
-  internalNote: string;
-  consent: string;
   filters: {
     search: string;
     searchPlaceholder: string;
@@ -267,20 +248,6 @@ type GroupLeaderCopy = {
     decisionAt: string;
     escalationDepth: string;
   };
-  attendance: {
-    title: string;
-    help: string;
-    noDates: string;
-    unknown: string;
-  };
-  accessibility: {
-    title: string;
-    help: string;
-    question: string;
-    unknown: string;
-    no: string;
-    yes: string;
-  };
   statusLabels: {
 
     active: (date: string) => string;
@@ -298,6 +265,7 @@ type GroupLeaderCopy = {
 };
 
 const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
+  ...MANUAL_REGISTRATION_COPY.it,
   exception: GROUP_EXCEPTION_COPY.it,
   srTitle: "Dashboard capogruppo",
   areaDescription: "Gestisci i partecipanti dei tuoi gruppi e segnala soltanto chi non appartiene al gruppo.",
@@ -316,8 +284,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   manageLinks: "Gestisci link",
   linkSlug: "Slug (indirizzo del link)",
     linkSlugHelp: "Modificando lo slug, il vecchio URL non sarà più valido.",
-
-  addParticipant: "Inserisci partecipante",
   inactiveGroupHelp:
     "Questo gruppo è collegato al tuo account, ma non è attivo nel catalogo operativo. Prima di usare link o inserimenti manuali serve un intervento di un manager/admin per riattivarlo o collegarti al gruppo corretto.",
   noGroups: "Nessun gruppo collegato al tuo account.",
@@ -352,20 +318,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   internalLabelPlaceholder: "Per esempio: link mandato su WhatsApp",
   internalLabelHelp:
     "Non viene mostrato ai partecipanti. Serve solo a riconoscere questo link in dashboard.",
-  noRegistrableGroups: "Nessun gruppo gestito può ricevere iscrizioni in questo momento.",
-  manualTitle: "Inserimento manuale",
-  manualHelp:
-    "Aggiungi una persona direttamente a uno dei gruppi che gestisci. La persona risulta subito confermata nel gruppo scelto.",
-  group: "Gruppo",
-  selectGroup: "Seleziona gruppo",
-  firstName: "Nome",
-  lastName: "Cognome",
-  email: "Email",
-  phone: "Telefono",
-  birthDate: "Data di nascita",
-  internalNote: "Nota interna",
-  consent:
-    "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione. Se inserisco uno o più figli, confermo che la persona mi ha dichiarato di esercitare la responsabilità genitoriale o di essere autorizzata a comunicarne i dati.",
   filters: {
     search: "Nome o codice",
     searchPlaceholder: "Nome o codice",
@@ -426,20 +378,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     decisionAt: "Decisione",
     escalationDepth: "Passaggi di risalita",
   },
-  attendance: {
-    title: "Presenza",
-    help: "Se conosci già i giorni di presenza, selezionali. Altrimenti lascia indicato che saranno confermati più avanti.",
-    noDates: "Date dell'evento non disponibili.",
-    unknown: "Non lo so ancora, sarà confermato più avanti",
-  },
-  accessibility: {
-    title: "Accessibilità e supporto",
-    help: "Compila solo le informazioni che conosci. Potranno essere completate più avanti.",
-    question: "La persona ha bisogni di accessibilità?",
-    unknown: "Non so / da verificare",
-    no: "No",
-    yes: "Sì",
-  },
   statusLabels: {
 
     active: (date) => `Attivo dal ${date}`,
@@ -458,6 +396,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
 
 const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   ...IT_GROUP_LEADER_COPY,
+  ...MANUAL_REGISTRATION_COPY.en,
   exception: GROUP_EXCEPTION_COPY.en,
   srTitle: "Group leader dashboard",
   areaDescription: "Manage participants in your groups and report anyone who does not belong to the group.",
@@ -476,8 +415,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   manageLinks: "Manage links",
   linkSlug: "Slug (link address)",
     linkSlugHelp: "Changing the slug makes the previous URL invalid.",
-
-  addParticipant: "Add participant",
   inactiveGroupHelp:
     "This group is linked to your account, but it is not active in the operational catalogue. Before using links or manual entries, a manager/admin needs to reactivate it or connect you to the correct group.",
   noGroups: "No group is linked to your account.",
@@ -512,19 +449,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   internalLabelPlaceholder: "For example: link sent on WhatsApp",
   internalLabelHelp:
     "It is not shown to participants. It only helps you recognise this link in the dashboard.",
-  noRegistrableGroups: "None of the groups you manage can receive registrations right now.",
-  manualTitle: "Manual entry",
-  manualHelp:
-    "Add a person directly to one of the groups you manage. The person is immediately confirmed in the selected group.",
-  group: "Group",
-  selectGroup: "Select group",
-  firstName: "First name",
-  lastName: "Last name",
-  phone: "Phone",
-  birthDate: "Date of birth",
-  internalNote: "Internal note",
-  consent:
-    "I have the registered person's consent to process data for this registration. If I add one or more children, I confirm that the person has stated that they have parental responsibility or are authorised to provide their data.",
   filters: {
     search: "Name or code",
     searchPlaceholder: "Name or code",
@@ -585,20 +509,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     decisionAt: "Decision",
     escalationDepth: "Escalation steps",
   },
-  attendance: {
-    title: "Attendance",
-    help: "If you already know the attendance days, select them. Otherwise leave the indication that they will be confirmed later.",
-    noDates: "Event dates are not available.",
-    unknown: "I do not know yet; it will be confirmed later",
-  },
-  accessibility: {
-    title: "Accessibility and support",
-    help: "Fill in only the information you know. It can be completed later.",
-    question: "Does the person have accessibility needs?",
-    unknown: "I do not know / to be checked",
-    no: "No",
-    yes: "Yes",
-  },
   statusLabels: {
 
     active: (date) => `Active since ${date}`,
@@ -620,6 +530,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   en: EN_GROUP_LEADER_COPY,
   fr: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.fr,
     exception: GROUP_EXCEPTION_COPY.fr,
     srTitle: "Dashboard responsable de groupe",
     areaDescription: "Gère les participants de tes groupes et signale les personnes qui n’en font pas partie.",
@@ -637,14 +548,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (adresse du lien)",
     linkSlugHelp: "Si vous modifiez le slug, l’ancienne URL ne sera plus valide.",
     saveLinkName: "Enregistrer le lien",
-
-    addParticipant: "Ajouter un participant",
     inactiveGroupHelp:
       "Ce groupe est relié à ton compte, mais il n'est pas actif dans le catalogue opérationnel. Avant d'utiliser des liens ou des ajouts manuels, un manager/admin doit le réactiver ou te relier au bon groupe.",
     noGroups: "Aucun groupe n'est relié à ton compte.",
-    manualTitle: "Ajout manuel",
-    manualHelp:
-      "Ajoute une personne directement à l'un des groupes que tu gères. La personne est immédiatement confirmée dans le groupe choisi.",
     linkTitle: "Lien d'inscription du groupe",
     linkHelp:
       "Tu peux générer des liens réservés uniquement pour les groupes que tu gères. Ces liens ne rendent pas le groupe visible dans le menu public.",
@@ -671,16 +577,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Par exemple : lien envoyé sur WhatsApp",
     internalLabelHelp:
       "Il n'est pas affiché aux participants. Il sert seulement à reconnaître ce lien dans le tableau de bord.",
-    noRegistrableGroups: "Aucun des groupes que tu gères ne peut recevoir d'inscriptions pour le moment.",
-    group: "Groupe",
-    selectGroup: "Sélectionner un groupe",
-    firstName: "Prénom",
-    lastName: "Nom",
-    phone: "Téléphone",
-    birthDate: "Date de naissance",
-    internalNote: "Note interne",
-    consent:
-      "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription. Si j'ajoute un ou plusieurs enfants, je confirme que la personne a déclaré exercer la responsabilité parentale ou être autorisée à communiquer leurs données.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Nom ou code",
@@ -719,20 +615,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Enregistrer la note",
 
     },
-    attendance: {
-      title: "Présence",
-      help: "Si tu connais déjà les jours de présence, sélectionne-les. Sinon laisse indiqué qu'ils seront confirmés plus tard.",
-      noDates: "Dates de l'événement non disponibles.",
-      unknown: "Je ne sais pas encore, ce sera confirmé plus tard",
-    },
-    accessibility: {
-      title: "Accessibilité et support",
-      help: "Remplis seulement les informations que tu connais. Elles pourront être complétées plus tard.",
-      question: "La personne a-t-elle des besoins d'accessibilité ?",
-      unknown: "Je ne sais pas / à vérifier",
-      no: "Non",
-      yes: "Oui",
-    },
     statusLabels: {
 
       active: (date) => `Actif depuis ${date}`,
@@ -750,6 +632,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   de: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.de,
     exception: GROUP_EXCEPTION_COPY.de,
     srTitle: "Dashboard Gruppenleitung",
     areaDescription: "Verwalte die Teilnehmenden deiner Gruppen und melde Personen, die nicht zur Gruppe gehören.",
@@ -767,14 +650,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (Linkadresse)",
     linkSlugHelp: "Wenn Sie den Slug ändern, ist die bisherige URL nicht mehr gültig.",
     saveLinkName: "Link speichern",
-
-    addParticipant: "Teilnehmende Person hinzufügen",
     inactiveGroupHelp:
       "Diese Gruppe ist mit deinem Konto verbunden, aber im operativen Katalog nicht aktiv. Bevor Links oder manuelle Einträge verwendet werden, muss ein Manager/Admin sie reaktivieren oder dich mit der richtigen Gruppe verbinden.",
     noGroups: "Mit deinem Konto ist keine Gruppe verbunden.",
-    manualTitle: "Manuelle Eingabe",
-    manualHelp:
-      "Füge eine Person direkt zu einer der Gruppen hinzu, die du verwaltest. Die Person ist sofort in der ausgewählten Gruppe bestätigt.",
     linkTitle: "Gruppen-Anmeldelink",
     linkHelp:
       "Du kannst reservierte Links nur für die Gruppen erstellen, die du verwaltest. Diese Links machen die Gruppe nicht im öffentlichen Menü sichtbar.",
@@ -801,16 +679,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Zum Beispiel: Link per WhatsApp gesendet",
     internalLabelHelp:
       "Wird den Teilnehmenden nicht angezeigt. Hilft nur, diesen Link im Dashboard wiederzuerkennen.",
-    noRegistrableGroups: "Keine der von dir verwalteten Gruppen kann derzeit Anmeldungen erhalten.",
-    group: "Gruppe",
-    selectGroup: "Gruppe auswählen",
-    firstName: "Vorname",
-    lastName: "Nachname",
-    phone: "Telefon",
-    birthDate: "Geburtsdatum",
-    internalNote: "Interne Notiz",
-    consent:
-      "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung. Wenn ich ein oder mehrere Kinder hinzufüge, bestätige ich, dass die Person die elterliche Verantwortung ausübt oder zur Angabe ihrer Daten berechtigt ist.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Name oder Code",
@@ -849,20 +717,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Notiz speichern",
 
     },
-    attendance: {
-      title: "Anwesenheit",
-      help: "Wenn du die Anwesenheitstage bereits kennst, wähle sie aus. Andernfalls lasse angegeben, dass sie später bestätigt werden.",
-      noDates: "Veranstaltungsdaten nicht verfügbar.",
-      unknown: "Ich weiß es noch nicht, es wird später bestätigt",
-    },
-    accessibility: {
-      title: "Barrierefreiheit und Unterstützung",
-      help: "Fülle nur die Informationen aus, die du kennst. Sie können später ergänzt werden.",
-      question: "Hat die Person Barrierefreiheitsbedarfe?",
-      unknown: "Ich weiß es nicht / zu prüfen",
-      no: "Nein",
-      yes: "Ja",
-    },
     statusLabels: {
 
       active: (date) => `Aktiv seit ${date}`,
@@ -880,6 +734,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   es: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.es,
     exception: GROUP_EXCEPTION_COPY.es,
     srTitle: "Panel responsable de grupo",
     areaDescription: "Gestiona los participantes de tus grupos e indica quién no pertenece al grupo.",
@@ -897,14 +752,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (dirección del enlace)",
     linkSlugHelp: "Al cambiar el slug, la URL anterior dejará de ser válida.",
     saveLinkName: "Guardar enlace",
-
-    addParticipant: "Añadir participante",
     inactiveGroupHelp:
       "Este grupo está vinculado a tu cuenta, pero no está activo en el catálogo operativo. Antes de usar enlaces o entradas manuales, un manager/admin debe reactivarlo o conectarte al grupo correcto.",
     noGroups: "Ningún grupo está vinculado a tu cuenta.",
-    manualTitle: "Entrada manual",
-    manualHelp:
-      "Añade una persona directamente a uno de los grupos que gestionas. La persona queda inmediatamente confirmada en el grupo elegido.",
     linkTitle: "Enlace de inscripción del grupo",
     linkHelp:
       "Puedes generar enlaces reservados solo para los grupos que gestionas. Estos enlaces no hacen que el grupo sea visible en el menú público.",
@@ -931,16 +781,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Por ejemplo: enlace enviado por WhatsApp",
     internalLabelHelp:
       "No se muestra a los participantes. Sirve solo para reconocer este enlace en el panel.",
-    noRegistrableGroups: "Ninguno de los grupos que gestionas puede recibir inscripciones en este momento.",
-    group: "Grupo",
-    selectGroup: "Selecciona grupo",
-    firstName: "Nombre",
-    lastName: "Apellidos",
-    phone: "Teléfono",
-    birthDate: "Fecha de nacimiento",
-    internalNote: "Nota interna",
-    consent:
-      "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción. Si añado uno o más hijos, confirmo que la persona ha declarado ejercer la responsabilidad parental o estar autorizada para comunicar sus datos.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Nombre o código",
@@ -979,20 +819,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Guardar nota",
 
     },
-    attendance: {
-      title: "Presencia",
-      help: "Si ya conoces los días de presencia, selecciónalos. Si no, deja indicado que se confirmarán más adelante.",
-      noDates: "Fechas del evento no disponibles.",
-      unknown: "Todavía no lo sé, se confirmará más adelante",
-    },
-    accessibility: {
-      title: "Accesibilidad y apoyo",
-      help: "Completa solo la información que conoces. Podrá completarse más adelante.",
-      question: "¿La persona tiene necesidades de accesibilidad?",
-      unknown: "No lo sé / por verificar",
-      no: "No",
-      yes: "Sí",
-    },
     statusLabels: {
 
       active: (date) => `Activo desde ${date}`,
@@ -1010,6 +836,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   nl: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.nl,
     exception: GROUP_EXCEPTION_COPY.nl,
     srTitle: "Dashboard groepsleider",
     areaDescription: "Beheer de deelnemers van je groepen en meld wie niet bij de groep hoort.",
@@ -1027,14 +854,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (linkadres)",
     linkSlugHelp: "Als je de slug wijzigt, is de vorige URL niet meer geldig.",
     saveLinkName: "Link opslaan",
-
-    addParticipant: "Deelnemer toevoegen",
     inactiveGroupHelp:
       "Deze groep is gekoppeld aan je account, maar is niet actief in de operationele catalogus. Voordat je links of handmatige invoer gebruikt, moet een manager/admin de groep opnieuw activeren of je aan de juiste groep koppelen.",
     noGroups: "Er is geen groep aan je account gekoppeld.",
-    manualTitle: "Handmatige invoer",
-    manualHelp:
-      "Voeg een persoon rechtstreeks toe aan een van de groepen die je beheert. De persoon is meteen bevestigd in de gekozen groep.",
     linkTitle: "Inschrijflink groep",
     linkHelp:
       "Je kunt alleen gereserveerde links genereren voor groepen die je beheert. Deze links maken de groep niet zichtbaar in het publieke menu.",
@@ -1061,16 +883,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Bijvoorbeeld: link gestuurd via WhatsApp",
     internalLabelHelp:
       "Wordt niet aan deelnemers getoond. Het helpt alleen om deze link in het dashboard te herkennen.",
-    noRegistrableGroups: "Geen van de groepen die je beheert kan momenteel inschrijvingen ontvangen.",
-    group: "Groep",
-    selectGroup: "Selecteer groep",
-    firstName: "Voornaam",
-    lastName: "Achternaam",
-    phone: "Telefoon",
-    birthDate: "Geboortedatum",
-    internalNote: "Interne notitie",
-    consent:
-      "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken. Als ik een of meer kinderen toevoeg, bevestig ik dat de persoon het ouderlijk gezag uitoefent of gemachtigd is hun gegevens door te geven.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Naam of code",
@@ -1109,20 +921,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Notitie opslaan",
 
     },
-    attendance: {
-      title: "Aanwezigheid",
-      help: "Als je de aanwezigheidsdagen al kent, selecteer ze. Laat anders staan dat ze later worden bevestigd.",
-      noDates: "Evenementdata niet beschikbaar.",
-      unknown: "Ik weet het nog niet, het wordt later bevestigd",
-    },
-    accessibility: {
-      title: "Toegankelijkheid en ondersteuning",
-      help: "Vul alleen de informatie in die je kent. Die kan later worden aangevuld.",
-      question: "Heeft de persoon toegankelijkheidsbehoeften?",
-      unknown: "Ik weet het niet / te controleren",
-      no: "Nee",
-      yes: "Ja",
-    },
     statusLabels: {
 
       active: (date) => `Actief sinds ${date}`,
@@ -1140,6 +938,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   uk: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.uk,
     exception: GROUP_EXCEPTION_COPY.uk,
     srTitle: "Панель керівника групи",
     areaDescription: "Керуйте учасниками своїх груп і повідомляйте про тих, хто не належить до групи.",
@@ -1157,14 +956,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (адреса посилання)",
     linkSlugHelp: "Після зміни slug попередня URL-адреса більше не буде дійсною.",
     saveLinkName: "Зберегти посилання",
-
-    addParticipant: "Додати учасника",
     inactiveGroupHelp:
       "Ця група пов'язана з вашим обліковим записом, але не активна в робочому каталозі. Перед використанням посилань або ручного додавання manager/admin має повторно активувати її або прив'язати вас до правильної групи.",
     noGroups: "До вашого облікового запису не прив'язано жодної групи.",
-    manualTitle: "Ручне додавання",
-    manualHelp:
-      "Додайте людину безпосередньо до однієї з груп, якими ви керуєте. Людина одразу буде підтверджена у вибраній групі.",
     linkTitle: "Посилання для реєстрації групи",
     linkHelp:
       "Ви можете створювати зарезервовані посилання лише для груп, якими керуєте. Ці посилання не роблять групу видимою в публічному меню.",
@@ -1191,16 +985,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Наприклад: посилання надіслано у WhatsApp",
     internalLabelHelp:
       "Не показується учасникам. Потрібно лише для розпізнавання цього посилання на панелі.",
-    noRegistrableGroups: "Жодна з груп, якими ви керуєте, зараз не може приймати реєстрації.",
-    group: "Група",
-    selectGroup: "Виберіть групу",
-    firstName: "Ім'я",
-    lastName: "Прізвище",
-    phone: "Телефон",
-    birthDate: "Дата народження",
-    internalNote: "Внутрішня нотатка",
-    consent:
-      "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації. Якщо я додаю одну або кількох дітей, я підтверджую, що ця особа має батьківську відповідальність або уповноважена надати їхні дані.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Ім'я або код",
@@ -1238,20 +1022,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       manageAria: (name, code) => `Керувати ${name}${code ? ` ${code}` : ""}`,
       saveNote: "Зберегти нотатку",
 
-    },
-    attendance: {
-      title: "Присутність",
-      help: "Якщо ви вже знаєте дні присутності, виберіть їх. Інакше залиште позначку, що їх буде підтверджено пізніше.",
-      noDates: "Дати події недоступні.",
-      unknown: "Я ще не знаю, буде підтверджено пізніше",
-    },
-    accessibility: {
-      title: "Доступність і підтримка",
-      help: "Заповніть лише ту інформацію, яку знаєте. Її можна буде доповнити пізніше.",
-      question: "Чи має особа потреби доступності?",
-      unknown: "Не знаю / потрібно перевірити",
-      no: "Ні",
-      yes: "Так",
     },
     statusLabels: {
 
@@ -1420,6 +1190,7 @@ export default async function CapogruppoDashboardPage({
               />
             ) : (
               <ManualRegistrationSection
+                action={createGroupLeaderManualRegistration}
                 groups={scopedGroups}
                 selectedGroupId={activeGroupId}
                 eventDays={getManualRegistrationEventDays(scopedGroups, locale)}
@@ -1813,107 +1584,6 @@ function GroupLeaderLinksSection({
           {copy.noRegistrableGroups}
         </p>
       ) : null}
-    </section>
-  );
-}
-
-function ManualRegistrationSection({
-  groups,
-  selectedGroupId,
-  eventDays,
-  locale,
-  copy,
-}: {
-  groups: ScopedGroupView[];
-  selectedGroupId: string | null;
-  eventDays: AttendanceDayColumn[];
-  locale: SupportedLocale;
-  copy: GroupLeaderCopy;
-}) {
-  const assignableGroups = groups.filter((group) => group.isAssignable);
-  const defaultGroupId =
-    selectedGroupId && assignableGroups.some((group) => group.id === selectedGroupId)
-      ? selectedGroupId
-      : "";
-
-  return (
-    <section>
-      <div>
-        <h2 className="text-lg font-semibold">{copy.manualTitle}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-          {copy.manualHelp}
-        </p>
-      </div>
-
-      {assignableGroups.length > 0 ? (
-        <ReliableForm
-          action={createGroupLeaderManualRegistration}
-          validation="manualRegistration"
-          locale={locale}
-          className="mt-5 grid gap-4 lg:grid-cols-2"
-        >
-          <div className="lg:col-span-2"><RequiredFieldsNote locale={locale} /></div>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
-            <span>{copy.group}<RequiredIndicator /></span>
-            <select name="groupId" required className="field" defaultValue={defaultGroupId}>
-              <option value="">{copy.selectGroup}</option>
-              {assignableGroups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            <span>{copy.firstName}<RequiredIndicator /></span>
-            <input name="firstName" required minLength={2} className="field" />
-          </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            <span>{copy.lastName}<RequiredIndicator /></span>
-            <input name="lastName" required minLength={2} className="field" />
-          </label>
-          <ManualEmailFields locale={locale} emailLabel={copy.email} />
-          <ManualPhoneFields locale={locale} label={copy.phone} />
-          <ParticipantBirthDateField label={copy.birthDate} locale={locale} />
-          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} initialUnknown={false} />
-          <ManualChildrenFields locale={locale} />
-          <ManualAccessibilityFields
-            locale={locale}
-            copy={copy.accessibility}
-          />
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
-            {copy.internalNote}
-            <textarea
-              name="leaderNote"
-              rows={3}
-              className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
-            />
-          </label>
-          <label className="flex gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm font-medium text-[var(--peace-ink)] lg:col-span-2">
-            <input
-              name="consentConfirmed"
-              type="checkbox"
-              required
-              className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
-            />
-            <span>{copy.consent}<RequiredIndicator /></span>
-          </label>
-          <label className="grid gap-1 text-sm lg:col-span-2">
-            {MANUAL_DUPLICATE_COPY[locale]}
-            <textarea name="duplicateReason" className="field" minLength={3} maxLength={500} />
-          </label>
-          <div className="lg:col-span-2">
-            <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-              {copy.addParticipant}
-            </PendingSubmitButton>
-          </div>
-        </ReliableForm>
-      ) : (
-        <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          {copy.noRegistrableGroups}
-        </p>
-      )}
     </section>
   );
 }

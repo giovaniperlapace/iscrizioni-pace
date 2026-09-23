@@ -1,0 +1,11 @@
+import type { SupportedLocale } from '../i18n/config';
+
+export const OPERATIONS_MANUAL_COPY: Record<SupportedLocale, { help: string; back: string; saved: string }> = {
+  it: { help: "Inserisci una persona nel gruppo scelto dell’evento corrente. Sarà subito confermata nel gruppo, anche se non visibile nel modulo pubblico.", back: "Torna a Gestione iscritti", saved: "Partecipante inserito. Puoi aggiungere un’altra persona o tornare a Gestione iscritti." },
+  en: { help: "Add a person to a group in the current event. They will be confirmed in the selected group, even if it is hidden from the public form.", back: "Back to participants", saved: "Participant added. You can add another person or return to the participant list." },
+  fr: { help: "Ajoutez une personne à un groupe de l’événement en cours. Elle sera confirmée dans le groupe choisi, même s’il est masqué dans le formulaire public.", back: "Retour aux participants", saved: "Participant ajouté. Vous pouvez ajouter une autre personne ou revenir à la liste." },
+  de: { help: "Fügen Sie eine Person zu einer Gruppe der aktuellen Veranstaltung hinzu. Sie wird in der gewählten Gruppe bestätigt, auch wenn diese im öffentlichen Formular verborgen ist.", back: "Zurück zur Teilnehmerverwaltung", saved: "Person hinzugefügt. Sie können eine weitere Person hinzufügen oder zur Liste zurückkehren." },
+  es: { help: "Añade una persona a un grupo del evento actual. Quedará confirmada en el grupo elegido, aunque esté oculto en el formulario público.", back: "Volver a participantes", saved: "Participante añadido. Puedes añadir otra persona o volver a la lista." },
+  nl: { help: "Voeg een persoon toe aan een groep van het huidige evenement. De persoon wordt bevestigd in de gekozen groep, ook als deze niet zichtbaar is in het openbare formulier.", back: "Terug naar deelnemersbeheer", saved: "Deelnemer toegevoegd. Je kunt nog iemand toevoegen of teruggaan naar de lijst." },
+  uk: { help: "Додайте людину до групи поточної події. Її буде одразу підтверджено в обраній групі, навіть якщо групу приховано в публічній формі.", back: "Повернутися до учасників", saved: "Учасника додано. Можна додати ще одну людину або повернутися до списку." },
+};
