@@ -78,6 +78,22 @@ export const EUROPEAN_COUNTRIES = [
   "Vaticano",
 ] as const;
 
+export const RESIDENCE_COUNTRIES = [
+  ...EUROPEAN_COUNTRIES,
+  "Cuba",
+  "Guatemala",
+  "Colombia",
+  "Nicaragua",
+  "Messico",
+  "Costa d’Avorio",
+  "Nigeria",
+  "Senegal",
+  "Mozambico",
+  "Repubblica Democratica del Congo",
+  "Malawi",
+  "Uganda",
+].sort((a, b) => a.localeCompare(b, "it"));
+
 export const PLACEHOLDER_GROUPS = [
   "Gruppo della mia città",
   "Giovani per la Pace",

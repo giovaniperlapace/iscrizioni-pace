@@ -21,7 +21,7 @@ import {
 import {
   ACCESSIBILITY_DIFFICULTIES,
   EUROPEAN_CITY_OPTIONS,
-  EUROPEAN_COUNTRIES,
+  RESIDENCE_COUNTRIES,
   NATIONALITY_OPTIONS,
   PLACEHOLDER_GROUPS,
 } from "@/lib/questionnaire/registration";
@@ -714,7 +714,7 @@ export function RegistrationForm({
     options.event?.ends_on ?? null,
     locale
   );
-  const filteredCountries = EUROPEAN_COUNTRIES.filter((country) =>
+  const filteredCountries = RESIDENCE_COUNTRIES.filter((country) =>
     [country, countryName(country, locale) ?? country].some(name =>
       normalizeSearchText(name).includes(normalizeSearchText(countrySearch))
     )
