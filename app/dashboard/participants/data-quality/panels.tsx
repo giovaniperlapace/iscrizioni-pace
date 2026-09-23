@@ -107,7 +107,6 @@ export function ImportPanel() {
     return (
       (decision.action === "import" &&
         (row.errors.length > 0 ||
-          (birthDateNeedsReview(row.values.data_nascita) && decision.confirmedBirthDate !== row.values.data_nascita) ||
           row.candidates.some((match) => match.archived))) ||
       ((decision.action === "skip" || row.candidates.length > 0) &&
         decision.reason.trim().length < 3)
@@ -291,14 +290,6 @@ export function ImportPanel() {
                             <option value="skip">Scarta questa riga</option>
                           </select>
                         </label>
-                        {decision.action === "import" && birthDateNeedsReview(row.values.data_nascita) && (
-                          <label className="mt-2 flex items-start gap-2">
-                            <input type="checkbox" disabled={busy}
-                              checked={decision.confirmedBirthDate === row.values.data_nascita}
-                              onChange={event => change({ confirmedBirthDate: event.target.checked ? row.values.data_nascita : undefined })} />
-                            <span>{BIRTH_DATE_COPY.it.confirm}</span>
-                          </label>
-                        )}
                         {(decision.action === "skip" ||
                           row.candidates.length > 0) && (
                           <label className="mt-2 grid gap-1">
@@ -340,7 +331,7 @@ export function ImportPanel() {
           {unresolved && (
             <p>
               Correggi il file e caricalo di nuovo oppure scarta le righe con errori.
-              Per i possibili duplicati, indica il motivo della tua scelta. Controlla e conferma anche le date che indicano meno di un anno.
+              Per i possibili duplicati, indica il motivo della tua scelta. Controlla anche le date che indicano meno di un anno.
             </p>
           )}
           <div className="flex flex-wrap gap-3">

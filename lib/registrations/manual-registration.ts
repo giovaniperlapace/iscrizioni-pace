@@ -1,4 +1,4 @@
-import { isValidBirthDate, BIRTH_DATE_REVIEW_ERROR } from "./birth-date.ts";
+import { isValidBirthDate } from "./birth-date.ts";
 import { validateContactFields } from "../forms/result.ts";
 import {
   DEFAULT_LOCALE,
@@ -70,7 +70,6 @@ export function parseManualRegistrationForm(
   };
   const errors = validateManualRegistrationInput(value);
   for (const issue of validateContactFields(formData)) {
-    if (issue.code === "birthDateReview") errors.push(BIRTH_DATE_REVIEW_ERROR);
     if (issue.field === "email" && !useLeaderEmail) errors.push("Inserisci un indirizzo email valido.");
   }
 

@@ -7,15 +7,8 @@ export function isValidBirthDate(value: string | null): boolean {
     value <= new Date().toISOString().slice(0, 10);
 }
 
-export const BIRTH_DATE_REVIEW_ERROR = "Controlla l’anno e conferma la data di nascita: il partecipante risulta avere meno di un anno.";
-
 export function birthDateNeedsReview(value: string | null, today = new Date().toISOString().slice(0, 10)): boolean {
   if (!value || !isValidBirthDate(value)) return false;
   const firstBirthday = `${Number(value.slice(0, 4)) + 1}`.padStart(4, "0") + value.slice(4);
   return firstBirthday > today;
-}
-
-export function birthDateReviewMissing(form: FormData): boolean {
-  const value = String(form.get("birthDate") ?? "").trim();
-  return birthDateNeedsReview(value) && form.get("birthDateConfirmation") !== value;
 }

@@ -1,4 +1,4 @@
-import { isValidBirthDate, birthDateReviewMissing, BIRTH_DATE_REVIEW_ERROR } from "../registrations/birth-date.ts";
+import { isValidBirthDate } from "../registrations/birth-date.ts";
 
 export type FormIssue = { field: string | null; code: string };
 export type FormFailure = { status: "error"; issues: FormIssue[] };
@@ -16,7 +16,6 @@ export function formFailureFromRedirect(path: string): FormFailure {
 }
 
 export function issueFromMessage(message: string): FormIssue {
-  if (message === BIRTH_DATE_REVIEW_ERROR) return { field: "birthDateConfirmation", code: "birthDateReview" };
   const child = message.match(/figlio (\d+)/);
   const prefix = child ? `child_${Number(child[1]) - 1}_` : "";
   if (/cognome/i.test(message)) return { field: `${prefix}lastName`, code: "name" };
@@ -55,6 +54,5 @@ export function validateContactFields(formData: FormData): FormIssue[] {
   if (formData.has("birthDate") && !isValidBirthDate(birthDate)) {
     issues.push({ field: "birthDate", code: "date" });
   }
-  if (birthDateReviewMissing(formData)) issues.push({ field: "birthDateConfirmation", code: "birthDateReview" });
   return issues;
 }

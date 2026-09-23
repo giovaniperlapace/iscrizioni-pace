@@ -21,7 +21,7 @@ servizio, stato_servizio, tag, stato, consenso_privacy, versione_privacy, data_c
 
 - Nome e cognome: 2–120 caratteri; almeno uno tra email e telefono.
 - Date come testo `AAAA-MM-GG`, reali, dal 1900 e non future. Data di nascita obbligatoria. Per un partecipante di meno di un anno,
-  l’anteprima richiede la conferma esplicita della data dopo aver controllato l’anno.
+  l’anteprima mostra un avviso per controllare l’anno, senza conferma aggiuntiva.
 - Telefono come testo E.164 con `+` e 7–15 cifre; separatori comuni/`00`
   normalizzati senza accettare lettere o stringhe arbitrarie. Email normalizzata.
 - Paese/città: testo libero fino a 120 caratteri, facoltativo.

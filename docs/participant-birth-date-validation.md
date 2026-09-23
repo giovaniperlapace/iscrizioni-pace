@@ -37,14 +37,12 @@ una nascita successiva all’evento dà età non disponibile, non zero.
 - Le modifiche di identità non possono cancellare la data; gli aggiornamenti
   parziali dei soli contatti continuano a ometterla senza riscriverla.
 - Campo condiviso accessibile: avviso nelle sette lingue per un partecipante
-  principale che risulta di meno di un anno alla data di compilazione. La
-  conferma esplicita contiene la data esatta; modificarla azzera la conferma.
-  Stesso controllo nei parser/server e nelle modifiche, anche per richieste
-  costruite direttamente senza i controlli del browser.
+  principale che risulta di meno di un anno alla data di compilazione. Per
+  richiesta dell’utente l’avviso è solo informativo: nessuna casella aggiuntiva
+  e nessun blocco del salvataggio per l’età, purché la data sia valida.
 - Excel verifica la data sia nell’anteprima sia alla conferma, comprese anteprime
-  firmate create dalla versione precedente. Per età inferiore a un anno richiede
-  una conferma specifica per quella riga/data. Guida web e modello condividono
-  le istruzioni aggiornate.
+  firmate create dalla versione precedente. Per età inferiore a un anno mostra
+  soltanto l’avviso. Guida web e modello condividono le istruzioni aggiornate.
 - Figli accompagnati invariati: un neonato è ammesso tramite il flusso dedicato.
   Nessun anno viene dedotto o corretto automaticamente.
 - Nessuna migration: il requisito è applicato agli ingressi dell’applicazione;
@@ -56,9 +54,9 @@ una nascita successiva all’evento dà età non disponibile, non zero.
 
 - `npm test`: parser pubblici/capogruppo, azione reale con guardia contro scritture,
   route identità manager/admin, Excel e anteprime pregresse; campi omessi/vuoti,
-  date impossibili/future, neonati confermati e conferma invalidata dal cambio data.
+  date impossibili/future, date recenti valide accettate senza conferme aggiuntive.
 - `tests/browser/birth-date.mjs`: componente reale e modulo pubblico da link,
-  sette lingue, errori e focus, conferma, reset al cambio data e mobile. Azioni
+  sette lingue, errori e focus, avviso non bloccante senza casella e mobile. Azioni
   sintetiche senza database né email. Si esegue separatamente dalla suite perché
   monta due route temporanee.
 - Lint, TypeScript e build da copia pulita con `npm ci` dal lockfile. Il vecchio

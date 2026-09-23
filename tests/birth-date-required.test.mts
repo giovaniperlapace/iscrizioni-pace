@@ -17,7 +17,7 @@ function data() {
   })) form.set(key, value);
   return form;
 }
-const invalidDates = [null, "", "   ", "invalid", "2026-02-30", "2100-02-29", "2999-01-01", new Date().toISOString().slice(0, 10)];
+const invalidDates = [null, "", "   ", "invalid", "2026-02-30", "2100-02-29", "2999-01-01"];
 for (const path of ["public", "group-link", "leader", "leader-delegate"]) {
   test(`${path} requires an actual, nonfuture birth date, including requests without the field`, () => {
     const form = data();
@@ -33,7 +33,6 @@ for (const path of ["public", "group-link", "leader", "leader-delegate"]) {
     }
     for (const date of ["2000-02-29", new Date().toISOString().slice(0, 10)]) {
       form.set("birthDate", date);
-      form.set("birthDateConfirmation", date);
       assert.equal(parse(form).ok, true);
     }
   });
@@ -83,21 +82,17 @@ test("partial contact updates may omit birth date but never explicitly empty it"
 });
 
 for (const parse of [parseRegistrationForm, parseManualRegistrationForm]) {
-  test(`${parse.name} requires a date-specific confirmation for participants under one year`, () => {
+  test(`${parse.name} accepts valid dates under one year without a confirmation`, () => {
     const form = data();
-    const today = new Date().toISOString().slice(0, 10);
-    form.set("birthDate", today);
-    assert.equal(parse(form).ok, false);
-    form.set("birthDateConfirmation", "on");
-    assert.equal(parse(form).ok, false);
-    form.set("birthDateConfirmation", today);
-    assert.equal(parse(form).ok, true);
-    form.set("birthDate", new Date(Date.now() - 86400000).toISOString().slice(0, 10));
-    assert.equal(parse(form).ok, false, "changing the date invalidates confirmation");
+    for (const date of [new Date().toISOString().slice(0, 10), new Date(Date.now() - 86400000).toISOString().slice(0, 10)]) {
+      form.set("birthDate", date);
+      assert.equal(parse(form).ok, true);
+      assert.deepEqual(forms.validateContactFields(form), []);
+    }
   });
 }
 
-test("child birth dates do not trigger the participant confirmation", () => {
+test("newborn accompanying children remain valid", () => {
   const form = data();
   form.set("participatesWithChildren", "yes"); form.set("childrenCount", "1");
   form.set("child_0_firstName", "Newborn"); form.set("child_0_lastName", "Child");

@@ -288,11 +288,10 @@ test("Excel requires birth dates and rechecks previews created before the requir
   }
 });
 
-test("Excel requires an explicit date-specific confirmation for a participant under one year", () => {
+test("Excel accepts a valid date under one year without a confirmation", () => {
   const birthDate = new Date().toISOString().slice(0, 10);
   const preview = buildPreviewRows([{ row: 2, values: row({ data_nascita: birthDate }), cellErrors: [] }], catalog, []);
   const decision = { row: 2, action: "import" as const, reason: "" };
-  assert.throws(() => validateDecisions(preview, [decision]), /meno di un anno/);
-  assert.throws(() => validateDecisions(preview, [{ ...decision, confirmedBirthDate: "on" }]), /meno di un anno/);
-  assert.equal(validateDecisions(preview, [{ ...decision, confirmedBirthDate: birthDate }]).length, 1);
+  assert.deepEqual(preview[0].errors, []);
+  assert.equal(validateDecisions(preview, [decision]).length, 1);
 });

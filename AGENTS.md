@@ -1,5 +1,12 @@
 # AGENTS.md
 
+## Avviso età sotto un anno senza conferma — 2026-09-23
+
+- Per richiesta dell’utente, l’avviso sotto un anno è solo informativo:
+  rimossa la casella e il relativo blocco da moduli, server e import Excel.
+  Restano data obbligatoria, valida e non futura, sette lingue e figli invariati.
+  Le note precedenti sulla conferma descrivono il comportamento superato.
+
 ## Città pubbliche iscrivibili nel modulo — 2026-09-23
 
 - Per richiesta dell’utente, il catalogo pubblico e il matching mostrano anche

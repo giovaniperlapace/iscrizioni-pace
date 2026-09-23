@@ -41,7 +41,7 @@ export const IMPORT_GUIDE = [
   },
   {
     title: "Compila i dati obbligatori",
-    text: "Per ogni persona inserisci nome, cognome, data di nascita e almeno un recapito: email oppure telefono. Compila anche i tre campi del consenso indicati qui sotto. Paese e città sono facoltativi. Se la data indica meno di un anno di età, controlla l’anno e conferma esplicitamente la data nell’anteprima.",
+    text: "Per ogni persona inserisci nome, cognome, data di nascita e almeno un recapito: email oppure telefono. Compila anche i tre campi del consenso indicati qui sotto. Paese e città sono facoltativi. Se la data indica meno di un anno di età, l’anteprima mostra un avviso che invita a controllare l’anno.",
   },
   {
     title: "Riporta il consenso già raccolto",

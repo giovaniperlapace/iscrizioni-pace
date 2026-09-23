@@ -28,10 +28,6 @@ export function ParticipantBirthDateField({ label, locale, value, defaultValue =
     </label>
     {review && <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
       <p id={`${id}-warning`} role="status">{copy.warning}</p>
-      <label className="mt-2 flex items-start gap-2">
-        <input key={date} type="checkbox" name="birthDateConfirmation" value={date} required className="mt-1" />
-        <span>{copy.confirm}</span>
-      </label>
     </div>}
   </div>;
 }

@@ -21,17 +21,15 @@ try {
     fillDate("2999-01-01"); ab("click", 'button[type=submit]');
     check('document.querySelector("[name=birthDate]").validity.rangeOverflow && document.querySelector("[data-calls]").textContent === "0"', "future date blocked");
     fillDate(today); ab("snapshot", "-i"); ab("click", 'button[type=submit]');
-    check('document.activeElement.name === "birthDateConfirmation" && document.querySelector("[data-calls]").textContent === "0"', "under-one date requires confirmation");
-    ab("check", '[name=birthDateConfirmation]'); ab("click", 'button[type=submit]');
-    check('document.querySelector("[data-calls]").textContent === "1"', "explicit confirmation accepted");
+    check('document.querySelector("[role=status]") && !document.querySelector("[name=birthDateConfirmation]") && document.querySelector("[data-calls]").textContent === "1"', "under-one warning does not block submission or require a checkbox");
     fillDate(yesterday);
-    check('!document.querySelector("[name=birthDateConfirmation]").checked', "date change resets confirmation");
+    check('Boolean(document.querySelector("[role=status]")) && !document.querySelector("[name=birthDateConfirmation]")', "warning remains for another recent date");
     fillDate("1990-01-02"); ab("click", 'button[type=submit]');
     check('!document.querySelector("[name=birthDateConfirmation]") && document.querySelector("[data-calls]").textContent === "2"', "ordinary date has no extra step");
     ab("open", `${base}/birth-date-public-check?locale=${locale}&link=1`); ab("snapshot", "-i");
     check('document.querySelector("[name=birthDate]").required', "public group registration requires date");
     fillDate(today); ab("snapshot", "-i");
-    check('document.querySelector("[name=birthDateConfirmation]").required && !document.querySelector("[name=birthDateConfirmation]").validity.valid', "public registration requires the same confirmation");
+    check('Boolean(document.querySelector("[name=birthDate]").getAttribute("aria-describedby")) && !document.querySelector("[name=birthDateConfirmation]") && document.querySelector("[name=birthDate]").validity.valid', "public registration displays only the warning");
   }
   ab("set", "viewport", "390", "844");
   check('document.documentElement.scrollWidth <= innerWidth', "mobile fits viewport");

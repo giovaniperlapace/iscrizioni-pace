@@ -1,4 +1,4 @@
-import { isValidBirthDate, birthDateReviewMissing, BIRTH_DATE_REVIEW_ERROR } from "./birth-date.ts";
+import { isValidBirthDate } from "./birth-date.ts";
 import { publicChildBirthDateBounds } from "./public-child-age.ts";
 import { countryName } from "./country-names.ts";
 import {
@@ -158,7 +158,6 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   };
 
   const errors = validateRegistrationInput(value);
-  if (birthDateReviewMissing(formData)) errors.push(BIRTH_DATE_REVIEW_ERROR);
   // New public registrations only: shared validators also handle historical edits
   // and assisted registrations, which must retain their existing behavior.
   const childDateBounds = publicChildBirthDateBounds();
