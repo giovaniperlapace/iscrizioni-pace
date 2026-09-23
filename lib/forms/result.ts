@@ -1,3 +1,5 @@
+import { isValidBirthDate, birthDateReviewMissing, BIRTH_DATE_REVIEW_ERROR } from "../registrations/birth-date.ts";
+
 export type FormIssue = { field: string | null; code: string };
 export type FormFailure = { status: "error"; issues: FormIssue[] };
 
@@ -14,6 +16,7 @@ export function formFailureFromRedirect(path: string): FormFailure {
 }
 
 export function issueFromMessage(message: string): FormIssue {
+  if (message === BIRTH_DATE_REVIEW_ERROR) return { field: "birthDateConfirmation", code: "birthDateReview" };
   const child = message.match(/figlio (\d+)/);
   const prefix = child ? `child_${Number(child[1]) - 1}_` : "";
   if (/cognome/i.test(message)) return { field: `${prefix}lastName`, code: "name" };
@@ -49,13 +52,9 @@ export function validateContactFields(formData: FormData): FormIssue[] {
   const phone = String(formData.get("phone") ?? "").trim().replace(/[\s().-]/g, "");
   if (phone && !/^\+[1-9]\d{6,14}$/.test(phone)) issues.push({ field: "phone", code: "phone" });
   const birthDate = String(formData.get("birthDate") ?? "");
-  if (birthDate && (!isRealDate(birthDate) || birthDate > new Date().toISOString().slice(0, 10))) {
+  if (formData.has("birthDate") && !isValidBirthDate(birthDate)) {
     issues.push({ field: "birthDate", code: "date" });
   }
+  if (birthDateReviewMissing(formData)) issues.push({ field: "birthDateConfirmation", code: "birthDateReview" });
   return issues;
-}
-
-function isRealDate(value: string): boolean {
-  const date = new Date(`${value}T00:00:00Z`);
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }

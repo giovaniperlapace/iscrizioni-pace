@@ -353,6 +353,7 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
   formData.set("lastName", "Bianchi");
   formData.set("useLeaderEmail", "on");
   formData.set("phone", "+39 333 123 4567");
@@ -391,6 +392,7 @@ test("parseManualRegistrationForm validates accompanying children", () => {
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
   formData.set("lastName", "Bianchi");
   formData.set("email", "paolo@example.org");
   formData.set("availabilityUnknown", "on");
@@ -440,6 +442,7 @@ test("parseManualRegistrationForm requires contact and consent", () => {
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
   formData.set("lastName", "Bianchi");
 
   const parsed = parseManualRegistrationForm(formData);
@@ -459,6 +462,7 @@ test("manual registration questionnaire snapshot marks group leader source", () 
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
   formData.set("lastName", "Bianchi");
   formData.set("email", "paolo@example.org");
   formData.set("availabilityUnknown", "on");

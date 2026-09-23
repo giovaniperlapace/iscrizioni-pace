@@ -202,7 +202,7 @@ test("matching prefers the closest Roma area before broader city groups", () => 
   assert.ok(!candidates.some((candidate) => candidate.id === "torino-giovani"));
 });
 
-test("public suggestions exclude territorial city and country nodes", () => {
+test("public suggestions include public assignable cities and exclude unavailable nodes", () => {
   const cityNode = group({
     id: "roma-city",
     name: "Roma",
@@ -212,7 +212,11 @@ test("public suggestions exclude territorial city and country nodes", () => {
     ageBands: [],
   });
   const publicCandidates = findMatchingGroupCandidates(
-    [...groups, cityNode],
+    [...groups, cityNode,
+      { ...cityNode, id: "hidden-city", isPublicCatalog: false },
+      { ...cityNode, id: "unassignable-city", isAssignable: false },
+      { ...cityNode, id: "country-node", nodeType: "country" },
+    ],
     {
       countryId: ITALY,
       cityId: ROME,
@@ -224,7 +228,10 @@ test("public suggestions exclude territorial city and country nodes", () => {
 
   assert.ok(publicCandidates.some((candidate) => candidate.id === "roma-area"));
   assert.ok(publicCandidates.some((candidate) => candidate.id === "roma-giovani"));
-  assert.ok(!publicCandidates.some((candidate) => candidate.id === "roma-city"));
+  assert.ok(publicCandidates.some((candidate) => candidate.id === "roma-city"));
+  for (const id of ["hidden-city", "unassignable-city", "country-node"]) {
+    assert.ok(!publicCandidates.some((candidate) => candidate.id === id));
+  }
 
   const internalFallback = findTerritorialFallback(
     [cityNode],

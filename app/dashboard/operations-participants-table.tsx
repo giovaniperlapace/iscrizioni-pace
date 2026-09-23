@@ -1,5 +1,6 @@
 "use client";
 
+import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { AccompanyingChildrenList } from "./accompanying-children-list";
 import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
 
@@ -925,12 +926,8 @@ export function OperationsParticipantsTable({
                   value={selected.lastName}
                   required
                 />
-                <Field
-                  label="Data di nascita"
-                  name="birthDate"
-                  type="date"
-                  value={selected.birthDate}
-                />
+                <ParticipantBirthDateField key={`${selected.registrationId}:${selected.birthDate}`}
+                  label="Data di nascita" locale="it" defaultValue={selected.birthDate ?? ""} />
                 <Field label="Paese" name="country" value={selected.country} />
                 <Field label="Città" name="city" value={selected.city} />
                 <Field

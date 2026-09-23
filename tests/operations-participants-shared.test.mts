@@ -40,7 +40,6 @@ test("the shared participant sheet edits identity, contacts, group, and tags", (
   for (const field of [
     "firstName",
     "lastName",
-    "birthDate",
     "city",
     "country",
     "email",
@@ -49,6 +48,8 @@ test("the shared participant sheet edits identity, contacts, group, and tags", (
     assert.match(sharedSection, new RegExp(`name=[{\"]${field}`));
   }
 
+  assert.match(sharedSection, /<ParticipantBirthDateField/);
+  assert.match(sharedSection, /defaultValue=\{selected.birthDate/);
   assert.match(sharedSection, /name="sourceDashboard" value=\{dashboard\}/);
   assert.match(sharedSection, /operationsControl\(selected, field\)/);
 });

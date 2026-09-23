@@ -1006,6 +1006,9 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
     formData.has("city") ||
     formData.has("country");
 
+  // Identity saves write birth_date too; an omitted field must not erase it.
+  if (hasIdentityUpdate && !birthDate) return formFailure([{ field: "birthDate", code: "date" }]);
+
   if (!assignmentId || !participantId || (!email && !phone && !hasIdentityUpdate)) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
   }

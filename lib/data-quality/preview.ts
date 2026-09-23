@@ -1,3 +1,4 @@
+import { birthDateNeedsReview } from "../registrations/birth-date.ts";
 import {
   compareIdentities,
   identityFingerprint,
@@ -6,6 +7,7 @@ import {
 } from "./duplicates.ts";
 import {
   validateExcelRow,
+  validDate,
   type Catalog,
   type ExcelRow,
   type ValidatedRow,
@@ -30,6 +32,7 @@ export type RowDecision = {
   row: number;
   action: "import" | "skip";
   reason: string;
+  confirmedBirthDate?: string;
 };
 export function buildPreviewRows(
   input: { row: number; values: ExcelRow; cellErrors: string[] }[],
@@ -82,6 +85,11 @@ export function validateDecisions(
       throw new Error(`Riga ${row.row}: scelta mancante.`);
     const reason =
       typeof decision.reason === "string" ? decision.reason.trim() : "";
+    // Recheck older sealed previews too, before any import RPC or QR creation.
+    if (decision.action === "import" && !validDate(row.values.data_nascita))
+      throw new Error(`Riga ${row.row}: data di nascita obbligatoria e valida.`);
+    if (decision.action === "import" && birthDateNeedsReview(row.values.data_nascita) && decision.confirmedBirthDate !== row.values.data_nascita)
+      throw new Error(`Riga ${row.row}: controlla l’anno e conferma la data di nascita (meno di un anno).`);
     if (decision.action === "import" && row.errors.length)
       throw new Error(`Riga ${row.row}: correggi gli errori o scarta la riga.`);
     if (

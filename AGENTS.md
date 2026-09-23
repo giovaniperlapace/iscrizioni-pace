@@ -1,5 +1,34 @@
 # AGENTS.md
 
+## Città pubbliche iscrivibili nel modulo — 2026-09-23
+
+- Per richiesta dell’utente, il catalogo pubblico e il matching mostrano anche
+  i nodi `city` con entrambi i flag pubblico e iscrivibile, oltre ad aree/gruppi.
+  Restano esclusi paesi, città non pubbliche o non iscrivibili. Le precedenti
+  note che escludevano tutte le città descrivono il comportamento superato.
+- Territorio ereditato, filtri geografici/età e ordinamento invariati; nessuna
+  modifica dati, schema, ruoli o assegnazione automatica. Test del loader
+  paginato e del matching. Rilascio insieme ai controlli nascita autorizzato
+  tramite commit/push su main; 462 test, lint, TypeScript e build superati.
+
+## Data di nascita obbligatoria e controllo età zero — 2026-09-23
+
+- Rilascio autorizzato tramite commit/push su main il 23 settembre:
+  data obbligatoria/reale/non futura nel pubblico,
+  capogruppo e import manager/admin. Modifiche identità non possono svuotarla;
+  update parziali dei contatti la conservano. Nessuna migration o modifica RLS.
+- `ParticipantBirthDateField` condiviso nelle sette lingue: sotto un anno alla
+  compilazione, avviso e conferma legata alla data; un cambio la azzera. Controlli
+  anche sul server e nell’import Excel, comprese anteprime pregresse. Figli
+  accompagnati invariati; mai inventare o dedurre date mancanti.
+- Diagnosi produzione READ ONLY: inizialmente 33 date mancanti, tutte capogruppo
+  e vuote negli snapshot originali; salite a 37 durante l’analisi. 15 iscritti
+  principali di 0 anni all’evento e 8 date future, 4 sovrapposti: 19 schede da
+  verificare. Elenco nominativo riservato solo in `output/`, non nei documenti
+  tecnici. Nessuna scrittura reale o email. Dettagli e collaudo in
+  `docs/participant-birth-date-validation.md`. Verificati 462 test, lint,
+  TypeScript, build e browser sette lingue/mobile in copia pulita con npm ci.
+
 ## Modale personale e annullamento autonomo — 2026-09-22
 
 - Scheda personale con icone Lucide, sezioni espandibili, dialog nativo accessibile

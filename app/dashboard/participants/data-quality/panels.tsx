@@ -1,5 +1,7 @@
 "use client";
 
+import { birthDateNeedsReview } from "@/lib/registrations/birth-date";
+import { BIRTH_DATE_COPY } from "@/lib/registrations/birth-date-copy";
 import { SuccessMessage } from "@/components/success-message";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -105,6 +107,7 @@ export function ImportPanel() {
     return (
       (decision.action === "import" &&
         (row.errors.length > 0 ||
+          (birthDateNeedsReview(row.values.data_nascita) && decision.confirmedBirthDate !== row.values.data_nascita) ||
           row.candidates.some((match) => match.archived))) ||
       ((decision.action === "skip" || row.candidates.length > 0) &&
         decision.reason.trim().length < 3)
@@ -259,7 +262,8 @@ export function ImportPanel() {
                             {match.signals.join(" · ")}
                           </p>
                         ))}
-                        {!row.errors.length && !row.candidates.length && (
+                        {birthDateNeedsReview(row.values.data_nascita) && <p className="mb-2 text-amber-900">{BIRTH_DATE_COPY.it.warning}</p>}
+                        {!row.errors.length && !row.candidates.length && !birthDateNeedsReview(row.values.data_nascita) && (
                           <p className="text-green-800">
                             Pronta per l’importazione, nessun duplicato rilevato
                           </p>
@@ -287,6 +291,14 @@ export function ImportPanel() {
                             <option value="skip">Scarta questa riga</option>
                           </select>
                         </label>
+                        {decision.action === "import" && birthDateNeedsReview(row.values.data_nascita) && (
+                          <label className="mt-2 flex items-start gap-2">
+                            <input type="checkbox" disabled={busy}
+                              checked={decision.confirmedBirthDate === row.values.data_nascita}
+                              onChange={event => change({ confirmedBirthDate: event.target.checked ? row.values.data_nascita : undefined })} />
+                            <span>{BIRTH_DATE_COPY.it.confirm}</span>
+                          </label>
+                        )}
                         {(decision.action === "skip" ||
                           row.candidates.length > 0) && (
                           <label className="mt-2 grid gap-1">
@@ -328,7 +340,7 @@ export function ImportPanel() {
           {unresolved && (
             <p>
               Correggi il file e caricalo di nuovo oppure scarta le righe con errori.
-              Per i possibili duplicati, indica il motivo della tua scelta prima di confermare.
+              Per i possibili duplicati, indica il motivo della tua scelta. Controlla e conferma anche le date che indicano meno di un anno.
             </p>
           )}
           <div className="flex flex-wrap gap-3">

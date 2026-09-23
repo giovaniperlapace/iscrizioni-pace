@@ -1,3 +1,4 @@
+import { isValidBirthDate, BIRTH_DATE_REVIEW_ERROR } from "./birth-date.ts";
 import { validateContactFields } from "../forms/result.ts";
 import {
   DEFAULT_LOCALE,
@@ -69,8 +70,8 @@ export function parseManualRegistrationForm(
   };
   const errors = validateManualRegistrationInput(value);
   for (const issue of validateContactFields(formData)) {
+    if (issue.code === "birthDateReview") errors.push(BIRTH_DATE_REVIEW_ERROR);
     if (issue.field === "email" && !useLeaderEmail) errors.push("Inserisci un indirizzo email valido.");
-    if (issue.field === "birthDate") errors.push("Inserisci una data di nascita valida.");
   }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value };
@@ -91,6 +92,10 @@ export function validateManualRegistrationInput(
 
   if (input.lastName.length < 2 || input.lastName.length > 120) {
     errors.push("Inserisci il cognome.");
+  }
+
+  if (!isValidBirthDate(input.birthDate)) {
+    errors.push("Inserisci una data di nascita valida.");
   }
 
   if (!input.useLeaderEmail && !input.email) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { publicChildBirthDateBounds } from "@/lib/registrations/public-child-age";
 
 import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
@@ -1241,17 +1242,8 @@ export function RegistrationForm({
             />
           ) : null}
         </div>
-        <Field required label={copy.birthDate}>
-          <input
-            name="birthDate"
-            type="date"
-            required
-            className="field"
-            value={birthDate}
-            data-field="birthDate"
-            onChange={(event) => setBirthDate(event.target.value)}
-          />
-        </Field>
+        <ParticipantBirthDateField label={copy.birthDate} locale={locale}
+          value={birthDate} onValueChange={setBirthDate} />
         <Field required label={copy.birthPlace}>
           <input
             name="birthPlace"

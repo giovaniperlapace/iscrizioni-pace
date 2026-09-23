@@ -109,7 +109,7 @@ export function findMatchingGroupCandidates(
           return false;
         }
 
-        if (group.nodeType !== "area" && group.nodeType !== "group") {
+        if (group.nodeType !== "city" && group.nodeType !== "area" && group.nodeType !== "group") {
           return false;
         }
       }

@@ -1,3 +1,4 @@
+import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
 import { OperationalChildrenEditor } from "@/app/dashboard/operational-children-editor";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
@@ -1874,10 +1875,7 @@ function ManualRegistrationSection({
           </label>
           <ManualEmailFields locale={locale} emailLabel={copy.email} />
           <ManualPhoneFields locale={locale} label={copy.phone} />
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.birthDate}
-            <input name="birthDate" type="date" className="field" />
-          </label>
+          <ParticipantBirthDateField label={copy.birthDate} locale={locale} />
           <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} initialUnknown={false} />
           <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields
@@ -2104,15 +2102,8 @@ function AssignmentDetailCard({
                 className="field bg-white font-normal"
               />
             </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              {copy.birthDate}
-              <input
-                name="birthDate"
-                type="date"
-                defaultValue={assignment.birthDate ?? ""}
-                className="field bg-white font-normal"
-              />
-            </label>
+            <ParticipantBirthDateField key={`${assignment.id}:${assignment.birthDate}`}
+              label={copy.birthDate} locale={locale} defaultValue={assignment.birthDate ?? ""} />
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
               Città
               <input

@@ -66,7 +66,7 @@ const getOptions = loadFunction("getPublicRegistrationOptions", {
   getCurrentPublicEvent: async () => ({ id: "event" }), resolveActiveGroupRegistrationLink: async () => null,
   getEventGroupCandidates, inheritGroupTerritories, loadAllRows,
 });
-function database(fail = false) {
+function database(fail = false, cityChoices = false) {
   const calls: URL[] = [];
   const rows = Array.from({ length: 1001 }, (_, i) => ({
     id: String(i), name: `group-${i}`, node_type: i === 1000 ? "country" : "group",
@@ -74,6 +74,13 @@ function database(fail = false) {
     city_id: null, is_public_catalog: i !== 1000, is_assignable: i !== 1000,
     community_kind: i === 1000 ? "territorial" : "santegidio", age_brackets: [],
   }));
+  if (cityChoices) {
+    for (let i = 0; i < 4; i++) rows[i].node_type = "city";
+    rows[1].is_public_catalog = false;
+    rows[2].is_assignable = false;
+    rows[3].is_public_catalog = false;
+    rows[3].is_assignable = false;
+  }
   const db = createClient("https://db.example.test", "synthetic", { auth: { persistSession: false }, global: { fetch: async (input, init) => {
     assert.equal(init?.method ?? "GET", "GET");
     const url = new URL(String(input));
@@ -99,4 +106,14 @@ test("public loader pages all active event ancestors and sends only resolved pub
 });
 test("a later page error never becomes partial or empty suggestions", async () => {
   await assert.rejects(getOptions(database(true).db), /read failed/);
+});
+
+test("public loader exposes cities only when both public and assignable", async () => {
+  const { db } = database(false, true);
+  const options = await getOptions(db);
+  const cities = options.groups.filter((g: GroupMatchCandidate) => g.nodeType === "city");
+  assert.deepEqual(cities.map((g: GroupMatchCandidate) => g.id), ["0"]);
+  const matches = findMatchingGroupCandidates(options.groups, criteria, { publicOnly: true });
+  assert.ok(matches.some(g => g.id === "0"));
+  for (const id of ["1", "2", "3"]) assert.ok(!matches.some(g => g.id === id));
 });

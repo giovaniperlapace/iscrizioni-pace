@@ -173,7 +173,7 @@ export async function getPublicRegistrationOptions(
     // Resolve against the complete active tree, then expose only public choices.
     groups: inheritGroupTerritories(groups).filter(group =>
       group.isPublicCatalog && group.isAssignable &&
-      (group.nodeType === "area" || group.nodeType === "group")
+      (group.nodeType === "city" || group.nodeType === "area" || group.nodeType === "group")
     ),
     groupLink: groupLink
       ? {

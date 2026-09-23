@@ -57,3 +57,20 @@ test("database event-scope denial cannot become success", async () => {
   assert.deepEqual(await response.json(), forms.formFailure([{ field: null, code: "forbidden" }]));
   assert.deepEqual(invalidated, []);
 });
+
+test("manager and admin cannot erase birth date through the identity endpoint", async () => {
+  for (const role of ["manager", "admin"]) {
+    for (const birthDate of ["", "   ", "2026-02-30", "2999-01-01"]) {
+      const body = new FormData();
+      body.set("birthDate", birthDate); body.set("sourceDashboard", role);
+      const req = new NextRequest("https://example.test/dashboard/participants/update", {
+        method: "POST", body, headers: { origin: "https://example.test", accept: "application/json" },
+      });
+      const { save, calls, invalidated } = fixture(role);
+      const response = await save(req);
+      assert.equal(response.status, 422);
+      assert.deepEqual((await response.json()).issues, [{ field: "birthDate", code: "date" }]);
+      assert.deepEqual(calls, []); assert.deepEqual(invalidated, []);
+    }
+  }
+});
