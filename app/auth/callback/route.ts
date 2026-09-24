@@ -6,6 +6,7 @@ import {
   getCurrentAuthContext,
 } from "@/lib/auth/session";
 import { isDashboardRole } from "@/lib/auth/roles";
+import { LAST_ACTIVITY_COOKIE, SESSION_STATE_MAX_AGE_SECONDS } from "@/lib/auth/session-persistence";
 import { linkParticipantsToUserByEmail } from "@/lib/registrations/public-flow";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -75,11 +76,14 @@ async function completeAuthentication(request: NextRequest, params: URLSearchPar
 
   const supabase = await createSupabaseServerClient();
   let verificationError: unknown = null;
+  let freshlyAuthenticated = false;
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       verificationError = error;
+    } else {
+      freshlyAuthenticated = true;
     }
   } else if (tokenHash && isOtpType(otpType)) {
     for (const verificationType of getOtpTypesToTry(otpType)) {
@@ -90,6 +94,7 @@ async function completeAuthentication(request: NextRequest, params: URLSearchPar
 
       if (!error) {
         verificationError = null;
+        freshlyAuthenticated = true;
         break;
       }
 
@@ -163,6 +168,18 @@ async function completeAuthentication(request: NextRequest, params: URLSearchPar
     requestUrl.origin
   );
   const response = NextResponse.redirect(responseUrl, 303);
+
+  // A valid new login starts a new inactivity window before the dashboard's
+  // proxy sees the request. An old session or a failed link must not renew it.
+  if (freshlyAuthenticated) {
+    response.cookies.set(LAST_ACTIVITY_COOKIE, String(Date.now()), {
+      httpOnly: true,
+      maxAge: SESSION_STATE_MAX_AGE_SECONDS,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+  }
 
   if (isDashboardRole(requestedRole)) {
     response.cookies.set("iscrizioni_requested_role", requestedRole, {

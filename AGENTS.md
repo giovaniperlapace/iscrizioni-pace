@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Magic Link dopo inattività — 2026-09-24
+
+- Il callback POST deve rinnovare `iscrizioni_last_activity` prima del redirect
+  alla dashboard, soltanto dopo una nuova verifica OTP/PKCE riuscita e il
+  completamento dell'accesso. Il vecchio cookie può sopravvivere alla sessione
+  Auth: senza rinnovo, il proxy disconnette immediatamente il nuovo accesso
+  con `error=inactive`, costringendo a richiedere un secondo Magic Link.
+- Cookie con le stesse opzioni del proxy (HttpOnly, SameSite=Lax, Secure in
+  produzione, path `/`, durata 30 giorni); timeout di inattività sempre 24 ore.
+  GET/HEAD di conferma, link falliti e semplice riuso della sessione esistente
+  non rinnovano il contatore. Ruoli, scanner protection e UI invariati.
+- Regressioni dei veri handler callback/proxy/activity con Auth sintetico in
+  `tests/magic-link-session-renewal.test.mts`; note in
+  `docs/incident-2026-09-24-magic-link-inactivity.md`. Nessuna migration,
+  modifica dati o email di collaudo. Verificati 524 test, lint, TypeScript,
+  build production e passaggio HTTP reale con provider sintetico. Commit/push
+  su main e rilascio Vercel autorizzati dall'utente il 24 settembre.
+
 ## Statistiche con gerarchia espandibile — 2026-09-23
 
 - Riepilogo Manager/Admin dai collegamenti padre–figlio reali, anche per nodi

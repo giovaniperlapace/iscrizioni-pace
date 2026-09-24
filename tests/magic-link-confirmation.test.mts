@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as confirmation from "../lib/auth/magic-link-confirmation.ts";
 import * as locale from "../lib/i18n/config.ts";
+import * as persistence from "../lib/auth/session-persistence.ts";
 import { buildAppMagicLink } from "../lib/registrations/magic-link.ts";
 
 function harness(failVerification = false) {
@@ -20,6 +21,7 @@ function harness(failVerification = false) {
     if(id.includes("magic-link-confirmation")) return confirmation;
     if(id.includes("i18n/config")) return locale;
     if(id.includes("auth/roles")) return {isDashboardRole:(role:string)=>role==="partecipante"};
+    if(id.includes("auth/session-persistence")) return persistence;
     if(id.includes("auth/session")) return {ensureCurrentUserProfile:async()=>{},getCurrentAuthContext:async()=>({dashboardPath:"/dashboard/partecipante"})};
     if(id.includes("supabase/server")) return {createSupabaseServerClient:async()=>{
       clients++;
