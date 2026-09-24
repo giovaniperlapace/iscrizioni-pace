@@ -19,13 +19,13 @@ type RegistrationConfirmationInput = {
 
 export function renderMagicLinkEmail(input: MagicLinkTemplateInput) {
   const sections = [
-    { locale: "it" as const, greeting: "Ciao,", intro: "Usa questo link per accedere alla tua iscrizione:", button: "Accedi alla tua iscrizione", ignore: "Se non hai richiesto tu questo link, puoi ignorare questa email." },
-    { locale: "en" as const, greeting: "Hello,", intro: "Use this link to access your registration:", button: "Access your registration", ignore: "If you did not request this link, you can ignore this email." },
+    { locale: "it" as const, greeting: "Ciao,", intro: "Usa questo link per accedere alla tua iscrizione:", button: "Accedi alla tua iscrizione", singleUse: "Questo link può essere usato una sola volta. Per accedere di nuovo, richiedi un nuovo link dalla pagina di accesso.", ignore: "Se non hai richiesto tu questo link, puoi ignorare questa email." },
+    { locale: "en" as const, greeting: "Hello,", intro: "Use this link to access your registration:", button: "Access your registration", singleUse: "This link can be used only once. To sign in again, request a new link from the sign-in page.", ignore: "If you did not request this link, you can ignore this email." },
   ];
   return {
     subject: "Accesso alla tua iscrizione / Access your registration",
-    text: sections.map(copy => [copy.greeting, "", copy.intro, input.actionLink, "", EMAIL_DELIVERY_COPY[copy.locale].checkSpam, EMAIL_DELIVERY_COPY[copy.locale].safeSender, "", copy.ignore].join("\n")).join("\n\n---\n\n"),
-    html: sections.map(copy => `<div lang="${copy.locale}"><p>${copy.greeting}</p><p>${copy.intro}</p><p><a href="${escapeHtml(input.actionLink)}">${copy.button}</a></p><p>${escapeHtml(EMAIL_DELIVERY_COPY[copy.locale].checkSpam)} ${escapeHtml(EMAIL_DELIVERY_COPY[copy.locale].safeSender)}</p><p>${copy.ignore}</p></div>`).join("<hr />"),
+    text: sections.map(copy => [copy.greeting, "", copy.intro, input.actionLink, "", copy.singleUse, "", EMAIL_DELIVERY_COPY[copy.locale].checkSpam, EMAIL_DELIVERY_COPY[copy.locale].safeSender, "", copy.ignore].join("\n")).join("\n\n---\n\n"),
+    html: sections.map(copy => `<div lang="${copy.locale}"><p>${copy.greeting}</p><p>${copy.intro}</p><p><a href="${escapeHtml(input.actionLink)}">${copy.button}</a></p><p>${copy.singleUse}</p><p>${escapeHtml(EMAIL_DELIVERY_COPY[copy.locale].checkSpam)} ${escapeHtml(EMAIL_DELIVERY_COPY[copy.locale].safeSender)}</p><p>${copy.ignore}</p></div>`).join("<hr />"),
   };
 }
 
