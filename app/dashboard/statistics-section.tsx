@@ -55,6 +55,8 @@ export function StatisticsSection({
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
           Seleziona qualsiasi conteggio per aprire la gestione iscritti già
           filtrata sulle persone che compongono quel dato.
+          Persone complessive, totali per gruppo, presenze e fasce di età includono
+          i figli accompagnati. Partecipanti iscritti e iscrizioni per settimana li escludono.
         </p>
       </div>
 
@@ -72,6 +74,7 @@ export function StatisticsSection({
       </ReportBlock>
 
       <ReportBlock name="attendance" title="Presenze previste">
+        <p className="px-2 text-sm">Figli accompagnati inclusi; le loro presenze seguono quelle del genitore.</p>
         <AttendanceStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
@@ -79,6 +82,7 @@ export function StatisticsSection({
       </ReportBlock>
 
       <ReportBlock name="age" title="Fasce di età">
+        <p className="px-2 text-sm">Figli accompagnati inclusi. Età calcolate all’inizio dell’evento.</p>
         <AgeStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
@@ -145,13 +149,13 @@ function TerritoryStatisticsSummary({
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <SummaryKpi
           icon={Users}
-          label="Persone complessive"
+          label="Persone complessive (figli accompagnati inclusi)"
           value={statistics.summary.totalPeople}
           href={participantHref({ personKind: "all" })}
         />
         <SummaryKpi
           icon={UserRound}
-          label="Partecipanti iscritti"
+          label="Partecipanti iscritti (figli accompagnati esclusi)"
           value={statistics.summary.registeredParticipants}
           href={participantHref({ personKind: "participant" })}
         />

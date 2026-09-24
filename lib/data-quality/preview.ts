@@ -86,6 +86,8 @@ export function validateDecisions(
     // Recheck older sealed previews too, before any import RPC or QR creation.
     if (decision.action === "import" && !validDate(row.values.data_nascita))
       throw new Error(`Riga ${row.row}: data di nascita obbligatoria e valida.`);
+    if (decision.action === "import" && (!row.values.citta?.trim() || row.values.citta.trim().length > 120))
+      throw new Error(`Riga ${row.row}: città di residenza obbligatoria, massimo 120 caratteri.`);
     if (decision.action === "import" && row.errors.length)
       throw new Error(`Riga ${row.row}: correggi gli errori o scarta la riga.`);
     if (

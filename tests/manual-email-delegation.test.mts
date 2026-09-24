@@ -11,7 +11,7 @@ function form(delegated = false) {
   const data = new FormData();
   for (const [key, value] of Object.entries({
     groupId: "11111111-1111-4111-8111-111111111111",
-    firstName: "Persona", lastName: "Sintetica", birthDate: "1990-01-02",
+    firstName: "Persona", lastName: "Sintetica", birthDate: "1990-01-02", cityOther: "Berlin",
     availabilityUnknown: "on", consentConfirmed: "on",
   })) data.set(key, value);
   if (delegated) data.set("useLeaderEmail", "on");

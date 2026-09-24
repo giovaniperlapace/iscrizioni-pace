@@ -1,5 +1,43 @@
 # AGENTS.md
 
+## Rilascio integrato: città obbligatoria e figli accompagnati — 2026-09-24
+
+- Vista Figli accompagnati per Manager/Admin/Viewer: una riga per figlio con
+  genitore espandibile e scheda esistente; iscritti principali sotto i 15 anni
+  in una tabella separata. Ricerca, filtro gruppo per ID e Senza gruppo,
+  indicatori globali e conteggi filtrati. Dati già autorizzati, nessuna query
+  aggiuntiva o scrittura. Statistiche chiariscono inclusione dei figli.
+- Schede storiche senza nascita/città/email conservate: letture e totali non
+  applicano i nuovi requisiti di inserimento. Figli di genitori incompleti
+  sempre inclusi; età ignota segnalata, non trasformata in zero o minore.
+  Nessuna migration, modifica dei dati, RLS, permessi o email di collaudo.
+- Rilettura READ ONLY: tutte le 23 iscrizioni Germania della diagnosi presenti,
+  zero eliminate, 7 date e 20 città ancora da completare con informazioni reali.
+- Verificati insieme 537 test, lint, TypeScript e build production in copia
+  pulita con npm ci. Browser Manager/Admin desktop/mobile: espansione tastiera,
+  ricerca, filtri, apertura/chiusura scheda con dati mancanti superati.
+- Commit/push su main e normale rilascio Vercel autorizzati dall'utente per
+  entrambe le modifiche. output/ riservato escluso dal commit.
+
+
+## Città obbligatoria negli inserimenti assistiti — 2026-09-24
+
+- Diagnosi READ ONLY Germania: 23 schede tutte da capogruppo manuale, 20 senza
+  città e 7 senza nascita. Le 7 sono anteriori alla correzione nascita del 23
+  settembre; le 11 del 24 settembre hanno tutte la data. Nessun caso proveniente
+  dal pubblico/link di gruppo. Dati realmente mancanti, non un errore tedesco.
+- Il modulo manuale condiviso Capogruppo/Manager/Admin richiede città nelle
+  sette lingue, con controllo browser/server prima delle scritture. Salva la
+  città dichiarata in city_other e nello snapshot; non copia city_id dal gruppo.
+  Data obbligatoria/reale/non futura conservata. Excel richiede città anche
+  riconfermando anteprime precedenti; pubblico/link hanno già entrambi i vincoli.
+- Nessuna modifica storica, migration, RLS o email di collaudo. Regressioni
+  parser/azioni/Excel e fixture browser required-registration-fields.mjs.
+  Verificati 531 test, lint, TypeScript e build con npm ci in copia isolata;
+  browser manuale sette lingue, pubblico/link in tedesco e mobile superati.
+  Dettagli in docs/incident-2026-09-24-germany-required-fields.md. Modifica locale,
+  inclusa nel rilascio integrato autorizzato del 24 settembre.
+
 ## Magic Link dopo inattività — 2026-09-24
 
 - Il callback POST deve rinnovare `iscrizioni_last_activity` prima del redirect

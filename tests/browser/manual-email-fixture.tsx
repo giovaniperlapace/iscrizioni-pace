@@ -17,6 +17,7 @@ export default function Fixture() {
       className="grid gap-4">
       <input type="hidden" name="groupId" value="11111111-1111-4111-8111-111111111111" />
       <input type="hidden" name="birthDate" value="1990-01-02" />
+      <input type="hidden" name="cityOther" value="Berlin" />
       <input type="hidden" name="firstName" value="Persona" />
       <input type="hidden" name="lastName" value="Sintetica" />
       <input type="hidden" name="availabilityUnknown" value="on" />

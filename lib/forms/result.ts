@@ -21,6 +21,7 @@ export function issueFromMessage(message: string): FormIssue {
   if (/cognome/i.test(message)) return { field: `${prefix}lastName`, code: "name" };
   if (/\bnome\b/i.test(message)) return { field: `${prefix}firstName`, code: "name" };
   if (/nascita/i.test(message)) return { field: `${prefix}birthDate`, code: "date" };
+  if (/città/i.test(message)) return { field: "cityOther", code: /massimo/i.test(message) ? "tooLong" : "required" };
   if (/almeno email o telefono/i.test(message)) return { field: "email", code: "contact" };
   if (/telefono/i.test(message)) return { field: "phone", code: "phone" };
   if (/duplicate-email|email-taken/.test(message)) return { field: "email", code: "duplicateEmail" };

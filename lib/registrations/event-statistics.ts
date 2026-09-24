@@ -622,7 +622,7 @@ function buildStatisticsPersonRow({
   };
 }
 
-function calculateAge(birthDate: string | null, referenceDate: string | null): number | null {
+export function calculateAge(birthDate: string | null, referenceDate: string | null): number | null {
   if (!birthDate || !referenceDate) {
     return null;
   }
@@ -630,7 +630,12 @@ function calculateAge(birthDate: string | null, referenceDate: string | null): n
   const birth = parseDateOnly(birthDate);
   const reference = parseDateOnly(referenceDate);
 
-  if (!birth || !reference || birth.getTime() > reference.getTime()) {
+  if (
+    !birth || !reference ||
+    birth.toISOString().slice(0, 10) !== birthDate ||
+    reference.toISOString().slice(0, 10) !== referenceDate ||
+    birth.getTime() > reference.getTime()
+  ) {
     return null;
   }
 

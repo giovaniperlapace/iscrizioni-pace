@@ -30,6 +30,7 @@ export type ManualRegistrationInput = {
   useLeaderEmail: boolean;
   phone: string | null;
   birthDate: string | null;
+  cityOther: string;
   preferredLocale: SupportedLocale;
   participatesWithChildren: boolean;
   children: RegistrationChildInput[];
@@ -58,6 +59,7 @@ export function parseManualRegistrationForm(
     useLeaderEmail,
     phone: normalizePhone(formData.get("phone")),
     birthDate: optionalDate(formData.get("birthDate")),
+    cityOther: optionalText(formData.get("cityOther")) ?? "",
     preferredLocale: DEFAULT_LOCALE,
     participatesWithChildren,
     children: parseAccompanyingChildren(formData, participatesWithChildren),
@@ -95,6 +97,12 @@ export function validateManualRegistrationInput(
 
   if (!isValidBirthDate(input.birthDate)) {
     errors.push("Inserisci una data di nascita valida.");
+  }
+
+  if (!input.cityOther?.trim()) {
+    errors.push("Inserisci la città in cui vivi abitualmente.");
+  } else if (input.cityOther.trim().length > 120) {
+    errors.push("Città di residenza: massimo 120 caratteri.");
   }
 
   if (!input.useLeaderEmail && !input.email) {
@@ -137,6 +145,9 @@ export function buildManualRegistrationQuestionnaireAnswers(
       firstName: input.firstName,
       lastName: input.lastName,
       birthDate: input.birthDate,
+    },
+    residence: {
+      cityOther: input.cityOther,
     },
     contact: {
       hasEmail: Boolean(input.email),

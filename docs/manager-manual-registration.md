@@ -16,7 +16,8 @@ interrompe il caricamento anziché esporre una lista incompleta. L’azione rile
 evento corrente, ruolo e gruppo prima delle scritture.
 
 Il modulo e i testi nelle sette lingue sono condivisi con il capogruppo:
-anagrafica, nascita obbligatoria/reale/non futura, contatti, presenze esplicite,
+anagrafica, nascita obbligatoria/reale/non futura, città di residenza obbligatoria,
+contatti, presenze esplicite,
 figli, accessibilità, nota e conferma del consenso. Nessuna presenza è
 preselezionata. Il partecipante viene confermato nel gruppo scelto. Gli errori
 lasciano compilato il modulo; un inserimento riuscito mostra la conferma e un
@@ -43,7 +44,9 @@ L’assegnazione conserva invece il ruolo effettivo `manager`/`admin`, attore
 ricavato dalla sessione e motivo `operations_manual_entry`. Snapshot e audit
 indicano `manager_manual`/`admin_manual` e `registration.created_by_manager`/
 `registration.created_by_admin`; non attribuiscono la decisione al capogruppo.
-I figli, i consensi e il QR seguono il flusso assistito esistente.
+La città dichiarata viene salvata in `city_other` e nello snapshot, senza
+copiare la città del gruppo. I figli, i consensi e il QR seguono il flusso
+assistito esistente.
 
 La funzione riutilizza l’azione di inserimento esistente: le scritture sono
 multiple e non diventano una nuova transazione atomica. Nessuna modifica a RLS,

@@ -24,7 +24,9 @@ servizio, stato_servizio, tag, stato, consenso_privacy, versione_privacy, data_c
   l’anteprima mostra un avviso per controllare l’anno, senza conferma aggiuntiva.
 - Telefono come testo E.164 con `+` e 7–15 cifre; separatori comuni/`00`
   normalizzati senza accettare lettere o stringhe arbitrarie. Email normalizzata.
-- Paese/città: testo libero fino a 120 caratteri, facoltativo.
+- Paese/città: testo libero fino a 120 caratteri. Dal 24 settembre la città di
+  residenza è obbligatoria anche alla conferma di anteprime precedenti; il paese
+  resta facoltativo.
 - Gruppo/servizio: UUID oppure nome normalizzato univoco tra le opzioni attive
   dell'evento. Gruppi anche assegnabili. Nessuna creazione automatica.
 - Tag: UUID o nomi univoci separati da `;`; marcatori interni.

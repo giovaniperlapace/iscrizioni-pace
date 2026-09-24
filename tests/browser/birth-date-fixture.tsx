@@ -13,7 +13,7 @@ export default function Fixture() {
       if (!parseManualRegistrationForm(data).ok) throw new Error("Validation bypass");
       setCalls(count => count + 1);
     }}>
-      {Object.entries({ groupId: "11111111-1111-4111-8111-111111111111", firstName: "Test", lastName: "Person", email: "synthetic@example.test", availabilityUnknown: "on", consentConfirmed: "on" }).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
+      {Object.entries({ groupId: "11111111-1111-4111-8111-111111111111", firstName: "Test", cityOther: "Berlin", lastName: "Person", email: "synthetic@example.test", availabilityUnknown: "on", consentConfirmed: "on" }).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
       <ParticipantBirthDateField label="Data di nascita" locale={locale} />
       <button type="submit">Verifica</button>
     </ReliableForm>

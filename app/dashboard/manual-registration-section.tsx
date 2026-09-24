@@ -80,6 +80,10 @@ export function ManualRegistrationSection({
           <ManualEmailFields locale={locale} emailLabel={copy.email} delegation={sourceDashboard === "manager" ? "group" : "self"} />
           <ManualPhoneFields locale={locale} label={copy.phone} />
           <ParticipantBirthDateField label={copy.birthDate} locale={locale} />
+          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
+            <span>{copy.city}<RequiredIndicator /></span>
+            <input name="cityOther" required maxLength={120} autoComplete="address-level2" className="field" />
+          </label>
           <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} initialUnknown={false} />
           <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields

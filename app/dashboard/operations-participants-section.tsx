@@ -1,3 +1,4 @@
+import { OperationsChildrenSection } from "@/app/dashboard/operations-children-section";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { OperationsManualRegistration } from "@/app/dashboard/operations-manual-registration";
 import { randomUUID } from "node:crypto";
@@ -37,6 +38,7 @@ export async function OperationsParticipantsSection({
   searchParams?: Record<string, string | undefined>;
 }) {
   const locale = await getRequestLocale();
+  const childrenView = searchParams?.view === "children";
   const duplicatesView = searchParams?.view === "duplicates";
   return (
     <>
@@ -47,7 +49,7 @@ export async function OperationsParticipantsSection({
       <OperationsParticipantsTable
         locale={locale}
         dataVersion={randomUUID()}
-        dialogOnly={duplicatesView}
+        dialogOnly={duplicatesView || childrenView}
         snapshot={{
           participants: snapshot.participants,
           allParticipants: snapshot.allParticipants,
@@ -74,6 +76,15 @@ export async function OperationsParticipantsSection({
         eventStartsOn={eventStartsOn}
         eventEndsOn={eventEndsOn}
       />
+      {childrenView && (
+        <OperationsChildrenSection
+          participants={snapshot.allParticipants}
+          eventId={eventId}
+          eventStartsOn={eventStartsOn}
+          dashboard={dashboard}
+          navMode={navMode}
+        />
+      )}
       {eventId && canManageEvent(eventId) && searchParams?.manual === "1" && (
         <OperationsManualRegistration dashboard={dashboard} searchParams={searchParams} />
       )}

@@ -13,6 +13,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Telefono",
     "birthDate": "Data di nascita",
+    "city": "Città in cui vivi abitualmente",
     "internalNote": "Nota interna",
     "consent": "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione. Se inserisco uno o più figli, confermo che la persona mi ha dichiarato di esercitare la responsabilità genitoriale o di essere autorizzata a comunicarne i dati.",
     "attendance": {
@@ -42,6 +43,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Phone",
     "birthDate": "Date of birth",
+    "city": "City of residence",
     "internalNote": "Internal note",
     "consent": "I have the registered person's consent to process data for this registration. If I add one or more children, I confirm that the person has stated that they have parental responsibility or are authorised to provide their data.",
     "attendance": {
@@ -71,6 +73,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Téléphone",
     "birthDate": "Date de naissance",
+    "city": "Ville de résidence",
     "internalNote": "Note interne",
     "consent": "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription. Si j'ajoute un ou plusieurs enfants, je confirme que la personne a déclaré exercer la responsabilité parentale ou être autorisée à communiquer leurs données.",
     "attendance": {
@@ -100,6 +103,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Telefon",
     "birthDate": "Geburtsdatum",
+    "city": "Wohnort",
     "internalNote": "Interne Notiz",
     "consent": "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung. Wenn ich ein oder mehrere Kinder hinzufüge, bestätige ich, dass die Person die elterliche Verantwortung ausübt oder zur Angabe ihrer Daten berechtigt ist.",
     "attendance": {
@@ -129,6 +133,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Teléfono",
     "birthDate": "Fecha de nacimiento",
+    "city": "Ciudad de residencia",
     "internalNote": "Nota interna",
     "consent": "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción. Si añado uno o más hijos, confirmo que la persona ha declarado ejercer la responsabilidad parental o estar autorizada para comunicar sus datos.",
     "attendance": {
@@ -158,6 +163,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Telefoon",
     "birthDate": "Geboortedatum",
+    "city": "Woonplaats",
     "internalNote": "Interne notitie",
     "consent": "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken. Als ik een of meer kinderen toevoeg, bevestig ik dat de persoon het ouderlijk gezag uitoefent of gemachtigd is hun gegevens door te geven.",
     "attendance": {
@@ -187,6 +193,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Телефон",
     "birthDate": "Дата народження",
+    "city": "Місто проживання",
     "internalNote": "Внутрішня нотатка",
     "consent": "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації. Якщо я додаю одну або кількох дітей, я підтверджую, що ця особа має батьківську відповідальність або уповноважена надати їхні дані.",
     "attendance": {

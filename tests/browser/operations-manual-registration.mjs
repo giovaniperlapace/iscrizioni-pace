@@ -81,6 +81,7 @@ try {
   ab('select','dialog select[name=groupId]','22222222-2222-4222-8222-222222222222');
   ab('fill','dialog input[name=firstName]','Synthetic');ab('fill','dialog input[name=lastName]','Person');
   ab('eval', `(() => {const f=document.querySelector('dialog [name=birthDate]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(f,'1990-01-02');f.dispatchEvent(new Event('input',{bubbles:true}));f.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  ab('fill','dialog input[name=cityOther]','Berlin');
   ab('check','dialog input[name=useLeaderEmail]');ab('check','dialog input[name=availabilityUnknown]');ab('check','dialog input[name=consentConfirmed]');
   ab('click','dialog button[type=submit]');ab('wait','dialog textarea[name=duplicateReason][aria-invalid=true]');
   check('document.querySelector("dialog input[name=firstName]").value==="Synthetic"','server error retains fields '+role);

@@ -295,3 +295,14 @@ test("Excel accepts a valid date under one year without a confirmation", () => {
   assert.deepEqual(preview[0].errors, []);
   assert.equal(validateDecisions(preview, [decision]).length, 1);
 });
+
+
+test("Excel requires residence city in preview and revalidates older sealed previews", () => {
+  for (const city of ["", "   ", "x".repeat(121)]) {
+    const preview = buildPreviewRows([{ row: 2, values: row({ citta: city }), cellErrors: [] }], catalog, []);
+    assert.ok(preview[0].errors.some(error => error.startsWith("citta:")));
+    preview[0].errors = []; // Preview issued before this requirement.
+    assert.throws(() => validateDecisions(preview, [{ row: 2, action: "import", reason: "" }]), /città di residenza/);
+    assert.equal(validateDecisions(preview, [{ row: 2, action: "skip", reason: "Dato da raccogliere" }]).length, 1);
+  }
+});

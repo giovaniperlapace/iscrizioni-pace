@@ -260,3 +260,18 @@ test("direct assigned nodes ignore residence and ancestors, separate namesakes a
     assert.equal(filterStatisticsPeople(snapshot.people, { ...filter, attendanceSlot: "2026-10-25__morning" }).length, row.label === "Italia" ? 3 : 0);
   }
 });
+
+test("legacy registrations missing birth, city and email remain in statistics with their children", () => {
+  const snapshot = buildEventStatisticsSnapshot({
+    participants: [{ registrationId: "legacy", eventId: "event", eventTitle: "Event",
+      birthDate: null, city: null, country: "Germania", currentGroupId: "germany",
+      currentGroupName: "Germania", childrenCount: 2 }],
+    groups: [{ id: "germany", eventId: "event", name: "Germania", parentGroupId: null, nodeType: "country" }],
+    attendanceChoices: [],
+  });
+  assert.equal(snapshot.summary.registeredParticipants, 1);
+  assert.equal(snapshot.summary.accompanyingChildren, 2);
+  assert.equal(snapshot.summary.totalPeople, 3);
+  assert.equal(snapshot.people.length, 3);
+  assert.equal(snapshot.participantBreakdowns.group[0].participantCount, 3);
+});

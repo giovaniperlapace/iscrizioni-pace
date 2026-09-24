@@ -41,7 +41,7 @@ export const IMPORT_GUIDE = [
   },
   {
     title: "Compila i dati obbligatori",
-    text: "Per ogni persona inserisci nome, cognome, data di nascita e almeno un recapito: email oppure telefono. Compila anche i tre campi del consenso indicati qui sotto. Paese e città sono facoltativi. Se la data indica meno di un anno di età, l’anteprima mostra un avviso che invita a controllare l’anno.",
+    text: "Per ogni persona inserisci nome, cognome, data di nascita, città di residenza e almeno un recapito: email oppure telefono. Compila anche i tre campi del consenso indicati qui sotto. Il paese è facoltativo; la città di residenza è obbligatoria. Se la data indica meno di un anno di età, l’anteprima mostra un avviso che invita a controllare l’anno.",
   },
   {
     title: "Riporta il consenso già raccolto",
@@ -125,6 +125,7 @@ export function validateExcelRow(
   for (const field of ["paese", "citta"] as const)
     if (values[field].length > 120)
       errors.push(`${field}: massimo 120 caratteri`);
+  if (!values.citta) errors.push("citta: obbligatoria, indica la città di residenza");
   if (!validDate(values.data_nascita))
     errors.push("data_nascita: obbligatoria, usa una data valida AAAA-MM-GG, non futura");
   values.email = values.email.toLowerCase();

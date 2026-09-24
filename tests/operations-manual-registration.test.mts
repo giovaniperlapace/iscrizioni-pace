@@ -13,7 +13,7 @@ import { attendanceSlotKey, buildAllowedAttendanceSlotKeys } from '../lib/regist
 const groupId = '11111111-1111-4111-8111-111111111111';
 function data() {
   const form = new FormData();
-  for (const [key, value] of Object.entries({ sourceDashboard: 'manager', groupId, firstName: 'Test', lastName: 'Persona', email: 'person@example.test', birthDate: '1990-01-02', availabilityUnknown: 'on', consentConfirmed: 'on' })) form.set(key, value);
+  for (const [key, value] of Object.entries({ sourceDashboard: 'manager', groupId, firstName: 'Test', lastName: 'Persona', email: 'person@example.test', birthDate: '1990-01-02', cityOther: 'Berlin', availabilityUnknown: 'on', consentConfirmed: 'on' })) form.set(key, value);
   return form;
 }
 type Options = { roles?: Array<{ role: string; eventId: string | null }>; current?: string | null; group?: Record<string, unknown>; groupError?: boolean; duplicateEmail?: boolean; duplicate?: boolean; failedWrite?: string; mailFails?: boolean; unauthenticated?: boolean };
@@ -32,7 +32,7 @@ function harness(options: Options = {}) {
   } };
   const deps = { ...forms, parseManualRegistrationForm, buildManualRegistrationQuestionnaireAnswers, canCreateOperationsRegistration, manualRegistrationPath, normalizeEmail, attendanceSlotKey, buildAllowedAttendanceSlotKeys,
     createSupabaseServerClient: async () => db, createSupabaseServiceClient: () => db,
-    getCurrentAuthContext: async () => options.unauthenticated ? null : ({ dashboardRole: 'manager', user: { id: 'operator', email: 'operator@example.test' }, eventRoles: options.roles ?? [{ role: 'manager', eventId: 'event' }] }),
+    getCurrentAuthContext: async () => options.unauthenticated ? null : ({ dashboardRole: options.roles?.[0]?.role === 'capogruppo' ? 'capogruppo' : 'manager', user: { id: 'operator', email: 'operator@example.test' }, eventRoles: options.roles ?? [{ role: 'manager', eventId: 'event' }] }),
     getCurrentOperationalEventId: async () => options.current === undefined ? 'event' : options.current,
     canManageGroupRegistrationLink: async () => true,
     hasExistingRegistrationForEmail: async () => !!options.duplicateEmail,
@@ -73,6 +73,9 @@ test('Manager and Admin create in unassigned hidden groups, recording actual pro
     form.set('child_0_firstName', 'Test'); form.set('child_0_lastName', 'Child'); form.set('child_0_birthDate', '2020-02-02');
     await assert.rejects(h.action(form), /REDIRECT:\/dashboard\/manager\?.*manual=1&manualSaved=1$/);
     const row = (table: string) => h.writes.find(w => w.table === table)!.row;
+    assert.equal(row('participants').city_other, 'Berlin');
+    assert.equal(row('participants').city_id, null);
+    assert.equal(row('registration_questionnaire_answers').answers.residence.cityOther, 'Berlin');
     assert.equal(row('registrations').source, 'admin'); assert.equal(row('registrations').created_by, 'operator');
     assert.equal(row('registrations').event_id, 'event');
     assert.equal(row('participant_group_assignments').group_id, groupId);
@@ -92,7 +95,7 @@ test('operational insertion fails closed for obsolete groups, other events, read
   for (const option of [{ group: { is_active: false } }, { group: { is_assignable: false } }, { group: { event_id: 'other' } }, { groupError: true }, { duplicateEmail: true }]) {
     const h = harness(option); assert.equal((await h.action(data())).status, 'error'); assert.equal(h.writes.length, 0); assert.equal(h.sends.length, 0);
   }
-  for (const [field, value] of [['birthDate', ''], ['birthDate', '2999-01-01'], ['consentConfirmed', ''], ['email', 'operator@example.test']]) {
+  for (const [field, value] of [['cityOther', ''], ['cityOther', '   '], ['cityOther', 'x'.repeat(121)], ['birthDate', ''], ['birthDate', '2999-01-01'], ['consentConfirmed', ''], ['email', 'operator@example.test']]) {
     const h = harness(); const form = data(); form.set(field, value);
     assert.equal((await h.action(form)).status, 'error'); assert.equal(h.writes.length, 0);
   }
@@ -213,4 +216,16 @@ test('successful insertion returns to the same authorized dashboard overlay with
       return true;
     });
   }
+});
+
+
+test('leader saves the supplied residence city, never the city of the assigned group', async () => {
+  const h = harness({ roles: [{ role: 'capogruppo', eventId: 'event' }], group: { city_id: 'unrelated-group-city' } });
+  const form = data(); form.delete('sourceDashboard'); form.set('cityOther', '  Würzburg  ');
+  await assert.rejects(h.action(form), /REDIRECT:\/dashboard\/capogruppo\?manualSaved=1$/);
+  const participant = h.writes.find(w => w.table === 'participants')!.row;
+  assert.equal(participant.city_other, 'Würzburg');
+  assert.equal(participant.city_id, null);
+  assert.equal(participant.birth_date, '1990-01-02');
+  assert.equal(h.writes.find(w => w.table === 'registration_questionnaire_answers')!.row.answers.residence.cityOther, 'Würzburg');
 });

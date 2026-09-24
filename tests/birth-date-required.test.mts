@@ -100,3 +100,32 @@ test("newborn accompanying children remain valid", () => {
   assert.equal(parseRegistrationForm(form).ok, true);
   assert.equal(parseManualRegistrationForm(form).ok, true);
 });
+
+for (const path of ["public", "group-link", "leader", "leader-delegate", "manager"]) {
+  test(`${path} requires residence city independently of the language or group`, async () => {
+    for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"]) {
+      const form = data();
+      form.set("locale", locale);
+      form.set("countryOther", "Deutschland");
+      if (path === "group-link") form.set("groupRegistrationLinkToken", "synthetic-link");
+      if (path === "leader-delegate") form.set("useLeaderEmail", "on");
+      if (path === "manager") form.set("sourceDashboard", "manager");
+      const manual = path.startsWith("leader") || path === "manager";
+      const parse = manual ? parseManualRegistrationForm : parseRegistrationForm;
+      for (const city of [null, "", "   "]) {
+        if (city === null) form.delete("cityOther"); else form.set("cityOther", city);
+        const result = parse(form);
+        assert.equal(result.ok, false, `${locale}/${city}`);
+        if (!result.ok) assert.ok(result.errors.some(error => /città/.test(error)));
+        if (manual) {
+          const failure = await action("createGroupLeaderManualRegistration")(form);
+          assert.ok(failure.issues.some((issue: forms.FormIssue) => issue.field === "cityOther"));
+        }
+      }
+      form.set("cityOther", "  Würzburg  ");
+      const result = parse(form);
+      assert.ok(result.ok);
+      assert.equal(result.value.cityOther, "Würzburg");
+    }
+  });
+}

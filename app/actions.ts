@@ -1747,7 +1747,8 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       birth_date: parsed.value.birthDate,
       preferred_locale: parsed.value.preferredLocale,
       country_id: groupRow.country_id,
-      city_id: groupRow.city_id,
+      city_id: null,
+      city_other: parsed.value.cityOther,
       has_previous_santegidio_participation: true,
       participates_with_group: true,
     })
