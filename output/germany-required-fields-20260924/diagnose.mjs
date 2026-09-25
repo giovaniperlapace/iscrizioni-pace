@@ -1,0 +1,16 @@
+import {createClient} from '@supabase/supabase-js';
+import {writeFileSync} from 'node:fs';
+const db=createClient(process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
+async function all(table,select,filters=q=>q){let rows=[];for(let n=0;;n+=500){const {data,error}=await filters(db.from(table).select(select)).order('id').range(n,n+499);if(error)throw Error(table+': '+error.message);rows.push(...data);if(data.length<500)return rows;}}
+const [events,countries]=await Promise.all([all('events','id,title,is_current',q=>q.eq('is_current',true)),all('countries','id,name_it,iso2')]);
+const event=events[0];if(!event)throw Error('event');
+const [groups,regs,assignments]=await Promise.all([all('groups','id,name,parent_group_id,country_id,city_id',q=>q.eq('event_id',event.id)),all('registrations','id,participant_id,source,submitted_at,created_by,status,participants(id,birth_date,city_id,city_other,country_id,country_other,preferred_locale)',q=>q.eq('event_id',event.id).is('deleted_at',null)),all('participant_group_assignments','id,registration_id,group_id',q=>q.eq('is_current',true))]);
+const de=countries.find(c=>c.iso2==='DE');const deGroups=new Set(groups.filter(g=>g.country_id===de?.id||/german|deutsch/i.test(g.name)).map(g=>g.id));for(let i=0;i<groups.length;i++){for(const g of groups)if(deGroups.has(g.parent_group_id))deGroups.add(g.id);}
+const deRegIds=new Set(assignments.filter(a=>deGroups.has(a.group_id)).map(a=>a.registration_id));
+const selected=regs.filter(r=>deRegIds.has(r.id)||r.participants?.country_id===de?.id||/german|deutsch/i.test(r.participants?.country_other||''));
+const report={total:selected.length,missingBirth:0,missingCity:0,missingBoth:0,bySource:{},byDay:{}};
+for(const r of selected){const p=r.participants;const b=!p.birth_date,c=!p.city_id&&!p.city_other?.trim(); report.missingBirth+=b;report.missingCity+=c;report.missingBoth+=b&&c;for(const [map,key] of [[report.bySource,r.source],[report.byDay,r.submitted_at.slice(0,10)]]){map[key]??={total:0,missingBirth:0,missingCity:0};map[key].total++;map[key].missingBirth+=b;map[key].missingCity+=c;}}
+const snapshots=[];for(let i=0;i<selected.length;i+=100){snapshots.push(...await all('registration_questionnaire_answers','id,registration_id,answers',q=>q.in('registration_id',selected.slice(i,i+100).map(r=>r.id))));}
+const snapshotReport={};for(const r of selected.filter(r=>!r.participants.birth_date||(!r.participants.city_id&&!r.participants.city_other?.trim()))){const s=snapshots.find(s=>s.registration_id===r.id)?.answers; const k=s?.source||'unspecified';snapshotReport[k]??={count:0,birthOriginallyMissing:0};snapshotReport[k].count++;snapshotReport[k].birthOriginallyMissing+=!s?.identity?.birthDate;}
+writeFileSync('output/germany-required-fields-20260924/diagnosis.json',JSON.stringify({report,snapshotReport,groups:groups.filter(g=>deGroups.has(g.id)),registrations:selected,snapshots},null,2),{mode:0o600});
+console.log(JSON.stringify({report,snapshotReport,groups:groups.filter(g=>deGroups.has(g.id)).map(g=>({name:g.name,cityConfigured:!!g.city_id})),snapshotShapes:snapshots.slice(0,2).map(s=>({keys:Object.keys(s.answers),identityKeys:Object.keys(s.answers.identity||{}),residenceKeys:Object.keys(s.answers.residence||{})}))},null,2));

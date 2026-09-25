@@ -1,0 +1,2288 @@
+{
+  "report": {
+    "total": 23,
+    "missingBirth": 7,
+    "missingCity": 20,
+    "missingBoth": 7,
+    "bySource": {
+      "capogruppo": {
+        "total": 23,
+        "missingBirth": 7,
+        "missingCity": 20
+      }
+    },
+    "byDay": {
+      "2026-09-24": {
+        "total": 11,
+        "missingBirth": 0,
+        "missingCity": 11
+      },
+      "2026-09-23": {
+        "total": 12,
+        "missingBirth": 7,
+        "missingCity": 9
+      }
+    }
+  },
+  "snapshotReport": {
+    "capogruppo_manual": {
+      "count": 20,
+      "birthOriginallyMissing": 9
+    }
+  },
+  "groups": [
+    {
+      "id": "00ac6387-a4d7-402d-914d-030032650745",
+      "name": "Germania",
+      "parent_group_id": null,
+      "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+      "city_id": null
+    }
+  ],
+  "registrations": [
+    {
+      "id": "051b0f0a-590e-4b87-a15f-2f0fea1c1c1a",
+      "participant_id": "aa1b41e2-9ffd-414b-88cc-e58c206d075e",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T08:28:09.934933+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "aa1b41e2-9ffd-414b-88cc-e58c206d075e",
+        "city_id": null,
+        "birth_date": "1958-08-09",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "0748faec-7e6e-4c47-aa5b-d915548ca421",
+      "participant_id": "2781b126-b01d-4542-970c-7bbd2562f2ea",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:53:55.549252+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "2781b126-b01d-4542-970c-7bbd2562f2ea",
+        "city_id": null,
+        "birth_date": "1966-03-16",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": "Germania",
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "1ac6a720-d3fc-458b-8e13-9b49af6390e9",
+      "participant_id": "9dfd1b89-8960-4183-bed1-329305d53bcd",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:14:45.829553+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "9dfd1b89-8960-4183-bed1-329305d53bcd",
+        "city_id": null,
+        "birth_date": "1971-07-01",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "240fd573-a62d-4cd9-a1fd-588347c26855",
+      "participant_id": "6f3759cc-8aff-4c7c-a5e1-88aa542dfffc",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T08:16:29.601025+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "6f3759cc-8aff-4c7c-a5e1-88aa542dfffc",
+        "city_id": null,
+        "birth_date": "1957-09-26",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "3bb8f774-92f8-47b3-82ca-d0e1bfad03d8",
+      "participant_id": "f05d2d7b-58e1-44f6-bea0-243ae796f32e",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:57:43.36578+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "f05d2d7b-58e1-44f6-bea0-243ae796f32e",
+        "city_id": null,
+        "birth_date": null,
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "3d05cb65-89b8-4d35-b005-a7a323585a36",
+      "participant_id": "a02c6e29-c7d2-47f2-bc91-194eccd5049f",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T09:07:08.567554+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "a02c6e29-c7d2-47f2-bc91-194eccd5049f",
+        "city_id": null,
+        "birth_date": null,
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "3d64a87a-f1de-4f0a-97b4-a25b337bd11a",
+      "participant_id": "82d97f3e-e714-4612-a17d-44911905a934",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:08:52.982341+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "82d97f3e-e714-4612-a17d-44911905a934",
+        "city_id": null,
+        "birth_date": "1959-12-21",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "3f56d65d-bee8-4caa-aca0-38e86a989b57",
+      "participant_id": "0b6b8d6d-eb07-43b9-80bf-8ff731417ff9",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:59:21.044221+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "0b6b8d6d-eb07-43b9-80bf-8ff731417ff9",
+        "city_id": null,
+        "birth_date": null,
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "5ac1cc39-655c-4901-beb2-f6be17e9d5b6",
+      "participant_id": "5caafec9-7fdf-47e2-9f74-50f1a5d82169",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:54:08.495225+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "5caafec9-7fdf-47e2-9f74-50f1a5d82169",
+        "city_id": null,
+        "birth_date": "1988-02-27",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "5e4268f2-c6bb-465a-b39f-4d29d29663fc",
+      "participant_id": "7c897ecd-5725-4137-9d55-f896f1ec253b",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:48:34.627307+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "7c897ecd-5725-4137-9d55-f896f1ec253b",
+        "city_id": null,
+        "birth_date": "1964-07-06",
+        "city_other": "Würzburg",
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": "Germania",
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "5e8b7481-4b8d-4dd7-8042-0802e68eb664",
+      "participant_id": "d8d59dfb-5849-4514-88e1-2bb019fbc2f9",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:16:48.962811+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "d8d59dfb-5849-4514-88e1-2bb019fbc2f9",
+        "city_id": null,
+        "birth_date": "1978-03-16",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "644a27a7-3942-4407-b2d2-3d1feb1750a2",
+      "participant_id": "ab2cfcb6-6c79-4abc-b7b5-61cfe2fc8a1c",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:52:09.122338+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "ab2cfcb6-6c79-4abc-b7b5-61cfe2fc8a1c",
+        "city_id": null,
+        "birth_date": "1960-09-26",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "6bc7b828-b82c-437e-8c5d-7ac882fe73d9",
+      "participant_id": "872beb23-b035-4c6f-8c7b-245696a36d39",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:42:16.642606+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "872beb23-b035-4c6f-8c7b-245696a36d39",
+        "city_id": null,
+        "birth_date": null,
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "7680caab-23c5-4880-843a-c219848b8a6c",
+      "participant_id": "0faa608d-4453-41ac-a764-f0e130965653",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:26:18.514501+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "0faa608d-4453-41ac-a764-f0e130965653",
+        "city_id": null,
+        "birth_date": "1960-04-10",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "8497f033-b961-4b00-a8df-6995bde01dd4",
+      "participant_id": "22a5ab9c-3084-456e-818e-0a3dfcca64ba",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:37:24.549134+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "22a5ab9c-3084-456e-818e-0a3dfcca64ba",
+        "city_id": null,
+        "birth_date": "1984-12-08",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "85846f16-72a8-44a1-8a99-f333b3d8aed5",
+      "participant_id": "9d323de8-f00a-4916-9c72-31aaef81a0c3",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:35:29.193306+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "9d323de8-f00a-4916-9c72-31aaef81a0c3",
+        "city_id": null,
+        "birth_date": "1944-08-12",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "86b28af5-054b-47b9-ab4f-aee34666d31e",
+      "participant_id": "e93c25ea-b6ae-4378-9bdc-86692733928d",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T09:10:02.54456+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "e93c25ea-b6ae-4378-9bdc-86692733928d",
+        "city_id": null,
+        "birth_date": null,
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "b3b6cc37-e67f-4c26-9ed7-6d1cb6df4a2c",
+      "participant_id": "9144136b-5299-4f05-8125-d0d5b4030ba2",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:50:35.530038+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "9144136b-5299-4f05-8125-d0d5b4030ba2",
+        "city_id": null,
+        "birth_date": "1980-08-26",
+        "city_other": "Würzburg",
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": "Germania",
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "d065ecaa-024a-42fb-a4e7-901303f917ca",
+      "participant_id": "a8fa75d3-9505-46bf-baf4-a63aa2b03290",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T09:05:37.149643+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "a8fa75d3-9505-46bf-baf4-a63aa2b03290",
+        "city_id": null,
+        "birth_date": null,
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "dd58422a-e78c-4133-9b21-c444e7b8d3b8",
+      "participant_id": "58a607ef-b763-4c7a-b6eb-ac0b3675ea51",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-24T07:56:34.202688+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "58a607ef-b763-4c7a-b6eb-ac0b3675ea51",
+        "city_id": null,
+        "birth_date": "1953-10-05",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "df096ddb-9884-42a9-b17a-37feaec971ec",
+      "participant_id": "3022f9cc-81e7-4389-b2f0-9261ac0455c7",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:52:04.908379+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "3022f9cc-81e7-4389-b2f0-9261ac0455c7",
+        "city_id": null,
+        "birth_date": "1971-10-18",
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": "Germania",
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "eb9c4c6b-d4a1-4e42-8c5a-4d111cf0f7a5",
+      "participant_id": "5105bf61-6f07-4a38-aebd-ab0d2e42e075",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T09:09:02.813471+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "5105bf61-6f07-4a38-aebd-ab0d2e42e075",
+        "city_id": null,
+        "birth_date": null,
+        "city_other": null,
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": null,
+        "preferred_locale": "en"
+      }
+    },
+    {
+      "id": "ec95b284-ea17-41c1-bbc2-acaf87dc61f3",
+      "participant_id": "3e11addc-48f6-4c35-83e7-95d6ff57d796",
+      "source": "capogruppo",
+      "submitted_at": "2026-09-23T08:44:24.74443+00:00",
+      "created_by": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5",
+      "status": "submitted",
+      "participants": {
+        "id": "3e11addc-48f6-4c35-83e7-95d6ff57d796",
+        "city_id": null,
+        "birth_date": "1962-02-01",
+        "city_other": "Würzburg",
+        "country_id": "a6196bd6-fa8b-428f-90fb-7a53930eefe3",
+        "country_other": "Germania",
+        "preferred_locale": "en"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "0b3d26c9-e878-48e1-b6e7-5d727fec1822",
+      "registration_id": "051b0f0a-590e-4b87-a15f-2f0fea1c1c1a",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Hofmann",
+          "birthDate": "1958-08-09",
+          "firstName": "Roswitha"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "255f1cd6-9080-4c84-86c2-be82b3ecd790",
+      "registration_id": "86b28af5-054b-47b9-ab4f-aee34666d31e",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Herrmann",
+          "birthDate": null,
+          "firstName": "Monika"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "2a763994-11ea-43fa-b9c9-bd0fe772865b",
+      "registration_id": "3d05cb65-89b8-4d35-b005-a7a323585a36",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Suwandi",
+          "birthDate": null,
+          "firstName": "Lina"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "2ce99808-ba72-4b0b-a0d2-1fd68265f5af",
+      "registration_id": "dd58422a-e78c-4133-9b21-c444e7b8d3b8",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Meixner",
+          "birthDate": "1953-10-05",
+          "firstName": "Waltraud"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "2d43afd7-2310-4dbf-8bb0-9d4553b199ab",
+      "registration_id": "eb9c4c6b-d4a1-4e42-8c5a-4d111cf0f7a5",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Leineweber",
+          "birthDate": null,
+          "firstName": "Matthias"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "2e779281-ffac-4ba2-bc6e-ead0dd252c88",
+      "registration_id": "5e4268f2-c6bb-465a-b39f-4d29d29663fc",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Kaufhold",
+          "birthDate": null,
+          "firstName": "Claudia"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "354eaaa8-d28f-4e80-873b-1f35f134ba30",
+      "registration_id": "85846f16-72a8-44a1-8a99-f333b3d8aed5",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Dantscher",
+          "birthDate": "1944-08-12",
+          "firstName": "Wiltrud"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "35ae4a61-6b80-4d1d-82a0-76bd1fb7d1f3",
+      "registration_id": "8497f033-b961-4b00-a8df-6995bde01dd4",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": true,
+          "hasPhone": false,
+          "useLeaderEmail": false,
+          "communicationDelegateUserId": null
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Kasmollari",
+          "birthDate": "1984-12-08",
+          "firstName": "Xhuljeta"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "3ce968c7-66c9-4e6c-8c74-d45697b820e4",
+      "registration_id": "df096ddb-9884-42a9-b17a-37feaec971ec",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Kendlbacher",
+          "birthDate": null,
+          "firstName": "Daniel"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "5fc75dc8-ed04-4961-9153-01765b9057b8",
+      "registration_id": "1ac6a720-d3fc-458b-8e13-9b49af6390e9",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Rath-Schamo",
+          "birthDate": "1971-07-01",
+          "firstName": "Sabine"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "7d7236eb-6758-47f8-943f-1dec050cffec",
+      "registration_id": "6bc7b828-b82c-437e-8c5d-7ac882fe73d9",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Leuchner",
+          "birthDate": null,
+          "firstName": "Angelika"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "894e36f3-12b0-455c-8949-a451b1b7340f",
+      "registration_id": "5e8b7481-4b8d-4dd7-8042-0802e68eb664",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": true,
+          "hasPhone": false,
+          "useLeaderEmail": false,
+          "communicationDelegateUserId": null
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Dantscher",
+          "birthDate": "1978-03-16",
+          "firstName": "Sandra"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "b092801b-f14c-47fa-9dd4-304e2f31c2b1",
+      "registration_id": "7680caab-23c5-4880-843a-c219848b8a6c",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Bühl",
+          "birthDate": "1960-04-10",
+          "firstName": "Susanne"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "babcde9d-ef35-4ab4-b974-cab681ae0504",
+      "registration_id": "0748faec-7e6e-4c47-aa5b-d915548ca421",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Wenderlein",
+          "birthDate": null,
+          "firstName": "Dieter"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "c2990a0b-4e7b-4776-9772-a317a5303665",
+      "registration_id": "3d64a87a-f1de-4f0a-97b4-a25b337bd11a",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Krimmer-Reder",
+          "birthDate": "1959-12-21",
+          "firstName": "Ruth"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "c3c487c7-63b6-4b9e-b740-0e63b38b612f",
+      "registration_id": "240fd573-a62d-4cd9-a1fd-588347c26855",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Schott",
+          "birthDate": "1957-09-26",
+          "firstName": "Helene"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "c427e572-3806-4fb2-8ae0-0b8f7586b94b",
+      "registration_id": "ec95b284-ea17-41c1-bbc2-acaf87dc61f3",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Wagner",
+          "birthDate": null,
+          "firstName": "Angelika"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "c5000b2f-e802-400e-8c10-05c4713cc9df",
+      "registration_id": "d065ecaa-024a-42fb-a4e7-901303f917ca",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Reder",
+          "birthDate": null,
+          "firstName": "Klaus"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "d36432d2-f65b-4983-ab9c-c18740f7c438",
+      "registration_id": "644a27a7-3942-4407-b2d2-3d1feb1750a2",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Thanner",
+          "birthDate": "1960-09-26",
+          "firstName": "Susanne"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "d44ee1c5-885b-406c-ad5b-e6010bdca736",
+      "registration_id": "3bb8f774-92f8-47b3-82ca-d0e1bfad03d8",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Büschel",
+          "birthDate": null,
+          "firstName": "Gabi"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "db235919-3a74-4f14-8b4a-b0e87f90612c",
+      "registration_id": "b3b6cc37-e67f-4c26-9ed7-6d1cb6df4a2c",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Welscher",
+          "birthDate": null,
+          "firstName": "Cornelia"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "e0e4d867-9f94-4ef3-b610-9cda035e2cb9",
+      "registration_id": "3f56d65d-bee8-4caa-aca0-38e86a989b57",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Lick",
+          "birthDate": null,
+          "firstName": "Hildegard"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    },
+    {
+      "id": "e87e5132-ff65-41a5-9267-ff050d1f58ac",
+      "registration_id": "5ac1cc39-655c-4901-beb2-f6be17e9d5b6",
+      "answers": {
+        "source": "capogruppo_manual",
+        "contact": {
+          "hasEmail": false,
+          "hasPhone": false,
+          "useLeaderEmail": true,
+          "communicationDelegateUserId": "0e192059-6f3d-42c3-aaf5-e3b8470ffed5"
+        },
+        "consents": {
+          "privacyAccepted": true,
+          "acceptedByOperator": false,
+          "acceptedByGroupLeader": true,
+          "dataProcessingAccepted": true
+        },
+        "identity": {
+          "lastName": "Sheik",
+          "birthDate": "1988-02-27",
+          "firstName": "Max"
+        },
+        "attendance": {
+          "overallChoice": "yes",
+          "availabilityDays": [
+            "2026-10-25",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-24"
+          ],
+          "availabilitySlots": [
+            {
+              "day": "2026-10-25",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "morning"
+            },
+            {
+              "day": "2026-10-24",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-25",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-26",
+              "part": "afternoon"
+            },
+            {
+              "day": "2026-10-27",
+              "part": "afternoon"
+            }
+          ],
+          "availabilityUnknown": false
+        },
+        "accessibility": {
+          "hasAccessibilityNeeds": false,
+          "washingtonGroupAnswers": {}
+        },
+        "groupParticipation": {
+          "selectedGroupId": "00ac6387-a4d7-402d-914d-030032650745",
+          "selectedGroupName": "Germania",
+          "enteredByGroupLeader": true,
+          "participatesWithGroup": true,
+          "hasPreviousSantegidioParticipation": true
+        },
+        "accompanyingChildren": {
+          "count": 0,
+          "children": [],
+          "enteredByGroupLeader": true,
+          "participatesWithChildren": false
+        }
+      }
+    }
+  ]
+}

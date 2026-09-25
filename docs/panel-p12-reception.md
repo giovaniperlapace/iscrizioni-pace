@@ -91,6 +91,10 @@ HTTP del computer in rete locale non è la procedura prevista per il telefono.
 
 ## Collaudo su telefono dopo pubblicazione staging
 
+Per la sessione pratica usare la [guida riutilizzabile al collaudo su telefono
+e QR](guida-collaudo-telefono-qr.md), con passaggi, esiti attesi e modello di verbale
+da conservare anche per le future prove di stampa.
+
 1. Applicare la sola nuova migration allo staging, verificarla, poi pubblicare
    il branch panel su Preview. Queste operazioni sono state autorizzate dalla
    richiesta successiva del 2026-09-22 «Puoi già preparare la preview»; la

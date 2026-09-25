@@ -4,6 +4,17 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Guida riutilizzabile al collaudo su telefono — 2026-09-24
+
+- Procedura pratica in `docs/guida-collaudo-telefono-qr.md`: preparazione
+  accesso/campioni staging, prove T01–T18 con azioni ed esiti attesi, scheda
+  verbale e casi futuri ST01–ST08 per stampa P14/P15. Conservare i verbali in
+  `docs/collaudi/AAAA-MM-GG-descrizione.md` dalla prima sessione effettiva.
+- La guida non attesta prove hardware eseguite. La scansione del singolo
+  scrive subito; per verificare senza scrivere usare il percorso Correzioni
+  e chiudere senza modifiche. Preparare dati fittizi e registrare stati iniziali
+  e finali; preservare la storia dei check-in, inclusa quella dei minori.
+
 ## P12 — scanner e ingresso evento — 2026-09-22
 
 - Implementata localmente sul branch panel. Su richiesta dell’utente, revisione
