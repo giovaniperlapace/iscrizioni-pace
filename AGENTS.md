@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Importazione servizi da Excel — 2026-09-25
+
+- Nuovo comando Manager/Admin accanto a Importa iscritti da Excel, modello
+  distinto nome/cognome/servizio, modale e report Excel con esiti per riga.
+  Mai creare partecipanti, account o servizi. Solo iscrizioni non eliminate
+  dell’evento corrente; omonimi esclusi, nessun matching approssimato.
+- Un solo servizio assegnato per persona: aggiornamento esplicito del precedente,
+  note conservate. Righe identiche applicate una volta; servizi contrastanti
+  per lo stesso nominativo esclusi tutti. Viewer escluso anche da URL/API.
+- Migration `20260925210000_service_excel_import.sql` applicata e registrata
+  atomicamente in produzione prima del push autorizzato del 25 settembre:
+  RPC service_role con autorizzazione DB, confronto completo in un passaggio,
+  lock contro omonimi/cancellazioni concorrenti, audit e ricevuta retry atomici.
+  Impronte delle 37 tabelle pubbliche preesistenti, policy, grant/RLS di 38
+  relazioni e 51 routine invariati; ricevute vuote. Nessuna email di collaudo.
+- Verificati 559 test, lint, TypeScript e build con npm ci in copia pulita,
+  PostgreSQL temporaneo/concorrenza
+  e browser desktop/mobile dal file al report reale. Dettagli e procedure in
+  `docs/service-excel-import.md`. Commit/push su main e normale rilascio Vercel
+  autorizzati dall’utente. Correzione locale separata degli errori presenze esclusa.
+
 ## Figli sempre visibili, disabilità ed Excel — 2026-09-25
 
 - Partecipanti Manager/Admin/Viewer: figli sempre visibili sotto il nome,

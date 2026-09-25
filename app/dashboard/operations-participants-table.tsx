@@ -51,6 +51,9 @@ import type {
 const ImportParticipantsDialog = dynamic(
   () => import("@/app/dashboard/participants/data-quality/import-dialog"),
 );
+const ImportServicesDialog = dynamic(
+  () => import("@/app/dashboard/participants/service-import/import-dialog"),
+);
 
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -495,7 +498,7 @@ export function OperationsParticipantsTable({
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <h2 className="text-lg font-semibold">{view === "without-group" ? "Senza gruppo" : view === "deleted" ? "Iscrizioni eliminate" : "Gestione iscritti"}</h2>
             {canManage && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex min-w-0 max-w-full flex-wrap gap-2">
                 <Link id="manual-participant-trigger" className={buttonClass}
                   href={manualRegistrationPath(`/dashboard/${dashboard}?${searchParams}`, dashboard, true)}
                   prefetch={false} scroll={false}>
@@ -503,6 +506,9 @@ export function OperationsParticipantsTable({
                 </Link>
                 <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null, manual: null, manualSaved: null, manualError: null })} scroll={false}>
                   Importa iscritti da Excel
+                </Link>
+                <Link id="import-services-trigger" className={buttonClass} href={paramsFor({ import: "services", edit: null, manual: null, manualSaved: null, manualError: null })} scroll={false}>
+                  Importa servizi da Excel
                 </Link>
               </div>
             )}
@@ -554,6 +560,9 @@ export function OperationsParticipantsTable({
       </div>
       {canManage && searchParams.get("import") === "excel" && (
         <ImportParticipantsDialog closePath={paramsFor({ import: null })} />
+      )}
+      {canManage && searchParams.get("import") === "services" && (
+        <ImportServicesDialog closePath={paramsFor({ import: null })} />
       )}
       {dashboard === "admin" && view !== "without-group" && (
         <div className="my-4">
@@ -731,7 +740,7 @@ export function OperationsParticipantsTable({
           <Download size={18} aria-hidden />
           Esporta iscritti
         </PendingDownload>
-        <p id="participants-export-description" className="min-w-0 flex-1 text-sm text-[var(--peace-muted)]">
+        <p id="participants-export-description" className="min-w-0 flex-1 basis-60 text-sm text-[var(--peace-muted)]">
           Scarica un file Excel con gli iscritti filtrati, le colonne selezionate e sempre il numero e i nomi dei minori accompagnati.
         </p>
       </div>

@@ -21,7 +21,7 @@ import {
 
 // Inspect and fully drain each entry with an actual decompression budget before
 // ExcelJS materializes the workbook. Never extract uploaded archives to disk.
-async function inspectArchive(buffer: Buffer): Promise<void> {
+export async function inspectArchive(buffer: Buffer): Promise<void> {
   if (buffer.length > MAX_FILE_BYTES) throw new Error("Il file supera 2 MiB.");
   await new Promise<void>((resolve, reject) =>
     yauzl.fromBuffer(
