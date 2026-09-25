@@ -33,14 +33,16 @@ const run = (selector, success, label) => {
   const before = button.getBoundingClientRect().width;
   const background = getComputedStyle(button).backgroundColor;
   button.click();
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 250));
+  const earlyProgress = Number(getComputedStyle(overlay).transform.split(',')[0].replace('matrix(', ''));
+  await new Promise(r => setTimeout(r, 350));
   const progress = Number(getComputedStyle(overlay).transform.split(',')[0].replace('matrix(', ''));
-  const during = overlay.dataset.state === 'pending' && progress > 0 && progress < .9
+  const during = earlyProgress > .25 && overlay.dataset.state === 'pending' && progress > earlyProgress && progress < .9
     && getComputedStyle(overlay).opacity === '0.25'
     && getComputedStyle(button, '::after').animationName !== 'work-spin'
     && getComputedStyle(button).backgroundColor === background
     && Math.abs(button.getBoundingClientRect().width - before) < 1;
-  const diagnostic = { progress, state: overlay.dataset.state, opacity: getComputedStyle(overlay).opacity,
+  const diagnostic = { earlyProgress, progress, state: overlay.dataset.state, opacity: getComputedStyle(overlay).opacity,
     spinner: getComputedStyle(button, '::after').animationName, background,
     duringBackground: getComputedStyle(button).backgroundColor, before, duringWidth: button.getBoundingClientRect().width };
   await new Promise(r => setTimeout(r, 4500));
@@ -91,7 +93,7 @@ try {
     const retried = button.disabled && overlay.dataset.state === 'pending';
     document.querySelector('[data-reject]').click();
     await new Promise(r => setTimeout(r, 100));
-    return held && samples.every((value, i) => value < .9 && (!i || value >= samples[i - 1]))
+    return held && samples.every((value, i) => value <= .9 && (!i || value >= samples[i - 1]))
       && complete && retried && overlay.dataset.state === 'idle' && !button.disabled;
   })()`, "long waits never reach 100 percent or restart; rapid retry and failure cancel old timers");
 

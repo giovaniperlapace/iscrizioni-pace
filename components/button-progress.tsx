@@ -36,11 +36,12 @@ export function ButtonProgress({ pending, failed = false }: { pending: boolean; 
       overlay.dataset.state = "pending";
       const update = () => {
         const elapsed = performance.now() - started.current!;
-        const progress = Math.min(0.9, 0.08 + 0.82 * (1 - Math.exp(-elapsed / 3000)));
+        // Move visibly during sub-second requests, then slow down below 100%.
+        const progress = Math.min(0.9, 0.18 + 0.72 * (1 - Math.exp(-elapsed / 500)));
         overlay.style.transform = `scaleX(${progress})`;
       };
       update();
-      const timer = window.setInterval(update, 120);
+      const timer = window.setInterval(update, 50);
       return () => window.clearInterval(timer);
     }
 
@@ -52,7 +53,7 @@ export function ButtonProgress({ pending, failed = false }: { pending: boolean; 
       }
       overlay.dataset.state = "complete";
       overlay.style.transform = "scaleX(1)";
-      const timer = window.setTimeout(() => { overlay.dataset.state = "idle"; }, 380);
+      const timer = window.setTimeout(() => { overlay.dataset.state = "idle"; }, 130);
       return () => window.clearTimeout(timer);
     }
     overlay.dataset.state = "idle";

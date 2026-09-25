@@ -358,7 +358,7 @@ a[aria-busy="true"]:not([data-button-progress="true"]),
   opacity: 0;
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 350ms linear;
+  transition: transform 100ms linear;
   pointer-events: none;
 }
 .button-progress-overlay:is([data-state="pending"], [data-state="complete"]) {

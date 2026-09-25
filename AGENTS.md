@@ -2,6 +2,9 @@
 
 ## Prova caricamento pulsanti solo Manager — 2026-09-25
 
+- Dopo la prova dell'utente, avanzamento iniziale accelerato: circa metà del
+  pulsante in 0,4 secondi; transizione ridotta da 350 a 100 ms e conclusione
+  visiva da 380 a 130 ms. Cap al 90%, pending reale e perimetro Manager conservati.
 - `app/dashboard/manager/layout.tsx` abilita `ButtonProgressProvider`: solo
   questa area usa l'overlay al 25%, anche nei componenti condivisi e nei portal.
   Dashboard Admin, Capogruppo, personale e pubblico mantengono la rotella.
