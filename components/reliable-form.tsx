@@ -41,7 +41,7 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
     const cleanups: Array<() => void> = [];
     const invalidFields: Control[] = [];
     issues.forEach((issue, index) => {
-      const aliases: Record<string, string[]> = { groupId: ["groupId", "groupIds", "groupPlacement"], label: ["label", "eventServiceLabel", "operationalTagLabel"] };
+      const aliases: Record<string, string[]> = { availabilitySlots: ["availabilitySlots", "availabilityUnknown"], groupId: ["groupId", "groupIds", "groupPlacement"], label: ["label", "eventServiceLabel", "operationalTagLabel"] };
       const names = issue.field ? aliases[issue.field] ?? [issue.field] : [];
       const matching = fields.filter((field) => names.includes(field.name));
       const field = matching[0];
@@ -52,7 +52,9 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
       message.textContent = copy[issue.code as keyof typeof copy] ?? copy.invalid;
       message.dataset.formError = "true";
       const label = field.closest("label");
-      if (label) label.append(message); else field.after(message);
+      const errorGroup = field.closest("[data-form-error-group]");
+      if (errorGroup) errorGroup.append(message);
+      else if (label) label.append(message); else field.after(message);
       matching.forEach((control) => {
         const describedBy = control.getAttribute("aria-describedby");
         const invalid = control.getAttribute("aria-invalid");

@@ -116,5 +116,6 @@ dei dati delle 37 tabelle pubbliche preesistenti, tutte le policy, i grant/RLS d
 Backup dello schema riservato sul server in
 `/root/pace-release-20260925-service-import/schema-before.sql`.
 Il codice segue il normale rilascio Git/Vercel autorizzato; nessun aggiornamento
-delle persone esistenti è necessario. La correzione locale separata degli errori
-di presenza è esclusa da questo rilascio.
+delle persone esistenti è necessario. L’utente ha poi autorizzato anche la
+correzione della posizione degli errori di presenza, inclusa nel rilascio con
+un commit distinto e verificata insieme all’import servizi.

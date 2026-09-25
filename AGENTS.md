@@ -19,7 +19,8 @@
   PostgreSQL temporaneo/concorrenza
   e browser desktop/mobile dal file al report reale. Dettagli e procedure in
   `docs/service-excel-import.md`. Commit/push su main e normale rilascio Vercel
-  autorizzati dall’utente. Correzione locale separata degli errori presenze esclusa.
+  autorizzati dall’utente. Successivamente autorizzata anche la correzione degli
+  errori presenze, inclusa in un commit distinto e verificata insieme.
 
 ## Figli sempre visibili, disabilità ed Excel — 2026-09-25
 
@@ -4092,3 +4093,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   nuova animazione dell’export capogruppo. Overlay e correzione conteggi del
   commit a25fba9 conservati. Commit/push su main autorizzati dall’utente;
   correzione separata degli errori presenze esclusa dal rilascio.
+
+## Errore presenze fuori dalla griglia — 2026-09-25
+
+- Il fieldset condiviso delle presenze assistite identifica un contenitore per
+  gli errori: ReliableForm appende il messaggio sotto griglia e opzione di
+  conferma successiva, preservando stile comune e dimensioni delle caselle.
+  aria-describedby collega il messaggio sia alle fasce sia all’opzione futura.
+- Nessuna modifica a validazione, dati o invii. Fixture sintetica
+  `tests/browser/attendance-error-placement.mjs` verifica posizione, dimensioni,
+  accessibilità e accettazione di entrambe le scelte per capogruppo/manager,
+  nelle sette lingue e su mobile. Commit/push su main autorizzati dall’utente
+  il 25 settembre insieme all’import servizi. Verificati insieme 559 test,
+  lint, TypeScript e build con npm ci in copia pulita.

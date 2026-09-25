@@ -35,7 +35,7 @@ export function ManualAttendanceFields({
   const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${eventDays.length}, minmax(5.5rem, 1fr))`;
 
   return (
-    <fieldset className="grid min-w-0 gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
+    <fieldset data-form-error-group className="grid min-w-0 gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
       <legend className="px-1 text-sm font-semibold text-[var(--peace-ink)]">
         <span>{copy.title}<RequiredIndicator /></span>
       </legend>
