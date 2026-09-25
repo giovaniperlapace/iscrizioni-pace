@@ -14,8 +14,9 @@ Accoglienza e gli altri incarichi autorizzati si sommano.
   selezione corrente. Chiusura conserva i parametri e lo scroll sottostante;
   Esc annulla prima la conferma o il modulo aperto. Focus, blocco dello sfondo,
   invii duplicati e avanzamento condiviso conservati.
-- La riga rimossa resta come riscontro locale, nella sua posizione. Alla
-  riapertura compare l’elenco corrente. Gli errori dell’operazione non sono
+- Dopo una rimozione riuscita, la riga scompare subito senza segnaposto
+  “Ruolo rimosso”; dopo l’ultimo incarico appare lo stato vuoto nella stessa
+  modale. Gli errori dell’operazione non sono
   presentati come errori di campi né attribuiti automaticamente alla connessione.
 - Rimozione dei propri ruoli disabilitata e respinta sul server. Il conflitto
   Manager/Viewer richiede prima la rimozione esplicita del ruolo attuale: non

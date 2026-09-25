@@ -19,13 +19,15 @@ try{
  click('Annulla');
  ab('click','dialog li:nth-child(3) button');ab('snapshot','-i');click('Conferma rimozione');
  check('document.querySelector("dialog[open]") && document.querySelector("h3").textContent.includes("2")','removal keeps modal and other assignments');
+ check('document.querySelectorAll("dialog li").length === 2 && !document.querySelector("dialog").textContent.includes("Ruolo rimosso")','removed row disappears without placeholder');
  click('Aggiungi ruolo');ab('select','[name=role]','manager_viewer');click('Assegna ruolo');
  check('document.querySelector("h3").textContent.includes("3")','viewer can be assigned after explicit manager removal');
  open('&fail=1');ab('click','dialog li:first-child button:last-child');ab('snapshot','-i');click('Conferma rimozione');
  check('document.querySelector("[role=alert]").textContent.includes("non è stato rimosso") && document.querySelector("h3").textContent.includes("2")','failed removal keeps role and shows useful error');
  click('Conferma rimozione');check('document.querySelector("h3").textContent.includes("1")','retry succeeds');
- ab('click','dialog li:nth-child(2) button');ab('snapshot','-i');click('Conferma rimozione');
+ ab('click','dialog li:first-child button');ab('snapshot','-i');click('Conferma rimozione');
  check('document.querySelector("dialog[open]") && document.querySelector("h3").textContent.includes("0")','last removal leaves person open');
+ check('document.querySelectorAll("dialog li").length === 0 && document.querySelector("dialog").textContent.includes("Nessun ruolo assegnato")','last row disappears and empty state is visible');
  open('&admin=1');click('Modifica incarico');
  check('document.querySelector("[name=groupId]").value === "group" && document.querySelector("[name=leaderKind]:checked").value === "primary"','leader edit retains actual group and responsibility');
  click('Annulla');ab('set','viewport','390','844');ab('snapshot','-i');

@@ -36,7 +36,6 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<RoleAssignment | null>(null);
   const [feedback, setFeedback] = useState<{ key: string; text: string; error: boolean } | null>(null);
-  const [initialAssignments] = useState(person.assignments);
   const [removed, setRemoved] = useState<Record<string, RoleAssignment>>({});
   const [added, setAdded] = useState<Record<string, RoleAssignment>>({});
   const own = person.userId === actorUserId;
@@ -55,8 +54,6 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
   const active = new Map(person.assignments.map(a => [keyOf(a), a]));
   Object.entries(added).forEach(([key, a]) => active.set(key, a));
   Object.keys(removed).forEach(key => active.delete(key));
-  const visible = new Map([...initialAssignments.map(a => [keyOf(a), a] as const), ...active, ...Object.entries(removed)]);
-  for (const key of visible.keys()) if (!active.has(key) && !removed[key]) visible.delete(key);
 
   async function run(data: FormData, assignment?: RoleAssignment) {
     if (busy.current) return;
@@ -75,6 +72,7 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
         setRemoved(prev => ({ ...prev, [key]: assignment }));
         setAdded(prev => { const next = { ...prev }; delete next[key]; return next; });
         setConfirmation(null);
+        if (editing && keyOf(editing) === key) { setEditing(null); setAdding(false); }
         addButton.current?.focus({ preventScroll: true });
       } else {
         const role = String(data.get("role"));
@@ -90,7 +88,7 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
         setRemoved(prev => { const next = { ...prev }; delete next[addedKey]; return next; });
         setAdding(false);
       }
-      setFeedback({ key: "success", text: assignment ? "Ruolo rimosso." : "Ruolo assegnato. Gli altri incarichi sono stati conservati.", error: false });
+      setFeedback(assignment ? null : { key: "success", text: "Ruolo assegnato. Gli altri incarichi sono stati conservati.", error: false });
       router.refresh();
     } catch (error) {
       unstable_rethrow(error);
@@ -108,14 +106,14 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
       <div className="my-5"><p className="font-semibold">{person.fullName || person.email}</p><p className="break-words text-sm text-[var(--peace-muted)]">{person.email}</p></div>
       <h3 className="font-semibold">Ruoli assegnati <span className="ml-2 text-sm text-[var(--peace-muted)]">{active.size}</span></h3>
       {own ? <p className="mt-2 text-sm text-[var(--peace-muted)]">Non puoi rimuovere i tuoi ruoli.</p> : null}
-      {visible.size === 0 ? <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessun ruolo assegnato. Puoi aggiungerne uno qui sotto.</p> : null}
-      <ul className="mt-3 grid gap-3">{[...visible].map(([key, a]) => <li key={key} className="rounded-md border border-[var(--peace-border)] p-3">
+      {active.size === 0 ? <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessun ruolo assegnato. Puoi aggiungerne uno qui sotto.</p> : null}
+      <ul className="mt-3 grid gap-3">{[...active].map(([key, a]) => <li key={key} className="rounded-md border border-[var(--peace-border)] p-3">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="min-w-0 w-full sm:w-auto sm:flex-1"><p className="text-sm font-semibold">{labels[a.role] ?? a.role}{a.role === "capogruppo" ? <span className="ml-2 font-normal text-[var(--peace-muted)]">{a.isPrimaryGroupLeader ? "Principale" : "Secondario"}</span> : null}</p>
             <p className="mt-1 break-words text-sm text-[var(--peace-muted)]">{[a.eventTitle, a.groupName].filter(Boolean).join(" · ") || "Tutti gli eventi"}</p></div>
-          {removed[key] ? <span role="status" className="text-sm text-[var(--peace-muted)]">Ruolo rimosso</span> : <div className="flex flex-wrap gap-2">{a.role === "capogruppo" ? <button type="button" disabled={!!pending} className={button} onClick={() => { setEditing(a); setAdding(true); setFeedback(null); }}>Modifica incarico</button> : null}<button type="button" className={`${button} text-[#8a3323]`} disabled={!!pending || own} onClick={() => { setConfirmation(key); setFeedback(null); }}>Rimuovi</button></div>}
+          {<div className="flex flex-wrap gap-2">{a.role === "capogruppo" ? <button type="button" disabled={!!pending} className={button} onClick={() => { setEditing(a); setAdding(true); setFeedback(null); }}>Modifica incarico</button> : null}<button type="button" className={`${button} text-[#8a3323]`} disabled={!!pending || own} onClick={() => { setConfirmation(key); setFeedback(null); }}>Rimuovi</button></div>}
         </div>
-        {confirmation === key && !removed[key] ? <form className="mt-3 border-t border-[var(--peace-border)] pt-3" aria-busy={pending === key} onSubmit={e => { e.preventDefault(); void run(new FormData(e.currentTarget), a); }}>
+        {confirmation === key ? <form className="mt-3 border-t border-[var(--peace-border)] pt-3" aria-busy={pending === key} onSubmit={e => { e.preventDefault(); void run(new FormData(e.currentTarget), a); }}>
           <input type="hidden" name="userId" value={person.userId} /><input type="hidden" name="role" value={a.role} /><input type="hidden" name="eventId" value={a.eventId ?? ""} /><input type="hidden" name="groupId" value={a.groupId ?? ""} /><input type="hidden" name="confirmRemoval" value="on" />
           <p className="text-sm">Rimuovere questo incarico? Gli altri ruoli restano invariati.</p>{notice(key)}
           <div className="mt-3 flex flex-wrap justify-end gap-2"><button autoFocus type="button" className={button} disabled={!!pending} onClick={() => setConfirmation(null)}>Mantieni ruolo</button><ProgressButton type="submit" aria-busy={pending === key} progressError={feedback?.key === key && feedback.error} disabled={!!pending} className={`${button} border-[#8a3323] text-[#8a3323]`}>{pending === key ? "Rimozione…" : "Conferma rimozione"}</ProgressButton></div>
