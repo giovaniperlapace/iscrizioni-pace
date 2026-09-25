@@ -17,6 +17,11 @@ export function buildChildrenOverview(
       age: calculateAge(child.birth_date, eventStartsOn),
       parent,
     })),
+  ).sort((a, b) =>
+    (a.parent.name ?? "").localeCompare(b.parent.name ?? "", "it") ||
+    a.parent.registrationId.localeCompare(b.parent.registrationId) ||
+    a.name.localeCompare(b.name, "it") ||
+    a.id.localeCompare(b.id),
   );
   const independent = active.flatMap((participant) => {
     const age = calculateAge(participant.birthDate, eventStartsOn);

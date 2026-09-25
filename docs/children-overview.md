@@ -7,6 +7,8 @@ restano invariati, compresa la consultazione del Manager Viewer.
 - Una riga per ogni figlio, anche sopra i 14 anni; il genitore effettivamente
   collegato compare nella colonna Genitore, dopo Data di nascita ed Età.
   Il nome è un link, attivabile anche da tastiera, alla scheda operativa esistente.
+  Righe ordinate per genitore e poi per nome del figlio: fratelli consecutivi,
+  anche con genitori omonimi distinti tramite ID di iscrizione.
 - Una seconda tabella contiene esclusivamente le iscrizioni principali con
   età nota inferiore a 15 anni all'inizio dell'evento. Non richiede un account
   Auth: comprende inserimenti assistiti e iscrizioni effettuate da un genitore.

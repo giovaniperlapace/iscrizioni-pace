@@ -102,3 +102,25 @@ test("legacy parents with missing birth, city and email retain their registratio
   assert.ok(result.children.every(item => item.parent === parent));
   assert.deepEqual(parent, before);
 });
+
+
+test("siblings stay adjacent by parent identity, including parents with identical names", () => {
+  const parent = (id: string, name: string, names: string[]) => row(id, "1980-01-01", {
+    name,
+    children: names.map((first_name, i) => ({...child(String(i), "2020-01-01"), first_name})),
+  });
+  const parents = [
+    parent("z", "Zoe Rossi", ["Beatrice", "Andrea"]),
+    parent("b", "Anna Rossi", ["Zeno", "Ada"]),
+    parent("a", "Anna Rossi", ["Luca", "Bruno"]),
+  ];
+  const before = structuredClone(parents);
+  const result = buildChildrenOverview(parents, "event", "2026-10-25");
+  assert.deepEqual(result.children.map(item => [item.parent.registrationId, item.name]), [
+    ["a", "Bruno Esempio"], ["a", "Luca Esempio"],
+    ["b", "Ada Esempio"], ["b", "Zeno Esempio"],
+    ["z", "Andrea Esempio"], ["z", "Beatrice Esempio"],
+  ]);
+  assert.deepEqual(buildChildrenOverview([...parents].reverse(), "event", "2026-10-25").children.map(item => item.id), result.children.map(item => item.id));
+  assert.deepEqual(parents, before);
+});

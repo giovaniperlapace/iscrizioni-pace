@@ -45,9 +45,9 @@ export function OperationsChildrenSection({
     `${name} ${person.name} ${person.email ?? ""} ${person.currentGroupName ?? ""}`
       .toLocaleLowerCase("it")
       .includes(needle);
-  const children = overview.children
-    .filter((child) => matches(child.parent, child.name))
-    .sort((a, b) => a.name.localeCompare(b.name, "it"));
+  const children = overview.children.filter((child) =>
+    matches(child.parent, child.name),
+  );
   const independent = overview.independent
     .filter(({ participant }) => matches(participant, participant.name))
     .sort((a, b) => a.participant.name.localeCompare(b.participant.name, "it"));
