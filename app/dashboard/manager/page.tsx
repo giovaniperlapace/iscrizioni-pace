@@ -1,3 +1,4 @@
+import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
 import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
 import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -1146,7 +1147,9 @@ async function getManagerOperationsSnapshot(
     scope.eventIds
   );
 
-  const attendanceByRegistration = section === "iscritti" ? await loadAttendanceSummaries(supabase, registrationIds) : new Map();
+  const [attendanceByRegistration, emailDelegations] = section === "iscritti"
+      ? await Promise.all([loadAttendanceSummaries(supabase, registrationIds), loadEmailDelegations(supabase, registrationIds)])
+      : [new Map(), new Set<string>()];
     const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
       const geography = participantGeography(participant);
@@ -1162,6 +1165,7 @@ async function getManagerOperationsSnapshot(
         deletedBy: registration.deleted_by,
         deletionReason: registration.deletion_reason,
         attendance: attendanceByRegistration.get(registration.id) ?? [],
+        emailDelegated: emailDelegations.has(registration.id),
           registrationId: registration.id,
         eventId: registration.event_id,
         eventTitle: event?.title ?? "Evento",

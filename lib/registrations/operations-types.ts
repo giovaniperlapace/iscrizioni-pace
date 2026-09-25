@@ -45,6 +45,7 @@ export type OperationsParticipantRow = {
   city: string | null;
   place: string;
   email: string | null;
+  emailDelegated?: boolean;
   phone: string | null;
   registrationStatus: string | null;
   submittedAt: string | null;

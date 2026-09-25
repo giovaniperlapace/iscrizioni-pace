@@ -1,3 +1,4 @@
+import { loadEmailDelegations } from "../lib/registrations/email-delegation.server.ts";
 import { loadAttendanceSummaries } from "../lib/registrations/attendance-summary.server.ts";
 import { loadGroupCityLinks } from "../lib/groups/geography.server.ts";
 import assert from "node:assert/strict";
@@ -44,6 +45,7 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/supabase/all-rows": { loadAllRows, loadRowsForIds },
         "@/lib/groups/geography.server": { loadGroupCityLinks },
         "@/lib/registrations/attendance-summary.server": { loadAttendanceSummaries },
+        "@/lib/registrations/email-delegation.server": { loadEmailDelegations: async (...args: Parameters<typeof loadEmailDelegations>) => { reads.push("email-delegations"); return loadEmailDelegations(...args); } },
         "@/lib/registrations/operations-dashboard": operations,
         "@/lib/registrations/event-statistics": statistics,
         "@/lib/registrations/event-statistics.server": { loadEventStatisticsSnapshot: async () => { reads.push("statistics"); return {}; } },
@@ -56,6 +58,7 @@ test("dashboard sections execute only the queries needed by their visible conten
       const page = compile(`app/dashboard/${dashboard}/page.tsx`, modules, true).default;
       await page({ searchParams: Promise.resolve({ section }) } as never);
       const context = `${dashboard}/${section}`;
+      assert.equal(reads.includes("email-delegations"), section === "iscritti", context);
       assert.equal(reads.includes("registrations"), section === "iscritti" || section === "gruppi", context);
       assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);
       assert.equal(reads.includes("event_user_roles"), section === "gruppi" || section === "ruoli", context);

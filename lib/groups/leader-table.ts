@@ -17,6 +17,7 @@ export type LeaderTableRow = Pick<
   | "participantName"
   | "participantCode"
   | "participantPlace"
+  | "emailDelegated"
   | "participantEmail"
   | "participantPhone"
   | "participantCountry"
@@ -41,6 +42,7 @@ export function toLeaderTableRow(row: AssignmentView): LeaderTableRow {
     participantCode: row.participantCode,
     participantPlace: row.participantPlace,
     participantEmail: row.participantEmail,
+    emailDelegated: row.emailDelegated,
     participantPhone: row.participantPhone,
     participantCountry: row.participantCountry,
     participantCity: row.participantCity,

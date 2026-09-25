@@ -4007,3 +4007,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Indicatore email delegata — 2026-09-25
+
+- Colonna Email Capogruppo e Manager/Admin/Viewer: badge nelle sette lingue
+  soltanto per la scelta documentata nello snapshot manuale. Email personale
+  attuale prioritaria; email assente senza scelta resta «—».
+- Loader paginato limitato agli ID già autorizzati, sole proiezioni origine/flag;
+  errori bloccanti. Nessuna modifica dati, schema, permessi, invio o export.
+- Test e fixture browser in `tests/email-delegation-indicator.test.mts` e
+  `tests/browser/email-delegation.mjs`; dettagli in `docs/email-delegation-indicator.md`.
+  Verificati 541 test, lint, TypeScript e build production con npm ci in copia
+  pulita. Browser: tre tabelle, sette lingue e mobile; provata insieme alla
+  nuova animazione dell’export capogruppo. Overlay e correzione conteggi del
+  commit a25fba9 conservati. Commit/push su main autorizzati dall’utente;
+  correzione separata degli errori presenze esclusa dal rilascio.

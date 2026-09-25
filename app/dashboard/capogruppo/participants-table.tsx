@@ -1,5 +1,7 @@
 "use client";
 
+import { ParticipantEmailCell } from "@/components/participant-email-cell";
+
 import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { AccompanyingChildrenList } from "../accompanying-children-list";
 
@@ -259,6 +261,8 @@ export function LeaderParticipantsTable({
                           </p>
                           <AccompanyingChildrenList records={row.children} participantName={row.participantName} startsOn={startsOn} locale={locale} />
                         </div>
+                      ) : column === "email" ? (
+                        <ParticipantEmailCell email={row.participantEmail} delegated={row.emailDelegated} locale={locale} />
                       ) : column === "tags" && row.tags.length ? (
                         <div className="flex flex-wrap gap-1">
                           {row.tags.map((tag) => (

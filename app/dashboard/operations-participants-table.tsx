@@ -1,5 +1,7 @@
 "use client";
 
+import { ParticipantEmailCell } from "@/components/participant-email-cell";
+
 import { attendanceSummary, attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { MANUAL_REGISTRATION_COPY } from "@/lib/registrations/manual-registration-copy";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
@@ -877,6 +879,8 @@ export function OperationsParticipantsTable({
                         column,
                         column === "tags" || quickEditColumns[column],
                       )
+                    ) : column === "email" ? (
+                      <ParticipantEmailCell email={row.email} delegated={row.emailDelegated} locale={locale} />
                     ) : column === "submittedAt" ? (
                       formatDate(row.submittedAt)
                     ) : (

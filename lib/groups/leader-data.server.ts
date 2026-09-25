@@ -1,3 +1,4 @@
+import { loadEmailDelegations } from "../registrations/email-delegation.server.ts";
 import { loadAttendanceSummaries } from "../registrations/attendance-summary.server.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
@@ -86,6 +87,9 @@ export async function loadLeaderAssignmentRows(
       .range(from, to),
   );
   const rows = data as unknown as AssignmentRow[];
-  const attendance = await loadAttendanceSummaries(db, rows.map(row => row.registration_id));
-  return rows.map(row => ({ ...row, attendance: attendance.get(row.registration_id) ?? [] }));
+  const [attendance, emailDelegations] = await Promise.all([
+    loadAttendanceSummaries(db, rows.map(row => row.registration_id)),
+    loadEmailDelegations(db, rows.map(row => row.registration_id)),
+  ]);
+  return rows.map(row => ({ ...row, emailDelegated: emailDelegations.has(row.registration_id), attendance: attendance.get(row.registration_id) ?? [] }));
 }
