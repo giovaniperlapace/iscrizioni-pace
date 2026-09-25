@@ -23,8 +23,10 @@ export function ButtonProgress({ pending, failed = false }: { pending: boolean; 
       overlay.dataset.state = "pending";
       const update = () => {
         const elapsed = performance.now() - started.current!;
-        // Move visibly during sub-second requests, then slow down below 100%.
-        const progress = Math.min(0.9, 0.18 + 0.72 * (1 - Math.exp(-elapsed / 500)));
+        // Keep the quick start, then approach 100% with a continuously slowing tail.
+        // Unlike an exponential capped at 90%, this still moves on long waits.
+        const progress = 1 - 0.72 * Math.exp(-elapsed / 500)
+          - 0.1 / Math.sqrt(1 + elapsed / 6_000);
         overlay.style.transform = `scaleX(${progress})`;
       };
       update();

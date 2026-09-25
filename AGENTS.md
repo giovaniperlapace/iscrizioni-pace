@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Avanzamento nelle attese lunghe — 2026-09-25
+
+- ButtonProgress conserva la partenza rapida e aggiunge una coda che continua
+  ad avanzare oltre il 90%, rallentando verso il 100% senza soglia fissa.
+  Indicativamente 94% a 10 secondi, 97% a un minuto, circa 99% a cinque minuti.
+  Riempimento completo solo al termine reale; errori, retry, opacità al 25%,
+  blocchi dei comandi e movimento ridotto conservati in tutto il sito.
+- La regressione browser richiede avanzamento strettamente crescente oltre
+  il vecchio limite e incrementi più piccoli nelle attese lunghe. 545 test,
+  lint, TypeScript e build con npm ci in copia pulita. Nessuna modifica ai
+  dati, alle query, alla colonna email o alla gestione dei ruoli.
+
+
 ## Gestione ruoli cumulativi e modale persistente — 2026-09-25
 
 - Modale nativa condivisa Admin/Manager: incarichi attuali, aggiunta separata,

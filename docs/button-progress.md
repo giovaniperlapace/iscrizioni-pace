@@ -6,11 +6,14 @@ tutto il sito. `ButtonProgress` è l’unica animazione; `ProgressButton`,
 componente. Non occorre un provider né un layout specifico del Manager.
 Le modali operative continuano a riutilizzare gli stessi componenti.
 
-L’overlay usa il colore corrente al 25%, parte rapidamente e rallenta fino al
-90%. Il completamento dipende dalla fine dell’operazione reale; un errore lo
+L’overlay usa il colore corrente al 25%, parte rapidamente e continua ad
+avanzare oltre il 90%, sempre più lentamente e senza una soglia di arresto.
+Il completamento dipende dalla fine dell’operazione reale; un errore lo
 nasconde senza raggiungere il 100%. È un avanzamento stimato, non una misura
 inviata dal server. Timings approvati conservati: aggiornamento ogni 50 ms,
-curva con costante 500 ms, transizione 100 ms e completamento visibile 130 ms.
+partenza esponenziale con costante 500 ms, coda inversa alla radice del tempo
+(scala 6 secondi), transizione 100 ms e completamento visibile 130 ms.
+Indicativamente: 94% a 10 secondi, 97% a un minuto e circa 99% a cinque minuti.
 `prefers-reduced-motion` conserva un indicatore statico.
 
 I controlli occupati mantengono i propri blocchi contro gli invii ripetuti e

@@ -104,9 +104,11 @@ try {
     const retried = button.disabled && overlay.dataset.state === 'pending';
     document.querySelector('[data-reject]').click();
     await new Promise(r => setTimeout(r, 100));
-    return held && samples.every((value, i) => value <= .9 && (!i || value >= samples[i - 1]))
+    return held && samples.at(-1) > .937
+      && samples.every((value, i) => value < 1 && (!i || value > samples[i - 1]))
+      && samples.at(-1) - samples.at(-2) < samples[4] - samples[3]
       && complete && retried && overlay.dataset.state === 'idle' && !button.disabled;
-  })()`, "long waits never reach 100 percent or restart; rapid retry and failure cancel old timers");
+  })()`, "long waits keep advancing past 90 percent with decreasing speed; only real completion reaches 100 percent, retry and failure cancel old timers");
 
   ab("click", "[data-open-portal]");
   run('[data-portal-save]', true, "portal uses the same shared feedback without a provider");
