@@ -879,12 +879,12 @@ export function EmailCampaignComposer({
         </div>
         <ProgressButton progressError={!!(error || templateSaveError)}
           type="button"
-          className="btn-primary"
+          className="btn-primary inline-flex items-center justify-center gap-2"
           aria-busy={busy}
           disabled={busy || selectedRecipientIds.length === 0}
           onClick={createPreview}
         >
-          <Eye aria-hidden="true" className="h-4 w-4" />
+          <Eye aria-hidden="true" className="h-4 w-4 shrink-0" />
           Controlla anteprima
         </ProgressButton>
       </section>
