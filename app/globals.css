@@ -199,7 +199,7 @@ input[type="radio"] {
     box-shadow: var(--focus-ring);
   }
 
-  .btn-primary:disabled {
+  .btn-primary:disabled:not([data-button-progress="true"][aria-busy="true"]) {
     cursor: not-allowed;
     background: #8aa6bd;
   }
@@ -227,7 +227,7 @@ input[type="radio"] {
     box-shadow: var(--focus-ring);
   }
 
-  .pending-submit-button[data-pending="true"] {
+  .pending-submit-button[data-pending="true"]:not([data-button-progress="true"]) {
     pointer-events: none;
     cursor: wait;
     border-color: #8aa6bd !important;
@@ -236,7 +236,7 @@ input[type="radio"] {
     opacity: 0.92;
   }
 
-  fieldset[aria-busy="true"] button {
+  fieldset[aria-busy="true"] button:not([data-button-progress="true"]) {
     cursor: wait;
     border-color: #8aa6bd !important;
     background: #8aa6bd !important;
@@ -303,8 +303,8 @@ input[type="radio"] {
 }
 .work-status.sr-only { position: absolute; }
 .work-spinner,
-button[aria-busy="true"]::after,
-button[data-pending="true"]::after {
+button[aria-busy="true"]:not([data-button-progress="true"])::after,
+button[data-pending="true"]:not([data-button-progress="true"])::after {
   content: "";
   display: inline-block;
   flex-shrink: 0;
@@ -316,12 +316,12 @@ button[data-pending="true"]::after {
   vertical-align: middle;
   animation: work-spin 0.8s linear infinite;
 }
-button[aria-busy="true"]::after,
-button[data-pending="true"]::after { margin-inline-start: 0.5rem; }
-button[aria-busy="true"],
-button[data-pending="true"],
-a[aria-busy="true"],
-.pending-link:has([data-link-pending="true"]) {
+button[aria-busy="true"]:not([data-button-progress="true"])::after,
+button[data-pending="true"]:not([data-button-progress="true"])::after { margin-inline-start: 0.5rem; }
+button[aria-busy="true"]:not([data-button-progress="true"]),
+button[data-pending="true"]:not([data-button-progress="true"]),
+a[aria-busy="true"]:not([data-button-progress="true"]),
+.pending-link:not([data-button-progress="true"]):has([data-link-pending="true"]) {
   cursor: wait;
   background-color: #dcecf7 !important;
   color: #123e60 !important;
@@ -340,8 +340,42 @@ a[aria-busy="true"],
   border: 0;
 }
 @keyframes work-spin { to { transform: rotate(360deg); } }
+
+/* Manager-only experiment: the overlay is behind the label, within the
+   existing button shape. Its currentColor gives white on solid buttons and
+   a tinted layer on outlined buttons, always at 25% opacity. */
+[data-button-progress="true"] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.button-progress-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 350ms linear;
+  pointer-events: none;
+}
+.button-progress-overlay:is([data-state="pending"], [data-state="complete"]) {
+  opacity: 0.25;
+}
+.button-progress-overlay:is([data-state="reset"], [data-state="idle"]) {
+  transition: none;
+}
+[data-button-progress="true"]:is([aria-busy="true"], [data-pending="true"], :has([data-link-pending="true"])) {
+  cursor: wait;
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .button-progress-overlay { transition: none; }
+  .button-progress-overlay[data-state="pending"] { transform: scaleX(0.9) !important; }
   .work-spinner,
-  button[aria-busy="true"]::after,
-  button[data-pending="true"]::after { animation: none; }
+  button[aria-busy="true"]:not([data-button-progress="true"])::after,
+  button[data-pending="true"]:not([data-button-progress="true"])::after { animation: none; }
 }

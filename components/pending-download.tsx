@@ -2,6 +2,7 @@
 
 import { useRef, useState, type AnchorHTMLAttributes } from "react";
 import { WorkStatus } from "@/components/work-status";
+import { ButtonProgress, useButtonProgressEnabled } from "@/components/button-progress";
 
 type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "download" | "onClick" | "href"> & {
   href: string;
@@ -13,8 +14,10 @@ export function PendingDownload({ href, filename, children, ...props }: Props) {
   const inFlight = useRef(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
+  const progressEnabled = useButtonProgressEnabled();
   return <>
     <a {...props} href={href} download={filename} aria-busy={pending} aria-disabled={pending}
+      data-button-progress={progressEnabled ? "true" : undefined}
       onClick={async (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
         event.preventDefault();
@@ -40,7 +43,8 @@ export function PendingDownload({ href, filename, children, ...props }: Props) {
           setPending(false);
         }
       }}>
-      {children}{pending && <WorkStatus className="link-work-status" />}
+      {children}{pending && <WorkStatus spinner={!progressEnabled} className={progressEnabled ? "sr-only" : "link-work-status"} />}
+      <ButtonProgress pending={pending} failed={error} />
     </a>
     {error && <span role="alert" className="text-sm text-[#8a3323]">Impossibile scaricare il file. Riprova.</span>}
   </>;

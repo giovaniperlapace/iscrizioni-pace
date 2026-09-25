@@ -8,7 +8,9 @@ import { normalizeLocale, type SupportedLocale } from "@/lib/i18n/config";
 import { parseManualRegistrationForm } from "@/lib/registrations/manual-registration";
 
 const PendingContext = createContext(false);
+const FailedContext = createContext(false);
 export function useReliableFormPending() { return useContext(PendingContext); }
+export function useReliableFormFailed() { return useContext(FailedContext); }
 
 type Props = Omit<FormHTMLAttributes<HTMLFormElement>, "action" | "onSubmit"> & {
   action: string | ((formData: FormData) => Promise<unknown>);
@@ -72,12 +74,14 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
 
   return (
     <PendingContext.Provider value={pending}>
+      <FailedContext.Provider value={issues.length > 0}>
       <form
         {...props}
         ref={ref}
         action={typeof action === "string" ? action : async (data) => { await action(data); }}
         noValidate
         aria-busy={pending}
+        data-form-error={issues.length > 0 ? "true" : undefined}
         onSubmit={(event) => {
           event.preventDefault();
           setResolvedLocale(normalizeLocale(document.documentElement.lang) ?? "en");
@@ -132,6 +136,7 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
         ) : null}
         {children}
       </form>
+      </FailedContext.Provider>
     </PendingContext.Provider>
   );
 }

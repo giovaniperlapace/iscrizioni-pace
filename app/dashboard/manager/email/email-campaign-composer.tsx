@@ -1,5 +1,7 @@
 "use client";
 
+import { ProgressButton } from "@/components/button-progress";
+
 import { SuccessMessage } from "@/components/success-message";
 
 import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
@@ -875,7 +877,7 @@ export function EmailCampaignComposer({
             L’anteprima congela messaggio, destinatari e allegati. Poi dovrai inviare una prova prima dell’invio definitivo.
           </p>
         </div>
-        <button
+        <ProgressButton progressError={!!(error || templateSaveError)}
           type="button"
           className="btn-primary"
           aria-busy={busy}
@@ -884,7 +886,7 @@ export function EmailCampaignComposer({
         >
           <Eye aria-hidden="true" className="h-4 w-4" />
           Controlla anteprima
-        </button>
+        </ProgressButton>
       </section>
 
       <section className="surface-card p-5 sm:p-6">
@@ -1052,7 +1054,7 @@ export function EmailCampaignComposer({
               >
                 Annulla
               </button>
-              <button
+              <ProgressButton progressError={!!(error || templateSaveError)}
                 type="submit"
                 className="btn-primary inline-flex items-center justify-center gap-2 px-4"
                 aria-busy={busy}
@@ -1064,7 +1066,7 @@ export function EmailCampaignComposer({
                   : selectedTemplate
                     ? "Salva nuovo modello"
                     : "Salva modello"}
-              </button>
+              </ProgressButton>
             </div>
           </form>
         </div>
@@ -1148,14 +1150,14 @@ export function EmailCampaignComposer({
                 </p>
               ) : null}
               {!testSent ? (
-                <button type="button" className="btn-secondary justify-self-start" disabled={busy} aria-busy={busy} onClick={sendTest}>
+                <ProgressButton progressError={!!(error || templateSaveError)} type="button" className="btn-secondary justify-self-start" disabled={busy} aria-busy={busy} onClick={sendTest}>
                   <Send aria-hidden="true" className="h-4 w-4" />
                   <span className="break-all text-left">
                     {busy
                       ? "Invio dell’email di prova in corso…"
                       : `1. Invia la prova a ${preview.testRecipientEmail}`}
                   </span>
-                </button>
+                </ProgressButton>
               ) : null}
               {testSent ? (
                 <div role="status" className="rounded-md border border-[#bde4ce] bg-[#edf9f2] p-4 text-sm text-[#16613d]">
@@ -1248,7 +1250,7 @@ export function EmailCampaignComposer({
                   >
                     Annulla
                   </button>
-                  <button
+                  <ProgressButton progressError={!!(error || templateSaveError)}
                     type="button"
                     className="btn-primary"
                     disabled={busy}
@@ -1256,7 +1258,7 @@ export function EmailCampaignComposer({
                     onClick={sendCampaign}
                   >
                     Conferma
-                  </button>
+                  </ProgressButton>
                 </div>
               </section>
             </div>

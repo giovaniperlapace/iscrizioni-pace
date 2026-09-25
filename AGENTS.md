@@ -1,5 +1,29 @@
 # AGENTS.md
 
+## Prova caricamento pulsanti solo Manager — 2026-09-25
+
+- `app/dashboard/manager/layout.tsx` abilita `ButtonProgressProvider`: solo
+  questa area usa l'overlay al 25%, anche nei componenti condivisi e nei portal.
+  Dashboard Admin, Capogruppo, personale e pubblico mantengono la rotella.
+- Avanzamento stimato a passaggio unico, rallentato fino al 90%; completamento
+  soltanto quando termina il pending reale di React/Next/download. Errori dei
+  moduli e delle azioni esplicite interrompono l'overlay senza riempirlo. Nessuna
+  percentuale dichiarata, attesa minima aggiunta o modifica ai blocchi invio.
+  Se una navigazione smonta il pulsante, l'animazione termina con esso.
+- `ProgressButton` conserva markup interno, colori e stato accessibile;
+  movimento ridotto rispettato, timer ripuliti su retry e smontaggio. Nessuna
+  modifica dati, permessi, query, migration o email di collaudo.
+- Fixture `tests/browser/manager-button-progress.mjs`: moduli, errori, download,
+  navigazione, attesa lunga, retry, portal, sette lingue, mobile, movimento
+  ridotto e uscita dal perimetro Manager. Eseguire prima dei test unitari:
+  le route sintetiche temporanee non fanno parte del catalogo dei link pubblici.
+- Commit/push su main e normale rilascio Vercel autorizzati dall'utente per
+  provare questa soluzione prima di decidere un'eventuale estensione al sito.
+- Verificati 537 test, lint, TypeScript e build production dopo npm ci in
+  copia pulita con i soli file di questa modifica; entrambe le fixture browser
+  (nuovo overlay e feedback originale) superate. Modifiche parallele sulle
+  email dei partecipanti escluse dal commit.
+
 ## Rilascio integrato: città obbligatoria e figli accompagnati — 2026-09-24
 
 - Vista Figli accompagnati per Manager/Admin/Viewer: una riga per figlio con

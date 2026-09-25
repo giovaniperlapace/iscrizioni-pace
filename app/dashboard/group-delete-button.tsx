@@ -1,5 +1,7 @@
 "use client";
 
+import { ProgressButton } from "@/components/button-progress";
+
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -74,7 +76,7 @@ export function GroupDeleteButton({ groupId, groupName, locale }: { groupId: str
       <div className="mt-5 flex flex-wrap justify-end gap-2">
         <button type="button" disabled={pending} onClick={close} className="min-h-11 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold disabled:opacity-50">{deleted ? copy.close : copy.cancel}</button>
         {error || blocked ? <button type="button" disabled={pending} onClick={() => void run()} className="min-h-11 rounded-md border px-4 text-sm font-semibold disabled:opacity-50">{copy.reload}</button> : null}
-        {preview && !blocked && !deleted ? <button type="button" disabled={!confirmed || pending} aria-busy={pending} onClick={() => void run(true)} className="min-h-11 rounded-md bg-red-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{copy.delete}</button> : null}
+        {preview && !blocked && !deleted ? <ProgressButton progressError={!!error} type="button" disabled={!confirmed || pending} aria-busy={pending} onClick={() => void run(true)} className="min-h-11 rounded-md bg-red-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{copy.delete}</ProgressButton> : null}
       </div>
     </dialog>, document.body) : null}
   </>;
