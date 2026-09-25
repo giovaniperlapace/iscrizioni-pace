@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Info, LoaderCircle, TriangleAlert, UserRoundX } from "lucide-react";
+import { ArrowLeft, Info, TriangleAlert, UserRoundX } from "lucide-react";
+import { ProgressButton } from "@/components/button-progress";
 import { cancelOwnRegistration } from "./cancellation-actions";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { SELF_CANCELLATION_COPY } from "@/lib/registrations/self-cancellation-copy";
@@ -61,9 +62,9 @@ export function CancelRegistrationButton({ registrationId, locale }: { registrat
       {error ? <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{copy[error]}</p> : null}
       <div className="mt-6 flex flex-col gap-3">
         <button type="button" autoFocus disabled={pending} onClick={close} className="btn-secondary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm disabled:opacity-50"><ArrowLeft size={18} aria-hidden="true" />{copy.keep}</button>
-        <button type="button" disabled={pending} aria-busy={pending} onClick={() => void cancel()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">
-          {pending ? <LoaderCircle size={18} className="animate-spin" aria-hidden="true" /> : <UserRoundX size={18} aria-hidden="true" />}{pending ? copy.pending : copy.confirm}
-        </button>
+        <ProgressButton progressError={!!error} type="button" disabled={pending} aria-busy={pending} onClick={() => void cancel()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">
+          <UserRoundX size={18} aria-hidden="true" />{pending ? copy.pending : copy.confirm}
+        </ProgressButton>
       </div>
     </dialog>, document.body) : null}
   </>;

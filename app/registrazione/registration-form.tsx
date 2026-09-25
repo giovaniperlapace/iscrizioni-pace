@@ -1,5 +1,6 @@
 "use client";
 
+import { ProgressButton } from "@/components/button-progress";
 import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { publicChildBirthDateBounds } from "@/lib/registrations/public-child-age";
 
@@ -1806,14 +1807,14 @@ export function RegistrationForm({
       </section>
 
       <div className="flex justify-end">
-        <button
+        <ProgressButton
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting}
-          className="min-h-12 rounded-md bg-[var(--peace-blue-800)] px-6 font-semibold text-white transition hover:bg-[var(--peace-blue-900)] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
+          className="min-h-12 rounded-md bg-[var(--peace-blue-800)] px-6 font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
           {isSubmitting ? copy.submitting : copy.submit}
-        </button>
+        </ProgressButton>
       </div>
     </form>
   );

@@ -121,7 +121,7 @@ export function AutoFilterForm({
       <div className="relative">
         <fieldset
           className={[
-            "m-0 min-w-0 border-0 p-0 transition disabled:cursor-wait",
+            "m-0 min-w-0 border-0 p-0 transition",
             isPending && blockWhilePending
               ? "pointer-events-none select-none blur-[1px]"
               : "",

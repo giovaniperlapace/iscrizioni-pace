@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Caricamento condiviso in tutto il sito — 2026-09-25
+
+- Esteso l’overlay approvato a tutti i ruoli e al pubblico/link di gruppo.
+  Un solo ButtonProgress, condiviso da pulsanti, invii, link, download e
+  selettore lingua; rimosso il provider/layout esclusivo del Manager.
+  Modali operative condivise, nessuna duplicazione per ruolo.
+- Conservati 25% di opacità e tempi rapidi approvati. Avanzamento stimato
+  fino al 90%, completamento solo a risposta reale; errori senza 100%.
+  Cursore CSS di attesa eliminato, blocchi invio/accessibilità conservati.
+- Corretto LinkStatus: anche il contenitore dello stato accessibile esce
+  dal flusso. Le statistiche non spostano più i numeri durante la navigazione;
+  nessuna modifica a fasce, conteggi o dati.
+- 537 test, lint, TypeScript e build con npm ci in copia pulita. Browser:
+  operazioni/portali/errori/attese lunghe/reinvii, sette lingue, mobile e
+  reduced motion; coordinate delle vere statistiche Manager/Admin stabili.
+  Modale personale verificata con azioni sintetiche. Nessuna scrittura reale
+  o email. Dettagli in docs/button-progress.md; modifiche parallele escluse.
+
+
 ## Prova caricamento pulsanti solo Manager — 2026-09-25
 
 - Dopo la prova dell'utente, avanzamento iniziale accelerato: circa metà del

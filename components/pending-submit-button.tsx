@@ -8,6 +8,7 @@ import { useFormStatus } from "react-dom";
 
 type PendingSubmitButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   pendingLabel?: ReactNode;
+  progressError?: boolean;
 };
 
 export function PendingSubmitButton({
@@ -15,6 +16,7 @@ export function PendingSubmitButton({
   className = "",
   disabled,
   pendingLabel,
+  progressError = false,
   type = "submit",
   ...props
 }: PendingSubmitButtonProps) {
@@ -29,7 +31,7 @@ export function PendingSubmitButton({
       type={type}
       disabled={disabled || pending}
       aria-busy={pending}
-      progressError={failed}
+      progressError={failed || progressError}
       data-pending={pending ? "true" : "false"}
       className={`pending-submit-button ${className}`}
     >

@@ -1,29 +1,16 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, type ComponentProps, type ReactNode } from "react";
-
-const ButtonProgressContext = createContext(false);
-
-// Opt-in at the Manager route boundary, including React portals. Other routes
-// keep their existing feedback even when they use the same controls.
-export function ButtonProgressProvider({ children }: { children: ReactNode }) {
-  return <ButtonProgressContext.Provider value={true}>{children}</ButtonProgressContext.Provider>;
-}
-
-export function useButtonProgressEnabled() {
-  return useContext(ButtonProgressContext);
-}
+import { useEffect, useRef, type ComponentProps } from "react";
 
 // Decorative estimated progress, not a measured percentage. Only the real
 // pending state can finish it; no timer releases controls or submits anything.
 export function ButtonProgress({ pending, failed = false }: { pending: boolean; failed?: boolean }) {
-  const enabled = useButtonProgressEnabled();
   const ref = useRef<HTMLSpanElement>(null);
   const started = useRef<number | null>(null);
 
   useEffect(() => {
     const overlay = ref.current;
-    if (!enabled || !overlay) return;
+    if (!overlay) return;
 
     if (pending) {
       if (started.current === null) {
@@ -57,9 +44,9 @@ export function ButtonProgress({ pending, failed = false }: { pending: boolean; 
       return () => window.clearTimeout(timer);
     }
     overlay.dataset.state = "idle";
-  }, [enabled, pending, failed]);
+  }, [pending, failed]);
 
-  return enabled ? <span ref={ref} className="button-progress-overlay" aria-hidden="true" /> : null;
+  return <span ref={ref} className="button-progress-overlay" aria-hidden="true" />;
 }
 
 type ProgressButtonProps = ComponentProps<"button"> & {
@@ -68,9 +55,8 @@ type ProgressButtonProps = ComponentProps<"button"> & {
 };
 
 export function ProgressButton({ children, progressError = false, ...props }: ProgressButtonProps) {
-  const enabled = useButtonProgressEnabled();
   const pending = props["aria-busy"] === true || props["aria-busy"] === "true" || props["data-pending"] === "true";
-  return <button {...props} data-button-progress={enabled ? "true" : undefined}>
+  return <button {...props} data-button-progress="true">
     {children}
     <ButtonProgress pending={pending} failed={progressError} />
   </button>;

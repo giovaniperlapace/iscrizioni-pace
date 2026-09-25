@@ -4,6 +4,7 @@ import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/
 import { AccompanyingChildrenList } from "../accompanying-children-list";
 
 import Link from "@/components/pending-link";
+import { ProgressButton } from "@/components/button-progress";
 import { useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { ArrowDown, ArrowUp, Columns3, Download } from "lucide-react";
@@ -163,7 +164,8 @@ export function LeaderParticipantsTable({
             )}
           </fieldset>
         </details>
-        <button
+        <ProgressButton
+          progressError={!!error}
           type="button"
           onClick={download}
           disabled={busy}
@@ -172,7 +174,7 @@ export function LeaderParticipantsTable({
         >
           <Download size={16} aria-hidden="true" />
           {copy.export}
-        </button>
+        </ProgressButton>
         <p className="max-w-xl text-sm leading-6 text-[var(--peace-muted)]">
           {copy.exportHelp}
         </p>

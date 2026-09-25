@@ -99,7 +99,8 @@ export function ParticipantMessageForm({
 
       <PendingSubmitButton
         pendingLabel={copy.sending}
-        className="inline-flex min-h-11 w-fit items-center justify-center rounded-md bg-[var(--peace-blue-800)] px-5 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)] disabled:cursor-wait disabled:opacity-70"
+        progressError={state.status === "error"}
+        className="inline-flex min-h-11 w-fit items-center justify-center rounded-md bg-[var(--peace-blue-800)] px-5 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
       >
         {copy.send}
       </PendingSubmitButton>

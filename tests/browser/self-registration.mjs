@@ -26,7 +26,7 @@ writeFileSync(new URL('actions.ts', route), '"use server";\nexport async functio
 writeFileSync(new URL('cancellation-actions.ts', route), `export async function cancelOwnRegistration(id:string,confirmed:boolean) {
  document.body.dataset.cancellations=String(Number(document.body.dataset.cancellations??0)+1);
  document.body.dataset.cancelPayload=JSON.stringify({id,confirmed});
- await new Promise(resolve=>setTimeout(resolve,200));
+ await new Promise(resolve=>setTimeout(resolve,1000));
  if(new URLSearchParams(location.search).has('failure')) return {error:'failed' as const};
  return {success:true as const};
 }`);
@@ -79,7 +79,15 @@ try {
  }
  open('locale=it&failure=1');
  ab('click','button:has(svg.lucide-user-round-x)');
- ab('click','dialog[aria-describedby] button:last-child'); ab('wait','[role=alert]');
+ check(`(async()=>{
+  const button=document.querySelector('dialog[aria-describedby] button:last-child');
+  const before=button.getBoundingClientRect().width;
+  button.click(); await new Promise(r=>setTimeout(r,300));
+  return button.disabled && button.querySelector('.button-progress-overlay').dataset.state==='pending'
+    && !button.querySelector('.animate-spin') && getComputedStyle(button).cursor!=='wait'
+    && Math.abs(button.getBoundingClientRect().width-before)<1;
+ })()`, 'personal confirmation uses the shared overlay without changing its width');
+ ab('wait','[role=alert]');
  check('document.body.dataset.cancellations==="1" && document.querySelectorAll("dialog[open]").length===1','failed cancellation stays in confirmation');
  ab('click','dialog[aria-describedby] button:first-child');
  check('document.querySelectorAll("dialog[open]").length===0','keep after failure');

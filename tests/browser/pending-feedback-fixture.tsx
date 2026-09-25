@@ -14,13 +14,13 @@ import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/i18n/config";
 
 const delay = () => new Promise<void>(resolve => setTimeout(resolve, 4000));
-export default function Fixture({ section, manager = false }: { section: string; manager?: boolean }) {
+export default function Fixture({ section, extended = false }: { section: string; extended?: boolean }) {
   const [locale, setLocale] = useState<SupportedLocale>("it");
   const [saved, setSaved] = useState(0);
   const [held, setHeld] = useState(false);
   const [heldError, setHeldError] = useState(false);
   const [portal, setPortal] = useState(false);
-  const prefix = `/pending-feedback-check?${manager ? "manager=1&" : ""}`;
+  const prefix = `/pending-feedback-check?${extended ? "extended=1&" : ""}`;
   return <WorkStatusProvider locale={locale}>
     <main className="mx-auto grid max-w-2xl gap-6 p-5">
       <h1 className="text-2xl font-bold">Attesa operazioni</h1>
@@ -54,7 +54,7 @@ export default function Fixture({ section, manager = false }: { section: string;
       <EventServiceActiveSwitch formId="switch-service" isActive serviceLabel="Servizio prova" />
       <ReliableForm id="switch-group" action={async () => { await delay(); }} />
       <GroupPublicCatalogSwitch formId="switch-group" isPublicCatalog groupName="Gruppo prova" />
-      {manager ? <>
+      {extended ? <>
         <ProgressButton data-held aria-busy={held} disabled={held} progressError={heldError} className="btn-primary px-4" onClick={() => { setHeldError(false); setHeld(true); }}>Attesa controllata</ProgressButton>
         <button data-resolve onClick={() => setHeld(false)}>Concludi operazione</button>
         <button data-reject onClick={() => { setHeldError(true); setHeld(false); }}>Interrompi con errore</button>
@@ -63,7 +63,7 @@ export default function Fixture({ section, manager = false }: { section: string;
           <ReliableForm action={async () => { await delay(); }}><PendingSubmitButton data-portal-save className="btn-primary px-4">Salva nella modale</PendingSubmitButton></ReliableForm>
           <button data-close-portal onClick={() => setPortal(false)}>Chiudi modale</button>
         </div>, document.body) : null}
-        <Link data-leave href="/pending-feedback-check" prefetch={false}>Esci dalla prova Manager</Link>
+        <Link data-leave href="/pending-feedback-check" prefetch={false}>Vai a un’altra pagina</Link>
       </> : null}
       <p id="details">Dettagli</p>
     </main>
