@@ -47,8 +47,12 @@ const seed: Row[] = Array.from({ length: 12 }, (_, i) => ({
   service: null,
   tagIds: [],
   tags: [],
-  childrenCount: 0,
-  children: [],
+  accessibility: i === 0 ? "Sentire, anche usando apparecchi acustici; Camminare o salire gradini" : undefined,
+  childrenCount: i === 0 ? 2 : 0,
+  children: i === 0 ? [
+    {id: "c1", first_name: "Sofia", last_name: "Bianchi", birth_date: "2020-01-01", position: 0},
+    {id: "c2", first_name: "Luca", last_name: "Bianchi", birth_date: "2022-01-01", position: 1},
+  ] : [],
 }));
 const groupOptions = [
   { id: "group1", eventId: "event", name: "Gruppo Roma" },

@@ -1,3 +1,4 @@
+import { CHILDREN_EXPORT_COPY, childrenExportValues } from "../registrations/children-export.ts";
 import { attendanceTableColumns, attendanceSlotText } from "../registrations/attendance-summary.ts";
 import ExcelJS from "exceljs";
 import yauzl from "yauzl";
@@ -210,6 +211,8 @@ export async function writeVisibleParticipantsWorkbook(
   const rows = people.map((person) =>
     columns.flatMap((column) => {
       switch (column) {
+        case "accessibility":
+          return person.accessibility ?? "—";
         case "attendance":
           return attendanceColumns.map(slot => attendanceSlotText(person.attendance, slot));
         case "name":
@@ -244,16 +247,31 @@ export async function writeVisibleParticipantsWorkbook(
             ? dateFormat.format(new Date(person.submittedAt))
             : "—";
       }
-    }),
+    }).concat(childrenExportValues(person.children ?? [])),
   );
-  return writeTableWorkbook("Iscritti", columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [PARTICIPANT_COLUMNS[column]]), rows);
+  const headers = columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [PARTICIPANT_COLUMNS[column]]);
+  headers.push(...CHILDREN_EXPORT_COPY.it.headers);
+  return writeTableWorkbook("Iscritti", headers, rows);
 }
 
 export async function writeTableWorkbook(name: string, headers: string[], rows: string[][]): Promise<Buffer> {
   const book = new ExcelJS.Workbook();
   book.creator = "Iscrizioni Pace";
   book.subject = "Esportazione colonne visibili";
-  addSheet(book, name, headers, rows);
+  const sheet = addSheet(book, name, headers, rows);
+  sheet.columns.forEach((column, index) => {
+    if (headers[index].length > 28) column.width = 44;
+    column.alignment = { wrapText: true, vertical: "top" };
+  });
+  sheet.eachRow(row => {
+    let lines = 1;
+    row.eachCell(cell => {
+      const width = (sheet.getColumn(cell.col).width ?? 24) - 3;
+      lines = Math.max(lines, String(cell.value ?? "").split("\n")
+        .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / width)), 0));
+    });
+    row.height = Math.max(30, lines * 16 + 12);
+  });
   return Buffer.from(await book.xlsx.writeBuffer());
 }
 

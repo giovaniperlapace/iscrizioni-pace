@@ -15,6 +15,7 @@ type RegistrationChildRelationRow = {
 };
 
 export type AssignmentRow = {
+  accessibility?: string;
   emailDelegated?: boolean;
   attendance?: import("./leader-attendance.ts").AttendanceChoice[];
   id: string;
@@ -226,6 +227,7 @@ export type AssignmentRow = {
 };
 
 export type AssignmentView = {
+  accessibility?: string;
   emailDelegated?: boolean;
   attendance?: import("./leader-attendance.ts").AttendanceChoice[];
   id: string;
@@ -315,6 +317,7 @@ export function toAssignmentView(
     registrationId: row.registration_id,
     attendance: row.attendance,
     emailDelegated: row.emailDelegated,
+    accessibility: row.accessibility,
     eventId: registration.event_id,
     participantId: participant.id,
     groupId: row.group_id,

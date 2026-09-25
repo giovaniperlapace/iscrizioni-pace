@@ -1,3 +1,4 @@
+import { loadAccessibilitySummaries } from "../lib/registrations/accessibility-summary.server.ts";
 import { loadEmailDelegations } from "../lib/registrations/email-delegation.server.ts";
 import { loadAttendanceSummaries } from "../lib/registrations/attendance-summary.server.ts";
 import { loadGroupCityLinks } from "../lib/groups/geography.server.ts";
@@ -45,6 +46,7 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/supabase/all-rows": { loadAllRows, loadRowsForIds },
         "@/lib/groups/geography.server": { loadGroupCityLinks },
         "@/lib/registrations/attendance-summary.server": { loadAttendanceSummaries },
+        "@/lib/registrations/accessibility-summary.server": { loadAccessibilitySummaries },
         "@/lib/registrations/email-delegation.server": { loadEmailDelegations: async (...args: Parameters<typeof loadEmailDelegations>) => { reads.push("email-delegations"); return loadEmailDelegations(...args); } },
         "@/lib/registrations/operations-dashboard": operations,
         "@/lib/registrations/event-statistics": statistics,

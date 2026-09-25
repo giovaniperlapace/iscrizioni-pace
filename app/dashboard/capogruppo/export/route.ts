@@ -1,3 +1,4 @@
+import { CHILDREN_EXPORT_COPY, childrenExportValues } from "@/lib/registrations/children-export";
 import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
     const attendanceColumns = attendanceTableColumns(startsOn, endsOn, locale);
     const assignments = await loadLeaderAssignmentRows(db, eventId, [
       ...scopedGroupIds,
-    ]);
+    ], locale);
     const rows = assignments.flatMap((row) => {
       const view = toAssignmentView(row, copy, groupRows);
       return view ? [toLeaderTableRow(view)] : [];
@@ -66,12 +67,14 @@ export async function GET(request: Request) {
     );
     const buffer = await writeTableWorkbook(
       copy.sheet,
-      preferences.columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [copy.columns[column]]),
+      [...preferences.columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [copy.columns[column]]), ...CHILDREN_EXPORT_COPY[locale].headers],
       sorted.map((row) =>
         preferences.columns.flatMap((column) => column === "attendance"
           ? attendanceColumns.map(slot => attendanceSlotText(row.attendance, slot, locale))
           : [leaderCellText(row, column, startsOn, locale)],
-        ),
+        ).concat(childrenExportValues(row.children.map(child => ({
+          id: child.id, position: child.position, firstName: child.first_name, lastName: child.last_name,
+        })))),
       ),
     );
     return new Response(new Uint8Array(buffer), {

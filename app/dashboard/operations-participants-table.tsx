@@ -95,6 +95,7 @@ export function OperationsParticipantsTable({
   dataVersion?: string;
   locale?: SupportedLocale;
 }) {
+  const canManage = Boolean(eventId && editableEventIds.includes(eventId));
   const attendanceColumns = attendanceTableColumns(eventStartsOn, eventEndsOn, locale);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -110,9 +111,9 @@ export function OperationsParticipantsTable({
     },
     serverPreferences,
   );
-  let preferences = DEFAULT_TABLE_PREFERENCES;
+  let preferences: TablePreferences = DEFAULT_TABLE_PREFERENCES;
   try {
-    preferences = parseTablePreferences(JSON.parse(stored));
+    preferences = parseTablePreferences(JSON.parse(stored), canManage);
   } catch {
     /* Defaults when storage is unavailable. */
   }
@@ -122,7 +123,7 @@ export function OperationsParticipantsTable({
       : preferences.columns,
     sort: searchParams.get("sort") ?? preferences.sort,
     direction: searchParams.get("direction") ?? preferences.direction,
-  });
+  }, canManage);
   const view =
     searchParams.get("view") === "deleted" && dashboard === "admin"
       ? "deleted"
@@ -166,7 +167,7 @@ export function OperationsParticipantsTable({
   const closePath = paramsFor({ edit: null });
   const returnTo = paramsFor({});
   function savePreferences(next: TablePreferences) {
-    const normalized = parseTablePreferences(next);
+    const normalized = parseTablePreferences(next, canManage);
     try {
       localStorage.setItem(storageKey, JSON.stringify(normalized));
       window.dispatchEvent(new Event("participant-preferences"));
@@ -188,6 +189,8 @@ export function OperationsParticipantsTable({
     column: ParticipantColumn,
   ): string | number | null {
     switch (column) {
+      case "accessibility":
+        return row.accessibility ?? "—";
       case "attendance":
         return attendanceSummary(row.attendance, locale);
       case "age":
@@ -237,17 +240,6 @@ export function OperationsParticipantsTable({
     snapshot.statisticsFilter &&
     parseStatisticsDrilldown(statisticsKey)?.personKind === "child",
   );
-  const [childrenDisplay, setChildrenDisplay] = useState({
-    statisticsKey,
-    visible: isChildrenView,
-  });
-  // A new statistics selection restores its default without resetting on sorting.
-  if (childrenDisplay.statisticsKey !== statisticsKey) {
-    setChildrenDisplay({ statisticsKey, visible: isChildrenView });
-  }
-  const showChildren = childrenDisplay.statisticsKey === statisticsKey
-    ? childrenDisplay.visible
-    : isChildrenView;
   const statisticsLabel = snapshot.statisticsFilter?.label;
   const accompanyingChildrenCount = rows.reduce(
     (total, row) => total + row.childrenCount,
@@ -491,7 +483,6 @@ export function OperationsParticipantsTable({
     );
   }
 
-  const canManage = Boolean(eventId && editableEventIds.includes(eventId));
   const exportParams = new URLSearchParams(searchParams.toString());
   exportParams.set("kind", "export");
   exportParams.set("columns", columns.join(","));
@@ -703,7 +694,7 @@ export function OperationsParticipantsTable({
               aria-label="Colonne visibili"
               className="absolute left-0 z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] sm:top-full flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
             >
-              {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
+              {Object.entries(PARTICIPANT_COLUMNS).filter(([key]) => canManage || key !== "accessibility").map(([key, label]) => (
                 <label
                   key={key}
                   className="flex min-h-11 items-center gap-2 text-sm"
@@ -731,14 +722,6 @@ export function OperationsParticipantsTable({
             </fieldset>
           </details>
         )}
-        <button
-          type="button"
-          aria-pressed={showChildren}
-          className={`${buttonClass} ${showChildren ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
-          onClick={() => setChildrenDisplay({ statisticsKey, visible: !showChildren })}
-        >
-          Mostra figli accompagnati
-        </button>
         <PendingDownload
           filename="partecipanti.xlsx"
           className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-[#217346] bg-[#217346] px-3 text-sm font-semibold text-white hover:border-[#185c37] hover:bg-[#185c37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#217346]"
@@ -749,7 +732,7 @@ export function OperationsParticipantsTable({
           Esporta iscritti
         </PendingDownload>
         <p id="participants-export-description" className="min-w-0 flex-1 text-sm text-[var(--peace-muted)]">
-          Scarica un file Excel con gli iscritti filtrati e solo le colonne visibili selezionate.
+          Scarica un file Excel con gli iscritti filtrati, le colonne selezionate e sempre il numero e i nomi dei minori accompagnati.
         </p>
       </div>
       {notice ? <SuccessMessage key={notice} className="my-2 text-sm text-[var(--peace-blue-800)]">{notice}</SuccessMessage> : null}
@@ -861,7 +844,7 @@ export function OperationsParticipantsTable({
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
-                        {showChildren && <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} />}
+                        <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} />
                         {pending[row.registrationId] && (
                           <p role="status">Salvataggio…</p>
                         )}

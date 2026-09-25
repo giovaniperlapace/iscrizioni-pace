@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Figli sempre visibili, disabilità ed Excel — 2026-09-25
+
+- Partecipanti Manager/Admin/Viewer: figli sempre visibili sotto il nome,
+  pulsante Mostra figli rimosso. Vista Figli accompagnati: Genitore in colonna
+  dopo nascita/età, nome cliccabile per la scheda esistente.
+- Colonna facoltativa Informazioni sulla disabilità per Manager/Admin e
+  Capogruppo, anche in Excel. Solo risposte dichiarate alle tre opzioni attuali
+  del form, senza inferenze; sette lingue Capogruppo, scope gruppi conservato.
+  Viewer escluso anche da URL/export; letture paginate e fail-closed.
+- Excel operativo e Capogruppo contengono sempre numero figli e Nomi e cognomi
+  dei minori accompagnati, separati da punto e virgola in una cella. Tutti i figli
+  collegati conservati anche se storicamente maggiorenni. Modello import invariato.
+- Nessuna migration, modifica dati o email. Dettagli e regressioni in
+  docs/children-overview.md. Commit/push su main autorizzati dall’utente.
+  Verificati 549 test, lint, TypeScript, build e browser desktop/mobile.
+
+
 ## Avanzamento nelle attese lunghe — 2026-09-25
 
 - ButtonProgress conserva la partenza rapida e aggiunge una coda che continua

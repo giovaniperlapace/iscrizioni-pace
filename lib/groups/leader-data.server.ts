@@ -1,3 +1,5 @@
+import type { SupportedLocale } from "../i18n/config.ts";
+import { loadAccessibilitySummaries } from "../registrations/accessibility-summary.server.ts";
 import { loadEmailDelegations } from "../registrations/email-delegation.server.ts";
 import { loadAttendanceSummaries } from "../registrations/attendance-summary.server.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -72,6 +74,7 @@ export async function loadLeaderAssignmentRows(
   db: SupabaseClient,
   eventId: string,
   groupIds: string[],
+  locale: SupportedLocale = "it",
 ): Promise<AssignmentRow[]> {
   const { data } = await loadRowsForIds(groupIds, (ids, from, to) =>
     db
@@ -87,9 +90,10 @@ export async function loadLeaderAssignmentRows(
       .range(from, to),
   );
   const rows = data as unknown as AssignmentRow[];
-  const [attendance, emailDelegations] = await Promise.all([
+  const [attendance, emailDelegations, accessibility] = await Promise.all([
     loadAttendanceSummaries(db, rows.map(row => row.registration_id)),
     loadEmailDelegations(db, rows.map(row => row.registration_id)),
+    loadAccessibilitySummaries(db, rows.map(row => row.registration_id), locale),
   ]);
-  return rows.map(row => ({ ...row, emailDelegated: emailDelegations.has(row.registration_id), attendance: attendance.get(row.registration_id) ?? [] }));
+  return rows.map(row => ({ ...row, accessibility: accessibility.get(row.registration_id), emailDelegated: emailDelegations.has(row.registration_id), attendance: attendance.get(row.registration_id) ?? [] }));
 }

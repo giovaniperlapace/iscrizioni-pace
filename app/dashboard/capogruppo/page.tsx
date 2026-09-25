@@ -1230,7 +1230,7 @@ export default async function CapogruppoDashboardPage({
       return [];
     }
 
-    const data = await loadLeaderAssignmentRows(serviceSupabase, currentEventId!, groupIds);
+    const data = await loadLeaderAssignmentRows(serviceSupabase, currentEventId!, groupIds, locale);
 
     return data
       .map((row) => toAssignmentView(row, copy, groupRows))

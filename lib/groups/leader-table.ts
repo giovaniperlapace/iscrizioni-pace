@@ -28,6 +28,7 @@ export type LeaderTableRow = Pick<
   | "tagIds"
   | "children"
   | "attendance"
+  | "accessibility"
 > & {
   serviceLabel: string | null;
   serviceStatus?: keyof typeof LEADER_SERVICE_STATUS_COPY.it | null;
@@ -52,6 +53,7 @@ export function toLeaderTableRow(row: AssignmentView): LeaderTableRow {
     tagIds: row.tagIds,
     children: row.children,
     attendance: row.attendance,
+    accessibility: row.accessibility,
     serviceLabel: row.service?.serviceLabel ?? null,
     serviceStatus: row.service?.status ?? null,
     tags: row.tags.map(({ id, label, color }) => ({ id, label, color })),
@@ -63,6 +65,8 @@ export function leaderColumnValue(
   startsOn: string | null,
 ): string | number | null {
   switch (column) {
+    case "accessibility":
+      return row.accessibility ?? null;
     case "attendance":
       return attendanceSummary(row.attendance);
     case "name":

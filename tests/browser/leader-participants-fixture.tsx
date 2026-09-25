@@ -1,5 +1,6 @@
 "use client";
 import type { SupportedLocale } from "@/lib/i18n/config";
+import { accessibilitySummary } from "@/lib/registrations/accessibility-summary";
 import { useState } from "react";
 import { LeaderParticipantsTable } from "@/app/dashboard/capogruppo/participants-table";
 import type { LeaderTableRow } from "@/lib/groups/leader-table";
@@ -43,7 +44,7 @@ export default function Fixture() {
         Cambia operatore
       </button>
       <LeaderParticipantsTable
-        rows={rows}
+        rows={rows.map(row => ({...row, accessibility: accessibilitySummary({hearing: true}, locale)}))}
         operatorId={operatorId}
         startsOn="2026-10-25"
         endsOn="2026-10-27"

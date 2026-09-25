@@ -1,3 +1,4 @@
+import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
 import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
 import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
 import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
@@ -733,9 +734,13 @@ export default async function AdminDashboardPage({
     );
     const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
     const serviceByParticipantId = mapParticipantEventServices(participantServices);
-    const [attendanceByRegistration, emailDelegations] = activeSection === "iscritti"
-      ? await Promise.all([loadAttendanceSummaries(serviceSupabase, registrationIds), loadEmailDelegations(serviceSupabase, registrationIds)])
-      : [new Map(), new Set<string>()];
+    const [attendanceByRegistration, emailDelegations, accessibilityByRegistration] = activeSection === "iscritti"
+      ? await Promise.all([
+          loadAttendanceSummaries(serviceSupabase, registrationIds),
+          loadEmailDelegations(serviceSupabase, registrationIds),
+          loadAccessibilitySummaries(serviceSupabase, registrationIds),
+        ])
+      : [new Map(), new Set<string>(), new Map<string, string>()];
     const participantRows = registrationRows.map((registration) => {
         const participant = relatedOne(registration.participants);
         const geography = participantGeography(participant);
@@ -752,6 +757,7 @@ export default async function AdminDashboardPage({
           deletedByName: registration.deleted_by ? deletedActorIdentities.get(registration.deleted_by)?.fullName ?? deletedActorIdentities.get(registration.deleted_by)?.email ?? null : null,
           deletionReason: registration.deletion_reason,
           attendance: attendanceByRegistration.get(registration.id) ?? [],
+          accessibility: accessibilityByRegistration.get(registration.id),
           emailDelegated: emailDelegations.has(registration.id),
           registrationId: registration.id,
           eventId: registration.event_id,

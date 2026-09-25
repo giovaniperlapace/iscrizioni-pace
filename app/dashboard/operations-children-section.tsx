@@ -80,9 +80,9 @@ export function OperationsChildrenSection({
         <div>
           <h2 className="text-lg font-semibold">Figli accompagnati</h2>
           <p className="mt-2 text-sm text-[var(--peace-muted)]">
-            Una riga per ogni figlio accompagnato, con il genitore collegato
-            espandibile. Più in basso trovi le persone sotto i 15 anni con una
-            propria iscrizione.
+            Una riga per ogni figlio accompagnato, con il genitore nella colonna
+            dedicata. Clicca sul nome del genitore per aprire la sua iscrizione.
+            Più in basso trovi le persone sotto i 15 anni con una propria iscrizione.
           </p>
           <p className="mt-2 text-sm">
             Età all’inizio dell’evento: {dateLabel(eventStartsOn)}. I figli
@@ -174,9 +174,10 @@ export function OperationsChildrenSection({
               <thead className="bg-[var(--peace-sky-100)]">
                 <tr>
                   {[
-                    "Figlio accompagnato / genitore",
+                    "Figlio accompagnato",
                     "Data di nascita",
                     "Età",
+                    "Genitore",
                     "Gruppo del genitore",
                   ].map((label) => (
                     <th scope="col" className={heading} key={label}>
@@ -188,47 +189,29 @@ export function OperationsChildrenSection({
               <tbody>
                 {children.map((child) => (
                   <tr
-                    className="border-t border-[var(--peace-border)] align-top hover:bg-[#f7fbfe]"
+                    className="border-t border-[var(--peace-border)] align-middle hover:bg-[#f7fbfe]"
                     key={child.id}
                   >
-                    <th scope="row" className={`${cell} font-normal`}>
-                      <div className="min-w-40 max-w-72">
-                        <LocalQueryLink
-                          className={nameLink}
-                          href={href(child.parent.registrationId)}
-                          aria-label={`Apri la scheda del genitore di ${child.name}`}
-                          scroll={false}
-                        >
-                          {child.name}
-                        </LocalQueryLink>
-                        <details className="mt-2">
-                          <summary className="min-h-11 cursor-pointer rounded-md bg-[var(--peace-sky-100)] px-2 py-3 text-xs font-semibold text-[var(--peace-blue-800)]">
-                            Genitore: {child.parent.name}
-                          </summary>
-                          <div className="mt-2 grid gap-1 break-words border-l-2 border-[var(--peace-border-strong)] pl-2 text-xs leading-5 text-[var(--peace-muted)]">
-                            <p>
-                              {child.parent.email ?? "Email non disponibile"}
-                            </p>
-                            <p>
-                              {child.parent.phone ?? "Telefono non disponibile"}
-                            </p>
-                            <p>{child.parent.place}</p>
-                            <Link
-                              className="inline-flex min-h-11 items-center font-semibold text-[var(--peace-blue-800)] underline decoration-dotted underline-offset-4"
-                              href={href(child.parent.registrationId)}
-                              scroll={false}
-                            >
-                              Apri scheda di {child.parent.name}
-                            </Link>
-                          </div>
-                        </details>
-                      </div>
+                    <th
+                      scope="row"
+                      className={`${cell} min-w-40 max-w-72 font-semibold`}
+                    >
+                      {child.name}
                     </th>
                     <td className={cell}>{dateLabel(child.birthDate)}</td>
                     <td className={cell}>
                       {child.age === null
                         ? "Da verificare"
                         : `${child.age} anni`}
+                    </td>
+                    <td className={`${cell} min-w-40 max-w-72`}>
+                      <LocalQueryLink
+                        className={nameLink}
+                        href={href(child.parent.registrationId)}
+                        scroll={false}
+                      >
+                        {child.parent.name}
+                      </LocalQueryLink>
                     </td>
                     <td className={cell}>
                       {child.parent.currentGroupName ?? "Senza gruppo"}

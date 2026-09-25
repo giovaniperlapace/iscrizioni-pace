@@ -40,16 +40,15 @@ try {
       "new menu is second and active",
     );
     check(
-      '!document.querySelector("details[open]")',
-      "parents initially collapsed",
+      'Array.from(document.querySelector("thead").rows[0].cells, cell => cell.textContent).join("|") === "Figlio accompagnato|Data di nascita|Età|Genitore|Gruppo del genitore"',
+      "parent column follows birth date and age",
     );
-    ab("eval", 'document.querySelector("summary").focus()');
-    ab("press", "Enter");
     check(
-      'document.querySelector("details").open',
-      "parent expands with keyboard",
+      '!document.querySelector("tbody details") && Array.from(document.querySelector("tbody").rows).every(row => row.cells[3].querySelector("a").textContent === "Genitore Esempio")',
+      "parent name is visible in each child row without expansion",
     );
-    ab("eval", 'document.querySelector("details a").click()');
+    ab("eval", 'document.querySelector("tbody").rows[0].cells[3].querySelector("a").focus()');
+    ab("press", "Enter");
     ab("snapshot", "-i");
     check(
       '!!document.querySelector("dialog[open]") && new URLSearchParams(location.search).get("edit") === "reg-0"',

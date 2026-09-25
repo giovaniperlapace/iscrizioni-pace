@@ -1,3 +1,4 @@
+import { loadAccessibilitySummaries } from "../registrations/accessibility-summary.server.ts";
 import { participantGeography, type ParticipantGeography } from "../registrations/geography.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashIdentityFingerprint } from "./fingerprint.server.ts";
@@ -16,6 +17,7 @@ import {
 } from "../registrations/event-statistics.ts";
 
 export type QualityPerson = Identity & {
+  accessibility?: string;
   attendance?: import("../registrations/attendance-summary.ts").SummaryAttendanceChoice[];
   participantId: string;
   eventId: string;
@@ -269,6 +271,7 @@ export async function filteredExportPeople(
     ends_on: string | null;
   },
   params: URLSearchParams,
+  includeAccessibility = false,
 ) {
   const all = (await loadQualityPeople(db, event.id)).map((person) => ({
     ...person,
@@ -326,6 +329,9 @@ export async function filteredExportPeople(
       drilldown,
     ).participants;
   }
+  const accessibility = includeAccessibility
+    ? await loadAccessibilitySummaries(db, people.map(person => person.id))
+    : new Map<string, string>();
   const attendanceByRegistration = new Map<string, StatisticsAttendanceChoice[]>();
   for (const choice of attendance) {
     const choices = attendanceByRegistration.get(choice.registration_id) ?? [];
@@ -333,7 +339,7 @@ export async function filteredExportPeople(
     attendanceByRegistration.set(choice.registration_id, choices);
   }
   return {
-    people: people.map(person => ({ ...person, attendance: attendanceByRegistration.get(person.id) ?? [] })),
+    people: people.map(person => ({ ...person, accessibility: accessibility.get(person.id), attendance: attendanceByRegistration.get(person.id) ?? [] })),
     attendance: attendance.filter((choice) =>
       people.some((person) => person.id === choice.registration_id),
     ),

@@ -55,13 +55,18 @@ function rpcError(code: string) {
 }
 export async function GET(request: NextRequest) {
   try {
-    const { db, auth, event, isAdmin } = await qualityAccess();
+    const { db, auth, event, isAdmin, canWrite } = await qualityAccess();
     const kind = request.nextUrl.searchParams.get("kind");
     const catalog = await loadCatalog(db, event.id, kind === "export");
     let buffer: Buffer;
     if (kind === "export") {
       if (request.nextUrl.searchParams.get("view") === "deleted" && !isAdmin)
         throw new Error("Archivio riservato agli admin.");
+      const requestedColumns = request.nextUrl.searchParams.get("columns");
+      const { columns } = parseTablePreferences({
+        columns:
+          requestedColumns === null ? undefined : requestedColumns.split(","),
+      }, canWrite);
       const { people } = await filteredExportPeople(
         db,
         {
@@ -70,12 +75,8 @@ export async function GET(request: NextRequest) {
           ends_on: event.ends_on ?? null,
         },
         request.nextUrl.searchParams,
+        canWrite && columns.includes("accessibility"),
       );
-      const requestedColumns = request.nextUrl.searchParams.get("columns");
-      const { columns } = parseTablePreferences({
-        columns:
-          requestedColumns === null ? undefined : requestedColumns.split(","),
-      });
       buffer = await writeVisibleParticipantsWorkbook(
         people,
         catalog,
@@ -94,6 +95,7 @@ export async function GET(request: NextRequest) {
           metadata: {
             format: "xlsx-visible-columns-v1",
             columns,
+            accompanying_children_columns: true,
             registration_count: people.length,
             filter_keys: [...request.nextUrl.searchParams.keys()].filter(
               (key) => key !== "kind",
