@@ -13,7 +13,8 @@ import { participantGeography, type ParticipantGeography } from "@/lib/registrat
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
-import { OperationalRoleRemoval } from "@/components/operational-role-removal";
+import { OperationalRoleDialog } from "@/components/operational-role-dialog";
+import { loadRolelessPerson } from "@/lib/operational-users/roleless-person";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { Settings } from "lucide-react";
@@ -40,7 +41,6 @@ import {
   updateGroupPublicCatalogVisibility,
   updateGroupRegistrationLink,
   updateEventOpeningState,
-  updateOperationalUserRole,
 } from "@/app/actions";
 import {
   DashboardAreaDescription,
@@ -101,7 +101,6 @@ import {
 } from "@/lib/registrations/event-statistics";
 import {
   getOperationalUserIdentities,
-  splitFullName,
 } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -470,7 +469,7 @@ export default async function AdminDashboardPage({
     null;
   const selectedOperationalRole =
     adminOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
-    null;
+    (params.roleUserId && params.section === "ruoli" ? await loadRolelessPerson(params.roleUserId) : null);
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
@@ -543,6 +542,7 @@ export default async function AdminDashboardPage({
 
             {activeSection === "ruoli" ? (
               <AdminOperationalUsersSection
+                actorUserId={auth.user.id}
                 roles={adminOperations.roleUsers}
                 eventOptions={
                   currentEvent ? [{ id: currentEvent.id, title: currentEvent.title }] : []
@@ -1578,12 +1578,14 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
 }
 
 function AdminOperationalUsersSection({
+  actorUserId,
   roles,
   eventOptions,
   groupOptions,
   selectedRole,
   navMode,
 }: {
+  actorUserId: string;
   roles: OperationalUserRoleRow[];
   eventOptions: Array<{ id: string; title: string }>;
   groupOptions: AdminGroupTreeRow[];
@@ -1678,6 +1680,7 @@ function AdminOperationalUsersSection({
 
       {selectedRole ? (
         <AdminOperationalRoleEditOverlay
+          actorUserId={actorUserId}
           role={selectedRole}
           eventOptions={eventOptions}
           groupOptions={groupOptions}
@@ -1689,133 +1692,16 @@ function AdminOperationalUsersSection({
 }
 
 function AdminOperationalRoleEditOverlay({
-  role,
-  eventOptions,
-  groupOptions,
-  navMode,
+  role, eventOptions, groupOptions, navMode, actorUserId,
 }: {
   role: OperationalUserRoleRow;
   eventOptions: Array<{ id: string; title: string }>;
   groupOptions: AdminGroupTreeRow[];
   navMode: AdminNavMode;
+  actorUserId: string;
 }) {
-  const nameParts = splitFullName(role.fullName);
-  const currentAssignment = preferredOperationalAssignment(role);
-
-  return (
-    <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[rgba(16,36,64,0.42)] px-4 py-8">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold">Modifica utente operativo</h3>
-            <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Aggiorna dati, ruolo e responsabilità della persona selezionata.
-            </p>
-          </div>
-          <Link
-            href={`/dashboard/admin?section=ruoli&nav=${navMode}`}
-            scroll={false}
-            aria-label="Chiudi"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--peace-border)] text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            <X className="size-5" aria-hidden="true" />
-          </Link>
-        </div>
-
-        <ReliableForm action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
-          <input type="hidden" name="sourceDashboard" value="admin" />
-          <input type="hidden" name="nav" value={navMode} />
-          <input type="hidden" name="currentUserId" value={role.userId} />
-          <input type="hidden" name="currentRole" value={preferredOperationalRole(role)} />
-          <input type="hidden" name="currentEventId" value={currentAssignment?.eventId ?? ""} />
-          <input type="hidden" name="currentGroupId" value={currentAssignment?.groupId ?? ""} />
-          <div className="grid gap-3 lg:grid-cols-3">
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Nome
-              <input
-                name="firstName"
-                className="field bg-white font-normal"
-                defaultValue={nameParts.firstName}
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Cognome
-              <input
-                name="lastName"
-                className="field bg-white font-normal"
-                defaultValue={nameParts.lastName}
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Email
-              <input
-                name="email"
-                type="email"
-                className="field bg-white font-normal"
-                defaultValue={role.email ?? ""}
-                readOnly
-                required
-              />
-            </label>
-          </div>
-          <OperationalRoleFields
-            eventOptions={eventOptions}
-            groupOptions={groupOptions.map((group) => ({
-              id: group.id,
-              name: group.name,
-              eventTitle: group.eventTitle,
-            }))}
-            roleOptions={[
-              { value: "capogruppo", label: "Capogruppo" },
-              { value: "manager", label: "Manager" },
-              { value: "manager_viewer", label: "Manager viewer" },
-              { value: "accoglienza", label: "Accoglienza" },
-              { value: "admin", label: "Admin globale" },
-            ]}
-            defaultRole={preferredOperationalRole(role)}
-            defaultEventId={role.eventRoles[0]?.eventId ?? role.groupLeaderAssignments[0]?.eventId}
-            defaultGroupIds={role.groupLeaderAssignments
-              .map((assignment) => assignment.groupId)
-              .filter((groupId): groupId is string => Boolean(groupId))}
-            defaultLeaderKindsByGroupId={Object.fromEntries(
-              role.groupLeaderAssignments
-                .filter((assignment) => assignment.groupId)
-                .map((assignment) => [
-                  assignment.groupId,
-                  assignment.isPrimaryGroupLeader ? "primary" : "secondary",
-                ])
-            )}
-            defaultLeaderKind={role.groupLeaderAssignments.some(
-              (assignment) => assignment.isPrimaryGroupLeader
-            )
-              ? "primary"
-              : "secondary"}
-            allowMultipleGroupLeaders
-          />
-          <div className="flex flex-wrap justify-end gap-3">
-            <Link
-              href={`/dashboard/admin?section=ruoli&nav=${navMode}`}
-              scroll={false}
-              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-ink)] transition hover:bg-[var(--peace-sky-100)]"
-            >
-              Annulla
-            </Link>
-            <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-              Salva modifiche
-            </PendingSubmitButton>
-          </div>
-        </ReliableForm>
-        <OperationalRoleRemoval
-          userId={role.userId}
-          assignments={role.assignments}
-          sourceDashboard="admin"
-          navMode={navMode}
-        />
-      </div>
-    </div>
-  );
+  return <OperationalRoleDialog key={role.userId} person={role} eventOptions={eventOptions}
+    groupOptions={groupOptions.map(({ id, eventId, name, eventTitle }) => ({ id, eventId, name, eventTitle }))} sourceDashboard="admin" navMode={navMode} actorUserId={actorUserId} />;
 }
 
 async function AdminGroupTreeSection({
@@ -2579,18 +2465,6 @@ function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string 
 
 function operationalRoleRowKey(row: OperationalUserRoleRow): string {
   return row.email ? `email:${row.email.toLowerCase()}` : `user:${row.userId}`;
-}
-
-function preferredOperationalRole(row: OperationalUserRoleRow): string {
-  return row.groupLeaderAssignments.length > 0
-    ? "capogruppo"
-    : (row.eventRoles[0]?.role ?? row.assignments[0]?.role ?? "manager");
-}
-
-function preferredOperationalAssignment(
-  row: OperationalUserRoleRow
-): OperationalUserRoleAssignment | null {
-  return row.groupLeaderAssignments[0] ?? row.eventRoles[0] ?? row.assignments[0] ?? null;
 }
 
 function operationalRoleSummary(row: OperationalUserRoleRow): string {

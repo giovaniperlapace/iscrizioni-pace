@@ -12,10 +12,12 @@ export function formFailure(issues: FormIssue[]): FormFailure {
 export function formFailureFromRedirect(path: string): FormFailure {
   const params = new URL(path, "https://local.invalid").searchParams;
   const error = [...params].find(([key]) => /error$/i.test(key));
+  if (error?.[0] === "roleError" && ["invalid", "missing-event"].includes(error[1])) return formFailure([{ field: null, code: "roleReload" }]);
   return formFailure([issueFromMessage(error?.[1] ?? "failed")]);
 }
 
 export function issueFromMessage(message: string): FormIssue {
+  if (message === "self-role") return { field: null, code: "roleSelf" };
   const child = message.match(/figlio (\d+)/);
   const prefix = child ? `child_${Number(child[1]) - 1}_` : "";
   if (/cognome/i.test(message)) return { field: `${prefix}lastName`, code: "name" };

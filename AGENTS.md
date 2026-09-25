@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Gestione ruoli cumulativi e modale persistente — 2026-09-25
+
+- Modale nativa condivisa Admin/Manager: incarichi attuali, aggiunta separata,
+  rimozione puntuale e modifica Principale/Secondario. Esiti nella modale, anche
+  dopo l’ultimo incarico; chiusura conserva contesto e scroll. Errori specifici,
+  self-removal disabilitata, blocchi invio e avanzamento condiviso.
+- La selezione non sostituisce più gli altri ruoli. Superata la vecchia regola
+  del select esclusivo: Manager e Manager viewer sono alternativi nello stesso
+  evento; il cambio richiede rimozione esplicita. Tutti gli altri ruoli restano.
+- Migration 20260925180000 applicata e registrata atomicamente prima del push:
+  indice di esclusività e RPC di rimozione service_role con permessi, lock,
+  aggiornamento referente e audit atomici. Zero conflitti storici; ruoli,
+  membership, gruppi, profili e policy verificati invariati. Nessuna email o
+  scrittura di collaudo su persone reali.
+- 545 test, lint, TypeScript e build con npm ci in copia pulita; PostgreSQL
+  temporaneo, concorrenza e browser desktop/mobile superati. Commit/push su
+  main autorizzati. Dettagli in docs/operational-role-management.md.
+
+
 ## Caricamento condiviso in tutto il sito — 2026-09-25
 
 - Esteso l’overlay approvato a tutti i ruoli e al pubblico/link di gruppo.

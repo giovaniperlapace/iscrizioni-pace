@@ -1,7 +1,9 @@
+import { ROLE_ERRORS } from "../operational-users/role-errors.ts";
 import { GROUP_GEOGRAPHY_COPY } from "../groups/geography-copy.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
 
 const en = {
+  ...ROLE_ERRORS,
   groupConflict: GROUP_GEOGRAPHY_COPY.en.conflict,
   groupTerritory: GROUP_GEOGRAPHY_COPY.en.territoryError,
   conflict: "These details have changed. Reopen the participant record before saving again.",
@@ -19,6 +21,7 @@ const en = {
 export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   en,
   it: {
+    ...ROLE_ERRORS,
     groupConflict: GROUP_GEOGRAPHY_COPY.it.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.it.territoryError,
     conflict: "Questi dati sono cambiati. Riapri la scheda del partecipante prima di salvare di nuovo.",
@@ -32,6 +35,7 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
     failed: "Salvataggio non riuscito. I dati inseriti sono stati conservati. Controlla la connessione e riprova.",
   },
   fr: {
+    ...ROLE_ERRORS,
     groupConflict: GROUP_GEOGRAPHY_COPY.fr.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.fr.territoryError,
     conflict: "Ces informations ont changé. Rouvrez la fiche du participant avant d’enregistrer à nouveau.",
@@ -39,24 +43,28 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
     phone: "Ajoutez l'indicatif international, par exemple +33 6 12345678. Commencez par + suivi de 7 à 15 chiffres.", date: "Saisissez une date valide et vérifiez l'ordre des dates.", attendance: "Choisissez au moins un créneau de présence ou une confirmation ultérieure.", consent: "Confirmez avoir le consentement de la personne.", children: "Indiquez le nombre d'enfants, de 1 à 10.", group: "Choisissez un groupe disponible.", tooLong: "Raccourcissez le texte selon la limite indiquée.", invalid: "Vérifiez le format et les limites de ce champ.", duplicateEmail: "Cette adresse e-mail est déjà liée à une inscription ou à un compte. Vérifiez l'adresse.", duplicate: "Cet élément existe déjà. Vérifiez l'entrée existante.", forbidden: "Vous n'avez pas l'autorisation d'enregistrer cette modification.", closed: "Les modifications de cette inscription sont closes.", failed: "L'enregistrement a échoué. Vos données ont été conservées. Vérifiez la connexion et réessayez.",
   },
   de: {
+    ...ROLE_ERRORS,
     groupConflict: GROUP_GEOGRAPHY_COPY.de.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.de.territoryError,
     conflict: "Diese Angaben wurden geändert. Öffne den Teilnehmendeneintrag vor dem erneuten Speichern neu.",
     summary: "Prüfen Sie die markierten Felder. Ihre Eingaben bleiben erhalten.", required: "Füllen Sie dieses Feld aus.", name: "Geben Sie einen Namen mit 2 bis 120 Zeichen ein.", email: "Geben Sie eine gültige E-Mail-Adresse ein.", contact: "Geben Sie mindestens eine E-Mail-Adresse oder Telefonnummer ein.", phone: "Geben Sie die internationale Vorwahl ein, zum Beispiel +49 151 12345678. Beginnen Sie mit + und 7 bis 15 Ziffern.", date: "Geben Sie ein gültiges Datum ein und prüfen Sie die Reihenfolge.", attendance: "Wählen Sie mindestens einen Anwesenheitszeitraum oder eine spätere Bestätigung.", consent: "Bestätigen Sie die Einwilligung der Person.", children: "Geben Sie die Anzahl der Kinder von 1 bis 10 an.", group: "Wählen Sie eine verfügbare Gruppe.", tooLong: "Kürzen Sie den Text auf die angegebene Grenze.", invalid: "Prüfen Sie Format und Grenzen dieses Feldes.", duplicateEmail: "Diese E-Mail-Adresse gehört bereits zu einer Anmeldung oder einem Konto. Prüfen Sie die Adresse.", duplicate: "Dieser Eintrag existiert bereits. Prüfen Sie den vorhandenen Eintrag.", forbidden: "Sie dürfen diese Änderung nicht speichern.", closed: "Änderungen an dieser Anmeldung sind geschlossen.", failed: "Speichern fehlgeschlagen. Ihre Eingaben bleiben erhalten. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
   },
   es: {
+    ...ROLE_ERRORS,
     groupConflict: GROUP_GEOGRAPHY_COPY.es.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.es.territoryError,
     conflict: "Estos datos han cambiado. Vuelve a abrir la ficha del participante antes de guardar de nuevo.",
     summary: "Revisa los campos señalados. Tus datos se han conservado.", required: "Completa este campo.", name: "Introduce un nombre de entre 2 y 120 caracteres.", email: "Introduce un correo electrónico válido.", contact: "Introduce al menos un correo electrónico o un teléfono.", phone: "Incluye el prefijo internacional, por ejemplo +34 612 345678. Empieza por + seguido de 7 a 15 cifras.", date: "Introduce una fecha válida y comprueba el orden de las fechas.", attendance: "Selecciona al menos una franja de asistencia o confirma más adelante.", consent: "Confirma que tienes el consentimiento de la persona.", children: "Indica el número de hijos, de 1 a 10.", group: "Selecciona un grupo disponible.", tooLong: "Acorta el texto hasta el límite indicado.", invalid: "Revisa el formato y los límites de este campo.", duplicateEmail: "Este correo ya está asociado a una inscripción o cuenta. Revisa la dirección.", duplicate: "Este elemento ya existe. Revisa la entrada existente.", forbidden: "No tienes permiso para guardar este cambio.", closed: "Las modificaciones de esta inscripción están cerradas.", failed: "No se ha podido guardar. Tus datos se han conservado. Revisa la conexión e inténtalo de nuevo.",
   },
   nl: {
+    ...ROLE_ERRORS,
     groupConflict: GROUP_GEOGRAPHY_COPY.nl.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.nl.territoryError,
     conflict: "Deze gegevens zijn gewijzigd. Open de deelnemersgegevens opnieuw voordat je weer opslaat.",
     summary: "Controleer de gemarkeerde velden. Je invoer is bewaard.", required: "Vul dit veld in.", name: "Voer een naam van 2 tot 120 tekens in.", email: "Voer een geldig e-mailadres in.", contact: "Voer ten minste een e-mailadres of telefoonnummer in.", phone: "Voeg de internationale landcode toe, bijvoorbeeld +31 6 12345678. Begin met + gevolgd door 7 tot 15 cijfers.", date: "Voer een geldige datum in en controleer de volgorde.", attendance: "Selecteer minstens één aanwezigheidsperiode of bevestig later.", consent: "Bevestig dat je toestemming van de persoon hebt.", children: "Geef het aantal kinderen op, van 1 tot 10.", group: "Selecteer een beschikbare groep.", tooLong: "Kort de tekst in tot de aangegeven limiet.", invalid: "Controleer de opmaak en grenzen van dit veld.", duplicateEmail: "Dit e-mailadres hoort al bij een inschrijving of account. Controleer het adres.", duplicate: "Dit item bestaat al. Controleer het bestaande item.", forbidden: "Je hebt geen toestemming om deze wijziging op te slaan.", closed: "Deze inschrijving kan niet meer worden gewijzigd.", failed: "Opslaan is mislukt. Je invoer is bewaard. Controleer de verbinding en probeer opnieuw.",
   },
   uk: {
+    ...ROLE_ERRORS,
     groupConflict: GROUP_GEOGRAPHY_COPY.uk.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.uk.territoryError,
     conflict: "Ці дані змінилися. Знову відкрийте картку учасника перед повторним збереженням.",
