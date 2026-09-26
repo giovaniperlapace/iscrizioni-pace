@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as confirmation from "../lib/auth/magic-link-confirmation.ts";
@@ -56,7 +58,7 @@ test("repeated scanner GETs never create an auth client or consume OTP/PKCE", as
       assert.equal(response.headers.get("referrer-policy"),"strict-origin");
       const html=await response.text();
       assert.match(html,/<form method="post" action="\/auth\/callback">/);
-      assert.doesNotMatch(html,/<script|http-equiv="refresh"|prefetch/);
+      assert.doesNotMatch(html,/http-equiv="refresh"|prefetch/);
     }
   }
   assert.deepEqual(h.counts(),{clients:0,verified:0,exchanged:0,linked:0});
@@ -93,7 +95,7 @@ test("confirmation is translated and safely escapes untrusted token fields",()=>
   for(const language of locale.SUPPORTED_LOCALES) {
     const html=confirmation.renderMagicLinkConfirmation(new URLSearchParams({token_hash:'"><script>alert(1)</script>',type:"email"}),language);
     assert.match(html,new RegExp(`<html lang="${language}">`));
-    assert.doesNotMatch(html,/<script>/);
+    assert.doesNotMatch(html,/<script>alert/);
     assert.match(html,/&lt;script&gt;/);
   }
 });
@@ -112,4 +114,30 @@ test("new emails never fall back to a Supabase link that consumes the token befo
   assert.equal(sent.length,0);
   await send(client({hashed_token:"synthetic",action_link:"https://supabase.invalid/verify"}),"person@example.test","https://app.example.test/auth/callback");
   assert.deepEqual(sent,[{to:"person@example.test",actionLink:"https://app.example.test/auth/callback?token_hash=synthetic&type=email"}]);
+});
+
+
+test("confirmation blocks repeat submissions during a slow response and resets on back navigation", () => {
+  const listeners = new Map();
+  const attributes = new Map();
+  const button = { disabled: false, textContent: "Conferma e accedi", setAttribute: (k: string, v: string) => attributes.set(k,v), removeAttribute: (k: string) => attributes.delete(k) };
+  const form = { querySelector: () => button, addEventListener: (k: string, v: (event?: unknown) => void) => listeners.set(k,v) };
+  runInNewContext(confirmation.CONFIRMATION_SUBMIT_SCRIPT, { document: { querySelector: () => form }, window: { addEventListener: (k: string, v: (event?: unknown) => void) => listeners.set(k,v) } });
+  let prevented = 0;
+  const event = { preventDefault: () => prevented++ };
+  assert.equal(button.disabled, false);
+  listeners.get("submit")(event);
+  assert.equal(prevented, 0);
+  assert.equal(button.disabled, true);
+  assert.equal(attributes.get("aria-busy"), "true");
+  listeners.get("submit")(event);
+  listeners.get("submit")(event);
+  assert.equal(prevented, 2);
+  listeners.get("pageshow")();
+  assert.equal(button.disabled, false);
+  assert.equal(button.textContent, "Conferma e accedi");
+  listeners.get("submit")(event);
+  assert.equal(prevented, 2);
+  const hash = createHash("sha256").update(confirmation.CONFIRMATION_SUBMIT_SCRIPT).digest("base64");
+  assert.ok(confirmation.MAGIC_LINK_RESPONSE_HEADERS["Content-Security-Policy"].includes(`script-src 'sha256-${hash}'`));
 });

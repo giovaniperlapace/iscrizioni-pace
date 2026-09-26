@@ -26,7 +26,7 @@ try {
   assert.equal(verifications,0,"scanner must not reach Auth");
   await ab("open",url);
   assert.match(await ab("snapshot","-i"),/button/);
-  assert.match(await ab("eval",'document.body.innerText.length > 0 && !document.querySelector("script, [data-nextjs-dialog]")'),/true/);
+  assert.match(await ab("eval",'document.body.innerText.length > 0 && document.querySelectorAll("script").length === 1 && !document.querySelector("[data-nextjs-dialog]")'),/true/);
   for(const [locale,label] of Object.entries({it:"Conferma e accedi",en:"Confirm and sign in",fr:"Confirmer et se connecter",de:"Bestätigen und anmelden",es:"Confirmar y acceder",nl:"Bevestigen en inloggen",uk:"Підтвердити та увійти"})) {
     await ab("eval",`document.cookie="iscrizioni_locale=${locale};path=/"`);
     await ab("open",url);
@@ -43,7 +43,7 @@ try {
   await ab("click",'button[type="submit"]');
   await ab("wait","--url","**/login?error=otp");
   assert.equal(verifications,1,"only explicit native POST reaches Auth");
-  console.log("PASS repeated GET/HEAD, seven languages, desktop/mobile, no scripts/errors, explicit POST reaches local Auth once and expired token returns to login");
+  console.log("PASS repeated GET/HEAD, seven languages, desktop/mobile, single guarded script/no errors, explicit POST reaches local Auth once and expired token returns to login");
 } finally {
   await ab("close");
   await new Promise(resolve=>auth.close(resolve));
