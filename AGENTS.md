@@ -154,6 +154,13 @@
   browser manuale sette lingue, pubblico/link in tedesco e mobile superati.
   Dettagli in docs/incident-2026-09-24-germany-required-fields.md. Modifica locale,
   inclusa nel rilascio integrato autorizzato del 24 settembre.
+## Presenze nella modifica personale su mobile — 2026-09-26
+
+- La scheda personale mostra le presenze in quattro riquadri su due colonne
+  quando il contenitore è stretto; da 32rem torna alla tabella per fasce.
+  Una sola serie di checkbox conserva selezioni e nomi dei campi durante il
+  cambio di layout, senza duplicare valori nel salvataggio. Calendario,
+  traduzioni e gestione delle presenze da comunicare invariati.
 
 ## Magic Link dopo inattività — 2026-09-24
 

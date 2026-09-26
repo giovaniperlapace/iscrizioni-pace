@@ -1679,36 +1679,25 @@ function AttendanceSlotTable({
     return null;
   }
 
-  const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${columns.length}, minmax(5.5rem, 1fr))`;
-
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--peace-border)]">
-      <div
-        className="grid bg-[#f7fbfe] text-center text-xs font-semibold uppercase text-[var(--peace-muted)]"
-        style={{ gridTemplateColumns }}
-      >
-        <div className="border-r border-[var(--peace-border)] px-3 py-3 text-left">
-          Fascia
+    <div className="@container min-w-0">
+      <div className="grid grid-cols-2 gap-3 @min-[32rem]:flex @min-[32rem]:gap-0 @min-[32rem]:overflow-hidden @min-[32rem]:rounded-lg @min-[32rem]:border @min-[32rem]:border-[var(--peace-border)]">
+        <div className="hidden @min-[32rem]:block @min-[32rem]:w-28 @min-[32rem]:shrink-0">
+          <div className="flex h-14 items-center bg-[#f7fbfe] px-3 text-xs font-semibold text-[var(--peace-muted)]">
+            Fascia
+          </div>
+          {ATTENDANCE_PARTS.map((part) => (
+            <div key={part.value} className="flex min-h-14 items-center border-t border-[var(--peace-border)] bg-[#fbfdff] px-3 text-sm font-medium">
+              {part.label[locale] ?? part.label.en}
+            </div>
+          ))}
         </div>
         {columns.map((column) => (
-          <div
-            key={column.day}
-            className="border-r border-[var(--peace-border)] px-3 py-3 last:border-r-0"
-          >
-            {column.label}
-          </div>
-        ))}
-      </div>
-      {ATTENDANCE_PARTS.map((part) => (
-        <div
-          key={part.value}
-          className="grid border-t border-[var(--peace-border)]"
-          style={{ gridTemplateColumns }}
-        >
-          <div className="border-r border-[var(--peace-border)] bg-[#fbfdff] px-3 py-3 text-sm font-medium text-[var(--peace-ink)]">
-            {part.label[locale] ?? part.label.en}
-          </div>
-          {columns.map((column) => {
+          <div key={column.day} className="min-w-0 overflow-hidden rounded-lg border border-[var(--peace-border)] @min-[32rem]:flex-1 @min-[32rem]:rounded-none @min-[32rem]:border-0 @min-[32rem]:border-l">
+            <div className="flex h-14 items-center justify-center bg-[#f7fbfe] px-2 text-center text-sm font-semibold text-[var(--peace-ink)] @min-[32rem]:text-xs">
+              {column.label}
+            </div>
+          {ATTENDANCE_PARTS.map((part) => {
             const slotAvailable = column.parts.includes(part.value);
             const slotValue = encodeAttendanceSlot({
               day: column.day,
@@ -1718,19 +1707,20 @@ function AttendanceSlotTable({
             return (
               <label
                 key={`${column.day}-${part.value}`}
-                className={`flex min-h-14 items-center justify-center border-r border-[var(--peace-border)] px-3 py-2 last:border-r-0 ${
+                className={`flex min-h-14 items-center justify-between gap-2 border-t border-[var(--peace-border)] px-2 py-2 text-xs @min-[32rem]:justify-center ${
                   slotAvailable
                     ? "bg-white text-[var(--peace-ink)]"
                     : "bg-[#f3f6f9] text-[#9aa8b8]"
                 }`}
               >
+                <span className="min-w-0 break-words font-medium @min-[32rem]:hidden">{part.label[locale] ?? part.label.en}</span>
                 {slotAvailable ? (
                   <input
                     type="checkbox"
                     name="availabilitySlots"
                     value={slotValue}
                     defaultChecked={selectedSlots.has(slotValue)}
-                    className="h-4 w-4 accent-[var(--peace-blue-800)]"
+                    className="h-5 w-5 shrink-0 accent-[var(--peace-blue-800)]"
                     aria-label={`${part.label[locale] ?? part.label.en} ${column.label}`}
                   />
                 ) : (
@@ -1739,8 +1729,9 @@ function AttendanceSlotTable({
               </label>
             );
           })}
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
