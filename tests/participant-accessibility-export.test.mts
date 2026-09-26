@@ -1,3 +1,4 @@
+import { parseStatisticsDrilldown } from "../lib/registrations/event-statistics.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -60,7 +61,7 @@ test("actual export GET strips forged disability requests from viewers and reads
       qualityAccess: async () => ({db: {}, auth: {user: {id: "actor"}}, event: {id: "event"}, isAdmin: false, canWrite}),
       loadCatalog: async () => ({services: [], tags: [], groups: []}),
       filteredExportPeople: async (_db: unknown, _event: unknown, _params: unknown, include: boolean) => {readSensitive = include; return {people: [{name: "Parent", children, accessibility: include ? "Sensitive fixture" : undefined}]};},
-      parseTablePreferences, writeVisibleParticipantsWorkbook,
+      parseTablePreferences, parseStatisticsDrilldown, writeVisibleParticipantsWorkbook,
       createSupabaseServiceClient: () => ({from: () => ({insert: async () => ({error: null})})}),
       NextResponse: Response,
     };
@@ -70,6 +71,10 @@ test("actual export GET strips forged disability requests from viewers and reads
     const book = new ExcelJS.Workbook(); await book.xlsx.load(Buffer.from(await response.arrayBuffer()) as never);
     assert.equal(book.worksheets[0].columnCount, canWrite ? 4 : 3);
     assert.equal(JSON.stringify(book.worksheets[0].getRow(2).values).includes("Sensitive fixture"), canWrite);
+    readSensitive = undefined;
+    const filtered = await handler({nextUrl: new URL("http://localhost/?kind=export&columns=name&stat=difficulty%3Dhearing")});
+    assert.equal(filtered.status, canWrite ? 200 : 400);
+    assert.equal(readSensitive, canWrite ? false : undefined, "viewer blocked before export reads even with disability column hidden");
   }
   assert.equal(parseTablePreferences({sort: "accessibility", columns: ["accessibility"]}, false).sort, "name");
 });

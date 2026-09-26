@@ -45,6 +45,11 @@ function database() {
     participant_operational_tags: [],
     event_attendance_choices: [],
     groups: [],
+    accessibility_needs: [
+      {registration_id: "r1203", washington_group_answers: {hearing: true, walkingOrSteps: true}},
+      {registration_id: "r1204", washington_group_answers: {hearing: "true"}},
+      {registration_id: "r1", washington_group_answers: {walkingOrSteps: true}},
+    ],
   };
   return {
     from(table: string) {
@@ -225,4 +230,20 @@ test("empty visible-column export keeps only its selected headers", async () => 
     "Numero dei figli accompagnati",
     "Nomi e cognomi dei minori accompagnati",
   ]);
+});
+
+
+test("disability drilldown exports exact declared people, combines filters and survives a hidden disability column", async () => {
+  const event = {id: "e", title: "Fixture", starts_on: "2026-10-25", ends_on: "2026-10-27"};
+  for (const include of [true, false]) {
+    const result = await filteredExportPeople(database(), event, new URLSearchParams({stat: "difficulty=hearing"}), include, true);
+    assert.deepEqual(result.people.map(person => person.id), ["r1203"]);
+    assert.equal(Boolean(result.people[0].accessibility), include);
+  }
+  const combined = await filteredExportPeople(database(), event, new URLSearchParams({stat: "difficulty=walkingOrSteps", contact: "p1203@example.test"}), false, true);
+  assert.deepEqual(combined.people.map(person => person.id), ["r1203"]);
+  calls.length = 0;
+  await assert.rejects(filteredExportPeople(database(), event, new URLSearchParams({stat: "difficulty=hearing"})), /permessi/);
+  assert.deepEqual(calls, [], "unauthorized disability filters must fail before reading data");
+  await assert.rejects(filteredExportPeople(database(), event, new URLSearchParams({stat: "kind=all&difficulty=invalid"}), false, true), /non valido/);
 });

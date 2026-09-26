@@ -1,3 +1,4 @@
+import { parseStatisticsDrilldown } from "@/lib/registrations/event-statistics";
 import { randomUUID, createHash } from "node:crypto";
 import { hashIdentityFingerprint } from "@/lib/data-quality/fingerprint.server";
 import { NextRequest, NextResponse } from "next/server";
@@ -57,6 +58,8 @@ export async function GET(request: NextRequest) {
   try {
     const { db, auth, event, isAdmin, canWrite } = await qualityAccess();
     const kind = request.nextUrl.searchParams.get("kind");
+    if (parseStatisticsDrilldown(request.nextUrl.searchParams.get("stat"))?.difficulty && !canWrite)
+      throw new Error("Non hai i permessi per questa operazione.");
     const catalog = await loadCatalog(db, event.id, kind === "export");
     let buffer: Buffer;
     if (kind === "export") {
@@ -76,6 +79,7 @@ export async function GET(request: NextRequest) {
         },
         request.nextUrl.searchParams,
         canWrite && columns.includes("accessibility"),
+        canWrite,
       );
       buffer = await writeVisibleParticipantsWorkbook(
         people,

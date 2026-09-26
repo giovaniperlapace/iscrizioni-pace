@@ -37,6 +37,15 @@ function fixture(failure?: { table: string; after: number }) {
         assert.equal(url.searchParams.get("event_id"), `eq.${eventId}`);
         if (table === "registrations") assert.equal(url.searchParams.get("deleted_at"), "is.null");
         rows = table === "registrations" ? registrations : groups;
+        if (table === "registrations") {
+          const select = url.searchParams.get("select");
+          if (select === "id,submitted_at") rows = registrations.map(({ id, submitted_at }) => ({ id, submitted_at }));
+          else if (!select?.includes("first_name")) rows = registrations.map(row => ({
+            id: row.id, event_id: row.event_id,
+            participants: select?.includes("birth_date") ? { birth_date: row.participants.birth_date } : { id: row.id },
+            registration_children: row.registration_children.map(child => ({ id: child.id, position: child.position, ...(select?.includes("birth_date") ? { birth_date: child.birth_date } : {}) })),
+          }));
+        }
       } else if (table === "participant_group_assignments") {
         assert.equal(url.searchParams.get("is_current"), "eq.true");
         rows = ids.filter(id => id !== uuid(1200)).map(id => ({ registration_id: id, group_id: uuid(5000) }));
@@ -82,3 +91,38 @@ test("catalogue fallback handles object/array joins and preserves explicit updat
   assert.deepEqual(participantGeography({ country_other: " Francia ", city_other: " Parigi ", countries: { name_it: "Italia" }, cities: { name: "Roma" } }), { country: "Francia", city: "Parigi" });
   assert.deepEqual(participantGeography(null), { country: null, city: null });
 });
+
+for (const report of ["territory", "attendance", "age", "registrations"] as const) {
+  test(`${report} reads only its sources and preserves the existing displayed counts`, async () => {
+    const complete = await loadEventStatisticsSnapshot(fixture().client, eventId, dates);
+    const { client, calls, urls } = fixture();
+    const result = await loadEventStatisticsSnapshot(client, eventId, dates, report);
+    assert.equal(calls.registrations, 3, "all reports keep deterministic pagination");
+    const expectedTables = report === "territory"
+      ? ["registrations", "groups", "participant_group_assignments", "event_attendance_choices"]
+      : report === "attendance" ? ["registrations", "event_attendance_choices"] : ["registrations"];
+    assert.deepEqual(Object.keys(calls).sort(), expectedTables.sort());
+    const select = urls.find(url => url.pathname.endsWith("/registrations"))!.searchParams.get("select")!;
+    assert.doesNotMatch(select, /first_name|last_name|country_other|city_other|events\(/);
+    if (report === "registrations") {
+      assert.equal(select, "id,submitted_at");
+      assert.deepEqual(result.registrationTimeline, complete.registrationTimeline);
+    } else if (report === "age") {
+      assert.match(select, /birth_date/);
+      assert.deepEqual(result.summary.ageBandCounts, complete.summary.ageBandCounts);
+    } else if (report === "attendance") {
+      assert.doesNotMatch(select, /birth_date|submitted_at/);
+      assert.deepEqual(result.attendanceSlots, complete.attendanceSlots);
+      assert.deepEqual(result.summary.attendanceSlotCounts, complete.summary.attendanceSlotCounts);
+      assert.equal(result.summary.withoutAttendance, complete.summary.withoutAttendance);
+    } else {
+      assert.doesNotMatch(select, /birth_date|submitted_at/);
+      assert.equal(result.summary.totalPeople, complete.summary.totalPeople);
+      assert.equal(result.summary.registeredParticipants, complete.summary.registeredParticipants);
+      assert.equal(result.summary.accompanyingChildren, complete.summary.accompanyingChildren);
+      assert.deepEqual(result.people.toSorted((a,b) => a.id.localeCompare(b.id)).map(p => [p.id, p.assignedGroupPath, p.attendanceSlotKeys]), complete.people.toSorted((a,b) => a.id.localeCompare(b.id)).map(p => [p.id, p.assignedGroupPath, p.attendanceSlotKeys]));
+    }
+    if (report !== "territory") assert.equal(result.people.length, 0, "no person-level payload for aggregate reports");
+    await assert.rejects(loadEventStatisticsSnapshot(fixture({ table: "registrations", after: 1 }).client, eventId, dates, report), /read failed/);
+  });
+}

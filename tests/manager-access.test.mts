@@ -1,3 +1,5 @@
+import { parseStatisticsDrilldown } from "../lib/registrations/event-statistics.ts";
+import { resolveStatisticsReport } from "../lib/registrations/statistics-reports.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -21,6 +23,7 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
   const reads: string[] = [];
   const deps = {
     exports: {},
+    resolveStatisticsReport, parseStatisticsDrilldown,
     require: (name: string) => { assert.equal(name, "react/jsx-runtime"); return jsxRuntime; },
     createSupabaseServerClient: async () => ({}),
     createSupabaseServiceClient: () => ({ from: () => { throw new Error("Unexpected operational read"); } }),
@@ -37,6 +40,8 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
 
 const deniedParams = [
   ...["email", "ruoli", "gruppi", "impostazioni", "servizi"].map(section => ({ section })),
+  { section: "dashboard", report: "disability" },
+  { section: "iscritti", stat: "difficulty=hearing" },
   { groupTool: "links" }, { groupId: "group" }, { groupLinkToken: "secret" },
   { roleSaved: "1" }, { serviceId: "service" },
 ];
@@ -78,7 +83,7 @@ test("both sidebar modes render exactly the two allowed viewer menu items", () =
   const f = fixture([]);
   for (const navMode of ["mini", "full"]) {
     for (const canManage of [false, true]) {
-      const html = renderToStaticMarkup(f.ManagerSidebar({ activeSection: "dashboard", navMode, canManage }));
+      const html = renderToStaticMarkup(f.ManagerSidebar({ activeSection: "dashboard", navMode, canManage, report: "territory" }));
       const menu = html.slice(html.indexOf("<nav"));
       const sections = [...menu.matchAll(/href="\/dashboard\/manager\?section=([a-z]+)&amp;nav=mini"/g)].map(match => match[1]);
       assert.deepEqual(sections, canManage ? ["dashboard", "iscritti", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "iscritti"]);

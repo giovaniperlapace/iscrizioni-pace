@@ -136,9 +136,9 @@ test("event statistics build non-overlapping requested age bands at event start"
     unknown: 0,
   });
 
-  assert.equal(snapshot.attendanceSlots.length, 6);
-  assert.equal(snapshot.attendanceSlots[0]?.day, "2026-10-25");
-  assert.equal(snapshot.attendanceSlots[0]?.dayPart, "morning");
+  assert.equal(snapshot.attendanceSlots.length, 7);
+  assert.equal(snapshot.attendanceSlots[0]?.day, "2026-10-24");
+  assert.equal(snapshot.attendanceSlots[0]?.dayPart, "afternoon");
 });
 
 test("event statistics expose only morning and afternoon and expand legacy full-day choices", () => {
@@ -176,9 +176,10 @@ test("event statistics expose only morning and afternoon and expand legacy full-
 
   assert.deepEqual(
     snapshot.attendanceSlots.map((slot) => slot.key),
-    ["2026-10-25__morning", "2026-10-25__afternoon"]
+    ["2026-10-24__afternoon", "2026-10-25__morning", "2026-10-25__afternoon"]
   );
   assert.deepEqual(snapshot.people[0]?.attendanceSlotKeys, [
+    "2026-10-24__afternoon",
     "2026-10-25__afternoon",
     "2026-10-25__morning",
   ]);
@@ -274,4 +275,28 @@ test("legacy registrations missing birth, city and email remain in statistics wi
   assert.equal(snapshot.summary.totalPeople, 3);
   assert.equal(snapshot.people.length, 3);
   assert.equal(snapshot.participantBreakdowns.group[0].participantCount, 3);
+});
+
+
+test("arrival afternoon counts include accompanying children and preserve exact drilldowns", () => {
+  const snapshot = buildEventStatisticsSnapshot({
+    participants: ["arrival", "unknown"].map(registrationId => ({
+      registrationId, eventId: "event", eventTitle: "Assisi", currentGroupId: null,
+      currentGroupName: null, country: null, city: null, childrenCount: registrationId === "arrival" ? 1 : 0,
+    })), groups: [],
+    attendanceChoices: [
+      { registration_id: "arrival", day: "2026-10-24", day_part: "afternoon", choice: "yes" },
+      { registration_id: "arrival", day: "2026-10-24", day_part: "day", choice: "yes" },
+      { registration_id: "arrival", day: "2026-10-23", day_part: "afternoon", choice: "yes" },
+      { registration_id: "unknown", day: null, choice: "unknown" },
+    ], eventStartsOn: "2026-10-25", eventEndsOn: "2026-10-27",
+  });
+  assert.equal(snapshot.summary.attendanceSlotCounts["2026-10-24__afternoon"], 2);
+  assert.equal(snapshot.summary.attendanceSlotCounts["2026-10-24__morning"], undefined);
+  assert.equal(snapshot.summary.withoutAttendance, 1);
+  assert.equal(snapshot.attendanceSlots.some(slot => slot.day === "2026-10-23"), false);
+  const people = filterStatisticsPeople(snapshot.people, { attendanceSlot: "2026-10-24__afternoon" });
+  assert.equal(people.length, 2);
+  assert.deepEqual(people.map(person => person.kind).sort(), ["child", "participant"]);
+  assert.ok(people.every(person => person.registrationId === "arrival"));
 });

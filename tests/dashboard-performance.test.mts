@@ -1,3 +1,4 @@
+import * as reports from "../lib/registrations/statistics-reports.ts";
 import { loadAccessibilitySummaries } from "../lib/registrations/accessibility-summary.server.ts";
 import { loadEmailDelegations } from "../lib/registrations/email-delegation.server.ts";
 import { loadAttendanceSummaries } from "../lib/registrations/attendance-summary.server.ts";
@@ -30,7 +31,7 @@ function compile(path: string, modules: Record<string, unknown>, components = fa
 
 test("dashboard sections execute only the queries needed by their visible content", async () => {
   for (const dashboard of ["admin", "manager"]) {
-    for (const section of ["dashboard", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])]) {
+    for (const section of ["dashboard", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])]) {
       const reads: string[] = [];
       const db = { from(table: string) {
         const query = new Proxy({}, { get: (_, key) => key === "then"
@@ -50,6 +51,8 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/registrations/email-delegation.server": { loadEmailDelegations: async (...args: Parameters<typeof loadEmailDelegations>) => { reads.push("email-delegations"); return loadEmailDelegations(...args); } },
         "@/lib/registrations/operations-dashboard": operations,
         "@/lib/registrations/event-statistics": statistics,
+        "@/lib/registrations/statistics-reports": reports,
+        "@/lib/registrations/disability-statistics.server": { loadDisabilityStatistics: async () => { reads.push("disability"); return { people: [] }; } },
         "@/lib/registrations/event-statistics.server": { loadEventStatisticsSnapshot: async () => { reads.push("statistics"); return {}; } },
         "@/lib/auth/session": { getCurrentAuthContext: async () => ({ user: { id: "operator" }, eventRoles: [{ role: "admin", eventId: null }] }) },
         "@/lib/supabase/server": { createSupabaseServerClient: async () => db },
@@ -58,14 +61,15 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/operational-users/identity": { getOperationalUserIdentities: async () => new Map() },
       };
       const page = compile(`app/dashboard/${dashboard}/page.tsx`, modules, true).default;
-      await page({ searchParams: Promise.resolve({ section }) } as never);
+      await page({ searchParams: Promise.resolve({ section: section === "disability" ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(section === "disability" ? { report: "disability" } : {}) }) } as never);
       const context = `${dashboard}/${section}`;
-      assert.equal(reads.includes("email-delegations"), section === "iscritti", context);
-      assert.equal(reads.includes("registrations"), section === "iscritti" || section === "gruppi", context);
+      assert.equal(reads.includes("email-delegations"), ["iscritti", "disability-people"].includes(section), context);
+      assert.equal(reads.includes("registrations"), ["iscritti", "disability-people", "gruppi"].includes(section), context);
       assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);
       assert.equal(reads.includes("event_user_roles"), section === "gruppi" || section === "ruoli", context);
       assert.equal(reads.includes("statistics"), section === "dashboard", context);
-      assert.equal(reads.includes("event_services"), ["iscritti", "gruppi", "impostazioni"].includes(section), context);
+      assert.equal(reads.includes("disability"), ["disability", "disability-people"].includes(section), context);
+      assert.equal(reads.includes("event_services"), ["iscritti", "disability-people", "gruppi", "impostazioni"].includes(section), context);
     }
   }
 });

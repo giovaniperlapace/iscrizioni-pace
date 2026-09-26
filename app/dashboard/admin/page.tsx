@@ -1,3 +1,5 @@
+import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
+import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
 import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
 import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
 import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
@@ -146,6 +148,7 @@ type AdminPageProps = {
     nav?: string;
     section?: string;
     stat?: string;
+    report?: string;
     status?: string;
   }>;
 };
@@ -418,6 +421,9 @@ export default async function AdminDashboardPage({
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveAdminSection(params);
+  const statisticsReport = resolveStatisticsReport(params.report);
+  const statisticsDrilldown =
+    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const needsAdminOperations = activeSection !== "impostazioni";
   const loadPlan = dashboardLoadPlan(activeSection);
   const currentEvent = needsAdminOperations
@@ -433,14 +439,16 @@ export default async function AdminDashboardPage({
       ? getAdminOperationsSnapshot(filters, currentEventId)
       : getAdminOperationsSnapshot(filters, null),
   ]);
-  const statisticsDrilldown =
-    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
+  const disabilityStatistics = (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty
+    ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
+    : undefined;
   const statistics =
-    activeSection === "dashboard" || statisticsDrilldown
+    (activeSection === "dashboard" && statisticsReport !== "disability") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getAdminStatisticsSnapshot(
           currentEventId,
           currentEvent?.starts_on ?? null,
-          currentEvent?.ends_on ?? null
+          currentEvent?.ends_on ?? null,
+          statisticsDrilldown || statisticsReport === "disability" ? "all" : statisticsReport
         )
       : buildEventStatisticsSnapshot({
           participants: [],
@@ -450,7 +458,7 @@ export default async function AdminDashboardPage({
   const statisticsSelection = statisticsDrilldown
     ? applyStatisticsDrilldownToOperations(
         adminOperations.participants,
-        statistics,
+        statisticsDrilldown.difficulty ? { ...statistics, people: disabilityStatistics?.people ?? [] } : statistics,
         statisticsDrilldown
       )
     : null;
@@ -492,7 +500,7 @@ export default async function AdminDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <AdminSidebar activeSection={activeSection} navMode={navMode} />
+          <AdminSidebar activeSection={activeSection} navMode={navMode} report={statisticsReport} />
 
           <div className="grid min-w-0 gap-6">
             <GroupAssignmentReports dashboard="admin" eventId={currentEventId} />
@@ -520,6 +528,9 @@ export default async function AdminDashboardPage({
             {activeSection === "dashboard" ? (
               <StatisticsSection
                 statistics={statistics}
+                report={statisticsReport}
+                canViewDisability={true}
+                disabilityStatistics={disabilityStatistics}
                 dashboard="admin"
                 navMode={navMode}
               />
@@ -922,7 +933,8 @@ export default async function AdminDashboardPage({
   async function getAdminStatisticsSnapshot(
     currentEventId: string | null,
     eventStartsOn: string | null,
-    eventEndsOn: string | null
+    eventEndsOn: string | null,
+    report: Exclude<StatisticsReport, "disability"> | "all"
   ): Promise<EventStatisticsSnapshot> {
     if (!currentEventId) {
       return buildEventStatisticsSnapshot({
@@ -932,7 +944,7 @@ export default async function AdminDashboardPage({
       });
     }
 
-    return loadEventStatisticsSnapshot(serviceSupabase, currentEventId, { eventStartsOn, eventEndsOn });
+    return loadEventStatisticsSnapshot(serviceSupabase, currentEventId, { eventStartsOn, eventEndsOn }, report);
   }
 
   async function getOpeningSnapshots(): Promise<EventSnapshot[]> {
@@ -1055,9 +1067,11 @@ export default async function AdminDashboardPage({
 function AdminSidebar({
   activeSection,
   navMode,
+  report,
 }: {
   activeSection: AdminSection;
   navMode: AdminNavMode;
+  report: StatisticsReport;
 }) {
   const isMini = navMode === "mini";
   const nextMode = isMini ? "full" : "mini";
@@ -1120,7 +1134,7 @@ function AdminSidebar({
           Admin
         </span>
         <Link
-          href={adminPath(activeSection, nextMode)}
+          href={`${adminPath(activeSection, nextMode)}${activeSection === "dashboard" ? `&report=${report}` : ""}`}
           aria-label={toggleLabel}
           title={toggleLabel}
           className="btn-secondary grid min-h-9 min-w-9 place-items-center px-2 text-sm"

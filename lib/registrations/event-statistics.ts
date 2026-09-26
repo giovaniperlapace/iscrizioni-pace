@@ -1,3 +1,4 @@
+import { ACCESSIBILITY_DIFFICULTIES } from "../questionnaire/registration.ts";
 import { buildRegistrationWeeks } from "./weekly-registrations.ts";
 import {
   buildAttendanceDayColumns,
@@ -87,6 +88,7 @@ export type StatisticsPersonRow = {
   ageBand: StatisticsAgeBand;
   attendanceSlotKeys: string[];
   attendanceUnknown: boolean;
+  difficultyKeys?: Array<typeof ACCESSIBILITY_DIFFICULTIES[number]["key"]>;
 };
 
 export type StatisticsAttendanceSlot = {
@@ -96,6 +98,7 @@ export type StatisticsAttendanceSlot = {
 };
 
 export type StatisticsDrilldownFilter = {
+  difficulty?: typeof ACCESSIBILITY_DIFFICULTIES[number]["key"];
   personKind?: StatisticsPersonKind | "all";
   country?: string;
   city?: string;
@@ -130,6 +133,7 @@ export function serializeStatisticsDrilldown(
 ): string {
   const params = new URLSearchParams();
 
+  if (filter.difficulty) params.set("difficulty", filter.difficulty);
   if (filter.personKind) {
     params.set("kind", filter.personKind);
   }
@@ -170,6 +174,11 @@ export function parseStatisticsDrilldown(
 
   const params = new URLSearchParams(value);
   const filter: StatisticsDrilldownFilter = {};
+  if (params.has("difficulty")) {
+    const difficulty = ACCESSIBILITY_DIFFICULTIES.find(item => item.key === params.get("difficulty"));
+    if (!difficulty || params.getAll("difficulty").length !== 1) throw new Error("Filtro statistiche non valido.");
+    filter.difficulty = difficulty.key;
+  }
   const kind = params.get("kind");
   const attendance = params.get("attendance");
   const age = params.get("age");
@@ -212,6 +221,7 @@ export function filterStatisticsPeople(
   filter: StatisticsDrilldownFilter
 ): StatisticsPersonRow[] {
   return people.filter((person) => {
+    if (filter.difficulty && (person.kind !== "participant" || !person.difficultyKeys?.includes(filter.difficulty))) return false;
     if (
       filter.personKind &&
       filter.personKind !== "all" &&
@@ -256,6 +266,7 @@ export function describeStatisticsDrilldown(
   slots: StatisticsAttendanceSlot[]
 ): string {
   const parts: string[] = [];
+  if (filter.difficulty) parts.push(`Difficoltà dichiarata: ${ACCESSIBILITY_DIFFICULTIES.find(item => item.key === filter.difficulty)!.label.it}`);
   if (filter.subtreeGroupKey) parts.push(`Gruppo o nodo e sottogruppi: ${filter.assignedGroupLabel ?? filter.subtreeGroupKey}`);
   if (filter.assignedGroupKey) parts.push(`Gruppo o nodo: ${filter.assignedGroupLabel ?? filter.assignedGroupKey}`);
 
@@ -464,10 +475,6 @@ function buildPeopleDetail(
   const slotsByKey = new Map<string, StatisticsAttendanceSlot>();
 
   for (const column of buildAttendanceDayColumns(eventStartsOn, eventEndsOn)) {
-    if (eventStartsOn && column.day < eventStartsOn) {
-      continue;
-    }
-
     for (const part of column.parts) {
       const key = attendanceDetailSlotKey(column.day, part);
       slotsByKey.set(key, { key, day: column.day, dayPart: part });

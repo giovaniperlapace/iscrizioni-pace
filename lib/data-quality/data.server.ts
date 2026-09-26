@@ -1,3 +1,4 @@
+import { withStatisticsDifficulties } from "../registrations/disability-statistics.server.ts";
 import { loadAccessibilitySummaries } from "../registrations/accessibility-summary.server.ts";
 import { participantGeography, type ParticipantGeography } from "../registrations/geography.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -272,7 +273,11 @@ export async function filteredExportPeople(
   },
   params: URLSearchParams,
   includeAccessibility = false,
+  canFilterAccessibility = false,
 ) {
+  const drilldown = parseStatisticsDrilldown(params.get("stat") ?? undefined);
+  if (params.has("stat") && !drilldown) throw new Error("Filtro statistiche non valido.");
+  if (drilldown?.difficulty && !canFilterAccessibility) throw new Error("Non hai i permessi per questa operazione.");
   const all = (await loadQualityPeople(db, event.id)).map((person) => ({
     ...person,
     eventTitle: event.title,
@@ -296,9 +301,6 @@ export async function filteredExportPeople(
           .range(from, to),
     )
   ).data as StatisticsAttendanceChoice[];
-  const drilldown = parseStatisticsDrilldown(params.get("stat") ?? undefined);
-  if (params.has("stat") && !drilldown)
-    throw new Error("Filtro statistiche non valido.");
   if (drilldown) {
     const groups = (
       await loadAllRows((from, to) =>
@@ -325,7 +327,7 @@ export async function filteredExportPeople(
     });
     people = applyStatisticsDrilldownToOperations(
       people,
-      statistics,
+      drilldown.difficulty ? await withStatisticsDifficulties(db, statistics) : statistics,
       drilldown,
     ).participants;
   }

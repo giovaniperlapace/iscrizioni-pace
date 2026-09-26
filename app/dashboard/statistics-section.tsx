@@ -1,5 +1,8 @@
 "use client";
 
+import { DisabilityStatisticsReport } from "@/app/dashboard/disability-statistics-report";
+import type { DisabilityStatisticsSnapshot } from "@/lib/registrations/disability-statistics";
+
 import Link from "@/components/pending-link";
 import {
   Baby,
@@ -21,11 +24,16 @@ import {
   type StatisticsPersonRow,
 } from "@/lib/registrations/event-statistics";
 
+import { STATISTICS_REPORTS, type StatisticsReport } from "@/lib/registrations/statistics-reports";
+
 type StatisticsDashboard = "admin" | "manager";
 type StatisticsNavMode = "full" | "mini";
 
 type StatisticsSectionProps = {
   statistics: EventStatisticsSnapshot;
+  report?: StatisticsReport;
+  canViewDisability?: boolean;
+  disabilityStatistics?: DisabilityStatisticsSnapshot;
   dashboard: StatisticsDashboard;
   navMode: StatisticsNavMode;
 };
@@ -42,6 +50,9 @@ const AGE_BANDS: StatisticsAgeBand[] = [
 
 export function StatisticsSection({
   statistics,
+  report = "territory",
+  canViewDisability = false,
+  disabilityStatistics,
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
@@ -53,14 +64,29 @@ export function StatisticsSection({
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Seleziona qualsiasi conteggio per aprire la gestione iscritti già
+          {report === "disability" ? "Seleziona un totale per difficoltà per aprire Gestione iscritti con le persone interessate. I conteggi per gruppo e il pulsante Mostra tutte le persone aprono l’elenco qui sotto." : <>Seleziona qualsiasi conteggio per aprire la gestione iscritti già
           filtrata sulle persone che compongono quel dato.
           Persone complessive, totali per gruppo, presenze e fasce di età includono
-          i figli accompagnati. Partecipanti iscritti e iscrizioni per settimana li escludono.
+          i figli accompagnati. Partecipanti iscritti e iscrizioni per settimana li escludono.</>}
         </p>
       </div>
 
-      <ReportBlock name="territory" title="Partecipanti per gruppo o nodo">
+      <nav aria-label="Categorie di statistiche" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
+        {STATISTICS_REPORTS.filter(item => item.key !== "disability" || canViewDisability).map(({ key, label }) => (
+          <Link
+            key={key}
+            href={`/dashboard/${dashboard}?${new URLSearchParams({ section: "dashboard", nav: navMode, report: key })}`}
+            prefetch={false}
+            scroll={false}
+            aria-current={report === key ? "page" : undefined}
+            className={`inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] ${report === key ? "bg-[var(--peace-blue-800)] text-white shadow-sm" : "text-[var(--peace-blue-900)] hover:bg-[var(--peace-sky-100)]"}`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      {report === "territory" ? <ReportBlock name="territory" title="Partecipanti per gruppo o nodo">
         <TerritoryStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
@@ -71,27 +97,31 @@ export function StatisticsSection({
           attendanceSlots={statistics.attendanceSlots}
           participantHref={participantHref}
         />
-      </ReportBlock>
+      </ReportBlock> : null}
 
-      <ReportBlock name="attendance" title="Presenze previste">
+      {report === "attendance" ? <ReportBlock name="attendance" title="Presenze previste">
         <p className="px-2 text-sm">Figli accompagnati inclusi; le loro presenze seguono quelle del genitore.</p>
         <AttendanceStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
         />
-      </ReportBlock>
+      </ReportBlock> : null}
 
-      <ReportBlock name="age" title="Fasce di età">
+      {report === "age" ? <ReportBlock name="age" title="Fasce di età">
         <p className="px-2 text-sm">Figli accompagnati inclusi. Età calcolate all’inizio dell’evento.</p>
         <AgeStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
         />
-      </ReportBlock>
+      </ReportBlock> : null}
 
-      <ReportBlock name="registrations" title="Iscrizioni per settimana">
+      {report === "disability" && canViewDisability && disabilityStatistics ? <ReportBlock name="disability" title="Disabilità e difficoltà dichiarate">
+        <DisabilityStatisticsReport statistics={disabilityStatistics} dashboard={dashboard} navMode={navMode} />
+      </ReportBlock> : null}
+
+      {report === "registrations" ? <ReportBlock name="registrations" title="Iscrizioni per settimana">
         <WeeklyRegistrations statistics={statistics} />
-      </ReportBlock>
+      </ReportBlock> : null}
     </section>
   );
 }
@@ -101,7 +131,7 @@ function ReportBlock({
   title,
   children,
 }: {
-  name: "territory" | "attendance" | "age" | "registrations";
+  name: StatisticsReport;
   title: string;
   children: ReactNode;
 }) {
@@ -314,23 +344,23 @@ function AttendanceStatisticsSummary({
   const days = groupAttendanceSlotsByDay(statistics.attendanceSlots);
 
   return (
-    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
+    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-4">
       <h3 className="text-base font-semibold">Riepilogo presenze previste</h3>
       <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
         Mattina e pomeriggio sono raggruppati per data. Seleziona un conteggio
         per vedere le iscrizioni corrispondenti.
       </p>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
         {days.map(({ day, slots }) => (
           <section
             key={day}
-            className="rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+            className={`col-span-2 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-3 ${slots.length === 1 ? "md:col-span-1" : ""}`}
           >
-            <h4 className="font-semibold text-[var(--peace-blue-900)]">
+            <h4 className="text-sm font-semibold text-[var(--peace-blue-900)]">
               {formatLongDay(day)}
             </h4>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className={`mt-2 grid gap-2 ${slots.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
               {slots.map((slot) => (
                 <AttendanceCountLink
                   key={slot.key}
@@ -343,11 +373,11 @@ function AttendanceStatisticsSummary({
           </section>
         ))}
 
-        <section className="rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
-          <h4 className="font-semibold text-[var(--peace-blue-900)]">
+        <section className="col-span-2 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-3">
+          <h4 className="text-sm font-semibold text-[var(--peace-blue-900)]">
             Presenza non specificata
           </h4>
-          <div className="mt-3">
+          <div className="mt-2">
             <AttendanceCountLink
               label="Nessuna fascia indicata"
               count={statistics.summary.withoutAttendance}
@@ -462,7 +492,7 @@ function AttendanceCountLink({
     <Link
       href={href}
       aria-label={`Apri ${count} persone: ${label}`}
-      className="group grid min-h-20 place-items-center rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-center transition hover:border-[var(--peace-border-strong)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
+      className="group grid min-h-16 place-items-center rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-center transition hover:border-[var(--peace-border-strong)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
     >
       <span className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
         {label}

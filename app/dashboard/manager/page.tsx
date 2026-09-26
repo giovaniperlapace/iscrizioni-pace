@@ -1,3 +1,5 @@
+import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
+import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
 import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
 import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
 import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
@@ -139,6 +141,7 @@ type ManagerPageProps = {
     nav?: string;
     section?: string;
     stat?: string;
+    report?: string;
     status?: string;
   }>;
 };
@@ -368,6 +371,9 @@ export default async function ManagerDashboardPage({
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveManagerSection(params);
+  const statisticsReport = resolveStatisticsReport(params.report);
+  const statisticsDrilldown =
+    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const currentEvent = await getCurrentOperationalEvent(
     serviceSupabase,
     "id,title,starts_on,ends_on"
@@ -376,7 +382,8 @@ export default async function ManagerDashboardPage({
   const canManage = currentEventId ? scope.canManageEvent(currentEventId) : scope.isAdmin;
   // Authorize the resolved section before any operational data is loaded,
   // including legacy URLs, inferred sections and remembered navigation.
-  if (!canAccessManagerSection(activeSection, canManage)) {
+  if (!canAccessManagerSection(activeSection, canManage) ||
+      (!canManage && ((activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
     redirect("/dashboard/manager?section=dashboard&nav=mini");
   }
   if (params.section === "servizi") {
@@ -394,16 +401,18 @@ export default async function ManagerDashboardPage({
           currentEventId,
           activeSection
         );
-  const statisticsDrilldown =
-    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
+  const disabilityStatistics = (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty
+    ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
+    : undefined;
   const statistics =
-    activeSection === "dashboard" || statisticsDrilldown
+    (activeSection === "dashboard" && statisticsReport !== "disability") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getManagerStatisticsSnapshot(
           serviceSupabase,
           scope,
           currentEventId,
           currentEvent?.starts_on ?? null,
-          currentEvent?.ends_on ?? null
+          currentEvent?.ends_on ?? null,
+          statisticsDrilldown || statisticsReport === "disability" ? "all" : statisticsReport
         )
       : buildEventStatisticsSnapshot({
           participants: [],
@@ -413,7 +422,7 @@ export default async function ManagerDashboardPage({
   const statisticsSelection = statisticsDrilldown
     ? applyStatisticsDrilldownToOperations(
         managerOperations.participants,
-        statistics,
+        statisticsDrilldown.difficulty ? { ...statistics, people: disabilityStatistics?.people ?? [] } : statistics,
         statisticsDrilldown
       )
     : null;
@@ -451,7 +460,7 @@ export default async function ManagerDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <ManagerSidebar activeSection={activeSection} navMode={navMode} canManage={canManage} />
+          <ManagerSidebar activeSection={activeSection} navMode={navMode} report={statisticsReport} canManage={canManage} />
 
           <div className="grid min-w-0 gap-6">
             <GroupAssignmentReports dashboard="manager" eventId={currentEventId} />
@@ -473,6 +482,9 @@ export default async function ManagerDashboardPage({
             {activeSection === "dashboard" ? (
               <StatisticsSection
                 statistics={statistics}
+                report={statisticsReport}
+                canViewDisability={canManage}
+                disabilityStatistics={disabilityStatistics}
                 dashboard="manager"
                 navMode={navMode}
               />
@@ -577,10 +589,12 @@ export default async function ManagerDashboardPage({
 function ManagerSidebar({
   activeSection,
   navMode,
+  report,
   canManage,
 }: {
   activeSection: ManagerSection;
   navMode: ManagerNavMode;
+  report: StatisticsReport;
   canManage: boolean;
 }) {
   const isMini = navMode === "mini";
@@ -644,7 +658,7 @@ function ManagerSidebar({
           Manager
         </span>
         <Link
-          href={`/dashboard/manager?section=${activeSection}&nav=${nextMode}`}
+          href={`/dashboard/manager?section=${activeSection}&nav=${nextMode}${activeSection === "dashboard" ? `&report=${report}` : ""}`}
           aria-label={toggleLabel}
           title={toggleLabel}
           className="btn-secondary grid min-h-9 min-w-9 place-items-center px-2 text-sm"
@@ -1305,7 +1319,8 @@ async function getManagerStatisticsSnapshot(
   scope: ReturnType<typeof getManagerEventScope>,
   currentEventId: string | null,
   eventStartsOn: string | null,
-  eventEndsOn: string | null
+  eventEndsOn: string | null,
+  report: Exclude<StatisticsReport, "disability"> | "all"
 ): Promise<EventStatisticsSnapshot> {
   if (
     !currentEventId ||
@@ -1318,7 +1333,7 @@ async function getManagerStatisticsSnapshot(
     });
   }
 
-  return loadEventStatisticsSnapshot(supabase, currentEventId, { eventStartsOn, eventEndsOn });
+  return loadEventStatisticsSnapshot(supabase, currentEventId, { eventStartsOn, eventEndsOn }, report);
 }
 
 async function ManagerGroupTreeSection({
