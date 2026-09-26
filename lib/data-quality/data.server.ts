@@ -274,6 +274,7 @@ export async function filteredExportPeople(
   params: URLSearchParams,
   includeAccessibility = false,
   canFilterAccessibility = false,
+  accessibilityDb: SupabaseClient = db,
 ) {
   const drilldown = parseStatisticsDrilldown(params.get("stat") ?? undefined);
   if (params.has("stat") && !drilldown) throw new Error("Filtro statistiche non valido.");
@@ -327,12 +328,12 @@ export async function filteredExportPeople(
     });
     people = applyStatisticsDrilldownToOperations(
       people,
-      drilldown.difficulty ? await withStatisticsDifficulties(db, statistics) : statistics,
+      drilldown.difficulty ? await withStatisticsDifficulties(accessibilityDb, statistics) : statistics,
       drilldown,
     ).participants;
   }
   const accessibility = includeAccessibility
-    ? await loadAccessibilitySummaries(db, people.map(person => person.id))
+    ? await loadAccessibilitySummaries(accessibilityDb, people.map(person => person.id))
     : new Map<string, string>();
   const attendanceByRegistration = new Map<string, StatisticsAttendanceChoice[]>();
   for (const choice of attendance) {

@@ -40,8 +40,6 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
 
 const deniedParams = [
   ...["email", "ruoli", "gruppi", "impostazioni", "servizi"].map(section => ({ section })),
-  { section: "dashboard", report: "disability" },
-  { section: "iscritti", stat: "difficulty=hearing" },
   { groupTool: "links" }, { groupId: "group" }, { groupLinkToken: "secret" },
   { roleSaved: "1" }, { serviceId: "service" },
 ];
@@ -88,5 +86,16 @@ test("both sidebar modes render exactly the two allowed viewer menu items", () =
       const sections = [...menu.matchAll(/href="\/dashboard\/manager\?section=([a-z]+)&amp;nav=mini"/g)].map(match => match[1]);
       assert.deepEqual(sections, canManage ? ["dashboard", "iscritti", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "iscritti"]);
     }
+  }
+});
+
+
+test("viewer can read disability statistics and drilldowns only for their current event", async () => {
+  for (const params of [{section: "dashboard", report: "disability"}, {section: "iscritti", stat: "difficulty=hearing"}]) {
+    const viewer = fixture([{role:"manager_viewer",eventId:"current"}]);
+    assert.deepEqual(await viewer.ManagerDashboardPage({searchParams:Promise.resolve(params)}), {canManage:false,activeSection:params.section});
+    const foreign = fixture([{role:"manager_viewer",eventId:"other"}]);
+    await assert.rejects(foreign.ManagerDashboardPage({searchParams:Promise.resolve(params)}), /REDIRECT:/);
+    assert.deepEqual(foreign.reads,["current-event"]);
   }
 });

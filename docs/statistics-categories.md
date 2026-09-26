@@ -49,10 +49,9 @@ La route temporanea di collaudo è stata rimossa. Modifiche locali, non pubblica
 
 ## Disabilità e difficoltà dichiarate
 
-Quinta categoria riservata ad Admin e Manager dell'evento corrente. Il ruolo
-separato Manager Viewer non la vede e il server respinge l'URL diretto prima
-che il loader legga dichiarazioni o nominativi. Non cambia l'accesso degli
-altri ruoli né delle altre categorie.
+Quinta categoria disponibile ad Admin, Manager e Manager Viewer dell'evento
+corrente. Il server verifica lo scope prima che il loader legga dichiarazioni
+o nominativi. Viewer può consultare i dati ma non modificarli.
 
 Il loader dedicato legge gli ID delle sole iscrizioni attive dell'evento,
 poi le dichiarazioni correnti usando le stesse tre opzioni boolean di
@@ -115,8 +114,8 @@ identifica il filtro e permette di rimuoverlo. Le statistiche generali non
 vengono caricate per questo tipo di drilldown.
 
 L'Excel conserva lo stesso filtro anche quando la colonna disabilità viene
-nascosta. Viewer bloccato prima dei loader sia nella pagina che nel download;
-filtri non validi respinti, letture paginate e bloccanti su errore.
+nascosta. Manager Viewer può consultare pagina e download; gli accessi fuori
+evento e i filtri non validi sono respinti, con letture paginate e bloccanti su errore.
 579 test, lint e TypeScript superati; build in copia isolata con lockfile.
 Prova nel browser locale: clic sul totale Udito, apertura Gestione iscritti,
 numero di righe corrispondente al totale e colonna delle difficoltà visibile.
@@ -139,3 +138,19 @@ isolata con dipendenze del lockfile: 579 test, lint, build production e
 TypeScript superati. Browser desktop e mobile 390px: proporzioni dei riquadri,
 leggibilità, link conservati e nessun overflow della pagina. Nessuna migration
 né modifica dei dati; le note locali precedenti descrivono le fasi di anteprima.
+
+
+## Manager Viewer: consultazione completa
+
+Correzione richiesta dopo il rilascio: Manager Viewer può consultare tutte le
+categorie, inclusa disabilità, nell'evento per cui è incaricato. Sono disponibili
+anche drilldown, colonna difficoltà e relativo export. Non cambia alcun permesso
+di modifica, inserimento, eliminazione o importazione. I precedenti riferimenti
+all'esclusione del Viewer sono superati da questa indicazione dell'utente.
+
+I loader della dashboard verificano lo scope dell'evento prima della lettura.
+L'export verifica qualityAccess e legge le dichiarazioni con client server solo
+per gli ID derivati dal risultato autorizzato, perché la policy SQL storica
+riserva la lettura diretta delle dichiarazioni ai gestori. Nessuna modifica RLS,
+ruoli o dati. Test degli accessi sull'evento corrente/estraneo e delle scritture
+vietate conservati; fixture della tabella aggiornata per la sola lettura.

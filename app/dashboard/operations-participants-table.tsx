@@ -116,7 +116,7 @@ export function OperationsParticipantsTable({
   );
   let preferences: TablePreferences = DEFAULT_TABLE_PREFERENCES;
   try {
-    preferences = parseTablePreferences(JSON.parse(stored), canManage);
+    preferences = parseTablePreferences(JSON.parse(stored));
   } catch {
     /* Defaults when storage is unavailable. */
   }
@@ -126,7 +126,7 @@ export function OperationsParticipantsTable({
       : preferences.columns,
     sort: searchParams.get("sort") ?? preferences.sort,
     direction: searchParams.get("direction") ?? preferences.direction,
-  }, canManage);
+  });
   const view =
     searchParams.get("view") === "deleted" && dashboard === "admin"
       ? "deleted"
@@ -170,7 +170,7 @@ export function OperationsParticipantsTable({
   const closePath = paramsFor({ edit: null });
   const returnTo = paramsFor({});
   function savePreferences(next: TablePreferences) {
-    const normalized = parseTablePreferences(next, canManage);
+    const normalized = parseTablePreferences(next);
     try {
       localStorage.setItem(storageKey, JSON.stringify(normalized));
       window.dispatchEvent(new Event("participant-preferences"));
@@ -703,7 +703,7 @@ export function OperationsParticipantsTable({
               aria-label="Colonne visibili"
               className="absolute left-0 z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] sm:top-full flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
             >
-              {Object.entries(PARTICIPANT_COLUMNS).filter(([key]) => canManage || key !== "accessibility").map(([key, label]) => (
+              {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
                 <label
                   key={key}
                   className="flex min-h-11 items-center gap-2 text-sm"

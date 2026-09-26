@@ -380,10 +380,11 @@ export default async function ManagerDashboardPage({
   );
   const currentEventId = currentEvent?.id ?? null;
   const canManage = currentEventId ? scope.canManageEvent(currentEventId) : scope.isAdmin;
+  const canViewStatistics = scope.isAdmin || Boolean(currentEventId && scope.eventIds?.has(currentEventId));
   // Authorize the resolved section before any operational data is loaded,
   // including legacy URLs, inferred sections and remembered navigation.
   if (!canAccessManagerSection(activeSection, canManage) ||
-      (!canManage && ((activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
+      (!canViewStatistics && ((activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
     redirect("/dashboard/manager?section=dashboard&nav=mini");
   }
   if (params.section === "servizi") {
@@ -483,7 +484,7 @@ export default async function ManagerDashboardPage({
               <StatisticsSection
                 statistics={statistics}
                 report={statisticsReport}
-                canViewDisability={canManage}
+                canViewDisability={canViewStatistics}
                 disabilityStatistics={disabilityStatistics}
                 dashboard="manager"
                 navMode={navMode}
@@ -1166,7 +1167,7 @@ async function getManagerOperationsSnapshot(
       ? await Promise.all([
           loadAttendanceSummaries(supabase, registrationIds),
           loadEmailDelegations(supabase, registrationIds),
-          loadAccessibilitySummaries(supabase, registrationRows.filter(row => scope.canManageEvent(row.event_id)).map(row => row.id)),
+          loadAccessibilitySummaries(supabase, registrationIds),
         ])
       : [new Map(), new Set<string>(), new Map<string, string>()];
     const participantRows = registrationRows.map((registration) => {

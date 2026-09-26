@@ -1,4 +1,3 @@
-import { parseStatisticsDrilldown } from "@/lib/registrations/event-statistics";
 import { randomUUID, createHash } from "node:crypto";
 import { hashIdentityFingerprint } from "@/lib/data-quality/fingerprint.server";
 import { NextRequest, NextResponse } from "next/server";
@@ -56,10 +55,8 @@ function rpcError(code: string) {
 }
 export async function GET(request: NextRequest) {
   try {
-    const { db, auth, event, isAdmin, canWrite } = await qualityAccess();
+    const { db, auth, event, isAdmin } = await qualityAccess();
     const kind = request.nextUrl.searchParams.get("kind");
-    if (parseStatisticsDrilldown(request.nextUrl.searchParams.get("stat"))?.difficulty && !canWrite)
-      throw new Error("Non hai i permessi per questa operazione.");
     const catalog = await loadCatalog(db, event.id, kind === "export");
     let buffer: Buffer;
     if (kind === "export") {
@@ -69,7 +66,7 @@ export async function GET(request: NextRequest) {
       const { columns } = parseTablePreferences({
         columns:
           requestedColumns === null ? undefined : requestedColumns.split(","),
-      }, canWrite);
+      });
       const { people } = await filteredExportPeople(
         db,
         {
@@ -78,8 +75,9 @@ export async function GET(request: NextRequest) {
           ends_on: event.ends_on ?? null,
         },
         request.nextUrl.searchParams,
-        canWrite && columns.includes("accessibility"),
-        canWrite,
+        columns.includes("accessibility"),
+        true, // qualityAccess already authorized reading this event, including Viewer.
+        createSupabaseServiceClient(), // Disability reads use only IDs from the authorized event result.
       );
       buffer = await writeVisibleParticipantsWorkbook(
         people,

@@ -52,7 +52,7 @@ test("Excel always appends both child columns, preserves full names and exports 
   assert.deepEqual(book.worksheets[0].getRow(1).values, [, "Partecipante", "Informazioni sulla disabilità", ...CHILDREN_EXPORT_COPY.it.headers]);
   assert.deepEqual(book.worksheets[0].getRow(2).values, [, "Parent", summary, "2", "Anna Maria Rossi; Luca Bianchi"]);
 });
-test("actual export GET strips forged disability requests from viewers and reads them for managers", async () => {
+test("actual export GET allows disability columns and filters for viewers and managers", async () => {
   const source = readFileSync("app/dashboard/participants/data-quality/api/route.ts", "utf8").split("// Enforce an actual body budget")[0];
   const compiled = ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext}}).outputText.replace(/import[\s\S]*?from ["'][^"']+["'];/g, "").replace(/export /g, "");
   for (const canWrite of [false, true]) {
@@ -67,14 +67,14 @@ test("actual export GET strips forged disability requests from viewers and reads
     };
     const handler = new Function(...Object.keys(dependencies), `${compiled}; return GET;`)(...Object.values(dependencies));
     const response = await handler({nextUrl: new URL("http://localhost/?kind=export&columns=name,accessibility")});
-    assert.equal(response.status, 200); assert.equal(readSensitive, canWrite);
+    assert.equal(response.status, 200); assert.equal(readSensitive, true);
     const book = new ExcelJS.Workbook(); await book.xlsx.load(Buffer.from(await response.arrayBuffer()) as never);
-    assert.equal(book.worksheets[0].columnCount, canWrite ? 4 : 3);
-    assert.equal(JSON.stringify(book.worksheets[0].getRow(2).values).includes("Sensitive fixture"), canWrite);
+    assert.equal(book.worksheets[0].columnCount, 4);
+    assert.equal(JSON.stringify(book.worksheets[0].getRow(2).values).includes("Sensitive fixture"), true);
     readSensitive = undefined;
     const filtered = await handler({nextUrl: new URL("http://localhost/?kind=export&columns=name&stat=difficulty%3Dhearing")});
-    assert.equal(filtered.status, canWrite ? 200 : 400);
-    assert.equal(readSensitive, canWrite ? false : undefined, "viewer blocked before export reads even with disability column hidden");
+    assert.equal(filtered.status, 200);
+    assert.equal(readSensitive, false, "hiding the column preserves the disability filter for both roles");
   }
   assert.equal(parseTablePreferences({sort: "accessibility", columns: ["accessibility"]}, false).sort, "name");
 });

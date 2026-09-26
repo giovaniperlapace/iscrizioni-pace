@@ -247,3 +247,28 @@ test("disability drilldown exports exact declared people, combines filters and s
   assert.deepEqual(calls, [], "unauthorized disability filters must fail before reading data");
   await assert.rejects(filteredExportPeople(database(), event, new URLSearchParams({stat: "kind=all&difficulty=invalid"}), false, true), /non valido/);
 });
+
+
+test("viewer export reads disability through a dedicated client scoped to authorized registration IDs", async () => {
+  const scopedIds: string[] = [];
+  const restrictedDb = database();
+  const originalFrom = restrictedDb.from.bind(restrictedDb);
+  restrictedDb.from = ((table: string) => {
+    assert.notEqual(table, "accessibility_needs", "Viewer RLS must not be used for disability reads");
+    return originalFrom(table);
+  }) as typeof restrictedDb.from;
+  const disabilityDb = { from(table: string) {
+    assert.equal(table, "accessibility_needs");
+    let batch: string[] = [];
+    const query = { select() {return query;}, in(field: string, ids: string[]) {
+      assert.equal(field, "registration_id"); batch = ids; scopedIds.push(...ids);
+      assert.ok(ids.every(id => registrations.some(row => row.id === id)));
+      return query;
+    }, order() {return query;}, range() {return Promise.resolve({data: batch.includes("r1203") ? [{registration_id:"r1203",washington_group_answers:{hearing:true}}] : [],error:null});} };
+    return query;
+  } } as unknown as SupabaseClient;
+  const result = await filteredExportPeople(restrictedDb, {id:"e",title:"Fixture",starts_on:null,ends_on:null}, new URLSearchParams({stat:"difficulty=hearing"}), true, true, disabilityDb);
+  assert.deepEqual(result.people.map(person=>person.id), ["r1203"]);
+  assert.match(result.people[0].accessibility!, /Sentire/);
+  assert.ok(scopedIds.includes("r1203"));
+});

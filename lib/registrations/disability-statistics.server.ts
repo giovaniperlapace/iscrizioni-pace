@@ -4,8 +4,7 @@ import { declaredAccessibilityDifficulties } from "./accessibility-summary.ts";
 import { buildEventStatisticsSnapshot, type EventStatisticsSnapshot } from "./event-statistics.ts";
 import type { DisabilityStatisticsSnapshot } from "./disability-statistics.ts";
 
-// Caller must authorize Admin or Manager for this event before invoking this loader.
-// Viewer must never reach it, even through a direct report URL.
+// Caller must authorize Admin, Manager or Manager Viewer for this event before invoking this loader.
 export async function loadDisabilityStatistics(db: SupabaseClient, eventId: string): Promise<DisabilityStatisticsSnapshot> {
   const { data: active } = await loadAllRows((from, to) => db.from("registrations")
     .select("id").eq("event_id", eventId).is("deleted_at", null).order("id").range(from, to));

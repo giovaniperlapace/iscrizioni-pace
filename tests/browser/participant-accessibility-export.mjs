@@ -24,7 +24,7 @@ try {
   check('document.documentElement.scrollWidth <= innerWidth', "operations mobile overflow stays inside table");
   ab("screenshot", "--full", "/tmp/pace-participants-disability-mobile.png");
   ab("eval", 'Array.from(document.querySelectorAll("button")).find(e => e.textContent.trim() === "Modalità sola lettura").click()');
-  check('!document.querySelector("thead").textContent.includes("Informazioni sulla disabilità") && !Array.from(document.querySelectorAll("fieldset label")).some(e => e.textContent.includes("Informazioni sulla disabilità")) && !new URL(document.querySelector("a[download]").href).searchParams.get("columns").includes("accessibility")', "viewer cannot select or export disability even with forged URL");
+  check('document.querySelector("thead").textContent.includes("Informazioni sulla disabilità") && Array.from(document.querySelectorAll("fieldset label")).some(e => e.textContent.includes("Informazioni sulla disabilità")) && new URL(document.querySelector("a[download]").href).searchParams.get("columns").includes("accessibility")', "viewer can select and export disability in read-only mode");
   ab("open", `${base}/${routes[1]}?columns=name,accessibility`); ab("snapshot", "-i");
   for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"]) {
     ab("select", 'select[aria-label="Lingua fixture"]', locale);

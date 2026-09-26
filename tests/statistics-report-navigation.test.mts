@@ -45,7 +45,7 @@ test("one report at a time, default/fallback to first, role and menu preserved i
 });
 
 
-test("viewer does not render disability category or report, even with injected props", () => {
+test("unscoped users do not render disability category or report, even with injected props", () => {
   const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
   const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, dashboard: "manager", navMode: "mini", report: "disability", canViewDisability: false, disabilityStatistics: { people: [] } }));
   assert.doesNotMatch(html, /report=disability|Protected report|data-statistics-report="disability"/);
