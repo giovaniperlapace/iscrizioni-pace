@@ -1,3 +1,4 @@
+import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
 import { MANUAL_REGISTRATION_COPY, type ManualRegistrationCopy } from "@/lib/registrations/manual-registration-copy";
 import { ManualRegistrationSection } from "@/app/dashboard/manual-registration-section";
 import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
@@ -1783,14 +1784,6 @@ function AssignmentDetailCard({
                 className="field bg-white font-normal"
               />
             </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Paese
-              <input
-                name="country"
-                defaultValue={assignment.participantCountry ?? ""}
-                className="field bg-white font-normal"
-              />
-            </label>
             <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
               Salva
             </PendingSubmitButton>
@@ -1829,6 +1822,7 @@ function AssignmentDetailCard({
           </ReliableForm>
         </DetailBlock>
 
+        {assignment.isCurrent ? <OperationalDemographicsEditor key={`demographics:${assignment.registrationId}`} registrationId={assignment.registrationId} locale={locale} /> : null}
         {assignment.isCurrent ? <OperationalAccessibilityEditor key={assignment.registrationId} registrationId={assignment.registrationId} locale={locale} /> : null}
         <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
           <OperationalChildrenEditor registrationId={assignment.registrationId} records={assignment.children} locale={locale} editable={assignment.isCurrent} />

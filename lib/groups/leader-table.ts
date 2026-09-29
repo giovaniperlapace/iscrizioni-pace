@@ -1,3 +1,4 @@
+import { internalSexText, type InternalSex } from "../registrations/assisted-demographics.ts";
 import { attendanceSummary } from "../registrations/attendance-summary.ts";
 import { LEADER_SERVICE_STATUS_COPY } from "./leader-table-copy.ts";
 import type { AssignmentView } from "./leader-assignments.ts";
@@ -29,7 +30,10 @@ export type LeaderTableRow = Pick<
   | "children"
   | "attendance"
   | "accessibility"
+  | "nationality"
 > & {
+  sex?: InternalSex;
+  sexText?: string | null;
   serviceLabel: string | null;
   serviceStatus?: keyof typeof LEADER_SERVICE_STATUS_COPY.it | null;
   tags: { id: string; label: string; color: string }[];
@@ -54,6 +58,7 @@ export function toLeaderTableRow(row: AssignmentView): LeaderTableRow {
     children: row.children,
     attendance: row.attendance,
     accessibility: row.accessibility,
+    nationality: row.nationality,
     serviceLabel: row.service?.serviceLabel ?? null,
     serviceStatus: row.service?.status ?? null,
     tags: row.tags.map(({ id, label, color }) => ({ id, label, color })),
@@ -65,6 +70,10 @@ export function leaderColumnValue(
   startsOn: string | null,
 ): string | number | null {
   switch (column) {
+    case "nationality":
+      return row.nationality ?? null;
+    case "sex":
+      return row.sexText ?? row.sex ?? null;
     case "accessibility":
       return row.accessibility ?? null;
     case "attendance":
@@ -102,6 +111,7 @@ export function leaderCellText(
   startsOn: string | null,
   locale: SupportedLocale,
 ): string {
+  if (column === "sex") return row.sexText ?? internalSexText(row.sex, locale);
   if (column === "attendance") return attendanceSummary(row.attendance, locale);
   const value = leaderColumnValue(row, column, startsOn);
   if (column === "service" && value && row.serviceStatus)

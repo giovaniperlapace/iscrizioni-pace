@@ -1067,7 +1067,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
         last_name: lastName,
         birth_date: birthDate,
         city_other: city,
-        country_other: country,
+        ...(formData.has("country") ? { country_other: country } : {}),
       })
       .eq("id", participantId);
 
@@ -1746,7 +1746,8 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       last_name: parsed.value.lastName,
       birth_date: parsed.value.birthDate,
       preferred_locale: parsed.value.preferredLocale,
-      country_id: groupRow.country_id,
+      country_id: null,
+      country_other: parsed.value.country ?? null,
       city_id: null,
       city_other: parsed.value.cityOther,
       has_previous_santegidio_participation: true,
@@ -1910,6 +1911,13 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     return formFailureFromRedirect(`${dashboardPath}?manualError=${encodeURIComponent(
         failedWrite.error.message
       )}`);
+  }
+
+  if (parsed.value.internalSex) {
+    const { error } = await serviceSupabase.rpc("set_assisted_registration_sex", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id, p_sex: parsed.value.internalSex,
+    });
+    if (error) return formFailure([{ field: null, code: "failed" }]);
   }
 
   const accessEmailSent = !parsed.value.useLeaderEmail && parsed.value.email

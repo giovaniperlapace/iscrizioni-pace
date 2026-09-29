@@ -1,3 +1,4 @@
+import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
 import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
 import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
 import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
@@ -1163,13 +1164,14 @@ async function getManagerOperationsSnapshot(
     scope.eventIds
   );
 
-  const [attendanceByRegistration, emailDelegations, accessibilityByRegistration] = section === "iscritti"
+  const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities] = section === "iscritti"
       ? await Promise.all([
           loadAttendanceSummaries(supabase, registrationIds),
           loadEmailDelegations(supabase, registrationIds),
           loadAccessibilitySummaries(supabase, registrationIds),
+          loadNationalities(supabase, registrationIds),
         ])
-      : [new Map(), new Set<string>(), new Map<string, string>()];
+      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>()];
     const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
       const geography = participantGeography(participant);
@@ -1186,6 +1188,7 @@ async function getManagerOperationsSnapshot(
         deletionReason: registration.deletion_reason,
         attendance: attendanceByRegistration.get(registration.id) ?? [],
         accessibility: accessibilityByRegistration.get(registration.id),
+        nationality: nationalities.get(registration.id),
         emailDelegated: emailDelegations.has(registration.id),
           registrationId: registration.id,
         eventId: registration.event_id,

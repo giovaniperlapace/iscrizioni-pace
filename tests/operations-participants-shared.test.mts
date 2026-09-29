@@ -41,13 +41,13 @@ test("the shared participant sheet edits identity, contacts, group, and tags", (
     "firstName",
     "lastName",
     "city",
-    "country",
     "email",
     "phone",
   ]) {
     assert.match(sharedSection, new RegExp(`name=[{\"]${field}`));
   }
 
+  assert.match(sharedSection, /<OperationalDemographicsEditor/);
   assert.match(sharedSection, /<ParticipantBirthDateField/);
   assert.match(sharedSection, /defaultValue=\{selected.birthDate/);
   assert.match(sharedSection, /name="sourceDashboard" value=\{dashboard\}/);

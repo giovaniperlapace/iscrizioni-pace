@@ -3,6 +3,8 @@ export const PARTICIPANT_COLUMNS = {
   email: "Email",
   phone: "Telefono",
   country: "Paese",
+  nationality: "Nazionalità",
+  sex: "Sesso",
   city: "Città",
   age: "Età",
   group: "Gruppo",

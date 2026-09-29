@@ -1,5 +1,6 @@
 "use client";
 
+import { useInternalSexColumn } from "../use-internal-sex-column";
 import { ParticipantEmailCell } from "@/components/participant-email-cell";
 
 import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
@@ -75,7 +76,8 @@ export function LeaderParticipantsTable({
     new URLSearchParams(searchParams.toString()),
     decoded,
   );
-  const sorted = sortLeaderRows(rows, preferences, startsOn, locale);
+  const sexText = useInternalSexColumn(preferences.columns.includes("sex"), rows.map(row => row.registrationId), locale);
+  const sorted = sortLeaderRows(rows.map(row => ({ ...row, sexText: sexText(row.registrationId) })), preferences, startsOn, locale);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const tablePath = (updates: Record<string, string | null> = {}) =>

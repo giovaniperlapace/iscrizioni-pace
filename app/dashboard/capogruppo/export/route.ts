@@ -1,3 +1,4 @@
+import { loadInternalSexes } from "@/lib/registrations/assisted-demographics.server";
 import { CHILDREN_EXPORT_COPY, childrenExportValues } from "@/lib/registrations/children-export";
 import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { getCurrentAuthContext } from "@/lib/auth/session";
@@ -59,6 +60,8 @@ export async function GET(request: Request) {
     });
     const params = new URL(request.url).searchParams;
     const preferences = leaderPreferences(params);
+    const sexes = preferences.columns.includes("sex") ? await loadInternalSexes(db, rows.map(row => row.registrationId), auth.user.id) : {};
+    for (const row of rows) row.sex = sexes[row.registrationId];
     const sorted = sortLeaderRows(
       filterLeaderRows(rows, params),
       preferences,

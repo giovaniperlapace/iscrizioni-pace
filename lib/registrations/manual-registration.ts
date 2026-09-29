@@ -1,3 +1,4 @@
+import { parseDemographics, type InternalSex } from "./assisted-demographics.ts";
 import { isValidBirthDate } from "./birth-date.ts";
 import { validateContactFields } from "../forms/result.ts";
 import {
@@ -31,6 +32,10 @@ export type ManualRegistrationInput = {
   phone: string | null;
   birthDate: string | null;
   cityOther: string;
+  nationality?: string | null;
+  birthPlace?: string | null;
+  country?: string | null;
+  internalSex?: InternalSex | null;
   preferredLocale: SupportedLocale;
   participatesWithChildren: boolean;
   children: RegistrationChildInput[];
@@ -51,7 +56,12 @@ export function parseManualRegistrationForm(
   const email = useLeaderEmail ? "" : normalizeEmail(formData.get("email"));
   const participatesWithChildren =
     formData.get("participatesWithChildren") === "yes";
+  const demographics = parseDemographics(formData);
+  const sex = String(formData.get("internalSex") ?? "");
+  if (!demographics || (sex !== "" && sex !== "male" && sex !== "female")) return { ok: false, errors: ["Dati non validi."] };
   const value: ManualRegistrationInput = {
+    ...demographics,
+    internalSex: sex || null,
     groupId: optionalUuid(formData.get("groupId")) ?? "",
     firstName: optionalText(formData.get("firstName")) ?? "",
     lastName: optionalText(formData.get("lastName")) ?? "",
@@ -141,12 +151,15 @@ export function buildManualRegistrationQuestionnaireAnswers(
 ) {
   return {
     source: `${actorRole}_manual`,
+    nationality: input.nationality ?? null,
+    birthPlace: input.birthPlace ?? null,
     identity: {
       firstName: input.firstName,
       lastName: input.lastName,
       birthDate: input.birthDate,
     },
     residence: {
+      countryOther: input.country ?? null,
       cityOther: input.cityOther,
     },
     contact: {

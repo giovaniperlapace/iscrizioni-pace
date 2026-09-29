@@ -1,5 +1,30 @@
 # AGENTS.md
 
+## Dati assistiti e sesso interno — 2026-09-29
+
+- Modulo condiviso Capogruppo/Manager/Admin: nazionalità, paese/luogo di nascita,
+  residenza e sesso facoltativi, sette lingue. Residenza mai dedotta dal gruppo
+  nei nuovi inserimenti; nessun riempimento dei record storici.
+- Schede operative: editor separato dei tre dati geografici, snapshot/conflitti
+  e audit atomici; nascita storica paese/città conservata. Navigazione modali
+  invariata. Nazionalità selezionabile nelle tabelle e negli export.
+- Sesso solo nell'inserimento assistito e nella colonna interna selezionata:
+  relazione separata con RLS senza accesso utente, RPC service_role con scope
+  evento/gruppi, nessuna lettura nei normali loader o nella scheda partecipante.
+  Viewer escluso anche da chiamate dirette/export. Nessun sesso nel questionario,
+  audit, email, statistiche, QR o preferenze salvate. L'export include solo
+  le colonne selezionate e autorizzate.
+- Migration `20260929120000_assisted_demographics.sql` applicata e registrata
+  atomicamente in produzione prima del push autorizzato del 29 settembre.
+  Dati e permessi delle 38 tabelle preesistenti, 23 routine pubbliche e 90 policy
+  invariati; nuova relazione vuota, RPC solo service_role. Nessun dato reale
+  modificato o email di prova. Creazione assistita
+  multi-scrittura preesistente conservata; limiti e rilascio documentati in
+  `docs/assisted-demographics.md`. Verificati 587 test, lint, TypeScript, build
+  con npm ci in copia pulita, SQL temporaneo e browser sette lingue/mobile.
+  Commit/push su main e normale rilascio Vercel autorizzati dall’utente.
+
+
 ## Importazione servizi da Excel — 2026-09-25
 
 - Nuovo comando Manager/Admin accanto a Importa iscritti da Excel, modello

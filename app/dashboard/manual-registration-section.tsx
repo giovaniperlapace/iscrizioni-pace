@@ -1,3 +1,4 @@
+import { AssistedDemographicFields } from "./assisted-demographic-fields";
 import type { ManualRegistrationCopy } from "@/lib/registrations/manual-registration-copy";
 import type { AttendanceDayColumn } from "@/lib/registrations/attendance-slots";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -84,6 +85,7 @@ export function ManualRegistrationSection({
             <span>{copy.city}<RequiredIndicator /></span>
             <input name="cityOther" required maxLength={120} autoComplete="address-level2" className="field" />
           </label>
+          <AssistedDemographicFields locale={locale} includeSex />
           <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} initialUnknown={false} />
           <ManualChildrenFields locale={locale} />
           <ManualAccessibilityFields

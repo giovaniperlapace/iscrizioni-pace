@@ -1,3 +1,4 @@
+import { loadNationalities } from "../registrations/assisted-demographics.server.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
 import { loadAccessibilitySummaries } from "../registrations/accessibility-summary.server.ts";
 import { loadEmailDelegations } from "../registrations/email-delegation.server.ts";
@@ -90,10 +91,11 @@ export async function loadLeaderAssignmentRows(
       .range(from, to),
   );
   const rows = data as unknown as AssignmentRow[];
-  const [attendance, emailDelegations, accessibility] = await Promise.all([
+  const [attendance, emailDelegations, accessibility, nationalities] = await Promise.all([
     loadAttendanceSummaries(db, rows.map(row => row.registration_id)),
     loadEmailDelegations(db, rows.map(row => row.registration_id)),
     loadAccessibilitySummaries(db, rows.map(row => row.registration_id), locale),
+    loadNationalities(db, rows.map(row => row.registration_id)),
   ]);
-  return rows.map(row => ({ ...row, accessibility: accessibility.get(row.registration_id), emailDelegated: emailDelegations.has(row.registration_id), attendance: attendance.get(row.registration_id) ?? [] }));
+  return rows.map(row => ({ ...row, nationality: nationalities.get(row.registration_id), accessibility: accessibility.get(row.registration_id), emailDelegated: emailDelegations.has(row.registration_id), attendance: attendance.get(row.registration_id) ?? [] }));
 }

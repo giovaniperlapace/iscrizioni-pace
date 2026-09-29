@@ -1,5 +1,7 @@
 "use client";
 
+import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
+import { useInternalSexColumn } from "./use-internal-sex-column";
 import { ParticipantEmailCell } from "@/components/participant-email-cell";
 
 import { attendanceSummary, attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
@@ -127,6 +129,7 @@ export function OperationsParticipantsTable({
     sort: searchParams.get("sort") ?? preferences.sort,
     direction: searchParams.get("direction") ?? preferences.direction,
   });
+  if (!canManage) preferences = { ...preferences, columns: preferences.columns.filter(column => column !== "sex"), sort: preferences.sort === "sex" ? "name" : preferences.sort };
   const view =
     searchParams.get("view") === "deleted" && dashboard === "admin"
       ? "deleted"
@@ -137,6 +140,7 @@ export function OperationsParticipantsTable({
     view === "without-group"
       ? ["name", "country", "city", "age", "group"]
       : preferences.columns;
+  const sexText = useInternalSexColumn(canManage && view !== "deleted" && !(snapshot.statisticsFilter && parseStatisticsDrilldown(searchParams.get("stat"))?.personKind === "child") && columns.includes("sex"), snapshot.participants.filter(row => !row.deletedAt).map(row => row.registrationId), locale);
   const [changes, setChanges] = useState<
     Record<string, { original: Row; next: Row }>
   >({});
@@ -192,6 +196,10 @@ export function OperationsParticipantsTable({
     column: ParticipantColumn,
   ): string | number | null {
     switch (column) {
+      case "sex":
+        return row.deletedAt ? null : sexText(row.registrationId);
+      case "nationality":
+        return row.nationality ?? null;
       case "accessibility":
         return row.accessibility ?? "—";
       case "attendance":
@@ -703,7 +711,7 @@ export function OperationsParticipantsTable({
               aria-label="Colonne visibili"
               className="absolute left-0 z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] sm:top-full flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
             >
-              {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
+              {Object.entries(PARTICIPANT_COLUMNS).filter(([key]) => key !== "sex" || (canManage && view !== "deleted")).map(([key, label]) => (
                 <label
                   key={key}
                   className="flex min-h-11 items-center gap-2 text-sm"
@@ -946,7 +954,7 @@ export function OperationsParticipantsTable({
                 />
                 <ParticipantBirthDateField key={`${selected.registrationId}:${selected.birthDate}`}
                   label="Data di nascita" locale="it" defaultValue={selected.birthDate ?? ""} />
-                <Field label="Paese" name="country" value={selected.country} />
+                {(!editableEventIds.includes(selected.eventId) || selected.deletedAt) ? <Field label="Paese" name="country" value={selected.country} /> : null}
                 <Field label="Città" name="city" value={selected.city} />
                 <Field
                   label="Email"
@@ -964,6 +972,7 @@ export function OperationsParticipantsTable({
                 )}
             </fieldset>
           </ReliableForm>
+          {editableEventIds.includes(selected.eventId) && !selected.deletedAt ? <OperationalDemographicsEditor key={`demographics:${selected.registrationId}`} registrationId={selected.registrationId} locale={locale} /> : null}
           <section className="grid gap-3">
             <h4 className="font-semibold">Gruppo, servizio e tag</h4>
             {(["group", "service", "tags"] as const).map((field) => (

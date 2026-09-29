@@ -1,3 +1,4 @@
+import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
 import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
 import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
 import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
@@ -745,13 +746,14 @@ export default async function AdminDashboardPage({
     );
     const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
     const serviceByParticipantId = mapParticipantEventServices(participantServices);
-    const [attendanceByRegistration, emailDelegations, accessibilityByRegistration] = activeSection === "iscritti"
+    const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities] = activeSection === "iscritti"
       ? await Promise.all([
           loadAttendanceSummaries(serviceSupabase, registrationIds),
           loadEmailDelegations(serviceSupabase, registrationIds),
           loadAccessibilitySummaries(serviceSupabase, registrationIds),
+          loadNationalities(serviceSupabase, registrationIds),
         ])
-      : [new Map(), new Set<string>(), new Map<string, string>()];
+      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>()];
     const participantRows = registrationRows.map((registration) => {
         const participant = relatedOne(registration.participants);
         const geography = participantGeography(participant);
@@ -769,6 +771,7 @@ export default async function AdminDashboardPage({
           deletionReason: registration.deletion_reason,
           attendance: attendanceByRegistration.get(registration.id) ?? [],
           accessibility: accessibilityByRegistration.get(registration.id),
+        nationality: nationalities.get(registration.id),
           emailDelegated: emailDelegations.has(registration.id),
           registrationId: registration.id,
           eventId: registration.event_id,

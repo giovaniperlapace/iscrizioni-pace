@@ -1,5 +1,9 @@
 "use server";
 
+import { parseDemographics, type Demographics } from "@/lib/registrations/assisted-demographics";
+import { loadInternalSexes } from "@/lib/registrations/assisted-demographics.server";
+type DemographicsSnapshot = Demographics & { questionnaireId: string | null; countryId: string | null; countryOther: string | null };
+
 import { revalidatePath } from "next/cache";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -64,5 +68,46 @@ export async function updateOperationalAccessibility(form: FormData) {
     if (error) return failure(error.code);
     refresh();
     return { status: "success" as const, snapshot: data as { answers: Record<string, boolean>; version: string } };
+  } catch { return failure(); }
+}
+
+export async function getOperationalDemographics(registrationId: string) {
+  if (!uuid.test(registrationId)) return failure("42501");
+  try {
+    const auth = await getCurrentAuthContext(await createSupabaseServerClient());
+    if (!auth) return failure("42501");
+    const { data, error } = await createSupabaseServiceClient().rpc("get_operational_demographics", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id,
+    });
+    if (error) return failure(error.code);
+    return { status: "success" as const, snapshot: data as DemographicsSnapshot };
+  } catch { return failure(); }
+}
+
+export async function updateOperationalDemographics(form: FormData) {
+  const registrationId = String(form.get("registrationId") ?? "");
+  const value = parseDemographics(form);
+  if (!uuid.test(registrationId) || !value) return failure("42501");
+  let expected: unknown;
+  try { expected = JSON.parse(String(form.get("expected"))); } catch { return failure(); }
+  try {
+    const auth = await getCurrentAuthContext(await createSupabaseServerClient());
+    if (!auth) return failure("42501");
+    const { data, error } = await createSupabaseServiceClient().rpc("update_operational_demographics", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id, p_expected: expected, p_value: value,
+    });
+    if (error) return failure(error.code);
+    refresh();
+    return { status: "success" as const, snapshot: data as DemographicsSnapshot };
+  } catch { return failure(); }
+}
+
+export async function getVisibleInternalSexes(registrationIds: string[]) {
+  if (!Array.isArray(registrationIds) || registrationIds.length > 200 || registrationIds.some(id => !uuid.test(id))) return failure("42501");
+  try {
+    const auth = await getCurrentAuthContext(await createSupabaseServerClient());
+    if (!auth) return failure("42501");
+    const values = await loadInternalSexes(createSupabaseServiceClient(), registrationIds, auth.user.id);
+    return { status: "success" as const, values };
   } catch { return failure(); }
 }

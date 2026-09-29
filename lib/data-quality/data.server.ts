@@ -18,6 +18,8 @@ import {
 } from "../registrations/event-statistics.ts";
 
 export type QualityPerson = Identity & {
+  nationality?: string | null;
+  sex?: import("../registrations/assisted-demographics.ts").InternalSex;
   accessibility?: string;
   attendance?: import("../registrations/attendance-summary.ts").SummaryAttendanceChoice[];
   participantId: string;

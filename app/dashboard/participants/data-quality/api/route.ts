@@ -1,3 +1,4 @@
+import { loadNationalities, loadInternalSexes } from "@/lib/registrations/assisted-demographics.server";
 import { randomUUID, createHash } from "node:crypto";
 import { hashIdentityFingerprint } from "@/lib/data-quality/fingerprint.server";
 import { NextRequest, NextResponse } from "next/server";
@@ -55,7 +56,7 @@ function rpcError(code: string) {
 }
 export async function GET(request: NextRequest) {
   try {
-    const { db, auth, event, isAdmin } = await qualityAccess();
+    const { db, auth, event, isAdmin, canWrite } = await qualityAccess();
     const kind = request.nextUrl.searchParams.get("kind");
     const catalog = await loadCatalog(db, event.id, kind === "export");
     let buffer: Buffer;
@@ -79,6 +80,12 @@ export async function GET(request: NextRequest) {
         true, // qualityAccess already authorized reading this event, including Viewer.
         createSupabaseServiceClient(), // Disability reads use only IDs from the authorized event result.
       );
+      if (columns.includes("sex") && !canWrite) throw new Error("Colonna riservata agli operatori.");
+      const [nationalities, sexes] = await Promise.all([
+        columns.includes("nationality") ? loadNationalities(db, people.map(person => person.id)) : Promise.resolve(new Map<string, string | null>()),
+        columns.includes("sex") ? loadInternalSexes(createSupabaseServiceClient(), people.filter(person => !person.deletedAt).map(person => person.id), auth.user.id) : Promise.resolve({} as Record<string, import("@/lib/registrations/assisted-demographics").InternalSex>),
+      ]);
+      for (const person of people) { person.nationality = nationalities.get(person.id); person.sex = sexes[person.id]; }
       buffer = await writeVisibleParticipantsWorkbook(
         people,
         catalog,
