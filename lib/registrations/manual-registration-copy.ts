@@ -13,7 +13,7 @@ export const MANUAL_REGISTRATION_COPY = {
     "email": "Email",
     "phone": "Telefono",
     "birthDate": "Data di nascita",
-    "city": "Città in cui vivi abitualmente",
+    "city": "Città in cui vive abitualmente",
     "internalNote": "Nota interna",
     "consent": "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione. Se inserisco uno o più figli, confermo che la persona mi ha dichiarato di esercitare la responsabilità genitoriale o di essere autorizzata a comunicarne i dati.",
     "attendance": {

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { getVisibleInternalSexes } from "./operational-registration-actions";
 import { internalSexText, type InternalSex } from "@/lib/registrations/assisted-demographics";
-import { OPERATIONAL_ADDITIONS_COPY } from "@/lib/registrations/operational-additions-copy";
+import { DEMOGRAPHICS_STATUS_COPY } from "@/lib/registrations/assisted-demographics";
 import type { SupportedLocale } from "@/lib/i18n/config";
 
 export function useInternalSexColumn(enabled: boolean, registrationIds: string[], locale: SupportedLocale) {
@@ -29,8 +29,8 @@ export function useInternalSexColumn(enabled: boolean, registrationIds: string[]
   }, [key]);
   return (id: string): string | null => {
     if (!enabled) return null;
-    if (result?.key !== key) return OPERATIONAL_ADDITIONS_COPY[locale][3];
-    if (result.failed) return OPERATIONAL_ADDITIONS_COPY[locale][4];
+    if (result?.key !== key) return DEMOGRAPHICS_STATUS_COPY[locale].loading;
+    if (result.failed) return DEMOGRAPHICS_STATUS_COPY[locale].error;
     return internalSexText(result.values[id], locale);
   };
 }

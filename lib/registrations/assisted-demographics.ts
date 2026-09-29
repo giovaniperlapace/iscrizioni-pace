@@ -18,3 +18,13 @@ export function parseDemographics(form: FormData): Demographics | null {
 export function internalSexText(value: InternalSex | null | undefined, locale: SupportedLocale) {
   return value ? DEMOGRAPHICS_COPY[locale][value] : "—";
 }
+
+export const DEMOGRAPHICS_STATUS_COPY = {
+  it: { save: "Salva dati", saved: "Dati aggiornati.", loading: "Caricamento…", error: "Impossibile caricare i dati.", retry: "Riprova" },
+  en: { save: "Save details", saved: "Details updated.", loading: "Loading…", error: "Unable to load details.", retry: "Try again" },
+  fr: { save: "Enregistrer les données", saved: "Données mises à jour.", loading: "Chargement…", error: "Impossible de charger les données.", retry: "Réessayer" },
+  de: { save: "Daten speichern", saved: "Daten aktualisiert.", loading: "Wird geladen…", error: "Daten konnten nicht geladen werden.", retry: "Erneut versuchen" },
+  es: { save: "Guardar datos", saved: "Datos actualizados.", loading: "Cargando…", error: "No se pudieron cargar los datos.", retry: "Reintentar" },
+  nl: { save: "Gegevens opslaan", saved: "Gegevens bijgewerkt.", loading: "Laden…", error: "De gegevens konden niet worden geladen.", retry: "Opnieuw proberen" },
+  uk: { save: "Зберегти дані", saved: "Дані оновлено.", loading: "Завантаження…", error: "Не вдалося завантажити дані.", retry: "Спробувати ще раз" },
+} satisfies Record<SupportedLocale, Record<string, string>>;
