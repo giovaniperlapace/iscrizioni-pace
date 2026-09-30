@@ -4,6 +4,21 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Attesa sul video ed esito temporaneo — 2026-09-30
+
+- Revisione successiva: durante `pending` nessun dialog modale. In modalità
+  camera il messaggio “Operazione in corso. Attendi l’esito prima della prossima
+  persona…” è sovrapposto soltanto al video; lo stream rimane attivo e
+  l’interblocco continua a impedire altri ingressi. Manuale: attesa inline.
+- Conferma e riepilogo compaiono subito sotto il riquadro video e scompaiono
+  dopo 2,5 secondi. Il timer è legato alla singola risposta e annullato al
+  cambio stato; non cambia sessione, QR latch o dati. Rimossi l’esito duplicato
+  nella testata/sul video e le istruzioni per rileggere lo stesso QR.
+- Selezione famiglia/scuola, correzioni, esiti incerti e blocco di sessione
+  mantengono il dialog e non scadono. Gli errori restano persistenti.
+- Verifica dedicata: `tests/browser/reception-feedback.mjs` (video continuo,
+  posizione, timer reale, rilettura e protezione della selezione successiva).
+
 ## Conferma QR in overlay — 2026-09-30
 
 - La console accoglienza apre un dialog modale sopra la fotocamera per la

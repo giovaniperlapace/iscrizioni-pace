@@ -22,7 +22,15 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   const locked = session.isLocked();
   const selection = state.phase === "selection";
   const correction = state.mode !== "enter";
-  const operationOpen = selection || locked;
+  const operationOpen = selection || state.phase === "uncertain" || state.phase === "blocked";
+  const [dismissedResult, setDismissedResult] = useState<typeof state | null>(null);
+  const showResult = state.phase !== "result" || dismissedResult !== state;
+
+  useEffect(() => {
+    if (state.phase !== "result") return;
+    const timer = setTimeout(() => setDismissedResult(state), 2500);
+    return () => clearTimeout(timer);
+  }, [state]);
 
   useEffect(() => { session.setActive(true); return () => session.setActive(false); }, [session]);
 
@@ -37,27 +45,27 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
     session.setMode(mode); setValue(""); setInput(mode === "enter" ? "camera" : "manual");
     latch.current.clearAbsence();
   }
-  const operationContent = <>
-    {state.phase === "pending" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
+  const operationContent = showResult ? <>
+    {state.phase === "pending" && input === "manual" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
     {state.message && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
       <p className="font-semibold">{state.message}</p>
       {state.phase === "uncertain" && <button type="button" className="btn-primary mt-3 min-h-12 px-4" onClick={() => void session.retry()}>Riprova la stessa operazione</button>}
       {state.phase === "blocked" && <PendingLink className="mt-3 block underline" href="/">Torna all’accesso</PendingLink>}
     </div>}
 
-    {state.result && <div className="grid gap-3 border-t border-[var(--peace-border)] pt-4">
+    {state.result && state.phase !== "pending" && <div className="grid gap-3 border-t border-[var(--peace-border)] pt-4">
       <h3 className="text-lg font-semibold">{selection ? "Conferma le presenze" : "Ultima operazione"}</h3>
       {selection && state.result.kind === "family" ? <p className="text-sm">Codice {state.result.code}</p> : <PresenceSummary result={state.result} />}
       {selection && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
         onSubmit={(values, confirmed) => void session.submit(values, confirmed)} onDismiss={() => session.next()} />}
     </div>}
-  </>;
+  </> : null;
   return <section className="grid gap-5" aria-labelledby="reception-title">
     <header className="grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
       <p className="text-xs font-semibold uppercase tracking-wide">Incarico attivo · Accoglienza evento</p>
       <h2 id="reception-title" className="text-xl font-semibold">{correction ? labels[state.mode] : "Registra ingresso"}</h2>
-      {state.phase !== "ready" && <p aria-hidden="true" className={`text-sm font-semibold ${state.phase === "result" ? "text-green-200" : "text-amber-200"}`}>
-        {state.phase === "pending" ? "Operazione in corso…" : state.phase === "selection" ? "Codice verificato · completa la conferma nella finestra aperta" : state.message}
+      {state.phase !== "ready" && state.phase !== "result" && state.phase !== "pending" && <p aria-hidden="true" className="text-sm font-semibold text-amber-200">
+        {state.phase === "selection" ? "Codice verificato · completa la conferma nella finestra aperta" : state.message}
       </p>}
     </header>
     <div className="surface-card grid gap-5 p-4 sm:p-7">
@@ -79,7 +87,8 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
 
     {input === "camera" ? <>
       <ReceptionCamera source={cameraSource} paused={locked || selection}
-        feedback={selection ? "QR letto correttamente · conferma i presenti nella finestra aperta" : state.phase === "pending" ? "Verifica e registrazione in corso…" : state.phase === "result" ? `${state.message} Puoi leggere il prossimo QR.` : locked ? "Operazione da verificare · segui le indicazioni nella finestra aperta" : undefined} onCode={code => {
+        feedback={state.phase === "pending" ? "Operazione in corso. Attendi l’esito prima della prossima persona…" : undefined}
+        belowPreview={!operationOpen ? operationContent : null} onCode={code => {
         latch.current.clearAbsence();
         if (session.isLocked() || session.snapshot().phase === "selection" || !latch.current.accept(code)) return;
         void session.inspect({ kind: "qr", value: code });
@@ -87,7 +96,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
         if (!session.isLocked() && session.snapshot().phase !== "selection") latch.current.absent();
         else latch.current.clearAbsence();
       }} />
-      <p className="text-sm text-[var(--peace-muted)]">{correction ? "Inquadra il QR per verificare le presenze. Nessuna modifica viene salvata senza la tua conferma." : "Per rileggere lo stesso QR, toglilo dall’inquadratura per un secondo e inquadralo di nuovo. Chi è già presente conserva il suo ingresso; per una famiglia puoi aggiungere i membri ancora assenti."}</p>
+
     </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void session.inspect({ kind: "code", value }); setValue(""); }}>
       <fieldset disabled={locked || selection} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <label className="grid min-w-0 gap-1 text-sm">Codice partecipante
@@ -101,11 +110,11 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
 
     {operationOpen ? <ReceptionOperationDialog onDismiss={selection ? () => session.next() : undefined}>
       <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-semibold outline-none">
-        {selection ? (input === "camera" ? "QR letto correttamente" : "Codice verificato") : state.phase === "pending" ? "Operazione in corso" : "Operazione da verificare"}
+        {selection ? (input === "camera" ? "QR letto correttamente" : "Codice verificato") : "Operazione da verificare"}
       </h2>
       {selection && <p className="text-sm">{correction ? "Controlla i dati e conferma la modifica. Non è ancora stata salvata." : state.result?.kind === "school" ? "Indica quanti studenti e accompagnatori sono presenti, poi premi Registra ingresso." : "Seleziona le persone presenti, poi premi Registra ingresso."}</p>}
       {operationContent}
-    </ReceptionOperationDialog> : operationContent}
+    </ReceptionOperationDialog> : input === "manual" ? operationContent : null}
     <div className="border-t border-[var(--peace-border)] pt-4">
       <button type="button" className="btn-secondary min-h-12 px-4" disabled={locked || selection}
         onClick={() => changeMode(correction ? "enter" : "correct")}>

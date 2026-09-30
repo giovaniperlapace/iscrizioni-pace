@@ -12,13 +12,20 @@ const snap=()=>ab('snapshot','-i');
 const click=name=>{ab('eval',`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(name)})?.scrollIntoView({block:'center'})`);ab('find','role','button','click','--name',name,'--exact');snap();};
 const check=(code,label)=>{assert.match(ab('eval',`Boolean(${code})`),/true/,label);console.log(`PASS ${label}`);};
 const wait=code=>{try {ab('wait','--fn',code);} catch(error) {console.log(ab('eval','document.body.innerText'));throw error;}snap();};
-const result=()=>wait('document.body.innerText.includes("Ultima operazione") && !document.body.innerText.includes("Operazione in corso")');
-const open=()=>{ab('open',`${base}/reception-check`);snap();};
+const result=()=>wait('Boolean(window.__receptionResult)');
+const open=()=>{ab('open',`${base}/reception-check`);snap();ab('eval',`(()=>{
+  window.__receptionObserver?.disconnect();window.__receptionResult='';
+  window.__receptionObserver=new MutationObserver(()=>{
+    const text=document.body.innerText;
+    if(text.includes('Operazione in corso')||document.querySelector('input[name=presentSubjects],input[name=students]'))window.__receptionResult='';
+    else if(text.includes('Ultima operazione'))window.__receptionResult=text;
+  });window.__receptionObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+})()`);};
 const count='JSON.parse(document.querySelector("[data-operations]").textContent).length';
 try {
   open();
   click('Avvia fotocamera');click('QR singolo');result();
-  check(`${count}===1 && document.body.innerText.includes("Ingresso registrato.")`,'single scan automatically enters');
+  check(`${count}===1 && window.__receptionResult.includes("Ingresso registrato.")`,'single scan automatically enters');
   click('QR singolo');ab('wait','800');snap();check(`${count}===1`,'same visible QR does not repeat');
   click('QR famiglia');wait('document.querySelectorAll("input[name=presentSubjects]").length===2');
   check('document.querySelectorAll("input[name=presentSubjects]:checked").length===0','family never presumed present');
@@ -33,7 +40,7 @@ try {
   check(`!document.querySelector("dialog[open]") && ${count}===1`, 'dismissal does not register family members');
   click('Nessun QR');ab('wait','1500');click('QR famiglia');wait('!!document.querySelector("dialog[open] input[name=presentSubjects]")');
   ab('check',`input[value="22222222-2222-4222-8222-222222222222"]`);snap();click('Registra ingresso');result();
-  check('document.body.innerText.includes("Presente dal") && document.body.innerText.includes("Ingresso non registrato")','partial family');
+  check('window.__receptionResult.includes("Presente dal") && window.__receptionResult.includes("Ingresso non registrato")','partial family');
   click('Correzioni e annullamenti');
   ab('fill','input[type=text]','FAML');click('Verifica codice');wait('!!document.querySelector("input[name=confirmCorrection]")');
   check('document.querySelector("dialog form button[type=submit]").disabled','correction requires confirmation');
@@ -41,11 +48,11 @@ try {
   click('Correggi presenze');result();
   ab('select','select[name=operation]','cancel');snap();ab('fill','input[type=text]','FAML');click('Verifica codice');wait('!!document.querySelector("input[name=confirmCorrection]")');
   ab('check','input[value="11111111-1111-4111-8111-111111111111"]');ab('check','input[name=confirmCorrection]');snap();click('Annulla ingresso');result();
-  check('!document.body.innerText.includes("Presente dal")','explicit cancellation');
+  check('!window.__receptionResult.includes("Presente dal")','explicit cancellation');
   click('Torna agli ingressi');click('Nessun QR');click('Avvia fotocamera');click('QR scuola');wait('document.querySelectorAll("input[type=number]").length===2');
   check('Array.from(document.querySelectorAll("input[type=number]")).every(e=>e.value==="")','school counts explicit');
   ab('fill','input[name=students]','18');ab('fill','input[name=companions]','2');snap();click('Registra ingresso');result();
-  check('document.body.innerText.includes("18 studenti e 2 accompagnatori")','school aggregate response');
+  check('window.__receptionResult.includes("18 studenti e 2 accompagnatori")','school aggregate response');
   ab('set','viewport','390','844');snap();
   check('document.documentElement.scrollWidth<=innerWidth','no mobile overflow');
   ab('screenshot','/tmp/pace-p12-mobile.png','--full');

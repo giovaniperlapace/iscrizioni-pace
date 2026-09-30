@@ -1,0 +1,52 @@
+import { execFileSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const base = process.argv[2] ?? 'http://localhost:3114';
+if (!/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(base)) throw Error('Local server required');
+const route = new URL('../../app/reception-check/', import.meta.url);
+mkdirSync(route, { recursive: true });
+copyFileSync(new URL('./reception-fixture.tsx', import.meta.url), new URL('page.tsx', route));
+const ab = (...args) => execFileSync('npx', ['--yes','agent-browser','--session','reception-feedback',...args], { encoding:'utf8', timeout:60000 });
+try {
+  ab('open', `${base}/reception-check`); ab('snapshot','-i');
+  ab('select', 'main>label select', 'slow');
+  ab('set','viewport','390','844');
+  ab('eval', `void (async () => {
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const check=(ok,message)=>{if(!ok)throw Error(message)};
+    const click=text=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===text);check(b&&!b.disabled,'button '+text);b.click()};
+    const wait=async (fn,label)=>{for(let i=0;i<120;i++){if(fn())return;await sleep(50)}throw Error('state timeout '+label+' '+document.body.innerText)};
+    const scanner=document.querySelector('[aria-label="Scanner fotocamera"]');
+    const video=scanner.querySelector('video');
+    click('Avvia fotocamera');click('QR singolo');
+    await wait(()=>scanner.innerText.includes('Operazione in corso. Attendi'),'pending');
+    check(!document.querySelector('dialog[open]'),'pending must not open modal');
+    check(scanner.querySelector('video')===video,'video replaced');
+    check(JSON.parse(document.querySelector('[data-camera]').textContent).stopped===0,'camera stopped');
+    check(video.parentElement.innerText.includes('Operazione in corso. Attendi'),'pending outside preview');
+    await wait(()=>scanner.innerText.includes('Ingresso registrato.'),'first success');
+    const preview=video.parentElement;
+    check(preview.nextElementSibling?.innerText.includes('Ingresso registrato.'),'result not immediately below preview');
+    check(!preview.innerText.includes('Ingresso registrato.'),'success still overlays video');
+    check(!document.body.innerText.includes('Per rileggere lo stesso QR'),'old instructions remain');
+    await sleep(2100);check(scanner.innerText.includes('Ingresso registrato.'),'success disappeared too early');
+    await sleep(600);check(!scanner.innerText.includes('Ultima operazione')&&!document.body.innerText.includes('Ingresso registrato.'),'success remains after 2.5 seconds');
+    check(scanner.querySelector('video')===video&&JSON.parse(document.querySelector('[data-camera]').textContent).stopped===0,'success expiry restarts camera');
+    click('Nessun QR');await sleep(1800);click('QR singolo');
+    await wait(()=>scanner.innerText.includes('Presenze già registrate'),'reread');
+    await sleep(800);click('QR famiglia');
+    await wait(()=>!!document.querySelector('dialog[open]'),'family');
+    await sleep(2800);
+    check(document.querySelector('dialog[open]')?.innerText.includes('QR letto correttamente'),'result timer closes new selection');
+    click('Chiudi senza modifiche');
+    return 'PASS preview-only pending, uninterrupted camera, result position, 2.5s expiry, repeated results and persistent selection';
+  })().then(value=>window.__feedbackResult=value).catch(error=>window.__feedbackResult='FAIL '+error.message); 'started'`);
+  ab('wait','--fn','Boolean(window.__feedbackResult)');
+  const result=ab('eval','window.__feedbackResult');
+  assert.match(result,/PASS/);console.log(result);
+  ab('screenshot','/tmp/pace-reception-feedback.png');
+  assert.equal(ab('errors').trim(),'');
+} finally {
+  ab('close');rmSync(route,{recursive:true,force:true});
+  rmSync(new URL('../../.next/dev/types/app/reception-check/',import.meta.url),{recursive:true,force:true});
+}

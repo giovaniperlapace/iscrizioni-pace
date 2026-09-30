@@ -55,3 +55,17 @@ RPC di sola verifica sui cinque token (quattro validi, uno invalid);
 zero righe check-in per il lotto; due minori solo in F. Nessuna migration,
 modifica production, email SMTP o deployment. Restano login sul telefono e
 prove fisiche; seguire `docs/guida-collaudo-telefono-qr.md`.
+
+## Annullamento ingressi per ripetere il collaudo — 30 settembre 2026
+
+Su richiesta dell’utente, annullati tramite `reception_event_check_in` gli
+ingressi attivi del solo lotto identificato dal manifest privato: A (1), B (1),
+F (3 persone, inclusi i due minori), S (una classe con 11 persone registrate).
+X era già senza ingresso. Operazione unica transazionale, con revisione riletta
+per ogni soggetto e audit ordinario a nome dell’account admin di collaudo.
+
+Verifica dopo il commit da una nuova connessione: zero ingressi attivi, sei
+righe storiche conservate e annullate. Hash dei check-in estranei al lotto
+invariato nella transazione. QR, codici, iscrizioni, minori e registro dei retry
+conservati; nessuna modifica production. Per la nuova sessione, chiudere
+un’eventuale operazione ancora aperta sul telefono e rileggere il QR.
