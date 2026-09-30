@@ -61,7 +61,7 @@ seconda sessione non può dimostrare il primo ingresso con persone già presenti
 
 **Atteso:** anteprima visibile, preferibilmente dalla fotocamera posteriore;
 nessun ingresso finché non si legge un codice. Il titolo resta riconoscibile
-anche scorrendo la pagina. Non serve aprire l’app Fotocamera del telefono.
+all’inizio della pagina; l’incarico scorre normalmente e non resta fisso. Non serve aprire l’app Fotocamera del telefono.
 
 ### T02 — Primo QR e protezione dalle letture ripetute
 
@@ -111,7 +111,7 @@ non sostituisce le quantità. Per cambiarle bisogna usare Correzioni.
 
 1. Inquadrare X dopo un esito valido.
 2. Verificare il rifiuto e che non restino in vista i dati della persona precedente.
-3. Toccare **Inserisci il codice manualmente**, lasciare **Codice partecipante**, inserire il
+3. Toccare **Inserisci il codice manualmente**, inserire il
    codice di A e premere **Leggi codice e registra**.
 4. Tornare a **Inquadra QR code** e avviarla.
 
@@ -129,7 +129,7 @@ subito l’ingresso: non è una ricerca in sola lettura.
 6. Chiudere la selezione con **Chiudi senza modifiche**. Scegliere
    **Annulla ingresso**, verificare F e selezionare soltanto il primo minore.
 7. Confermare e annullare, poi verificare ancora F.
-8. Chiudere senza modifiche e premere **Torna agli ingressi**.
+8. Chiudere senza modifiche e premere la scheda **Ingressi**.
 
 **Atteso:** alla fine solo l’adulto è presente. Correggere sostituisce l’insieme
 dei presenti; annullare riguarda solo i selezionati. Per annullare tutti usare
@@ -196,7 +196,7 @@ Provare anche una sessione scaduta quando riproducibile con il referente.
 Il referente verifica presenze, assenza di duplicati e audit dei casi critici.
 Le statistiche delle presenze effettive previste in P13 non sono il riscontro
 per chiudere P12. Per rileggere senza registrare usare **Correzioni → Verifica
-codice → Chiudi senza modifiche**. Per S selezionare Contenuto del QR.
+codice → Chiudi senza modifiche**. Per S aprire la scheda Correzioni e annullamenti e usare Inquadra QR code.
 
 ## 5. Conserviamo il metodo per la stampa
 

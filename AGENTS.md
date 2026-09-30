@@ -4,6 +4,17 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Sezioni accoglienza e codice manuale — 2026-09-30
+
+- Revisione successiva al rilascio `1ac8393`, pubblicazione staging autorizzata:
+  incarico fuori dalla
+  card operativa, sotto il menu dashboard, senza sticky durante lo scroll.
+- Navigazione superiore Ingressi / Correzioni e annullamenti, con gli stessi
+  blocchi durante selezioni/richieste/esiti incerti. Sostituisce il pulsante in fondo.
+- Manuale: solo codice partecipante di quattro caratteri; rimossi Tipo di codice
+  e inserimento del token QR. Correzioni conserva la scansione camera anche per
+  scuole, come sola verifica; scritture ancora esplicite e confermate.
+
 ## Anteprima scanner verticale — 2026-09-30
 
 - Modalità rinominate “Inquadra QR code” e “Inserisci il codice manualmente”,

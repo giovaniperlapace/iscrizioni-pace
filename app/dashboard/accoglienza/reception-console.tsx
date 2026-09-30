@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import PendingLink from "@/components/pending-link";
 import { ReceptionCamera } from "./reception-camera";
 import type { CameraSource } from "@/lib/reception/camera";
-import type { ReceptionCommand, ReceptionLookup, ReceptionResult } from "@/lib/reception/contracts";
+import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import { ReceptionStationSession, ScanLatch, type ReceptionMode, type VerifiedReception } from "@/lib/reception/station";
 
 const labels = { enter: "Registra ingresso", correct: "Correggi presenze", cancel: "Annulla ingresso" };
@@ -17,7 +17,6 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID()));
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
   const [input, setInput] = useState<"camera" | "manual">("camera");
-  const [kind, setKind] = useState<ReceptionLookup["kind"]>("code");
   const [value, setValue] = useState("");
   const latch = useRef(new ScanLatch());
   const locked = session.isLocked();
@@ -34,46 +33,59 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   }, [state.phase]);
 
   function changeMode(mode: ReceptionMode) {
-    session.setMode(mode); setValue("");
+    session.setMode(mode); setValue(""); setInput(mode === "enter" ? "camera" : "manual");
+    latch.current.clearAbsence();
   }
-  return <section className="surface-card grid gap-5 p-4 sm:p-7" aria-labelledby="reception-title">
-    <header className="sticky top-[4.75rem] z-30 grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
+  return <section className="grid gap-5" aria-labelledby="reception-title">
+    <header className="grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
       <p className="text-xs font-semibold uppercase tracking-wide">Incarico attivo · Accoglienza evento</p>
       <h2 id="reception-title" className="text-xl font-semibold">{correction ? labels[state.mode] : "Registra ingresso evento"}</h2>
       {state.phase !== "ready" && <p aria-hidden="true" className={`text-sm font-semibold ${state.phase === "result" ? "text-green-200" : "text-amber-200"}`}>
         {state.phase === "pending" ? "Operazione in corso…" : state.phase === "selection" ? "Conferma le presenze qui sotto ↓" : state.message}
       </p>}
     </header>
+    <nav aria-label="Sezioni accoglienza" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
+      {([{ mode: "enter", label: "Ingressi" }, { mode: "correct", label: "Correzioni e annullamenti" }] as const).map(item => {
+        const selected = item.mode === "enter" ? !correction : correction;
+        return <button key={item.mode} type="button" aria-pressed={selected} disabled={locked || selection}
+          onClick={() => { if (!selected) changeMode(item.mode); }}
+          className={`flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold sm:flex-none ${selected ? "bg-[var(--peace-blue-800)] text-white" : "text-[var(--peace-muted)] hover:bg-[var(--peace-sky-100)]"}`}>
+          {item.label}
+        </button>;
+      })}
+    </nav>
+    <div className="surface-card grid gap-5 p-4 sm:p-7">
+      {correction && <label className="grid gap-1 text-sm">Operazione da eseguire
+        <select name="operation" className="field min-h-12" value={state.mode} disabled={locked || selection}
+          onChange={event => changeMode(event.target.value as ReceptionMode)}>
+          <option value="correct">Correggi presenze</option><option value="cancel">Annulla ingresso</option>
+        </select>
+      </label>}
       <p className="text-sm">{correction ? "Verifica un codice e conferma esplicitamente la modifica." : "Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie e scuole conferma chi è presente."}</p>
 
 
-    {!correction && <div className="flex flex-wrap gap-2" aria-label="Modalità di lettura">
+    <div className="flex flex-wrap gap-2" aria-label="Modalità di lettura">
       <button type="button" className={input === "camera" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
         aria-pressed={input === "camera"} disabled={locked || selection} onClick={() => { setInput("camera"); setValue(""); }}>Inquadra QR code</button>
       <button type="button" className={input === "manual" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
         aria-pressed={input === "manual"} disabled={locked || selection} onClick={() => { setInput("manual"); setValue(""); }}>Inserisci il codice manualmente</button>
-    </div>}
+    </div>
 
-    {!correction && input === "camera" ? <>
-      <ReceptionCamera source={cameraSource} paused={!session.canScan()} onCode={code => {
+    {input === "camera" ? <>
+      <ReceptionCamera source={cameraSource} paused={locked || selection} onCode={code => {
         latch.current.clearAbsence();
-        if (!session.canScan() || !latch.current.accept(code)) return;
+        if (session.isLocked() || session.snapshot().phase === "selection" || !latch.current.accept(code)) return;
         void session.inspect({ kind: "qr", value: code });
       }} onNoCode={() => {
-        if (session.canScan()) latch.current.absent();
+        if (!session.isLocked() && session.snapshot().phase !== "selection") latch.current.absent();
         else latch.current.clearAbsence();
       }} />
-      <p className="text-sm text-[var(--peace-muted)]">Per rileggere lo stesso QR, toglilo dall’inquadratura per un secondo e inquadralo di nuovo. Chi è già presente conserva il suo ingresso; per una famiglia puoi aggiungere i membri ancora assenti.</p>
-    </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void session.inspect({ kind, value }); setValue(""); }}>
-      <fieldset disabled={locked || selection} className="grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
-        <label className="grid gap-1 text-sm">Tipo di codice
-          <select name="lookupKind" className="field min-h-12" value={kind} onChange={event => { setKind(event.target.value as ReceptionLookup["kind"]); setValue(""); }}>
-            <option value="code">Codice partecipante</option><option value="qr">Contenuto del QR</option>
-          </select>
-        </label>
-        <label className="grid min-w-0 gap-1 text-sm">{kind === "code" ? "Codice partecipante" : "Contenuto del QR"}
-          <input className="field min-h-12 min-w-0" type={kind === "qr" ? "password" : "text"} autoComplete="off" spellCheck={false}
-            autoCapitalize={kind === "code" ? "characters" : "none"} required maxLength={kind === "code" ? 4 : 43}
+      <p className="text-sm text-[var(--peace-muted)]">{correction ? "Inquadra il QR per verificare le presenze. Nessuna modifica viene salvata senza la tua conferma." : "Per rileggere lo stesso QR, toglilo dall’inquadratura per un secondo e inquadralo di nuovo. Chi è già presente conserva il suo ingresso; per una famiglia puoi aggiungere i membri ancora assenti."}</p>
+    </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void session.inspect({ kind: "code", value }); setValue(""); }}>
+      <fieldset disabled={locked || selection} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className="grid min-w-0 gap-1 text-sm">Codice partecipante
+          <input className="field min-h-12 min-w-0" type="text" autoComplete="off" spellCheck={false}
+            autoCapitalize="characters" required maxLength={4}
             value={value} onChange={event => setValue(event.target.value)} />
         </label>
         <button className="btn-primary min-h-12 px-4" type="submit" aria-busy={state.phase === "pending"}>{correction ? "Verifica codice" : "Leggi codice e registra"}</button>
@@ -93,15 +105,6 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
       {selection && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
         onSubmit={(values, confirmed) => void session.submit(values, confirmed)} onDismiss={() => session.next()} />}
     </div>}
-    <div className="flex flex-wrap gap-2">
-      <button type="button" className="btn-secondary min-h-12 px-4" disabled={locked || selection}
-        onClick={() => changeMode(correction ? "enter" : "correct")}>{correction ? "Torna agli ingressi" : "Correzioni e annullamenti"}</button>
-      {correction && <label className="grid gap-1 text-sm">Operazione da eseguire
-        <select name="operation" className="field min-h-12" value={state.mode} disabled={locked || selection}
-          onChange={event => changeMode(event.target.value as ReceptionMode)}>
-          <option value="correct">Correggi presenze</option><option value="cancel">Annulla ingresso</option>
-        </select>
-      </label>}
     </div>
   </section>;
 }

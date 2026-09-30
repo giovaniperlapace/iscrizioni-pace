@@ -32,7 +32,7 @@ try {
   ab('select','select[name=operation]','cancel');snap();ab('fill','input[type=text]','FAML');click('Verifica codice');wait('!!document.querySelector("input[name=confirmCorrection]")');
   ab('check','input[value="11111111-1111-4111-8111-111111111111"]');ab('check','input[name=confirmCorrection]');snap();click('Annulla ingresso');result();
   check('!document.body.innerText.includes("Presente dal")','explicit cancellation');
-  click('Torna agli ingressi');click('Avvia fotocamera');click('QR scuola');wait('document.querySelectorAll("input[type=number]").length===2');
+  click('Ingressi');click('Avvia fotocamera');click('QR scuola');wait('document.querySelectorAll("input[type=number]").length===2');
   check('Array.from(document.querySelectorAll("input[type=number]")).every(e=>e.value==="")','school counts explicit');
   ab('fill','input[name=students]','18');ab('fill','input[name=companions]','2');snap();click('Registra ingresso');result();
   check('document.body.innerText.includes("18 studenti e 2 accompagnatori")','school aggregate response');
