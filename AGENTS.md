@@ -4,13 +4,21 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Pubblicazione staging panel — 2026-09-30
+
+- La richiesta di pubblicare sullo staging comprende commit e push sul branch
+  `codex/panel-p0-p10`, quindi verifica della preview Vercel generata dal push.
+  Non implica pubblicazione su main/production né nuove migration.
+
 ## Sezioni accoglienza e codice manuale — 2026-09-30
 
 - Revisione successiva al rilascio `1ac8393`, pubblicazione staging autorizzata:
   incarico fuori dalla
   card operativa, sotto il menu dashboard, senza sticky durante lo scroll.
-- Navigazione superiore Ingressi / Correzioni e annullamenti, con gli stessi
-  blocchi durante selezioni/richieste/esiti incerti. Sostituisce il pulsante in fondo.
+- Revisione successiva richiesta: eliminate le schede superiori Ingressi /
+  Correzioni e annullamenti. Ripristinato il pulsante in fondo alla card, separato
+  da un bordo; in correzione diventa Torna agli ingressi. Conservati i blocchi
+  durante selezioni/richieste/esiti incerti.
 - Manuale: solo codice partecipante di quattro caratteri; rimossi Tipo di codice
   e inserimento del token QR. Correzioni conserva la scansione camera anche per
   scuole, come sola verifica; scritture ancora esplicite e confermate.

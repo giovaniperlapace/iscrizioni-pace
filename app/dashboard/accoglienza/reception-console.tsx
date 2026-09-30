@@ -44,16 +44,6 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
         {state.phase === "pending" ? "Operazione in corso…" : state.phase === "selection" ? "Conferma le presenze qui sotto ↓" : state.message}
       </p>}
     </header>
-    <nav aria-label="Sezioni accoglienza" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
-      {([{ mode: "enter", label: "Ingressi" }, { mode: "correct", label: "Correzioni e annullamenti" }] as const).map(item => {
-        const selected = item.mode === "enter" ? !correction : correction;
-        return <button key={item.mode} type="button" aria-pressed={selected} disabled={locked || selection}
-          onClick={() => { if (!selected) changeMode(item.mode); }}
-          className={`flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold sm:flex-none ${selected ? "bg-[var(--peace-blue-800)] text-white" : "text-[var(--peace-muted)] hover:bg-[var(--peace-sky-100)]"}`}>
-          {item.label}
-        </button>;
-      })}
-    </nav>
     <div className="surface-card grid gap-5 p-4 sm:p-7">
       {correction && <label className="grid gap-1 text-sm">Operazione da eseguire
         <select name="operation" className="field min-h-12" value={state.mode} disabled={locked || selection}
@@ -105,6 +95,12 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
       {selection && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
         onSubmit={(values, confirmed) => void session.submit(values, confirmed)} onDismiss={() => session.next()} />}
     </div>}
+    <div className="border-t border-[var(--peace-border)] pt-4">
+      <button type="button" className="btn-secondary min-h-12 px-4" disabled={locked || selection}
+        onClick={() => changeMode(correction ? "enter" : "correct")}>
+        {correction ? "Torna agli ingressi" : "Correzioni e annullamenti"}
+      </button>
+    </div>
     </div>
   </section>;
 }

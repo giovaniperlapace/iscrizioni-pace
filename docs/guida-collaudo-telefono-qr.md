@@ -129,7 +129,7 @@ subito l’ingresso: non è una ricerca in sola lettura.
 6. Chiudere la selezione con **Chiudi senza modifiche**. Scegliere
    **Annulla ingresso**, verificare F e selezionare soltanto il primo minore.
 7. Confermare e annullare, poi verificare ancora F.
-8. Chiudere senza modifiche e premere la scheda **Ingressi**.
+8. Chiudere senza modifiche e premere **Torna agli ingressi**.
 
 **Atteso:** alla fine solo l’adulto è presente. Correggere sostituisce l’insieme
 dei presenti; annullare riguarda solo i selezionati. Per annullare tutti usare
@@ -196,7 +196,7 @@ Provare anche una sessione scaduta quando riproducibile con il referente.
 Il referente verifica presenze, assenza di duplicati e audit dei casi critici.
 Le statistiche delle presenze effettive previste in P13 non sono il riscontro
 per chiudere P12. Per rileggere senza registrare usare **Correzioni → Verifica
-codice → Chiudi senza modifiche**. Per S aprire la scheda Correzioni e annullamenti e usare Inquadra QR code.
+codice → Chiudi senza modifiche**. Per S premere Correzioni e annullamenti in fondo e usare Inquadra QR code.
 
 ## 5. Conserviamo il metodo per la stampa
 
