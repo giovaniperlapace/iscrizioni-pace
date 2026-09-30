@@ -17,10 +17,10 @@ export default function ReceptionFixture() {
   const uncertain=useRef(false);
   const cameraCode=useRef<string|null>(null);
   const [cameraStats,setCameraStats]=useState({started:0,stopped:0,facing:""});
-  const [source] = useState<CameraSource>(() => async ({facing,signal,onCode}: Parameters<CameraSource>[0]) => {
+  const [source] = useState<CameraSource>(() => async ({facing,signal,onCode,onNoCode}: Parameters<CameraSource>[0]) => {
     if(modeRef.current==="camera-denied") throw new DOMException("Synthetic denial","NotAllowedError");
     setCameraStats(s=>({...s,started:s.started+1,facing}));
-    const timer=setInterval(()=>{if(cameraCode.current)onCode(cameraCode.current);},250);
+    const timer=setInterval(()=>{if(cameraCode.current)onCode(cameraCode.current);else onNoCode?.();},250);
     let stopped=false;
     const stop=()=>{if(stopped)return;stopped=true;clearInterval(timer);setCameraStats(s=>({...s,stopped:s.stopped+1}));};
     signal.addEventListener("abort",stop,{once:true});return stop;

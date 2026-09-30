@@ -26,6 +26,23 @@ test("single entry keeps one duty across consecutive QR/manual reads and needs n
   assert.equal(calls.length,4); assert.ok(calls.every(c=>c.duty==="event_entry"));
   assert.equal(session.snapshot().mode,"enter");
 });
+test("already present singles and complete families are read without sending entry commands", async () => {
+  for (const children of [false, true]) {
+    const calls: ReceptionCommand[] = [];
+    const result = family(children);
+    result.persons = result.persons.map(person => ({ ...person, checkedInAt: now }));
+    const session = new ReceptionStationSession(async command => { calls.push(command); return result; }, () => request);
+    await session.inspect(lookup);
+    await session.inspect(lookup);
+    assert.deepEqual(calls.map(command => command.action), ["inspect", "inspect"]);
+    assert.deepEqual(session.snapshot().result, result);
+    assert.equal(session.snapshot().phase, "result");
+    assert.equal(session.canScan(), true);
+    session.setMode("correct");
+    await session.inspect(lookup);
+    assert.equal(session.snapshot().phase, "selection");
+  }
+});
 test("family is paused until explicit subset; school requires explicit counts",async()=>{
   for (const result of [family(true),school]) {
     const calls:ReceptionCommand[]=[];
@@ -105,9 +122,29 @@ test("leaving while verification is pending cannot trigger an automatic entry",a
   const session=new ReceptionStationSession(c=>{calls.push(c);return new Promise(r=>{resolve=r;});},()=>request);
   const pending=session.inspect(lookup);session.setActive(false);resolve(family());await pending;assert.equal(calls.length,1);
 });
-test("same-frame QR and unreadable gaps never repeat a token; explicit release permits another arrival",()=>{
+test("stable QR and brief gaps stay latched; sustained removal permits rereading",()=>{
   const latch=new ScanLatch();assert.equal(latch.accept("a"),true);
   for(let i=0;i<20;i++) assert.equal(latch.accept("a"),false);
-  assert.equal(latch.accept("b"),true);assert.equal(latch.accept("b"),false);
-  latch.reset();assert.equal(latch.accept("b"),true);
+  latch.absent(0);latch.absent(250);assert.equal(latch.accept("a"),false);
+  for(const time of [500,750,1000,1250,1500]) latch.absent(time);
+  assert.equal(latch.accept("a"),true);
+  assert.equal(latch.accept("a"),false);
+  latch.absent(2000);latch.absent(10000);
+  assert.equal(latch.accept("a"),false);
+  latch.absent(11000);latch.absent(11250);latch.clearAbsence();
+  latch.absent(11500);latch.absent(11750);
+  assert.equal(latch.accept("a"),false);
+  assert.equal(latch.accept("b"),true);
+});
+test("rereading a partly present family allows later arrivals without automatic writes",async()=>{
+  const calls:ReceptionCommand[]=[];
+  const result=family(true);result.persons[0].checkedInAt=now;
+  const session=new ReceptionStationSession(async command=>{calls.push(command);return result;},()=>request);
+  await session.inspect(lookup);
+  assert.equal(session.snapshot().phase,"selection");
+  assert.deepEqual(calls.map(c=>c.action),["inspect"]);
+  await session.submit({subjectIds:[child]});
+  assert.deepEqual(calls[1].subjectIds,[child]);
+  assert.equal(session.snapshot().result?.kind,"family");
+  assert.equal(result.persons[0].checkedInAt,now);
 });

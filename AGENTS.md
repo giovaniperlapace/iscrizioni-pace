@@ -4,6 +4,42 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Anteprima scanner verticale — 2026-09-30
+
+- Modalità rinominate “Inquadra QR code” e “Inserisci il codice manualmente”,
+  con pulsanti a capo su schermi stretti. Eliminato il selettore anteriore:
+  avvio/stop soltanto, richiesta camera `environment` a ogni avvio.
+- Correzioni e annullamenti sono in fondo alla console. Rimosso il pulsante di
+  rilettura: una sequenza di fotogrammi senza QR per almeno un secondo riabilita
+  lo stesso codice; singoli frame illeggibili e interruzioni camera non bastano.
+  Questo requisito sostituisce il blocco persistente fino a conferma descritto
+  nella P12 originaria. Durante selezione, richieste ed esiti incerti non si riabilita.
+- La famiglia parzialmente presente torna alla selezione con la nuova scansione;
+  membri già presenti indicati e disabilitati. Singoli e famiglie interamente
+  presenti terminano dopo inspect senza enter, conservando ora e stato.
+- Dashboard Accoglienza: rimosso il vecchio riquadro Area protetta con
+  descrizione e il titolo evento duplicato; resta il titolo nella testata globale.
+- `ReceptionCamera` usa un riquadro verticale 3:4, centrato e largo al massimo
+  24rem, con guida quadrata centrale larga due terzi del riquadro.
+- Il video conserva l’intera immagine (`object-contain`); la guida è soltanto
+  visiva e non intercetta tocchi. Decoder invariato: analizza tutto il fotogramma,
+  anche fuori dal quadrato. Rilascio staging autorizzato il 30 settembre; 347 test, lint e build staging superati.
+
+## Campioni accoglienza staging — 2026-09-30
+
+- Preparati su richiesta account `accoglienza.staging@example.invalid` e
+  `accoglienza2.staging@example.invalid`, solo Accoglienza evento corrente;
+  `admin.accoglienza.staging@example.invalid`, Admin globale solo nello staging.
+- Lotto fittizio A/B/F/S/X: due singoli, famiglia con due minori, scuola 10+2,
+  QR revocato. Verifica RPC senza ingressi; zero check-in iniziali.
+- Procedura e codici in `docs/collaudi/2026-09-30-preparazione-accoglienza.md`.
+  Script `prepare-reception-staging.mjs` conserva le presenze; script
+  `reception-staging-access.mjs` genera link monouso senza SMTP. Connessione
+  vincolata al container staging noto e modalità log.
+- Token, link e QR locali in `.env.collaudo-accoglienza/`, esclusa da Git;
+  non pubblicarli nel repository. Preservare il manifest per riusare il lotto.
+  Nessuna prova hardware certificata, migration, deployment o modifica production.
+
 ## Guida riutilizzabile al collaudo su telefono — 2026-09-24
 
 - Procedura pratica in `docs/guida-collaudo-telefono-qr.md`: preparazione

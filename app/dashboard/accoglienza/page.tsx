@@ -3,10 +3,7 @@ import { receptionCheckIn } from "./actions";
 
 import { redirect } from "next/navigation";
 
-import {
-  DashboardAreaDescription,
-  DashboardRoleTabs,
-} from "@/app/dashboard/role-tabs";
+import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -18,7 +15,7 @@ export default async function AccoglienzaDashboardPage() {
     redirect("/login");
   }
 
-  const { data: event, error } = await supabase.from("events").select("id,title").eq("is_current", true).maybeSingle();
+  const { data: event, error } = await supabase.from("events").select("id").eq("is_current", true).maybeSingle();
   if (error) throw new Error("Impossibile caricare l’evento dell’accoglienza.");
   const authorized = event && auth.eventRoles.some(role =>
     (role.role === "admin" && role.eventId === null) ||
@@ -33,15 +30,10 @@ export default async function AccoglienzaDashboardPage() {
             activeRole="accoglienza"
             eventRoles={auth.eventRoles}
           />
-          <DashboardAreaDescription>
-            Verifica i codici e registra le persone realmente presenti
-            con i soli dati necessari all’ingresso.
-          </DashboardAreaDescription>
         </header>
-        {authorized ? <>
-          <p className="text-sm font-semibold">{event.title}</p>
+        {authorized ?
           <ReceptionConsole commandAction={receptionCheckIn.bind(null, event.id)} />
-        </> : <p role="alert" className="surface-card p-5">Nessun incarico di accoglienza autorizzato nell’evento corrente. Rivolgiti a un amministratore.</p>}
+        : <p role="alert" className="surface-card p-5">Nessun incarico di accoglienza autorizzato nell’evento corrente. Rivolgiti a un amministratore.</p>}
       </section>
     </main>
   );

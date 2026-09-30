@@ -19,16 +19,24 @@ const messages = {
 };
 export const EVENT_RECEPTION_DUTY = "event_entry" as const;
 
-// The last code stays latched through unreadable frames, errors and camera
-// restarts. Only another code or an explicit operator action releases it.
+// A stable QR is read once. A sustained sequence of empty frames rearms it;
+// short decoder gaps and camera restarts do not count as removal.
 export class ScanLatch {
   private last: string | null = null;
+  private emptySince: number | null = null;
+  private previousEmpty: number | null = null;
+  clearAbsence() { this.emptySince = this.previousEmpty = null; }
+  absent(now = performance.now()) {
+    if (this.previousEmpty === null || now - this.previousEmpty > 750) this.emptySince = now;
+    this.previousEmpty = now;
+    if (this.emptySince !== null && now - this.emptySince >= 1000) this.last = null;
+  }
   accept(value: string) {
+    this.clearAbsence();
     if (value === this.last) return false;
     this.last = value;
     return true;
   }
-  reset() { this.last = null; }
 }
 
 // Synchronous state is also the interlock: two frames/clicks in the same render
@@ -108,7 +116,9 @@ export class ReceptionStationSession {
     }
     if (command.action === "inspect") {
       this.update({ result: response });
-      if (this.state.mode === "enter" && response.kind === "family" && response.persons.length === 1) {
+      if (this.state.mode === "enter" && response.kind === "family" && response.persons.every(person => person.checkedInAt)) {
+        this.update({ phase: "result", message: "Presenze già registrate: nessuna modifica." });
+      } else if (this.state.mode === "enter" && response.kind === "family" && response.persons.length === 1) {
         // Keep the pending interlock across verification and automatic entry.
         await this.run({ duty: EVENT_RECEPTION_DUTY, lookup: command.lookup, action: "enter", requestId: this.requestId(), subjectIds: [response.persons[0].id] });
       } else if (this.state.mode === "enter" && response.kind === "school" && response.checkedInAt) {

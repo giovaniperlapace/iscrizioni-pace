@@ -23,7 +23,6 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   const locked = session.isLocked();
   const selection = state.phase === "selection";
   const correction = state.mode !== "enter";
-  const [repeat, setRepeat] = useState(false);
 
   useEffect(() => { session.setActive(true); return () => session.setActive(false); }, [session]);
 
@@ -35,7 +34,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   }, [state.phase]);
 
   function changeMode(mode: ReceptionMode) {
-    session.setMode(mode); setValue(""); setRepeat(false);
+    session.setMode(mode); setValue("");
   }
   return <section className="surface-card grid gap-5 p-4 sm:p-7" aria-labelledby="reception-title">
     <header className="sticky top-[4.75rem] z-30 grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
@@ -47,36 +46,24 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
     </header>
       <p className="text-sm">{correction ? "Verifica un codice e conferma esplicitamente la modifica." : "Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie e scuole conferma chi è presente."}</p>
 
-    <div className="flex flex-wrap gap-2">
-      <button type="button" className="btn-secondary min-h-12 px-4" disabled={locked || selection}
-        onClick={() => changeMode(correction ? "enter" : "correct")}>{correction ? "Torna agli ingressi" : "Correzioni e annullamenti"}</button>
-      {correction && <label className="grid gap-1 text-sm">Operazione da eseguire
-        <select name="operation" className="field min-h-12" value={state.mode} disabled={locked || selection}
-          onChange={event => changeMode(event.target.value as ReceptionMode)}>
-          <option value="correct">Correggi presenze</option><option value="cancel">Annulla ingresso</option>
-        </select>
-      </label>}
-    </div>
 
-    {!correction && <div className="flex gap-2" aria-label="Modalità di lettura">
+    {!correction && <div className="flex flex-wrap gap-2" aria-label="Modalità di lettura">
       <button type="button" className={input === "camera" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
-        aria-pressed={input === "camera"} disabled={locked || selection} onClick={() => { setInput("camera"); setValue(""); }}>Fotocamera</button>
+        aria-pressed={input === "camera"} disabled={locked || selection} onClick={() => { setInput("camera"); setValue(""); }}>Inquadra QR code</button>
       <button type="button" className={input === "manual" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
-        aria-pressed={input === "manual"} disabled={locked || selection} onClick={() => { setInput("manual"); setValue(""); }}>Codice manuale</button>
+        aria-pressed={input === "manual"} disabled={locked || selection} onClick={() => { setInput("manual"); setValue(""); }}>Inserisci il codice manualmente</button>
     </div>}
 
     {!correction && input === "camera" ? <>
       <ReceptionCamera source={cameraSource} paused={!session.canScan()} onCode={code => {
+        latch.current.clearAbsence();
         if (!session.canScan() || !latch.current.accept(code)) return;
-        setRepeat(false); void session.inspect({ kind: "qr", value: code });
+        void session.inspect({ kind: "qr", value: code });
+      }} onNoCode={() => {
+        if (session.canScan()) latch.current.absent();
+        else latch.current.clearAbsence();
       }} />
-      <p className="text-sm text-[var(--peace-muted)]">Dopo l’esito puoi inquadrare il prossimo QR. Lo stesso codice non viene ripetuto automaticamente.</p>
-      <button type="button" className="btn-secondary min-h-12 px-4 justify-self-start" disabled={!session.canScan()}
-        onClick={() => setRepeat(true)}>Leggi di nuovo lo stesso QR</button>
-      {repeat && <div className="rounded-xl border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950">
-        <p>È un nuovo arrivo con lo stesso QR? Per correggere o annullare un ingresso usa il percorso Correzioni.</p>
-        <button type="button" className="btn-secondary mt-2 min-h-12 px-4" disabled={!session.canScan()} onClick={() => { if (!session.canScan()) return; latch.current.reset(); session.next(); setRepeat(false); }}>Conferma nuova lettura</button>
-      </div>}
+      <p className="text-sm text-[var(--peace-muted)]">Per rileggere lo stesso QR, toglilo dall’inquadratura per un secondo e inquadralo di nuovo. Chi è già presente conserva il suo ingresso; per una famiglia puoi aggiungere i membri ancora assenti.</p>
     </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void session.inspect({ kind, value }); setValue(""); }}>
       <fieldset disabled={locked || selection} className="grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
         <label className="grid gap-1 text-sm">Tipo di codice
@@ -106,6 +93,16 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
       {selection && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
         onSubmit={(values, confirmed) => void session.submit(values, confirmed)} onDismiss={() => session.next()} />}
     </div>}
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className="btn-secondary min-h-12 px-4" disabled={locked || selection}
+        onClick={() => changeMode(correction ? "enter" : "correct")}>{correction ? "Torna agli ingressi" : "Correzioni e annullamenti"}</button>
+      {correction && <label className="grid gap-1 text-sm">Operazione da eseguire
+        <select name="operation" className="field min-h-12" value={state.mode} disabled={locked || selection}
+          onChange={event => changeMode(event.target.value as ReceptionMode)}>
+          <option value="correct">Correggi presenze</option><option value="cancel">Annulla ingresso</option>
+        </select>
+      </label>}
+    </div>
   </section>;
 }
 
@@ -146,9 +143,9 @@ function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
     {result.kind === "family" ? <fieldset className="grid gap-2">
       <legend className="mb-2 font-medium">{mode === "cancel" ? "Seleziona gli ingressi da annullare" : "Seleziona le persone realmente presenti"}</legend>
       {result.persons.map(person => <label key={person.id} className="flex min-h-14 items-center gap-3 rounded-xl border border-[var(--peace-border)] p-3">
-        <input type="checkbox" name="presentSubjects" value={person.id} className="h-6 w-6 shrink-0" checked={selected.includes(person.id)}
+        <input type="checkbox" name="presentSubjects" value={person.id} className="h-6 w-6 shrink-0" checked={selected.includes(person.id)} disabled={mode === "enter" && Boolean(person.checkedInAt)}
           onChange={event => { setSelected(ids => event.target.checked ? [...ids, person.id] : ids.filter(id => id !== person.id)); setConfirmed(false); }} />
-        <span className="min-w-0 break-words font-medium">{person.firstName} {person.lastName}</span>
+        <span className="min-w-0 break-words font-medium">{person.firstName} {person.lastName}{mode === "enter" && person.checkedInAt ? " · Già presente" : ""}</span>
       </label>)}
       <p className="text-sm">{mode === "correct" ? "Le persone deselezionate risulteranno assenti." : mode === "enter" ? "Gli ingressi già registrati restano validi anche se deselezionati." : "Si annullano solo gli ingressi selezionati."}</p>
     </fieldset> : mode !== "cancel" && <div className="grid gap-3 sm:grid-cols-2">

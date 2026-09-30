@@ -5,11 +5,12 @@ export type CameraSource = (options: {
   signal: AbortSignal;
   onCode: (value: string) => void;
   onError: () => void;
+  onNoCode?: () => void;
 }) => Promise<() => void>;
 
 // Decode only in the browser. No images, tokens or device labels are sent to
 // logs, storage, analytics or third-party services.
-export const startQrCamera: CameraSource = async ({ video, facing, signal, onCode, onError }) => {
+export const startQrCamera: CameraSource = async ({ video, facing, signal, onCode, onError, onNoCode }) => {
   if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("unsupported");
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
@@ -47,6 +48,7 @@ export const startQrCamera: CameraSource = async ({ video, facing, signal, onCod
           const frame = context.getImageData(0, 0, canvas.width, canvas.height);
           const qr = jsQR(frame.data, frame.width, frame.height, { inversionAttempts: "dontInvert" });
           if (qr) onCode(qr.data);
+          else onNoCode?.();
         }
         timer = setTimeout(readFrame, 250);
       } catch { stop(); onError(); }

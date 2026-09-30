@@ -39,7 +39,7 @@ try {
   ab('set','viewport','390','844');snap();
   check('document.documentElement.scrollWidth<=innerWidth','no mobile overflow');
   ab('screenshot','/tmp/pace-p12-mobile.png','--full');
-  open();ab('select','main>label select','uncertain');snap();click('Codice manuale');ab('fill','input[type=text]','SOLO');click('Leggi codice e registra');
+  open();ab('select','main>label select','uncertain');snap();click('Inserisci il codice manualmente');ab('fill','input[type=text]','SOLO');click('Leggi codice e registra');
   wait('document.body.innerText.includes("Esito da verificare")');
   check('document.querySelector("input[type=text]").matches(":disabled")','uncertain outcome freezes original command');
   click('Riprova la stessa operazione');result();
@@ -47,9 +47,9 @@ try {
   ab('fill','input[type=text]','NOPE');click('Leggi codice e registra');wait('document.body.innerText.includes("Codice non valido")');
   check('!document.body.innerText.includes("Anna Bianchi")','invalid code clears identity');
   open();ab('select','main>label select','camera-denied');snap();click('Avvia fotocamera');wait('document.body.innerText.includes("Fotocamera non autorizzata")');
-  ab('select','main>label select','normal');snap();click('Avvia fotocamera');click('Usa fotocamera anteriore');
-  check('JSON.parse(document.querySelector("[data-camera]").textContent).facing==="user"','camera facing changed');
-  click('Codice manuale');
+  ab('select','main>label select','normal');snap();click('Avvia fotocamera');click('Ferma fotocamera');click('Avvia fotocamera');
+  check('JSON.parse(document.querySelector("[data-camera]").textContent).facing==="environment"','rear camera requested again after restart');
+  click('Inserisci il codice manualmente');
   check('(()=>{const c=JSON.parse(document.querySelector("[data-camera]").textContent);return c.started===c.stopped})()','camera released in manual mode');
   ab('select','main>label select','forbidden');snap();ab('fill','input[type=text]','SOLO');click('Leggi codice e registra');wait('document.body.innerText.includes("Sessione scaduta o incarico")');
   check('document.querySelector("input[type=text]").matches(":disabled")','session expiry blocks operations');

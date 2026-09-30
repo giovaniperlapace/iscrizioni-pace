@@ -1,6 +1,8 @@
 # Guida pratica — collaudo su telefono e QR
 
-Procedura riutilizzabile, preparata il 24 settembre 2026. Le caselle sono da
+Procedura riutilizzabile, preparata il 24 settembre 2026.
+Aggiornamento 30 settembre: rilettura automatica dopo rimozione del QR,
+nel rilascio panel autorizzato per lo staging. Le caselle sono da
 compilare durante le prove: questo documento non certifica test già eseguiti.
 Prima sessione: circa 20–30 minuti; prove approfondite in una sessione separata.
 
@@ -70,26 +72,27 @@ anche scorrendo la pagina. Non serve aprire l’app Fotocamera del telefono.
 5. Inquadrare B.
 
 **Atteso:** A entra automaticamente dopo la risposta del server. Lo stesso QR
-non avvia operazioni ripetute anche se tolto e rimesso. B viene elaborato senza
+non avvia operazioni ripetute finché resta inquadrato o scompare solo brevemente. B viene elaborato senza
 dover scegliere di nuovo l’azione. Nessun successo mentre il salvataggio è in corso.
 
 ### T03 — Persona già presente
 
 1. Dopo B, inquadrare nuovamente A.
 2. Annotare lo stato e l’ora della presenza.
-3. Per ripetere subito A usare **Leggi di nuovo lo stesso QR**, poi
-   **Conferma nuova lettura**.
+3. Per ripetere A toglierlo dall’inquadratura per almeno un secondo, poi
+   inquadrarlo di nuovo.
 
 **Atteso:** presenza già registrata, nessun nuovo ingresso né cambiamento
-dell’ora originale. Il pulsante autorizza una nuova lettura, non una correzione.
+dell’ora originale. La rilettura verifica lo stato senza modificare ingressi già registrati.
 
 ### T04 — Famiglia che arriva in due momenti
 
 1. Inquadrare F: controllare i tre nomi e che nessuno sia selezionato.
 2. Selezionare solo l’adulto e il primo minore, poi **Registra ingresso**.
 3. Controllare che il secondo minore risulti ancora senza ingresso.
-4. Chiedere una nuova lettura dello stesso QR e confermarla.
-5. Selezionare solo il secondo minore e registrare.
+4. Togliere il QR dall’inquadratura per almeno un secondo e inquadrarlo di nuovo.
+5. Verificare che adulto e primo minore siano indicati come già presenti e non
+   selezionabili; selezionare solo il secondo minore e registrare.
 
 **Atteso:** prima risultano presenti due persone, poi tutte e tre. Il secondo
 ingresso conserva le presenze precedenti anche se non vengono riselezionate.
@@ -99,7 +102,7 @@ ingresso conserva le presenze precedenti anche se non vengono riselezionate.
 1. Inquadrare S; verificare classe e quantità previste: 10 + 2.
 2. Provare 11 studenti: il salvataggio deve essere impedito. Provare anche 0 + 0.
 3. Inserire **8 studenti e 1 accompagnatore**, poi registrare.
-4. Rileggere S tramite la conferma di nuova lettura.
+4. Togliere S dall’inquadratura per almeno un secondo e inquadrarlo di nuovo.
 
 **Atteso:** solo 8 + 1 registrati; una rilettura mostra l’ingresso esistente e
 non sostituisce le quantità. Per cambiarle bisogna usare Correzioni.
@@ -108,9 +111,9 @@ non sostituisce le quantità. Per cambiarle bisogna usare Correzioni.
 
 1. Inquadrare X dopo un esito valido.
 2. Verificare il rifiuto e che non restino in vista i dati della persona precedente.
-3. Toccare **Codice manuale**, lasciare **Codice partecipante**, inserire il
+3. Toccare **Inserisci il codice manualmente**, lasciare **Codice partecipante**, inserire il
    codice di A e premere **Leggi codice e registra**.
-4. Tornare a **Fotocamera** e avviarla.
+4. Tornare a **Inquadra QR code** e avviarla.
 
 **Atteso:** nessun ingresso per X; A risulta già presente. L’incarico resta
 ingresso evento. Anche la lettura manuale di un singolo assente registrerebbe
@@ -134,14 +137,14 @@ Annulla ingresso selezionando i presenti, non una correzione con selezione vuota
 
 ## 3. Fotocamera nell’uso reale
 
-Ripetere queste prove sui due telefoni. Con un QR già letto, autorizzare la
-nuova lettura oppure alternare A e B, altrimenti il blocco delle ripetizioni
+Ripetere queste prove sui due telefoni. Con un QR già letto, toglierlo dall’inquadratura per almeno un secondo
+oppure alternare A e B, altrimenti il blocco delle ripetizioni
 può sembrare un problema di messa a fuoco.
 
 | ID | Cosa fare | Cosa ci aspettiamo |
 | --- | --- | --- |
 | T08 | Ferma fotocamera → Avvia fotocamera | Anteprima ripristinata; stesso QR ancora protetto dalle ripetizioni |
-| T09 | Usa fotocamera anteriore, avviala; poi torna alla posteriore e avviala | Cambio effettivo della camera, azione conservata |
+| T09 | Ferma e riavvia la fotocamera dopo una lettura | Posteriore preferita a ogni avvio, nessun selettore anteriore, azione conservata |
 | T10 | Passa a un’altra app o blocca lo schermo; poi torna | Camera sospesa; ripartenza con avvio esplicito |
 | T11 | Esci dalla dashboard | Indicatore della fotocamera del sistema si spegne |
 | T12 | Con permesso camera reimpostato, nega la richiesta | Errore comprensibile; Codice manuale utilizzabile |
