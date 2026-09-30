@@ -567,6 +567,7 @@ export default async function AdminDashboardPage({
 
             {activeSection === "dashboard" ? (
               <StatisticsSection
+                eventId={currentEventId}
                 statistics={statistics}
                 panelStatistics={panelStatistics}
                 dashboard="admin"

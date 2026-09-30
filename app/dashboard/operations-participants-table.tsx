@@ -1,5 +1,6 @@
 "use client";
 
+import { EventAttendanceProvider, EventPresence } from "@/app/dashboard/event-attendance";
 import { PendingDownload } from "@/components/pending-download";
 import { SuccessMessage } from "@/components/success-message";
 
@@ -469,7 +470,7 @@ export function OperationsParticipantsTable({
   exportParams.set("columns", columns.join(","));
   exportParams.delete("status");
   return (
-    <>
+    <EventAttendanceProvider key={eventId} eventId={eventId}>
     {!dialogOnly && <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
         <div className="min-w-0">
@@ -823,6 +824,7 @@ export function OperationsParticipantsTable({
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
+                        <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} />
                         {showChildren && row.childrenCount > 0 && (
                           <div className="mt-2">
                             <span className="inline-flex rounded-md bg-[var(--peace-sky-100)] px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
@@ -841,6 +843,7 @@ export function OperationsParticipantsTable({
                                     <span title="Età all’inizio dell’evento">
                                       {age === null ? "Età non disponibile" : age === 0 ? "meno di 1 anno" : `${age} ${age === 1 ? "anno" : "anni"}`}
                                     </span>
+                                    <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} childId={child.id} />
                                   </li>
                                 );
                               })}
@@ -886,6 +889,7 @@ export function OperationsParticipantsTable({
     </section>}
       {selected && (
         <ParticipantDialog participant={selected} closePath={closePath}>
+          <section className="rounded-md border border-[var(--peace-border)] p-3"><h4 className="font-semibold">Ingresso all’evento</h4><EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} /></section>
           {selected.deletedAt ? (
             <div className="grid gap-2 rounded-md bg-red-50 p-4 text-sm">
               <p>Eliminata il {formatDate(selected.deletedAt)}.</p>
@@ -983,6 +987,7 @@ export function OperationsParticipantsTable({
               <p key={child.id}>
                 {child.first_name} {child.last_name} ·{" "}
                 {formatDate(child.birth_date)}
+                <EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} childId={child.id} />
               </p>
             ))}
             {!selected.childrenCount && <p>Nessun figlio associato.</p>}
@@ -1043,7 +1048,7 @@ export function OperationsParticipantsTable({
           )}
         </ParticipantDialog>
       )}
-    </>
+    </EventAttendanceProvider>
   );
 }
 

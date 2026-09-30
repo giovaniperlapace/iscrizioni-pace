@@ -46,6 +46,7 @@ try {
   console.log('PASS canonical migrations applied to disposable PostgreSQL; legacy check-in preserved');
   console.log(file(join(root,'tests/sql/reception-check-ins.sql')).trim());
   console.log(file(join(root,'tests/sql/reception-event-duty.sql')).trim());
+  console.log(file(join(root,'tests/sql/event-attendance.sql')).trim());
   // Separate connections compete for the same family, then same school booking.
   const concurrent=(sql)=>new Promise((resolve,reject)=>{
     const child=spawn(join(bin,'psql'),args,{stdio:['pipe','pipe','pipe']}); let out='',err='';

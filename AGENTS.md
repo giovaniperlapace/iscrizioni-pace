@@ -4,6 +4,26 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## P13 — visualizzazione ingressi evento — 2026-09-30
+
+- Prima tranche implementata localmente sul branch panel: Gestione iscritti e
+  scheda admin/manager/viewer mostrano ingresso e ora per adulto e ciascun
+  minore. Le statistiche aggiungono totali evento distinti per adulti, minori,
+  studenti, accompagnatori e classi/gruppi scuola. Giorni previsti e accessi
+  panel restano separati; nessuna deduzione di uscita o no-show.
+- Endpoint `/dashboard/attendance`: sessione autenticata, ruolo reale per utente
+  ed evento, client con RLS (mai service role), paginazione da 500 e proiezione
+  minima. Solo check-in evento attivi di iscrizioni/scuole operative;
+  `summary=1` omette le chiavi nominali. Risposte private/no-store.
+- Aggiornamento del solo contesto presenze ogni 10 secondi, sospeso a scheda
+  nascosta; timeout 15 secondi, richieste non sovrapposte. Nessun refresh dei
+  form. Errore = indisponibilità, non assenza; 401/403 cancella i dati e ferma
+  il polling fino a Riprova. Nessuna persistenza client delle presenze.
+- Nessuna migration/RLS modificata. Accessi panel/incarichi sala e collaudo
+  hardware restano separati. Contratto, limiti e verifiche in
+  `docs/panel-p13-event-attendance.md`. Commit/push e verifica della preview
+  staging autorizzati dall’utente nella richiesta successiva del 30 settembre.
+
 ## Pubblicazione staging panel — 2026-09-30
 
 - La richiesta di pubblicare sullo staging comprende commit e push sul branch

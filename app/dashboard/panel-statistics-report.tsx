@@ -234,10 +234,9 @@ export function PanelStatisticsReport({
             Presenze effettive e no-show
           </p>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-            Il confronto previsto/effettivo sarà disponibile dopo l’introduzione
-            del check-in individuale, dei minori e delle scuole nella Milestone
-            P11. Questa vista non usa i check-in legacy per evitare confronti
-            parziali o fuorvianti.
+            Il confronto previsto/effettivo dei panel sarà disponibile con gli
+            ingressi ai singoli panel. Gli ingressi all’evento sono riportati
+            separatamente e non attestano la partecipazione a un panel.
           </p>
         </div>
       ) : null}

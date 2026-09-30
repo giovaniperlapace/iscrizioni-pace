@@ -512,6 +512,7 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "dashboard" ? (
               <StatisticsSection
+                eventId={currentEventId}
                 statistics={statistics}
                 panelStatistics={panelStatistics}
                 dashboard="manager"

@@ -766,6 +766,15 @@ accedere alla scheda completa del partecipante.
 
 ### Milestone P13 - presenza panel e quadro operativo dell'evento
 
+Prima tranche implementata localmente il 2026-09-30 su richiesta dell’utente:
+stato/orario di ingresso in elenco e scheda operativa admin/manager/viewer,
+minori distinti, conteggi evento per persone e scuole, aggiornamento ogni 10
+secondi senza perdita dei form aperti. Usa P11/P12 e RLS esistenti; nessuna
+migration. Dettagli in `docs/panel-p13-event-attendance.md`.
+Non chiude P13: restano collaudo autenticato tra scanner e seconda postazione,
+report operativo avanzato e accessi panel/incarichi sala descritti sotto.
+
+
 Scopo: collegare le presenze effettive a statistiche e agli accessi dei singoli
 panel. Il requisito di separazione degli accessi è stato espresso nella
 revisione del 2026-09-12; il dettaglio degli incarichi va revisionato nella

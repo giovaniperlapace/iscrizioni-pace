@@ -1,5 +1,6 @@
 "use client";
 
+import { EventAttendanceReport } from "@/app/dashboard/event-attendance";
 import Link from "@/components/pending-link";
 import {
   Baby,
@@ -27,6 +28,7 @@ type StatisticsDashboard = "admin" | "manager";
 type StatisticsNavMode = "full" | "mini";
 
 type StatisticsSectionProps = {
+  eventId?: string | null;
   statistics: EventStatisticsSnapshot;
   dashboard: StatisticsDashboard;
   navMode: StatisticsNavMode;
@@ -59,6 +61,7 @@ const AGE_BANDS: StatisticsAgeBand[] = [
 ];
 
 export function StatisticsSection({
+  eventId = null,
   statistics,
   panelStatistics,
   canManage,
@@ -78,6 +81,7 @@ export function StatisticsSection({
 
   return (
     <section className="grid w-full min-w-0 gap-8">
+      <EventAttendanceReport eventId={eventId} />
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">

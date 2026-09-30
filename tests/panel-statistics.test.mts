@@ -225,7 +225,7 @@ test("P10 report exposes all requested filters and safe operational links", () =
   assert.match(reportSource, /campaignPanel=/);
   assert.match(reportSource, /canManage && panel\.publicationStatus === "published"/);
   assert.match(reportSource, /Presenze effettive e no-show/);
-  assert.match(reportSource, /Milestone\s+P11/);
+  assert.match(reportSource, /ingressi ai singoli panel/);
   assert.match(statisticsSource, /moment_attendance_choices/);
   assert.match(statisticsSource, /school_panel_reservations/);
   assert.match(statisticsSource, /choice\.registrationStatus === "cancelled"/);
