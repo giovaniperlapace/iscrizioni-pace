@@ -55,7 +55,7 @@ seconda sessione non può dimostrare il primo ingresso con persone già presenti
 ### T01 — Aprire e avviare
 
 1. Accedere alla dashboard e controllare l’evento.
-2. Verificare il titolo **Registra ingresso evento** e l’incarico Accoglienza evento.
+2. Verificare il titolo **Registra ingresso** e l’incarico Accoglienza evento.
 3. Toccare **Avvia fotocamera** e consentire l’accesso alla fotocamera.
 4. Inquadrare inizialmente il tavolo, senza QR.
 

@@ -39,7 +39,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   return <section className="grid gap-5" aria-labelledby="reception-title">
     <header className="grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
       <p className="text-xs font-semibold uppercase tracking-wide">Incarico attivo · Accoglienza evento</p>
-      <h2 id="reception-title" className="text-xl font-semibold">{correction ? labels[state.mode] : "Registra ingresso evento"}</h2>
+      <h2 id="reception-title" className="text-xl font-semibold">{correction ? labels[state.mode] : "Registra ingresso"}</h2>
       {state.phase !== "ready" && <p aria-hidden="true" className={`text-sm font-semibold ${state.phase === "result" ? "text-green-200" : "text-amber-200"}`}>
         {state.phase === "pending" ? "Operazione in corso…" : state.phase === "selection" ? "Conferma le presenze qui sotto ↓" : state.message}
       </p>}
