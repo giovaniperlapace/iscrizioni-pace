@@ -23,15 +23,6 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   const selection = state.phase === "selection";
   const correction = state.mode !== "enter";
   const operationOpen = selection || state.phase === "uncertain" || state.phase === "blocked";
-  const [dismissedResult, setDismissedResult] = useState<typeof state | null>(null);
-  const showResult = state.phase !== "result" || dismissedResult !== state;
-
-  useEffect(() => {
-    if (state.phase !== "result") return;
-    const timer = setTimeout(() => setDismissedResult(state), 2500);
-    return () => clearTimeout(timer);
-  }, [state]);
-
   useEffect(() => { session.setActive(true); return () => session.setActive(false); }, [session]);
 
   useEffect(() => {
@@ -45,7 +36,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
     session.setMode(mode); setValue(""); setInput(mode === "enter" ? "camera" : "manual");
     latch.current.clearAbsence();
   }
-  const operationContent = showResult ? <>
+  const operationContent = <>
     {state.phase === "pending" && input === "manual" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
     {state.message && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
       <p className="font-semibold">{state.message}</p>
@@ -59,7 +50,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
       {selection && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
         onSubmit={(values, confirmed) => void session.submit(values, confirmed)} onDismiss={() => session.next()} />}
     </div>}
-  </> : null;
+  </>;
   return <section className="grid gap-5" aria-labelledby="reception-title">
     <header className="grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
       <p className="text-xs font-semibold uppercase tracking-wide">Incarico attivo · Accoglienza evento</p>
