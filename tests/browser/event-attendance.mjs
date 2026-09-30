@@ -18,6 +18,11 @@ try {
   wait('document.querySelector("tbody").innerText.includes("Ingresso registrato")');
   check('document.querySelector("tbody li").innerText.includes("Ingresso non registrato")', 'adult entry does not imply child entry');
   check('document.querySelector("article").innerText.includes("13")', 'school quantities included in total people');
+  for (const view of ['iscritti', 'panel']) {
+    const selector = `[data-school-view="${view}"] tbody`;
+    wait(`document.querySelector('${selector}').innerText.includes("10 studenti · 2 accompagnatori presenti")`);
+    check(`document.querySelector('${selector}').innerText.includes("Ingresso registrato") && document.querySelector('${selector}').innerText.includes("20 studenti")`, `school actual entry and booked quantities stay separate in ${view}`);
+  }
   ab('set', 'viewport', '390', '844'); ab('snapshot', '-i');
   ab('screenshot', '/tmp/pace-p13-mobile.png', '--full');
   check('document.documentElement.scrollWidth <= innerWidth', 'mobile page has no horizontal overflow');
@@ -36,6 +41,20 @@ try {
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"forbidden"}))');
   wait('document.querySelector("dialog").innerText.includes("Presenza non disponibile")');
   check('!document.querySelector("tbody").innerText.includes("Ingresso registrato")', 'revoked access clears previous presence data');
+  for (const view of ['iscritti', 'panel']) {
+    check(`document.querySelector('[data-school-view="${view}"] tbody').innerText.includes("Presenza non disponibile")`, `school presence clears on revoked access in ${view}`);
+  }
+  ab('eval', 'window.dispatchEvent(new Event("fixture-close-participant"))');
+  wait('!document.querySelector("dialog[open]")');
+  ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"entered"}))');
+  ab('eval', 'document.querySelectorAll("[data-school-view] button").forEach(b=>{if(b.textContent==="Riprova") b.click()})');
+  wait('document.querySelector("[data-school-view] tbody").innerText.includes("Ingresso registrato")');
+  ab('find', 'role', 'button', 'click', '--name', 'Apri scheda scuola iscritti', '--exact');
+  wait('!!document.querySelector("[data-school-view] [role=dialog]")');
+  ab('fill', '[data-school-view] input[name="schoolName"]', 'Modifica scuola conservata');
+  ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"absent"}))');
+  wait('document.querySelector("[data-school-view] [role=dialog]").innerText.includes("Ingresso non registrato")');
+  check('document.querySelector("[data-school-view] input[name=schoolName]").value === "Modifica scuola conservata"', 'school cancellation refresh preserves unsaved form');
   assert.equal(ab('errors').trim(), '');
   console.log('PASS browser flow and no runtime errors');
 } finally {

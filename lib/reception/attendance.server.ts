@@ -5,6 +5,7 @@ export type AttendanceSnapshot = {
   updatedAt: string;
   totals: { adults: number; children: number; students: number; companions: number; schoolBookings: number; people: number };
   entries: Record<string, string>;
+  schoolEntries: Record<string, { checkedInAt: string; students: number; companions: number }>;
 };
 export class AttendanceReadError extends Error {
   status: number;
@@ -22,7 +23,7 @@ export async function loadEventAttendance(db: SupabaseClient, eventId: string, s
   if (!roles?.some(role => (role.role === "admin" && role.event_id === null) ||
     (["manager", "manager_viewer"].includes(role.role) && role.event_id === eventId))) throw new AttendanceReadError(403);
 
-  const result: AttendanceSnapshot = { eventId, updatedAt: "", entries: {},
+  const result: AttendanceSnapshot = { eventId, updatedAt: "", entries: {}, schoolEntries: {},
     totals: { adults: 0, children: 0, students: 0, companions: 0, schoolBookings: 0, people: 0 } };
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await db.from("check_ins").select(
@@ -36,10 +37,11 @@ export async function loadEventAttendance(db: SupabaseClient, eventId: string, s
       const school = row.school as unknown as { status: string } | null;
       if (row.school_booking_id) {
         if (!school || !["submitted", "confirmed"].includes(school.status)) continue;
-        if (!Number.isSafeInteger(row.student_count) || !Number.isSafeInteger(row.companion_count) || row.student_count < 0 || row.companion_count < 0) throw new AttendanceReadError(503);
+        if (!Number.isSafeInteger(row.student_count) || !Number.isSafeInteger(row.companion_count) || row.student_count < 0 || row.companion_count < 0 || !Number.isFinite(Date.parse(row.checked_in_at))) throw new AttendanceReadError(503);
         result.totals.students += row.student_count;
         result.totals.companions += row.companion_count;
         result.totals.schoolBookings++;
+        if (!summaryOnly) result.schoolEntries[row.school_booking_id] = { checkedInAt: row.checked_in_at, students: row.student_count, companions: row.companion_count };
       } else {
         if (!registration || registration.deleted_at || registration.cancelled_at || !["submitted", "confirmed"].includes(registration.status)) continue;
         if (!row.registration_id || !Number.isFinite(Date.parse(row.checked_in_at))) throw new AttendanceReadError(503);

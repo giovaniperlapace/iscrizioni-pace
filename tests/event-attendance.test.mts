@@ -30,7 +30,10 @@ test('event attendance counts adult, individual children and school quantities s
   const result = await loadEventAttendance(db, event);
   assert.deepEqual(result.totals, { adults: 1, children: 1, students: 10, companions: 2, schoolBookings: 1, people: 14 });
   assert.deepEqual(result.entries, { 'adult:adult': at, 'adult:child': at });
-  assert.deepEqual((await loadEventAttendance(db, event, true)).entries, {});
+  assert.deepEqual(result.schoolEntries, { school: { checkedInAt: at, students: 10, companions: 2 } });
+  const summary = await loadEventAttendance(db, event, true);
+  assert.deepEqual(summary.entries, {});
+  assert.deepEqual(summary.schoolEntries, {});
   assert.ok(calls.some(c => c.table === 'check_ins' && c.method === 'eq' && c.args[0] === 'event_id' && c.args[1] === event));
   for (const column of ['moment_id', 'cancelled_at']) assert.ok(calls.some(c => c.method === 'is' && c.args[0] === column && c.args[1] === null));
   assert.ok(calls.some(c => c.table === 'event_user_roles' && c.method === 'eq' && c.args[0] === 'user_id' && c.args[1] === 'actor'));
@@ -59,4 +62,11 @@ test('empty check-ins produce zero, not expected attendance or family size', asy
   const result = await loadEventAttendance(database({ rows: [] }).db, event);
   assert.equal(result.totals.people, 0);
   assert.deepEqual(result.entries, {});
+});
+
+test('school presence rejects invalid timestamps and quantities instead of implying absence', async () => {
+  for (const invalid of [{ checked_in_at: 'invalid' }, { student_count: -1 }, { companion_count: null }]) {
+    const rows = [row('school', { registration_id: null, school_booking_id: 'school', school: { status: 'confirmed' }, student_count: 10, companion_count: 2, ...invalid })];
+    await assert.rejects(loadEventAttendance(database({ rows }).db, event), { status: 503 });
+  }
 });

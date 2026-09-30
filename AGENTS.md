@@ -4,6 +4,31 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Presenze scuole nelle schede operative — 2026-09-30
+
+- Entrambi gli accessi Scuole (Partecipanti e Panel) mostrano ingresso evento,
+  ora e quantità effettive studenti/accompagnatori in tabella e nella scheda.
+  Il provider condiviso aggiorna solo le presenze ogni 10 secondi, senza
+  perdere modifiche nei form; errori e revoche non diventano assenze.
+- `/dashboard/attendance` aggiunge `schoolEntries` per prenotazione operativa;
+  `summary=1` restituisce la mappa vuota. Stessi controlli ruolo/evento e RLS,
+  nessuna migration. Quantità prenotate e ingressi panel restano distinti.
+
+## Messaggio scanner temporaneo e riepilogo persistente — 2026-09-30
+
+- In modalità fotocamera, al termine dell’operazione il messaggio di stato
+  (ingresso registrato, già presente, codice non valido o conflitto) sostituisce
+  l’attesa nel riquadro video. Scompare dopo 7 secondi; ogni nuova risposta
+  avvia il proprio timer e annulla quello precedente.
+- Il riepilogo nominativo/scuola rimane direttamente sotto il video e non
+  scade. Il messaggio non è duplicato sotto il video o nella testata.
+  Il timer non cambia sessione, stream, latch, presenza o dati salvati.
+- Selezioni da confermare, esiti incerti con retry e sessione bloccata restano
+  nel dialog persistente. In modalità manuale restano i messaggi inline.
+- Test browser `tests/browser/reception-feedback.mjs`: posizione attesa/stato,
+  scadenza a 7 secondi di conferma ed errore, riepilogo persistente, rilettura,
+  selezione successiva e stream continuo.
+
 ## Attesa sul video ed esito persistente — 2026-09-30
 
 - Revisione successiva: durante `pending` nessun dialog modale. In modalità

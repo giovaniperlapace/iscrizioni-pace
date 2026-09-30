@@ -28,7 +28,7 @@ export function EventAttendanceProvider({ eventId, summaryOnly = false, children
         if (response.redirected || response.status === 401 || response.status === 403) blocked = true;
         if (response.redirected || !response.ok) throw new Error("unavailable");
         const data: AttendanceSnapshot = await response.json();
-        if (data.eventId !== eventId || !data.entries || !data.totals || !Number.isFinite(Date.parse(data.updatedAt))) throw new Error("invalid");
+        if (data.eventId !== eventId || !data.entries || !data.schoolEntries || !data.totals || !Number.isFinite(Date.parse(data.updatedAt))) throw new Error("invalid");
         if (!disposed) setState({ data, error: false });
       } catch {
         // Never display an old presence or turn a failed read into an absence.
@@ -59,6 +59,19 @@ export function EventPresence({ eventId, registrationId, childId, inactive = fal
   const at = loaded ? data.entries[`${registrationId}:${childId ?? "adult"}`] : null;
   return <span className={`block text-xs leading-5 ${at ? "font-semibold text-green-800" : "text-[var(--peace-muted)]"}`}>
     {!loaded ? (error ? "Presenza non disponibile" : "Presenza da verificare…") : at ? `Ingresso registrato · ${date(at)}` : "Ingresso non registrato"}
+  </span>;
+}
+
+export function SchoolEventPresence({ eventId, bookingId, inactive = false }: { eventId: string; bookingId: string; inactive?: boolean }) {
+  const { data, error } = useContext(AttendanceContext);
+  if (inactive) return <span className="block text-xs leading-5 text-[var(--peace-muted)]">Prenotazione non operativa</span>;
+  const loaded = data?.eventId === eventId;
+  const entry = loaded ? data.schoolEntries[bookingId] : null;
+  return <span className={`block text-xs leading-5 ${entry ? "font-semibold text-green-800" : "text-[var(--peace-muted)]"}`}>
+    {!loaded ? (error ? "Presenza non disponibile" : "Presenza da verificare…") : entry ? <>
+      <span className="block">Ingresso registrato · {date(entry.checkedInAt)}</span>
+      <span className="block">{entry.students} studenti · {entry.companions} accompagnatori presenti</span>
+    </> : "Ingresso non registrato"}
   </span>;
 }
 

@@ -76,3 +76,15 @@ Implementazione inizialmente locale; nella richiesta successiva del 30 settembre
 l’utente ha autorizzato commit/push e verifica della preview staging. Nessuna
 migration remota o invio email. L’integrazione dedicata di main resta rinviata come da nota
 P12; il branch panel è stato aggiornato dal proprio upstream prima del lavoro.
+
+### Presenze per prenotazione scuola — 30 settembre 2026
+
+La risposta completa include `schoolEntries`, indicizzata per ID prenotazione,
+con `checkedInAt`, `students` e `companions` dai check-in evento attivi.
+La risposta `summary=1` mantiene questa mappa vuota. Ora e quantità sono
+validate prima di restituire il risultato; errori interrompono l'intera lettura.
+
+Le viste Scuole in Partecipanti e Panel condividono ingresso, ora e quantità
+presenti, nella tabella e nella scheda. I prenotati restano separati. Il provider
+presenze conserva i form aperti durante polling, annullamenti e correzioni;
+revoche/errori cancellano i dati precedenti e mostrano indisponibilità.
