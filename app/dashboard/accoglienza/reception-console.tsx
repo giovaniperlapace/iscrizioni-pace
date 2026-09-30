@@ -23,6 +23,14 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   const selection = state.phase === "selection";
   const correction = state.mode !== "enter";
   const operationOpen = selection || state.phase === "uncertain" || state.phase === "blocked";
+  const [expiredFeedback, setExpiredFeedback] = useState<typeof state | null>(null);
+  const completedFeedback = state.phase === "result" || state.phase === "error";
+  useEffect(() => {
+    if (!completedFeedback) return;
+    const timer = setTimeout(() => setExpiredFeedback(state), 7000);
+    return () => clearTimeout(timer);
+  }, [state, completedFeedback]);
+
   useEffect(() => { session.setActive(true); return () => session.setActive(false); }, [session]);
 
   useEffect(() => {
@@ -38,7 +46,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
   }
   const operationContent = <>
     {state.phase === "pending" && input === "manual" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
-    {state.message && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
+    {state.message && (input === "manual" || operationOpen) && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
       <p className="font-semibold">{state.message}</p>
       {state.phase === "uncertain" && <button type="button" className="btn-primary mt-3 min-h-12 px-4" onClick={() => void session.retry()}>Riprova la stessa operazione</button>}
       {state.phase === "blocked" && <PendingLink className="mt-3 block underline" href="/">Torna all’accesso</PendingLink>}
@@ -55,7 +63,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
     <header className="grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
       <p className="text-xs font-semibold uppercase tracking-wide">Incarico attivo · Accoglienza evento</p>
       <h2 id="reception-title" className="text-xl font-semibold">{correction ? labels[state.mode] : "Registra ingresso"}</h2>
-      {state.phase !== "ready" && state.phase !== "result" && state.phase !== "pending" && <p aria-hidden="true" className="text-sm font-semibold text-amber-200">
+      {state.phase !== "ready" && state.phase !== "result" && state.phase !== "error" && state.phase !== "pending" && <p aria-hidden="true" className="text-sm font-semibold text-amber-200">
         {state.phase === "selection" ? "Codice verificato · completa la conferma nella finestra aperta" : state.message}
       </p>}
     </header>
@@ -78,7 +86,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
 
     {input === "camera" ? <>
       <ReceptionCamera source={cameraSource} paused={locked || selection}
-        feedback={state.phase === "pending" ? "Operazione in corso. Attendi l’esito prima della prossima persona…" : undefined}
+        feedback={state.phase === "pending" ? "Operazione in corso. Attendi l’esito prima della prossima persona…" : completedFeedback && expiredFeedback !== state ? state.message : undefined}
         belowPreview={!operationOpen ? operationContent : null} onCode={code => {
         latch.current.clearAbsence();
         if (session.isLocked() || session.snapshot().phase === "selection" || !latch.current.accept(code)) return;
