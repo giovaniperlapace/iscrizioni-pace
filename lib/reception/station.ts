@@ -9,6 +9,7 @@ export type StationState = {
   lookup: ReceptionLookup | null;
   retry: ReceptionCommand | null;
   message: string;
+  problem?: Exclude<ReceptionResult["status"], "valid">;
 };
 const messages = {
   invalid: "Codice non valido o iscrizione non disponibile per questo evento.",
@@ -62,17 +63,17 @@ export class ReceptionStationSession {
   canScan() { return this.state.mode === "enter" && ["ready", "result", "error"].includes(this.state.phase); }
   setMode(mode: ReceptionMode) {
     if (this.isLocked()) return;
-    this.update({ mode, phase: "ready", result: null, lookup: null, message: "", retry: null });
+    this.update({ mode, phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
   next() {
     if (this.isLocked()) return;
-    this.update({ phase: "ready", result: null, lookup: null, message: "", retry: null });
+    this.update({ phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
   async inspect(lookup: ReceptionLookup) {
     if (this.isLocked() || this.state.phase === "selection") return;
     const command = parseReceptionCommand({ duty: EVENT_RECEPTION_DUTY, action: "inspect", lookup });
-    this.update({ result: null, lookup: null, message: "" });
-    if (!command) { this.update({ phase: "error", message: messages.invalid }); return; }
+    this.update({ result: null, lookup: null, message: "", problem: undefined });
+    if (!command) { this.update({ phase: "error", problem: "invalid", message: messages.invalid }); return; }
     this.update({ lookup: command.lookup });
     await this.run(command);
   }
@@ -104,13 +105,13 @@ export class ReceptionStationSession {
     finally { clearTimeout(timer); }
   }
   private async run(command: ReceptionCommand) {
-    this.update({ phase: "pending", message: "", retry: null });
+    this.update({ phase: "pending", message: "", problem: undefined, retry: null });
     const response = await this.call(command);
     if (!this.active) return;
     if (response.status !== "valid") {
       this.update({
         phase: response.status === "unavailable" ? "uncertain" : response.status === "forbidden" ? "blocked" : "error",
-        result: null, retry: response.status === "unavailable" ? command : null, message: messages[response.status],
+        result: null, problem: response.status, retry: response.status === "unavailable" ? command : null, message: messages[response.status],
       });
       return;
     }

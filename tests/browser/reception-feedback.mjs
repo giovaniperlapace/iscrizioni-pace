@@ -24,10 +24,12 @@ try {
     check(scanner.querySelector('video')===video,'video replaced');
     check(JSON.parse(document.querySelector('[data-camera]').textContent).stopped===0,'camera stopped');
     check(video.parentElement.innerText.includes('Operazione in corso. Attendi'),'pending outside preview');
+    check(video.parentElement.querySelector('[data-feedback-tone=progress]'),'pending color');
     await wait(()=>scanner.innerText.includes('Ingresso registrato.'),'first success');
     const preview=video.parentElement;
     check(preview.nextElementSibling?.innerText.includes('Ultima operazione'),'result not immediately below preview');
     check(preview.innerText.includes('Ingresso registrato.'),'status does not replace pending on video');
+    check(preview.querySelector('[data-feedback-tone=success]'),'success color');
     check(!preview.nextElementSibling?.innerText.includes('Ingresso registrato.'),'status duplicated in persistent summary');
     check(!document.body.innerText.includes('Per rileggere lo stesso QR'),'old instructions remain');
     await sleep(6200);check(preview.innerText.includes('Ingresso registrato.'),'status disappeared before seven seconds');
@@ -49,6 +51,7 @@ try {
     const preview=document.querySelector('video').parentElement;
     Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='QR estraneo').click();
     await new Promise(r=>setTimeout(r,500));
+    if(!preview.querySelector('[data-feedback-tone=error]'))throw Error('invalid code color');
     if(!preview.innerText.includes('Codice non valido'))throw Error('invalid code missing from video');
     await new Promise(r=>setTimeout(r,7200));
     if(preview.innerText.includes('Codice non valido'))throw Error('error status did not expire');

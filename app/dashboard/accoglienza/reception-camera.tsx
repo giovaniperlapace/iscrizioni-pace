@@ -3,9 +3,17 @@
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { cameraErrorMessage, startQrCamera, type CameraSource } from "@/lib/reception/camera";
 
-export function ReceptionCamera({ paused, feedback, belowPreview, onCode, onNoCode, source = startQrCamera }: {
+const feedbackStyles = {
+  progress: "bg-sky-800 text-white",
+  success: "bg-green-800 text-white",
+  warning: "bg-amber-300 text-amber-950",
+  error: "bg-red-800 text-white",
+};
+
+export function ReceptionCamera({ paused, feedback, feedbackTone = "progress", belowPreview, onCode, onNoCode, source = startQrCamera }: {
   paused: boolean;
   feedback?: string;
+  feedbackTone?: keyof typeof feedbackStyles;
   belowPreview?: ReactNode;
   onCode: (value: string) => void;
   onNoCode: () => void;
@@ -56,7 +64,7 @@ export function ReceptionCamera({ paused, feedback, belowPreview, onCode, onNoCo
     <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-2xl bg-slate-950">
       <video ref={video} muted playsInline autoPlay aria-label="Anteprima fotocamera" className="absolute inset-0 h-full w-full object-contain" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 border-white/80" aria-hidden="true" />
-      {feedback && <p role="status" className="pointer-events-none absolute inset-x-2 bottom-2 rounded-lg bg-slate-950/85 p-3 text-center font-semibold text-white">{feedback}</p>}
+      {feedback && <p role="status" data-feedback-tone={feedbackTone} className={`pointer-events-none absolute inset-x-2 bottom-2 rounded-lg p-3 text-center font-semibold shadow-lg ${feedbackStyles[feedbackTone]}`}>{feedback}</p>}
     </div>
     {belowPreview}
     <p role={failed ? "alert" : "status"} className="text-sm text-[var(--peace-ink)]">{paused ? "Lettura di nuovi QR in attesa del completamento dell’operazione." : status}</p>

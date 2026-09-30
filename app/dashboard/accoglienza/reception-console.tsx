@@ -87,6 +87,7 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
     {input === "camera" ? <>
       <ReceptionCamera source={cameraSource} paused={locked || selection}
         feedback={state.phase === "pending" ? "Operazione in corso. Attendi l’esito prima della prossima persona…" : completedFeedback && expiredFeedback !== state ? state.message : undefined}
+        feedbackTone={state.phase === "pending" ? "progress" : state.phase === "result" ? "success" : state.problem === "conflict" ? "warning" : "error"}
         belowPreview={!operationOpen ? operationContent : null} onCode={code => {
         latch.current.clearAbsence();
         if (session.isLocked() || session.snapshot().phase === "selection" || !latch.current.accept(code)) return;

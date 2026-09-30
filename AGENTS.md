@@ -14,6 +14,14 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   `summary=1` restituisce la mappa vuota. Stessi controlli ruolo/evento e RLS,
   nessuna migration. Quantità prenotate e ingressi panel restano distinti.
 
+## Colori dei messaggi scanner — 2026-09-30
+
+- Overlay camera: azzurro per attesa, verde per operazione riuscita/presenza già
+  registrata, rosso per codice o richiesta non validi, ambra per conflitto da
+  verificare. Testo sempre esplicito, contrasto elevato e sfondo opaco.
+- Colore derivato dallo stato e dal codice di errore, mai dal testo tradotto.
+  Durata di 7 secondi, riepilogo persistente, stream e interblocchi invariati.
+
 ## Messaggio scanner temporaneo e riepilogo persistente — 2026-09-30
 
 - In modalità fotocamera, al termine dell’operazione il messaggio di stato
