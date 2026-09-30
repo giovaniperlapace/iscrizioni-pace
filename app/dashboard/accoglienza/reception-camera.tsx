@@ -3,8 +3,9 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { cameraErrorMessage, startQrCamera, type CameraSource } from "@/lib/reception/camera";
 
-export function ReceptionCamera({ paused, onCode, onNoCode, source = startQrCamera }: {
+export function ReceptionCamera({ paused, feedback, onCode, onNoCode, source = startQrCamera }: {
   paused: boolean;
+  feedback?: string;
   onCode: (value: string) => void;
   onNoCode: () => void;
   source?: CameraSource;
@@ -54,9 +55,9 @@ export function ReceptionCamera({ paused, onCode, onNoCode, source = startQrCame
     <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-2xl bg-slate-950">
       <video ref={video} muted playsInline autoPlay aria-label="Anteprima fotocamera" className="absolute inset-0 h-full w-full object-contain" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 border-white/80" aria-hidden="true" />
-      {paused && <p className="absolute inset-x-2 bottom-2 rounded-lg bg-slate-950 p-3 text-center font-semibold text-white">Scansione sospesa · completa l’operazione</p>}
+      {feedback && <p role="status" className="absolute inset-x-2 bottom-2 rounded-lg bg-slate-950 p-3 text-center font-semibold text-white">{feedback}</p>}
     </div>
-    <p role={failed ? "alert" : "status"} className="text-sm text-[var(--peace-ink)]">{status}</p>
+    <p role={failed ? "alert" : "status"} className="text-sm text-[var(--peace-ink)]">{paused ? "Lettura di nuovi QR in attesa del completamento dell’operazione." : status}</p>
     <div className="flex flex-wrap gap-2">
       <button type="button" className="btn-primary min-h-12 px-4" disabled={paused && !requested}
         onClick={() => {

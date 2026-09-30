@@ -4,6 +4,32 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Conferma QR in overlay — 2026-09-30
+
+- La console accoglienza apre un dialog modale sopra la fotocamera per la
+  verifica in corso, la selezione famiglia/scuola, correzioni, esiti incerti
+  e sessione bloccata. Dopo la verifica mostra “QR letto correttamente”
+  (manuale: “Codice verificato”) e l’azione necessaria, senza anticipare
+  il successo della scrittura. I singoli conservano l’ingresso automatico.
+- Dialog nativo con focus iniziale, sfondo non interattivo, scroll interno
+  entro 90dvh e azioni di conferma in fondo. Escape equivale a chiudere senza
+  modifiche soltanto durante la selezione; durante richieste/esiti incerti
+  resta bloccato. Retry e interblocchi della sessione restano invariati.
+- Al successo il dialog si chiude e il riquadro camera mostra l’esito e
+  l’invito al QR successivo. Eliminato “Scansione sospesa · completa
+  l’operazione”. Nessuna modifica a salvataggi, permessi o database.
+- Verifica browser estesa in `tests/browser/reception.mjs` per focus, overlay
+  mobile e impossibilità di chiudere l’esito incerto con Escape.
+
+## Scuole nel menu Partecipanti — 2026-09-30
+
+- Nel branch panel, admin e manager (inclusi viewer in sola lettura) hanno
+  la scheda Scuole accanto a Senza gruppo: `section=iscritti&view=schools`.
+  Riusa catalogo, filtri, scheda e azioni delle prenotazioni scuola già
+  disponibili in Panel; apertura/chiusura, filtri e ritorno dalle azioni
+  conservano il menu di provenienza. I due accessi condividono gli stessi dati.
+- Permessi e scope evento invariati; nessuna migration o modifica RLS.
+
 ## P13 — visualizzazione ingressi evento — 2026-09-30
 
 - Prima tranche implementata localmente sul branch panel: Gestione iscritti e

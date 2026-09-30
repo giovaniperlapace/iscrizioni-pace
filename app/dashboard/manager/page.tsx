@@ -397,6 +397,7 @@ export default async function ManagerDashboardPage({
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveManagerSection(params);
+  const participantSchoolsView = activeSection === "iscritti" && params.view === "schools";
   const currentEvent = await getCurrentOperationalEvent(
     serviceSupabase,
     "id,title,starts_on,ends_on"
@@ -405,14 +406,17 @@ export default async function ManagerDashboardPage({
   const canSeeCurrentEvent = Boolean(
     currentEventId && (!scope.eventIds || scope.eventIds.has(currentEventId))
   );
-  const [panelLocations, panelCatalog, schoolCatalog] =
+  const [panelLocations, panelCatalog, schoolCatalog] = await Promise.all([
     activeSection === "panel" && currentEventId && canSeeCurrentEvent
-      ? await Promise.all([
-          getEventLocations(serviceSupabase, currentEventId),
-          getPanelDraftCatalog(serviceSupabase, currentEventId),
-          getSchoolBookingCatalog(serviceSupabase, currentEventId),
-        ])
-      : [[], { panels: [], audienceTypes: [] }, { bookings: [], panelOptions: [] }];
+      ? getEventLocations(serviceSupabase, currentEventId)
+      : Promise.resolve([]),
+    activeSection === "panel" && currentEventId && canSeeCurrentEvent
+      ? getPanelDraftCatalog(serviceSupabase, currentEventId)
+      : Promise.resolve({ panels: [], audienceTypes: [] }),
+    (activeSection === "panel" || participantSchoolsView) && currentEventId && canSeeCurrentEvent
+      ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
+      : Promise.resolve({ bookings: [], panelOptions: [] }),
+  ]);
   const panelStatisticsPromise =
     activeSection === "dashboard" && currentEventId && canSeeCurrentEvent
       ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
@@ -523,7 +527,7 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
-            {activeSection === "iscritti" ? (
+            {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
                 searchParams={params}
                 snapshot={participantsSnapshot}
@@ -613,8 +617,9 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
-            {activeSection === "panel" && panelView === "schools" ? (
+            {(activeSection === "panel" && panelView === "schools") || participantSchoolsView ? (
               <SchoolBookingsSection
+                sourceSection={participantSchoolsView ? "iscritti" : "panel"}
                 dashboard="manager"
                 navMode={navMode}
                 event={currentEvent && canSeeCurrentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}

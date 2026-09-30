@@ -441,6 +441,7 @@ export default async function AdminDashboardPage({
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveAdminSection(params);
+  const participantSchoolsView = activeSection === "iscritti" && params.view === "schools";
   const needsAdminOperations = activeSection !== "impostazioni";
   const currentEvent = needsAdminOperations
     ? await getCurrentOperationalEvent(
@@ -467,7 +468,7 @@ export default async function AdminDashboardPage({
     activeSection === "panel" && currentEventId
       ? getPanelDraftCatalog(serviceSupabase, currentEventId)
       : Promise.resolve({ panels: [], audienceTypes: [] }),
-    activeSection === "panel" && currentEventId
+    (activeSection === "panel" || participantSchoolsView) && currentEventId
       ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
       : Promise.resolve({ bookings: [], panelOptions: [] }),
     activeSection === "dashboard" && currentEventId
@@ -576,7 +577,7 @@ export default async function AdminDashboardPage({
               />
             ) : null}
 
-            {activeSection === "iscritti" ? (
+            {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
                 searchParams={params}
                 snapshot={participantsSnapshot}
@@ -632,8 +633,9 @@ export default async function AdminDashboardPage({
               />
             ) : null}
 
-            {activeSection === "panel" && panelView === "schools" ? (
+            {(activeSection === "panel" && panelView === "schools") || participantSchoolsView ? (
               <SchoolBookingsSection
+                sourceSection={participantSchoolsView ? "iscritti" : "panel"}
                 dashboard="admin"
                 navMode={navMode}
                 event={currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}
