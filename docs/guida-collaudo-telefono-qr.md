@@ -1,5 +1,15 @@
 # Guida pratica — collaudo su telefono e QR
 
+> Aggiornamento 30 settembre 2026: il percorso separato Correzioni e annullamenti
+> è stato sostituito da **Modifica presenze**, accessibile dal riepilogo e dalle
+> **Ultime 15 letture** locali alla pagina. Non richiede nuova scansione e rilegge
+> automaticamente i dati prima della modifica. Nei casi sotto che citano il
+> vecchio percorso, usare questi accessi. La scansione normale di un singolo
+> assente registra immediatamente l’ingresso: non usarla come verifica senza
+> scrittura. Per annullare tutti gli ingressi di una famiglia deselezionare tutti;
+> per una scuola usare l’opzione esplicita nella scheda e confermare il salvataggio.
+
+
 Procedura riutilizzabile, preparata il 24 settembre 2026.
 Aggiornamento 30 settembre: rilettura automatica dopo rimozione del QR,
 nel rilascio panel autorizzato per lo staging. Le caselle sono da

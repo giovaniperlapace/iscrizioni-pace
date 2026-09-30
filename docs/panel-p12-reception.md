@@ -189,3 +189,23 @@ la CLI ne elenca scope e date ma non restituisce i valori; l’export vuoto non
 indica valori runtime mancanti. Nessuna variabile Vercel modificata. Production
 e `main` rimangono esclusi. La revisione autenticata su telefono resta rinviata
 al mattino seguente, come richiesto dall’utente.
+
+## Aggiornamento 30 settembre: modifica dalle ultime letture
+
+La modalità separata Correzioni e annullamenti è sostituita da **Modifica presenze**
+nel riepilogo dell’ultima operazione e nella lista **Ultime 15 letture**. La lista
+è limitata alla pagina aperta sul dispositivo e si perde ricaricando. Include
+letture valide via QR o codice, deduplicate; non contiene scansioni non valide.
+Aprire una voce rilegge le presenze e la revisione dal server senza scrivere.
+
+Singoli e famiglie mostrano i presenti selezionati: deselezionare annulla quegli
+ingressi; deselezionare tutti invia `cancel` dei soli presenti correnti. Per le
+scuole si modificano le quantità o si seleziona l’annullamento totale. Ogni
+scrittura richiede conferma. Dopo salvataggio o chiusura riprende il normale
+flusso ingressi, mantenendo la modalità di lettura. Le protezioni di concorrenza
+e retry restano invariate. Nessuna migration o nuova lettura diretta del DB.
+
+La precedente indicazione di usare Correzioni per una verifica senza scrittura
+è superata: la scansione normale di un singolo assente registra subito l’ingresso.
+Verifiche: `tests/reception-station.test.mts`, `tests/browser/reception.mjs` e
+`tests/browser/reception-feedback.mjs`, con backend sintetico e vista mobile.

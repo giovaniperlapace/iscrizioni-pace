@@ -148,3 +148,74 @@ test("rereading a partly present family allows later arrivals without automatic 
   assert.equal(session.snapshot().result?.kind,"family");
   assert.equal(result.persons[0].checkedInAt,now);
 });
+
+test("recent reads are limited to 15, deduplicated across QR/manual and local to session", async () => {
+  let code = "0000";
+  const session = new ReceptionStationSession(async () => ({...family(), code, persons: family().persons.map(p => ({...p, checkedInAt: now}))}), () => request);
+  for (let i = 0; i < 16; i++) { code = String(i).padStart(4, "0"); await session.inspect({kind:"code",value:code}); }
+  assert.equal(session.snapshot().recent.length,15);
+  assert.equal(session.snapshot().recent.at(-1)?.key,"family:0001");
+  code="0005"; await session.inspect({kind:"qr",value:"a".repeat(43)});
+  assert.equal(session.snapshot().recent.length,15);
+  assert.equal(session.snapshot().recent[0].key,"family:0005");
+  assert.equal(session.snapshot().recent.filter(e=>e.key==="family:0005").length,1);
+  assert.equal(new ReceptionStationSession(async()=>family(),()=>request).snapshot().recent.length,0);
+});
+test("editing recent reads refreshes revision without entering; empty selection cancels only current presences", async()=>{
+  const calls:ReceptionCommand[]=[];
+  let revision=1;
+  const present={...family(true),persons:family(true).persons.map((p,i)=>({...p,checkedInAt:i===0?now:null}))};
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return {...present,revision};},()=>request);
+  await session.inspect(lookup);session.next();revision=9;
+  await session.editRecent("family:TEST");
+  assert.deepEqual(calls.map(c=>c.action),["inspect","inspect"]);
+  assert.equal(session.snapshot().result?.revision,9);
+  await session.submit({subjectIds:[]});assert.equal(calls.length,2);
+  await session.submit({subjectIds:[]},true);
+  assert.equal(calls[2].action,"cancel");assert.deepEqual(calls[2].subjectIds,[adult]);
+  assert.equal(calls[2].expectedRevision,9);assert.equal(calls[2].reason,"entry_cancelled");
+  assert.equal(session.snapshot().mode,"enter");
+});
+test("school modification and cancellation share fresh verification and explicit confirmation",async()=>{
+  const calls:ReceptionCommand[]=[];
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return {...school,checkedInAt:now,students:8,companions:1,revision:3};},()=>request);
+  await session.inspect({kind:"qr",value:"s".repeat(43)});await session.editCurrent();
+  await session.submit({students:7,companions:1},true);
+  assert.equal(calls[2].action,"correct");assert.equal(calls[2].students,7);
+  await session.editCurrent();await session.submit({},false,true);assert.equal(calls.length,4);
+  await session.submit({},true,true);
+  assert.equal(calls[4].action,"cancel");assert.equal(calls[4].students,undefined);
+  assert.equal(calls[4].expectedRevision,3);
+});
+test("recent edits keep uncertain retry identity and block other operations; revocation clears history",async()=>{
+  const calls:ReceptionCommand[]=[];let status:"valid"|"unavailable"|"forbidden"="valid";
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return status==="valid"?{...family(),persons:family().persons.map(p=>({...p,checkedInAt:now}))}:{status};},()=>request);
+  await session.inspect(lookup);status="unavailable";await session.editCurrent();
+  await session.editRecent("family:TEST");assert.equal(calls.length,2);
+  status="valid";await session.retry();assert.equal(calls[2],calls[1]);
+  assert.equal(session.snapshot().phase,"selection");assert.equal(calls.every(c=>c.action==="inspect"),true);
+  session.next();status="forbidden";await session.editRecent("family:TEST");
+  assert.equal(session.snapshot().phase,"blocked");assert.equal(session.snapshot().recent.length,0);
+});
+
+test("stale recent entries never auto-enter and conflicts require another inspection",async()=>{
+  const calls:ReceptionCommand[]=[];let revision=1;let present=true;
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return c.action!=="inspect"?{status:"conflict"}:{...family(),revision,persons:family().persons.map(p=>({...p,checkedInAt:present?now:null}))};},()=>request);
+  await session.inspect(lookup);present=false;revision=4;
+  await session.editRecent("family:TEST");
+  assert.deepEqual(calls.map(c=>c.action),["inspect","inspect"]);
+  const refreshed = session.snapshot().result;
+  assert.equal(refreshed?.kind==="family" && refreshed.persons[0].checkedInAt,null);
+  await session.submit({subjectIds:[]},true);assert.equal(calls.length,2);
+  await session.submit({subjectIds:[adult]},true);assert.equal(calls[2].expectedRevision,4);
+  assert.equal(session.snapshot().phase,"error");
+  await session.submit({subjectIds:[adult]},true);assert.equal(calls.length,3);
+  revision=5;await session.editRecent("family:TEST");assert.equal(session.snapshot().result?.revision,5);
+});
+test("invalid recent references are removed instead of showing stale details",async()=>{
+  let invalid=false;
+  const session=new ReceptionStationSession(async()=>invalid?{status:"invalid"}:{...school,checkedInAt:now},()=>request);
+  await session.inspect({kind:"qr",value:"s".repeat(43)});
+  invalid=true;await session.editRecent(session.snapshot().recent[0].key);
+  assert.equal(session.snapshot().recent.length,0);assert.equal(session.snapshot().result,null);
+});

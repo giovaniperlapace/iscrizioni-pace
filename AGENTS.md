@@ -4,6 +4,31 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Modifica presenze e ultime letture — 2026-09-30
+
+- Sostituito il percorso separato Correzioni e annullamenti con una scheda
+  unica Modifica presenze, disponibile dal riepilogo di un ingresso presente
+  (anche appena registrato) e dalle ultime 15 iscrizioni valide lette.
+  Le famiglie parzialmente presenti conservano sia l’ingresso dei nuovi arrivati
+  sia l’accesso alla modifica dalla selezione.
+- Cronologia solo in memoria nella pagina/dispositivo: nominativo o scuola,
+  ora della lettura, nessuna persistenza browser. Deduplica famiglie per codice
+  pubblico anche tra QR e manuale; scuole per token QR attivo. Riletture spostano
+  la voce in cima; modifiche aggiornano la voce senza cambiare l’ora di lettura.
+  La revoca della sessione svuota la lista; un riferimento non più valido viene rimosso.
+- Apertura modifica = nuova inspect server usando il riferimento conservato,
+  mai ingresso automatico. Famiglie precompilate: deselezionare annulla i relativi
+  ingressi; selezione vuota usa cancel dei soli presenti riletti. Scuole: quantità
+  precompilate e opzione esplicita per annullare tutto. Conferma obbligatoria;
+  salvataggio/chiusura riportano al normale ingresso senza cambiare fotocamera.
+- Revisioni, UUID di retry, interblocchi e autorizzazioni esistenti invariati;
+  nessuna migration. La precedente modalità di sola verifica tramite Correzioni
+  non esiste più: scansione normale di singoli assenti registra subito l’ingresso.
+- Test sessione e browser coprono cronologia, rilettura aggiornata, annullamento
+  totale, scuole, ritorno al flusso normale, retry e cancellazione della lista.
+  Verificati 358 test, lint, typecheck, build staging e browser sintetico
+  desktop/mobile (inclusi overlay, timer 7 secondi e stream continuo).
+
 ## Presenze scuole nelle schede operative — 2026-09-30
 
 - Entrambi gli accessi Scuole (Partecipanti e Panel) mostrano ingresso evento,

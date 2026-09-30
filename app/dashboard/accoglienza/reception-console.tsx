@@ -7,7 +7,7 @@ import type { CameraSource } from "@/lib/reception/camera";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import { ReceptionStationSession, ScanLatch, type ReceptionMode, type VerifiedReception } from "@/lib/reception/station";
 
-const labels = { enter: "Registra ingresso", correct: "Correggi presenze", cancel: "Annulla ingresso" };
+const labels = { enter: "Registra ingresso", correct: "Salva presenze", cancel: "Annulla ingresso" };
 const date = (value: string) => new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value));
 
 export function ReceptionConsole({ commandAction, cameraSource }: {
@@ -40,10 +40,8 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
     return () => window.removeEventListener("beforeunload", warn);
   }, [state.phase]);
 
-  function changeMode(mode: ReceptionMode) {
-    session.setMode(mode); setValue(""); setInput(mode === "enter" ? "camera" : "manual");
-    latch.current.clearAbsence();
-  }
+  function dismiss() { session.setMode("enter"); session.next(); }
+  function inspect(lookup: ReceptionCommand["lookup"]) { if (session.isLocked() || session.snapshot().phase === "selection") return; session.setMode("enter"); void session.inspect(lookup); }
   const operationContent = <>
     {state.phase === "pending" && input === "manual" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
     {state.message && (input === "manual" || operationOpen) && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
@@ -56,26 +54,21 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
       <h3 className="text-lg font-semibold">{selection ? "Conferma le presenze" : "Ultima operazione"}</h3>
       {selection && state.result.kind === "family" ? <p className="text-sm">Codice {state.result.code}</p> : <PresenceSummary result={state.result} />}
       {selection && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
-        onSubmit={(values, confirmed) => void session.submit(values, confirmed)} onDismiss={() => session.next()} />}
+        onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={dismiss} />}
+      {!correction && (state.result.kind === "family" ? state.result.persons.some(person => person.checkedInAt) : state.result.checkedInAt) &&
+        <button type="button" className="btn-secondary min-h-12 px-4" onClick={() => void session.editCurrent()}>Modifica presenze</button>}
     </div>}
   </>;
   return <section className="grid gap-5" aria-labelledby="reception-title">
     <header className="grid gap-1 rounded-xl bg-slate-900 p-3 text-white">
       <p className="text-xs font-semibold uppercase tracking-wide">Incarico attivo · Accoglienza evento</p>
-      <h2 id="reception-title" className="text-xl font-semibold">{correction ? labels[state.mode] : "Registra ingresso"}</h2>
+      <h2 id="reception-title" className="text-xl font-semibold">{correction ? "Modifica presenze" : "Registra ingresso"}</h2>
       {state.phase !== "ready" && state.phase !== "result" && state.phase !== "error" && state.phase !== "pending" && <p aria-hidden="true" className="text-sm font-semibold text-amber-200">
         {state.phase === "selection" ? "Codice verificato · completa la conferma nella finestra aperta" : state.message}
       </p>}
     </header>
     <div className="surface-card grid gap-5 p-4 sm:p-7">
-      {correction && <label className="grid gap-1 text-sm">Operazione da eseguire
-        <select name="operation" className="field min-h-12" value={state.mode} disabled={locked || selection}
-          onChange={event => changeMode(event.target.value as ReceptionMode)}>
-          <option value="correct">Correggi presenze</option><option value="cancel">Annulla ingresso</option>
-        </select>
-      </label>}
-      <p className="text-sm">{correction ? "Verifica un codice e conferma esplicitamente la modifica." : "Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie e scuole conferma chi è presente."}</p>
-
+      <p className="text-sm">Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie e scuole conferma chi è presente.</p>
 
     <div className="flex flex-wrap gap-2" aria-label="Modalità di lettura">
       <button type="button" className={input === "camera" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
@@ -91,36 +84,42 @@ export function ReceptionConsole({ commandAction, cameraSource }: {
         belowPreview={!operationOpen ? operationContent : null} onCode={code => {
         latch.current.clearAbsence();
         if (session.isLocked() || session.snapshot().phase === "selection" || !latch.current.accept(code)) return;
-        void session.inspect({ kind: "qr", value: code });
+        inspect({ kind: "qr", value: code });
       }} onNoCode={() => {
         if (!session.isLocked() && session.snapshot().phase !== "selection") latch.current.absent();
         else latch.current.clearAbsence();
       }} />
 
-    </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void session.inspect({ kind: "code", value }); setValue(""); }}>
+    </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); inspect({ kind: "code", value }); setValue(""); }}>
       <fieldset disabled={locked || selection} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <label className="grid min-w-0 gap-1 text-sm">Codice partecipante
           <input className="field min-h-12 min-w-0" type="text" autoComplete="off" spellCheck={false}
             autoCapitalize="characters" required maxLength={4}
             value={value} onChange={event => setValue(event.target.value)} />
         </label>
-        <button className="btn-primary min-h-12 px-4" type="submit" aria-busy={state.phase === "pending"}>{correction ? "Verifica codice" : "Leggi codice e registra"}</button>
+        <button className="btn-primary min-h-12 px-4" type="submit" aria-busy={state.phase === "pending"}>Leggi codice e registra</button>
       </fieldset>
     </form>}
 
-    {operationOpen ? <ReceptionOperationDialog onDismiss={selection ? () => session.next() : undefined}>
+    {operationOpen ? <ReceptionOperationDialog onDismiss={selection ? dismiss : undefined}>
       <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-semibold outline-none">
-        {selection ? (input === "camera" ? "QR letto correttamente" : "Codice verificato") : "Operazione da verificare"}
+        {selection ? correction ? "Modifica presenze" : (input === "camera" ? "QR letto correttamente" : "Codice verificato") : "Operazione da verificare"}
       </h2>
       {selection && <p className="text-sm">{correction ? "Controlla i dati e conferma la modifica. Non è ancora stata salvata." : state.result?.kind === "school" ? "Indica quanti studenti e accompagnatori sono presenti, poi premi Registra ingresso." : "Seleziona le persone presenti, poi premi Registra ingresso."}</p>}
       {operationContent}
     </ReceptionOperationDialog> : input === "manual" ? operationContent : null}
-    <div className="border-t border-[var(--peace-border)] pt-4">
-      <button type="button" className="btn-secondary min-h-12 px-4" disabled={locked || selection}
-        onClick={() => changeMode(correction ? "enter" : "correct")}>
-        {correction ? "Torna agli ingressi" : "Correzioni e annullamenti"}
-      </button>
-    </div>
+    <details className="border-t border-[var(--peace-border)] pt-4">
+      <summary className="cursor-pointer py-3 font-semibold">Ultime 15 letture ({state.recent.length})</summary>
+      <p className="mb-3 text-sm">Iscrizioni lette su questo dispositivo nella pagina aperta. La lista si svuota ricaricando. Le presenze vengono aggiornate quando apri la modifica.</p>
+      {state.recent.length === 0 ? <p className="text-sm">Nessuna lettura recente.</p> : <ul className="grid gap-3">
+        {state.recent.map(entry => <li key={entry.key} className="grid gap-2 rounded-xl border border-[var(--peace-border)] p-3">
+          <strong className="break-words">{entry.result.kind === "family" ? `${entry.result.persons[0]?.firstName} ${entry.result.persons[0]?.lastName} · ${entry.result.code}` : `${entry.result.schoolName} · ${entry.result.classDescription}`}</strong>
+          <span className="text-sm">Letto il {date(entry.readAt)}</span>
+          <button type="button" className="btn-secondary min-h-12 px-4" disabled={locked || selection}
+            onClick={() => void session.editRecent(entry.key)}>Modifica presenze</button>
+        </li>)}
+      </ul>}
+    </details>
     </div>
   </section>;
 }
@@ -161,21 +160,22 @@ function PresenceSummary({ result }: { result: VerifiedReception }) {
 function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
   result: VerifiedReception;
   mode: ReceptionMode;
-  onSubmit: (values: Pick<ReceptionCommand, "subjectIds" | "students" | "companions">, confirmed: boolean) => void;
+  onSubmit: (values: Pick<ReceptionCommand, "subjectIds" | "students" | "companions">, confirmed: boolean, cancelSchool?: boolean) => void;
   onDismiss: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>(() => mode === "correct" && result.kind === "family" ? result.persons.filter(p => p.checkedInAt).map(p => p.id) : []);
   const [students, setStudents] = useState(mode === "correct" && result.kind === "school" ? String(result.students) : "");
   const [companions, setCompanions] = useState(mode === "correct" && result.kind === "school" ? String(result.companions) : "");
+  const [cancelSchool, setCancelSchool] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const familyValid = result.kind !== "family" || selected.length > 0;
-  const countsValid = result.kind !== "school" || mode === "cancel" ||
+  const familyValid = result.kind !== "family" || selected.length > 0 || (mode === "correct" && result.persons.some(person => person.checkedInAt));
+  const countsValid = result.kind !== "school" || mode === "cancel" || cancelSchool ||
     (students !== "" && companions !== "" && Number.isInteger(Number(students)) && Number.isInteger(Number(companions)) &&
       Number(students) >= 0 && Number(students) <= result.expectedStudents && Number(companions) >= 0 && Number(companions) <= result.expectedCompanions && Number(students) + Number(companions) > 0);
   return <form className="grid gap-4" onSubmit={event => {
     event.preventDefault();
     if (!familyValid || !countsValid || (mode !== "enter" && !confirmed)) return;
-    onSubmit(result.kind === "family" ? { subjectIds: selected } : mode === "cancel" ? {} : { students: Number(students), companions: Number(companions) }, confirmed);
+    onSubmit(result.kind === "family" ? { subjectIds: selected } : mode === "cancel" ? {} : { students: Number(students), companions: Number(companions) }, confirmed, cancelSchool);
   }}>
     {result.kind === "family" ? <fieldset className="grid gap-2">
       <legend className="mb-2 font-medium">{mode === "cancel" ? "Seleziona gli ingressi da annullare" : "Seleziona le persone realmente presenti"}</legend>
@@ -184,12 +184,16 @@ function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
           onChange={event => { setSelected(ids => event.target.checked ? [...ids, person.id] : ids.filter(id => id !== person.id)); setConfirmed(false); }} />
         <span className="min-w-0 break-words font-medium">{person.firstName} {person.lastName}{mode === "enter" && person.checkedInAt ? " · Già presente" : ""}</span>
       </label>)}
-      <p className="text-sm">{mode === "correct" ? "Le persone deselezionate risulteranno assenti." : mode === "enter" ? "Gli ingressi già registrati restano validi anche se deselezionati." : "Si annullano solo gli ingressi selezionati."}</p>
-    </fieldset> : mode !== "cancel" && <div className="grid gap-3 sm:grid-cols-2">
+      <p className="text-sm">{mode === "correct" ? "L’ingresso delle persone deselezionate verrà annullato." : mode === "enter" ? "Gli ingressi già registrati restano validi anche se deselezionati." : "Si annullano solo gli ingressi selezionati."}</p>
+    </fieldset> : mode !== "cancel" && !cancelSchool && <div className="grid gap-3 sm:grid-cols-2">
       <label className="grid gap-1 text-sm">Studenti presenti<input className="field min-h-12" type="number" inputMode="numeric" name="students" min={0} max={result.expectedStudents} step={1} required value={students} onChange={event => { setStudents(event.target.value); setConfirmed(false); }} /></label>
       <label className="grid gap-1 text-sm">Accompagnatori presenti<input className="field min-h-12" type="number" inputMode="numeric" name="companions" min={0} max={result.expectedCompanions} step={1} required value={companions} onChange={event => { setCompanions(event.target.value); setConfirmed(false); }} /></label>
     </div>}
-    {mode !== "enter" && <label className="flex min-h-14 items-center gap-3 text-sm"><input type="checkbox" name="confirmCorrection" className="h-6 w-6 shrink-0" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Confermo {mode === "cancel" ? "l’annullamento degli ingressi indicati" : "la correzione delle presenze indicate"}.</label>}
+    {mode === "correct" && result.kind === "school" && result.checkedInAt && <label className="flex min-h-14 items-center gap-3 text-sm">
+      <input type="checkbox" className="h-6 w-6 shrink-0" checked={cancelSchool} onChange={event => { setCancelSchool(event.target.checked); setConfirmed(false); }} />Annulla tutto l’ingresso della scuola
+    </label>}
+    {mode === "correct" && result.kind === "family" && selected.length === 0 && <p role="status" className="text-sm font-semibold">Salvando annullerai tutti gli ingressi attualmente registrati.</p>}
+    {mode !== "enter" && <label className="flex min-h-14 items-center gap-3 text-sm"><input type="checkbox" name="confirmCorrection" className="h-6 w-6 shrink-0" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Confermo {(mode === "cancel" || cancelSchool || (result.kind === "family" && selected.length === 0)) ? "l’annullamento degli ingressi indicati" : "la correzione delle presenze indicate"}.</label>}
     <div className="sticky bottom-0 flex flex-wrap gap-2 border-t border-[var(--peace-border)] bg-white py-3">
       <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || !countsValid || (mode !== "enter" && !confirmed)}>{labels[mode]}</button>
       <button className="btn-secondary min-h-12 px-4" type="button" onClick={onDismiss}>Chiudi senza modifiche</button>
