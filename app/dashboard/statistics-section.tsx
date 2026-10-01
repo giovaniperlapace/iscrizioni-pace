@@ -1,5 +1,8 @@
 "use client";
 
+import { AssociationStatisticsReport } from "@/app/dashboard/association-statistics-report";
+import type { AssociationStatisticsSnapshot } from "@/lib/registrations/association-statistics";
+
 import { DisabilityStatisticsReport } from "@/app/dashboard/disability-statistics-report";
 import type { DisabilityStatisticsSnapshot } from "@/lib/registrations/disability-statistics";
 
@@ -34,6 +37,7 @@ type StatisticsSectionProps = {
   report?: StatisticsReport;
   canViewDisability?: boolean;
   disabilityStatistics?: DisabilityStatisticsSnapshot;
+  associationStatistics?: AssociationStatisticsSnapshot;
   dashboard: StatisticsDashboard;
   navMode: StatisticsNavMode;
 };
@@ -53,6 +57,7 @@ export function StatisticsSection({
   report = "territory",
   canViewDisability = false,
   disabilityStatistics,
+  associationStatistics,
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
@@ -64,7 +69,7 @@ export function StatisticsSection({
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          {report === "disability" ? "Seleziona un totale per difficoltà per aprire Gestione iscritti con le persone interessate. I conteggi per gruppo e il pulsante Mostra tutte le persone aprono l’elenco qui sotto." : <>Seleziona qualsiasi conteggio per aprire la gestione iscritti già
+          {report === "disability" ? "Seleziona un totale per difficoltà per aprire Gestione iscritti con le persone interessate. I conteggi per gruppo e il pulsante Mostra tutte le persone aprono l’elenco qui sotto." : <>Seleziona i conteggi del riepilogo per aprire la gestione iscritti già
           filtrata sulle persone che compongono quel dato.
           Persone complessive, totali per gruppo, presenze e fasce di età includono
           i figli accompagnati. Partecipanti iscritti e iscrizioni per settimana li escludono.</>}
@@ -91,6 +96,8 @@ export function StatisticsSection({
           statistics={statistics}
           participantHref={participantHref}
         />
+
+        {associationStatistics ? <AssociationStatisticsReport statistics={associationStatistics} /> : null}
 
         <TerritoryAttendancePivot
           people={statistics.people}

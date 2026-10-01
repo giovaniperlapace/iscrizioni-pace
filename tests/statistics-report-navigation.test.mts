@@ -16,6 +16,7 @@ new Function("require", "exports", js)((name: string) => {
   if (name === "react") return React;
   if (name === "react/jsx-runtime") return runtime;
   if (name === "lucide-react") return { Baby: "svg", ChevronRight: "svg", ChevronDown: "svg", UserRound: "svg", Users: "svg" };
+  if (name.endsWith("association-statistics-report")) return { AssociationStatisticsReport: () => React.createElement("div", null, "Association report") };
   if (name.endsWith("disability-statistics-report")) return { DisabilityStatisticsReport: () => React.createElement("div", null, "Protected report") };
   if (name.endsWith("statistics-reports")) return reports;
   if (name.endsWith("event-statistics")) return statistics;

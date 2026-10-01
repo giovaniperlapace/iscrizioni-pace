@@ -1,3 +1,4 @@
+import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
 import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
 import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
 import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
@@ -403,6 +404,9 @@ export default async function ManagerDashboardPage({
           currentEventId,
           activeSection
         );
+  const associationStatistics = activeSection === "dashboard" && statisticsReport === "territory" && currentEventId && canViewStatistics
+    ? await loadAssociationStatistics(serviceSupabase, currentEventId, currentEvent?.starts_on ?? null, currentEvent?.ends_on ?? null)
+    : undefined;
   const disabilityStatistics = (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty
     ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
     : undefined;
@@ -487,6 +491,7 @@ export default async function ManagerDashboardPage({
                 report={statisticsReport}
                 canViewDisability={canViewStatistics}
                 disabilityStatistics={disabilityStatistics}
+                associationStatistics={associationStatistics}
                 dashboard="manager"
                 navMode={navMode}
               />

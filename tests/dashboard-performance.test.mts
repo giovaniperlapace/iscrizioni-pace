@@ -31,9 +31,10 @@ function compile(path: string, modules: Record<string, unknown>, components = fa
 }
 
 test("dashboard sections execute only the queries needed by their visible content", async () => {
-  for (const role of ["admin", "manager", "manager_viewer"]) {
+  for (const role of ["admin", "manager", "manager_viewer", "foreign_manager", "foreign_viewer"]) {
+    const foreign = role.startsWith("foreign_");
     const dashboard = role === "admin" ? "admin" : "manager";
-    for (const section of ["dashboard", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])].filter(section => role !== "manager_viewer" || ["dashboard", "disability", "disability-people", "iscritti"].includes(section))) {
+    for (const section of ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])].filter(section => foreign ? section === "dashboard" : role !== "manager_viewer" || ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti"].includes(section))) {
       const reads: string[] = [];
       const db = { from(table: string) {
         const query = new Proxy({}, { get: (_, key) => key === "then"
@@ -55,22 +56,24 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/registrations/operations-dashboard": operations,
         "@/lib/registrations/event-statistics": statistics,
         "@/lib/registrations/statistics-reports": reports,
+        "@/lib/registrations/association-statistics.server": { loadAssociationStatistics: async () => { reads.push("associations"); return { people: [] }; } },
         "@/lib/registrations/disability-statistics.server": { loadDisabilityStatistics: async () => { reads.push("disability"); return { people: [] }; } },
         "@/lib/registrations/event-statistics.server": { loadEventStatisticsSnapshot: async () => { reads.push("statistics"); return {}; } },
-        "@/lib/auth/session": { getCurrentAuthContext: async () => ({ user: { id: "operator" }, eventRoles: [{ role, eventId: role === "admin" ? null : "event" }] }) },
+        "@/lib/auth/session": { getCurrentAuthContext: async () => ({ user: { id: "operator" }, eventRoles: [{ role: foreign ? (role === "foreign_viewer" ? "manager_viewer" : "manager") : role, eventId: role === "admin" ? null : foreign ? "other-event" : "event" }] }) },
         "@/lib/supabase/server": { createSupabaseServerClient: async () => db },
         "@/lib/supabase/service": { createSupabaseServiceClient: () => db },
         "@/lib/events/current": { getCurrentOperationalEvent: async () => ({ id: "event", title: "Fixture" }) },
         "@/lib/operational-users/identity": { getOperationalUserIdentities: async () => new Map() },
       };
       const page = compile(`app/dashboard/${dashboard}/page.tsx`, modules, true).default;
-      await page({ searchParams: Promise.resolve({ section: section === "disability" ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(section === "disability" ? { report: "disability" } : {}) }) } as never);
+      await page({ searchParams: Promise.resolve({ section: ["disability", "attendance", "age", "registrations"].includes(section) ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(["disability", "attendance", "age", "registrations"].includes(section) ? { report: section } : {}) }) } as never);
       const context = `${role}/${section}`;
       assert.equal(reads.includes("email-delegations"), ["iscritti", "disability-people"].includes(section), context);
       assert.equal(reads.includes("registrations"), ["iscritti", "disability-people", "gruppi"].includes(section), context);
       assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);
       assert.equal(reads.includes("event_user_roles"), section === "gruppi" || section === "ruoli", context);
-      assert.equal(reads.includes("statistics"), section === "dashboard", context);
+      assert.equal(reads.includes("statistics"), !foreign && ["dashboard", "attendance", "age", "registrations"].includes(section), context);
+      assert.equal(reads.includes("associations"), !foreign && section === "dashboard", context);
       assert.equal(reads.includes("disability"), ["disability", "disability-people"].includes(section), context);
       assert.equal(reads.includes("event_services"), ["iscritti", "disability-people", "gruppi", "impostazioni"].includes(section), context);
     }

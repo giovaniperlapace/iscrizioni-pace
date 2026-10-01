@@ -1,5 +1,20 @@
 # AGENTS.md
 
+## Associazioni dichiarate nelle statistiche — 2026-10-01
+
+- In Gruppi e partecipanti, contatore espandibile con nome, presenze previste
+  e associazione dichiarata per Admin/Manager/Viewer dell'evento autorizzato.
+  Campo testo externalGroupAssociation, senza Sì/No separato: conteggiare
+  solo stringhe non vuote, una volta per iscrizione attiva, senza eredità ai figli.
+- Questionario più recente anche quando vuoto; proiezione del solo campo,
+  letture paginate/batched e fail-closed. Nomi mancanti e presenze da comunicare
+  espliciti; calendario completo incluso pomeriggio precedente l'evento.
+- Nessuna migration, scrittura dati o email. 593 test con TZ=Europe/Rome,
+  lint, TypeScript e build in copia isolata con npm ci; browser sintetico
+  desktop/mobile e tastiera. Due test export preesistenti dipendono dal fuso
+  italiano. Dettagli in docs/association-statistics.md. Commit/push su main
+  e normale rilascio Vercel autorizzati dall’utente; modifiche parallele escluse.
+
 ## Dati assistiti e sesso interno — 2026-09-29
 
 - Modulo condiviso Capogruppo/Manager/Admin: nazionalità, paese/luogo di nascita,
