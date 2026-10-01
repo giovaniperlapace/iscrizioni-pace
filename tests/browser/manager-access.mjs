@@ -13,10 +13,10 @@ const source = read('app/dashboard/manager/page.tsx');
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const helpers = ast.statements.filter(n => ts.isFunctionDeclaration(n) && ['ManagerSidebar','canAccessManagerSection'].includes(n.name?.text)).map(n=>n.getText(ast)).join('\n');
 write('page.tsx', `import Link from '@/components/pending-link';
-import {BarChart3,Users,Mail,ShieldCheck,Network,Settings} from 'lucide-react';
+import {BarChart3,FileDown,Users,Mail,ShieldCheck,Network,Settings} from 'lucide-react';
 import {DashboardRoleTabs} from './tabs';
 import {getCurrentAuthContext} from './fixture';
-type ManagerSection = 'dashboard'|'iscritti'|'email'|'ruoli'|'gruppi'|'impostazioni';
+type ManagerSection = 'esportazioni'|'dashboard'|'iscritti'|'email'|'ruoli'|'gruppi'|'impostazioni';
 type ManagerNavMode = 'mini'|'full';
 ${helpers.replaceAll('/dashboard/manager','/manager-access-check')}
 export default async function Page({searchParams}:{searchParams:Promise<Record<string,string>>}) {
@@ -70,7 +70,7 @@ try{
    ab('set','viewport',width,'900');
    for(const nav of ['full','mini']){
     ab('open',base+'/manager-access-check?nav='+nav);ab('snapshot','-i');
-    check(`document.querySelectorAll('nav[aria-label="Sezioni dashboard manager"] a').length===${role==='manager'?6:2}`,'menu '+role+' '+width+' '+nav);
+    check(`document.querySelectorAll('nav[aria-label="Sezioni dashboard manager"] a').length===${role==='manager'?7:3}`,'menu '+role+' '+width+' '+nav);
     check('document.querySelectorAll("[role=tab]").length===2 && document.documentElement.scrollWidth<=innerWidth','tabs and layout');
     if(role==='manager_viewer' && nav==='full')ab('screenshot','/tmp/pace-viewer-'+width+'.png');
    }

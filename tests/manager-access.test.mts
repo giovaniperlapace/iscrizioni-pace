@@ -32,7 +32,7 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
     parseOperationsDashboardFilters: () => ({}),
     redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); },
     permanentRedirect: (url: string) => { throw new Error(`PERMANENT:${url}`); },
-    Link: "a", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
+    Link: "a", FileDown: "svg", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
   };
   const api = new Function(...Object.keys(deps), `${js}; return {ManagerDashboardPage, ManagerSidebar};`)(...Object.values(deps));
   return { ...api, reads };
@@ -51,10 +51,18 @@ for (const params of deniedParams) {
   });
 }
 
-test("viewer can open statistics and participant data in read-only mode", async () => {
+test("viewer can open statistics, exports and participant data in read-only mode", async () => {
   const f = fixture([{ role: "manager_viewer", eventId: "current" }]);
-  for (const section of ["dashboard", "iscritti"]) {
+  for (const section of ["dashboard", "esportazioni", "iscritti"]) {
     assert.deepEqual(await f.ManagerDashboardPage({ searchParams: Promise.resolve({ section }) }), { canManage: false, activeSection: section });
+  }
+});
+
+test("exports page rejects operators from a different current event", async () => {
+  for (const role of ["manager", "manager_viewer"]) {
+    const f = fixture([{ role, eventId: "other" }]);
+    await assert.rejects(f.ManagerDashboardPage({ searchParams: Promise.resolve({ section: "esportazioni" }) }), /REDIRECT:/);
+    assert.deepEqual(f.reads, ["current-event"]);
   }
 });
 
@@ -65,7 +73,7 @@ test("manager rights belong to the current event and global admin remains unrest
     [{ role: "manager", eventId: "current" }, { role: "manager_viewer", eventId: "current" }],
   ]) {
     const f = fixture(roles);
-    for (const section of ["dashboard", "iscritti", "email", "ruoli", "gruppi", "impostazioni"]) {
+    for (const section of ["dashboard", "esportazioni", "iscritti", "email", "ruoli", "gruppi", "impostazioni"]) {
       assert.deepEqual(await f.ManagerDashboardPage({ searchParams: Promise.resolve({ section }) }), { canManage: true, activeSection: section });
     }
   }
@@ -77,14 +85,14 @@ test("manager rights belong to the current event and global admin remains unrest
   }
 });
 
-test("both sidebar modes render exactly the two allowed viewer menu items", () => {
+test("both sidebar modes render only the allowed read-only viewer menu items", () => {
   const f = fixture([]);
   for (const navMode of ["mini", "full"]) {
     for (const canManage of [false, true]) {
       const html = renderToStaticMarkup(f.ManagerSidebar({ activeSection: "dashboard", navMode, canManage, report: "territory" }));
       const menu = html.slice(html.indexOf("<nav"));
       const sections = [...menu.matchAll(/href="\/dashboard\/manager\?section=([a-z]+)&amp;nav=mini"/g)].map(match => match[1]);
-      assert.deepEqual(sections, canManage ? ["dashboard", "iscritti", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "iscritti"]);
+      assert.deepEqual(sections, canManage ? ["dashboard", "esportazioni", "iscritti", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "esportazioni", "iscritti"]);
     }
   }
 });

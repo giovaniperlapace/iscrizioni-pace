@@ -1,3 +1,4 @@
+import { ExportsSection } from "@/app/dashboard/exports-section";
 import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
 import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
 import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
@@ -29,6 +30,7 @@ import { permanentRedirect, redirect } from "next/navigation";
 import Link from "@/components/pending-link";
 import {
   BarChart3,
+  FileDown,
   Mail,
   Network,
   Pencil,
@@ -393,7 +395,7 @@ type OperationalUserRoleAssignment = {
 };
 
 
-type AdminSection = "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
+type AdminSection = "esportazioni" | "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
@@ -541,6 +543,8 @@ export default async function AdminDashboardPage({
                 navMode={navMode}
               />
             ) : null}
+
+            {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
@@ -1097,6 +1101,13 @@ function AdminSidebar({
       Icon: BarChart3,
       label: "Statistiche",
       help: "Evento e partecipanti",
+    },
+    {
+      key: "esportazioni",
+      href: adminPath("esportazioni", navMode),
+      Icon: FileDown,
+      label: "Esportazioni",
+      help: "Presenze per gruppo in Excel",
     },
     {
       key: "iscritti",
@@ -2460,6 +2471,7 @@ function parseGroupTableFilters(input: {
 
 function resolveAdminSection(input: { section?: string; openingSaved?: string; openingError?: string; eventTool?: string }): AdminSection {
   if (
+    input.section === "esportazioni" ||
     input.section === "impostazioni" ||
     input.section === "dashboard" ||
     input.section === "iscritti" ||

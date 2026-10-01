@@ -4,6 +4,7 @@ export const SESSION_IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 export const SESSION_STATE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 const ADMIN_SECTIONS = new Set([
+  "esportazioni",
   "evento",
   "servizi",
   "impostazioni",
@@ -13,6 +14,7 @@ const ADMIN_SECTIONS = new Set([
   "gruppi",
 ]);
 const MANAGER_SECTIONS = new Set([
+  "esportazioni",
   "dashboard",
   "iscritti",
   "servizi",

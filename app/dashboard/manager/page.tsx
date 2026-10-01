@@ -1,3 +1,4 @@
+import { ExportsSection } from "@/app/dashboard/exports-section";
 import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
 import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
 import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
@@ -26,6 +27,7 @@ import { ReliableForm } from "@/components/reliable-form";
 import Link from "@/components/pending-link";
 import {
   BarChart3,
+  FileDown,
   Settings,
   Mail,
   Network,
@@ -350,7 +352,7 @@ type OperationalUserRoleAssignment = {
 };
 
 
-type ManagerSection = "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
+type ManagerSection = "esportazioni" | "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -386,7 +388,7 @@ export default async function ManagerDashboardPage({
   // Authorize the resolved section before any operational data is loaded,
   // including legacy URLs, inferred sections and remembered navigation.
   if (!canAccessManagerSection(activeSection, canManage) ||
-      (!canViewStatistics && ((activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
+      (!canViewStatistics && (activeSection === "esportazioni" || (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
     redirect("/dashboard/manager?section=dashboard&nav=mini");
   }
   if (params.section === "servizi") {
@@ -496,6 +498,8 @@ export default async function ManagerDashboardPage({
                 navMode={navMode}
               />
             ) : null}
+
+            {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
             {activeSection === "iscritti" ? (
               <OperationsParticipantsSection
@@ -620,6 +624,13 @@ function ManagerSidebar({
       Icon: BarChart3,
       label: "Statistiche",
       help: "Evento e partecipanti",
+    },
+    {
+      key: "esportazioni",
+      href: "/dashboard/manager?section=esportazioni&nav=mini",
+      Icon: FileDown,
+      label: "Esportazioni",
+      help: "Presenze per gruppo in Excel",
     },
     {
       key: "iscritti",
@@ -914,12 +925,13 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 }
 
 function canAccessManagerSection(section: ManagerSection, canManage: boolean): boolean {
-  return canManage || section === "dashboard" || section === "iscritti";
+  return canManage || section === "dashboard" || section === "iscritti" || section === "esportazioni";
 }
 
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
   if (params.section === "servizi") return "impostazioni";
   if (
+    params.section === "esportazioni" ||
     params.section === "dashboard" ||
     params.section === "iscritti" ||
     params.section === "impostazioni" ||

@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Esportazioni presenze per gruppo — 2026-10-01
+
+- Sezione Esportazioni distinta dalle statistiche, condivisa Admin/Manager e
+  accessibile in sola lettura al Viewer dell’evento corrente. Quattro XLSX:
+  A/A2 per gruppo, B/B2 con precedenza tag operatore > servizio assegnato > gruppo.
+  Nomi sempre dal catalogo corrente; esempi storici solo per formato/accorpamenti.
+- Figli inclusi nei totali e nelle presenze del genitore, ma per scelta esplicita
+  restano nel gruppo d’iscrizione anche quando il genitore ha servizi o tag.
+  Raccordo per ID/evento in lib/presence-exports; nessun matching approssimato.
+  Nuove radici non mappate e operatori ambigui restano in sezioni esplicite.
+- Download autorizzato prima delle letture, paginato e senza risultati parziali;
+  nessuna scrittura DB, migration o email. Script amministrativo in
+  scripts/export-group-presence.mts. Stampa con fasce complete, subtotali,
+  totale generale, Date non indicate e data/ora di Roma. Dettagli, manutenzione
+  del raccordo e limiti dello snapshot in docs/group-presence-exports.md.
+  Verificati 619 test, lint, TypeScript, build production e browser desktop/mobile.
+  Commit/push su main e normale rilascio Vercel autorizzati dall’utente.
+
 ## Associazioni dichiarate nelle statistiche — 2026-10-01
 
 - In Gruppi e partecipanti, contatore espandibile con nome, presenze previste
