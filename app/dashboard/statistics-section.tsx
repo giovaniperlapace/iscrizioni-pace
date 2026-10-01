@@ -97,6 +97,8 @@ export function StatisticsSection({
           participantHref={participantHref}
         />
 
+        <SingleDayAttendanceSummary statistics={statistics} participantHref={participantHref} />
+
         {associationStatistics ? <AssociationStatisticsReport statistics={associationStatistics} /> : null}
 
         <TerritoryAttendancePivot
@@ -108,6 +110,7 @@ export function StatisticsSection({
 
       {report === "attendance" ? <ReportBlock name="attendance" title="Presenze previste">
         <p className="px-2 text-sm">Figli accompagnati inclusi; le loro presenze seguono quelle del genitore.</p>
+        <SingleDayAttendanceSummary statistics={statistics} participantHref={participantHref} />
         <AttendanceStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
@@ -400,6 +403,59 @@ function AttendanceStatisticsSummary({
         </p>
       ) : null}
     </article>
+  );
+}
+
+function SingleDayAttendanceSummary({
+  statistics,
+  participantHref,
+}: {
+  statistics: EventStatisticsSnapshot;
+  participantHref: (filter: StatisticsDrilldownFilter) => string;
+}) {
+  const days = groupAttendanceSlotsByDay(statistics.attendanceSlots);
+  return (
+    <details className="group/single-day min-w-0 rounded-lg border border-[var(--peace-border)] bg-white">
+      <summary className="flex cursor-pointer list-none items-center gap-4 rounded-lg p-5 transition hover:bg-[#f7fbfe] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] [&::-webkit-details-marker]:hidden">
+        <span className="text-3xl font-semibold tabular-nums text-[var(--peace-blue-800)]">
+          {statistics.summary.singleDayPeople}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">Partecipano solo un giorno</span>
+          <span className="block text-sm text-[var(--peace-muted)]">Apri il dettaglio per giorno · figli accompagnati inclusi</span>
+        </span>
+        <ChevronDown aria-hidden="true" size={20} className="shrink-0 transition-transform group-open/single-day:rotate-180" />
+      </summary>
+      <div className="border-t border-[var(--peace-border)] p-5">
+        <p className="mb-4 text-sm leading-6 text-[var(--peace-muted)]">
+          Persone con presenza indicata in una sola data, anche soltanto al mattino o al pomeriggio.
+          Le presenze da comunicare sono escluse. Seleziona un numero per aprire gli iscritti corrispondenti.
+        </p>
+        <table className="w-full text-left text-sm">
+          <caption className="sr-only">Partecipano solo un giorno: dettaglio per data</caption>
+          <thead>
+            <tr className="border-b border-[var(--peace-border)]">
+              <th scope="col" className="py-3 pr-3 font-semibold">Giorno</th>
+              <th scope="col" className="py-3 text-right font-semibold">Solo questo giorno</th>
+            </tr>
+          </thead>
+          <tbody>
+            {days.map(({ day }) => {
+              const count = statistics.summary.singleDayCounts[day] ?? 0;
+              return (
+                <tr key={day} className="border-b border-[var(--peace-border)] last:border-0">
+                  <th scope="row" className="py-2 pr-3 font-medium">{formatLongDay(day)}</th>
+                  <td className="py-2 text-right">
+                    <CountLink count={count} href={participantHref({ singleAttendanceDay: day })} label={`Apri ${count} persone presenti solo ${formatLongDay(day)}`} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {days.length === 0 ? <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessun giorno di presenza configurato per l’evento.</p> : null}
+      </div>
+    </details>
   );
 }
 

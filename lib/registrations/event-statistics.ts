@@ -107,6 +107,7 @@ export type StatisticsDrilldownFilter = {
   assignedGroupKey?: string;
   assignedGroupLabel?: string;
   attendanceSlot?: string | "none";
+  singleAttendanceDay?: string;
   ageBand?: StatisticsAgeBand;
 };
 
@@ -117,6 +118,8 @@ export type EventStatisticsSummary = {
   ageBandCounts: Record<StatisticsAgeBand, number>;
   attendanceSlotCounts: Record<string, number>;
   withoutAttendance: number;
+  singleDayPeople: number;
+  singleDayCounts: Record<string, number>;
 };
 
 export type EventStatisticsSnapshot = {
@@ -154,6 +157,7 @@ export function serializeStatisticsDrilldown(
   if (filter.attendanceSlot) {
     params.set("attendance", filter.attendanceSlot);
   }
+  if (filter.singleAttendanceDay) params.set("singleDay", filter.singleAttendanceDay);
   if (filter.ageBand) {
     params.set("age", filter.ageBand);
   }
@@ -174,6 +178,14 @@ export function parseStatisticsDrilldown(
 
   const params = new URLSearchParams(value);
   const filter: StatisticsDrilldownFilter = {};
+  if (params.has("singleDay")) {
+    const day = params.get("singleDay")!;
+    const date = parseDateOnly(day);
+    if (params.getAll("singleDay").length !== 1 || !date || date.toISOString().slice(0, 10) !== day) {
+      throw new Error("Filtro statistiche non valido.");
+    }
+    filter.singleAttendanceDay = day;
+  }
   if (params.has("difficulty")) {
     const difficulty = ACCESSIBILITY_DIFFICULTIES.find(item => item.key === params.get("difficulty"));
     if (!difficulty || params.getAll("difficulty").length !== 1) throw new Error("Filtro statistiche non valido.");
@@ -221,6 +233,7 @@ export function filterStatisticsPeople(
   filter: StatisticsDrilldownFilter
 ): StatisticsPersonRow[] {
   return people.filter((person) => {
+    if (filter.singleAttendanceDay && singleAttendanceDay(person) !== filter.singleAttendanceDay) return false;
     if (filter.difficulty && (person.kind !== "participant" || !person.difficultyKeys?.includes(filter.difficulty))) return false;
     if (
       filter.personKind &&
@@ -266,6 +279,7 @@ export function describeStatisticsDrilldown(
   slots: StatisticsAttendanceSlot[]
 ): string {
   const parts: string[] = [];
+  if (filter.singleAttendanceDay) parts.push(`Partecipano solo il ${formatFilterDate(filter.singleAttendanceDay)}`);
   if (filter.difficulty) parts.push(`Difficoltà dichiarata: ${ACCESSIBILITY_DIFFICULTIES.find(item => item.key === filter.difficulty)!.label.it}`);
   if (filter.subtreeGroupKey) parts.push(`Gruppo o nodo e sottogruppi: ${filter.assignedGroupLabel ?? filter.subtreeGroupKey}`);
   if (filter.assignedGroupKey) parts.push(`Gruppo o nodo: ${filter.assignedGroupLabel ?? filter.assignedGroupKey}`);
@@ -347,6 +361,14 @@ export function buildEventStatisticsSnapshot({
   };
 }
 
+// The existing slot normalization handles duplicate and legacy full-day choices.
+// An unknown declaration cannot establish that someone attends only one day.
+function singleAttendanceDay(person: StatisticsPersonRow): string | null {
+  if (person.attendanceUnknown || person.attendanceSlotKeys.length === 0) return null;
+  const days = new Set(person.attendanceSlotKeys.map(key => key.split("__")[0]));
+  return days.size === 1 ? [...days][0] : null;
+}
+
 function buildEventStatisticsSummary(
   people: StatisticsPersonRow[]
 ): EventStatisticsSummary {
@@ -361,8 +383,15 @@ function buildEventStatisticsSummary(
   let registeredParticipants = 0;
   let accompanyingChildren = 0;
   let withoutAttendance = 0;
+  let singleDayPeople = 0;
+  const singleDayCounts: Record<string, number> = {};
 
   for (const person of people) {
+    const day = singleAttendanceDay(person);
+    if (day) {
+      singleDayPeople += 1;
+      singleDayCounts[day] = (singleDayCounts[day] ?? 0) + 1;
+    }
     if (person.kind === "child") {
       accompanyingChildren += 1;
     } else {
@@ -388,6 +417,8 @@ function buildEventStatisticsSummary(
     ageBandCounts,
     attendanceSlotCounts,
     withoutAttendance,
+    singleDayPeople,
+    singleDayCounts,
   };
 }
 

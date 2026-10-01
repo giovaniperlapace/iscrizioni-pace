@@ -20,7 +20,7 @@ const groups = Array.from({ length: 1001 }, (_, i) => ({
   node_type: i === 1000 ? "country" : i === 999 ? "city" : "group",
   parent_group_id: i === 1000 ? null : uuid(i === 999 ? 6000 : 5999),
 }));
-function fixture(failure?: { table: string; after: number }) {
+function fixture(failure?: { table: string; after: number }, singleDay = false) {
   const calls: Record<string, number> = {};
   const urls: URL[] = [];
   const client = createClient("https://database.example.test", "synthetic-key", {
@@ -50,7 +50,7 @@ function fixture(failure?: { table: string; after: number }) {
         assert.equal(url.searchParams.get("is_current"), "eq.true");
         rows = ids.filter(id => id !== uuid(1200)).map(id => ({ registration_id: id, group_id: uuid(5000) }));
       } else {
-        rows = ids.flatMap(id => Array.from({ length: 6 }, (_, i) => ({ registration_id: id, day: `2026-10-${25 + Math.floor(i / 2)}`, day_part: i % 2 ? "afternoon" : "morning", choice: "yes" })));
+        rows = ids.flatMap(id => Array.from({ length: singleDay && (id === uuid(0) || id === uuid(1200)) ? 2 : 6 }, (_, i) => ({ registration_id: id, day: `2026-10-${25 + Math.floor(i / 2)}`, day_part: i % 2 ? "afternoon" : "morning", choice: "yes" })));
       }
       const from = Number(url.searchParams.get("offset") ?? 0);
       const limit = Math.min(1000, Number(url.searchParams.get("limit") ?? 1000));
@@ -124,5 +124,16 @@ for (const report of ["territory", "attendance", "age", "registrations"] as cons
     }
     if (report !== "territory") assert.equal(result.people.length, 0, "no person-level payload for aggregate reports");
     await assert.rejects(loadEventStatisticsSnapshot(fixture({ table: "registrations", after: 1 }).client, eventId, dates, report), /read failed/);
+  });
+}
+
+for (const report of ["all", "territory", "attendance"] as const) {
+  test(`${report} preserves nonzero single-day counts beyond the first page without extra sources`, async () => {
+    const { client } = fixture(undefined, true);
+    const result = await loadEventStatisticsSnapshot(client, eventId, dates, report);
+    assert.equal(result.summary.singleDayPeople, 3);
+    assert.deepEqual(result.summary.singleDayCounts, { "2026-10-25": 3 });
+    if (report === "all") assert.equal(filterStatisticsPeople(result.people, { singleAttendanceDay: "2026-10-25" }).length, 3);
+    if (report === "attendance") assert.deepEqual(result.people, []);
   });
 }

@@ -119,8 +119,8 @@ export async function loadEventStatisticsSnapshot(
     summary: report === "age"
       ? { ...empty.summary, ageBandCounts: snapshot.summary.ageBandCounts }
       : report === "attendance"
-        ? { ...empty.summary, attendanceSlotCounts: snapshot.summary.attendanceSlotCounts, withoutAttendance: snapshot.summary.withoutAttendance }
-        : { ...empty.summary, totalPeople: snapshot.summary.totalPeople, registeredParticipants: snapshot.summary.registeredParticipants, accompanyingChildren: snapshot.summary.accompanyingChildren },
+        ? { ...empty.summary, attendanceSlotCounts: snapshot.summary.attendanceSlotCounts, withoutAttendance: snapshot.summary.withoutAttendance, singleDayPeople: snapshot.summary.singleDayPeople, singleDayCounts: snapshot.summary.singleDayCounts }
+        : { ...empty.summary, totalPeople: snapshot.summary.totalPeople, registeredParticipants: snapshot.summary.registeredParticipants, accompanyingChildren: snapshot.summary.accompanyingChildren, singleDayPeople: snapshot.summary.singleDayPeople, singleDayCounts: snapshot.summary.singleDayCounts },
     attendanceSlots: needsAttendance ? snapshot.attendanceSlots : [],
     people: report === "territory" ? snapshot.people : [],
   };
