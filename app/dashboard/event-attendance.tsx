@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { ReceptionOperationalReport } from "./reception-operational-report";
 import type { AttendanceSnapshot } from "@/lib/reception/attendance.server";
 
 type AttendanceState = { data: AttendanceSnapshot | null; error: boolean };
@@ -86,8 +87,9 @@ function AttendanceTotals() {
   </div>;
 }
 export function EventAttendanceReport({ eventId }: { eventId: string | null }) {
-  return <article className="surface-card p-5"><h2 className="text-xl font-semibold">Ingressi effettivi all’evento</h2>
+  return <article className="surface-card min-w-0 p-5"><h2 className="text-xl font-semibold">Ingressi effettivi all’evento</h2>
     <p className="mt-2 text-sm text-[var(--peace-muted)]">Totali dell’intero evento: persone con ingresso registrato all’accoglienza, al netto degli annullamenti. I giorni previsti e le prenotazioni ai panel restano separati. Non indica quante persone sono ancora sul posto.</p>
     <EventAttendanceProvider key={eventId} eventId={eventId} summaryOnly><AttendanceTotals /></EventAttendanceProvider>
+    <ReceptionOperationalReport eventId={eventId} />
   </article>;
 }

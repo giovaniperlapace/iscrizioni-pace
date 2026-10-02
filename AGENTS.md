@@ -4,6 +4,55 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Flusso QR consolidato — da preservare, 2026-09-30
+
+Questa sezione è il riferimento funzionale corrente e prevale sulle descrizioni
+storiche dello scanner riportate sotto. L’utente ha confermato che il flusso
+sembra funzionare, con alcune rifiniture ancora da individuare. Preservare queste
+scelte durante bugfix, refactoring, merge da main e sviluppo delle prossime
+milestone; non sostituirle con versioni precedenti né riprogettare il flusso senza
+una nuova richiesta esplicita dell’utente. Aggiornare questa sezione se l’utente
+approva successive variazioni, mantenendo chiaro ciò che viene superato.
+
+- Uso principale da telefono. Fotocamera predefinita con avvio esplicito e
+  posteriore preferita; alternativa tramite codice partecipante di quattro
+  caratteri. Anteprima verticale 3:4, immagine intera e guida soltanto visiva.
+- Incarico ingresso evento stabilito prima della scansione e conservato tra
+  letture. Singolo assente: ingresso automatico. Famiglie: confermare i componenti
+  realmente presenti; scuole: confermare le quantità effettive. Mai presumere
+  presenti tutti i componenti o tutti i prenotati.
+- QR già presente: nessuna nuova scrittura automatica. Famiglie parzialmente
+  presenti: possibilità di registrare nuovi arrivi senza alterare gli ingressi
+  precedenti. Stesso QR riabilitato solo dopo almeno un secondo continuativo
+  senza QR; fotogrammi illeggibili isolati e riavvio camera non bastano.
+- Attesa sul video senza dialog durante la richiesta; stream mantenuto attivo,
+  nuove operazioni bloccate. Esito sul video per 7 secondi, con azzurro per attesa,
+  verde per successo/già presente, rosso per errore e ambra per conflitto.
+  Riepilogo persistente sotto il video, senza duplicare il messaggio altrove.
+- Dialog persistente per selezione, modifica, esito incerto e sessione bloccata.
+  Nessuna scadenza automatica delle decisioni. Esiti incerti: stesso comando e
+  UUID per retry, nessuna scansione successiva; nessun successo anticipato.
+- Unica scheda **Modifica presenze**, dal riepilogo con ingresso presente o dalle
+  **Ultime 15 letture**. Non ripristinare il percorso separato Correzioni e
+  annullamenti, il selettore di operazione o l’obbligo di nuova scansione/codice.
+- Cronologia delle ultime 15 iscrizioni valide distinta per iscrizione, solo
+  nella memoria della pagina sul dispositivo: nessuna lista condivisa o
+  persistenza dopo reload. Apertura modifica: rilettura server automatica, senza
+  ingresso automatico. Non usare i dati storici della lista come stato corrente.
+- Modifica famiglia: presenti preselezionati, deselezione annulla i relativi
+  ingressi; tutti deselezionati annulla tutti gli ingressi correnti. Scuole:
+  quantità precompilate e annullamento totale esplicito. Conferma obbligatoria;
+  salvataggio o chiusura riportano agli ingressi conservando la modalità di lettura.
+- Preservare controlli server/DB, revisioni concorrenti, idempotenza, revoche,
+  scope evento e storia delle presenze dei minori. Gli incarichi panel/sala
+  futuri restano separati: una scansione panel non registra l’ingresso evento.
+
+Il riscontro positivo dell’utente non certifica il completamento di P11/P12/P13
+né un collaudo hardware formalizzato. Restano da registrare le rifiniture emerse
+e verificare il flusso autenticato su dispositivi reali, inclusa la seconda
+postazione che osserva presenze e statistiche. Base implementata: commit
+`387825a` sul branch `codex/panel-p0-p10`; dettagli e test nella sezione seguente.
+
 ## Modifica presenze e ultime letture — 2026-09-30
 
 - Sostituito il percorso separato Correzioni e annullamenti con una scheda
@@ -103,6 +152,49 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   disponibili in Panel; apertura/chiusura, filtri e ritorno dalle azioni
   conservano il menu di provenienza. I due accessi condividono gli stessi dati.
 - Permessi e scope evento invariati; nessuna migration o modifica RLS.
+
+## Pubblicazione codice report P13 — 2026-10-02
+
+- L’utente ha richiesto commit/push del lavoro P13 su `codex/panel-p0-p10`
+  e aggiornamento di questa memoria. Inclusi report, migration versionata,
+  test, piano e nota del flusso QR consolidato; conservati i requisiti scanner.
+- La richiesta riguarda il codice: `20260930180000_reception_operational_report.sql`
+  resta da applicare al database staging con richiesta esplicita. Il push
+  attiva la preview applicativa; fino all’applicazione SQL il nuovo report
+  mostra indisponibilità. I totali presenze preesistenti restano indipendenti.
+- Nessun merge main, modifica production, invio email o incarico panel/sala
+  implementato. La proposta degli incarichi resta da confermare e P13 resta
+  aperta per quella tranche e per il collaudo autenticato/hardware.
+- Fetch del 2 ottobre: panel/upstream allineati a `387825a`; `origin/main`
+  a `01e0a82`, senza integrazione in questa pubblicazione del codice.
+
+## P13 — report operativo accoglienza — 2026-09-30
+
+- Seconda tranche locale sul branch panel: Statistiche mostra previsti/ingressi,
+  filtro giorno e mattina/pomeriggio Europe/Rome, ingressi validi per ora e
+  contatori audit per richieste duplicate, retry, correzioni e annullamenti.
+  Non dedurre permanenza/no-show; le semplici riletture `inspect` e il punto
+  fisico di accoglienza non sono misurabili con lo storico attuale.
+- Nuova RPC aggregata `reception_operational_report`, SECURITY DEFINER con
+  `search_path` vuoto e controllo reale `auth.uid()`/ruolo/evento, invocabile
+  da authenticated: solo admin globale e manager/viewer dell’evento. Nessuna
+  esposizione di audit grezzo o dati nominali, nessun ampliamento delle RLS.
+- Endpoint `/dashboard/attendance/report`, client autenticato senza service
+  role, risposta private/no-store e validazione stretta. Polling 10 secondi,
+  timeout 15, stop a pagina nascosta/revoca e dati rimossi su errore o cambio
+  filtro; nessun refresh dei form. Scanner P11/P12 invariato.
+- Migration `20260930180000_reception_operational_report.sql` solo locale,
+  da applicare allo staging prima della pubblicazione, su richiesta esplicita.
+  Commit/push richiesti successivamente il 2 ottobre; database remoto invariato.
+  Piano e proposta
+  incarichi da revisionare in `docs/panel-p13-operational-report.md`; gli
+  accessi panel/sala e il collaudo hardware restano aperti.
+- Verificati 361 test, lint, typecheck, build staging, PostgreSQL 17 temporaneo
+  (inclusi revoca, fascia oraria e deduplica scuole fra panel) e browser
+  sintetico desktop/mobile; nessun errore runtime.
+- Fetch iniziale: panel/upstream a `387825a`, main a `dff2159`; nessun
+  fast-forward necessario. Modifica preesistente al flusso QR consolidato
+  conservata. Merge main ancora destinato all’integrazione dedicata.
 
 ## P13 — visualizzazione ingressi evento — 2026-09-30
 

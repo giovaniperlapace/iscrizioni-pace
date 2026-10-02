@@ -775,6 +775,18 @@ Non chiude P13: restano collaudo autenticato tra scanner e seconda postazione,
 report operativo avanzato e accessi panel/incarichi sala descritti sotto.
 
 
+Seconda tranche locale del 2026-09-30: report operativo con previsti e ingressi,
+filtri giorno/mattina/pomeriggio Europe/Rome, distribuzione oraria e contatori
+aggregati di duplicati nelle richieste, retry, correzioni e annullamenti.
+I limiti dell’audit storico e l’assenza del dato postazione sono espliciti.
+Nuova RPC aggregata autenticata nella migration locale
+`20260930180000_reception_operational_report.sql`, non applicata in remoto.
+Contratto e proposta concreta degli incarichi ancora da confermare in
+`docs/panel-p13-operational-report.md`. Restano accessi panel/sala e collaudo
+funzionale; P13 non è dichiarata conclusa. Il 2 ottobre l’utente ha richiesto
+commit/push del codice e aggiornamento AGENTS; la migration staging resta
+da applicare su richiesta esplicita prima di attivare il report.
+
 Scopo: collegare le presenze effettive a statistiche e agli accessi dei singoli
 panel. Il requisito di separazione degli accessi è stato espresso nella
 revisione del 2026-09-12; il dettaglio degli incarichi va revisionato nella

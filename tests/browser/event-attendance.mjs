@@ -15,9 +15,21 @@ try {
   wait('document.body.innerText.includes("Ingresso non registrato")');
   ab('find', 'role', 'button', 'click', '--name', 'Mostra figli accompagnati', '--exact'); ab('snapshot', '-i');
   ab('find', 'role', 'button', 'click', '--name', 'entered', '--exact'); ab('snapshot', '-i');
-  wait('document.querySelector("tbody").innerText.includes("Ingresso registrato")');
-  check('document.querySelector("tbody li").innerText.includes("Ingresso non registrato")', 'adult entry does not imply child entry');
+  wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")');
+  check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Ingresso non registrato")', 'adult entry does not imply child entry');
   check('document.querySelector("article").innerText.includes("13")', 'school quantities included in total people');
+  const report = 'section[aria-label="Report operativo accoglienza"]';
+  wait(`document.querySelector('${report}').innerText.includes("Aggiornato alle")`);
+  ab('fill',`${report} input[type=date]`,'2026-09-30'); ab('snapshot','-i');
+  ab('select',`${report} select`,'morning'); ab('snapshot','-i');
+  wait(`document.querySelector('${report}').innerText.includes("Aggiornato alle")`);
+  check(`document.querySelector('${report} select').value === "morning"`, 'report retains selected time filter');
+  check(`document.querySelector('${report}').innerText.includes("Totale persone") && document.querySelector('${report}').innerText.includes("26")`, 'report separates expected and actual people');
+  ab('click',`${report} summary`); ab('snapshot','-i');
+  check(`document.querySelector('${report}').innerText.includes("2026-09-30 12:00")`, 'hourly report displays Rome labels');
+  ab('find','role','button','click','--name','Intero evento','--exact'); ab('snapshot','-i');
+  wait(`document.querySelector('${report} select').disabled`);
+
   for (const view of ['iscritti', 'panel']) {
     const selector = `[data-school-view="${view}"] tbody`;
     wait(`document.querySelector('${selector}').innerText.includes("10 studenti · 2 accompagnatori presenti")`);
@@ -35,12 +47,13 @@ try {
   check('document.querySelector("dialog input[name=firstName]").value === "Modifica conservata"', 'automatic cancellation refresh preserves unsaved form');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"error"}))');
   wait('document.querySelector("dialog").innerText.includes("Presenza non disponibile")');
-  check('!document.querySelector("tbody").innerText.includes("Ingresso non registrato")', 'read failure is not displayed as absence');
+  check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso non registrato")', 'read failure is not displayed as absence');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"entered"}))');
   wait('document.querySelector("dialog").innerText.includes("Ingresso registrato")');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"forbidden"}))');
   wait('document.querySelector("dialog").innerText.includes("Presenza non disponibile")');
-  check('!document.querySelector("tbody").innerText.includes("Ingresso registrato")', 'revoked access clears previous presence data');
+  check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")', 'revoked access clears previous presence data');
+  check(`document.querySelector('${report}').innerText.includes("Report non disponibile") && !document.querySelector('${report}').innerText.includes("26")`, 'report revocation clears aggregates');
   for (const view of ['iscritti', 'panel']) {
     check(`document.querySelector('[data-school-view="${view}"] tbody').innerText.includes("Presenza non disponibile")`, `school presence clears on revoked access in ${view}`);
   }

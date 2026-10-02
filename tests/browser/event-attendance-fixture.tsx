@@ -35,6 +35,16 @@ export default function Fixture() {
       if (!String(input).startsWith("/dashboard/attendance")) return original(input, options);
       if (mode === "error" || mode === "forbidden") return new Response("{}", { status: mode === "forbidden" ? 403 : 503 });
       const entered = mode === "entered";
+      if (String(input).startsWith("/dashboard/attendance/report")) {
+        const params = new URL(String(input),window.location.origin).searchParams;
+        const day = params.get("day") || null, part = params.get("part") ?? "all";
+        return Response.json({ eventId,updatedAt:new Date().toISOString(),day,part,
+          expected:{ adults:2,children:1,students:20,companions:3,schoolBookings:1 },
+          arrivals:{ adults:entered ? 1 : 0,children:0,students:entered ? 10 : 0,companions:entered ? 2 : 0,schoolBookings:entered ? 1 : 0 },
+          operations:{ duplicateRequests:2,retries:1,corrections:3,cancellations:4 },
+          hours:entered ? [{hour:"2026-09-30 12:00",people:13}] : [],
+        });
+      }
       return Response.json({ eventId, updatedAt: new Date().toISOString(), schoolEntries: entered ? { school: { checkedInAt: "2026-09-30T10:00:00Z", students: 10, companions: 2 } } : {}, entries: entered ? { "registration:adult": "2026-09-30T10:00:00Z" } : {}, totals: { adults: entered ? 1 : 0, children: 0, students: entered ? 10 : 0, companions: entered ? 2 : 0, schoolBookings: entered ? 1 : 0, people: entered ? 13 : 0 } });
     };
     let disposed = false;
@@ -45,10 +55,10 @@ export default function Fixture() {
     <h1>Collaudo ingressi evento</h1>
     <div className="flex flex-wrap gap-3">{["entered", "absent", "error", "forbidden"].map(mode => <button key={mode} className="btn-secondary p-3" onClick={() => { window.dispatchEvent(new CustomEvent("fixture-attendance", { detail: mode })); setVersion(n => n + 1); }}>{mode}</button>)}<button className="btn-secondary p-3" onClick={() => setSelected(true)}>Apri scheda</button></div>
     <p data-version={version}>Cambio sul server simulato: {version}</p>
-    {ready && <><EventAttendanceReport eventId={eventId} /><OperationsParticipantsTable
+    {ready && <><EventAttendanceReport eventId={eventId} /><div className="min-w-0" data-participant-view><OperationsParticipantsTable
       snapshot={{ participants: [row], allParticipants: [row], groupOptions: [], operationalTags: [], eventServices: [], filters: parseOperationsDashboardFilters({}) }}
       selectedParticipant={selected ? row : null} editableEventIds={[eventId]} dashboard="admin" navMode="full" canDeleteRegistration={false} operatorId="fixture" eventId={eventId} eventStartsOn="2026-10-25"
-    />{(["iscritti", "panel"] as const).map(sourceSection => <div key={sourceSection} data-school-view={sourceSection}>
+    /></div>{(["iscritti", "panel"] as const).map(sourceSection => <div key={sourceSection} data-school-view={sourceSection}>
       <button className="btn-secondary p-3" onClick={() => { setSelected(false); setSchoolSelected(true); }}>Apri scheda scuola {sourceSection}</button>
       <SchoolBookingsSection sourceSection={sourceSection} dashboard="manager" navMode="full" event={{ id: eventId, title: "Evento di prova" }} bookings={[school]} panelOptions={[]} selectedBooking={schoolSelected && sourceSection === "iscritti" ? school : null} isCreating={false} canManage filters={{ query: "", status: "all", panelId: "all" }} />
     </div>)}</>}
