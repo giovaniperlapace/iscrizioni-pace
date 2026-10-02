@@ -51,6 +51,7 @@ function copy(
       attendance: "",
       accessibility: "",
       nationality: "",
+      association: "",
       sex: "",
     },
     visibleColumns,

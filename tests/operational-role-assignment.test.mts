@@ -144,3 +144,22 @@ test("legacy selector changes only add roles and ignore submitted personal ident
   assert.deepEqual(await action(f), { status: "success" });
   assert.equal(calls[0].get("existingUserId"), "target"); assert.equal(calls[0].has("firstName"), false);
 });
+
+test("candidate search includes scoped assisted participants and aliases without duplicating linked accounts", async () => {
+  const code = readFileSync(new URL("../lib/operational-users/role-candidates.ts", import.meta.url), "utf8");
+  const js = ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+  const candidateModule = { exports: {} as { loadRoleCandidates: (db: unknown, events: string[]) => Promise<Array<{ id: string; searchText?: string }>> } };
+  new Function("exports", js)(candidateModule.exports);
+  const scopes: unknown[] = [];
+  const linked = { id: "linked", auth_user_id: "account", first_name: "José", last_name: "Rossi", public_code: "AB12", participant_contacts: [] };
+  const assisted = { id: "assisted", auth_user_id: null, first_name: "Anna", last_name: "Verdi", public_code: "CD34", participant_contacts: [{ email: "anna@example.test", is_primary: true }] };
+  const db = { from(table: string) { return {
+    select() { return this; }, order() { return this; }, eq(key: string, value: string) { scopes.push([key, value]); return this; }, is(key: string, value: unknown) { scopes.push([key, value]); return this; },
+    range() { return { error: null, data: table === "profiles" ? [{ id: "account", full_name: "Account name", email: "jose@example.test" }] : [{ participants: linked },{ participants: assisted },{ participants: assisted }] }; },
+  }; } };
+  const rows = await candidateModule.exports.loadRoleCandidates(db, ["event"]);
+  assert.equal(rows.length, 2);
+  assert.match(rows.find(row => row.id === "account")!.searchText!, /José Rossi AB12/);
+  assert.equal(rows.find(row => row.id === "participant:assisted")!.searchText, "CD34");
+  assert.deepEqual(scopes, [["event_id", "event"], ["deleted_at", null]]);
+});

@@ -428,8 +428,8 @@ export function EmailCampaignComposer({
 
       {error ? <p className="status-error">{error}</p> : null}
       {notice ? noticeDismissible
-        ? <SuccessMessage key={noticeVersion} className="status-success">{notice}</SuccessMessage>
-        : <p className="status-success">{notice}</p> : null}
+        ? <SuccessMessage key={noticeVersion} attention className="status-success">{notice}</SuccessMessage>
+        : <SuccessMessage key={notice} attention persistent className="status-success">{notice}</SuccessMessage> : null}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(17rem,1fr)]">
         <section className="surface-card grid gap-5 p-5 sm:p-6">

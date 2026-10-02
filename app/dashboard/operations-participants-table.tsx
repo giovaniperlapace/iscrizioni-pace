@@ -1,5 +1,7 @@
 "use client";
 
+import { nationalityName } from "@/lib/registrations/nationality-names";
+import { OperationalAssociationEditor } from "@/app/dashboard/operational-association-editor";
 import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
 import { useInternalSexColumn } from "./use-internal-sex-column";
 import { ParticipantEmailCell } from "@/components/participant-email-cell";
@@ -198,8 +200,10 @@ export function OperationsParticipantsTable({
     switch (column) {
       case "sex":
         return row.deletedAt ? null : sexText(row.registrationId);
+      case "association":
+        return row.association ?? null;
       case "nationality":
-        return row.nationality ?? null;
+        return nationalityName(row.nationality, locale);
       case "accessibility":
         return row.accessibility ?? "—";
       case "attendance":
@@ -973,6 +977,9 @@ export function OperationsParticipantsTable({
             </fieldset>
           </ReliableForm>
           {editableEventIds.includes(selected.eventId) && !selected.deletedAt ? <OperationalDemographicsEditor key={`demographics:${selected.registrationId}`} registrationId={selected.registrationId} locale={locale} /> : null}
+          {editableEventIds.includes(selected.eventId) && !selected.deletedAt
+            ? <OperationalAssociationEditor key={`association:${selected.registrationId}`} registrationId={selected.registrationId} />
+            : <div className="grid gap-1 text-sm"><span className="font-semibold">Associazione / organizzazione</span><span>{selected.association || "—"}</span></div>}
           <section className="grid gap-3">
             <h4 className="font-semibold">Gruppo, servizio e tag</h4>
             {(["group", "service", "tags"] as const).map((field) => (

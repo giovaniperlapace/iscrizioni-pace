@@ -1,5 +1,86 @@
 # AGENTS.md
 
+## Pubblicazione correzioni dashboard e associazione — 2026-10-02
+
+- L’utente ha richiesto commit e push di tutte le modifiche locali su `main`:
+  tag riservati, ruoli, nazionalità, conferme email e associazione dichiarata,
+  inclusi test, documentazione e le due migration versionate.
+- Verifiche applicative già superate sulla versione pubblicata: 635 test,
+  lint, typecheck e build production; verifiche SQL locali e browser sintetico
+  descritte sotto. Fetch prima del commit: `main` e `origin/main` a `01e0a82`.
+- La pubblicazione del codice non applica le migration
+  `20261002120000_operational_tags_managers_only.sql` e
+  `20261002140000_operational_association.sql`: restano da eseguire sul database
+  dell’ambiente esplicitamente concordato. Fino ad allora il salvataggio
+  dell’associazione non è disponibile e la restrizione DB dei tag è incompleta.
+  Nessuna modifica a database remoti o invio email in questa pubblicazione.
+
+## Associazione dichiarata modificabile e colonna partecipanti — 2026-10-02
+
+- Admin e manager dell’evento possono correggere o svuotare “Associazione /
+  organizzazione” nella scheda dell’iscritto attivo. Si modifica il campo
+  canonico `answers.externalGroupAssociation` del questionario più recente;
+  le altre risposte, inclusa la partecipazione con Sant’Egidio, e le assegnazioni
+  di gruppo restano preservate. Se manca il questionario viene creato un record
+  minimo solo quando si aggiunge un valore. Testo libero, massimo 200 caratteri.
+- Colonna facoltativa nella tabella Admin/Manager e nell’export delle colonne
+  selezionate; Viewer in sola lettura, capogruppo escluso. Letture paginate per
+  ID già autorizzati, proiezione del solo campo; un valore vuoto nel questionario
+  più recente non riporta in vita dichiarazioni precedenti. Le statistiche
+  delle associazioni leggono già lo stesso dato canonico.
+- Migration locale `20261002140000_operational_association.sql`: RPC
+  `get_operational_association` / `update_operational_association`, invocabili
+  solo da service_role con attore derivato dalla sessione. Controllo DB di ruolo,
+  evento corrente e iscrizione attiva, lock, confronto snapshot e audit atomico
+  senza riportare il testo dell’associazione nei log. Conflitto o errore conserva
+  il testo del form. Nessuna migration remota applicata: applicare all’ambiente
+  concordato prima del rilascio. Nessun commit/push in questa modifica locale.
+- Verifiche: 635 test applicativi, lint/typecheck e build production, PostgreSQL 17 temporaneo
+  (scope, autorizzazioni, conflitti, cancellazione, audit/rollback), browser
+  sintetico desktop/mobile e export XLSX. Main e origin/main allineati nei
+  commit a `01e0a82` al fetch iniziale; conservate le altre modifiche locali.
+
+## Tag riservati, ricerca ruoli, nazionalità e conferme email — 2026-10-02
+
+- Lavoro locale su `main`, riallineato con pull fast-forward a `origin/main`
+  `01e0a82` prima delle modifiche; fetch finale: zero commit divergenti.
+  Nessun commit/push, rilascio o migration remota richiesti. Diagnosi remota
+  in sola lettura; branch panel conservato separatamente.
+- I capigruppo non vedono più catalogo, filtro, colonna o modulo dei tag.
+  Il loader condiviso con l’export non legge i tag; preferenze/URL storici non
+  possono reintrodurre la colonna. L’action verifica il ruolo effettivo:
+  solo admin globale o manager dell’evento può assegnarli.
+- Migration locale `20261002120000_operational_tags_managers_only.sql`, da
+  applicare all’ambiente concordato prima del rilascio: revoca lettura e
+  assegnazione ai capigruppo anche via API/RLS. Manager viewer conserva sola
+  lettura; admin/manager gestione. Nessuna cancellazione dei tag esistenti.
+  Questa scelta supera le precedenti descrizioni della Milestone 14.2.
+- Ricerca ruoli: nomi in qualsiasi ordine, accenti, email e codice; include
+  iscritti non eliminati dell’evento autorizzato con email anche senza profilo
+  Auth. Account collegati deduplicati per ID, con nome del partecipante tra
+  gli alias di ricerca. Assegnazione rilegge scope e identità sul server,
+  riusa/crea l’account e non rinomina i profili esistenti. Nessuna email in
+  fase di ricerca; inviti solo secondo la scelta nel modulo.
+- Elenchi ruoli raggruppati per ID Auth, mai per email; apertura conferma
+  rimozione porta focus e scroll ai pulsanti e chiude l’aggiunta aperta.
+  Rimane il divieto di rimozione del proprio account, esplicitato nel testo
+  e nel titolo del pulsante. L’utente segnala “non cliccabile”: resta da
+  confermare se riguarda sé stesso o un’altra persona; nelle prove sintetiche
+  sugli altri account rimozione, errore, retry e ultimo ruolo funzionano.
+- Nazionalità presentate con il nome del paese nella lingua corrente, inclusi
+  i valori storici inglesi riconosciuti; valori sconosciuti preservati. Nessuna
+  riscrittura dei dati esistenti. In modifica, focus = ricerca vuota con elenco
+  completo, valore salvato conservato finché non si scrive o seleziona.
+  Localizzate anche tabelle, export e scheda personale.
+- Conferma della presa in carico delle campagne email: scroll automatico al
+  messaggio, annuncio accessibile e chiusura esplicita. Indica email in coda,
+  senza anticipare l’avvenuta consegna. Salvataggi modelli visibili per 12
+  secondi; gli altri messaggi mantengono il comportamento precedente.
+- Verifiche locali: 632 test applicativi, lint/typecheck e build superati; PostgreSQL 17
+  temporaneo per RLS tag e rimozione ruoli; browser desktop/mobile con dati
+  sintetici e sette lingue. Nessun invio email o modifica di persone reali.
+
+
 ## Esportazioni presenze per gruppo — 2026-10-01
 
 - Sezione Esportazioni distinta dalle statistiche, condivisa Admin/Manager e

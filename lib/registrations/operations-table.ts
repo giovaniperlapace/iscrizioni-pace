@@ -4,6 +4,7 @@ export const PARTICIPANT_COLUMNS = {
   phone: "Telefono",
   country: "Paese",
   nationality: "Nazionalità",
+  association: "Associazione / organizzazione",
   sex: "Sesso",
   city: "Città",
   age: "Età",

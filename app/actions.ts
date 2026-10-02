@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveRoleParticipant } from "@/lib/operational-users/role-participant";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
 import { canCreateOperationsRegistration } from "@/lib/registrations/manual-registration-access";
 
@@ -1231,29 +1232,19 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     redirect("/login");
   }
 
+  const canUpdate = auth.eventRoles.some(
+    (role) => role.role === "admin" || (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canUpdate) {
+    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
+  }
+
   const serviceSupabase = createSupabaseServiceClient();
   const { data: activeRegistration, error: activeRegistrationError } = await serviceSupabase
     .from("registrations").select("id").eq("id", registrationId ?? "")
     .eq("participant_id", participantId).eq("event_id", eventId).is("deleted_at", null).maybeSingle();
   if (activeRegistrationError || !activeRegistration) return formFailure([{ field: null, code: "failed" }]);
-
-  const canUpdate = isCapogruppo
-    ? await canGroupLeaderTagParticipant(
-        serviceSupabase,
-        auth.user.id,
-        participantId,
-        eventId,
-        assignmentId
-      )
-    : auth.eventRoles.some(
-        (role) =>
-          role.role === "admin" ||
-          (role.role === "manager" && role.eventId === eventId)
-      );
-
-  if (!canUpdate) {
-    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
-  }
 
   const { data: tags } = await loadAllRows((from, to) => serviceSupabase
     .from("operational_tags")
@@ -2537,7 +2528,13 @@ export async function assignOperationalUserRole(formData: FormData) {
   }
 
   let userId: string | null;
-  if (mode === "existing") {
+  if (mode === "existing" && existingUserId?.startsWith("participant:")) {
+    const profile = await resolveRoleParticipant(serviceSupabase, existingUserId.slice("participant:".length), roleEventId ?? currentEventId ?? "");
+    if (!profile) return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
+    userId = profile.id;
+    email = normalizeEmail(profile.email);
+    fullName = profile.full_name || email;
+  } else if (mode === "existing") {
     // Resolve the selected account again on the server. Submitted identity
     // fields must never rename or relink an existing user's personal record.
     const { data: profile, error } = await serviceSupabase.from("profiles")

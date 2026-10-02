@@ -28,6 +28,7 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
+  const confirmationRef = useRef<HTMLFormElement>(null);
   const addButton = useRef<HTMLButtonElement>(null);
   const busy = useRef(false);
   const titleId = useId();
@@ -45,6 +46,11 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
     node.showModal();
     return () => { node.close(); trigger?.focus({ preventScroll: true }); };
   }, []);
+  useEffect(() => {
+    if (!confirmation) return;
+    confirmationRef.current?.scrollIntoView({ block: "nearest" });
+    confirmationRef.current?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+  }, [confirmation]);
   const close = () => {
     if (busy.current) return;
     const url = new URL(window.location.href);
@@ -105,22 +111,22 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
       </header>
       <div className="my-5"><p className="font-semibold">{person.fullName || person.email}</p><p className="break-words text-sm text-[var(--peace-muted)]">{person.email}</p></div>
       <h3 className="font-semibold">Ruoli assegnati <span className="ml-2 text-sm text-[var(--peace-muted)]">{active.size}</span></h3>
-      {own ? <p className="mt-2 text-sm text-[var(--peace-muted)]">Non puoi rimuovere i tuoi ruoli.</p> : null}
+      {own ? <p className="mt-2 text-sm text-[var(--peace-muted)]">Stai gestendo il tuo account. Per rimuovere uno dei tuoi ruoli deve intervenire un altro manager o amministratore.</p> : null}
       {active.size === 0 ? <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessun ruolo assegnato. Puoi aggiungerne uno qui sotto.</p> : null}
       <ul className="mt-3 grid gap-3">{[...active].map(([key, a]) => <li key={key} className="rounded-md border border-[var(--peace-border)] p-3">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="min-w-0 w-full sm:w-auto sm:flex-1"><p className="text-sm font-semibold">{labels[a.role] ?? a.role}{a.role === "capogruppo" ? <span className="ml-2 font-normal text-[var(--peace-muted)]">{a.isPrimaryGroupLeader ? "Principale" : "Secondario"}</span> : null}</p>
             <p className="mt-1 break-words text-sm text-[var(--peace-muted)]">{[a.eventTitle, a.groupName].filter(Boolean).join(" · ") || "Tutti gli eventi"}</p></div>
-          {<div className="flex flex-wrap gap-2">{a.role === "capogruppo" ? <button type="button" disabled={!!pending} className={button} onClick={() => { setEditing(a); setAdding(true); setFeedback(null); }}>Modifica incarico</button> : null}<button type="button" className={`${button} text-[#8a3323]`} disabled={!!pending || own} onClick={() => { setConfirmation(key); setFeedback(null); }}>Rimuovi</button></div>}
+          {<div className="flex flex-wrap gap-2">{a.role === "capogruppo" ? <button type="button" disabled={!!pending} className={button} onClick={() => { setConfirmation(null); setEditing(a); setAdding(true); setFeedback(null); }}>Modifica incarico</button> : null}<button type="button" className={`${button} text-[#8a3323]`} title={own ? "Il tuo ruolo deve essere rimosso da un altro manager o amministratore" : "Rimuovi questo incarico"} disabled={!!pending || own} onClick={() => { setAdding(false); setEditing(null); setConfirmation(key); setFeedback(null); }}>Rimuovi</button></div>}
         </div>
-        {confirmation === key ? <form className="mt-3 border-t border-[var(--peace-border)] pt-3" aria-busy={pending === key} onSubmit={e => { e.preventDefault(); void run(new FormData(e.currentTarget), a); }}>
+        {confirmation === key ? <form ref={confirmationRef} className="mt-3 border-t border-[var(--peace-border)] pt-3" aria-busy={pending === key} onSubmit={e => { e.preventDefault(); void run(new FormData(e.currentTarget), a); }}>
           <input type="hidden" name="userId" value={person.userId} /><input type="hidden" name="role" value={a.role} /><input type="hidden" name="eventId" value={a.eventId ?? ""} /><input type="hidden" name="groupId" value={a.groupId ?? ""} /><input type="hidden" name="confirmRemoval" value="on" />
           <p className="text-sm">Rimuovere questo incarico? Gli altri ruoli restano invariati.</p>{notice(key)}
-          <div className="mt-3 flex flex-wrap justify-end gap-2"><button autoFocus type="button" className={button} disabled={!!pending} onClick={() => setConfirmation(null)}>Mantieni ruolo</button><ProgressButton type="submit" aria-busy={pending === key} progressError={feedback?.key === key && feedback.error} disabled={!!pending} className={`${button} border-[#8a3323] text-[#8a3323]`}>{pending === key ? "Rimozione…" : "Conferma rimozione"}</ProgressButton></div>
+          <div className="mt-3 flex flex-wrap justify-end gap-2"><button type="button" className={button} disabled={!!pending} onClick={() => setConfirmation(null)}>Mantieni ruolo</button><ProgressButton type="submit" aria-busy={pending === key} progressError={feedback?.key === key && feedback.error} disabled={!!pending} className={`${button} border-[#8a3323] text-[#8a3323]`}>{pending === key ? "Rimozione…" : "Conferma rimozione"}</ProgressButton></div>
         </form> : null}
       </li>)}</ul>
       <section className="mt-5 border-t border-[var(--peace-border)] pt-5">
-        <button ref={addButton} type="button" className={button} disabled={!!pending} aria-expanded={adding} onClick={() => { setEditing(null); setAdding(!adding); setFeedback(null); }}><Plus size={17} aria-hidden />Aggiungi ruolo</button>
+        <button ref={addButton} type="button" className={button} disabled={!!pending} aria-expanded={adding} onClick={() => { setConfirmation(null); setEditing(null); setAdding(!adding); setFeedback(null); }}><Plus size={17} aria-hidden />Aggiungi ruolo</button>
         {adding ? <form key={editing ? keyOf(editing) : "add"} className="mt-4 grid gap-3" aria-busy={pending === "add"} onSubmit={e => { e.preventDefault(); void run(new FormData(e.currentTarget)); }}>
           <input type="hidden" name="mode" value="existing" /><input type="hidden" name="existingUserId" value={person.userId} />
           <fieldset disabled={!!pending}>

@@ -214,7 +214,7 @@ test("filters and stable locale sorting agree for table/export; tampered group y
       "columns=tags,name,phone,password&sort=name&direction=asc",
     ),
   );
-  assert.deepEqual(prefs.columns, ["name", "tags", "phone"]);
+  assert.deepEqual(prefs.columns, ["name", "phone"]);
   assert.deepEqual(
     sortLeaderRows(rows, prefs, "2026-10-25", "it").map((r) => r.id),
     ["a", "b"],
@@ -234,7 +234,7 @@ test("filters and stable locale sorting agree for table/export; tampered group y
   );
   assert.deepEqual(
     filterLeaderRows(rows, new URLSearchParams("tag=none")).map((r) => r.id),
-    ["b"],
+    ["b", "a"],
   );
   assert.equal(leaderCellText(rows[0], "age", "2026-10-25", "it"), "25");
 });

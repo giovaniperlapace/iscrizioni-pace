@@ -24,14 +24,14 @@ export function OperationalUserTargetFields({ candidates }: { candidates: RoleCa
             label="Utente esistente"
             name="existingUserId"
             options={candidates}
-            placeholder="Inizia a digitare un nome o un’email"
+            placeholder="Cerca nome, cognome, email o codice"
             emptyQueryHint="Inizia a digitare"
           />
           <label className="flex items-start gap-2 text-sm">
             <input name="sendInvite" type="checkbox" className="mt-1" defaultChecked />
             <span>Invia un’email con il ruolo assegnato e le istruzioni per accedere.</span>
           </label>
-          <p className="text-sm font-normal text-[var(--peace-muted)]">Cerca per nome o email, anche tra gli utenti che non hanno ancora un ruolo.</p>
+          <p className="text-sm font-normal text-[var(--peace-muted)]">Cerca anche per cognome e nome o codice partecipante. Sono inclusi gli iscritti con email che non hanno ancora un account.</p>
         </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-3">

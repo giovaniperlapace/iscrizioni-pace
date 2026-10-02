@@ -1,3 +1,4 @@
+import { nationalityName } from "../registrations/nationality-names.ts";
 import { internalSexText } from "../registrations/assisted-demographics.ts";
 import { CHILDREN_EXPORT_COPY, childrenExportValues } from "../registrations/children-export.ts";
 import { attendanceTableColumns, attendanceSlotText } from "../registrations/attendance-summary.ts";
@@ -212,8 +213,10 @@ export async function writeVisibleParticipantsWorkbook(
   const rows = people.map((person) =>
     columns.flatMap((column) => {
       switch (column) {
+        case "association":
+          return person.association ?? "—";
         case "nationality":
-          return person.nationality ?? "—";
+          return nationalityName(person.nationality) ?? "—";
         case "sex":
           return internalSexText(person.sex, "it");
         case "accessibility":

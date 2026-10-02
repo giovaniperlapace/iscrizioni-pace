@@ -1,5 +1,6 @@
 "use client";
 
+import { nationalityName } from "@/lib/registrations/nationality-names";
 import { ProgressButton } from "@/components/button-progress";
 import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { publicChildBirthDateBounds } from "@/lib/registrations/public-child-age";
@@ -758,8 +759,9 @@ export function RegistrationForm({
       }))
     : PLACEHOLDER_GROUPS.map((group) => ({ value: group, label: group }));
   const filteredNationalities = NATIONALITY_OPTIONS.filter((nationality) =>
-    normalizeSearchText(nationality).includes(normalizeSearchText(nationalitySearch))
-  );
+    !nationalitySearch || nationalitySearch === selectedNationality ||
+    normalizeSearchText(`${nationalityName(nationality, locale)} ${nationality}`).includes(normalizeSearchText(nationalitySearch))
+  ).sort((a, b) => (nationalityName(a, locale) ?? a).localeCompare(nationalityName(b, locale) ?? b, locale));
   const normalizedPhoneNumber = phoneNumber.replace(/[\s().-]/g, "");
   const selectedPhonePrefix =
     phonePrefix === OTHER_PHONE_PREFIX ? customPhonePrefix.trim() : phonePrefix;
@@ -1263,7 +1265,7 @@ export function RegistrationForm({
               className="field"
               placeholder={copy.nationalityPlaceholder}
               required
-              value={nationalitySearch}
+              value={nationalitySearch === selectedNationality ? nationalityName(selectedNationality, locale) ?? "" : nationalitySearch}
               data-field="nationality"
               onBlur={() => {
                 window.setTimeout(() => setShowNationalityOptions(false), 120);
@@ -1297,7 +1299,7 @@ export function RegistrationForm({
                       setShowNationalityOptions(false);
                     }}
                   >
-                    {nationality}
+                    {nationality === copy.noNationality ? nationality : nationalityName(nationality, locale)}
                   </button>
                 ))}
               </div>

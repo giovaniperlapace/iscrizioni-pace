@@ -1,3 +1,4 @@
+import { loadAssociations } from "@/lib/registrations/association.server";
 import { ExportsSection } from "@/app/dashboard/exports-section";
 import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
 import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
@@ -844,7 +845,7 @@ function aggregateOperationalUserRows(
   const rowsByKey = new Map<string, OperationalUserRoleRow>();
 
   for (const item of assignments) {
-    const key = item.email ? `email:${item.email.toLowerCase()}` : `user:${item.userId}`;
+    const key = `user:${item.userId}`;
     const row =
       rowsByKey.get(key) ??
       {
@@ -1181,14 +1182,15 @@ async function getManagerOperationsSnapshot(
     scope.eventIds
   );
 
-  const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities] = section === "iscritti"
+  const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities, associations] = section === "iscritti"
       ? await Promise.all([
           loadAttendanceSummaries(supabase, registrationIds),
           loadEmailDelegations(supabase, registrationIds),
           loadAccessibilitySummaries(supabase, registrationIds),
           loadNationalities(supabase, registrationIds),
+          loadAssociations(supabase, registrationIds),
         ])
-      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>()];
+      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>(), new Map<string, string | null>()];
     const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
       const geography = participantGeography(participant);
@@ -1206,6 +1208,7 @@ async function getManagerOperationsSnapshot(
         attendance: attendanceByRegistration.get(registration.id) ?? [],
         accessibility: accessibilityByRegistration.get(registration.id),
         nationality: nationalities.get(registration.id),
+        association: associations.get(registration.id),
         emailDelegated: emailDelegations.has(registration.id),
           registrationId: registration.id,
         eventId: registration.event_id,
@@ -2577,7 +2580,7 @@ function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string 
 }
 
 function operationalRoleRowKey(row: OperationalUserRoleRow): string {
-  return row.email ? `email:${row.email.toLowerCase()}` : `user:${row.userId}`;
+  return `user:${row.userId}`;
 }
 
 function operationalRoleSummary(row: OperationalUserRoleRow): string {

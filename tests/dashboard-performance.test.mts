@@ -1,3 +1,4 @@
+import { loadAssociations } from "../lib/registrations/association.server.ts";
 import { loadNationalities } from "../lib/registrations/assisted-demographics.server.ts";
 import * as reports from "../lib/registrations/statistics-reports.ts";
 import { loadAccessibilitySummaries } from "../lib/registrations/accessibility-summary.server.ts";
@@ -52,6 +53,7 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/registrations/attendance-summary.server": { loadAttendanceSummaries },
         "@/lib/registrations/accessibility-summary.server": { loadAccessibilitySummaries },
         "@/lib/registrations/assisted-demographics.server": { loadNationalities },
+        "@/lib/registrations/association.server": { loadAssociations: async (...args: Parameters<typeof loadAssociations>) => { reads.push("participant-associations"); return loadAssociations(...args); } },
         "@/lib/registrations/email-delegation.server": { loadEmailDelegations: async (...args: Parameters<typeof loadEmailDelegations>) => { reads.push("email-delegations"); return loadEmailDelegations(...args); } },
         "@/lib/registrations/operations-dashboard": operations,
         "@/lib/registrations/event-statistics": statistics,
@@ -68,6 +70,7 @@ test("dashboard sections execute only the queries needed by their visible conten
       const page = compile(`app/dashboard/${dashboard}/page.tsx`, modules, true).default;
       await page({ searchParams: Promise.resolve({ section: ["disability", "attendance", "age", "registrations"].includes(section) ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(["disability", "attendance", "age", "registrations"].includes(section) ? { report: section } : {}) }) } as never);
       const context = `${role}/${section}`;
+      assert.equal(reads.includes("participant-associations"), ["iscritti", "disability-people"].includes(section), context);
       assert.equal(reads.includes("email-delegations"), ["iscritti", "disability-people"].includes(section), context);
       assert.equal(reads.includes("registrations"), ["iscritti", "disability-people", "gruppi"].includes(section), context);
       assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);

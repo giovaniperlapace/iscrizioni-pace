@@ -19,6 +19,7 @@ import {
 
 export type QualityPerson = Identity & {
   nationality?: string | null;
+  association?: string | null;
   sex?: import("../registrations/assisted-demographics.ts").InternalSex;
   accessibility?: string;
   attendance?: import("../registrations/attendance-summary.ts").SummaryAttendanceChoice[];

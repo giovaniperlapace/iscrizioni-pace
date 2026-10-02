@@ -111,3 +111,35 @@ export async function getVisibleInternalSexes(registrationIds: string[]) {
     return { status: "success" as const, values };
   } catch { return failure(); }
 }
+
+export async function getOperationalAssociation(registrationId: string) {
+  if (!uuid.test(registrationId)) return failure("42501");
+  try {
+    const auth = await getCurrentAuthContext(await createSupabaseServerClient());
+    if (!auth?.eventRoles.some(role => role.role === "admin" || role.role === "manager")) return failure("42501");
+    const { data, error } = await createSupabaseServiceClient().rpc("get_operational_association", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id,
+    });
+    if (error) return failure(error.code);
+    return { status: "success" as const, snapshot: data as { association: string | null; questionnaireId: string | null } };
+  } catch { return failure(); }
+}
+
+export async function updateOperationalAssociation(form: FormData) {
+  const registrationId = String(form.get("registrationId") ?? "");
+  const value = String(form.get("association") ?? "").trim();
+  if (!uuid.test(registrationId)) return failure("42501");
+  if (value.length > 200) return formFailure([{ field: "association", code: "invalid" }]);
+  let expected: unknown;
+  try { expected = JSON.parse(String(form.get("expected"))); } catch { return failure(); }
+  try {
+    const auth = await getCurrentAuthContext(await createSupabaseServerClient());
+    if (!auth?.eventRoles.some(role => role.role === "admin" || role.role === "manager")) return failure("42501");
+    const { data, error } = await createSupabaseServiceClient().rpc("update_operational_association", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id, p_expected: expected, p_value: value || null,
+    });
+    if (error) return failure(error.code);
+    refresh();
+    return { status: "success" as const, snapshot: data as { association: string | null; questionnaireId: string | null } };
+  } catch { return failure(); }
+}

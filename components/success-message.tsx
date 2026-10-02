@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import type { SupportedLocale } from "@/lib/i18n/config";
 
 const CLOSE_LABEL: Record<SupportedLocale, string> = {
@@ -9,18 +9,25 @@ const CLOSE_LABEL: Record<SupportedLocale, string> = {
 };
 const SUCCESS_PARAMS = ["saved", "openingSaved", "adminSaved", "managerSaved", "groupSaved", "groupLinkSaved", "roleSaved", "serviceSaved", "manualSaved"];
 
-export function SuccessMessage({ children, locale = "it", className = "", clearQuery = false }: {
+export function SuccessMessage({ children, locale = "it", className = "", clearQuery = false, attention = false, persistent = false }: {
   children: ReactNode;
   locale?: SupportedLocale;
   className?: string;
   clearQuery?: boolean;
+  attention?: boolean;
+  persistent?: boolean;
 }) {
+  const messageRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
   useEffect(() => {
-    if (!visible) return;
-    const timer = window.setTimeout(() => setVisible(false), 5_000);
+    if (!visible || persistent) return;
+    const timer = window.setTimeout(() => setVisible(false), attention ? 12_000 : 5_000);
     return () => window.clearTimeout(timer);
-  }, [visible]);
+  }, [visible, attention, persistent]);
+
+  useEffect(() => {
+    if (attention) messageRef.current?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }, [attention]);
 
   useEffect(() => {
     if (visible || !clearQuery) return;
@@ -37,7 +44,7 @@ export function SuccessMessage({ children, locale = "it", className = "", clearQ
 
   if (!visible) return null;
   return (
-    <div role="status" className={`flex items-start gap-3 ${className}`}>
+    <div ref={messageRef} role="status" aria-live="polite" className={`flex items-start gap-3 ${className}`}>
       <div className="min-w-0 flex-1">{children}</div>
       <button type="button" aria-label={CLOSE_LABEL[locale]} title={CLOSE_LABEL[locale]}
         onClick={() => setVisible(false)}

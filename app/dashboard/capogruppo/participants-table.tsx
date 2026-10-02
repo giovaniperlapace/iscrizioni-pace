@@ -141,7 +141,7 @@ export function LeaderParticipantsTable({
             aria-label={copy.visibleColumns}
             className="absolute left-0 top-full z-20 mt-2 grid min-w-56 gap-2 rounded-md border border-[var(--peace-border)] bg-white p-4 shadow-lg"
           >
-            {(Object.keys(PARTICIPANT_COLUMNS) as ParticipantColumn[]).map(
+            {(Object.keys(PARTICIPANT_COLUMNS) as ParticipantColumn[]).filter(column => column !== "tags" && column !== "association").map(
               (column) => (
                 <label
                   key={column}

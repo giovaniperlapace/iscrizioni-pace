@@ -92,6 +92,6 @@ test("table exports include nationality and internal sex only when selected, and
   assert.equal(response.status,200);
   const book=new ExcelJS.Workbook();await book.xlsx.load(Buffer.from(await response.arrayBuffer()) as never);
   const header=JSON.stringify(book.worksheets[0].getRow(1).values),row=JSON.stringify(book.worksheets[0].getRow(2).values);
-  assert.equal(header.includes("Sesso"),selected);assert.equal(row.includes("Femmina"),selected);assert.equal(row.includes("Italian"),selected);
+  assert.equal(header.includes("Sesso"),selected);assert.equal(row.includes("Femmina"),selected);assert.equal(row.includes("Italia"),selected);
  }
 });

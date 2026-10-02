@@ -47,34 +47,34 @@ if(process.env.PREPARE_ONLY) {console.log('Prepared synthetic route');process.ex
 try {
  ab('open',`${base}/assisted-demographics-check`);ab('snapshot','-i');ab('screenshot','/tmp/pace-demographics-desktop.png');
  check('document.body.innerText.length>100 && !document.querySelector("[data-nextjs-dialog]")','dev page rendered without error overlay');
- ab('eval','document.querySelector("[name=nationality]").scrollIntoView({block:"center"})');ab('screenshot','/tmp/pace-demographics-fields.png');
+ ab('eval','document.querySelector("[role=combobox]").scrollIntoView({block:"center"})');ab('screenshot','/tmp/pace-demographics-fields.png');
  if (!process.env.TABLE_ONLY) {
- for(const locale of ['it','en','fr','de','es','nl','uk'])for(const role of ['manager','capogruppo']){
+ if (!process.env.EDIT_ONLY) for(const locale of ['it','en','fr','de','es','nl','uk'])for(const role of ['manager','capogruppo']){
  ab('open',`${base}/assisted-demographics-check?locale=${locale}&role=${role}`);ab('snapshot','-i');
  check('["nationality","birthPlace","country","internalSex"].every(name=>document.querySelector(`[name=${name}]`) && !document.querySelector(`[name=${name}]`).required)',locale+' '+role+' optional fields');
  ab('fill','[name=firstName]','Anna');ab('fill','[name=lastName]','Synthetic');ab('check','[name=useLeaderEmail]');
  ab('eval',`(()=>{const e=document.querySelector('[name=birthDate]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'1990-01-01');e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
  ab('fill','[name=cityOther]','Roma');ab('check','[name=availabilityUnknown]');ab('check','[name=consentConfirmed]');
- ab('fill','[name=nationality]','Italian');ab('fill','[name=birthPlace]','France');ab('fill','[name=country]','Germany');ab('select','[name=internalSex]','female');
+ ab('fill','[role=combobox]','Italian');ab('fill','[name=birthPlace]','France');ab('fill','[name=country]','Germany');ab('select','[name=internalSex]','female');
  ab('click','button[type=submit]');ab('wait','--fn','document.querySelector("[data-result]").textContent.includes("female")');
  check('JSON.parse(document.querySelector("[data-result]").textContent).country==="Germany"',locale+' '+role+' declared geography and sex reach action');
  ab('set','viewport','390','844');check('document.documentElement.scrollWidth<=innerWidth',locale+' mobile fits');ab('set','viewport','1280','900');
  }
  for(const locale of ['it','en','fr','de','es','nl','uk']){
  ab('open',`${base}/assisted-demographics-check?mode=edit&locale=${locale}`);ab('snapshot','-i');
- ab('wait','[name=nationality]');check('document.querySelector("[name=birthPlace]").value==="Roma, Italia" && !document.querySelector("[name=internalSex]")',locale+' existing birthplace preserved, sex absent from edit loads');
+ ab('wait','[role=combobox]');check('document.querySelector("[name=birthPlace]").value==="Roma, Italia" && !document.querySelector("[name=internalSex]")',locale+' existing birthplace preserved, sex absent from edit loads');
  }
- ab('fill','[name=nationality]','Conflict');ab('click','button[type=submit]');ab('wait','[role=alert]');check('document.querySelector("[name=nationality]").value==="Conflict"','conflict retains edits');
- ab('fill','[name=nationality]','French');ab('click','button[type=submit]');ab('wait','--fn','document.body.dataset.saved?.includes("French")');
+ ab('fill','[role=combobox]','Conflict');ab('click','button[type=submit]');ab('wait','[role=alert]');check('document.querySelector("[name=nationality]").value==="Conflict"','conflict retains edits');
+ ab('fill','[role=combobox]','French');ab('click','button[type=submit]');ab('wait','--fn','document.body.dataset.saved?.includes("French")');
  }
  ab('open',`${base}/assisted-demographics-check?mode=table&columns=name,nationality`);ab('snapshot','-i');
- check('!document.body.dataset.sexCalls && document.querySelector("tbody").textContent.includes("Italian")','nationality visible without sex reads');
+ check('!document.body.dataset.sexCalls && document.querySelector("tbody").textContent.includes("Italia")','nationality visible without sex reads');
  ab('click','summary');ab('find','role','checkbox','check','--name','Sesso','--exact');ab('wait','--fn','document.querySelector("tbody").textContent.includes("Femmina")');
  check('Number(document.body.dataset.sexCalls)===1','visible sex reads once');
  ab('find','role','checkbox','click','--name','Sesso','--exact');ab('snapshot','-i');check('!document.querySelector("tbody").textContent.includes("Femmina") && Number(document.body.dataset.sexCalls)===1','hidden sex removed without further reads');
  ab('set','viewport','390','844');check('document.documentElement.scrollWidth<=innerWidth','table mobile fits');ab('screenshot','/tmp/pace-demographics-mobile.png');
  ab('open',`${base}/assisted-demographics-check?mode=manager&columns=name,nationality`);ab('snapshot','-i');
- check('!document.body.dataset.sexCalls && document.querySelector("tbody").textContent.includes("Italian")','manager nationality without internal reads');
+ check('!document.body.dataset.sexCalls && document.querySelector("tbody").textContent.includes("Italia")','manager nationality without internal reads');
  ab('click','details:has(fieldset[aria-label="Colonne visibili"]) > summary');ab('snapshot','-i');ab('find','role','checkbox','check','--name','Sesso','--exact');
  ab('wait','--fn','document.querySelector("tbody").textContent.includes("Femmina")');check('Number(document.body.dataset.sexCalls)===1','manager selected sex loads once');
  ab('find','role','button','click','--name','Modalità sola lettura','--exact');ab('snapshot','-i');

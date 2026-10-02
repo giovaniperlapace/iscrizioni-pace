@@ -1,3 +1,4 @@
+import { nationalityName } from "@/lib/registrations/nationality-names";
 import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
 import { EditableRegistrationInfo } from "./editable-registration-info";
 import { CancelRegistrationButton } from "./cancel-registration-button";
@@ -1415,7 +1416,7 @@ export default async function PartecipanteDashboardPage({
                         />
                         <Info
                           label={copy.nationality}
-                          value={questionnaire?.answers?.nationality ?? copy.notProvided}
+                          value={nationalityName(questionnaire?.answers?.nationality, locale) ?? copy.notProvided}
                         />
                       </div>
 
@@ -1946,7 +1947,7 @@ function RegistrationSummaryCard({
           <SummaryInfo
             icon={Flag}
             label={copy.nationality}
-            value={questionnaire?.answers?.nationality ?? copy.notProvided}
+            value={nationalityName(questionnaire?.answers?.nationality, locale) ?? copy.notProvided}
           />
           <SummaryInfo icon={CalendarDays} label={copy.expectedPresence} value={attendanceSummary} />
           <SummaryInfo icon={Accessibility} label={copy.accessibilitySupport} value={supportSummary} />

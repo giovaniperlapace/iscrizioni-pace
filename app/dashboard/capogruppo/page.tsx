@@ -4,7 +4,7 @@ import { ManualRegistrationSection } from "@/app/dashboard/manual-registration-s
 import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
 import { OperationalChildrenEditor } from "@/app/dashboard/operational-children-editor";
-import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
+import { loadRowsForIds } from "@/lib/supabase/all-rows";
 import { LocalOverlay } from "@/app/dashboard/local-overlay";
 import { LocalQueryLink } from "@/components/local-query-link";
 import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
@@ -29,7 +29,6 @@ import {
   updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
   updateGroupLeaderAttendance,
-  updateParticipantOperationalTags,
 } from "@/app/actions";
 import {
   DashboardAreaDescription,
@@ -51,9 +50,6 @@ import {
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
-import type {
-  OperationalTagOption,
-} from "@/lib/registrations/operational-tags";
 import {
   eventServiceStatusLabel,
   type ParticipantEventService,
@@ -1050,7 +1046,6 @@ export default async function CapogruppoDashboardPage({
   const query = normalizeSearchQuery(params.q);
   const contactQuery = normalizeSearchQuery(params.contact);
   const groupFilter = normalizeFilterParam(params.group);
-  const tagFilter = normalizeFilterParam(params.tag);
   const activeTool =
     params.groupLinkToken || params.groupLinkGroupId
       ? "link"
@@ -1073,10 +1068,9 @@ export default async function CapogruppoDashboardPage({
   const { groupRows, activeGroupRows, rootGroupIds, scopedGroupIds } =
     await loadLeaderScope(serviceSupabase, auth.user.id, currentEventId);
 
-  const [assignments, operationalTags, groupLinks] =
+  const [assignments, groupLinks] =
     await Promise.all([
       getAssignments([...scopedGroupIds]),
-      getOperationalTags(),
       activeTool === "link" ? getGroupLinks([...scopedGroupIds]) : Promise.resolve([]),
     ]);
   const assignedGroups = groupRows
@@ -1155,9 +1149,7 @@ export default async function CapogruppoDashboardPage({
             query={query}
             contactQuery={contactQuery}
             groupFilter={effectiveGroupFilter}
-            tagFilter={tagFilter}
             groupOptions={groupFilterOptions}
-            tagOptions={operationalTags}
             showGroupColumn={showGroupColumn}
             copy={copy}
           />
@@ -1213,7 +1205,6 @@ export default async function CapogruppoDashboardPage({
                 attendanceSaved={params.saved === "attendance"}
                 locale={locale}
                 assignment={selectedAssignment}
-                tagOptions={operationalTags}
                 copy={copy}
               />
             </DashboardToolOverlay>
@@ -1265,26 +1256,6 @@ export default async function CapogruppoDashboardPage({
       createdAt: link.created_at,
       expiresAt: link.expires_at,
       revokedAt: link.revoked_at,
-    }));
-  }
-
-  async function getOperationalTags(): Promise<OperationalTagOption[]> {
-    const { data } = await loadAllRows((from, to) => serviceSupabase
-      .from("operational_tags")
-      .select("id,event_id,label,color")
-      .eq("event_id", currentEventId)
-      .order("label", { ascending: true }).order("id").range(from, to));
-
-    return ((data ?? []) as Array<{
-      id: string;
-      event_id: string;
-      label: string;
-      color: string;
-    }>).map((tag) => ({
-      id: tag.id,
-      eventId: tag.event_id,
-      label: tag.label,
-      color: tag.color,
     }));
   }
 }
@@ -1594,24 +1565,20 @@ function AssignmentFilters({
   query,
   contactQuery,
   groupFilter,
-  tagFilter,
   groupOptions,
-  tagOptions,
   showGroupColumn,
   copy,
 }: {
   query: string;
   contactQuery: string;
   groupFilter: string;
-  tagFilter: string;
   groupOptions: Array<{ id: string; name: string }>;
-  tagOptions: OperationalTagOption[];
   showGroupColumn: boolean;
   copy: GroupLeaderCopy;
 }) {
   const filterGridClassName = showGroupColumn
-    ? "grid min-w-[860px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(190px,1fr)_minmax(170px,1fr)_auto] gap-3"
-    : "grid min-w-[760px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(170px,1fr)_auto] gap-3";
+    ? "grid min-w-[690px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(190px,1fr)_auto] gap-3"
+    : "grid min-w-[590px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_auto] gap-3";
 
   return (
     <AutoFilterForm
@@ -1621,7 +1588,6 @@ function AssignmentFilters({
         q: "",
         contact: "",
         group: "all",
-        tag: "all",
       }}
     >
       <div className="overflow-x-auto rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3">
@@ -1669,24 +1635,6 @@ function AssignmentFilters({
             </>
           ) : null}
 
-          <label className="sr-only" htmlFor="leader-participant-tag">
-            {copy.filters.tag}
-          </label>
-          <select
-            id="leader-participant-tag"
-            name="tag"
-            defaultValue={tagFilter}
-            className="field min-h-10 bg-white text-sm font-normal"
-          >
-            <option value="all">{copy.filters.allTags}</option>
-            <option value="none">{copy.filters.noTags}</option>
-            {tagOptions.map((tag) => (
-              <option key={tag.id} value={tag.id}>
-                {tag.label}
-              </option>
-            ))}
-          </select>
-
           <Link
             href="/dashboard/capogruppo#assegnazioni-gruppo"
             className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
@@ -1706,7 +1654,6 @@ function AssignmentDetailCard({
   locale,
   returnTo,
   assignment,
-  tagOptions,
   copy,
 }: {
   assignment: AssignmentView;
@@ -1715,7 +1662,6 @@ function AssignmentDetailCard({
   attendanceSaved: boolean;
   locale: SupportedLocale;
   returnTo: string;
-  tagOptions: OperationalTagOption[];
   copy: GroupLeaderCopy;
 }) {
 
@@ -1885,31 +1831,7 @@ function AssignmentDetailCard({
         </div>
       </ReliableForm>
 
-      <ReliableForm
-        action={updateParticipantOperationalTags}
-        className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
-        data-preserve-dashboard-scroll
-      >
-        <input type="hidden" name="sourceDashboard" value="capogruppo" />
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <input type="hidden" name="assignmentId" value={assignment.id} />
-        <input type="hidden" name="registrationId" value={assignment.registrationId} />
-        <input type="hidden" name="participantId" value={assignment.participantId} />
-        <input type="hidden" name="eventId" value={assignment.eventId} />
-        <fieldset className="grid gap-2">
-          <legend className="text-sm font-semibold text-[var(--peace-ink)]">
-            Tag operativi
-          </legend>
-          <TagCheckboxGrid
-            tagOptions={tagOptions}
-            selectedTagIds={assignment.tagIds}
-            emptyLabel="Nessun tag creato dal manager per questo evento."
-          />
-        </fieldset>
-        <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          Salva
-        </PendingSubmitButton>
-      </ReliableForm>
+
     </section>
   );
 }
@@ -1966,47 +1888,6 @@ function ParticipantServiceSummary({
       <span className="text-xs text-[var(--peace-muted)]">
         {eventServiceStatusLabel(service.status)}
       </span>
-    </div>
-  );
-}
-
-function TagCheckboxGrid({
-  tagOptions,
-  selectedTagIds,
-  emptyLabel,
-}: {
-  tagOptions: OperationalTagOption[];
-  selectedTagIds: string[];
-  emptyLabel: string;
-}) {
-  if (tagOptions.length === 0) {
-    return <p className="text-sm text-[var(--peace-muted)]">{emptyLabel}</p>;
-  }
-
-  const selected = new Set(selectedTagIds);
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {tagOptions.map((tag) => (
-        <label
-          key={tag.id}
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-semibold text-[var(--peace-ink)]"
-        >
-          <input
-            type="checkbox"
-            name="tagIds"
-            value={tag.id}
-            defaultChecked={selected.has(tag.id)}
-            className="size-4 accent-[var(--peace-blue-800)]"
-          />
-          <span
-            aria-hidden="true"
-            className="size-2.5 rounded-full"
-            style={{ backgroundColor: tag.color }}
-          />
-          {tag.label}
-        </label>
-      ))}
     </div>
   );
 }
