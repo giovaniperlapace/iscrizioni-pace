@@ -1,5 +1,1188 @@
 # AGENTS.md
 
+## Riallineamento main nel branch panel — 2026-10-03
+
+- Su richiesta dell’utente integrato `origin/main` a `0b7e4d1` nella base panel
+  `388d05f`, con merge sul branch esistente `codex/panel-p0-p10`. Conservati
+  scanner consolidato, scuole/panel e tutte le correzioni recenti di main.
+- Risolti 14 file in conflitto, mantenendo figli sempre visibili/editor e ingressi
+  individuali, ruoli prima dei loader, statistiche, export e Postmark con docenti.
+  Lockfile allineato a main con il decoder jsqr; fixture adattate ai flussi riuniti.
+- 18 migration importate da main, invariate; nessuna applicazione remota, push o
+  deployment. Prima della preview confrontare registro DB e configurazione email.
+  P13/report SQL resta da attivare in staging; P13 non è dichiarata conclusa.
+- Verificati 743 test, lint, TypeScript, build staging, PostgreSQL 17 temporaneo
+  e browser presenze/scanner desktop/mobile con dati sintetici.
+- Nota locale main sulle migration production del 3 ottobre preservata in stash
+  separato, non inclusa nel merge. Inventario e collaudi nel documento
+  `docs/panel-main-integration-2026-10-03.md` e nel piano panel.
+
+## Pubblicazione correzioni dashboard e associazione — 2026-10-02
+
+- L’utente ha richiesto commit e push di tutte le modifiche locali su `main`:
+  tag riservati, ruoli, nazionalità, conferme email e associazione dichiarata,
+  inclusi test, documentazione e le due migration versionate.
+- Verifiche applicative già superate sulla versione pubblicata: 635 test,
+  lint, typecheck e build production; verifiche SQL locali e browser sintetico
+  descritte sotto. Fetch prima del commit: `main` e `origin/main` a `01e0a82`.
+- La pubblicazione del codice non applica le migration
+  `20261002120000_operational_tags_managers_only.sql` e
+  `20261002140000_operational_association.sql`: restano da eseguire sul database
+  dell’ambiente esplicitamente concordato. Fino ad allora il salvataggio
+  dell’associazione non è disponibile e la restrizione DB dei tag è incompleta.
+  Nessuna modifica a database remoti o invio email in questa pubblicazione.
+
+## Associazione dichiarata modificabile e colonna partecipanti — 2026-10-02
+
+- Admin e manager dell’evento possono correggere o svuotare “Associazione /
+  organizzazione” nella scheda dell’iscritto attivo. Si modifica il campo
+  canonico `answers.externalGroupAssociation` del questionario più recente;
+  le altre risposte, inclusa la partecipazione con Sant’Egidio, e le assegnazioni
+  di gruppo restano preservate. Se manca il questionario viene creato un record
+  minimo solo quando si aggiunge un valore. Testo libero, massimo 200 caratteri.
+- Colonna facoltativa nella tabella Admin/Manager e nell’export delle colonne
+  selezionate; Viewer in sola lettura, capogruppo escluso. Letture paginate per
+  ID già autorizzati, proiezione del solo campo; un valore vuoto nel questionario
+  più recente non riporta in vita dichiarazioni precedenti. Le statistiche
+  delle associazioni leggono già lo stesso dato canonico.
+- Migration locale `20261002140000_operational_association.sql`: RPC
+  `get_operational_association` / `update_operational_association`, invocabili
+  solo da service_role con attore derivato dalla sessione. Controllo DB di ruolo,
+  evento corrente e iscrizione attiva, lock, confronto snapshot e audit atomico
+  senza riportare il testo dell’associazione nei log. Conflitto o errore conserva
+  il testo del form. Nessuna migration remota applicata: applicare all’ambiente
+  concordato prima del rilascio. Nessun commit/push in questa modifica locale.
+- Verifiche: 635 test applicativi, lint/typecheck e build production, PostgreSQL 17 temporaneo
+  (scope, autorizzazioni, conflitti, cancellazione, audit/rollback), browser
+  sintetico desktop/mobile e export XLSX. Main e origin/main allineati nei
+  commit a `01e0a82` al fetch iniziale; conservate le altre modifiche locali.
+
+## Tag riservati, ricerca ruoli, nazionalità e conferme email — 2026-10-02
+
+- Lavoro locale su `main`, riallineato con pull fast-forward a `origin/main`
+  `01e0a82` prima delle modifiche; fetch finale: zero commit divergenti.
+  Nessun commit/push, rilascio o migration remota richiesti. Diagnosi remota
+  in sola lettura; branch panel conservato separatamente.
+- I capigruppo non vedono più catalogo, filtro, colonna o modulo dei tag.
+  Il loader condiviso con l’export non legge i tag; preferenze/URL storici non
+  possono reintrodurre la colonna. L’action verifica il ruolo effettivo:
+  solo admin globale o manager dell’evento può assegnarli.
+- Migration locale `20261002120000_operational_tags_managers_only.sql`, da
+  applicare all’ambiente concordato prima del rilascio: revoca lettura e
+  assegnazione ai capigruppo anche via API/RLS. Manager viewer conserva sola
+  lettura; admin/manager gestione. Nessuna cancellazione dei tag esistenti.
+  Questa scelta supera le precedenti descrizioni della Milestone 14.2.
+- Ricerca ruoli: nomi in qualsiasi ordine, accenti, email e codice; include
+  iscritti non eliminati dell’evento autorizzato con email anche senza profilo
+  Auth. Account collegati deduplicati per ID, con nome del partecipante tra
+  gli alias di ricerca. Assegnazione rilegge scope e identità sul server,
+  riusa/crea l’account e non rinomina i profili esistenti. Nessuna email in
+  fase di ricerca; inviti solo secondo la scelta nel modulo.
+- Elenchi ruoli raggruppati per ID Auth, mai per email; apertura conferma
+  rimozione porta focus e scroll ai pulsanti e chiude l’aggiunta aperta.
+  Rimane il divieto di rimozione del proprio account, esplicitato nel testo
+  e nel titolo del pulsante. L’utente segnala “non cliccabile”: resta da
+  confermare se riguarda sé stesso o un’altra persona; nelle prove sintetiche
+  sugli altri account rimozione, errore, retry e ultimo ruolo funzionano.
+- Nazionalità presentate con il nome del paese nella lingua corrente, inclusi
+  i valori storici inglesi riconosciuti; valori sconosciuti preservati. Nessuna
+  riscrittura dei dati esistenti. In modifica, focus = ricerca vuota con elenco
+  completo, valore salvato conservato finché non si scrive o seleziona.
+  Localizzate anche tabelle, export e scheda personale.
+- Conferma della presa in carico delle campagne email: scroll automatico al
+  messaggio, annuncio accessibile e chiusura esplicita. Indica email in coda,
+  senza anticipare l’avvenuta consegna. Salvataggi modelli visibili per 12
+  secondi; gli altri messaggi mantengono il comportamento precedente.
+- Verifiche locali: 632 test applicativi, lint/typecheck e build superati; PostgreSQL 17
+  temporaneo per RLS tag e rimozione ruoli; browser desktop/mobile con dati
+  sintetici e sette lingue. Nessun invio email o modifica di persone reali.
+
+
+## Esportazioni presenze per gruppo — 2026-10-01
+
+- Sezione Esportazioni distinta dalle statistiche, condivisa Admin/Manager e
+  accessibile in sola lettura al Viewer dell’evento corrente. Quattro XLSX:
+  A/A2 per gruppo, B/B2 con precedenza tag operatore > servizio assegnato > gruppo.
+  Nomi sempre dal catalogo corrente; esempi storici solo per formato/accorpamenti.
+- Figli inclusi nei totali e nelle presenze del genitore, ma per scelta esplicita
+  restano nel gruppo d’iscrizione anche quando il genitore ha servizi o tag.
+  Raccordo per ID/evento in lib/presence-exports; nessun matching approssimato.
+  Nuove radici non mappate e operatori ambigui restano in sezioni esplicite.
+- Download autorizzato prima delle letture, paginato e senza risultati parziali;
+  nessuna scrittura DB, migration o email. Script amministrativo in
+  scripts/export-group-presence.mts. Stampa con fasce complete, subtotali,
+  totale generale, Date non indicate e data/ora di Roma. Dettagli, manutenzione
+  del raccordo e limiti dello snapshot in docs/group-presence-exports.md.
+  Verificati 619 test, lint, TypeScript, build production e browser desktop/mobile.
+  Commit/push su main e normale rilascio Vercel autorizzati dall’utente.
+
+## Associazioni dichiarate nelle statistiche — 2026-10-01
+
+- In Gruppi e partecipanti, contatore espandibile con nome, presenze previste
+  e associazione dichiarata per Admin/Manager/Viewer dell'evento autorizzato.
+  Campo testo externalGroupAssociation, senza Sì/No separato: conteggiare
+  solo stringhe non vuote, una volta per iscrizione attiva, senza eredità ai figli.
+- Questionario più recente anche quando vuoto; proiezione del solo campo,
+  letture paginate/batched e fail-closed. Nomi mancanti e presenze da comunicare
+  espliciti; calendario completo incluso pomeriggio precedente l'evento.
+- Nessuna migration, scrittura dati o email. 593 test con TZ=Europe/Rome,
+  lint, TypeScript e build in copia isolata con npm ci; browser sintetico
+  desktop/mobile e tastiera. Due test export preesistenti dipendono dal fuso
+  italiano. Dettagli in docs/association-statistics.md. Commit/push su main
+  e normale rilascio Vercel autorizzati dall’utente; modifiche parallele escluse.
+
+## Dati assistiti e sesso interno — 2026-09-29
+
+- Modulo condiviso Capogruppo/Manager/Admin: nazionalità, paese/luogo di nascita,
+  residenza e sesso facoltativi, sette lingue. Residenza mai dedotta dal gruppo
+  nei nuovi inserimenti; nessun riempimento dei record storici.
+- Schede operative: editor separato dei tre dati geografici, snapshot/conflitti
+  e audit atomici; nascita storica paese/città conservata. Navigazione modali
+  invariata. Nazionalità selezionabile nelle tabelle e negli export.
+- Sesso solo nell'inserimento assistito e nella colonna interna selezionata:
+  relazione separata con RLS senza accesso utente, RPC service_role con scope
+  evento/gruppi, nessuna lettura nei normali loader o nella scheda partecipante.
+  Viewer escluso anche da chiamate dirette/export. Nessun sesso nel questionario,
+  audit, email, statistiche, QR o preferenze salvate. L'export include solo
+  le colonne selezionate e autorizzate.
+- Migration `20260929120000_assisted_demographics.sql` applicata e registrata
+  atomicamente in produzione prima del push autorizzato del 29 settembre.
+  Dati e permessi delle 38 tabelle preesistenti, 23 routine pubbliche e 90 policy
+  invariati; nuova relazione vuota, RPC solo service_role. Nessun dato reale
+  modificato o email di prova. Creazione assistita
+  multi-scrittura preesistente conservata; limiti e rilascio documentati in
+  `docs/assisted-demographics.md`. Verificati 587 test, lint, TypeScript, build
+  con npm ci in copia pulita, SQL temporaneo e browser sette lingue/mobile.
+  Commit/push su main e normale rilascio Vercel autorizzati dall’utente.
+
+
+## Importazione servizi da Excel — 2026-09-25
+
+- Nuovo comando Manager/Admin accanto a Importa iscritti da Excel, modello
+  distinto nome/cognome/servizio, modale e report Excel con esiti per riga.
+  Mai creare partecipanti, account o servizi. Solo iscrizioni non eliminate
+  dell’evento corrente; omonimi esclusi, nessun matching approssimato.
+- Un solo servizio assegnato per persona: aggiornamento esplicito del precedente,
+  note conservate. Righe identiche applicate una volta; servizi contrastanti
+  per lo stesso nominativo esclusi tutti. Viewer escluso anche da URL/API.
+- Migration `20260925210000_service_excel_import.sql` applicata e registrata
+  atomicamente in produzione prima del push autorizzato del 25 settembre:
+  RPC service_role con autorizzazione DB, confronto completo in un passaggio,
+  lock contro omonimi/cancellazioni concorrenti, audit e ricevuta retry atomici.
+  Impronte delle 37 tabelle pubbliche preesistenti, policy, grant/RLS di 38
+  relazioni e 51 routine invariati; ricevute vuote. Nessuna email di collaudo.
+- Verificati 559 test, lint, TypeScript e build con npm ci in copia pulita,
+  PostgreSQL temporaneo/concorrenza
+  e browser desktop/mobile dal file al report reale. Dettagli e procedure in
+  `docs/service-excel-import.md`. Commit/push su main e normale rilascio Vercel
+  autorizzati dall’utente. Successivamente autorizzata anche la correzione degli
+  errori presenze, inclusa in un commit distinto e verificata insieme.
+
+## Figli sempre visibili, disabilità ed Excel — 2026-09-25
+
+- Partecipanti Manager/Admin/Viewer: figli sempre visibili sotto il nome,
+  pulsante Mostra figli rimosso. Vista Figli accompagnati: Genitore in colonna
+  dopo nascita/età, nome cliccabile per la scheda esistente.
+- Colonna facoltativa Informazioni sulla disabilità per Manager/Admin e
+  Capogruppo, anche in Excel. Solo risposte dichiarate alle tre opzioni attuali
+  del form, senza inferenze; sette lingue Capogruppo, scope gruppi conservato.
+  Viewer escluso anche da URL/export; letture paginate e fail-closed.
+- Excel operativo e Capogruppo contengono sempre numero figli e Nomi e cognomi
+  dei minori accompagnati, separati da punto e virgola in una cella. Tutti i figli
+  collegati conservati anche se storicamente maggiorenni. Modello import invariato.
+- Nessuna migration, modifica dati o email. Dettagli e regressioni in
+  docs/children-overview.md. Commit/push su main autorizzati dall’utente.
+  Verificati 549 test, lint, TypeScript, build e browser desktop/mobile.
+
+
+## Avanzamento nelle attese lunghe — 2026-09-25
+
+- ButtonProgress conserva la partenza rapida e aggiunge una coda che continua
+  ad avanzare oltre il 90%, rallentando verso il 100% senza soglia fissa.
+  Indicativamente 94% a 10 secondi, 97% a un minuto, circa 99% a cinque minuti.
+  Riempimento completo solo al termine reale; errori, retry, opacità al 25%,
+  blocchi dei comandi e movimento ridotto conservati in tutto il sito.
+- La regressione browser richiede avanzamento strettamente crescente oltre
+  il vecchio limite e incrementi più piccoli nelle attese lunghe. 545 test,
+  lint, TypeScript e build con npm ci in copia pulita. Nessuna modifica ai
+  dati, alle query, alla colonna email o alla gestione dei ruoli.
+
+
+## Gestione ruoli cumulativi e modale persistente — 2026-09-25
+
+- Modale nativa condivisa Admin/Manager: incarichi attuali, aggiunta separata,
+  rimozione puntuale e modifica Principale/Secondario. Esiti nella modale, anche
+  dopo l’ultimo incarico; chiusura conserva contesto e scroll. Errori specifici,
+  self-removal disabilitata, blocchi invio e avanzamento condiviso.
+- La selezione non sostituisce più gli altri ruoli. Superata la vecchia regola
+  del select esclusivo: Manager e Manager viewer sono alternativi nello stesso
+  evento; il cambio richiede rimozione esplicita. Tutti gli altri ruoli restano.
+- Migration 20260925180000 applicata e registrata atomicamente prima del push:
+  indice di esclusività e RPC di rimozione service_role con permessi, lock,
+  aggiornamento referente e audit atomici. Zero conflitti storici; ruoli,
+  membership, gruppi, profili e policy verificati invariati. Nessuna email o
+  scrittura di collaudo su persone reali.
+- 545 test, lint, TypeScript e build con npm ci in copia pulita; PostgreSQL
+  temporaneo, concorrenza e browser desktop/mobile superati. Commit/push su
+  main autorizzati. Dettagli in docs/operational-role-management.md.
+
+
+## Caricamento condiviso in tutto il sito — 2026-09-25
+
+- Esteso l’overlay approvato a tutti i ruoli e al pubblico/link di gruppo.
+  Un solo ButtonProgress, condiviso da pulsanti, invii, link, download e
+  selettore lingua; rimosso il provider/layout esclusivo del Manager.
+  Modali operative condivise, nessuna duplicazione per ruolo.
+- Conservati 25% di opacità e tempi rapidi approvati. Avanzamento stimato
+  fino al 90%, completamento solo a risposta reale; errori senza 100%.
+  Cursore CSS di attesa eliminato, blocchi invio/accessibilità conservati.
+- Corretto LinkStatus: anche il contenitore dello stato accessibile esce
+  dal flusso. Le statistiche non spostano più i numeri durante la navigazione;
+  nessuna modifica a fasce, conteggi o dati.
+- 537 test, lint, TypeScript e build con npm ci in copia pulita. Browser:
+  operazioni/portali/errori/attese lunghe/reinvii, sette lingue, mobile e
+  reduced motion; coordinate delle vere statistiche Manager/Admin stabili.
+  Modale personale verificata con azioni sintetiche. Nessuna scrittura reale
+  o email. Dettagli in docs/button-progress.md; modifiche parallele escluse.
+
+
+## Prova caricamento pulsanti solo Manager — 2026-09-25
+
+- Dopo la prova dell'utente, avanzamento iniziale accelerato: circa metà del
+  pulsante in 0,4 secondi; transizione ridotta da 350 a 100 ms e conclusione
+  visiva da 380 a 130 ms. Cap al 90%, pending reale e perimetro Manager conservati.
+- `app/dashboard/manager/layout.tsx` abilita `ButtonProgressProvider`: solo
+  questa area usa l'overlay al 25%, anche nei componenti condivisi e nei portal.
+  Dashboard Admin, Capogruppo, personale e pubblico mantengono la rotella.
+- Avanzamento stimato a passaggio unico, rallentato fino al 90%; completamento
+  soltanto quando termina il pending reale di React/Next/download. Errori dei
+  moduli e delle azioni esplicite interrompono l'overlay senza riempirlo. Nessuna
+  percentuale dichiarata, attesa minima aggiunta o modifica ai blocchi invio.
+  Se una navigazione smonta il pulsante, l'animazione termina con esso.
+- `ProgressButton` conserva markup interno, colori e stato accessibile;
+  movimento ridotto rispettato, timer ripuliti su retry e smontaggio. Nessuna
+  modifica dati, permessi, query, migration o email di collaudo.
+- Fixture `tests/browser/manager-button-progress.mjs`: moduli, errori, download,
+  navigazione, attesa lunga, retry, portal, sette lingue, mobile, movimento
+  ridotto e uscita dal perimetro Manager. Eseguire prima dei test unitari:
+  le route sintetiche temporanee non fanno parte del catalogo dei link pubblici.
+- Commit/push su main e normale rilascio Vercel autorizzati dall'utente per
+  provare questa soluzione prima di decidere un'eventuale estensione al sito.
+- Verificati 537 test, lint, TypeScript e build production dopo npm ci in
+  copia pulita con i soli file di questa modifica; entrambe le fixture browser
+  (nuovo overlay e feedback originale) superate. Modifiche parallele sulle
+  email dei partecipanti escluse dal commit.
+
+## Rilascio integrato: città obbligatoria e figli accompagnati — 2026-09-24
+
+- Vista Figli accompagnati per Manager/Admin/Viewer: una riga per figlio con
+  genitore espandibile e scheda esistente; iscritti principali sotto i 15 anni
+  in una tabella separata. Ricerca, filtro gruppo per ID e Senza gruppo,
+  indicatori globali e conteggi filtrati. Dati già autorizzati, nessuna query
+  aggiuntiva o scrittura. Statistiche chiariscono inclusione dei figli.
+- Schede storiche senza nascita/città/email conservate: letture e totali non
+  applicano i nuovi requisiti di inserimento. Figli di genitori incompleti
+  sempre inclusi; età ignota segnalata, non trasformata in zero o minore.
+  Nessuna migration, modifica dei dati, RLS, permessi o email di collaudo.
+- Rilettura READ ONLY: tutte le 23 iscrizioni Germania della diagnosi presenti,
+  zero eliminate, 7 date e 20 città ancora da completare con informazioni reali.
+- Verificati insieme 537 test, lint, TypeScript e build production in copia
+  pulita con npm ci. Browser Manager/Admin desktop/mobile: espansione tastiera,
+  ricerca, filtri, apertura/chiusura scheda con dati mancanti superati.
+- Commit/push su main e normale rilascio Vercel autorizzati dall'utente per
+  entrambe le modifiche. output/ riservato escluso dal commit.
+
+
+## Città obbligatoria negli inserimenti assistiti — 2026-09-24
+
+- Diagnosi READ ONLY Germania: 23 schede tutte da capogruppo manuale, 20 senza
+  città e 7 senza nascita. Le 7 sono anteriori alla correzione nascita del 23
+  settembre; le 11 del 24 settembre hanno tutte la data. Nessun caso proveniente
+  dal pubblico/link di gruppo. Dati realmente mancanti, non un errore tedesco.
+- Il modulo manuale condiviso Capogruppo/Manager/Admin richiede città nelle
+  sette lingue, con controllo browser/server prima delle scritture. Salva la
+  città dichiarata in city_other e nello snapshot; non copia city_id dal gruppo.
+  Data obbligatoria/reale/non futura conservata. Excel richiede città anche
+  riconfermando anteprime precedenti; pubblico/link hanno già entrambi i vincoli.
+- Nessuna modifica storica, migration, RLS o email di collaudo. Regressioni
+  parser/azioni/Excel e fixture browser required-registration-fields.mjs.
+  Verificati 531 test, lint, TypeScript e build con npm ci in copia isolata;
+  browser manuale sette lingue, pubblico/link in tedesco e mobile superati.
+  Dettagli in docs/incident-2026-09-24-germany-required-fields.md. Modifica locale,
+  inclusa nel rilascio integrato autorizzato del 24 settembre.
+## Presenze nella modifica personale su mobile — 2026-09-26
+
+- La scheda personale mostra le presenze in quattro riquadri su due colonne
+  quando il contenitore è stretto; da 32rem torna alla tabella per fasce.
+  Una sola serie di checkbox conserva selezioni e nomi dei campi durante il
+  cambio di layout, senza duplicare valori nel salvataggio. Calendario,
+  traduzioni e gestione delle presenze da comunicare invariati.
+
+## Magic Link dopo inattività — 2026-09-24
+
+- Il callback POST deve rinnovare `iscrizioni_last_activity` prima del redirect
+  alla dashboard, soltanto dopo una nuova verifica OTP/PKCE riuscita e il
+  completamento dell'accesso. Il vecchio cookie può sopravvivere alla sessione
+  Auth: senza rinnovo, il proxy disconnette immediatamente il nuovo accesso
+  con `error=inactive`, costringendo a richiedere un secondo Magic Link.
+- Cookie con le stesse opzioni del proxy (HttpOnly, SameSite=Lax, Secure in
+  produzione, path `/`, durata 30 giorni); timeout di inattività sempre 24 ore.
+  GET/HEAD di conferma, link falliti e semplice riuso della sessione esistente
+  non rinnovano il contatore. Ruoli, scanner protection e UI invariati.
+- Regressioni dei veri handler callback/proxy/activity con Auth sintetico in
+  `tests/magic-link-session-renewal.test.mts`; note in
+  `docs/incident-2026-09-24-magic-link-inactivity.md`. Nessuna migration,
+  modifica dati o email di collaudo. Verificati 524 test, lint, TypeScript,
+  build production e passaggio HTTP reale con provider sintetico. Commit/push
+  su main e rilascio Vercel autorizzati dall'utente il 24 settembre.
+
+## Statistiche con gerarchia espandibile — 2026-09-23
+
+- Riepilogo Manager/Admin dai collegamenti padre–figlio reali, anche per nodi
+  superiori non iscrivibili; solo rami con persone. Nodi inizialmente chiusi,
+  espansione ricorsiva, totali comprensivi dei discendenti e figli accompagnati.
+  Nessuna deduzione dalla residenza. Filtri per ID del sottoalbero o assegnazione
+  diretta; omonimi distinti. “Iscritti a … senza sottogruppo” compare solo per
+  assegnazioni dirette quando sono presenti anche sottogruppi occupati.
+- Nessuna modifica dati/permessi/migration. Test gerarchia, integrità e filtri in
+  statistics-hierarchy.test.mts; fixture browser statistics-hierarchy.mjs.
+  Verificati 522 test, lint, TypeScript e build in copia pulita con npm ci;
+  browser Manager/Admin desktop/mobile, espansione e tastiera superati.
+  Commit/push su main e pubblicazione Vercel autorizzati dopo anteprima approvata.
+
+## Riepilogo per assegnazione corrente — 2026-09-23
+
+- Statistiche Manager/Admin: elenco piatto per ID del gruppo corrente, gruppo
+  effettivo oppure nodo Nazione/città/area iscrivibile. Nessun raggruppamento
+  per residenza o antenati; omonimi distinti anche nei filtri dei conteggi.
+  Figli e presenze conservati; senza gruppo e nodi non iscrivibili segnalati
+  per mantenere i totali. Loader paginato legge anche is_assignable.
+- Nessuna modifica dati, permessi o migration. Commit/push su main e rilascio
+  Vercel autorizzati dall’utente. Verificati 518 test, lint, TypeScript e build
+  in copia pulita con npm ci dal lockfile. Regressioni in event-statistics,
+  statistics-loading e statistics-report-layout.
+
+
+## Presenze in colonne per momento — 2026-09-23
+
+- Selezionare Giorni di presenza espande la tabella Manager/Admin e Capogruppo
+  in una colonna per giorno/fascia, nello stesso punto delle colonne scelte.
+  Calendario dell’evento completo, incluso il pomeriggio precedente l’inizio;
+  celle Sì/No nelle sette lingue. Per richiesta utente, presenze sconosciute o
+  non comunicate restano Da comunicare, senza convertirle in assenze.
+- Excel operativo e capogruppo usano le stesse intestazioni ordinate e celle.
+  Presenze storiche senza fascia valgono per entrambe; permessi, query e dati
+  invariati. Test calendario/celle/Excel e route capogruppo; fixture browser
+  `tests/browser/attendance-columns.mjs` per entrambe le tabelle e mobile.
+  Modifica locale, non pubblicata.
+
+
+## Compatibilità build della fixture router — 2026-09-23
+
+- Il deployment `0c632e4` è fallito: dipendenze locali Next 16.3 diverse dal
+  lockfile Next 16.2.9 usato da Vercel. `bfcacheId` richiesto dal primo era
+  rifiutato come proprietà extra nell’oggetto inline dal secondo.
+- Fixture compatibile con entrambe tramite spread della proprietà aggiuntiva;
+  mantenuti i controlli TypeScript. Rimossa anche la funzione ActionIcon inutilizzata.
+  Prima dei rilasci verificare con `npm ci` dal lockfile e controllare lo stato
+  effettivo del deployment: il solo push non conferma la pubblicazione.
+
+
+## Riepilogo personale e annullamento — 2026-09-23
+
+- Riepilogo allineato alla scheda di modifica con icone Lucide, riquadri e
+  spaziature condivisi. Annulla la mia iscrizione in basso a destra nel
+  riepilogo, fuori dalla modale di modifica; conferma separata e focus/Esc
+  conservati. Rimossa dalle sette lingue la frase su account e incarichi.
+- Nessuna modifica alla logica di annullamento o ai dati. Modifica locale,
+  non pubblicata. Fixture browser aggiornata per la nuova posizione.
+
+## Colonna giorni di presenza — 2026-09-23
+
+- Colonna facoltativa `attendance` in Gestione iscritti Manager/Admin e nella
+  tabella Capogruppo, conservata nelle preferenze e inclusa nell’Excel.
+  Date ordinate, mattina/pomeriggio, sette lingue nel formatter; righe storiche
+  senza fascia valgono per l’intera giornata. Nessuna riga indica Da comunicare;
+  dati non caricati non sono convertiti in presenze assenti.
+- Letture correnti per gli ID già autorizzati, paginate e bloccanti su errore;
+  riepilogo operativo caricato soltanto nella sezione iscritti. Nessuna
+  migration, modifica dei dati o pubblicazione. Test in
+  `tests/attendance-summary.test.mts` includono paginazione ed Excel.
+
+
+## Inserimento singolo in overlay — 2026-09-23
+
+- Inserisci partecipante è accanto a Importa iscritti da Excel nella toolbar
+  condivisa Manager/Admin. `manual=1` apre una modale nativa sopra l’elenco;
+  catalogo ancora caricato solo all’apertura, Viewer escluso. Il vecchio URL
+  `/dashboard/manager/nuovo` reindirizza alla dashboard con la modale aperta.
+- X/Esc chiudono localmente e restituiscono il focus; scorrimento interno e
+  sfondo bloccato. Form e azione conservano il contesto della dashboard con
+  indirizzo di ritorno validato: filtri, colonne, ordine e menu. Dopo il
+  salvataggio, conferma e nuovo modulo nella stessa modale. Nessuna variazione
+  a scritture, permessi, dati o migration. Verificati 512 test, lint, TypeScript
+  e build in copia isolata; browser sintetico sette lingue, desktop/mobile,
+  Manager/Admin e Viewer. Modifica locale, non pubblicata.
+
+## Inserimento singolo Manager/Admin — 2026-09-23
+
+- Gestione iscritti offre Inserisci partecipante per Manager dell’evento corrente
+  e Admin globali. Nuova pagina `/dashboard/manager/nuovo`, gruppi attivi e
+  iscrivibili anche privati, nessuna membership richiesta. Catalogo paginato e
+  caricato solo all’apertura; Viewer escluso anche da URL/azione diretti.
+- Modulo e traduzioni condivisi col capogruppo, presenze non preselezionate,
+  controlli nascita/duplicati/consenso e figli conservati. Errori mantengono i
+  campi; successo apre un nuovo modulo. Senza email personale, il Manager usa
+  la consegna al referente del gruppo, non una delega esplicita a sé stesso.
+- Azione rilegge ruolo/evento/gruppo. Registrazione `source=admin` per il vincolo
+  esistente, assegnazione/snapshot/audit distinguono Manager e Admin reali.
+  Nessuna migration/RLS o scrittura di collaudo reale; resta il salvataggio
+  multi-scrittura del flusso assistito esistente. Dettagli e limiti in
+  `docs/manager-manual-registration.md`. Verificati 510 test, lint, TypeScript
+  e build in copia pulita con npm ci; browser sintetico sette lingue, desktop/
+  mobile e Viewer. Rilascio autorizzato dall’utente tramite commit/push su
+  main e normale deployment Vercel.
+
+## Più città nei suggerimenti dei gruppi — 2026-09-23
+
+- Editor Manager/Admin mantiene Paese → Città facoltativa; Aggiungi un’altra
+  città aggiunge righe rimovibili. Sette lingue e città fuori catalogo.
+  La scelta generale conserva l’eredità o tutto il paese; l’opzione Tutte le
+  città del paese può interrompere un vincolo urbano ereditato.
+- Matching su qualunque città collegata, eredità dell’insieme più vicino,
+  override esplicito e priorità urbana; fallback su paese per città non
+  riconosciuta invariato. Relazione caricata con paginazione e fail-closed.
+- Migration `20260923210000_group_multiple_cities.sql`: city_scope,
+  relazione con FK/RLS subordinata al gruppo, RPC service_role con salvataggio
+  e audit atomici, scope/versione/gerarchia e tutte le città validate. Singola
+  città conserva city_id; gruppi regionali hanno city_id nullo per non dedurre
+  arbitrariamente la residenza negli inserimenti assistiti. Nessuna modifica
+  di persone, ruoli o assegnazioni. Migration applicata e registrata atomicamente
+  in produzione il 23 settembre prima del push autorizzato. Dati delle 15
+  tabelle operative, 89 policy e grant delle 36 tabelle preesistenti invariati;
+  nuova relazione vuota e city_scope ereditato per tutti i gruppi.
+- SQL temporaneo, parser, caricamenti paginati e matching collaudati; fixture
+  browser in sette lingue/mobile. 502 test, lint, TypeScript e build superati.
+  Dettagli in docs/operational-group-geography.md.
+
+## Dashboard per tutti i ruoli assegnati — 2026-09-23
+
+- I ruoli operativi si sommano: Manager/Manager Viewer non nascondono né
+  impediscono le dashboard Capogruppo e Accoglienza se assegnate allo stesso
+  account. Tab e autorizzazione condivisa da sessione/proxy seguono la stessa
+  regola; area personale sempre disponibile, deleghe Admin invariate.
+- Anche una membership capogruppo secondaria abilita la dashboard del gruppo.
+  Verifica produzione READ ONLY del caso segnalato: entrambi gli incarichi
+  presenti sullo stesso account e Fiumicino attivo nell'evento corrente.
+  Il blocco era nella precedenza esclusiva dei ruoli, non nei dati.
+- Viewer conserva Statistiche e Gestione iscritti in sola lettura; i permessi
+  capogruppo valgono solo nella propria gerarchia. Nessuna modifica a ruoli,
+  membership, dati, RLS o migration. Test di tutte le combinazioni dei ruoli,
+  sette lingue, sessione e proxy con capogruppo secondario.
+- Correzione del rilascio di produzione: 498 test, lint, TypeScript e build
+  con npm ci in copia pulita; browser sintetico sette lingue/desktop/mobile
+  superato. Pubblicazione tramite main/Vercel nel rilascio già autorizzato.
+
+## Manager Viewer e iscrizione personale — 2026-09-23
+
+- Manager Viewer vede solo Statistiche e Gestione iscritti nella dashboard
+  operativa, in entrambi i formati del menu. Le altre sezioni sono respinte
+  lato server prima dei loader, anche tramite URL diretto, vecchio alias
+  servizi, parametri impliciti o navigazione memorizzata. Permesso Manager
+  verificato sull'evento corrente; Admin globale conserva tutte le sezioni.
+- Manager e Manager Viewer possono passare a Iscrizione e QR personale,
+  nelle sette lingue. Superata la precedente esclusione dell'area personale:
+  si usa lo stesso account email. Chi non è iscritto usa Avvia la mia iscrizione;
+  il flusso esistente associa l'iscrizione all'account autenticato quando
+  l'email coincide. Non creare iscrizioni vuote né inventare presenze/consensi.
+- Verifica produzione in sola lettura: 10 account dell'evento, 6 già collegati,
+  4 senza iscrizione, nessuna associazione pendente o ambigua alla stessa email.
+  Nessuna modifica dati/RLS, migration o email.
+  Verificati 493 test, lint, TypeScript e build con npm ci in copia pulita,
+  browser sintetico sette lingue/desktop/mobile per entrambi i ruoli.
+  Pubblicazione in produzione autorizzata dall'utente tramite push su main
+  e deployment Vercel; superata la precedente richiesta di solo commit locale.
+  Dettagli e collaudo in `docs/manager-personal-access.md`.
+
+## Territorio modificabile da Manager/Admin — 2026-09-23
+
+- Editor gruppi condiviso: paese e città facoltativa, catalogo esistente più
+  opzioni del modulo pubblico, altra città, territorio ereditato esplicito.
+  Cambio paese azzera la città; nessuna deduzione dai nomi. Nuovi testi nelle
+  sette lingue; dati conservati in caso di errore. Cataloghi caricati solo
+  aprendo l’editor, paginati e senza risultati parziali su errore.
+- Migration `20260923180000_operational_group_geography.sql`: nuova RPC
+  solo service_role, attore dalla sessione, Admin globale/Manager stesso evento,
+  coerenza paese/città/antenati/sottogruppi e versione `updated_at` con PT409.
+  Gruppo, eventuali cataloghi mancanti e audit atomici; RLS, iscrizioni e
+  assegnazioni invariati. Migration applicata e registrata atomicamente in
+  produzione il 23 settembre prima del push autorizzato: hash delle 15 tabelle
+  operative e 89 policy invariati, grant solo service_role e conflitto PT409
+  verificati senza scritture reali. Backup schema riservato in
+  `/root/pace-release-20260923-group-geography/`. Rilascio autorizzato su main
+  e Vercel. Dettagli in
+  `docs/operational-group-geography.md`; test azione/parser, SQL temporaneo e
+  browser sintetico sette lingue/desktop/mobile; 469 test, lint, TypeScript e
+  build superati con npm ci in copia pulita.
+- Precedente configurazione dati dei 12 paesi richiesta dall’utente già eseguita:
+  sei gruppi nuovi (Cuba, Guatemala, Colombia, Nicaragua, Messico, Uganda),
+  sei esistenti collegati (Costa d’Avorio, Nigeria, Senegal, Mozambico, Congo/RDC,
+  Malawi). Tutti effettivi/pubblici/iscrivibili, nessun limite età/città. Audit e
+  snapshot riservati in `output/country-groups-20260923/`; nessuna iscrizione
+  o referente modificato. Africa/America Latina non sono paesi nel catalogo.
+
+
+## Assisi: città territoriale nei suggerimenti pubblici — 2026-09-23
+
+- Il filtro `nodeType=city` non bastava: Assisi ha `communityKind=territorial`.
+  Il matching pubblico ora ammette anche le città territoriali pubbliche e
+  iscrivibili nel normale selettore; filtri età/geografici e matching interno
+  per tipologia invariati. Nessuna modifica al database o ai flag dei gruppi.
+- Diagnosi READ ONLY: Assisi è attiva/pubblica/iscrivibile senza fasce età,
+  eredita Italia dal padre; country_id/city_id propri vuoti. Non dedurre la
+  città dal nome. Test aggiornati con la tipologia reale, prima fallivano in
+  tre casi; fixture Assisi con nascita 2025, esclusioni e matching interno.
+- 463 test, lint, TypeScript e build superati. Browser sul modulo con catalogo
+  reale: Italia → Assisi, 15/06/2025; visibili e distinguibili Assisi e Diocesi
+  di Assisi, selezione del corretto ID verificata senza inviare iscrizioni.
+
+## Avviso età sotto un anno senza conferma — 2026-09-23
+
+- Per richiesta dell’utente, l’avviso sotto un anno è solo informativo:
+  rimossa la casella e il relativo blocco da moduli, server e import Excel.
+  Restano data obbligatoria, valida e non futura, sette lingue e figli invariati.
+  Le note precedenti sulla conferma descrivono il comportamento superato.
+
+## Città pubbliche iscrivibili nel modulo — 2026-09-23
+
+- Per richiesta dell’utente, il catalogo pubblico e il matching mostrano anche
+  i nodi `city` con entrambi i flag pubblico e iscrivibile, oltre ad aree/gruppi.
+  Restano esclusi paesi, città non pubbliche o non iscrivibili. Le precedenti
+  note che escludevano tutte le città descrivono il comportamento superato.
+- Territorio ereditato, filtri geografici/età e ordinamento invariati; nessuna
+  modifica dati, schema, ruoli o assegnazione automatica. Test del loader
+  paginato e del matching. Rilascio insieme ai controlli nascita autorizzato
+  tramite commit/push su main; 462 test, lint, TypeScript e build superati.
+
+## Data di nascita obbligatoria e controllo età zero — 2026-09-23
+
+- Rilascio autorizzato tramite commit/push su main il 23 settembre:
+  data obbligatoria/reale/non futura nel pubblico,
+  capogruppo e import manager/admin. Modifiche identità non possono svuotarla;
+  update parziali dei contatti la conservano. Nessuna migration o modifica RLS.
+- `ParticipantBirthDateField` condiviso nelle sette lingue: sotto un anno alla
+  compilazione, avviso e conferma legata alla data; un cambio la azzera. Controlli
+  anche sul server e nell’import Excel, comprese anteprime pregresse. Figli
+  accompagnati invariati; mai inventare o dedurre date mancanti.
+- Diagnosi produzione READ ONLY: inizialmente 33 date mancanti, tutte capogruppo
+  e vuote negli snapshot originali; salite a 37 durante l’analisi. 15 iscritti
+  principali di 0 anni all’evento e 8 date future, 4 sovrapposti: 19 schede da
+  verificare. Elenco nominativo riservato solo in `output/`, non nei documenti
+  tecnici. Nessuna scrittura reale o email. Dettagli e collaudo in
+  `docs/participant-birth-date-validation.md`. Verificati 462 test, lint,
+  TypeScript, build e browser sette lingue/mobile in copia pulita con npm ci.
+
+## Modale personale e annullamento autonomo — 2026-09-22
+
+- Scheda personale con icone Lucide, sezioni espandibili, dialog nativo accessibile
+  e conferma separata nelle sette lingue. Esc nella conferma non chiude la scheda;
+  focus iniziale su Mantieni iscrizione, errori conservati, invii duplicati bloccati.
+- `cancelOwnRegistration` ricava l’attore da Auth. Nuova RPC solo service_role
+  `cancel_own_registration`: lock e verifica proprietario/evento corrente anche per
+  account operativi; disponibile oltre la chiusura modifiche, reinvio idempotente.
+  Soft delete e revoca QR, audit atomico, conservazione storico/figli/account/ruoli,
+  scollegamento identità senza altre iscrizioni vive per consentire riuso email.
+  Annulla solo destinatari in coda della propria iscrizione, preservando deleghe
+  altrui; RPC operativa e RLS invariate.
+- Migration `20260922210000` applicata e registrata atomicamente in produzione
+  il 22 settembre prima del push autorizzato. Impronte delle 15 tabelle operative,
+  RLS e RPC operativa invariate; nuova RPC verificata solo service_role. Backup
+  schema riservato in `/root/pace-release-20260922-self-cancellation/`.
+  Test azione, PostgreSQL temporaneo e browser sintetico sette lingue/mobile;
+  447 test, lint, typecheck e build superati; procedure in
+  `docs/self-registration-cancellation.md`. Pubblicazione autorizzata tramite
+  commit/push su main e Vercel; nessuna modifica a persone reali o email di collaudo.
+
+## Rilascio integrato delle tre attività — 2026-09-22
+
+- Verificata la compatibilità di gestione/eliminazione gruppi e figli sempre
+  visibili, aggiunta figli/accessibilità operativa e riutilizzo email eliminate.
+  Test integrato `tests/sql/combined-operational-release.sql`: eliminazione gruppo
+  conserva figli/accessibilità e revoca lo scope capogruppo; il Manager mantiene
+  accesso, eliminazione iscrizione impedisce modifiche e scollega l’identità.
+- Migration `20260922180000`, `20260922190000`, `20260922200000` applicate e
+  registrate insieme in una transazione in produzione prima del push autorizzato.
+  Hash delle 13 tabelle operative invariati, RLS e grant della RPC ciclo vita
+  invariati; nuove RPC solo service_role e DELETE groups revocato come previsto.
+  Scollegate soltanto 11 identità con sole iscrizioni eliminate, con audit;
+  contenuto storico conservato. Backup riservato sul server in
+  `/root/pace-release-20260922-combined/`.
+- 439 test, lint, typecheck, build production, tre fixture SQL, test SQL integrato
+  e concorrenza gruppi superati. Browser sintetico gruppi, accessibilità/aggiunta
+  figli e tabella capogruppo nelle sette lingue e desktop/mobile superato.
+  Nessuna eliminazione di collaudo su dati reali né email inviata.
+- Pubblicazione autorizzata dall’utente tramite commit/push su main e Vercel.
+  La cancellazione locale della presentazione e `output/` sono estranei al rilascio.
+  Le note precedenti «non pubblicata/applicata» descrivono lo stato preparatorio.
+
+## Figli sempre visibili nella tabella capogruppo — 2026-09-22
+
+- `toLeaderTableRow` conserva i figli già caricati e ordinati dalla lettura
+  scoped delle iscrizioni del capogruppo. `LeaderParticipantsTable` li mostra
+  sempre sotto il genitore nella colonna nome, non nascondibile: badge con
+  numero, nomi/cognomi e età all’inizio dell’evento. Nessun interruttore.
+- `AccompanyingChildrenList` condivide il markup con la tabella Manager/Admin,
+  dove resta attivato soltanto da Mostra figli accompagnati. Etichette nelle
+  sette lingue, gestione di meno di un anno ed età non disponibile.
+- Nessuna modifica a query, permessi, schema, dati o colonne dell’export.
+  Regressione del mapper e fixture browser `leader-participants.mjs`: figli
+  collegati al genitore, ordinamento/colonne, desktop/mobile e sette lingue.
+  Verificati 439 test, lint, typecheck e build production.
+  Modifica locale, non pubblicata.
+
+
+## Riutilizzo email degli eliminati — 2026-09-22
+
+- Il controllo iscrizioni email ignora gli eliminati; il capogruppo può
+  ricreare anche la stessa persona senza deroga duplicati, anche da Excel. Email ancora usate
+  da iscrizioni attive dell'evento restano bloccate. Letture paginate e fail-closed.
+- `lib/registrations/email-identity.ts` esclude identità con sole iscrizioni
+  eliminate da sincronizzazione, login, referenti e modifica contatti, evitando
+  di riscrivere o ricollegare lo storico quando un indirizzo viene riutilizzato.
+  Identità operative senza iscrizione e persone attive in altri eventi conservate.
+- Migration `20260922200000_deleted_registration_email_reuse.sql` preparata,
+  NON applicata in produzione: scollega Auth dall'ultima iscrizione eliminata
+  dopo la cancellazione coda, con audit; include eliminazioni pregresse. Conserva
+  account Auth e ruoli. Ripristino rifiutato PT409 se email riutilizzata nell'evento.
+- Test `tests/deleted-email-reuse.test.mts`, regressione inserimento in
+  `tests/account-access.test.mts`, PostgreSQL temporaneo in
+  `tests/sql/deleted-email-reuse.sql`. Dettagli e limiti di rilascio in
+  `docs/deleted-registration-email-reuse.md`. Nessun invio o modifica dati reali.
+
+## Accessibilità e aggiunta figli nelle schede operative — 2026-09-22
+
+- Le modali capogruppo e Manager/Admin includono modifica delle tre opzioni
+  di accessibilità esistenti e inserimento figli, anche nelle schede senza figli.
+  Componenti condivisi, sette lingue, errori conservano i dati, refresh mantiene
+  la selezione. Nuovi figli fino a dieci, prima posizione libera senza rinumerare
+  i fratelli; UUID di richiesta rende idempotente il reinvio dello stesso inserimento.
+- `operational-registration-actions.ts` deriva l’attore dalla sessione. Migration
+  `20260922190000_operational_registration_additions.sql`: RPC solo service_role,
+  lock iscrizione, Admin globale/Manager evento/capogruppo con gerarchia attiva,
+  evento e assegnazione correnti; esclusi eliminati/viewer/gruppi estranei.
+  Accessibilità letta solo aprendo una scheda modificabile; errori non diventano
+  dati vuoti. Scrittura con snapshot/versione, conflitti PT409, audit atomico.
+- Chiavi storiche e richiesta distinta di ricontatto `needs_operational_support`
+  conservate. Nessun cambio RLS, consensi, QR, gruppi o presenze. Date dei figli
+  coerenti con inserimenti assistiti e correzioni storiche; limite 0–17 solo pubblico.
+- Migration e codice non ancora pubblicati/applicati in produzione: migration
+  prima del rilascio. Test azioni, SQL su PostgreSQL temporaneo e browser
+  sintetico nelle sette lingue/mobile; procedure in
+  `docs/operational-registration-additions.md`. Nessuna scrittura di collaudo
+  su persone reali o invio email.
+
+## Eliminazione gruppi e guida esterna — 2026-09-22
+
+- `GroupDeleteButton` nell’elenco Gruppi Admin/Manager: anteprima conteggi,
+  conferma esplicita, dialog accessibile, sette lingue, filtri conservati e
+  messaggio di successo. Il portal blocca la propagazione di onChange per non
+  attivare AutoFilterForm del Manager. Nessun comando per viewer/capogruppo.
+- Per richiesta esplicita, eliminare il gruppo NON elimina persone, account,
+  iscrizioni, figli, presenze o QR. Rimuove solo i collegamenti a quel gruppo:
+  gli iscritti correnti restano senza gruppo; i referenti mantengono account e
+  altri incarichi. I sottogruppi bloccano la rimozione, senza cascade gerarchico.
+- Migration locale `20260922180000_group_deletion.sql`: RPC service_role-only
+  `manage_group_deletion`, attore dalla sessione, Admin globale/Manager stesso
+  evento verificati nel DB, lock e impronta su gruppo/collegamenti, conflitti
+  PT409, audit atomico con snapshot dei collegamenti rimossi. Revoca solo
+  DELETE diretto di groups ad anon/authenticated; altre policy/grant invariati.
+  Hash dei link dismessi in tabella privata app, riuso impedito anche creando
+  un gruppo omonimo. Nessun hash/token/ciphertext nell’audit o nel browser.
+- Non ancora applicata in produzione né pubblicata: migration prima del codice.
+  Test SQL temporanei (anche 1.205 assegnazioni), concorrenza multi-sessione,
+  azione server e browser sintetico nelle sette lingue. Verificati 428 test,
+  lint, typecheck e build production. Procedure e limiti in
+  `docs/group-deletion.md`. Nessuna cancellazione o email reale di collaudo.
+- Tutorial esterno `docs/guida-gruppi.docx` e sorgente `.md`: esempi di gruppo
+  effettivo, paese, città e area, distinzione iscrivibilità/visibilità, referenti,
+  link ed eliminazione. Il modulo non imposta country_id/city_id dai nomi;
+  la guida spiega che la configurazione geografica del catalogo va verificata.
+
+
+## Saturazione API per conflitti obsoleti — 2026-09-22
+
+- PostgREST 14.6 ritenta indefinitamente SQLSTATE `40001`: non usarlo per
+  conflitti applicativi deterministici. Alle 16:54:58 Europe/Rome annullate
+  con `pg_cancel_backend` dieci richieste `review_participant_duplicate` in
+  ciclo, che occupavano tutte le connessioni e causavano `PGRST003`/HTTP 504
+  anche su ruoli, dashboard e modulo pubblico. Nessun riavvio del database.
+- Migration `20260922153000_nonretryable_stale_conflicts.sql` applicata e
+  registrata atomicamente in produzione: revisioni duplicati, importazioni
+  e modifiche figli restituiscono `PT409` per versioni obsolete. Cambiano solo
+  i codici, preservando corpo delle funzioni, lock, controlli e grant verificati.
+  L'app riconosce PT409 e il precedente 40001 come conflitti da ricaricare.
+- Regressione SQL `tests/sql/nonretryable-stale-conflicts.sql`, regressioni
+  azione figli e mapper qualità. Prova HTTP reale con ID sintetici e versione
+  deliberatamente obsoleta: 409/PT409 in 182 ms prima di qualsiasi scrittura,
+  successiva lettura HTTP 200. Diagnosi e limiti in
+  `docs/incident-2026-09-22-postgrest-retries.md`.
+
+## Iscrizioni nelle sette lingue — 2026-09-22
+
+- La lingua selezionata viene salvata da `submitPublicRegistration`, ma il
+  vincolo storico `participants_preferred_locale_check` ammetteva solo it/en:
+  fr/de/es/nl/uk fallivano alla prima INSERT del partecipante (SQLSTATE 23514).
+- Migration `20260922120000_participant_supported_locales.sql` applicata e
+  registrata atomicamente in produzione il 22 settembre: il solo vincolo dei
+  partecipanti ora ammette le sette lingue di `SUPPORTED_LOCALES`. Default,
+  dati storici, grant, RLS e altri vincoli invariati. Conteggio e hash dei 1.919
+  partecipanti verificati invariati nella transazione protetta da lock.
+- Regressione su PostgreSQL temporaneo in
+  `tests/sql/participant-supported-locales.mts`: riproduce i cinque errori
+  originali, verifica INSERT/UPDATE nelle sette lingue, conservazione dei dati
+  e default, rifiuto di valori sconosciuti e null. Dettagli e comando in
+  `docs/incident-2026-09-22-registration-locales.md`. Nessuna iscrizione reale
+  di collaudo o email inviata; correzione DB immediatamente attiva senza build.
+
+## Modifica figli nelle schede operative — 2026-09-21
+
+- `OperationalChildrenEditor` permette a Manager/Admin e capogruppo di modificare
+  nome, cognome e data di nascita o rimuovere singoli figli con conferma. Moduli
+  separati per salvataggio/rimozione: dati errati nei campi non impediscono
+  l’eliminazione. Sette lingue, errori conservano gli inserimenti; refresh della
+  scheda mantiene filtri e selezione. Inserimento nuovi partecipanti invariato.
+- `updateOperationalChild` deriva l’attore dalla sessione e chiama la RPC
+  service_role-only `update_operational_child`: autorizza Manager dell’evento,
+  Admin globale oppure capogruppo nell’evento corrente e gerarchia attiva con
+  assegnazione corrente. Esclude iscrizioni eliminate, viewer e gruppi estranei.
+- RPC con lock iscrizione/figlio, confronto dei dati originari contro conflitti,
+  modifica puntuale e audit prima/dopo atomici. Mantiene ID e posizioni degli
+  altri figli; gruppo, presenze, QR e dati del genitore invariati. Nessun limite
+  di 17 anni sulle correzioni storiche, nessuna modifica alle policy RLS.
+- Migration `20260921120000_operational_children.sql` applicata e registrata
+  atomicamente in produzione il 21 settembre, prima del push autorizzato.
+  Conteggio/hash dei 73 figli invariati; privilegi solo service_role verificati.
+  Nessuna scrittura di collaudo su partecipanti reali. Test SQL su PostgreSQL temporaneo in
+  `tests/sql/operational-children.sql`, azione/parser in
+  `tests/operational-children.test.mts`, browser con azioni sintetiche in
+  `tests/browser/operational-children.mjs`. Verificati 419 test, lint, typecheck,
+  build production, SQL e browser nelle sette lingue/mobile senza azioni reali.
+
+## Presenze nuovi partecipanti capogruppo — 2026-09-21
+
+- Il solo modulo di inserimento nuovi partecipanti del capogruppo passa
+  `initialUnknown={false}` a `ManualAttendanceFields`: nessuna presenza né
+  «Non lo so ancora, lo comunicherò in seguito» preselezionata. L’opzione resta
+  disponibile; il validatore esistente richiede fasce oppure la scelta esplicita
+  di presenze da comunicare. Modifica delle presenze esistenti e altri utilizzi
+  del componente invariati. Nessuna modifica dati o schema.
+
+## Controlli nuove iscrizioni pubbliche — 2026-09-21
+
+- Il modulo pubblico condiviso dai link di gruppo richiede `emailConfirmation`;
+  confronto normalizzato nel browser e in `parseRegistrationForm`, prima delle
+  scritture. La conferma non entra in `RegistrationInput` né nel database.
+- Per scelta dell’utente niente slider: mantenuta la data di nascita dei figli.
+  `public-child-age.ts` calcola i limiti inclusivi per 0–17 anni compiuti alla
+  data di iscrizione (giorno UTC, coerente con il validatore esistente), usati
+  dal campo data e dal solo parser pubblico. Date future e diciottesimo
+  compleanno esclusi; gestiti anni bisestili. Validatori condivisi con modifiche
+  storiche e inserimenti assistiti invariati.
+- Testo nelle sette lingue: funzione per bambini accompagnati, sempre collegati
+  all’iscrizione del genitore per panel/altri eventi; se entrambi i genitori si
+  iscrivono alla preghiera, inserire i figli con un solo genitore.
+- Accesso, modali operative, dati storici, schema e RLS invariati. Modifiche
+  autorizzate per il rilascio tramite main/Vercel il 21 settembre.
+  Test in `tests/public-email-confirmation.test.mts`,
+  `tests/public-child-age.test.mts`; fixture browser separata in
+  `tests/browser/public-registration-controls.mjs` (route temporanea, nessun invio).
+  Verificati 415 test, lint, typecheck, build e browser nelle sette lingue,
+  modulo generale/link di gruppo e layout mobile; nessun errore browser.
+
+
+## Salvataggio schede personali e operative — 2026-09-18
+
+- `updateParticipantDashboard` normalizza `participants` ed `events` con
+  `relatedOne`: PostgREST restituisce oggetti per le relazioni molti-a-uno.
+  Non usare solo `[0]`: respinge il proprietario legittimo prima del salvataggio.
+  Le letture dei dati da conservare devono riuscire prima di qualsiasi scrittura.
+- Il modulo identità/contatti Admin/Manager usa `/dashboard/participants/update`.
+  Non spostarlo sotto `/dashboard/admin`: il proxy reindirizza i manager con 307
+  prima del handler. Vecchia route admin conservata come alias. Autenticazione,
+  origine, validazione e verifica Admin globale/Manager nel handler; scope evento,
+  iscrizione/partecipante e transazione restano nella RPC esistente.
+- Test completi delle azioni personale e capogruppo, route operativa e proxy;
+  SQL temporaneo per operazioni/presenze e scope. Diagnosi e limiti in
+  `docs/incident-2026-09-18-participant-save.md`. Nessuna modifica dati/RLS o invio.
+  Pubblicazione in produzione autorizzata il 18 settembre; rilascio tramite main/Vercel.
+
+
+## Lingua delle email pubbliche — 2026-09-18
+
+- `submitPublicRegistration` risolve la lingua lato server con `getRequestLocale`
+  (cookie del selettore, poi lingua browser, fallback inglese). La passa alla
+  creazione come `preferredLocale`: viene salvata sul partecipante e usata dalla
+  conferma, anziché conservare il default inglese del parser.
+- `registration-confirmation-copy.ts` contiene oggetto, corpo e testo alternativo
+  QR nelle sette lingue. Testo semplice e HTML condividono gli stessi messaggi;
+  il titolo ufficiale dell'evento resta quello del catalogo, anche se bilingue.
+- Magic Link italiano/inglese nello stesso messaggio, con identico URL in entrambe
+  le sezioni. Token, callback e trasporto Postmark invariati.
+- Notifiche per inserimenti assistiti e ruoli continuano a usare la lingua del
+  paese del gruppo. Nessun aggiornamento delle preferenze storiche o reinvio.
+- Regressioni in `tests/registration-email-locales.test.mts` e nel test dell'azione
+  pubblica: scelta lingua, sette template, escaping, QR e Magic Link bilingue.
+
+
+## Audit oltre 1.000 iscritti — 2026-09-18
+
+- Monitoraggio Admin, campagne, identità operative, cataloghi/gerarchie e letture
+  di ruoli/link usano pagine da 500 con ordine stabile; filtri estesi suddivisi
+  in blocchi da 100. Anche le relazioni uno-a-molti vanno paginate dentro ciascun
+  blocco. Non sostituire paginazione con aumento del limite PostgREST.
+- `writeRowsForIds` limita i filtri delle scritture e interrompe al primo errore.
+  La modifica dei destinatari invalida prima il precedente test della campagna:
+  un errore intermedio non può lasciare una selezione parziale pronta all'invio.
+- `findAuthUserByEmail` scorre Auth Admin in pagine da 500: niente ricerca solo
+  nella prima pagina. Errori non equivalgono ad account assente.
+- Conservare le factory lazy dei loader Manager per rispettare `dashboardLoadPlan`.
+- Audit, percorsi già protetti e limiti in `docs/row-cap-audit-2026-09-18.md`;
+  regressioni in `tests/row-cap-audit.test.mts`. Nessuna modifica dati/RLS/invii.
+
+
+## Iscrizione personale e limite righe per Admin — 2026-09-18
+
+- La dashboard partecipante filtra `participants.auth_user_id` con l'account
+  autenticato direttamente nella query `registrations` con join interno,
+  prima del limite. Mantiene evento corrente, esclusione degli eliminati e
+  controllo difensivo del proprietario; seleziona l'ultima iscrizione con
+  ordine stabile `submitted_at DESC, id DESC` e `limit(1)`.
+- Il vecchio filtro solo in memoria perdeva le iscrizioni più vecchie degli
+  Admin quando le righe visibili superavano il massimo PostgREST di 1.000.
+  Riprodotto su Stefano e Daniela: iscrizioni e QR presenti e attivi. Il
+  partecipante ordinario verificato vede una sola riga tramite RLS. Nessuna
+  modifica a dati, ruoli, QR o testi/interfaccia ordinaria.
+- Gli errori della query interrompono il caricamento usando il boundary già
+  condiviso, anziché apparire come assenza di iscrizione.
+- Regressioni in `tests/personal-registration-scope.test.mts`: query reale
+  del componente con builder Supabase, oltre 1.000 righe, Admin/Manager,
+  partecipante, eliminati/altro evento, assenza, proprietà ed errore DB.
+  Verificati 345 test, lint, typecheck e build in export pulito con npm ci;
+  query aggiornata verificata in sola lettura su entrambi gli account e un
+  partecipante ordinario, permessi authenticated verificati via SQL readonly.
+
+
+## Prestazioni dashboard — 2026-09-18
+
+- Apertura/chiusura schede Admin/Manager (anche Duplicati) tramite dati già
+  caricati e `LocalQueryLink`/cronologia nativa; selezione da `useSearchParams`,
+  URL diretto, filtri, colonne e cronologia conservati. Testi e grafica invariati.
+- Presenze caricate separatamente dal GET privato autenticato
+  `/dashboard/participants/attendance`: admin globale o manager dell’evento,
+  iscrizione attiva, no-store, annullamento richieste alla chiusura. Salvataggio
+  tramite azione esistente; versione del pannello rinnovata a ogni risposta server.
+- Scheda capogruppo chiudibile localmente; apertura continua a controllare
+  scope/QR/presenze sul server. Link di gruppo caricati solo nello strumento link.
+- `dashboardLoadPlan` limita i dati alla sezione visibile. `loadRowsForIds`
+  esegue ondate di tre blocchi da 100, mantenendo paginazione, ordine, deduplica
+  e interruzione senza risultati parziali. Nessuna cache di dati o autorizzazioni.
+- `vercel.json` fissa la regione delle funzioni a `fra1` (Francoforte): il
+  database Hetzner è in `fsn1-dc14`, verificato dai metadata della VM. Il
+  deployment precedente usava `iad1` (USA). Verificare la regione nel rilascio.
+- Attività sessione forzata solo quando cambia il percorso stabile memorizzabile;
+  interazioni restano sincronizzate al minuto, con lo stesso timeout di 24 ore.
+- Diagnosi, misure e collaudo in `docs/performance-2026-09-18.md`. Nessuna
+  migration, modifica RLS o scrittura di collaudo sui partecipanti reali.
+
+## Territorio ereditato nei suggerimenti di gruppo — 2026-09-16
+
+- Il catalogo pubblico carica con paginazione stabile tutti i gruppi attivi
+  dell'evento, inclusi gli antenati non pubblici/non assegnabili. Solo dopo
+  la risoluzione espone al browser i gruppi e le aree pubblici assegnabili.
+- `lib/groups/territory.ts` integra paese e città mancanti dal più vicino
+  antenato valorizzato, senza riscrivere i dati. La città esplicita prevale;
+  cicli, antenati mancanti/inattivi/di altro evento e paesi contraddittori
+  interrompono il caricamento. Non dedurre territori dai nomi dei gruppi.
+- Il matching mantiene la precedenza della città sul paese, poi specificità
+  del nodo e ordine pubblico; conserva filtri età, tipologia e visibilità.
+  Gruppi di altre città sono esclusi se la città personale è riconosciuta;
+  senza città riconosciuta resta il fallback del paese. Nessuna assegnazione
+  automatica né modifica a link riservati, ruoli, database o RLS.
+- Diagnosi in sola lettura: Varsavia e Poznan Chojna hanno territorio diretto
+  vuoto e padre Polonia. La nuova risoluzione sui 112 gruppi attivi li propone
+  entrambi come gruppi nazionali; una precedenza per città richiede una città
+  associata al gruppo o a un suo antenato.
+- Regressioni in `tests/group-territory-inheritance.test.mts`: caso Polonia,
+  ereditarietà multilivello, ordine città/paese, filtri, gerarchie invalide,
+  oltre 1.000 nodi e interruzione su errore nelle pagine successive.
+  Verificati 336 test, lint, typecheck e build con dipendenze da `npm ci`.
+- Prima della modifica, `main` riallineato con pull fast-forward da `8062b90`
+  a `5e6d3ff`; cartella locale `output/` conservata. Modifica non pubblicata.
+
+## Normalizzazione multilingue dei paesi — 2026-09-16
+
+- `country-names.ts` riconduce i nomi nelle sette lingue allo stesso codice ISO,
+  con alias espliciti e confronto senza accenti, mai approssimativo. Conserva
+  le etichette italiane già usate dal catalogo e dalle città. Valori storici
+  sconosciuti restano visibili; corrispondenze multiple non scelgono un ID.
+- Il modulo pubblico mostra e cerca le etichette nella lingua dell'interfaccia,
+  mantenendo le chiavi canoniche per città e gruppi. Anche `Altro / non in lista`
+  passa dalla stessa validazione. Parser e salvataggio normalizzano il paese;
+  il resolver cerca l'ID tramite `countries.iso2` e interrompe il salvataggio
+  se fallisce la lettura del catalogo, paginata. Paesi validi non presenti nel
+  catalogo restano ammessi come testo canonico, senza creare nuove righe.
+- `participantGeography` normalizza anche i dati preesistenti per elenchi,
+  statistiche ed export. Il paese della scheda capogruppo usa lo stesso helper.
+  Testo esplicito mantiene precedenza su collegamenti di catalogo obsoleti;
+  gerarchia territoriale del gruppo e assegnazioni restano invariate.
+- Verifica in sola lettura della scheda 5H5R: `España` risolve `ES` e si mostra
+  come `Spagna`. Nessuna riscrittura dati storici, migration o modifica RLS.
+  Rilascio autorizzato tramite push main/Vercel il 16 settembre.
+  Test in `tests/country-normalization.test.mts`
+  e fixture browser `tests/browser/country-normalization.mjs`. Verificati 330
+  test, lint, typecheck e build in copia pulita con `npm ci`; browser nelle
+  sette lingue, desktop/mobile, nessun invio. Eseguire la fixture browser
+  separatamente dalla suite: monta temporaneamente una route di collaudo.
+
+
+## Recupero campagne e conferma magic link — rilascio 2026-09-16
+
+- Batch Postmark distingue rifiuti definitivi, `retry`, `blocked` e `unknown`.
+  HTTP 429 e manutenzione dichiarata (ErrorCode 100) sono riprogrammabili;
+  rete, risposte malformate e HTTP 5xx non confermati restano incerti, senza
+  retry. Errori di configurazione/account sospendono fino a ripresa manuale.
+  Dopo un errore generale nessun altro sottobatch viene inviato; i messaggi
+  non ancora sottoposti tornano scheduled. Successi misti vengono salvati.
+- Migration `20260916120000_email_campaign_recovery.sql` applicata e registrata
+  atomicamente il 16 settembre prima del nuovo worker: stato destinatario `unknown`, campagna `attention`,
+  controllo globale service_role-only con pausa persistente, backoff 60s–1h
+  e Retry-After fino a 24h. Claim e pausa condividono il lock; le richieste
+  già in volo possono terminare. Nessuna riscrittura dei destinatari storici.
+  `resume_email_campaign_delivery()` rimuove la pausa dopo correzione della
+  configurazione, ma non riaccoda unknown/sending/failed. Dashboard mostra
+  pausa/blocco ed Esiti da verificare. Non riavviare esiti incerti senza
+  riconciliazione con Postmark. Dettagli in `docs/postmark.md`.
+- GET `/auth/callback` mostra soltanto la conferma, in sette lingue, senza
+  client Auth né consumo di token, anche per vecchi link token/code. Solo
+  POST dal medesimo origin verifica OTP/PKCE e conclude il flusso esistente;
+  redirect 303, no-store e referrer limitato all’origine (mai token/query),
+  nessun JS o prefetch automatico. I nuovi
+  magic link richiedono hashed_token: niente fallback al link Supabase che
+  consumerebbe il token prima della conferma. Scope limitato ai punti 3 e 5
+  della revisione: altri rilievi esplicitamente rinviati dall'utente.
+- Test trasporto/worker e callback con provider/Auth simulati; SQL su PGlite
+  temporaneo, fixture `tests/sql/email-campaign-recovery.sql`. Rilascio
+  autorizzato tramite push main/Vercel; timer sospeso e controllo globale
+  bloccato durante il passaggio. Conteggio e hash dei 3.324 destinatari
+  invariati nella migration; nessun invio di prova o reinvio storico.
+- Verifiche finali: 322 test, lint, typecheck e build production; dipendenze
+  dal lockfile in copia pulita per evitare directory duplicate preesistenti.
+  Browser sintetico desktop/mobile: GET/HEAD ripetuti, sette lingue, nessuna
+  chiamata Auth prima del clic, POST unico verso Auth locale simulato e ritorno
+  a login per token scaduto. Referrer strict-origin: no-referrer produrrebbe
+  Origin:null sul POST nativo Chromium e verrebbe respinto dal controllo CSRF.
+
+## Rilascio Postmark — 2026-09-15
+
+- Rilascio operativo `e74d395`, deployment Vercel READY
+  `dpl_8mr9uuYWXvztxnV3yPEm1VxAwXvb`, alias registrationspeace.santegidio.org.
+  Migration `20260912180000` applicata e registrata in transazione: hash dei
+  destinatari invariato, RPC solo service_role. Timer attivo, prima chiamata
+  HTTP riuscita con coda vuota. Magic link richiesto dal browser in produzione
+  alla casella di servizio: Postmark Delivered, Google SMTP 250, stream outbound.
+  Callback login non eseguita. 310 test e build Vercel superati.
+- Pubblicazione autorizzata dall’utente. Scope Vercel reale:
+  `giovaniperlapaces-projects`, progetto `iscrizioni-pace`, piano Hobby.
+  Lo scope storico stefano-orlandos-projects-de2d57cb non è più accessibile.
+- Cron Vercel rimosso: Hobby non permette frequenza al minuto. Richiamo
+  autenticato mediante timer systemd sul server DB esistente, definizioni
+  in `scripts/postmark-cron/`. Config riservata `/etc/iscrizioni-pace/email-cron.conf`,
+  root 0600; token CRON_SECRET condiviso con produzione, mai in Git.
+  Timer dopo 60 secondi dal completamento, niente esecuzioni sovrapposte.
+- SMTP precedente conservato nelle env per rollback ma ignorato dal nuovo codice.
+  Nuove env Postmark in produzione e sviluppo. Backup RPC precedenti locale
+  `/tmp/pace-postmark-release/rollback-queue.sql`. Coordinare deployment,
+  migration atomica e avvio timer; nessuna riscrittura destinatari.
+
+
+## Postmark — ripresa 2026-09-15
+
+- Account approvato; pagamento ancora da completare. Integrazione recuperata dallo
+  stash `e96c3ee21bdde047fbffb25fb145fcf65a877b61`, conservato. Sostituisce lo standby
+  precedente. Note preparatorie sotto; per lo stato attuale vedere Rilascio Postmark sopra.
+- Configurazione locale riservata in `.env.postmark.local` (0600, esclusa da Git).
+  Caricare l'override per test; normale `.env.local` e Vercel restano invariati.
+  Nuova modalità `postmark|log`, `POSTMARK_SERVER_TOKEN`, `EMAIL_REPLY_TO`;
+  stream separati outbound/broadcast. Nessun fallback Gmail o Nodemailer.
+- Due prove reali a registrationspeace@santegidio.org consegnate con SMTP Google
+  250 OK, QR sintetico e allegato. From/Reply-To, CID e tracking verificati.
+  Nessuna iscrizione/account modificato; callback login reale non collaudata.
+- Quota Gmail 300/giorno rimossa nella migration locale; claim 25 atomico,
+  inoltro `/email/batch` e blocchi consecutivi senza pausa per budget 180 secondi.
+  Avvio in background con Next after; cron al minuto riprende scheduled residui.
+  Nessun tetto 25/minuto. Esiti per destinatario, payload limitati per byte,
+  nessun retry incerto; errori DB dopo accettazione lasciano sending da verificare. Migration NON applicata in produzione: coordinare col rilascio e
+  verificare piano Vercel/CRON_SECRET. Non eseguire la nuova coda su Gmail.
+- Backup locale precedente e copie duplicate nello stash
+  `backup-pre-postmark-2026-09-15-local-changes-and-duplicates`; codice già pubblicato
+  riallineato a origin/main. Conservata la rimozione locale del dettaglio errore
+  in registration-page-content.tsx (estranea a Postmark).
+- Lockfile recuperato dalla versione corrente rimuovendo solo Nodemailer e tipi.
+  Dettagli e passi di rilascio in `docs/postmark.md`. Nessuna pubblicazione eseguita.
+- Verifiche finali dopo ottimizzazione batch: 310 test, lint, typecheck e build superati; SQL PGlite con 1.205
+  destinatari. Allineato il test del messaggio gruppo al testo generico già scelto
+  localmente, conservando il controllo di assenza del fallback.
+- `npm run dev:postmark` carica l'override locale; `npm run email:verify:postmark`
+  controlla provider senza invio. Piano Postmark Basic 50.000 rilevato; 4 prove
+  consumate, incluse due batch con Delivered/SMTP 250. Ultimo controllo fattura
+  insoluta precedente all’ottimizzazione; nessuna modifica al pagamento.
+
+
+## Segnalazioni di appartenenza al gruppo — 2026-09-15
+
+- Il capogruppo usa il collegamento discreto `Segnala un problema di gruppo`,
+  con conferma e testi nelle sette lingue. `updateGroupLeaderAssignment` chiama
+  `report_group_assignment`: registra solo l'audit `group_leader.assignment_reported`,
+  senza modificare alcun campo dell'assegnazione, note incluse. Invii ripetuti
+  dello stesso referente sulla stessa assegnazione sono idempotenti.
+- `GroupAssignmentReports` mostra le segnalazioni nelle dashboard Manager/Admin
+  dell'evento, con collegamento alla scheda. Controlla i ruoli prima delle
+  letture; paginazione completa, blocchi da 100 ID, esclusione delle assegnazioni
+  non correnti e delle iscrizioni eliminate. Un errore mostra un avviso.
+  Le segnalazioni sono interne alla dashboard, senza invii email.
+- Migration `20260915160000_group_assignment_reports.sql`: la vecchia RPC
+  `reject_group_assignment` delega alla sola segnalazione, anche per vecchi client.
+  La policy UPDATE delle assegnazioni ammette solo Manager/Admin; le note del
+  capogruppo continuano tramite l'azione server con scope. RPC solo service_role,
+  con nuova verifica di membership, gruppo attivo, evento corrente e iscrizione.
+- Verifiche: `tests/sql/group-assignment-reports.sql` su PostgreSQL temporaneo
+  (PGlite), test del pannello in `tests/group-assignment-reports.test.mts`.
+  Migration applicata e registrata in produzione il 2026-09-15. Conteggio
+  e hash delle 396 assegnazioni invariati prima/dopo. Prova reale interamente
+  annullata: RPC nuova e storica, idempotenza, assegnazione invariata e blocco
+  UPDATE del capogruppo con ruolo SQL authenticated verificati. Nessuna
+  segnalazione di prova persistente. Rilascio: 307 test, lint mirato, typecheck
+  e build production superati nella copia isolata con npm ci dal lockfile.
+
+
+## Rilascio correzioni iscrizione e referenti — 2026-09-15
+
+- Pacchetto integrato su `8062b90`: avvio iscrizione personale, conservazione
+  del gruppo dopo errori, controllo link prima delle scritture, referenti
+  principali/secondari nelle tabelle e rimozione della frase guida sulle
+  disabilità in tutte le lingue, anche nella modifica personale.
+- Verifica finale in checkout isolato con dipendenze dal lockfile: 304 test,
+  lint e build production superati. Nessuna migration o modifica dati richiesta.
+- Pubblicazione autorizzata su `main` tramite integrazione Git Vercel; il lavoro
+  parallelo sulle segnalazioni di assegnazione resta separato da questo rilascio.
+  Le note sotto che descrivono patch non pubblicate si riferiscono ai controlli
+  locali precedenti a questo pacchetto. Nessun collaudo autenticato reale.
+
+## Referenti multipli nella gestione gruppi — 2026-09-15
+
+- Le tabelle gruppi admin/manager mostrano gli incarichi capogruppo del gruppo
+  e dell'evento correnti: tutti i principali e, sotto, tutti i secondari in
+  carattere più piccolo. Componente condiviso `GroupLeadersSummary`, colonna
+  Referenti, nomi a capo senza troncamento e ricerca estesa a tutti i referenti.
+- `groupLeaderSummaries` usa gli utenti operativi già caricati, deduplica per
+  account e conserva gli omonimi. Il campo storico `primary_leader_name` resta
+  soltanto come fallback quando non risultano membership; nessuna modifica
+  a dati, assegnazioni, ruoli o autorizzazioni.
+- Cinque test mirati su scope, principali multipli, secondari, omonimi,
+  fallback e markup; lint e typecheck in copia pulita superati.
+  Nessuna verifica visuale nel browser reale né deployment per questa patch.
+
+## Link di gruppo conservati dopo errori — 2026-09-15
+
+- `submitPublicRegistration` conserva il token originale del modulo nei ritorni
+  per validazione, rate limit ed errore di salvataggio. `buildRegistrationRetryPath`
+  torna al percorso personalizzato con email/errore codificati; token malformati
+  o riservati restano nel parametro `groupLink` della route registrazione.
+- `RegistrationPageContent` non ripiega più sul modulo generico se fallisce il
+  caricamento del link: mostra un errore senza form. La route storica con query
+  non reindirizza token riservati verso percorsi applicativi.
+- `createPublicRegistration` verifica il link prima di creare partecipante,
+  contatti o iscrizione; un link già scaduto/revocato non lascia per questo
+  motivo un'iscrizione senza assegnazione. Le scritture successive conservano
+  il workflow esistente, senza introdurre una transazione complessiva.
+- Test in `tests/group-registration-retry.test.mts`: errori e reinvio corretto,
+  URL sicuri, gruppo passato al form, nessun fallback generico e rifiuto prima
+  delle scritture. Suite completa: 289 test superati; lint mirato e typecheck
+  superati, quest'ultimo in copia pulita con `npm ci` dal lockfile.
+- Nessuna modifica ai dati storici, invio email o deployment. Non è stato
+  eseguito un collaudo autenticato reale; i test usano dati sintetici.
+
+## Avvio iscrizione personale da account operativo — 2026-09-15
+
+- Il pulsante della dashboard partecipante senza iscrizione apre direttamente
+  `/registrazione?email=...`, con email autenticata codificata; anche la card
+  personale usa `/registrazione`. Non usare la home: il proxy rimanda gli
+  utenti autenticati alla dashboard, producendo un ritorno alla stessa pagina.
+- Messaggio di iscrizione assente aggiornato nelle sette lingue. Salvataggio,
+  collegamento account, ruoli e controlli del modulo restano quelli esistenti.
+- Regressioni URL in `tests/personal-registration-navigation.test.mts`:
+  email semplice/speciale/assente e card con/senza iscrizione. Dieci test
+  mirati e lint superati. Il typecheck del workspace era bloccato da directory
+  duplicate preesistenti in `node_modules/@types` (`node 2`, `react 2`, ecc.);
+  verificato poi con successo in copia pulita con `npm ci`, insieme alla
+  correzione dei link di gruppo descritta sopra.
+  Nessun collaudo autenticato reale o deployment effettuato per questa patch.
+
+## Errori iscrizione da link di gruppo — 2026-09-15
+
+- `submitPublicRegistration` conserva il token del gruppo nei ritorni per
+  validazione, rate limit ed errore di salvataggio, usando il percorso breve
+  del gruppo con email ed errore codificati. Legge il token dal form anche
+  quando la validazione non produce un input valido.
+- Se il link non è disponibile, `RegistrationPageContent` mostra l'errore
+  senza ripiegare sulle opzioni e sul modulo generali. I controlli server
+  sul link e sull'assegnazione restano invariati.
+- Regressioni in `tests/registration-error-routing.test.mts`: tre percorsi
+  di errore, iscrizione generale, token manipolato e link non disponibile.
+
+## Avvio iscrizione personale degli utenti operativi — 2026-09-15
+
+- Il pulsante `Avvia la mia iscrizione` nella dashboard senza iscrizione
+  collegata apre direttamente `/registrazione`, con email della sessione
+  codificata nella query. Non puntare alla home: il proxy rimanda gli utenti
+  autenticati alla dashboard, impedendo di raggiungere il modulo.
+- Riusa il flusso pubblico esistente, anche per i capigruppo creati prima
+  della propria iscrizione. Nessuna modifica a ruoli, database o invii email.
+
+## Statistiche e geografia complete — 2026-09-14
+
+- `lib/registrations/event-statistics.server.ts` carica le statistiche comuni
+  admin/manager, dopo i controlli di ruolo/evento dei chiamanti. Paginazione
+  stabile di tutte le fonti, blocchi da 100 UUID anche per assegnazioni e
+  presenze. Errori e gerarchie incomplete interrompono il riepilogo; i boundary
+  admin/manager offrono Riprova senza conteggi falsi o parziali.
+- `geography.ts` condivide il fallback testo personale → catalogo collegato
+  fra statistiche, elenchi ed export. La gerarchia del gruppo conserva la
+  precedenza territoriale nelle statistiche. Non trattare il solo campo
+  `city_other` vuoto come assenza di città: gli inserimenti capogruppo usano ID.
+- Paese pubblico validato nel browser e sul server: opzioni esistenti e paesi
+  extraeuropei nelle sette lingue; città/province come Roma/RM rifiutate.
+- Correzione dati autorizzata: due schede RM/Roma portate a Italia e collegate
+  al catalogo IT, con transazione protetta e audit prima/dopo, batch
+  `statistics-countries-2026-09-14`. Nessuna riassegnazione delle 12 persone
+  realmente senza gruppo e nessuna modifica a presenze, account o consensi.
+- Diagnosi, collaudo (267 test, lint, typecheck, build, browser sintetico e
+  letture reali) e limiti in `docs/incident-2026-09-14-statistics.md`.
+
+## Richieste dashboard e limite URL — 2026-09-14
+
+- La patch `loadRowsForIds` usa blocchi di
+  100 UUID. I precedenti 300 producono URL di circa 12 KiB respinti dal proxy
+  Kong con HTTP 414; errore riprodotto sul server reale e osservato nei log
+  del 14 settembre, 10:28–10:39 Europe/Rome. Digest della schermata
+  `2526072483` correlato esattamente su Vercel alle 10:29:44.
+  Conservare paginazione e rifiuto
+  dei risultati parziali. Nessuna modifica a database o configurazione server.
+- Regressioni in `tests/supabase-id-batches.test.mts`; riscontri e limiti
+  dell'indagine, incluso episodio di sabato non correlato, in
+  `docs/incident-2026-09-14-manager.md`.
+
+
 Questo file e' la memoria operativa stabile per Codex e per futuri agenti che lavoreranno su questa app. Deve restare aggiornato quando cambiano architettura, workflow, comandi, schema dati, ruoli, policy RLS o decisioni importanti.
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
@@ -1523,16 +2706,12 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
   panel. Usare le tabelle canoniche delle iscrizioni ai momenti/panel; non
   modellare i panel come tag operativi e non duplicarli nello snapshot della
   campagna.
-- Dal 2026-07-23 l'accesso alle dashboard per `manager` e `manager_viewer` e'
-  esclusivo: dopo il login questi ruoli entrano sempre nella dashboard manager
-  e non vedono né possono aprire la dashboard capogruppo o l'area personale,
-  anche quando l'account possiede una membership capogruppo o una scheda
-  partecipante. Un eventuale ruolo `admin` mantiene invece l'accesso completo
-  alle aree delegate. Dal 2026-07-26 questa distinzione vale anche dentro la
-  dashboard manager: il navigatore tra dashboard viene mostrato quando
-  l'utente e' admin, cosi' puo' tornare ad admin, accoglienza, capogruppo o area
-  personale durante test e assistenza; per `manager` e `manager_viewer` resta
-  nascosto e la dashboard manager continua a essere l'unica area accessibile.
+- Dal 2026-09-23 `manager` e `manager_viewer` possono passare tra dashboard
+  manager e Iscrizione e QR personale con lo stesso account. La precedente
+  esclusione dell'area personale del 23 luglio è superata. Le altre dashboard
+  sono disponibili quando corrispondono a un ulteriore ruolo assegnato;
+  Admin conserva tutte le aree delegate.
+  Manager Viewer ha soltanto Statistiche e Gestione iscritti nel menu operativo.
 - Dal 2026-07-26 la sessione autenticata viene ripristinata anche entrando da
   home o login: l'utente viene riportato all'ultima dashboard e, per
   admin/manager, all'ultima sezione stabile del menu consultata. Parametri
@@ -2998,7 +4177,8 @@ Ruoli minimi da supportare:
   funzioni organizzative consentite. Non puo' creare eventi, cambiare evento
   corrente, aprire, sospendere o nascondere le iscrizioni, né nominare altri
   manager.
-- `manager_viewer`: vede ciò che vede il manager ma non modifica iscrizioni.
+- `manager_viewer`: consulta Statistiche e Gestione iscritti senza modifiche
+  operative; accede e modifica la propria iscrizione nell’area personale.
 - `accoglienza`: scansiona QR code e verifica iscrizioni/check-in vedendo solo dati minimi necessari.
 
 I ruoli devono vivere in profili o membership applicative, non solo nei metadata Supabase Auth. Dove serve, il ruolo deve essere scoperto da uno scope: evento, gruppo, funzione di accoglienza.
@@ -3820,6 +5000,48 @@ Quando il piano verrà cancellato:
   stati modificati. Restano da completare collaudo autenticato dei ruoli,
   test SQL/RLS e concorrenza e verifica dei conteggi P10.
 
+
+
+## Presenza comunicata nelle schede admin e manager — 2026-09-14
+
+- La scheda condivisa include `OperationsAttendance`: lettura delle presenze
+  correnti della singola iscrizione, griglia mattina/pomeriggio e stato da
+  confermare, riusando `ManualAttendanceFields` del capogruppo. Caricamento
+  indipendente con stato visibile; un errore non viene mostrato come assenza
+  di presenze. Solo admin globale e manager dell'evento possono modificare;
+  iscritti senza gruppo inclusi, eliminati esclusi. Filtri e scheda conservati.
+- `updateOperationsAttendance` controlla i ruoli della sessione e rilegge le
+  date dell'evento. La RPC `update_operations_attendance` ripete i controlli,
+  blocca l'iscrizione e sostituisce le presenze insieme all'audit in transazione.
+  Attore ricavato dal server, RPC riservata a service_role. Presenze capogruppo,
+  snapshot originali, scelte dei momenti e RLS rimangono separati.
+- Migration `20260914140000_operations_attendance.sql` applicata e registrata
+  in produzione il 2026-09-14 su richiesta esplicita. Privilegi verificati:
+  solo service_role può eseguire la RPC. Prova reale in transazione annullata:
+  hash e conteggio delle 1.376 presenze invariati; 89 policy RLS invariate.
+  Pubblicazione del codice tramite push su main e deployment Git Vercel.
+- Regressioni: `tests/operations-attendance.test.mts` e
+  `tests/sql/operations-attendance.sql`: scope evento, iscrizioni eliminate,
+  errori lettura, date, audit atomico e privilegi RPC. Verificati anche i test
+  SQL preesistenti del capogruppo. In copia pulita dal lockfile: 270 test,
+  typecheck, lint e build superati.
+
+
+## Andamento settimanale iscrizioni — 2026-09-21
+
+- Le statistiche condivise Admin/Manager terminano con un grafico a barre delle
+  schede non eliminate per `registrations.submitted_at`, senza sommare i minori.
+  Il loader esistente conserva scope evento, paginazione ed errori bloccanti.
+- `weekly-registrations.ts` raggruppa lunedì–domenica in Europe/Rome, include
+  settimane a zero fino a quella corrente e segnala date mancanti/non valide.
+  Dal 31 agosto 2026 le colonne sono settimanali; tutte le iscrizioni precedenti
+  sono aggregate in una colonna storica esclusa dal confronto. Barre adiacenti
+  con etichette giorno/mese inclinate di 45 gradi.
+  Settimana corrente distinta e incompleta; confronto assoluto/percentuale
+  limitato alle ultime due settimane concluse, senza percentuale su base zero.
+- Test su confini temporali, ora legale, cambio anno, settimane vuote e loader
+  oltre 1.000 schede. Nessuna migration o modifica dei dati richiesta.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
@@ -3912,3 +5134,31 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Su richiesta dell’utente, niente messaggi di successo dopo iscrizione o
   rimozione: stato, pulsante e posti aggiornati confermano l’esito. Restano
   gli errori nella riga interessata.
+
+## Indicatore email delegata — 2026-09-25
+
+- Colonna Email Capogruppo e Manager/Admin/Viewer: badge nelle sette lingue
+  soltanto per la scelta documentata nello snapshot manuale. Email personale
+  attuale prioritaria; email assente senza scelta resta «—».
+- Loader paginato limitato agli ID già autorizzati, sole proiezioni origine/flag;
+  errori bloccanti. Nessuna modifica dati, schema, permessi, invio o export.
+- Test e fixture browser in `tests/email-delegation-indicator.test.mts` e
+  `tests/browser/email-delegation.mjs`; dettagli in `docs/email-delegation-indicator.md`.
+  Verificati 541 test, lint, TypeScript e build production con npm ci in copia
+  pulita. Browser: tre tabelle, sette lingue e mobile; provata insieme alla
+  nuova animazione dell’export capogruppo. Overlay e correzione conteggi del
+  commit a25fba9 conservati. Commit/push su main autorizzati dall’utente;
+  correzione separata degli errori presenze esclusa dal rilascio.
+
+## Errore presenze fuori dalla griglia — 2026-09-25
+
+- Il fieldset condiviso delle presenze assistite identifica un contenitore per
+  gli errori: ReliableForm appende il messaggio sotto griglia e opzione di
+  conferma successiva, preservando stile comune e dimensioni delle caselle.
+  aria-describedby collega il messaggio sia alle fasce sia all’opzione futura.
+- Nessuna modifica a validazione, dati o invii. Fixture sintetica
+  `tests/browser/attendance-error-placement.mjs` verifica posizione, dimensioni,
+  accessibilità e accettazione di entrambe le scelte per capogruppo/manager,
+  nelle sette lingue e su mobile. Commit/push su main autorizzati dall’utente
+  il 25 settembre insieme all’import servizi. Verificati insieme 559 test,
+  lint, TypeScript e build con npm ci in copia pulita.

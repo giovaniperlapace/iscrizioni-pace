@@ -1,5 +1,11 @@
 "use client";
 
+import { nationalityName } from "@/lib/registrations/nationality-names";
+import { ProgressButton } from "@/components/button-progress";
+import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
+import { publicChildBirthDateBounds } from "@/lib/registrations/public-child-age";
+
+import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
 import { OTHER_PHONE_PREFIX, PHONE_PREFIX_OPTIONS } from "@/lib/registrations/phone-prefixes";
 
 import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
@@ -16,13 +22,15 @@ import {
 } from "@/lib/groups/matching";
 import {
   ACCESSIBILITY_DIFFICULTIES,
-  EUROPEAN_CITY_OPTIONS,
-  EUROPEAN_COUNTRIES,
+  RESIDENCE_CITY_OPTIONS,
+  RESIDENCE_COUNTRIES,
   NATIONALITY_OPTIONS,
   PLACEHOLDER_GROUPS,
 } from "@/lib/questionnaire/registration";
 import type { PublicRegistrationOptions } from "@/lib/registrations/public-flow";
 import type { SupportedLocale } from "@/lib/i18n/config";
+import { countryName, findCountryId } from "@/lib/registrations/country-names";
+import { isCountryName, COUNTRY_VALIDATION_MESSAGE } from "@/lib/registrations/country-validation";
 import {
   ATTENDANCE_PARTS,
   buildAttendanceDayColumns,
@@ -81,6 +89,9 @@ type StoredRegistrationForm = {
 };
 
 type RegistrationFormCopy = {
+  emailConfirmation: string;
+  emailMismatch: string;
+  childrenHelp: string;
   newRegistration: string;
   intro: string;
   groupLinkPrefix: string;
@@ -116,7 +127,6 @@ type RegistrationFormCopy = {
   childBirthDate: string;
   accessibilityQuestion: string;
   accessibilityTitle: string;
-  accessibilityHelp: string;
   previousQuestion: string;
   externalGroupQuestion: string;
   externalGroupPlaceholder: string;
@@ -145,10 +155,13 @@ type RegistrationFormCopy = {
 
 const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
   it: {
+    emailConfirmation: "Conferma email",
+    emailMismatch: "Gli indirizzi email devono coincidere.",
+    childrenHelp: "Questa funzione è pensata per iscrivere i bambini accompagnati, da 0 a 17 anni compiuti alla data di iscrizione. I figli iscritti qui resteranno sempre collegati alla tua iscrizione per i panel e gli altri eventi. Se entrambi i genitori si iscrivono alla preghiera, inserite i figli nell’iscrizione di un solo genitore.",
     newRegistration: "Nuova iscrizione",
     intro:
-      "Questa è la prima iscrizione all'evento. Dopo l'invio potrai accedere alla tua dashboard, scaricare il QR code per l'ingresso e, quando sarà pubblicato il programma completo, scegliere i momenti a cui partecipare, come panel tematici ed eventi.",
-    groupLinkPrefix: "Questo link iscrive al gruppo di",
+      "Compila questo modulo per iscriverti all'evento. Dopo l'invio potrai accedere alla tua area personale e scaricare il QR code per l'ingresso. Quando sarà pubblicato il programma completo, potrai anche scegliere a quali incontri tematici e altri eventi partecipare.",
+    groupLinkPrefix: "Usa questo link per iscriverti con il gruppo",
     groupLinkSuffix: ".",
     firstName: "Nome",
     lastName: "Cognome",
@@ -182,20 +195,18 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "Hai una disabilità, una condizione di salute o un bisogno di accessibilità che desideri segnalarci per organizzare meglio l'accoglienza?",
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
-    accessibilityHelp:
-      "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
     previousQuestion: "Hai partecipato ad altri eventi della Comunità di Sant’Egidio?",
     externalGroupQuestion: "Fai parte di qualche associazione?",
     externalGroupPlaceholder: "Nome dell’associazione (facoltativo)",
     groupQuestion: "Parteciperai alla Preghiera per la Pace con un gruppo della Comunità?",
     groupLabel: "Gruppo",
-    groupPlaceholder: "Cerca per gruppo",
+    groupPlaceholder: "Cerca il tuo gruppo",
     groupDisabledPlaceholder: "Indica prima paese, città e data di nascita",
     noMatchingLeader: "Nessun gruppo corrispondente trovato",
     cannotFindLeader: "Non trovo il mio gruppo",
     daysTitle: "In quali giorni pensi di essere presente?",
     daysHelp:
-      "Puoi selezionare uno o più giorni dell'evento, oppure indicare che lo comunicherai più avanti.",
+      "Seleziona le mattine e i pomeriggi in cui pensi di essere presente, oppure indica che lo comunicherai più avanti.",
     daysUnknown: "Non lo so ancora, lo comunicherò in seguito",
     privacyTitle: "Privacy e trattamento dati",
     privacyBody:
@@ -208,113 +219,117 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Acconsento a ricevere comunicazioni informative su futuri eventi e iniziative della Comunità di Sant'Egidio. Il consenso è facoltativo e può essere revocato in qualsiasi momento.",
     requiredChoice: "Seleziona una risposta per proseguire.",
     requiredGroup: "Seleziona un gruppo o indica che non lo trovi.",
-    requiredDays: "Seleziona almeno un giorno o indica che lo comunicherai in seguito.",
+    requiredDays: "Seleziona almeno una mattina o un pomeriggio, oppure indica che lo comunicherai in seguito.",
     yes: "Sì",
     no: "No",
     submit: "Invia iscrizione",
     submitting: "Invio iscrizione...",
   },
   en: {
+    emailConfirmation: "Confirm email",
+    emailMismatch: "The email addresses must match.",
+    childrenHelp: "This feature is intended for registering accompanied children aged 0 to 17 on the registration date. Children registered here will always remain linked to your registration for panels and other events. If both parents register for the prayer, include the children in only one parent’s registration.",
     newRegistration: "New registration",
     intro:
-      "This is your first registration for the event. After submitting it, you will be able to access your dashboard, download the QR code for entry and, when the full programme is published, choose the moments you want to attend, such as thematic panels and events.",
-    groupLinkPrefix: "This link registers you with the group",
+      "Complete this form to register for the event. Once you have submitted your registration, you will be able to access your dashboard and download your entry QR code. When the full programme is published, you will also be able to choose which panel discussions and other events to attend.",
+    groupLinkPrefix: "Use this link to register as part of the group",
     groupLinkSuffix: ".",
     firstName: "First name",
     lastName: "Last name",
-    country: "Country where you usually live",
+    country: "Country of residence",
     countryPlaceholder: "Search for the country where you live",
-    countryOtherPlaceholder: "Write the country where you live",
+    countryOtherPlaceholder: "Enter the country where you live",
     noCountry: "No country found",
-    city: "City where you usually live",
+    city: "City of residence",
     cityPlaceholder: "Search for the city where you live",
     cityDisabledPlaceholder: "Select the country first",
-    cityOtherPlaceholder: "Write the city where you live",
+    cityOtherPlaceholder: "Enter the city where you live",
     noCity: "No city found",
     birthDate: "Date of birth",
     birthPlace: "Place of birth (country and city)",
     birthPlacePlaceholder: "For example: Italy, Rome",
     nationality: "Nationality",
-    nationalityPlaceholder: "Search nationality",
+    nationalityPlaceholder: "Search for your nationality",
     noNationality: "No nationality found",
-    phone: "Phone (optional)",
-    phonePrefixLabel: "International prefix",
+    phone: "Phone number (optional)",
+    phonePrefixLabel: "Country calling code",
     phoneOther: "Other",
-    phoneNumberPlaceholder: "Number",
-    phonePrefixPlaceholder: "Write the prefix, for example +234",
-    phoneTitle: "Use only digits, spaces, dots, brackets or hyphens.",
-    childrenQuestion: "Will you attend the event with one or more children?",
-    childrenCount: "How many children will attend with you?",
+    phoneNumberPlaceholder: "Phone number",
+    phonePrefixPlaceholder: "Enter the country calling code, e.g. +234",
+    phoneTitle: "Use only digits, spaces, full stops, parentheses or hyphens.",
+    childrenQuestion: "Will any of your children be attending the event with you?",
+    childrenCount: "How many of your children will be attending with you?",
     childCard: (index) => `Child ${index}`,
     childFirstName: "First name",
     childLastName: "Last name",
     childBirthDate: "Date of birth",
     accessibilityQuestion:
-      "Do you have a disability, health condition or accessibility need that you would like to tell us about so we can organise the welcome better?",
-    accessibilityTitle: "Which aspects should we consider?",
-    accessibilityHelp:
-      "You can select one or more options that are useful for organising the welcome better.",
+      "Do you have a disability, health condition or accessibility need that you would like us to know about so we can better support you at the event?",
+    accessibilityTitle: "What should we take into account?",
     previousQuestion: "Have you attended other events organised by the Community of Sant’Egidio?",
-    externalGroupQuestion: "Are you a member of any association?",
+    externalGroupQuestion: "Are you a member of an association?",
     externalGroupPlaceholder: "Association name (optional)",
     groupQuestion: "Will you attend the Prayer for Peace with a group from the Community?",
     groupLabel: "Group",
-    groupPlaceholder: "Search by group",
-    groupDisabledPlaceholder: "Enter country, city and date of birth first",
+    groupPlaceholder: "Search for your group",
+    groupDisabledPlaceholder: "Enter your country, city and date of birth first",
     noMatchingLeader: "No matching group found",
     cannotFindLeader: "I cannot find my group",
-    daysTitle: "Which days do you think you will attend?",
+    daysTitle: "Which days do you plan to attend?",
     daysHelp:
-      "You can select one or more event days, or say that you will communicate this later.",
-    daysUnknown: "I do not know yet; I will communicate it later",
+      "Select the mornings and afternoons you plan to attend, or let us know later if you are not yet sure.",
+    daysUnknown: "I am not sure yet; I will let you know later",
     privacyTitle: "Privacy and data processing",
     privacyBody:
-      "I confirm that I have read the event privacy notice and authorise the processing of the data entered to manage the registration, identify the participant, send organisational communications, organise welcome arrangements, handle any accessibility needs and fulfil safety and legal requirements connected with the event. The data will be processed under EU Regulation 2016/679 (GDPR), with appropriate confidentiality measures, access limited to authorised staff and storage only for the time needed for the stated purposes. I know that I may exercise the rights of access, rectification, erasure, restriction, objection and withdrawal of consent, without affecting the lawfulness of processing already carried out.",
+      "I confirm that I have read the event privacy notice and authorise the processing of the data entered to manage the registration, identify the participant, send organisational communications, make arrangements to welcome participants, address any accessibility needs and fulfil safety and legal requirements connected with the event. The data will be processed under EU Regulation 2016/679 (GDPR), with appropriate confidentiality measures, access limited to authorised staff and storage only for the time needed for the stated purposes. I know that I may exercise the rights of access, rectification, erasure, restriction, objection and withdrawal of consent, without affecting the lawfulness of processing already carried out.",
     privacyConsent:
       "I accept the privacy notice and authorise the processing of the data needed to manage the registration and the event. If I register one or more children, I confirm that I have parental responsibility or am authorised to provide their data.",
     sensitiveConsent:
-      "I consent to the processing of the information provided about disability, health or accessibility needs, so that welcome and support measures can be prepared during the event.",
+      "I consent to the processing of the information provided about disability, health or accessibility needs, so that appropriate arrangements can be made to welcome and support me during the event.",
     futureEventsConsent:
       "I agree to receive information about future events and initiatives of the Community of Sant'Egidio. This consent is optional and may be withdrawn at any time.",
     requiredChoice: "Select an answer to continue.",
     requiredGroup: "Select a group or indicate that you cannot find it.",
-    requiredDays: "Select at least one day or indicate that you will communicate it later.",
+    requiredDays: "Select at least one morning or afternoon, or indicate that you will let us know later.",
     yes: "Yes",
     no: "No",
     submit: "Submit registration",
     submitting: "Submitting registration...",
   },
   fr: {
+    emailConfirmation: "Confirmer l’adresse e-mail",
+    emailMismatch: "Les adresses e-mail doivent être identiques.",
+    childrenHelp: "Cette fonction est destinée à inscrire les enfants accompagnés, âgés de 0 à 17 ans à la date d’inscription. Les enfants inscrits ici resteront toujours liés à ton inscription pour les panels et les autres événements. Si les deux parents s’inscrivent à la prière, inscrivez les enfants avec un seul parent.",
     newRegistration: "Nouvelle inscription",
     intro:
-      "Il s'agit de ta première inscription à l'événement. Après l'envoi, tu pourras accéder à ton dashboard, télécharger le QR code pour l'entrée et, lorsque le programme complet sera publié, choisir les moments auxquels participer, comme les panels thématiques et les événements.",
-    groupLinkPrefix: "Ce lien t'inscrit au groupe",
+      "Remplis ce formulaire pour t'inscrire à l'événement. Une fois ton inscription envoyée, tu pourras accéder à ton espace personnel et télécharger ton QR code d'entrée. Lorsque le programme complet sera publié, tu pourras aussi choisir les tables rondes thématiques et les autres événements auxquels tu souhaites participer.",
+    groupLinkPrefix: "Utilise ce lien pour t'inscrire avec le groupe",
     groupLinkSuffix: ".",
     firstName: "Prénom",
     lastName: "Nom",
     country: "Pays où tu vis habituellement",
     countryPlaceholder: "Cherche le pays où tu vis",
-    countryOtherPlaceholder: "Écris le pays où tu vis",
+    countryOtherPlaceholder: "Saisis le pays où tu vis",
     noCountry: "Aucun pays trouvé",
     city: "Ville où tu vis habituellement",
     cityPlaceholder: "Cherche la ville où tu vis",
     cityDisabledPlaceholder: "Sélectionne d'abord le pays",
-    cityOtherPlaceholder: "Écris la ville où tu vis",
+    cityOtherPlaceholder: "Saisis la ville où tu vis",
     noCity: "Aucune ville trouvée",
     birthDate: "Date de naissance",
     birthPlace: "Lieu de naissance (pays et ville)",
     birthPlacePlaceholder: "Par exemple : Italie, Rome",
     nationality: "Nationalité",
-    nationalityPlaceholder: "Cherche la nationalité",
+    nationalityPlaceholder: "Recherche ta nationalité",
     noNationality: "Aucune nationalité trouvée",
-    phone: "Téléphone (optionnel)",
-    phonePrefixLabel: "Préfixe international",
+    phone: "Téléphone (facultatif)",
+    phonePrefixLabel: "Indicatif téléphonique international",
     phoneOther: "Autre",
     phoneNumberPlaceholder: "Numéro",
-    phonePrefixPlaceholder: "Écris le préfixe, par exemple +234",
+    phonePrefixPlaceholder: "Saisis l'indicatif, par exemple +234",
     phoneTitle: "Saisis uniquement des chiffres, espaces, points, parenthèses ou tirets.",
-    childrenQuestion: "Participeras-tu à l'événement avec un ou plusieurs enfants ?",
-    childrenCount: "Avec combien d'enfants participeras-tu ?",
+    childrenQuestion: "Un ou plusieurs de tes enfants participeront-ils à l'événement avec toi ?",
+    childrenCount: "Combien de tes enfants participeront avec toi ?",
     childCard: (index) => `Enfant ${index}`,
     childFirstName: "Prénom",
     childLastName: "Nom",
@@ -322,54 +337,55 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     accessibilityQuestion:
       "As-tu un handicap, un problème de santé ou un besoin d'accessibilité que tu souhaites nous signaler pour mieux organiser l'accueil ?",
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
-    accessibilityHelp:
-      "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
     previousQuestion: "As-tu participé à d’autres événements de la Communauté de Sant’Egidio ?",
     externalGroupQuestion: "Fais-tu partie d’une association ?",
     externalGroupPlaceholder: "Nom de l’association (facultatif)",
     groupQuestion: "Participeras-tu à la Prière pour la Paix avec un groupe de la Communauté ?",
     groupLabel: "Groupe",
-    groupPlaceholder: "Chercher par groupe",
-    groupDisabledPlaceholder: "Indique d'abord pays, ville et date de naissance",
+    groupPlaceholder: "Recherche ton groupe",
+    groupDisabledPlaceholder: "Indique d'abord ton pays, ta ville et ta date de naissance",
     noMatchingLeader: "Aucun groupe correspondant trouvé",
     cannotFindLeader: "Je ne trouve pas mon groupe",
-    daysTitle: "Quels jours penses-tu être présent ?",
+    daysTitle: "Quels jours prévois-tu de participer ?",
     daysHelp:
-      "Tu peux sélectionner un ou plusieurs jours de l'événement, ou indiquer que tu le communiqueras plus tard.",
-    daysUnknown: "Je ne sais pas encore, je le communiquerai plus tard",
+      "Sélectionne les matinées et les après-midi où tu prévois de participer, ou indique que tu nous le préciseras plus tard.",
+    daysUnknown: "Je ne sais pas encore ; je vous le préciserai plus tard",
     privacyTitle: "Confidentialité et traitement des données",
     privacyBody:
       "Je confirme avoir lu la notice de confidentialité de l'événement et j'autorise le traitement des données saisies pour gérer l'inscription, identifier le participant, envoyer les communications d'organisation, organiser l'accueil, gérer les éventuels besoins d'accessibilité et remplir les obligations de sécurité et légales liées à l'événement. Les données seront traitées conformément au Règlement UE 2016/679 (RGPD), avec des mesures appropriées de confidentialité, un accès limité aux personnes autorisées et une conservation limitée au temps nécessaire aux finalités indiquées. Je sais que je peux exercer mes droits d'accès, rectification, effacement, limitation, opposition et retrait du consentement, sans affecter la licéité du traitement déjà effectué.",
     privacyConsent:
       "J'accepte la notice de confidentialité et j'autorise le traitement des données nécessaires à la gestion de l'inscription et de l'événement. Si j'inscris un ou plusieurs enfants, je confirme exercer l'autorité parentale ou être autorisé à communiquer leurs données.",
     sensitiveConsent:
-      "Je consens au traitement des informations indiquées concernant un handicap, la santé ou des besoins d'accessibilité, afin de préparer des mesures d'accueil et de support pendant l'événement.",
+      "Je consens au traitement des informations fournies concernant un handicap, la santé ou des besoins d'accessibilité, afin de prévoir un accueil et un accompagnement adaptés pendant l'événement.",
     futureEventsConsent:
       "J'accepte de recevoir des communications d'information sur les futurs événements et initiatives de la Communauté de Sant'Egidio. Ce consentement est facultatif et peut être retiré à tout moment.",
     requiredChoice: "Sélectionne une réponse pour continuer.",
     requiredGroup: "Sélectionne un groupe ou indique que tu ne le trouves pas.",
-    requiredDays: "Sélectionne au moins un jour ou indique que tu le communiqueras plus tard.",
+    requiredDays: "Sélectionne au moins une matinée ou un après-midi, ou indique que tu nous le préciseras plus tard.",
     yes: "Oui",
     no: "Non",
     submit: "Envoyer l'inscription",
     submitting: "Envoi de l'inscription...",
   },
   de: {
+    emailConfirmation: "E-Mail bestätigen",
+    emailMismatch: "Die E-Mail-Adressen müssen übereinstimmen.",
+    childrenHelp: "Diese Funktion ist für die Anmeldung begleiteter Kinder gedacht, die am Tag der Anmeldung 0 bis 17 Jahre alt sind. Hier angemeldete Kinder bleiben für Podiumsgespräche und andere Veranstaltungen immer mit deiner Anmeldung verbunden. Wenn sich beide Eltern zum Gebet anmelden, tragt die Kinder nur bei einem Elternteil ein.",
     newRegistration: "Neue Anmeldung",
     intro:
-      "Dies ist deine erste Anmeldung für die Veranstaltung. Nach dem Absenden kannst du dein Dashboard öffnen, den QR-Code für den Einlass herunterladen und, sobald das vollständige Programm veröffentlicht ist, die Programmpunkte auswählen, an denen du teilnehmen möchtest.",
-    groupLinkPrefix: "Dieser Link meldet dich für die Gruppe an",
+      "Fülle dieses Formular aus, um dich für die Veranstaltung anzumelden. Nach dem Absenden kannst du deinen persönlichen Bereich öffnen und deinen QR-Code für den Einlass herunterladen. Sobald das vollständige Programm veröffentlicht ist, kannst du auch auswählen, an welchen Podiumsdiskussionen und weiteren Veranstaltungen du teilnehmen möchtest.",
+    groupLinkPrefix: "Über diesen Link meldest du dich zusammen mit der folgenden Gruppe an:",
     groupLinkSuffix: ".",
     firstName: "Vorname",
     lastName: "Nachname",
-    country: "Land, in dem du normalerweise lebst",
+    country: "Land, in dem du lebst",
     countryPlaceholder: "Suche das Land, in dem du lebst",
-    countryOtherPlaceholder: "Schreibe das Land, in dem du lebst",
+    countryOtherPlaceholder: "Gib das Land ein, in dem du lebst",
     noCountry: "Kein Land gefunden",
-    city: "Stadt, in der du normalerweise lebst",
+    city: "Stadt, in der du lebst",
     cityPlaceholder: "Suche die Stadt, in der du lebst",
     cityDisabledPlaceholder: "Wähle zuerst das Land aus",
-    cityOtherPlaceholder: "Schreibe die Stadt, in der du lebst",
+    cityOtherPlaceholder: "Gib die Stadt ein, in der du lebst",
     noCity: "Keine Stadt gefunden",
     birthDate: "Geburtsdatum",
     birthPlace: "Geburtsort (Land und Stadt)",
@@ -377,58 +393,59 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     nationality: "Staatsangehörigkeit",
     nationalityPlaceholder: "Staatsangehörigkeit suchen",
     noNationality: "Keine Staatsangehörigkeit gefunden",
-    phone: "Telefon (optional)",
+    phone: "Telefonnummer (optional)",
     phonePrefixLabel: "Internationale Vorwahl",
     phoneOther: "Andere",
     phoneNumberPlaceholder: "Nummer",
-    phonePrefixPlaceholder: "Schreibe die Vorwahl, zum Beispiel +234",
+    phonePrefixPlaceholder: "Gib die Vorwahl ein, zum Beispiel +234",
     phoneTitle: "Gib nur Ziffern, Leerzeichen, Punkte, Klammern oder Bindestriche ein.",
-    childrenQuestion: "Nimmst du mit einem oder mehreren Kindern an der Veranstaltung teil?",
-    childrenCount: "Mit wie vielen Kindern nimmst du teil?",
+    childrenQuestion: "Nehmen eines oder mehrere deiner Kinder mit dir an der Veranstaltung teil?",
+    childrenCount: "Wie viele deiner Kinder nehmen mit dir teil?",
     childCard: (index) => `Kind ${index}`,
     childFirstName: "Vorname",
     childLastName: "Nachname",
     childBirthDate: "Geburtsdatum",
     accessibilityQuestion:
-      "Hast du eine Behinderung, gesundheitliche Situation oder einen Barrierefreiheitsbedarf, den du uns mitteilen möchtest, damit wir den Empfang besser organisieren können?",
+      "Hast du eine Behinderung, eine gesundheitliche Beeinträchtigung oder besondere Anforderungen an die Barrierefreiheit, über die du uns informieren möchtest, damit wir dich bei der Veranstaltung besser unterstützen können?",
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
-    accessibilityHelp:
-      "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
     previousQuestion: "Hast du an anderen Veranstaltungen der Gemeinschaft Sant’Egidio teilgenommen?",
     externalGroupQuestion: "Gehörst du einem Verein an?",
     externalGroupPlaceholder: "Name des Vereins (optional)",
     groupQuestion: "Wirst du mit einer Gruppe der Gemeinschaft am Gebet für den Frieden teilnehmen?",
     groupLabel: "Gruppe",
-    groupPlaceholder: "Nach Gruppe suchen",
+    groupPlaceholder: "Suche nach deiner Gruppe",
     groupDisabledPlaceholder: "Gib zuerst Land, Stadt und Geburtsdatum an",
     noMatchingLeader: "Keine passende Gruppe gefunden",
     cannotFindLeader: "Ich finde meine Gruppe nicht",
     daysTitle: "An welchen Tagen wirst du voraussichtlich anwesend sein?",
     daysHelp:
-      "Du kannst einen oder mehrere Veranstaltungstage auswählen oder angeben, dass du es später mitteilst.",
-    daysUnknown: "Ich weiß es noch nicht und teile es später mit",
+      "Wähle die Vormittage und Nachmittage aus, an denen du teilnehmen möchtest, oder gib an, dass du uns später Bescheid gibst.",
+    daysUnknown: "Ich weiß es noch nicht und gebe später Bescheid",
     privacyTitle: "Datenschutz und Datenverarbeitung",
     privacyBody:
-      "Ich bestätige, dass ich die Datenschutzhinweise zur Veranstaltung gelesen habe, und erlaube die Verarbeitung der eingegebenen Daten zur Verwaltung der Anmeldung, Identifizierung der teilnehmenden Person, organisatorischen Kommunikation, Organisation des Empfangs, Bearbeitung eventueller Barrierefreiheitsbedarfe sowie zur Erfüllung von Sicherheits- und Rechtspflichten im Zusammenhang mit der Veranstaltung. Die Daten werden gemäß EU-Verordnung 2016/679 (DSGVO) verarbeitet, mit angemessenen Vertraulichkeitsmaßnahmen, Zugriff nur für autorisierte Personen und Speicherung nur für die für die genannten Zwecke erforderliche Zeit. Ich weiß, dass ich meine Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch und Widerruf der Einwilligung ausüben kann, ohne die Rechtmäßigkeit der bereits erfolgten Verarbeitung zu berühren.",
+      "Ich bestätige, dass ich die Datenschutzhinweise zur Veranstaltung gelesen habe, und erlaube die Verarbeitung der eingegebenen Daten zur Verwaltung der Anmeldung, Identifizierung der teilnehmenden Person, organisatorischen Kommunikation, Organisation des Empfangs, Berücksichtigung eventueller Anforderungen an die Barrierefreiheit sowie zur Erfüllung von Sicherheits- und Rechtspflichten im Zusammenhang mit der Veranstaltung. Die Daten werden gemäß EU-Verordnung 2016/679 (DSGVO) verarbeitet, mit angemessenen Vertraulichkeitsmaßnahmen, Zugriff nur für autorisierte Personen und Speicherung nur für die für die genannten Zwecke erforderliche Zeit. Ich weiß, dass ich meine Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch und Widerruf der Einwilligung ausüben kann, ohne die Rechtmäßigkeit der bereits erfolgten Verarbeitung zu berühren.",
     privacyConsent:
       "Ich akzeptiere die Datenschutzhinweise und erlaube die Verarbeitung der Daten, die für die Verwaltung der Anmeldung und der Veranstaltung erforderlich sind. Wenn ich ein oder mehrere Kinder anmelde, bestätige ich, sorgeberechtigt oder zur Angabe ihrer Daten befugt zu sein.",
     sensitiveConsent:
-      "Ich stimme der Verarbeitung der angegebenen Informationen zu Behinderung, Gesundheit oder Barrierefreiheitsbedarf zu, damit Empfangs- und Unterstützungsmaßnahmen während der Veranstaltung vorbereitet werden können.",
+      "Ich stimme der Verarbeitung der angegebenen Informationen zu Behinderung, Gesundheit oder Anforderungen an die Barrierefreiheit zu, damit geeignete Vorkehrungen für den Empfang und die Unterstützung während der Veranstaltung getroffen werden können.",
     futureEventsConsent:
       "Ich willige ein, Informationen über zukünftige Veranstaltungen und Initiativen der Gemeinschaft Sant'Egidio zu erhalten. Diese Einwilligung ist freiwillig und kann jederzeit widerrufen werden.",
     requiredChoice: "Wähle eine Antwort aus, um fortzufahren.",
     requiredGroup: "Wähle eine Gruppe aus oder gib an, dass du sie nicht findest.",
-    requiredDays: "Wähle mindestens einen Tag aus oder gib an, dass du es später mitteilst.",
+    requiredDays: "Wähle mindestens einen Vormittag oder Nachmittag aus oder gib an, dass du uns später Bescheid gibst.",
     yes: "Ja",
     no: "Nein",
     submit: "Anmeldung senden",
     submitting: "Anmeldung wird gesendet...",
   },
   es: {
+    emailConfirmation: "Confirmar correo electrónico",
+    emailMismatch: "Las direcciones de correo electrónico deben coincidir.",
+    childrenHelp: "Esta función está pensada para inscribir a niños acompañados de entre 0 y 17 años cumplidos en la fecha de inscripción. Los hijos inscritos aquí permanecerán siempre vinculados a tu inscripción para los paneles y otros eventos. Si ambos progenitores se inscriben en la oración, incluid a los hijos en la inscripción de uno solo.",
     newRegistration: "Nueva inscripción",
     intro:
-      "Esta es tu primera inscripción al evento. Después de enviarla podrás acceder a tu panel, descargar el código QR para la entrada y, cuando se publique el programa completo, elegir los momentos en los que participar, como paneles temáticos y eventos.",
-    groupLinkPrefix: "Este enlace te inscribe en el grupo",
+      "Completa este formulario para inscribirte en el evento. Una vez enviada la inscripción, podrás acceder a tu área personal y descargar tu código QR de entrada. Cuando se publique el programa completo, también podrás elegir las mesas redondas temáticas y los demás eventos en los que quieras participar.",
+    groupLinkPrefix: "Utiliza este enlace para inscribirte con el grupo",
     groupLinkSuffix: ".",
     firstName: "Nombre",
     lastName: "Apellidos",
@@ -445,7 +462,7 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     birthPlace: "Lugar de nacimiento (país y ciudad)",
     birthPlacePlaceholder: "Por ejemplo: Italia, Roma",
     nationality: "Nacionalidad",
-    nationalityPlaceholder: "Busca la nacionalidad",
+    nationalityPlaceholder: "Busca tu nacionalidad",
     noNationality: "No se encontró ninguna nacionalidad",
     phone: "Teléfono (opcional)",
     phonePrefixLabel: "Prefijo internacional",
@@ -453,29 +470,27 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
     phoneNumberPlaceholder: "Número",
     phonePrefixPlaceholder: "Escribe el prefijo, por ejemplo +234",
     phoneTitle: "Introduce solo cifras, espacios, puntos, paréntesis o guiones.",
-    childrenQuestion: "¿Participarás en el evento con uno o más hijos?",
-    childrenCount: "¿Con cuántos hijos participarás?",
+    childrenQuestion: "¿Participará contigo en el evento alguno de tus hijos?",
+    childrenCount: "¿Cuántos de tus hijos participarán contigo?",
     childCard: (index) => `Hijo ${index}`,
     childFirstName: "Nombre",
     childLastName: "Apellidos",
     childBirthDate: "Fecha de nacimiento",
     accessibilityQuestion:
-      "¿Tienes una discapacidad, condición de salud o necesidad de accesibilidad que quieras comunicarnos para organizar mejor la acogida?",
+      "¿Tienes alguna discapacidad, algún problema de salud o alguna necesidad de accesibilidad que quieras comunicarnos para que podamos atenderte mejor durante el evento?",
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
-    accessibilityHelp:
-      "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
     previousQuestion: "¿Has participado en otros eventos de la Comunidad de Sant’Egidio?",
     externalGroupQuestion: "¿Formas parte de alguna asociación?",
     externalGroupPlaceholder: "Nombre de la asociación (opcional)",
     groupQuestion: "¿Participarás en la Oración por la Paz con un grupo de la Comunidad?",
     groupLabel: "Grupo",
-    groupPlaceholder: "Buscar por grupo",
-    groupDisabledPlaceholder: "Indica primero país, ciudad y fecha de nacimiento",
-    noMatchingLeader: "No se encontró ningún grupo compatible",
+    groupPlaceholder: "Busca tu grupo",
+    groupDisabledPlaceholder: "Indica primero tu país, ciudad y fecha de nacimiento",
+    noMatchingLeader: "No se encontró ningún grupo que coincida con la búsqueda",
     cannotFindLeader: "No encuentro mi grupo",
-    daysTitle: "¿Qué días crees que estarás presente?",
+    daysTitle: "¿Qué días tienes previsto asistir?",
     daysHelp:
-      "Puedes seleccionar uno o más días del evento, o indicar que lo comunicarás más adelante.",
+      "Selecciona las mañanas y las tardes en las que tienes previsto asistir, o indica que nos lo comunicarás más adelante.",
     daysUnknown: "Todavía no lo sé; lo comunicaré más adelante",
     privacyTitle: "Privacidad y tratamiento de datos",
     privacyBody:
@@ -488,147 +503,149 @@ const REGISTRATION_FORM_COPY: Record<SupportedLocale, RegistrationFormCopy> = {
       "Acepto recibir comunicaciones informativas sobre futuros eventos e iniciativas de la Comunidad de Sant'Egidio. Este consentimiento es opcional y puede retirarse en cualquier momento.",
     requiredChoice: "Selecciona una respuesta para continuar.",
     requiredGroup: "Selecciona un grupo o indica que no lo encuentras.",
-    requiredDays: "Selecciona al menos un día o indica que lo comunicarás más adelante.",
+    requiredDays: "Selecciona al menos una mañana o una tarde, o indica que nos lo comunicarás más adelante.",
     yes: "Sí",
     no: "No",
     submit: "Enviar inscripción",
     submitting: "Enviando inscripción...",
   },
   nl: {
+    emailConfirmation: "E-mailadres bevestigen",
+    emailMismatch: "De e-mailadressen moeten overeenkomen.",
+    childrenHelp: "Deze functie is bedoeld voor het inschrijven van kinderen onder begeleiding die op de inschrijfdatum 0 tot en met 17 jaar oud zijn. Kinderen die je hier inschrijft, blijven voor panels en andere evenementen altijd aan jouw inschrijving gekoppeld. Als beide ouders zich voor het gebed inschrijven, vermeld de kinderen dan bij slechts één ouder.",
     newRegistration: "Nieuwe inschrijving",
     intro:
-      "Dit is je eerste inschrijving voor het evenement. Na verzending kun je je dashboard openen, de QR-code voor de toegang downloaden en, zodra het volledige programma is gepubliceerd, de momenten kiezen waaraan je wilt deelnemen.",
-    groupLinkPrefix: "Deze link schrijft je in bij de groep",
+      "Vul dit formulier in om je aan te melden voor het evenement. Nadat je je inschrijving hebt verzonden, kun je je persoonlijke pagina openen en je QR-code voor toegang downloaden. Zodra het volledige programma is gepubliceerd, kun je ook kiezen aan welke panelgesprekken en andere evenementen je wilt deelnemen.",
+    groupLinkPrefix: "Gebruik deze link om je in te schrijven bij de groep",
     groupLinkSuffix: ".",
     firstName: "Voornaam",
     lastName: "Achternaam",
-    country: "Land waar je gewoonlijk woont",
+    country: "Land waar je woont",
     countryPlaceholder: "Zoek het land waar je woont",
-    countryOtherPlaceholder: "Schrijf het land waar je woont",
+    countryOtherPlaceholder: "Vul het land in waar je woont",
     noCountry: "Geen land gevonden",
-    city: "Stad waar je gewoonlijk woont",
+    city: "Stad waar je woont",
     cityPlaceholder: "Zoek de stad waar je woont",
     cityDisabledPlaceholder: "Selecteer eerst het land",
-    cityOtherPlaceholder: "Schrijf de stad waar je woont",
+    cityOtherPlaceholder: "Vul de stad in waar je woont",
     noCity: "Geen stad gevonden",
     birthDate: "Geboortedatum",
     birthPlace: "Geboorteplaats (land en stad)",
     birthPlacePlaceholder: "Bijvoorbeeld: Italië, Rome",
     nationality: "Nationaliteit",
-    nationalityPlaceholder: "Zoek nationaliteit",
+    nationalityPlaceholder: "Zoek je nationaliteit",
     noNationality: "Geen nationaliteit gevonden",
-    phone: "Telefoon (optioneel)",
-    phonePrefixLabel: "Internationaal kengetal",
+    phone: "Telefoonnummer (optioneel)",
+    phonePrefixLabel: "Landcode",
     phoneOther: "Anders",
     phoneNumberPlaceholder: "Nummer",
-    phonePrefixPlaceholder: "Schrijf het kengetal, bijvoorbeeld +234",
+    phonePrefixPlaceholder: "Vul de landcode in, bijvoorbeeld +234",
     phoneTitle: "Gebruik alleen cijfers, spaties, punten, haakjes of streepjes.",
-    childrenQuestion: "Neem je met een of meer kinderen deel aan het evenement?",
-    childrenCount: "Met hoeveel kinderen neem je deel?",
+    childrenQuestion: "Nemen een of meer van je kinderen samen met jou deel aan het evenement?",
+    childrenCount: "Hoeveel van je kinderen nemen samen met jou deel?",
     childCard: (index) => `Kind ${index}`,
     childFirstName: "Voornaam",
     childLastName: "Achternaam",
     childBirthDate: "Geboortedatum",
     accessibilityQuestion:
-      "Heb je een handicap, gezondheidssituatie of toegankelijkheidsbehoefte die je ons wilt melden zodat we de ontvangst beter kunnen organiseren?",
+      "Heb je een beperking, een gezondheidsprobleem of specifieke behoeften op het gebied van toegankelijkheid die je ons wilt laten weten, zodat we je tijdens het evenement beter kunnen ondersteunen?",
     accessibilityTitle: "Waar moeten we rekening mee houden?",
-    accessibilityHelp:
-      "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
     previousQuestion: "Heb je aan andere evenementen van de Gemeenschap van Sant’Egidio deelgenomen?",
     externalGroupQuestion: "Ben je lid van een vereniging?",
     externalGroupPlaceholder: "Naam van de vereniging (optioneel)",
     groupQuestion: "Zul je met een groep van de Gemeenschap deelnemen aan het Gebed voor de Vrede?",
     groupLabel: "Groep",
-    groupPlaceholder: "Zoek op groep",
+    groupPlaceholder: "Zoek je groep",
     groupDisabledPlaceholder: "Vul eerst land, stad en geboortedatum in",
     noMatchingLeader: "Geen passende groep gevonden",
     cannotFindLeader: "Ik kan mijn groep niet vinden",
     daysTitle: "Op welke dagen denk je aanwezig te zijn?",
     daysHelp:
-      "Je kunt een of meer dagen van het evenement selecteren, of aangeven dat je dit later doorgeeft.",
+      "Selecteer de ochtenden en middagen waarop je wilt deelnemen, of geef aan dat je dit later laat weten.",
     daysUnknown: "Ik weet het nog niet; ik geef het later door",
     privacyTitle: "Privacy en gegevensverwerking",
     privacyBody:
-      "Ik bevestig dat ik de privacyverklaring van het evenement heb gelezen en geef toestemming voor de verwerking van de ingevoerde gegevens om de inschrijving te beheren, de deelnemer te identificeren, organisatorische communicatie te verzenden, de ontvangst te organiseren, eventuele toegankelijkheidsbehoeften te beheren en te voldoen aan veiligheids- en wettelijke verplichtingen rond het evenement. De gegevens worden verwerkt volgens EU-verordening 2016/679 (AVG), met passende vertrouwelijkheidsmaatregelen, toegang beperkt tot bevoegde medewerkers en bewaring alleen zolang nodig voor de genoemde doeleinden. Ik weet dat ik mijn rechten op toegang, rectificatie, verwijdering, beperking, bezwaar en intrekking van toestemming kan uitoefenen, zonder afbreuk te doen aan de rechtmatigheid van reeds uitgevoerde verwerking.",
+      "Ik bevestig dat ik de privacyverklaring van het evenement heb gelezen en geef toestemming voor de verwerking van de ingevoerde gegevens om de inschrijving te beheren, de deelnemer te identificeren, organisatorische communicatie te verzenden, de ontvangst te organiseren, rekening te houden met eventuele toegankelijkheidsbehoeften en te voldoen aan veiligheids- en wettelijke verplichtingen rond het evenement. De gegevens worden verwerkt volgens EU-verordening 2016/679 (AVG), met passende vertrouwelijkheidsmaatregelen, toegang beperkt tot bevoegde medewerkers en bewaring alleen zolang nodig voor de genoemde doeleinden. Ik weet dat ik mijn rechten op toegang, rectificatie, verwijdering, beperking, bezwaar en intrekking van toestemming kan uitoefenen, zonder afbreuk te doen aan de rechtmatigheid van reeds uitgevoerde verwerking.",
     privacyConsent:
       "Ik accepteer de privacyverklaring en geef toestemming voor de verwerking van de gegevens die nodig zijn om de inschrijving en het evenement te beheren. Als ik een of meer kinderen inschrijf, bevestig ik dat ik ouderlijk gezag heb of bevoegd ben hun gegevens door te geven.",
     sensitiveConsent:
-      "Ik stem in met de verwerking van de verstrekte informatie over handicap, gezondheid of toegankelijkheidsbehoeften, zodat ontvangst- en ondersteuningsmaatregelen tijdens het evenement kunnen worden voorbereid.",
+      "Ik stem in met de verwerking van de verstrekte informatie over een beperking, gezondheid of toegankelijkheidsbehoeften, zodat passende voorzieningen voor ontvangst en ondersteuning tijdens het evenement kunnen worden getroffen.",
     futureEventsConsent:
       "Ik ga ermee akkoord informatie te ontvangen over toekomstige evenementen en initiatieven van de Gemeenschap van Sant'Egidio. Deze toestemming is vrijwillig en kan op elk moment worden ingetrokken.",
     requiredChoice: "Selecteer een antwoord om door te gaan.",
     requiredGroup: "Selecteer een groep of geef aan dat je die niet kunt vinden.",
-    requiredDays: "Selecteer ten minste één dag of geef aan dat je dit later doorgeeft.",
+    requiredDays: "Selecteer ten minste één ochtend of middag, of geef aan dat je dit later laat weten.",
     yes: "Ja",
     no: "Nee",
     submit: "Inschrijving verzenden",
     submitting: "Inschrijving wordt verzonden...",
   },
   uk: {
+    emailConfirmation: "Підтвердьте електронну адресу",
+    emailMismatch: "Електронні адреси мають збігатися.",
+    childrenHelp: "Ця функція призначена для реєстрації дітей у супроводі дорослих віком від 0 до 17 повних років на дату реєстрації. Діти, зареєстровані тут, завжди залишатимуться пов’язаними з вашою реєстрацією на панельні дискусії та інші заходи. Якщо обоє батьків реєструються на молитву, додайте дітей до реєстрації лише одного з батьків.",
     newRegistration: "Нова реєстрація",
     intro:
-      "Це ваша перша реєстрація на подію. Після надсилання ви зможете відкрити свою панель, завантажити QR-код для входу і, коли буде опублікована повна програма, вибрати частини програми, у яких хочете взяти участь.",
-    groupLinkPrefix: "Це посилання реєструє вас у групі",
+      "Заповніть цю форму, щоб зареєструватися на захід. Після надсилання форми ви зможете відкрити особистий кабінет і завантажити QR-код для входу. Коли буде опубліковано повну програму, ви також зможете вибрати тематичні дискусії та інші заходи, у яких хочете взяти участь.",
+    groupLinkPrefix: "Скористайтеся цим посиланням, щоб зареєструватися у складі групи",
     groupLinkSuffix: ".",
     firstName: "Ім'я",
     lastName: "Прізвище",
     country: "Країна, де ви зазвичай живете",
     countryPlaceholder: "Знайдіть країну, де ви живете",
-    countryOtherPlaceholder: "Напишіть країну, де ви живете",
+    countryOtherPlaceholder: "Вкажіть країну, де ви живете",
     noCountry: "Країну не знайдено",
     city: "Місто, де ви зазвичай живете",
     cityPlaceholder: "Знайдіть місто, де ви живете",
     cityDisabledPlaceholder: "Спочатку виберіть країну",
-    cityOtherPlaceholder: "Напишіть місто, де ви живете",
+    cityOtherPlaceholder: "Вкажіть місто, де ви живете",
     noCity: "Місто не знайдено",
     birthDate: "Дата народження",
     birthPlace: "Місце народження (країна і місто)",
     birthPlacePlaceholder: "Наприклад: Італія, Рим",
     nationality: "Громадянство",
-    nationalityPlaceholder: "Знайти громадянство",
+    nationalityPlaceholder: "Знайдіть своє громадянство",
     noNationality: "Громадянство не знайдено",
     phone: "Телефон (необов'язково)",
-    phonePrefixLabel: "Міжнародний код",
+    phonePrefixLabel: "Міжнародний телефонний код",
     phoneOther: "Інше",
     phoneNumberPlaceholder: "Номер",
-    phonePrefixPlaceholder: "Напишіть код, наприклад +234",
+    phonePrefixPlaceholder: "Введіть телефонний код, наприклад +234",
     phoneTitle: "Вводьте лише цифри, пробіли, крапки, дужки або дефіси.",
-    childrenQuestion: "Ви братимете участь у події з однією або кількома дітьми?",
-    childrenCount: "Зі скількома дітьми ви братимете участь?",
+    childrenQuestion: "Чи братимуть участь у заході разом із вами ваші діти?",
+    childrenCount: "Скільки ваших дітей братимуть участь разом із вами?",
     childCard: (index) => `Дитина ${index}`,
     childFirstName: "Ім’я",
     childLastName: "Прізвище",
     childBirthDate: "Дата народження",
     accessibilityQuestion:
-      "Чи маєте ви інвалідність, стан здоров'я або потребу в доступності, про які хочете повідомити нам, щоб ми краще організували прийом?",
+      "Чи є у вас інвалідність, особливості стану здоров'я або потреби щодо доступності, про які ви хотіли б нам повідомити, щоб ми могли краще організувати вашу участь у заході?",
     accessibilityTitle: "Що нам потрібно врахувати?",
-    accessibilityHelp:
-      "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
     previousQuestion: "Чи брали ви участь в інших заходах Спільноти святого Егідія?",
     externalGroupQuestion: "Чи належите ви до якоїсь асоціації?",
     externalGroupPlaceholder: "Назва асоціації (необов’язково)",
     groupQuestion: "Чи братимете ви участь у Молитві за мир з групою Спільноти?",
     groupLabel: "Група",
-    groupPlaceholder: "Шукати за групою",
+    groupPlaceholder: "Знайдіть свою групу",
     groupDisabledPlaceholder: "Спочатку вкажіть країну, місто і дату народження",
     noMatchingLeader: "Відповідну групу не знайдено",
     cannotFindLeader: "Я не можу знайти свою групу",
     daysTitle: "У які дні ви плануєте бути присутніми?",
     daysHelp:
-      "Можна вибрати один або кілька днів події або вказати, що повідомите це пізніше.",
+      "Виберіть ранкові та післяобідні години, коли ви плануєте бути присутніми, або вкажіть, що повідомите про це пізніше.",
     daysUnknown: "Я ще не знаю, повідомлю пізніше",
     privacyTitle: "Конфіденційність і обробка даних",
     privacyBody:
-      "Я підтверджую, що прочитав/прочитала повідомлення про конфіденційність події, і дозволяю обробку введених даних для управління реєстрацією, ідентифікації учасника, організаційних повідомлень, організації прийому, можливих потреб доступності та виконання вимог безпеки і закону, пов'язаних із подією. Дані оброблятимуться відповідно до Регламенту ЄС 2016/679 (GDPR), із належними заходами конфіденційності, доступом лише для уповноважених осіб і зберіганням лише протягом часу, необхідного для зазначених цілей. Я знаю, що можу здійснювати права доступу, виправлення, видалення, обмеження, заперечення та відкликання згоди, без шкоди для законності вже здійсненої обробки.",
+      "Я підтверджую, що прочитав/прочитала повідомлення про конфіденційність події, і дозволяю обробку введених даних для опрацювання реєстрації, ідентифікації учасника, надсилання організаційних повідомлень, організації прийому, врахування можливих потреб щодо доступності та виконання вимог безпеки й законодавства, пов'язаних із заходом. Дані оброблятимуться відповідно до Регламенту ЄС 2016/679 (GDPR), із належними заходами конфіденційності, доступом лише для уповноважених осіб і зберіганням лише протягом часу, необхідного для зазначених цілей. Я знаю, що можу здійснювати права доступу, виправлення, видалення, обмеження, заперечення та відкликання згоди, без шкоди для законності вже здійсненої обробки.",
     privacyConsent:
-      "Я приймаю повідомлення про конфіденційність і дозволяю обробку даних, необхідних для управління реєстрацією та подією. Якщо я реєструю одну або кількох дітей, я підтверджую, що маю батьківські права або уповноважений/уповноважена надати їхні дані.",
+      "Я приймаю повідомлення про конфіденційність і дозволяю обробку даних, необхідних для опрацювання реєстрації та організації заходу. Якщо я реєструю одну або кількох дітей, я підтверджую, що маю батьківські права або уповноважений/уповноважена надати їхні дані.",
     sensitiveConsent:
-      "Я погоджуюся на обробку вказаної інформації про інвалідність, здоров'я або потреби доступності, щоб підготувати заходи прийому та підтримки під час події.",
+      "Я погоджуюся на обробку наданої інформації про інвалідність, стан здоров'я або потреби щодо доступності, щоб забезпечити належний прийом і підтримку під час заходу.",
     futureEventsConsent:
-      "Я погоджуюся отримувати інформаційні повідомлення про майбутні події та ініціативи Спільноти Sant'Egidio. Ця згода є добровільною і може бути відкликана в будь-який час.",
+      "Я погоджуюся отримувати інформаційні повідомлення про майбутні заходи та ініціативи Спільноти святого Егідія. Ця згода є добровільною і може бути відкликана в будь-який час.",
     requiredChoice: "Виберіть відповідь, щоб продовжити.",
     requiredGroup: "Виберіть групу або вкажіть, що не можете її знайти.",
-    requiredDays: "Виберіть принаймні один день або вкажіть, що повідомите пізніше.",
+    requiredDays: "Виберіть принаймні один ранковий або післяобідній період або вкажіть, що повідомите про свою присутність пізніше.",
     yes: "Так",
     no: "Ні",
     submit: "Надіслати реєстрацію",
@@ -645,6 +662,7 @@ export function RegistrationForm({
   options,
 }: RegistrationFormProps) {
   const copy = REGISTRATION_FORM_COPY[locale] ?? REGISTRATION_FORM_COPY.en;
+  const childDateBounds = publicChildBirthDateBounds();
   const formRef = useRef<HTMLFormElement>(null);
   const submittedRef = useRef(false);
   const [hasAccessibilityNeeds, setHasAccessibilityNeeds] = useState("");
@@ -698,14 +716,16 @@ export function RegistrationForm({
     options.event?.ends_on ?? null,
     locale
   );
-  const filteredCountries = EUROPEAN_COUNTRIES.filter((country) =>
-    normalizeSearchText(country).includes(normalizeSearchText(countrySearch))
+  const filteredCountries = RESIDENCE_COUNTRIES.filter((country) =>
+    [country, countryName(country, locale) ?? country].some(name =>
+      normalizeSearchText(name).includes(normalizeSearchText(countrySearch))
+    )
   );
   const countryValue =
     selectedCountry === OTHER_COUNTRY ? customCountry : selectedCountry;
   const cityOptions =
     selectedCountry && selectedCountry !== OTHER_COUNTRY
-      ? EUROPEAN_CITY_OPTIONS[selectedCountry] ?? []
+      ? RESIDENCE_CITY_OPTIONS[selectedCountry] ?? []
       : [];
   const filteredCities = cityOptions.filter((city) =>
     normalizeSearchText(city).includes(normalizeSearchText(citySearch))
@@ -739,8 +759,9 @@ export function RegistrationForm({
       }))
     : PLACEHOLDER_GROUPS.map((group) => ({ value: group, label: group }));
   const filteredNationalities = NATIONALITY_OPTIONS.filter((nationality) =>
-    normalizeSearchText(nationality).includes(normalizeSearchText(nationalitySearch))
-  );
+    !nationalitySearch || nationalitySearch === selectedNationality ||
+    normalizeSearchText(`${nationalityName(nationality, locale)} ${nationality}`).includes(normalizeSearchText(nationalitySearch))
+  ).sort((a, b) => (nationalityName(a, locale) ?? a).localeCompare(nationalityName(b, locale) ?? b, locale));
   const normalizedPhoneNumber = phoneNumber.replace(/[\s().-]/g, "");
   const selectedPhonePrefix =
     phonePrefix === OTHER_PHONE_PREFIX ? customPhonePrefix.trim() : phonePrefix;
@@ -889,6 +910,18 @@ export function RegistrationForm({
     return () => window.clearTimeout(restoreTimer);
   }, [email, error, options.groupLink]);
 
+  function validateEmailConfirmation() {
+    const form = formRef.current;
+    const first = form?.elements.namedItem("email") as HTMLInputElement | null;
+    const confirmation = form?.elements.namedItem("emailConfirmation") as HTMLInputElement | null;
+    if (first && confirmation) {
+      confirmation.setCustomValidity(
+        confirmation.value && first.value.trim().toLowerCase() !== confirmation.value.trim().toLowerCase()
+          ? copy.emailMismatch : ""
+      );
+    }
+  }
+
   function clearCitySelection() {
     setCitySearch("");
     setSelectedCity("");
@@ -914,6 +947,11 @@ export function RegistrationForm({
           return;
         }
 
+        validateEmailConfirmation();
+        if (!event.currentTarget.reportValidity()) {
+          event.preventDefault();
+          return;
+        }
         saveCurrentForm();
 
         if (
@@ -985,8 +1023,10 @@ export function RegistrationForm({
         </div>
       </header>
 
+      <RequiredFieldsNote locale={locale} />
+
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5 sm:grid-cols-2">
-        <Field label="Email" className="sm:col-span-2">
+        <Field required label="Email" className="sm:col-span-2">
           <input
             name="email"
             type="email"
@@ -994,10 +1034,22 @@ export function RegistrationForm({
             defaultValue={email}
             className="field"
             autoComplete="email"
+            onInput={validateEmailConfirmation}
             data-field="email"
           />
         </Field>
-        <Field label={copy.firstName}>
+        <Field required label={copy.emailConfirmation} className="sm:col-span-2">
+          <input
+            name="emailConfirmation"
+            type="email"
+            required
+            className="field"
+            autoComplete="off"
+            onInput={validateEmailConfirmation}
+            data-field="emailConfirmation"
+          />
+        </Field>
+        <Field required label={copy.firstName}>
           <input
             name="firstName"
             required
@@ -1007,7 +1059,7 @@ export function RegistrationForm({
             data-field="firstName"
           />
         </Field>
-        <Field label={copy.lastName}>
+        <Field required label={copy.lastName}>
           <input
             name="lastName"
             required
@@ -1018,7 +1070,7 @@ export function RegistrationForm({
           />
         </Field>
         <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.country}</span>
+          <span>{copy.country}<RequiredIndicator /></span>
           <input type="hidden" name="countryOther" value={countryValue} />
           <div className="relative">
             <input
@@ -1055,13 +1107,13 @@ export function RegistrationForm({
                       }
 
                       setSelectedCountry(country);
-                      setCountrySearch(country);
+                      setCountrySearch(countryName(country, locale) ?? country);
                       setCustomCountry("");
                       clearCitySelection();
                       setShowCountryOptions(false);
                     }}
                   >
-                    {country}
+                    {countryName(country, locale)}
                   </button>
                 ))}
                 <button
@@ -1088,6 +1140,10 @@ export function RegistrationForm({
               value={customCountry}
               data-field="country"
               onChange={(event) => {
+                event.target.setCustomValidity(
+                  event.target.value.trim() && !isCountryName(event.target.value)
+                    ? COUNTRY_VALIDATION_MESSAGE[locale] : ""
+                );
                 setCustomCountry(event.target.value);
                 clearCitySelection();
               }}
@@ -1095,7 +1151,7 @@ export function RegistrationForm({
           ) : null}
         </div>
         <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.city}</span>
+          <span>{copy.city}<RequiredIndicator /></span>
           <input type="hidden" name="cityOther" value={cityValue} />
           {selectedCountry === OTHER_COUNTRY ? (
             <input
@@ -1189,18 +1245,9 @@ export function RegistrationForm({
             />
           ) : null}
         </div>
-        <Field label={copy.birthDate}>
-          <input
-            name="birthDate"
-            type="date"
-            required
-            className="field"
-            value={birthDate}
-            data-field="birthDate"
-            onChange={(event) => setBirthDate(event.target.value)}
-          />
-        </Field>
-        <Field label={copy.birthPlace}>
+        <ParticipantBirthDateField label={copy.birthDate} locale={locale}
+          value={birthDate} onValueChange={setBirthDate} />
+        <Field required label={copy.birthPlace}>
           <input
             name="birthPlace"
             required
@@ -1211,14 +1258,14 @@ export function RegistrationForm({
           />
         </Field>
         <div className="grid gap-2 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.nationality}</span>
+          <span>{copy.nationality}<RequiredIndicator /></span>
           <input type="hidden" name="nationality" value={selectedNationality} />
           <div className="relative">
             <input
               className="field"
               placeholder={copy.nationalityPlaceholder}
               required
-              value={nationalitySearch}
+              value={nationalitySearch === selectedNationality ? nationalityName(selectedNationality, locale) ?? "" : nationalitySearch}
               data-field="nationality"
               onBlur={() => {
                 window.setTimeout(() => setShowNationalityOptions(false), 120);
@@ -1252,7 +1299,7 @@ export function RegistrationForm({
                       setShowNationalityOptions(false);
                     }}
                   >
-                    {nationality}
+                    {nationality === copy.noNationality ? nationality : nationalityName(nationality, locale)}
                   </button>
                 ))}
               </div>
@@ -1295,17 +1342,19 @@ export function RegistrationForm({
             />
           </div>
           {phonePrefix === OTHER_PHONE_PREFIX ? (
-            <input
-              className="field"
-              inputMode="tel"
-              pattern="\\+[1-9][0-9]{0,3}"
-              placeholder={copy.phonePrefixPlaceholder}
-              required={phoneNumber.length > 0}
-              title={copy.phonePrefixLabel}
-              value={customPhonePrefix}
-              data-field="phone"
-              onChange={(event) => setCustomPhonePrefix(event.target.value)}
-            />
+            <Field label={copy.phonePrefixLabel} required={phoneNumber.length > 0}>
+              <input
+                className="field"
+                inputMode="tel"
+                pattern="\\+[1-9][0-9]{0,3}"
+                placeholder={copy.phonePrefixPlaceholder}
+                required={phoneNumber.length > 0}
+                title={copy.phonePrefixLabel}
+                value={customPhonePrefix}
+                data-field="phone"
+                onChange={(event) => setCustomPhonePrefix(event.target.value)}
+              />
+            </Field>
           ) : null}
         </div>
       </section>
@@ -1336,7 +1385,8 @@ export function RegistrationForm({
 
         {participatesWithChildren === "yes" ? (
           <div className="grid gap-4">
-            <Field label={copy.childrenCount}>
+            <p id="children-help" className="text-sm text-[var(--peace-muted)]">{copy.childrenHelp}</p>
+            <Field required label={copy.childrenCount}>
               <select
                 name="childrenCount"
                 className="field"
@@ -1362,7 +1412,7 @@ export function RegistrationForm({
                   <legend className="px-2 text-sm font-semibold text-[var(--peace-blue-900)]">
                     {copy.childCard(index + 1)}
                   </legend>
-                  <Field label={copy.childFirstName}>
+                  <Field required label={copy.childFirstName}>
                     <input
                       name={`child_${index}_firstName`}
                       required
@@ -1371,7 +1421,7 @@ export function RegistrationForm({
                       data-field="children"
                     />
                   </Field>
-                  <Field label={copy.childLastName}>
+                  <Field required label={copy.childLastName}>
                     <input
                       name={`child_${index}_lastName`}
                       required
@@ -1380,10 +1430,13 @@ export function RegistrationForm({
                       data-field="children"
                     />
                   </Field>
-                  <Field label={copy.childBirthDate} className="sm:col-span-2">
+                  <Field required label={copy.childBirthDate} className="sm:col-span-2">
                     <input
                       name={`child_${index}_birthDate`}
                       type="date"
+                      min={childDateBounds.min}
+                      max={childDateBounds.max}
+                      aria-describedby="children-help"
                       required
                       className="field bg-white"
                       autoComplete="off"
@@ -1399,7 +1452,7 @@ export function RegistrationForm({
 
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-          <span>{copy.accessibilityQuestion}</span>
+          <span>{copy.accessibilityQuestion}<RequiredIndicator /></span>
           <input
             name="hasAccessibilityNeeds"
             type="hidden"
@@ -1436,11 +1489,8 @@ export function RegistrationForm({
           <div className="grid gap-4">
             <div>
               <h2 className="text-lg font-semibold">
-                {copy.accessibilityTitle}
+                {copy.accessibilityTitle}<RequiredIndicator />
               </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-                {copy.accessibilityHelp}
-              </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (
@@ -1473,7 +1523,7 @@ export function RegistrationForm({
         />
         {!hasGroupLink ? (
           <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-            <span>{copy.previousQuestion}</span>
+            <span>{copy.previousQuestion}<RequiredIndicator /></span>
             <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
               <ChoiceButton
                 active={hasPreviousParticipation === "yes"}
@@ -1515,7 +1565,7 @@ export function RegistrationForm({
         />
         {!hasGroupLink && hasPreviousParticipation === "yes" ? (
           <div className="grid gap-3 text-sm font-medium text-[var(--peace-ink)]">
-            <span>{copy.groupQuestion}</span>
+            <span>{copy.groupQuestion}<RequiredIndicator /></span>
             <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
               <ChoiceButton
                 active={participatesWithGroup === "yes"}
@@ -1561,7 +1611,7 @@ export function RegistrationForm({
         ) : null}
 
         {effectiveParticipatesWithGroup === "yes" ? (
-          <Field label={copy.groupLabel}>
+          <Field required={!hasGroupLink && !cannotFindLeader} label={copy.groupLabel}>
             <input
               name={hasRealGroups ? "groupId" : "groupName"}
               value={selectedGroupValue}
@@ -1671,7 +1721,7 @@ export function RegistrationForm({
       <section className="grid gap-4 rounded-lg border border-[var(--peace-border)] bg-white p-5">
         <div>
           <h2 className="text-lg font-semibold">
-            {copy.daysTitle}
+            {copy.daysTitle}<RequiredIndicator />
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
             {copy.daysHelp}
@@ -1731,7 +1781,7 @@ export function RegistrationForm({
             data-field="consents"
           />
           <span>
-            {copy.privacyConsent}
+            {copy.privacyConsent}<RequiredIndicator />
           </span>
         </label>
         {hasAccessibilityNeeds === "yes" ? (
@@ -1744,7 +1794,7 @@ export function RegistrationForm({
               data-field="consents"
             />
             <span>
-              {copy.sensitiveConsent}
+              {copy.sensitiveConsent}<RequiredIndicator />
             </span>
           </label>
         ) : null}
@@ -1759,14 +1809,14 @@ export function RegistrationForm({
       </section>
 
       <div className="flex justify-end">
-        <button
+        <ProgressButton
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting}
-          className="min-h-12 rounded-md bg-[var(--peace-blue-800)] px-6 font-semibold text-white transition hover:bg-[var(--peace-blue-900)] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
+          className="min-h-12 rounded-md bg-[var(--peace-blue-800)] px-6 font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
           {isSubmitting ? copy.submitting : copy.submit}
-        </button>
+        </ProgressButton>
       </div>
     </form>
   );
@@ -1776,14 +1826,16 @@ function Field({
   label,
   children,
   className = "",
+  required = false,
 }: {
+  required?: boolean;
   label: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <label className={`grid gap-2 text-sm font-medium text-[var(--peace-ink)] ${className}`}>
-      <span>{label}</span>
+      <span>{label}{required ? <RequiredIndicator /> : null}</span>
       {children}
     </label>
   );
@@ -2138,25 +2190,6 @@ function focusField(form: HTMLFormElement | null, field: string) {
 
   element.focus({ preventScroll: true });
   element.scrollIntoView({ block: "center", behavior: "smooth" });
-}
-
-function findCountryId(
-  countries: PublicRegistrationOptions["countries"],
-  value: string
-): string | null {
-  const normalized = normalizeMatchText(value);
-
-  if (!normalized) {
-    return null;
-  }
-
-  return (
-    countries.find(
-      (country) =>
-        normalizeMatchText(country.name_it) === normalized ||
-        normalizeMatchText(country.name_en) === normalized
-    )?.id ?? null
-  );
 }
 
 function findCityId(

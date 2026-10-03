@@ -1,6 +1,13 @@
 "use client";
 
+import { useInternalSexColumn } from "../use-internal-sex-column";
+import { ParticipantEmailCell } from "@/components/participant-email-cell";
+
+import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
+import { AccompanyingChildrenList } from "../accompanying-children-list";
+
 import Link from "@/components/pending-link";
+import { ProgressButton } from "@/components/button-progress";
 import { useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { ArrowDown, ArrowUp, Columns3, Download } from "lucide-react";
@@ -35,13 +42,16 @@ export function LeaderParticipantsTable({
   rows,
   operatorId,
   startsOn,
+  endsOn = null,
   locale,
 }: {
   rows: LeaderTableRow[];
   operatorId: string;
   startsOn: string | null;
+  endsOn?: string | null;
   locale: SupportedLocale;
 }) {
+  const attendanceColumns = attendanceTableColumns(startsOn, endsOn, locale);
   const searchParams = useSearchParams();
   const copy = LEADER_TABLE_COPY[locale];
   const storageKey = `iscrizioni:leader-participants:v1:${operatorId}`;
@@ -66,7 +76,8 @@ export function LeaderParticipantsTable({
     new URLSearchParams(searchParams.toString()),
     decoded,
   );
-  const sorted = sortLeaderRows(rows, preferences, startsOn, locale);
+  const sexText = useInternalSexColumn(preferences.columns.includes("sex"), rows.map(row => row.registrationId), locale);
+  const sorted = sortLeaderRows(rows.map(row => ({ ...row, sexText: sexText(row.registrationId) })), preferences, startsOn, locale);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const tablePath = (updates: Record<string, string | null> = {}) =>
@@ -130,7 +141,7 @@ export function LeaderParticipantsTable({
             aria-label={copy.visibleColumns}
             className="absolute left-0 top-full z-20 mt-2 grid min-w-56 gap-2 rounded-md border border-[var(--peace-border)] bg-white p-4 shadow-lg"
           >
-            {(Object.keys(PARTICIPANT_COLUMNS) as ParticipantColumn[]).map(
+            {(Object.keys(PARTICIPANT_COLUMNS) as ParticipantColumn[]).filter(column => column !== "tags" && column !== "association").map(
               (column) => (
                 <label
                   key={column}
@@ -157,7 +168,8 @@ export function LeaderParticipantsTable({
             )}
           </fieldset>
         </details>
-        <button
+        <ProgressButton
+          progressError={!!error}
           type="button"
           onClick={download}
           disabled={busy}
@@ -166,7 +178,7 @@ export function LeaderParticipantsTable({
         >
           <Download size={16} aria-hidden="true" />
           {copy.export}
-        </button>
+        </ProgressButton>
         <p className="max-w-xl text-sm leading-6 text-[var(--peace-muted)]">
           {copy.exportHelp}
         </p>
@@ -183,7 +195,9 @@ export function LeaderParticipantsTable({
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] text-xs uppercase tracking-wide text-[#6f7f91]">
-                {preferences.columns.map((column) => (
+                {preferences.columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                  <th key={slot.key} scope="col" className="whitespace-nowrap p-3 text-center font-semibold">{slot.label}</th>
+                )) : (
                   <th
                     key={column}
                     className="whitespace-nowrap p-3 font-semibold"
@@ -229,10 +243,12 @@ export function LeaderParticipantsTable({
                   key={row.id}
                   className="border-b border-[var(--peace-border)] align-top hover:bg-[#f7fbfe] last:border-b-0"
                 >
-                  {preferences.columns.map((column) => (
+                  {preferences.columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                    <td key={slot.key} className="whitespace-nowrap p-3 text-center">{attendanceSlotText(row.attendance, slot, locale)}</td>
+                  )) : (
                     <td key={column} className="whitespace-pre-line p-3">
                       {column === "name" ? (
-                        <>
+                        <div className="min-w-40 max-w-72">
                           <Link
                             scroll={false}
                             href={tablePath({ assignmentId: row.id })}
@@ -245,7 +261,10 @@ export function LeaderParticipantsTable({
                               .filter(Boolean)
                               .join(" · ")}
                           </p>
-                        </>
+                          <AccompanyingChildrenList records={row.children} participantName={row.participantName} startsOn={startsOn} locale={locale} />
+                        </div>
+                      ) : column === "email" ? (
+                        <ParticipantEmailCell email={row.participantEmail} delegated={row.emailDelegated} locale={locale} />
                       ) : column === "tags" && row.tags.length ? (
                         <div className="flex flex-wrap gap-1">
                           {row.tags.map((tag) => (

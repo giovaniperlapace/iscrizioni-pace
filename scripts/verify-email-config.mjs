@@ -1,37 +1,28 @@
-import nodemailer from "nodemailer";
-
-const user =
-  process.env.EMAIL_USER ||
-  process.env.SMTP_USER ||
-  process.env.GMAIL_USER ||
-  process.env.EMAIL_FROM ||
-  "registrationspeace@santegidio.org";
-const password =
-  process.env.EMAIL_PASSWORD ||
-  process.env.SMTP_PASSWORD ||
-  process.env.GMAIL_APP_PASSWORD;
-
-if (!password) {
-  console.error("Missing EMAIL_PASSWORD/SMTP_PASSWORD/GMAIL_APP_PASSWORD");
-  process.exit(1);
-}
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT || 465),
-  secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : true,
-  auth: {
-    user,
-    pass: password.replace(/\s+/g, ""),
-  },
-});
+import { getEmailConfig } from "../lib/email/config.ts";
 
 try {
-  await transporter.verify();
-  console.log("Email SMTP configuration verified.");
+  const config = getEmailConfig();
+  if (config.deliveryMode !== "postmark" || config.serverToken === "POSTMARK_API_TEST") {
+    throw new Error("Configure a real Postmark server token to verify the account (no email is sent).");
+  }
+  async function read(path) {
+    const response = await fetch(`https://api.postmarkapp.com${path}`, {
+      headers: { Accept: "application/json", "X-Postmark-Server-Token": config.serverToken },
+      redirect: "error", signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Postmark verification HTTP ${response.status}`);
+    return response.json();
+  }
+  const [server, transactional, broadcast] = await Promise.all([
+    read("/server"),
+    read(`/message-streams/${encodeURIComponent(config.transactionalStream)}`),
+    read(`/message-streams/${encodeURIComponent(config.broadcastStream)}`),
+  ]);
+  if (server.DeliveryType !== "Live") throw new Error("Postmark server is not Live.");
+  if (transactional.MessageStreamType !== "Transactional" || transactional.ArchivedAt) throw new Error("Invalid transactional stream.");
+  if (broadcast.MessageStreamType !== "Broadcasts" || broadcast.ArchivedAt) throw new Error("Invalid broadcast stream.");
+  console.log("Postmark credentials and stream types verified. No email sent. Account approval, sender DNS and actual delivery must also be checked.");
 } catch (error) {
-  const code = error?.code ? ` ${error.code}` : "";
-  const responseCode = error?.responseCode ? ` ${error.responseCode}` : "";
-  console.error(`Email SMTP verification failed.${code}${responseCode}`);
-  process.exit(1);
+  console.error(error.message);
+  process.exitCode = 1;
 }

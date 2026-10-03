@@ -1,11 +1,17 @@
 "use client";
 
 import { EventAttendanceReport } from "@/app/dashboard/event-attendance";
+import { AssociationStatisticsReport } from "@/app/dashboard/association-statistics-report";
+import type { AssociationStatisticsSnapshot } from "@/lib/registrations/association-statistics";
+
+import { DisabilityStatisticsReport } from "@/app/dashboard/disability-statistics-report";
+import type { DisabilityStatisticsSnapshot } from "@/lib/registrations/disability-statistics";
+
 import Link from "@/components/pending-link";
 import {
   Baby,
-  ChevronDown,
   ChevronRight,
+  ChevronDown,
   UserRound,
   Users,
   type LucideIcon,
@@ -16,13 +22,15 @@ import type { PanelStatisticsSnapshot } from "@/lib/panels/panel-statistics";
 import { PanelStatisticsReport } from "@/app/dashboard/panel-statistics-report";
 import {
   serializeStatisticsDrilldown,
+  buildAssignedGroupTree,
   type EventStatisticsSnapshot,
-  type ParticipantBreakdownLevel,
   type StatisticsAgeBand,
   type StatisticsAttendanceSlot,
   type StatisticsDrilldownFilter,
   type StatisticsPersonRow,
 } from "@/lib/registrations/event-statistics";
+
+import { STATISTICS_REPORTS, type StatisticsReport } from "@/lib/registrations/statistics-reports";
 
 type StatisticsDashboard = "admin" | "manager";
 type StatisticsNavMode = "full" | "mini";
@@ -30,27 +38,17 @@ type StatisticsNavMode = "full" | "mini";
 type StatisticsSectionProps = {
   eventId?: string | null;
   statistics: EventStatisticsSnapshot;
+  report?: StatisticsReport;
+  canViewDisability?: boolean;
+  disabilityStatistics?: DisabilityStatisticsSnapshot;
+  associationStatistics?: AssociationStatisticsSnapshot;
   dashboard: StatisticsDashboard;
   navMode: StatisticsNavMode;
-  panelStatistics: PanelStatisticsSnapshot;
-  canManage: boolean;
+  panelStatistics?: PanelStatisticsSnapshot;
+  canManage?: boolean;
 };
 
-type SummaryBreakdownRow = {
-  label: string;
-  count: number;
-};
-
-type PivotLevel = "country" | "city" | "group";
-
-type TerritoryPivotRow = {
-  key: string;
-  level: PivotLevel;
-  label: string;
-  people: StatisticsPersonRow[];
-  filter: StatisticsDrilldownFilter;
-  children: TerritoryPivotRow[];
-};
+type AssignedGroupRow = ReturnType<typeof buildAssignedGroupTree>[number];
 
 const AGE_BANDS: StatisticsAgeBand[] = [
   "0-14",
@@ -64,18 +62,14 @@ export function StatisticsSection({
   eventId = null,
   statistics,
   panelStatistics,
-  canManage,
+  canManage = false,
+  report = "territory",
+  canViewDisability = false,
+  disabilityStatistics,
+  associationStatistics,
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
-  const territorySummary = useMemo(
-    () => ({
-      country: summarizeLabels(statistics.people.map((person) => person.country)),
-      city: summarizeLabels(statistics.people.map((person) => person.city)),
-      group: summarizeLabels(statistics.people.map((person) => person.group)),
-    }),
-    [statistics.people]
-  );
   const participantHref = (filter: StatisticsDrilldownFilter) =>
     buildParticipantsHref(dashboard, navMode, filter);
 
@@ -85,47 +79,78 @@ export function StatisticsSection({
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Seleziona qualsiasi conteggio per aprire la gestione iscritti già
+          {report === "disability" ? "Seleziona un totale per difficoltà per aprire Gestione iscritti con le persone interessate. I conteggi per gruppo e il pulsante Mostra tutte le persone aprono l’elenco qui sotto." : <>Seleziona i conteggi del riepilogo per aprire la gestione iscritti già
           filtrata sulle persone che compongono quel dato.
+          Persone complessive, totali per gruppo, presenze e fasce di età includono
+          i figli accompagnati. Partecipanti iscritti e iscrizioni per settimana li escludono.</>}
         </p>
       </div>
 
-      <ReportBlock name="panels" title="Panel">
+      {panelStatistics ? <ReportBlock name="panels" title="Panel">
         <PanelStatisticsReport
           statistics={panelStatistics}
           dashboard={dashboard}
           navMode={navMode}
           canManage={canManage}
         />
-      </ReportBlock>
+      </ReportBlock> : null}
 
-      <ReportBlock name="territory" title="Territori e gruppi">
+      <nav aria-label="Categorie di statistiche" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
+        {STATISTICS_REPORTS.filter(item => item.key !== "disability" || canViewDisability).map(({ key, label }) => (
+          <Link
+            key={key}
+            href={`/dashboard/${dashboard}?${new URLSearchParams({ section: "dashboard", nav: navMode, report: key })}`}
+            prefetch={false}
+            scroll={false}
+            aria-current={report === key ? "page" : undefined}
+            className={`inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] ${report === key ? "bg-[var(--peace-blue-800)] text-white shadow-sm" : "text-[var(--peace-blue-900)] hover:bg-[var(--peace-sky-100)]"}`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      {report === "territory" ? <ReportBlock name="territory" title="Partecipanti per gruppo o nodo">
         <TerritoryStatisticsSummary
           statistics={statistics}
-          territorySummary={territorySummary}
           participantHref={participantHref}
         />
+
+        <SingleDayAttendanceSummary statistics={statistics} participantHref={participantHref} />
+
+        {associationStatistics ? <AssociationStatisticsReport statistics={associationStatistics} /> : null}
 
         <TerritoryAttendancePivot
           people={statistics.people}
           attendanceSlots={statistics.attendanceSlots}
           participantHref={participantHref}
         />
-      </ReportBlock>
+      </ReportBlock> : null}
 
-      <ReportBlock name="attendance" title="Presenze previste">
+      {report === "attendance" ? <ReportBlock name="attendance" title="Presenze previste">
+        <p className="px-2 text-sm">Figli accompagnati inclusi; le loro presenze seguono quelle del genitore.</p>
+        <SingleDayAttendanceSummary statistics={statistics} participantHref={participantHref} />
         <AttendanceStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
         />
-      </ReportBlock>
+      </ReportBlock> : null}
 
-      <ReportBlock name="age" title="Fasce di età">
+      {report === "age" ? <ReportBlock name="age" title="Fasce di età">
+        <p className="px-2 text-sm">Figli accompagnati inclusi. Età calcolate all’inizio dell’evento.</p>
         <AgeStatisticsSummary
           statistics={statistics}
           participantHref={participantHref}
         />
-      </ReportBlock>
+      </ReportBlock> : null}
+
+      {report === "disability" && canViewDisability && disabilityStatistics ? <ReportBlock name="disability" title="Disabilità e difficoltà dichiarate">
+        <DisabilityStatisticsReport statistics={disabilityStatistics} dashboard={dashboard} navMode={navMode} />
+      </ReportBlock> : null}
+
+      {report === "registrations" ? <ReportBlock name="registrations" title="Iscrizioni per settimana">
+        <WeeklyRegistrations statistics={statistics} />
+      </ReportBlock> : null}
     </section>
   );
 }
@@ -135,7 +160,7 @@ function ReportBlock({
   title,
   children,
 }: {
-  name: "panels" | "territory" | "attendance" | "age";
+  name: StatisticsReport | "panels";
   title: string;
   children: ReactNode;
 }) {
@@ -164,18 +189,16 @@ function ReportBlock({
 
 function TerritoryStatisticsSummary({
   statistics,
-  territorySummary,
   participantHref,
 }: {
   statistics: EventStatisticsSnapshot;
-  territorySummary: Record<ParticipantBreakdownLevel, SummaryBreakdownRow[]>;
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
   return (
     <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
         <h3 className="text-base font-semibold">
-          Riepilogo persone, territori e gruppi
+          Riepilogo partecipanti
         </h3>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
           Ogni conteggio apre l’elenco delle iscrizioni corrispondenti.
@@ -185,13 +208,13 @@ function TerritoryStatisticsSummary({
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <SummaryKpi
           icon={Users}
-          label="Persone complessive"
+          label="Persone complessive (figli accompagnati inclusi)"
           value={statistics.summary.totalPeople}
           href={participantHref({ personKind: "all" })}
         />
         <SummaryKpi
           icon={UserRound}
-          label="Partecipanti iscritti"
+          label="Partecipanti iscritti (figli accompagnati esclusi)"
           value={statistics.summary.registeredParticipants}
           href={participantHref({ personKind: "participant" })}
         />
@@ -203,43 +226,6 @@ function TerritoryStatisticsSummary({
         />
       </div>
 
-      <div className="mt-4">
-        <SummaryPanel
-          title="Territori e gruppi più rappresentati"
-          description="Le prime cinque voci per numero di persone; il riepilogo completo è nella tabella pivot successiva."
-        >
-          <div className="grid gap-4 lg:grid-cols-3">
-            {(
-              [
-                ["country", "Paesi"],
-                ["city", "Città"],
-                ["group", "Gruppi"],
-              ] as const
-            ).map(([level, title]) => (
-              <div key={level}>
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-                  {title}
-                </h4>
-                <div className="grid gap-2">
-                  {territorySummary[level].slice(0, 5).map((row) => (
-                    <SummaryFilterLink
-                      key={row.label}
-                      label={row.label}
-                      count={row.count}
-                      href={participantHref({ [level]: row.label })}
-                    />
-                  ))}
-                  {territorySummary[level].length === 0 ? (
-                    <p className="text-sm text-[var(--peace-muted)]">
-                      Nessun dato disponibile.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </SummaryPanel>
-      </div>
     </article>
   );
 }
@@ -253,31 +239,29 @@ function TerritoryAttendancePivot({
   attendanceSlots: StatisticsAttendanceSlot[];
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
-  const rows = useMemo(() => buildTerritoryPivotRows(people), [people]);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
-
-  function toggleRow(key: string) {
-    setExpandedRows((current) => {
-      const next = new Set(current);
-
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-
-      return next;
-    });
-  }
+  const rows = useMemo(() => buildAssignedGroupTree(people), [people]);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const toggle = (key: string) => setExpanded(current => {
+    const next = new Set(current);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+  const renderRow = (row: AssignedGroupRow, depth = 0): ReactNode => (
+    <Fragment key={row.key}>
+      <TerritoryPivotTableRow row={row} depth={depth} expanded={expanded.has(row.key)} onToggle={() => toggle(row.key)} attendanceSlots={attendanceSlots} participantHref={participantHref} />
+      {expanded.has(row.key) ? row.children.map(child => renderRow(child, depth + 1)) : null}
+    </Fragment>
+  );
 
   return (
     <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div>
-        <h3 className="text-base font-semibold">Persone per territorio e gruppo</h3>
+        <h3 className="text-base font-semibold">Partecipanti per gruppo o nodo</h3>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          Espandi un paese per vedere le città. Le città con più gruppi possono
-          essere aperte a loro volta. Le colonne mostrano le presenze previste
-          per mattina e pomeriggio.
+          Espandi i nodi per vedere i sottogruppi. Ogni totale include gli iscritti
+          al nodo e a tutti i suoi sottogruppi, inclusi i minori accompagnati.
+          Le colonne mostrano le presenze previste per mattina e pomeriggio.
+          Sono segnalate anche le persone senza gruppo o assegnate a nodi non iscrivibili.
         </p>
       </div>
 
@@ -286,8 +270,8 @@ function TerritoryAttendancePivot({
         <table className="isolate w-full min-w-max border-separate border-spacing-0 text-left text-sm">
           <thead className="bg-[#f7fbfe]">
             <tr className="text-xs uppercase tracking-wide text-[#6f7f91] [&>th]:border-b [&>th]:border-[var(--peace-border)]">
-              <th className="sticky left-0 z-20 min-w-64 bg-[#f7fbfe] px-4 py-3 font-semibold">
-                Territorio o gruppo
+              <th className="sm:sticky left-0 z-20 min-w-48 sm:min-w-64 bg-[#f7fbfe] px-4 py-3 font-semibold">
+                Gruppo o nodo
               </th>
               <th className="min-w-24 px-3 py-3 text-center font-semibold">
                 Totale
@@ -306,49 +290,14 @@ function TerritoryAttendancePivot({
             </tr>
           </thead>
           <tbody>
-            {rows.map((country) => (
-              <Fragment key={country.key}>
-                <TerritoryPivotTableRow
-                  row={country}
-                  attendanceSlots={attendanceSlots}
-                  expanded={expandedRows.has(country.key)}
-                  onToggle={() => toggleRow(country.key)}
-                  participantHref={participantHref}
-                />
-                {expandedRows.has(country.key)
-                  ? country.children.map((city) => (
-                      <Fragment key={city.key}>
-                        <TerritoryPivotTableRow
-                          row={city}
-                          attendanceSlots={attendanceSlots}
-                          expanded={expandedRows.has(city.key)}
-                          onToggle={() => toggleRow(city.key)}
-                          participantHref={participantHref}
-                        />
-                        {expandedRows.has(city.key)
-                          ? city.children.map((group) => (
-                              <TerritoryPivotTableRow
-                                key={group.key}
-                                row={group}
-                                attendanceSlots={attendanceSlots}
-                                expanded={false}
-                                onToggle={() => undefined}
-                                participantHref={participantHref}
-                              />
-                            ))
-                          : null}
-                      </Fragment>
-                    ))
-                  : null}
-              </Fragment>
-            ))}
+            {rows.map(row => renderRow(row))}
           </tbody>
         </table>
       </div>
 
       {rows.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          Nessun dato territoriale disponibile.
+          Nessuna assegnazione disponibile.
         </p>
       ) : null}
     </article>
@@ -357,55 +306,35 @@ function TerritoryAttendancePivot({
 
 function TerritoryPivotTableRow({
   row,
-  attendanceSlots,
+  depth,
   expanded,
   onToggle,
+  attendanceSlots,
   participantHref,
 }: {
-  row: TerritoryPivotRow;
-  attendanceSlots: StatisticsAttendanceSlot[];
+  row: AssignedGroupRow;
+  depth: number;
   expanded: boolean;
   onToggle: () => void;
+  attendanceSlots: StatisticsAttendanceSlot[];
   participantHref: (filter: StatisticsDrilldownFilter) => string;
 }) {
-  const canExpand = row.children.length > 0;
-  const rowTone =
-    row.level === "country"
-      ? "bg-white font-semibold"
-      : row.level === "city"
-        ? "bg-[#fbfdff] font-medium"
-        : "bg-[#f7fbfe]";
-  const indent =
-    row.level === "country" ? "pl-4" : row.level === "city" ? "pl-10" : "pl-16";
-
   return (
-    <tr className={`[&>th]:border-b [&>td]:border-b [&>th]:border-[var(--peace-border)] [&>td]:border-[var(--peace-border)] last:[&>th]:border-b-0 last:[&>td]:border-b-0 ${rowTone}`}>
+    <tr className={`[&>th]:border-b [&>td]:border-b [&>th]:border-[var(--peace-border)] [&>td]:border-[var(--peace-border)] last:[&>th]:border-b-0 last:[&>td]:border-b-0 bg-white`}>
       <th
         scope="row"
-        className={`sticky left-0 z-[5] min-w-64 py-3 pr-4 text-left ${indent} ${rowTone}`}
+        className={`sm:sticky left-0 z-[5] min-w-48 sm:min-w-64 py-3 pr-4 text-left pl-4 bg-white`}
       >
-        {canExpand ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            className="-ml-1 flex min-h-8 items-center gap-2 rounded-md pr-2 text-left transition hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--peace-blue-800)]"
-          >
-            <span className="grid size-8 shrink-0 place-items-center text-[var(--peace-blue-800)]">
-              {expanded ? (
-                <ChevronDown aria-hidden="true" size={18} />
-              ) : (
-                <ChevronRight aria-hidden="true" size={18} />
-              )}
-            </span>
-            <span>{row.label}</span>
-          </button>
-        ) : (
-          <span className="flex min-h-8 items-center gap-2">
-            <span aria-hidden="true" className="size-8 shrink-0" />
-            <span>{row.label}</span>
-          </span>
-        )}
+        <div className="w-48 whitespace-normal sm:w-64" style={{ paddingLeft: Math.min(depth, 6) * 16 }}>
+          {row.children.length ? (
+            <button type="button" aria-expanded={expanded} onClick={onToggle} className="flex min-h-11 items-center gap-2 rounded-md text-left hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-2">
+              {expanded ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+              <span>{row.label}<span className="block text-xs font-normal text-[var(--peace-muted)]">{row.type}</span></span>
+            </button>
+          ) : (
+            <span className="block py-2 pl-[26px]">{row.label}{row.type ? <span className="block text-xs font-normal text-[var(--peace-muted)]">{row.type}</span> : null}</span>
+          )}
+        </div>
       </th>
       <td className="px-3 py-3 text-center">
         <CountLink
@@ -444,23 +373,23 @@ function AttendanceStatisticsSummary({
   const days = groupAttendanceSlotsByDay(statistics.attendanceSlots);
 
   return (
-    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-5">
+    <article className="min-w-0 max-w-full rounded-lg border border-[var(--peace-border)] bg-white p-4">
       <h3 className="text-base font-semibold">Riepilogo presenze previste</h3>
       <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
         Mattina e pomeriggio sono raggruppati per data. Seleziona un conteggio
         per vedere le iscrizioni corrispondenti.
       </p>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
         {days.map(({ day, slots }) => (
           <section
             key={day}
-            className="rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
+            className={`col-span-2 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-3 ${slots.length === 1 ? "md:col-span-1" : ""}`}
           >
-            <h4 className="font-semibold text-[var(--peace-blue-900)]">
+            <h4 className="text-sm font-semibold text-[var(--peace-blue-900)]">
               {formatLongDay(day)}
             </h4>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className={`mt-2 grid gap-2 ${slots.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
               {slots.map((slot) => (
                 <AttendanceCountLink
                   key={slot.key}
@@ -473,11 +402,11 @@ function AttendanceStatisticsSummary({
           </section>
         ))}
 
-        <section className="rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
-          <h4 className="font-semibold text-[var(--peace-blue-900)]">
+        <section className="col-span-2 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-3">
+          <h4 className="text-sm font-semibold text-[var(--peace-blue-900)]">
             Presenza non specificata
           </h4>
-          <div className="mt-3">
+          <div className="mt-2">
             <AttendanceCountLink
               label="Nessuna fascia indicata"
               count={statistics.summary.withoutAttendance}
@@ -493,6 +422,59 @@ function AttendanceStatisticsSummary({
         </p>
       ) : null}
     </article>
+  );
+}
+
+function SingleDayAttendanceSummary({
+  statistics,
+  participantHref,
+}: {
+  statistics: EventStatisticsSnapshot;
+  participantHref: (filter: StatisticsDrilldownFilter) => string;
+}) {
+  const days = groupAttendanceSlotsByDay(statistics.attendanceSlots);
+  return (
+    <details className="group/single-day min-w-0 rounded-lg border border-[var(--peace-border)] bg-white">
+      <summary className="flex cursor-pointer list-none items-center gap-4 rounded-lg p-5 transition hover:bg-[#f7fbfe] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] [&::-webkit-details-marker]:hidden">
+        <span className="text-3xl font-semibold tabular-nums text-[var(--peace-blue-800)]">
+          {statistics.summary.singleDayPeople}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">Partecipano solo un giorno</span>
+          <span className="block text-sm text-[var(--peace-muted)]">Apri il dettaglio per giorno · figli accompagnati inclusi</span>
+        </span>
+        <ChevronDown aria-hidden="true" size={20} className="shrink-0 transition-transform group-open/single-day:rotate-180" />
+      </summary>
+      <div className="border-t border-[var(--peace-border)] p-5">
+        <p className="mb-4 text-sm leading-6 text-[var(--peace-muted)]">
+          Persone con presenza indicata in una sola data, anche soltanto al mattino o al pomeriggio.
+          Le presenze da comunicare sono escluse. Seleziona un numero per aprire gli iscritti corrispondenti.
+        </p>
+        <table className="w-full text-left text-sm">
+          <caption className="sr-only">Partecipano solo un giorno: dettaglio per data</caption>
+          <thead>
+            <tr className="border-b border-[var(--peace-border)]">
+              <th scope="col" className="py-3 pr-3 font-semibold">Giorno</th>
+              <th scope="col" className="py-3 text-right font-semibold">Solo questo giorno</th>
+            </tr>
+          </thead>
+          <tbody>
+            {days.map(({ day }) => {
+              const count = statistics.summary.singleDayCounts[day] ?? 0;
+              return (
+                <tr key={day} className="border-b border-[var(--peace-border)] last:border-0">
+                  <th scope="row" className="py-2 pr-3 font-medium">{formatLongDay(day)}</th>
+                  <td className="py-2 text-right">
+                    <CountLink count={count} href={participantHref({ singleAttendanceDay: day })} label={`Apri ${count} persone presenti solo ${formatLongDay(day)}`} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {days.length === 0 ? <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessun giorno di presenza configurato per l’evento.</p> : null}
+      </div>
+    </details>
   );
 }
 
@@ -554,26 +536,6 @@ function SummaryKpi({
   );
 }
 
-function SummaryPanel({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="h-full rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
-      <h4 className="font-semibold text-[var(--peace-ink)]">{title}</h4>
-      <p className="mt-1 text-sm leading-5 text-[var(--peace-muted)]">
-        {description}
-      </p>
-      <div className="mt-3">{children}</div>
-    </section>
-  );
-}
-
 function SummaryFilterLink({
   label,
   count,
@@ -612,7 +574,7 @@ function AttendanceCountLink({
     <Link
       href={href}
       aria-label={`Apri ${count} persone: ${label}`}
-      className="group grid min-h-20 place-items-center rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-center transition hover:border-[var(--peace-border-strong)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
+      className="group grid min-h-16 place-items-center rounded-md border border-[var(--peace-border)] bg-white px-3 py-2 text-center transition hover:border-[var(--peace-border-strong)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)]"
     >
       <span className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
         {label}
@@ -658,76 +620,6 @@ function buildParticipantsHref(
   return `/dashboard/${dashboard}?${params.toString()}`;
 }
 
-function buildTerritoryPivotRows(
-  people: StatisticsPersonRow[]
-): TerritoryPivotRow[] {
-  const countries = groupPeopleByLabel(people, (person) => person.country);
-
-  return sortedGroupEntries(countries).map(([country, countryPeople]) => {
-    const cities = groupPeopleByLabel(countryPeople, (person) => person.city);
-    const cityRows = sortedGroupEntries(cities).map(([city, cityPeople]) => {
-      const groups = groupPeopleByLabel(cityPeople, (person) => person.group);
-      const groupRows =
-        groups.size > 1
-          ? sortedGroupEntries(groups).map(([group, groupPeople]) => ({
-              key: pivotRowKey("group", country, city, group),
-              level: "group" as const,
-              label: group,
-              people: groupPeople,
-              filter: { country, city, group },
-              children: [],
-            }))
-          : [];
-
-      return {
-        key: pivotRowKey("city", country, city),
-        level: "city" as const,
-        label: city,
-        people: cityPeople,
-        filter: { country, city },
-        children: groupRows,
-      };
-    });
-
-    return {
-      key: pivotRowKey("country", country),
-      level: "country" as const,
-      label: country,
-      people: countryPeople,
-      filter: { country },
-      children: cityRows,
-    };
-  });
-}
-
-function groupPeopleByLabel(
-  people: StatisticsPersonRow[],
-  getLabel: (person: StatisticsPersonRow) => string
-): Map<string, StatisticsPersonRow[]> {
-  const grouped = new Map<string, StatisticsPersonRow[]>();
-
-  for (const person of people) {
-    const label = getLabel(person);
-    const current = grouped.get(label) ?? [];
-    current.push(person);
-    grouped.set(label, current);
-  }
-
-  return grouped;
-}
-
-function sortedGroupEntries(
-  grouped: Map<string, StatisticsPersonRow[]>
-): Array<[string, StatisticsPersonRow[]]> {
-  return [...grouped.entries()].sort(([first], [second]) =>
-    first.localeCompare(second, "it", { sensitivity: "base" })
-  );
-}
-
-function pivotRowKey(level: PivotLevel, ...labels: string[]): string {
-  return `${level}:${labels.map((label) => encodeURIComponent(label)).join(":")}`;
-}
-
 function countPeopleForSlot(
   people: StatisticsPersonRow[],
   slotKey: string
@@ -754,22 +646,6 @@ function groupAttendanceSlotsByDay(
         attendancePartOrder(first.dayPart) - attendancePartOrder(second.dayPart)
     ),
   }));
-}
-
-function summarizeLabels(values: string[]): SummaryBreakdownRow[] {
-  const countByLabel = new Map<string, number>();
-
-  for (const label of values) {
-    countByLabel.set(label, (countByLabel.get(label) ?? 0) + 1);
-  }
-
-  return [...countByLabel.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort(
-      (first, second) =>
-        second.count - first.count ||
-        first.label.localeCompare(second.label, "it", { sensitivity: "base" })
-    );
 }
 
 function ageBandLabel(ageBand: StatisticsAgeBand): string {
@@ -811,4 +687,48 @@ function formatDate(value: string, options: Intl.DateTimeFormatOptions): string 
     ...options,
     timeZone: "UTC",
   }).format(date);
+}
+
+function WeeklyRegistrations({ statistics }: { statistics: EventStatisticsSnapshot }) {
+  const { weeks, undated } = statistics.registrationTimeline;
+  const maximum = Math.max(1, ...weeks.map((week) => week.count));
+  const completed = weeks.filter((week) => !week.current && !week.historical);
+  const latest = completed.at(-1);
+  const previous = completed.at(-2);
+  const delta = latest && previous ? latest.count - previous.count : null;
+  const label = (date: string) => formatDate(date, { day: "2-digit", month: "2-digit" });
+
+  return (
+    <article className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <p className="text-sm leading-6 text-[var(--peace-muted)]">
+        Nuove iscrizioni per settimana, da lunedì a domenica (ora italiana).
+        Ogni scheda vale un’iscrizione; minori accompagnati esclusi. Sono conteggiate le iscrizioni non eliminate.
+        Le iscrizioni precedenti al 31/08/2026 sono riunite nella prima colonna.
+        La settimana in corso è incompleta; questa e la colonna storica sono escluse dal confronto.
+      </p>
+      {delta !== null && latest && previous ? (
+        <p className="mt-3 text-sm font-semibold text-[var(--peace-blue-900)]">
+          Ultima settimana conclusa ({label(latest.start)} – {label(latest.end)}): {latest.count} iscrizioni.
+          {" "}{delta > 0 ? "In aumento" : delta < 0 ? "In diminuzione" : "Stabili"} rispetto alla precedente
+          {delta !== 0 ? `: ${delta > 0 ? "+" : ""}${delta}${previous.count > 0 ? ` (${delta > 0 ? "+" : ""}${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 }).format(delta / previous.count * 100)}%)` : ""}` : ""}.
+        </p>
+      ) : <p className="mt-3 text-sm text-[var(--peace-muted)]">Il confronto sarà disponibile dopo due settimane concluse.</p>}
+      {weeks.length ? (
+        <div className="mt-6 overflow-x-auto overscroll-x-contain" tabIndex={0} role="region" aria-label="Grafico iscrizioni settimanali, scorrimento orizzontale">
+          <div className="flex w-max gap-px pb-3 pr-3">
+            {weeks.map((week) => (
+              <div key={week.start} className="w-14 shrink-0 text-center" aria-label={`${week.historical ? "Prima del 31/08" : `${label(week.start)} – ${label(week.end)}`}: ${week.count} iscrizioni${week.current ? ", settimana in corso incompleta" : ""}`}>
+                <div className="flex h-56 flex-col justify-end border-b border-[var(--peace-border)]" aria-hidden="true">
+                  <span className="mb-1 text-sm font-semibold tabular-nums">{week.count}</span>
+                  <div className={`w-full rounded-t-sm ${week.current ? "border-2 border-dashed border-[var(--peace-blue-800)] bg-[#cce3f2]" : week.historical ? "bg-slate-400" : "bg-[var(--peace-blue-800)]"}`} style={{ height: `${week.count / maximum * 180}px` }} />
+                </div>
+                <div className="relative h-24"><p className="absolute left-7 top-2 origin-top-left rotate-45 whitespace-nowrap text-[10px]">{week.historical ? "Prima del 31/08" : `${label(week.start)} – ${label(week.end)}`}{week.current ? " · In corso" : ""}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : <p className="mt-5 text-sm">Nessuna iscrizione con data disponibile.</p>}
+      {undated > 0 ? <p className="mt-3 text-sm text-[var(--peace-muted)]">Iscrizioni senza data valida, escluse dal grafico: {undated}.</p> : null}
+    </article>
+  );
 }

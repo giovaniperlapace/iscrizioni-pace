@@ -1,5 +1,7 @@
+import { CHILDREN_EXPORT_COPY, childrenExportValues } from "../lib/registrations/children-export.ts";
+import { attendanceTableColumns, attendanceSlotText } from "../lib/registrations/attendance-summary.ts";
 import ts from "typescript";
-import { toAssignmentView } from "../lib/groups/leader-assignments.ts";
+import { type AssignmentView, toAssignmentView } from "../lib/groups/leader-assignments.ts";
 import { toLeaderTableRow } from "../lib/groups/leader-table.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -180,6 +182,7 @@ const row = (
   name: string,
   overrides: Partial<LeaderTableRow> = {},
 ): LeaderTableRow => ({
+  children: [],
   id,
   registrationId: id,
   groupId: "root",
@@ -211,7 +214,7 @@ test("filters and stable locale sorting agree for table/export; tampered group y
       "columns=tags,name,phone,password&sort=name&direction=asc",
     ),
   );
-  assert.deepEqual(prefs.columns, ["name", "tags", "phone"]);
+  assert.deepEqual(prefs.columns, ["name", "phone"]);
   assert.deepEqual(
     sortLeaderRows(rows, prefs, "2026-10-25", "it").map((r) => r.id),
     ["a", "b"],
@@ -231,7 +234,7 @@ test("filters and stable locale sorting agree for table/export; tampered group y
   );
   assert.deepEqual(
     filterLeaderRows(rows, new URLSearchParams("tag=none")).map((r) => r.id),
-    ["b"],
+    ["b", "a"],
   );
   assert.equal(leaderCellText(rows[0], "age", "2026-10-25", "it"), "25");
 });
@@ -323,6 +326,10 @@ function exportHandler(
     leaderCellText,
     LEADER_TABLE_COPY,
     writeTableWorkbook,
+    CHILDREN_EXPORT_COPY,
+    childrenExportValues,
+    attendanceTableColumns,
+    attendanceSlotText,
   };
   const handler = new Function(
     ...Object.keys(dependencies),
@@ -384,7 +391,7 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
       deleted_at: deletedAt,
       status: "submitted",
       submitted_at: "2026-09-07",
-      registration_children: [],
+      registration_children: id === "Anna" ? [{id: "c", first_name: "Sofia", last_name: "Prova", birth_date: "2020-01-01", position: 0}] : [],
       participants: {
         id,
         first_name: id,
@@ -408,7 +415,9 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
     },
   });
   const db = database({
-    groups,
+    groups: groups.map(group => ({...group, events: {starts_on: "2026-10-01", ends_on: "2026-10-02"}})),
+    event_attendance_choices: [{registration_id: "Anna", day: "2026-10-01", day_part: "morning", choice: "yes"}],
+    accessibility_needs: [{registration_id: "Anna", washington_group_answers: {hearing: true}}, {registration_id: "Outside", washington_group_answers: {walkingOrSteps: true}}],
     group_memberships: members,
     participant_group_assignments: [
       assignment("Anna", "child", "current"),
@@ -430,13 +439,41 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
   await book.xlsx.load(Buffer.from(await response.arrayBuffer()) as never);
   const sheet = book.worksheets[0];
   assert.equal(sheet.rowCount, 3);
-  assert.equal(sheet.columnCount, 2);
+  assert.equal(sheet.columnCount, 4);
   assert.equal(sheet.getCell("A2").value, "Zeno Prova");
   assert.equal(sheet.getCell("A3").value, "Anna Prova");
+  assert.equal(sheet.getCell("C2").value, "0");
+  assert.equal(sheet.getCell("C3").value, "1");
+  assert.equal(sheet.getCell("D3").value, "Sofia Prova");
+  const disability = await route.handler(new Request("http://localhost/dashboard/capogruppo/export?columns=name,accessibility"));
+  const disabilityBook = new ExcelJS.Workbook();
+  await disabilityBook.xlsx.load(Buffer.from(await disability.arrayBuffer()) as never);
+  assert.equal(disabilityBook.worksheets[0].getCell("B2").value, "Sentire, anche usando apparecchi acustici");
+  assert.equal(disabilityBook.worksheets[0].rowCount, 3);
+  const moments = await route.handler(new Request("http://localhost/dashboard/capogruppo/export?columns=name,attendance,email"));
+  const momentBook = new ExcelJS.Workbook();
+  await momentBook.xlsx.load(Buffer.from(await moments.arrayBuffer()) as never);
+  assert.equal(momentBook.worksheets[0].columnCount, 9);
+  assert.equal(momentBook.worksheets[0].getCell("C1").value, "1 ottobre · Mattina");
+  assert.equal(momentBook.worksheets[0].getCell("C2").value, "Sì");
+  assert.equal(momentBook.worksheets[0].getCell("D2").value, "No");
+  assert.equal(momentBook.worksheets[0].getCell("C3").value, "Da comunicare");
   const filtered = await route.handler(
     new Request("http://localhost/dashboard/capogruppo/export?group=sibling"),
   );
   const empty = new ExcelJS.Workbook();
   await empty.xlsx.load(Buffer.from(await filtered.arrayBuffer()) as never);
   assert.equal(empty.worksheets[0].rowCount, 1);
+});
+
+test("leader table mapping retains children with parent and their established order", () => {
+  const children = [
+    { id: "c1", first_name: "Sofia", last_name: "Bianchi", birth_date: "2020-10-25", position: 1 },
+    { id: "c2", first_name: "Luca", last_name: "Bianchi", birth_date: "2026-05-01", position: 2 },
+  ];
+  const parent = { ...row("parent", "Anna Bianchi"), children, service: null } as unknown as AssignmentView;
+  const tableRows = [toLeaderTableRow(parent), toLeaderTableRow({ ...parent, id: "other", children: [] })];
+  const sorted = sortLeaderRows(tableRows, leaderPreferences(new URLSearchParams()), "2026-10-25", "it");
+  assert.deepEqual(sorted.find(row => row.id === "parent")?.children, children);
+  assert.deepEqual(sorted.find(row => row.id === "other")?.children, []);
 });

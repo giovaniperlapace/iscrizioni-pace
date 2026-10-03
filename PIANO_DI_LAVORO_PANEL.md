@@ -41,6 +41,16 @@ Stato di partenza al 2026-08-04:
 
 ## 2. Metodo obbligatorio per ogni milestone
 
+### Riallineamento del 2026-10-03
+
+Integrato localmente `origin/main` a `0b7e4d1` nella base panel `388d05f`,
+conservando P0–P13 e le correzioni dashboard di main. 14 file in conflitto
+ricomposti; 18 migration di main importate senza modificarle. Nessuna applicazione
+SQL remota o pubblicazione: il registro staging va confrontato prima del rilascio.
+Verificati 743 test, lint, TypeScript, build staging e collaudi SQL/browser.
+Dettagli in `docs/panel-main-integration-2026-10-03.md`.
+P13 resta aperta per accessi panel/sala e collaudo autenticato/hardware.
+
 ### Strategia di integrazione P0-P16 — aggiornata il 2026-09-12
 
 - L'utente conferma il buon esito delle novità fino a P10. P0-P10 e le

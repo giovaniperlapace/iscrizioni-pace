@@ -29,7 +29,7 @@ export default function Fixture() {
     let mode = "absent";
     const change = (event: Event) => { mode = (event as CustomEvent).detail; };
     window.addEventListener("fixture-attendance", change);
-    const closeParticipant = () => setSelected(false);
+    const closeParticipant = () => { window.history.replaceState(null, "", window.location.pathname); setSelected(false); };
     window.addEventListener("fixture-close-participant", closeParticipant);
     window.fetch = async (input, options) => {
       if (!String(input).startsWith("/dashboard/attendance")) return original(input, options);
@@ -53,7 +53,7 @@ export default function Fixture() {
   }, []);
   return <main className="mx-auto grid max-w-6xl gap-5 p-4">
     <h1>Collaudo ingressi evento</h1>
-    <div className="flex flex-wrap gap-3">{["entered", "absent", "error", "forbidden"].map(mode => <button key={mode} className="btn-secondary p-3" onClick={() => { window.dispatchEvent(new CustomEvent("fixture-attendance", { detail: mode })); setVersion(n => n + 1); }}>{mode}</button>)}<button className="btn-secondary p-3" onClick={() => setSelected(true)}>Apri scheda</button></div>
+    <div className="flex flex-wrap gap-3">{["entered", "absent", "error", "forbidden"].map(mode => <button key={mode} className="btn-secondary p-3" onClick={() => { window.dispatchEvent(new CustomEvent("fixture-attendance", { detail: mode })); setVersion(n => n + 1); }}>{mode}</button>)}<button className="btn-secondary p-3" onClick={() => { window.history.replaceState(null, "", `${window.location.pathname}?edit=registration`); setSelected(true); }}>Apri scheda</button></div>
     <p data-version={version}>Cambio sul server simulato: {version}</p>
     {ready && <><EventAttendanceReport eventId={eventId} /><div className="min-w-0" data-participant-view><OperationsParticipantsTable
       snapshot={{ participants: [row], allParticipants: [row], groupOptions: [], operationalTags: [], eventServices: [], filters: parseOperationsDashboardFilters({}) }}

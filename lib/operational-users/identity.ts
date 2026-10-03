@@ -1,3 +1,5 @@
+import { emailParticipantIds, reusableIdentityParticipantIds } from "../registrations/email-identity.ts";
+import { loadAllRows, loadRowsForIds, writeRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type OperationalUserIdentity = {
@@ -57,11 +59,11 @@ export async function getOperationalUserIdentities(
   }
 
   const [{ data: profiles }, { data: linkedParticipants }] = await Promise.all([
-    supabase.from("profiles").select("id,email,full_name").in("id", uniqueUserIds),
-    supabase
+    loadRowsForIds(uniqueUserIds, (batch, from, to) => supabase.from("profiles").select("id,email,full_name").in("id", batch).order("id").range(from, to)),
+    loadRowsForIds(uniqueUserIds, (batch, from, to) => supabase
       .from("participants")
       .select("id,auth_user_id,first_name,last_name")
-      .in("auth_user_id", uniqueUserIds),
+      .in("auth_user_id", batch).order("id").range(from, to)),
   ]);
   const profileById = new Map(
     ((profiles ?? []) as ProfileRow[]).map((profile) => [profile.id, profile])
@@ -77,16 +79,16 @@ export async function getOperationalUserIdentities(
   );
   const [{ data: linkedContacts }, { data: fallbackContacts }] = await Promise.all([
     linkedParticipantIds.length > 0
-      ? supabase
+      ? loadRowsForIds(linkedParticipantIds, (batch, from, to) => supabase
           .from("participant_contacts")
           .select("participant_id,email,is_primary")
-          .in("participant_id", linkedParticipantIds)
+          .in("participant_id", batch).order("id").range(from, to))
       : Promise.resolve({ data: [] }),
     profileEmails.length > 0
-      ? supabase
+      ? loadRowsForIds(profileEmails, (batch, from, to) => supabase
           .from("participant_contacts")
           .select("participant_id,email,is_primary")
-          .in("email", profileEmails)
+          .in("email", batch).order("id").range(from, to))
       : Promise.resolve({ data: [] }),
   ]);
   const fallbackParticipantIds = Array.from(
@@ -94,16 +96,20 @@ export async function getOperationalUserIdentities(
   );
   const { data: fallbackParticipants } =
     fallbackParticipantIds.length > 0
-      ? await supabase
+      ? await loadRowsForIds(fallbackParticipantIds, (batch, from, to) => supabase
           .from("participants")
           .select("id,auth_user_id,first_name,last_name")
-          .in("id", fallbackParticipantIds)
+          .in("id", batch).order("id").range(from, to))
       : { data: [] };
   const participantById = new Map(
     [...linkedParticipantRows, ...((fallbackParticipants ?? []) as ParticipantRow[])].map(
       (participant) => [participant.id, participant]
     )
   );
+  const eligibleIds = new Set(await reusableIdentityParticipantIds(supabase, [...participantById.keys()]));
+  for (const id of participantById.keys()) {
+    if (!eligibleIds.has(id)) participantById.delete(id);
+  }
   const contactByParticipantId = pickPreferredContact(
     [...((linkedContacts ?? []) as ContactRow[]), ...((fallbackContacts ?? []) as ContactRow[])]
   );
@@ -162,6 +168,10 @@ export async function getOperationalRegistrationSuggestion(
     return null;
   }
 
+  const contactIds = await emailParticipantIds(supabase, normalizedEmail);
+  const eligibleIds = await reusableIdentityParticipantIds(supabase, contactIds);
+  if (contactIds.length && !eligibleIds.length) return null;
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name")
@@ -177,14 +187,7 @@ export async function getOperationalRegistrationSuggestion(
     }
   }
 
-  const { data: contact } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", normalizedEmail)
-    .order("is_primary", { ascending: false })
-    .limit(1);
-  const participantId =
-    ((contact ?? []) as Array<{ participant_id: string }>)[0]?.participant_id ?? null;
+  const participantId = eligibleIds[0];
 
   if (!participantId) {
     return null;
@@ -240,20 +243,20 @@ export async function syncOperationalIdentityByEmail(
   }
 
   if (input.userId) {
-    const { data: linkedParticipants } = await supabase
+    const { data: linkedParticipants } = await loadAllRows((from, to) => supabase
       .from("participants")
       .select("id")
-      .eq("auth_user_id", input.userId);
+      .eq("auth_user_id", input.userId).order("id").range(from, to));
 
     for (const participant of (linkedParticipants ?? []) as Array<{ id: string }>) {
       participantIds.add(participant.id);
     }
   }
 
-  const { data: contacts } = await supabase
+  const { data: contacts } = await loadAllRows((from, to) => supabase
     .from("participant_contacts")
     .select("participant_id")
-    .eq("email", email);
+    .eq("email", email).order("id").range(from, to));
 
   for (const contact of (contacts ?? []) as Array<{ participant_id: string }>) {
     participantIds.add(contact.participant_id);
@@ -276,10 +279,11 @@ export async function syncOperationalIdentityByEmail(
     participantUpdates.auth_user_id = input.userId;
   }
 
-  await supabase
+  const eligibleIds = await reusableIdentityParticipantIds(supabase, [...participantIds]);
+  await writeRowsForIds(eligibleIds, ids => supabase
     .from("participants")
     .update(participantUpdates)
-    .in("id", Array.from(participantIds));
+    .in("id", ids));
 }
 
 function pickPreferredContact(rows: ContactRow[]): Map<string, ContactRow> {

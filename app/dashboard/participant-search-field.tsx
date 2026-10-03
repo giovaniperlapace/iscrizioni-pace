@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type ParticipantSearchOption = {
   email: string | null;
+  searchText?: string;
   id: string;
   name: string;
 };
@@ -16,7 +17,8 @@ type ParticipantSearchFieldProps = {
   emptyQueryHint?: string;
 };
 
-const MAX_RESULTS = 5;
+const MAX_RESULTS = 30;
+const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 export function ParticipantSearchField({
   label,
@@ -29,17 +31,13 @@ export function ParticipantSearchField({
   const [selectedId, setSelectedId] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalize(query);
   const results = useMemo(() => {
     if (!normalizedQuery && emptyQueryHint) return [];
 
     const filteredOptions = normalizedQuery
       ? options.filter((option) =>
-          [option.name, option.email]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-            .includes(normalizedQuery)
+          normalizedQuery.split(/\s+/).every(term => normalize([option.name, option.email, option.searchText].filter(Boolean).join(" ")).includes(term))
         )
       : options;
 
@@ -76,7 +74,7 @@ export function ParticipantSearchField({
               setSelectedId("");
               setShowOptions(true);
             }}
-            onFocus={() => setShowOptions(true)}
+            onFocus={(event) => { if (selectedId) event.currentTarget.select(); setShowOptions(true); }}
             placeholder={placeholder}
             autoComplete="off"
             required

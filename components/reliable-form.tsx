@@ -8,7 +8,9 @@ import { normalizeLocale, type SupportedLocale } from "@/lib/i18n/config";
 import { parseManualRegistrationForm } from "@/lib/registrations/manual-registration";
 
 const PendingContext = createContext(false);
+const FailedContext = createContext(false);
 export function useReliableFormPending() { return useContext(PendingContext); }
+export function useReliableFormFailed() { return useContext(FailedContext); }
 
 type Props = Omit<FormHTMLAttributes<HTMLFormElement>, "action" | "onSubmit"> & {
   action: string | ((formData: FormData) => Promise<unknown>);
@@ -39,7 +41,7 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
     const cleanups: Array<() => void> = [];
     const invalidFields: Control[] = [];
     issues.forEach((issue, index) => {
-      const aliases: Record<string, string[]> = { groupId: ["groupId", "groupIds", "groupPlacement"], label: ["label", "eventServiceLabel", "operationalTagLabel"] };
+      const aliases: Record<string, string[]> = { availabilitySlots: ["availabilitySlots", "availabilityUnknown"], groupId: ["groupId", "groupIds", "groupPlacement"], label: ["label", "eventServiceLabel", "operationalTagLabel"] };
       const names = issue.field ? aliases[issue.field] ?? [issue.field] : [];
       const matching = fields.filter((field) => names.includes(field.name));
       const field = matching[0];
@@ -50,7 +52,9 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
       message.textContent = copy[issue.code as keyof typeof copy] ?? copy.invalid;
       message.dataset.formError = "true";
       const label = field.closest("label");
-      if (label) label.append(message); else field.after(message);
+      const errorGroup = field.closest("[data-form-error-group]");
+      if (errorGroup) errorGroup.append(message);
+      else if (label) label.append(message); else field.after(message);
       matching.forEach((control) => {
         const describedBy = control.getAttribute("aria-describedby");
         const invalid = control.getAttribute("aria-invalid");
@@ -72,12 +76,14 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
 
   return (
     <PendingContext.Provider value={pending}>
+      <FailedContext.Provider value={issues.length > 0}>
       <form
         {...props}
         ref={ref}
         action={typeof action === "string" ? action : async (data) => { await action(data); }}
         noValidate
         aria-busy={pending}
+        data-form-error={issues.length > 0 ? "true" : undefined}
         onSubmit={(event) => {
           event.preventDefault();
           setResolvedLocale(normalizeLocale(document.documentElement.lang) ?? "en");
@@ -132,6 +138,7 @@ export function ReliableForm({ action, children, validation, locale, ...props }:
         ) : null}
         {children}
       </form>
+      </FailedContext.Provider>
     </PendingContext.Provider>
   );
 }

@@ -25,11 +25,8 @@ const REQUIRED_ENV = [
   "APP_URL",
   "PUBLIC_SITE_URL",
   "EMAIL_FROM",
-  "EMAIL_USER",
-  "EMAIL_PASSWORD",
-  "SMTP_HOST",
-  "SMTP_PORT",
-  "SMTP_SECURE",
+  "EMAIL_REPLY_TO",
+  "POSTMARK_SERVER_TOKEN",
   "EMAIL_DELIVERY_MODE",
 ] as const;
 
@@ -65,19 +62,16 @@ export function validateOpeningReadiness(
       }
     }
 
-    if (env.EMAIL_DELIVERY_MODE !== "smtp") {
+    if (env.EMAIL_DELIVERY_MODE !== "postmark") {
       errors.push({
         name: "EMAIL_DELIVERY_MODE",
-        message: "EMAIL_DELIVERY_MODE deve essere smtp prima dell'apertura.",
+        message: "EMAIL_DELIVERY_MODE deve essere postmark prima dell'apertura.",
       });
     }
   }
 
-  if (env.SMTP_SECURE && env.SMTP_SECURE !== "true") {
-    warnings.push({
-      name: "SMTP_SECURE",
-      message: "SMTP_SECURE diverso da true richiede una verifica esplicita.",
-    });
+  if (env.POSTMARK_SERVER_TOKEN === "POSTMARK_API_TEST") {
+    errors.push({ name: "POSTMARK_SERVER_TOKEN", message: "Il token di test non abilita invii reali." });
   }
 
   if (

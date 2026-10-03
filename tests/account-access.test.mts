@@ -94,9 +94,9 @@ test("SMTP success/failure is audited truthfully and audit failure never repeats
   }
 });
 
-function manualHarness(options: { delegated?: boolean; writeFails?: boolean; mailFails?: boolean; unauthorized?: boolean } = {}) {
+function manualHarness(options: { internalSex?: string; sexFails?: boolean; delegated?: boolean; writeFails?: boolean; mailFails?: boolean; unauthorized?: boolean; previousDeleted?: boolean } = {}) {
   const writes: string[] = []; const sends: Record<string, unknown>[] = [];
-  const db = { from(table: string) {
+  const db = { rpc: async (name: string, args: Record<string, unknown>) => { writes.push(name); assert.equal(args.p_actor_user_id, "leader"); return { error: options.sexFails ? { code: "42501" } : null }; }, from(table: string) {
     return { select() { return this; }, eq() { return this; },
       insert() { writes.push(table); return this; },
       async maybeSingle() { return { data: { id: "group", event_id: "event", is_active: true, is_assignable: true, events: {} }, error: null }; },
@@ -105,9 +105,10 @@ function manualHarness(options: { delegated?: boolean; writeFails?: boolean; mai
     };
   } };
   const dependencies = {
+    formFailure: (issues: unknown) => ({status: "error", issues}),
     validateContactFields: () => [], parseManualRegistrationForm: () => ({ ok: true, value: {
       useLeaderEmail: !!options.delegated, email: options.delegated ? null : "person@example.test", firstName: "Test", lastName: "Person",
-      preferredLocale: "en", availabilityUnknown: true, children: [],
+      preferredLocale: "en", availabilityUnknown: true, children: [], internalSex: options.internalSex,
     } }),
     createSupabaseServerClient: async () => db, createSupabaseServiceClient: () => db,
     getCurrentAuthContext: async () => options.unauthorized ? null : ({ dashboardRole: "capogruppo", user: { id: "leader", email: "leader@example.test" } }),
@@ -119,7 +120,9 @@ function manualHarness(options: { delegated?: boolean; writeFails?: boolean; mai
     sendAccountAccessEmail: async (_db: unknown, input: Record<string, unknown>) => { sends.push(input); return !options.mailFails; },
     getAppUrl: () => "https://example.test", revalidatePath: () => {},
     redirect: (path: string) => { throw Error(`REDIRECT:${path}`); }, formFailureFromRedirect: (path: string) => path,
-    require: (id: string) => id.includes("data.server") ? { loadQualityPeople: async () => [] } : {},
+    require: (id: string) => id.includes("data.server")
+      ? { loadQualityPeople: async () => options.previousDeleted ? [{ id: "old", deletedAt: "2026-09-22" }] : [] }
+      : id.includes("duplicates") ? { compareIdentities: () => true } : {},
   };
   const source = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
   const code = source.slice(source.indexOf("export async function createGroupLeaderManualRegistration"), source.indexOf("export async function updateGroupRegistrationLink")).replace("export async", "async");
@@ -137,6 +140,26 @@ test("manual creation sends only after successful writes, never for delegation o
   const failed = manualHarness({ writeFails: true }); assert.match(await failed.action(new FormData()), /manualError/); assert.equal(failed.sends.length, 0);
   const denied = manualHarness({ unauthorized: true }); await assert.rejects(denied.action(new FormData()), /login/); assert.equal(denied.writes.length, 0); assert.equal(denied.sends.length, 0);
   const mailFailed = manualHarness({ mailFails: true }); await assert.rejects(mailFailed.action(new FormData()), /manualSaved=1&manualError=access-email/); assert.equal(mailFailed.sends.length, 1);
+});
+
+test("manual internal sex is written only after assignment and before any access email", async () => {
+  const good = manualHarness({ internalSex: "female" });
+  await assert.rejects(good.action(new FormData()), /manualSaved=1$/);
+  assert.ok(good.writes.indexOf("set_assisted_registration_sex") > good.writes.indexOf("participant_group_assignments"));
+  assert.equal(good.sends.length, 1);
+  const failed = manualHarness({ internalSex: "female", sexFails: true });
+  assert.equal((await failed.action(new FormData())).status, "error");
+  assert.equal(failed.sends.length, 0);
+  const omitted = manualHarness();
+  await assert.rejects(omitted.action(new FormData()), /manualSaved=1$/);
+  assert.ok(!omitted.writes.includes("set_assisted_registration_sex"));
+});
+
+test("manual registration recreates a deleted person without a duplicate override", async () => {
+  const harness = manualHarness({ previousDeleted: true });
+  await assert.rejects(harness.action(new FormData()), /manualSaved=1$/);
+  assert.ok(harness.writes.includes("participants"));
+  assert.ok(harness.writes.includes("registrations"));
 });
 
 test("creating a leader from group management sends after membership success, never for an existing leader", async () => {

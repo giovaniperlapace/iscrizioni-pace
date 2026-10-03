@@ -10,7 +10,7 @@ mkdirSync(route, { recursive: true });
 copyFileSync(new URL("./form-fixture.tsx", import.meta.url), new URL("page.tsx", route));
 const postRoute = new URL("post/", route);
 mkdirSync(postRoute, { recursive: true });
-writeFileSync(new URL("route.ts", postRoute), 'export { POST } from "@/app/dashboard/admin/participants/update/route";\n');
+writeFileSync(new URL("route.ts", postRoute), 'export { POST } from "@/app/dashboard/participants/update/route";\n');
 const ab = (...args) => execFileSync("npx", ["--yes", "agent-browser", "--session", "form-affidabili", ...args], { encoding: "utf8", timeout: 60000 });
 const evaluate = (code) => ab("eval", code);
 function check(code, label) {
@@ -22,6 +22,7 @@ function fillBase(phone = "+39 333 1234567") {
   ab("select", '[name="groupId"]', "11111111-1111-4111-8111-111111111111");
   ab("fill", '[name="firstName"]', "Mario"); ab("fill", '[name="lastName"]', "Prova");
   ab("fill", '[name="email"]', "duplicate@example.org"); ab("fill", '[name="phone"]', phone);
+  ab("eval", '(()=>{const field=document.querySelector("[name=birthDate]"); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(field,"1990-01-02"); field.dispatchEvent(new Event("input",{bubbles:true})); field.dispatchEvent(new Event("change",{bubbles:true}));})()');
   ab("fill", '[name="leaderNote"]', "Testo da conservare"); ab("check", '[name="consentConfirmed"]');
 }
 function submit() { ab("find", "role", "button", "click", "--name", "Inserisci partecipante"); }

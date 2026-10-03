@@ -1,3 +1,4 @@
+import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
 // Mounted temporarily at /form-reliability-check by the browser regression runner.
 import { redirect } from "next/navigation";
 import { ReliableForm } from "@/components/reliable-form";
@@ -36,7 +37,7 @@ export default async function FormFixture({ searchParams }: { searchParams: Prom
         <label>Cognome<input className="field" name="lastName" required minLength={2} /></label>
         <label>Email<input className="field" name="email" type="email" /></label>
         <label>Telefono<input className="field" name="phone" type="tel" /></label>
-        <label>Data di nascita<input className="field" name="birthDate" type="date" /></label>
+        <ParticipantBirthDateField label="Data di nascita" locale="it" />
         <input type="hidden" name="availabilityUnknown" value="on" />
         <ManualChildrenFields locale="it" />
         <ManualAccessibilityFields locale="it" copy={{ title:"Accessibilità", help:"Solo opzioni strutturate", question:"Bisogni di accessibilità?", unknown:"Non so", yes:"Sì", no:"No" }} />

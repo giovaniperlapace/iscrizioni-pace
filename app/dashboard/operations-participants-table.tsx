@@ -1,6 +1,24 @@
 "use client";
 
 import { EventAttendanceProvider, EventPresence } from "@/app/dashboard/event-attendance";
+import { nationalityName } from "@/lib/registrations/nationality-names";
+import { OperationalAssociationEditor } from "@/app/dashboard/operational-association-editor";
+import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
+import { useInternalSexColumn } from "./use-internal-sex-column";
+import { ParticipantEmailCell } from "@/components/participant-email-cell";
+
+import { attendanceSummary, attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
+import { MANUAL_REGISTRATION_COPY } from "@/lib/registrations/manual-registration-copy";
+import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
+import type { SupportedLocale } from "@/lib/i18n/config";
+import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
+import { AccompanyingChildrenList } from "./accompanying-children-list";
+import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
+
+import { OperationalChildrenEditor } from "./operational-children-editor";
+
+import { LocalQueryLink } from "@/components/local-query-link";
+import { OperationsAttendance } from "./operations-attendance";
 import { PendingDownload } from "@/components/pending-download";
 import { SuccessMessage } from "@/components/success-message";
 
@@ -14,7 +32,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { ArrowDown, ArrowUp, Columns3, Download, Pencil, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Download, Pencil, UserPlus, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ReliableForm } from "@/components/reliable-form";
@@ -38,6 +56,9 @@ import type {
 const ImportParticipantsDialog = dynamic(
   () => import("@/app/dashboard/participants/data-quality/import-dialog"),
 );
+const ImportServicesDialog = dynamic(
+  () => import("@/app/dashboard/participants/service-import/import-dialog"),
+);
 
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -54,6 +75,7 @@ const serverPreferences = () => "";
 export function OperationsParticipantsTable({
   snapshot,
   selectedParticipant,
+  attendancePanel,
   editableEventIds,
   dashboard,
   navMode,
@@ -61,10 +83,14 @@ export function OperationsParticipantsTable({
   operatorId,
   eventId,
   eventStartsOn,
+  eventEndsOn = null,
   dialogOnly = false,
+  dataVersion = "",
+  locale = "it",
 }: {
   snapshot: OperationsParticipantsSnapshot;
   selectedParticipant: Row | null;
+  attendancePanel?: ReactNode;
   editableEventIds: string[];
   dashboard: "admin" | "manager";
   navMode: "mini" | "full";
@@ -72,8 +98,13 @@ export function OperationsParticipantsTable({
   operatorId: string;
   eventId: string | null;
   eventStartsOn: string | null;
+  eventEndsOn?: string | null;
   dialogOnly?: boolean;
+  dataVersion?: string;
+  locale?: SupportedLocale;
 }) {
+  const canManage = Boolean(eventId && editableEventIds.includes(eventId));
+  const attendanceColumns = attendanceTableColumns(eventStartsOn, eventEndsOn, locale);
   const router = useRouter();
   const searchParams = useSearchParams();
   const storageKey = `iscrizioni:participants:v2:${operatorId}`;
@@ -88,7 +119,7 @@ export function OperationsParticipantsTable({
     },
     serverPreferences,
   );
-  let preferences = DEFAULT_TABLE_PREFERENCES;
+  let preferences: TablePreferences = DEFAULT_TABLE_PREFERENCES;
   try {
     preferences = parseTablePreferences(JSON.parse(stored));
   } catch {
@@ -101,6 +132,7 @@ export function OperationsParticipantsTable({
     sort: searchParams.get("sort") ?? preferences.sort,
     direction: searchParams.get("direction") ?? preferences.direction,
   });
+  if (!canManage) preferences = { ...preferences, columns: preferences.columns.filter(column => column !== "sex"), sort: preferences.sort === "sex" ? "name" : preferences.sort };
   const view =
     searchParams.get("view") === "deleted" && dashboard === "admin"
       ? "deleted"
@@ -111,6 +143,7 @@ export function OperationsParticipantsTable({
     view === "without-group"
       ? ["name", "country", "city", "age", "group"]
       : preferences.columns;
+  const sexText = useInternalSexColumn(canManage && view !== "deleted" && !(snapshot.statisticsFilter && parseStatisticsDrilldown(searchParams.get("stat"))?.personKind === "child") && columns.includes("sex"), snapshot.participants.filter(row => !row.deletedAt).map(row => row.registrationId), locale);
   const [changes, setChanges] = useState<
     Record<string, { original: Row; next: Row }>
   >({});
@@ -126,7 +159,10 @@ export function OperationsParticipantsTable({
     changes[row.registrationId]?.original === row
       ? changes[row.registrationId].next
       : row;
-  const selected = selectedParticipant ? current(selectedParticipant) : null;
+  const selectedId = searchParams.get("edit");
+  const selectedRow = snapshot.allParticipants.find((row) => row.registrationId === selectedId)
+    ?? (selectedParticipant?.registrationId === selectedId ? selectedParticipant : null);
+  const selected = selectedRow ? current(selectedRow) : null;
   const paramsFor = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", "iscritti");
@@ -163,6 +199,16 @@ export function OperationsParticipantsTable({
     column: ParticipantColumn,
   ): string | number | null {
     switch (column) {
+      case "sex":
+        return row.deletedAt ? null : sexText(row.registrationId);
+      case "association":
+        return row.association ?? null;
+      case "nationality":
+        return nationalityName(row.nationality, locale);
+      case "accessibility":
+        return row.accessibility ?? "—";
+      case "attendance":
+        return attendanceSummary(row.attendance, locale);
       case "age":
         return calculateAgeAtDate(row.birthDate, eventStartsOn);
       case "group":
@@ -210,17 +256,6 @@ export function OperationsParticipantsTable({
     snapshot.statisticsFilter &&
     parseStatisticsDrilldown(statisticsKey)?.personKind === "child",
   );
-  const [childrenDisplay, setChildrenDisplay] = useState({
-    statisticsKey,
-    visible: isChildrenView,
-  });
-  // A new statistics selection restores its default without resetting on sorting.
-  if (childrenDisplay.statisticsKey !== statisticsKey) {
-    setChildrenDisplay({ statisticsKey, visible: isChildrenView });
-  }
-  const showChildren = childrenDisplay.statisticsKey === statisticsKey
-    ? childrenDisplay.visible
-    : isChildrenView;
   const statisticsLabel = snapshot.statisticsFilter?.label;
   const accompanyingChildrenCount = rows.reduce(
     (total, row) => total + row.childrenCount,
@@ -464,7 +499,6 @@ export function OperationsParticipantsTable({
     );
   }
 
-  const canManage = Boolean(eventId && editableEventIds.includes(eventId));
   const exportParams = new URLSearchParams(searchParams.toString());
   exportParams.set("kind", "export");
   exportParams.set("columns", columns.join(","));
@@ -477,9 +511,19 @@ export function OperationsParticipantsTable({
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <h2 className="text-lg font-semibold">{view === "without-group" ? "Senza gruppo" : view === "deleted" ? "Iscrizioni eliminate" : "Gestione iscritti"}</h2>
             {canManage && (
-              <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null })} scroll={false}>
-                Importa iscritti da Excel
-              </Link>
+              <div className="flex min-w-0 max-w-full flex-wrap gap-2">
+                <Link id="manual-participant-trigger" className={buttonClass}
+                  href={manualRegistrationPath(`/dashboard/${dashboard}?${searchParams}`, dashboard, true)}
+                  prefetch={false} scroll={false}>
+                  <UserPlus size={18} aria-hidden />{MANUAL_REGISTRATION_COPY[locale].addParticipant}
+                </Link>
+                <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null, manual: null, manualSaved: null, manualError: null })} scroll={false}>
+                  Importa iscritti da Excel
+                </Link>
+                <Link id="import-services-trigger" className={buttonClass} href={paramsFor({ import: "services", edit: null, manual: null, manualSaved: null, manualError: null })} scroll={false}>
+                  Importa servizi da Excel
+                </Link>
+              </div>
             )}
           </div>
           <p className="mt-1 text-sm text-[var(--peace-muted)]">
@@ -529,6 +573,9 @@ export function OperationsParticipantsTable({
       </div>
       {canManage && searchParams.get("import") === "excel" && (
         <ImportParticipantsDialog closePath={paramsFor({ import: null })} />
+      )}
+      {canManage && searchParams.get("import") === "services" && (
+        <ImportServicesDialog closePath={paramsFor({ import: null })} />
       )}
       {dashboard === "admin" && view !== "without-group" && (
         <div className="my-4">
@@ -669,7 +716,7 @@ export function OperationsParticipantsTable({
               aria-label="Colonne visibili"
               className="absolute left-0 z-30 mt-2 flex w-[min(24rem,calc(100vw-4rem))] sm:top-full flex-wrap gap-x-4 rounded-md border border-[var(--peace-border-strong)] bg-white p-3 shadow-lg"
             >
-              {Object.entries(PARTICIPANT_COLUMNS).map(([key, label]) => (
+              {Object.entries(PARTICIPANT_COLUMNS).filter(([key]) => key !== "sex" || (canManage && view !== "deleted")).map(([key, label]) => (
                 <label
                   key={key}
                   className="flex min-h-11 items-center gap-2 text-sm"
@@ -697,14 +744,6 @@ export function OperationsParticipantsTable({
             </fieldset>
           </details>
         )}
-        <button
-          type="button"
-          aria-pressed={showChildren}
-          className={`${buttonClass} ${showChildren ? "!bg-[var(--peace-blue-800)] !text-white" : ""}`}
-          onClick={() => setChildrenDisplay({ statisticsKey, visible: !showChildren })}
-        >
-          Mostra figli accompagnati
-        </button>
         <PendingDownload
           filename="partecipanti.xlsx"
           className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-[#217346] bg-[#217346] px-3 text-sm font-semibold text-white hover:border-[#185c37] hover:bg-[#185c37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#217346]"
@@ -714,8 +753,8 @@ export function OperationsParticipantsTable({
           <Download size={18} aria-hidden />
           Esporta iscritti
         </PendingDownload>
-        <p id="participants-export-description" className="min-w-0 flex-1 text-sm text-[var(--peace-muted)]">
-          Scarica un file Excel con gli iscritti filtrati e solo le colonne visibili selezionate.
+        <p id="participants-export-description" className="min-w-0 flex-1 basis-60 text-sm text-[var(--peace-muted)]">
+          Scarica un file Excel con gli iscritti filtrati, le colonne selezionate e sempre il numero e i nomi dei minori accompagnati.
         </p>
       </div>
       {notice ? <SuccessMessage key={notice} className="my-2 text-sm text-[var(--peace-blue-800)]">{notice}</SuccessMessage> : null}
@@ -735,7 +774,9 @@ export function OperationsParticipantsTable({
           </caption>
           <thead className="bg-[var(--peace-sky-100)]">
             <tr>
-              {columns.map((column) => (
+              {columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                <th key={slot.key} scope="col" className="whitespace-nowrap px-3 py-2 text-center font-semibold">{slot.label}</th>
+              )) : (
                 <th
                   key={column}
                   scope="col"
@@ -805,51 +846,28 @@ export function OperationsParticipantsTable({
                 aria-busy={pending[row.registrationId] || false}
                 className="border-t border-[var(--peace-border)] align-top hover:bg-[#f7fbfe]"
               >
-                {columns.map((column) => (
+                {columns.map((column) => column === "attendance" ? attendanceColumns.map(slot => (
+                  <td key={slot.key} className="whitespace-nowrap px-3 py-3 text-center">{attendanceSlotText(row.attendance, slot, locale)}</td>
+                )) : (
                   <td
                     key={column}
                     className={`px-3 py-3 ${column === "name" ? "sticky left-0 z-10 bg-white" : ""}`}
                   >
                     {column === "name" ? (
                       <div className="min-w-40 max-w-72">
-                        <Link
-                          prefetch={false}
+                        <LocalQueryLink
                           id={`participant-${row.registrationId}`}
                           className="inline-flex min-h-11 items-center font-semibold text-[var(--peace-blue-800)] underline decoration-dotted underline-offset-4"
                           href={paramsFor({ edit: row.registrationId })}
                           scroll={false}
                         >
                           {row.name}
-                        </Link>
+                        </LocalQueryLink>
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
                         <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} />
-                        {showChildren && row.childrenCount > 0 && (
-                          <div className="mt-2">
-                            <span className="inline-flex rounded-md bg-[var(--peace-sky-100)] px-2 py-1 text-xs font-semibold text-[var(--peace-blue-800)]">
-                              {row.childrenCount} {row.childrenCount === 1 ? "figlio accompagnato" : "figli accompagnati"}
-                            </span>
-                            <ul
-                              aria-label={`Figli accompagnati di ${row.name}`}
-                              className="mt-2 grid gap-1 border-l-2 border-[var(--peace-border-strong)] pl-2 text-xs leading-5 text-[var(--peace-muted)]"
-                            >
-                              {row.children.map((child) => {
-                                const age = calculateAgeAtDate(child.birth_date, eventStartsOn);
-                                return (
-                                  <li key={child.id} className="break-words">
-                                    <span className="font-medium text-[var(--peace-ink)]">{child.first_name} {child.last_name}</span>
-                                    {" · "}
-                                    <span title="Età all’inizio dell’evento">
-                                      {age === null ? "Età non disponibile" : age === 0 ? "meno di 1 anno" : `${age} ${age === 1 ? "anno" : "anni"}`}
-                                    </span>
-                                    <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} childId={child.id} />
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                        )}
+                        <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} renderChildDetails={(child) => child.id ? <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} childId={child.id} /> : null} />
                         {pending[row.registrationId] && (
                           <p role="status">Salvataggio…</p>
                         )}
@@ -867,6 +885,8 @@ export function OperationsParticipantsTable({
                         column,
                         column === "tags" || quickEditColumns[column],
                       )
+                    ) : column === "email" ? (
+                      <ParticipantEmailCell email={row.email} delegated={row.emailDelegated} locale={locale} />
                     ) : column === "submittedAt" ? (
                       formatDate(row.submittedAt)
                     ) : (
@@ -888,7 +908,10 @@ export function OperationsParticipantsTable({
       </div>
     </section>}
       {selected && (
-        <ParticipantDialog participant={selected} closePath={closePath}>
+        <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath}>
+          {attendancePanel ?? (!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
+            <OperationsAttendance key={`${selected.registrationId}:${dataVersion}`} registrationId={selected.registrationId} dashboard={dashboard} returnTo={returnTo} />
+          ) : null)}
           <section className="rounded-md border border-[var(--peace-border)] p-3"><h4 className="font-semibold">Ingresso all’evento</h4><EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} /></section>
           {selected.deletedAt ? (
             <div className="grid gap-2 rounded-md bg-red-50 p-4 text-sm">
@@ -902,7 +925,7 @@ export function OperationsParticipantsTable({
             </div>
           ) : null}
           <ReliableForm
-            action="/dashboard/admin/participants/update"
+            action="/dashboard/participants/update"
             method="post"
             data-preserve-dashboard-scroll
             className="grid gap-3"
@@ -936,13 +959,9 @@ export function OperationsParticipantsTable({
                   value={selected.lastName}
                   required
                 />
-                <Field
-                  label="Data di nascita"
-                  name="birthDate"
-                  type="date"
-                  value={selected.birthDate}
-                />
-                <Field label="Paese" name="country" value={selected.country} />
+                <ParticipantBirthDateField key={`${selected.registrationId}:${selected.birthDate}`}
+                  label="Data di nascita" locale="it" defaultValue={selected.birthDate ?? ""} />
+                {(!editableEventIds.includes(selected.eventId) || selected.deletedAt) ? <Field label="Paese" name="country" value={selected.country} /> : null}
                 <Field label="Città" name="city" value={selected.city} />
                 <Field
                   label="Email"
@@ -960,6 +979,10 @@ export function OperationsParticipantsTable({
                 )}
             </fieldset>
           </ReliableForm>
+          {editableEventIds.includes(selected.eventId) && !selected.deletedAt ? <OperationalDemographicsEditor key={`demographics:${selected.registrationId}`} registrationId={selected.registrationId} locale={locale} /> : null}
+          {editableEventIds.includes(selected.eventId) && !selected.deletedAt
+            ? <OperationalAssociationEditor key={`association:${selected.registrationId}`} registrationId={selected.registrationId} />
+            : <div className="grid gap-1 text-sm"><span className="font-semibold">Associazione / organizzazione</span><span>{selected.association || "—"}</span></div>}
           <section className="grid gap-3">
             <h4 className="font-semibold">Gruppo, servizio e tag</h4>
             {(["group", "service", "tags"] as const).map((field) => (
@@ -979,18 +1002,12 @@ export function OperationsParticipantsTable({
               </p>
             )}
           </section>
+          {editableEventIds.includes(selected.eventId) && !selected.deletedAt ? <OperationalAccessibilityEditor key={selected.registrationId} registrationId={selected.registrationId} /> : null}
           <section className="grid gap-2 text-sm">
             <h4 className="font-semibold">
               Figli partecipanti ({selected.childrenCount})
             </h4>
-            {selected.children.map((child) => (
-              <p key={child.id}>
-                {child.first_name} {child.last_name} ·{" "}
-                {formatDate(child.birth_date)}
-                <EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} childId={child.id} />
-              </p>
-            ))}
-            {!selected.childrenCount && <p>Nessun figlio associato.</p>}
+            <OperationalChildrenEditor registrationId={selected.registrationId} records={selected.children} renderChildDetails={(child) => child.id ? <EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} childId={child.id} /> : null} editable={editableEventIds.includes(selected.eventId) && !selected.deletedAt} />
           </section>
           {(selected.deletedAt
             ? dashboard === "admin"
@@ -1062,7 +1079,6 @@ function ParticipantDialog({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const router = useRouter();
   useEffect(() => {
     const dialog = ref.current!;
     dialog.showModal();
@@ -1083,7 +1099,7 @@ function ParticipantDialog({
       className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-lg bg-white p-0 text-[var(--peace-ink)] shadow-xl backdrop:bg-black/40"
       onCancel={(event) => {
         event.preventDefault();
-        router.replace(closePath, { scroll: false });
+        window.history.replaceState(null, "", closePath);
       }}
     >
       <div className="flex items-start justify-between gap-3 border-b p-5">
@@ -1093,15 +1109,15 @@ function ParticipantDialog({
           </h3>
           <p>{participant.name}</p>
         </div>
-        <Link
-          prefetch={false}
+        <LocalQueryLink
+          replace
           href={closePath}
           scroll={false}
           className={buttonClass}
           aria-label="Chiudi scheda partecipante"
         >
           <X size={18} />
-        </Link>
+        </LocalQueryLink>
       </div>
       <div className="grid max-h-[calc(90dvh-7rem)] gap-6 overflow-y-auto p-5">
         {children}

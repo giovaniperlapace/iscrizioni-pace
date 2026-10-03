@@ -1,3 +1,7 @@
+import { OperationsChildrenSection } from "@/app/dashboard/operations-children-section";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { OperationsManualRegistration } from "@/app/dashboard/operations-manual-registration";
+import { randomUUID } from "node:crypto";
 import { Suspense } from "react";
 import { OperationsParticipantsNavigation } from "@/app/dashboard/operations-participants-navigation";
 import { OperationsDuplicatesSection } from "@/app/dashboard/operations-duplicates-section";
@@ -8,7 +12,7 @@ import type {
 } from "@/lib/registrations/operations-types";
 export type { OperationsParticipantRow } from "@/lib/registrations/operations-types";
 
-export function OperationsParticipantsSection({
+export async function OperationsParticipantsSection({
   snapshot,
   selectedParticipant,
   canManageEvent,
@@ -18,6 +22,7 @@ export function OperationsParticipantsSection({
   operatorId,
   eventId,
   eventStartsOn,
+  eventEndsOn = null,
   searchParams,
 }: {
   snapshot: OperationsParticipantsSnapshot;
@@ -29,8 +34,11 @@ export function OperationsParticipantsSection({
   operatorId: string;
   eventId: string | null;
   eventStartsOn: string | null;
+  eventEndsOn?: string | null;
   searchParams?: Record<string, string | undefined>;
 }) {
+  const locale = await getRequestLocale();
+  const childrenView = searchParams?.view === "children";
   const duplicatesView = searchParams?.view === "duplicates";
   return (
     <>
@@ -38,34 +46,47 @@ export function OperationsParticipantsSection({
         dashboard={dashboard}
         navMode={navMode}
       />
-      {(!duplicatesView || selectedParticipant) && (
-        <OperationsParticipantsTable
-          dialogOnly={duplicatesView}
-          snapshot={{
-            participants: snapshot.participants,
-            allParticipants: snapshot.allParticipants,
-            groupOptions: snapshot.groupOptions,
-            operationalTags: snapshot.operationalTags,
-            eventServices: snapshot.eventServices,
-            filters: snapshot.filters,
-            statisticsFilter: snapshot.statisticsFilter,
-          }}
-          selectedParticipant={selectedParticipant}
-          editableEventIds={[
-            ...new Set(
-              snapshot.groupOptions
-                .map((group) => group.eventId)
-                .concat(eventId ?? [])
-                .filter(canManageEvent),
-            ),
-          ]}
-          dashboard={dashboard}
-          navMode={navMode}
-          canDeleteRegistration={canDeleteRegistration}
-          operatorId={operatorId}
+      <OperationsParticipantsTable
+        locale={locale}
+        dataVersion={randomUUID()}
+        dialogOnly={duplicatesView || childrenView}
+        snapshot={{
+          participants: snapshot.participants,
+          allParticipants: snapshot.allParticipants,
+          groupOptions: snapshot.groupOptions,
+          operationalTags: snapshot.operationalTags,
+          eventServices: snapshot.eventServices,
+          filters: snapshot.filters,
+          statisticsFilter: snapshot.statisticsFilter,
+        }}
+        selectedParticipant={selectedParticipant}
+        editableEventIds={[
+          ...new Set(
+            snapshot.groupOptions
+              .map((group) => group.eventId)
+              .concat(eventId ?? [])
+              .filter(canManageEvent),
+          ),
+        ]}
+        dashboard={dashboard}
+        navMode={navMode}
+        canDeleteRegistration={canDeleteRegistration}
+        operatorId={operatorId}
+        eventId={eventId}
+        eventStartsOn={eventStartsOn}
+        eventEndsOn={eventEndsOn}
+      />
+      {childrenView && (
+        <OperationsChildrenSection
+          participants={snapshot.allParticipants}
           eventId={eventId}
           eventStartsOn={eventStartsOn}
+          dashboard={dashboard}
+          navMode={navMode}
         />
+      )}
+      {eventId && canManageEvent(eventId) && searchParams?.manual === "1" && (
+        <OperationsManualRegistration dashboard={dashboard} searchParams={searchParams} />
       )}
       {duplicatesView && eventId && (
         <Suspense

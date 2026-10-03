@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredIndicator } from "@/components/required-indicator";
 import { useState } from "react";
 import type { SupportedLocale } from "@/lib/i18n/config";
 
@@ -34,9 +35,9 @@ export function ManualAttendanceFields({
   const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${eventDays.length}, minmax(5.5rem, 1fr))`;
 
   return (
-    <fieldset className="grid min-w-0 gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
+    <fieldset data-form-error-group className="grid min-w-0 gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4 lg:col-span-2">
       <legend className="px-1 text-sm font-semibold text-[var(--peace-ink)]">
-        {copy.title}
+        <span>{copy.title}<RequiredIndicator /></span>
       </legend>
       <p className="text-sm leading-6 text-[var(--peace-muted)]">
         {copy.help}

@@ -6,6 +6,7 @@ import {
 } from "./duplicates.ts";
 import {
   validateExcelRow,
+  validDate,
   type Catalog,
   type ExcelRow,
   type ValidatedRow,
@@ -44,7 +45,7 @@ export function buildPreviewRows(
   return rows.map((row) => ({
     ...row,
     candidates: [
-      ...existing,
+      ...existing.filter(person => !person.deletedAt),
       ...rows
         .filter((other) => other.row !== row.row)
         .map((other) => other.identity),
@@ -82,6 +83,11 @@ export function validateDecisions(
       throw new Error(`Riga ${row.row}: scelta mancante.`);
     const reason =
       typeof decision.reason === "string" ? decision.reason.trim() : "";
+    // Recheck older sealed previews too, before any import RPC or QR creation.
+    if (decision.action === "import" && !validDate(row.values.data_nascita))
+      throw new Error(`Riga ${row.row}: data di nascita obbligatoria e valida.`);
+    if (decision.action === "import" && (!row.values.citta?.trim() || row.values.citta.trim().length > 120))
+      throw new Error(`Riga ${row.row}: città di residenza obbligatoria, massimo 120 caratteri.`);
     if (decision.action === "import" && row.errors.length)
       throw new Error(`Riga ${row.row}: correggi gli errori o scarta la riga.`);
     if (

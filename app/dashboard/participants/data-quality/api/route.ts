@@ -1,3 +1,5 @@
+import { loadAssociations } from "@/lib/registrations/association.server";
+import { loadNationalities, loadInternalSexes } from "@/lib/registrations/assisted-demographics.server";
 import { randomUUID, createHash } from "node:crypto";
 import { hashIdentityFingerprint } from "@/lib/data-quality/fingerprint.server";
 import { NextRequest, NextResponse } from "next/server";
@@ -43,7 +45,7 @@ async function version(eventId: string, actor: string) {
   return data;
 }
 function rpcError(code: string) {
-  if (code === "40001")
+  if (code === "PT409" || code === "40001")
     return new Error(
       "I dati sono cambiati. Ricarica e genera una nuova anteprima.",
     );
@@ -55,13 +57,18 @@ function rpcError(code: string) {
 }
 export async function GET(request: NextRequest) {
   try {
-    const { db, auth, event, isAdmin } = await qualityAccess();
+    const { db, auth, event, isAdmin, canWrite } = await qualityAccess();
     const kind = request.nextUrl.searchParams.get("kind");
     const catalog = await loadCatalog(db, event.id, kind === "export");
     let buffer: Buffer;
     if (kind === "export") {
       if (request.nextUrl.searchParams.get("view") === "deleted" && !isAdmin)
         throw new Error("Archivio riservato agli admin.");
+      const requestedColumns = request.nextUrl.searchParams.get("columns");
+      const { columns } = parseTablePreferences({
+        columns:
+          requestedColumns === null ? undefined : requestedColumns.split(","),
+      });
       const { people } = await filteredExportPeople(
         db,
         {
@@ -70,17 +77,23 @@ export async function GET(request: NextRequest) {
           ends_on: event.ends_on ?? null,
         },
         request.nextUrl.searchParams,
+        columns.includes("accessibility"),
+        true, // qualityAccess already authorized reading this event, including Viewer.
+        createSupabaseServiceClient(), // Disability reads use only IDs from the authorized event result.
       );
-      const requestedColumns = request.nextUrl.searchParams.get("columns");
-      const { columns } = parseTablePreferences({
-        columns:
-          requestedColumns === null ? undefined : requestedColumns.split(","),
-      });
+      if (columns.includes("sex") && !canWrite) throw new Error("Colonna riservata agli operatori.");
+      const [nationalities, sexes, associations] = await Promise.all([
+        columns.includes("nationality") ? loadNationalities(db, people.map(person => person.id)) : Promise.resolve(new Map<string, string | null>()),
+        columns.includes("sex") ? loadInternalSexes(createSupabaseServiceClient(), people.filter(person => !person.deletedAt).map(person => person.id), auth.user.id) : Promise.resolve({} as Record<string, import("@/lib/registrations/assisted-demographics").InternalSex>),
+        columns.includes("association") ? loadAssociations(db, people.map(person => person.id)) : Promise.resolve(new Map<string, string | null>()),
+      ]);
+      for (const person of people) { person.association = associations.get(person.id); person.nationality = nationalities.get(person.id); person.sex = sexes[person.id]; }
       buffer = await writeVisibleParticipantsWorkbook(
         people,
         catalog,
         columns,
         event.starts_on ?? null,
+        event.ends_on ?? null,
       );
       const { error } = await createSupabaseServiceClient()
         .from("audit_logs")
@@ -93,6 +106,7 @@ export async function GET(request: NextRequest) {
           metadata: {
             format: "xlsx-visible-columns-v1",
             columns,
+            accompanying_children_columns: true,
             registration_count: people.length,
             filter_keys: [...request.nextUrl.searchParams.keys()].filter(
               (key) => key !== "kind",

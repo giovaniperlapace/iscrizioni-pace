@@ -45,6 +45,11 @@ function database() {
     participant_operational_tags: [],
     event_attendance_choices: [],
     groups: [],
+    accessibility_needs: [
+      {registration_id: "r1203", washington_group_answers: {hearing: true, walkingOrSteps: true}},
+      {registration_id: "r1204", washington_group_answers: {hearing: "true"}},
+      {registration_id: "r1", washington_group_answers: {walkingOrSteps: true}},
+    ],
   };
   return {
     from(table: string) {
@@ -176,6 +181,8 @@ test("visible-column workbook contains only chosen columns, readable values and 
     "Servizio",
     "Tag",
     "Data iscrizione",
+    "Numero dei figli accompagnati",
+    "Nomi e cognomi dei minori accompagnati",
   ]);
   assert.deepEqual(sheet.getRow(2).values, [
     ,
@@ -186,9 +193,11 @@ test("visible-column workbook contains only chosen columns, readable values and 
     "Accoglienza",
     "Referente",
     "6 set 2026",
+    "1",
+    "Child Fixture",
   ]);
   assert.equal(sheet.getCell("A2").type, ExcelJS.ValueType.String);
-  assert.equal(sheet.columnCount, 7);
+  assert.equal(sheet.columnCount, 9);
   assert.equal(
     Object.values(sheet.getRow(2).values).includes(person.email!),
     false,
@@ -218,5 +227,48 @@ test("empty visible-column export keeps only its selected headers", async () => 
     ,
     "Partecipante",
     "Città",
+    "Numero dei figli accompagnati",
+    "Nomi e cognomi dei minori accompagnati",
   ]);
+});
+
+
+test("disability drilldown exports exact declared people, combines filters and survives a hidden disability column", async () => {
+  const event = {id: "e", title: "Fixture", starts_on: "2026-10-25", ends_on: "2026-10-27"};
+  for (const include of [true, false]) {
+    const result = await filteredExportPeople(database(), event, new URLSearchParams({stat: "difficulty=hearing"}), include, true);
+    assert.deepEqual(result.people.map(person => person.id), ["r1203"]);
+    assert.equal(Boolean(result.people[0].accessibility), include);
+  }
+  const combined = await filteredExportPeople(database(), event, new URLSearchParams({stat: "difficulty=walkingOrSteps", contact: "p1203@example.test"}), false, true);
+  assert.deepEqual(combined.people.map(person => person.id), ["r1203"]);
+  calls.length = 0;
+  await assert.rejects(filteredExportPeople(database(), event, new URLSearchParams({stat: "difficulty=hearing"})), /permessi/);
+  assert.deepEqual(calls, [], "unauthorized disability filters must fail before reading data");
+  await assert.rejects(filteredExportPeople(database(), event, new URLSearchParams({stat: "kind=all&difficulty=invalid"}), false, true), /non valido/);
+});
+
+
+test("viewer export reads disability through a dedicated client scoped to authorized registration IDs", async () => {
+  const scopedIds: string[] = [];
+  const restrictedDb = database();
+  const originalFrom = restrictedDb.from.bind(restrictedDb);
+  restrictedDb.from = ((table: string) => {
+    assert.notEqual(table, "accessibility_needs", "Viewer RLS must not be used for disability reads");
+    return originalFrom(table);
+  }) as typeof restrictedDb.from;
+  const disabilityDb = { from(table: string) {
+    assert.equal(table, "accessibility_needs");
+    let batch: string[] = [];
+    const query = { select() {return query;}, in(field: string, ids: string[]) {
+      assert.equal(field, "registration_id"); batch = ids; scopedIds.push(...ids);
+      assert.ok(ids.every(id => registrations.some(row => row.id === id)));
+      return query;
+    }, order() {return query;}, range() {return Promise.resolve({data: batch.includes("r1203") ? [{registration_id:"r1203",washington_group_answers:{hearing:true}}] : [],error:null});} };
+    return query;
+  } } as unknown as SupabaseClient;
+  const result = await filteredExportPeople(restrictedDb, {id:"e",title:"Fixture",starts_on:null,ends_on:null}, new URLSearchParams({stat:"difficulty=hearing"}), true, true, disabilityDb);
+  assert.deepEqual(result.people.map(person=>person.id), ["r1203"]);
+  assert.match(result.people[0].accessibility!, /Sentire/);
+  assert.ok(scopedIds.includes("r1203"));
 });

@@ -1,5 +1,7 @@
+import { loadAllRows, writeRowsForIds } from "@/lib/supabase/all-rows";
+import { getEmailConfig } from "@/lib/email/config";
 import { randomUUID } from "node:crypto";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import { resolveSelectedCampaignRecipientIds } from "@/lib/email/campaign-selection";
 import { renderCampaignTemplate, validateCampaignTemplate } from "@/lib/email/campaign-templates";
@@ -23,7 +25,7 @@ import {
   type CampaignRecipient as Recipient,
   type CampaignRecipientPreview as RecipientPreview,
 } from "@/lib/email/campaign-recipients.server";
-import { sendTransactionalEmail } from "@/lib/email/smtp";
+import { sendBroadcastEmail } from "@/lib/email/smtp";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -262,11 +264,10 @@ async function updateCampaignRecipients(
     throw new Error("La lista destinatari non è più modificabile.");
   }
 
-  const { data: rows, error: rowsError } = await service
+  const { data: rows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
     .select("recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,school_teacher_id")
-    .eq("campaign_id", campaignId);
-  if (rowsError) throw new Error(rowsError.message);
+    .eq("campaign_id", campaignId).order("id").range(from, to));
 
   const recipients = (rows ?? []).map<Recipient>((row) => ({
     recipientKey: row.recipient_key,
@@ -284,20 +285,22 @@ async function updateCampaignRecipients(
 
   const includedIds = [...selectedIds];
   const excludedIds = [...availableIds].filter((id) => !selectedIds.has(id));
-  const { error: includedError } = await service
+  // Invalidate the previous test before the first batch. If a later write
+  // fails, a partially updated selection must not remain ready to send.
+  const { error: resetError } = await service.from("email_campaigns")
+    .update({ status: "draft", test_sent_at: null, test_sent_to_user_id: null })
+    .eq("id", campaignId);
+  if (resetError) throw new Error(resetError.message);
+  await writeRowsForIds(includedIds, ids => service
     .from("email_campaign_recipients")
     .update({ status: "pending", error_code: null })
     .eq("campaign_id", campaignId)
-    .in("recipient_key", includedIds);
-  if (includedError) throw new Error(includedError.message);
-  if (excludedIds.length) {
-    const { error: excludedError } = await service
-      .from("email_campaign_recipients")
-      .update({ status: "skipped", error_code: null })
-      .eq("campaign_id", campaignId)
-      .in("recipient_key", excludedIds);
-    if (excludedError) throw new Error(excludedError.message);
-  }
+    .in("recipient_key", ids));
+  await writeRowsForIds(excludedIds, ids => service
+    .from("email_campaign_recipients")
+    .update({ status: "skipped", error_code: null })
+    .eq("campaign_id", campaignId)
+    .in("recipient_key", ids));
 
   const { error: campaignError } = await service
     .from("email_campaigns")
@@ -347,13 +350,13 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     throw new Error("Campagna non disponibile o già inviata.");
   }
   assertCanManageCampaignEvent(eventRoles, campaign.event_id);
-  const { data: recipientRows } = await service
+  const { data: recipientRows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
     .select(
       "id,campaign_id,recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,school_teacher_id,status"
     )
     .eq("campaign_id", campaignId)
-    .eq("status", "pending");
+    .eq("status", "pending").order("id").range(from, to));
   const recipients = (recipientRows ?? []).map((row) =>
     campaignRecipientFromDatabaseRow({
       ...row,
@@ -379,7 +382,7 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
       renderSafeCampaignHtml(campaign.body_template, sample.templateData),
       attachments
     );
-    const result = await sendTransactionalEmail({
+    const result = await sendBroadcastEmail({
       to: testEmail,
       subject: `[TEST] ${renderCampaignTemplate(campaign.subject_template, sample.templateData)}`,
       text: campaignHtmlToText(html),
@@ -387,10 +390,11 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
       attachments: attachments.map(emailAttachmentInput),
     });
     await service.from("email_campaigns").update({ test_sent_at: new Date().toISOString(), test_sent_to_user_id: userId, status: "ready" }).eq("id", campaignId);
-    await audit(service, campaign.event_id, userId, campaignId, "email_campaign.test_sent", { delivery_mode: process.env.EMAIL_DELIVERY_MODE === "log" ? "log" : "smtp" });
+    await audit(service, campaign.event_id, userId, campaignId, "email_campaign.test_sent", { delivery_mode: process.env.EMAIL_DELIVERY_MODE === "log" ? "log" : "postmark" });
     return NextResponse.json({ ok: true, messageId: result.messageId });
   }
   if (!campaign.test_sent_at) throw new Error("Prima dell'invio definitivo è obbligatorio inviare il test.");
+  getEmailConfig();
   const { data: claimed } = await service
     .from("email_campaigns")
     .update({ status: "sending" })
@@ -409,9 +413,13 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
       .eq("status", "sending");
     throw cause;
   }
-  const result = await processDueCampaignDeliveries({
-    campaignId,
-    actorUserId: userId,
+  after(async () => {
+    try {
+      await processDueCampaignDeliveries({ campaignId, actorUserId: userId });
+    } catch {
+      // The durable queue remains the source of truth; never log recipient data.
+      console.error("[email-campaign] background_processing_failed", { campaignId });
+    }
   });
   await audit(service, campaign.event_id, userId, campaignId, "email_campaign.queued", {
     recipient_count: campaign.recipient_count,
@@ -420,7 +428,12 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     last_scheduled_for: reservation.lastScheduledFor,
   });
   return NextResponse.json({
-    ...result,
+    ok: true,
+    queued: true,
+    sent: 0,
+    failed: 0,
+    scheduled: reservation.scheduledToday + reservation.scheduledLater,
+    status: "scheduled",
     scheduledLater: reservation.scheduledLater,
     lastScheduledFor: reservation.lastScheduledFor,
   });

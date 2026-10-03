@@ -1,5 +1,9 @@
 "use client";
 
+import { ProgressButton } from "@/components/button-progress";
+
+import { birthDateNeedsReview } from "@/lib/registrations/birth-date";
+import { BIRTH_DATE_COPY } from "@/lib/registrations/birth-date-copy";
 import { SuccessMessage } from "@/components/success-message";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -158,9 +162,9 @@ export function ImportPanel() {
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button className="btn-primary px-5 py-2 text-sm" aria-busy={busy} disabled={busy || !file}>
+          <ProgressButton progressError={!!error} className="btn-primary px-5 py-2 text-sm" aria-busy={busy} disabled={busy || !file}>
             Mostra anteprima
-          </button>
+          </ProgressButton>
           <p className="text-sm text-[var(--peace-muted)]">
             Nessuna iscrizione verrà aggiunta fino alla tua conferma finale.
           </p>
@@ -259,7 +263,8 @@ export function ImportPanel() {
                             {match.signals.join(" · ")}
                           </p>
                         ))}
-                        {!row.errors.length && !row.candidates.length && (
+                        {birthDateNeedsReview(row.values.data_nascita) && <p className="mb-2 text-amber-900">{BIRTH_DATE_COPY.it.warning}</p>}
+                        {!row.errors.length && !row.candidates.length && !birthDateNeedsReview(row.values.data_nascita) && (
                           <p className="text-green-800">
                             Pronta per l’importazione, nessun duplicato rilevato
                           </p>
@@ -328,18 +333,18 @@ export function ImportPanel() {
           {unresolved && (
             <p>
               Correggi il file e caricalo di nuovo oppure scarta le righe con errori.
-              Per i possibili duplicati, indica il motivo della tua scelta prima di confermare.
+              Per i possibili duplicati, indica il motivo della tua scelta. Controlla anche le date che indicano meno di un anno.
             </p>
           )}
           <div className="flex flex-wrap gap-3">
-            <button
+            <ProgressButton progressError={!!error}
               className="btn-primary px-5 py-2 text-sm"
               aria-busy={busy}
               disabled={busy || !confirmed || unresolved}
               onClick={() => void commit()}
             >
               Conferma importazione
-            </button>
+            </ProgressButton>
             <button
               className="btn-secondary px-4 py-2 text-sm disabled:opacity-50"
               disabled={busy}
@@ -577,7 +582,7 @@ export function ReviewPanel({
                 {error}
               </p>
             )}
-            <button
+            <ProgressButton progressError={!!error}
               className={button}
               aria-busy={busy}
               disabled={
@@ -594,7 +599,7 @@ export function ReviewPanel({
                   : mode === "merge"
                     ? "Conferma unione"
                     : "Conferma decisione"}
-            </button>
+            </ProgressButton>
           </form>
         )}
     </section>

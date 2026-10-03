@@ -1,3 +1,6 @@
+import { DEMOGRAPHICS_COPY } from "../registrations/assisted-demographics.ts";
+import { CHILDREN_EXPORT_COPY } from "../registrations/children-export.ts";
+import { ATTENDANCE_SUMMARY_COPY } from "../registrations/attendance-summary.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
 import type { ParticipantColumn } from "../registrations/operations-table.ts";
 type Copy = {
@@ -45,6 +48,11 @@ function copy(
       service,
       tags,
       submittedAt,
+      attendance: "",
+      accessibility: "",
+      nationality: "",
+      association: "",
+      sex: "",
     },
     visibleColumns,
     export: download,
@@ -244,3 +252,11 @@ export const LEADER_SERVICE_STATUS_COPY = {
     declined: "Відхилено",
   },
 } satisfies Record<SupportedLocale, Record<string, string>>;
+
+for (const locale of Object.keys(LEADER_TABLE_COPY) as SupportedLocale[]) {
+  LEADER_TABLE_COPY[locale].columns.nationality = DEMOGRAPHICS_COPY[locale].nationality;
+  LEADER_TABLE_COPY[locale].columns.sex = DEMOGRAPHICS_COPY[locale].sex;
+  LEADER_TABLE_COPY[locale].columns.accessibility = CHILDREN_EXPORT_COPY[locale].accessibility;
+  LEADER_TABLE_COPY[locale].exportHelp += ` ${CHILDREN_EXPORT_COPY[locale].help}`;
+  LEADER_TABLE_COPY[locale].columns.attendance = ATTENDANCE_SUMMARY_COPY[locale][0];
+}

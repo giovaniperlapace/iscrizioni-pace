@@ -1,3 +1,5 @@
+import { parseDemographics, type InternalSex } from "./assisted-demographics.ts";
+import { isValidBirthDate } from "./birth-date.ts";
 import { validateContactFields } from "../forms/result.ts";
 import {
   DEFAULT_LOCALE,
@@ -29,6 +31,11 @@ export type ManualRegistrationInput = {
   useLeaderEmail: boolean;
   phone: string | null;
   birthDate: string | null;
+  cityOther: string;
+  nationality?: string | null;
+  birthPlace?: string | null;
+  country?: string | null;
+  internalSex?: InternalSex | null;
   preferredLocale: SupportedLocale;
   participatesWithChildren: boolean;
   children: RegistrationChildInput[];
@@ -49,7 +56,12 @@ export function parseManualRegistrationForm(
   const email = useLeaderEmail ? "" : normalizeEmail(formData.get("email"));
   const participatesWithChildren =
     formData.get("participatesWithChildren") === "yes";
+  const demographics = parseDemographics(formData);
+  const sex = String(formData.get("internalSex") ?? "");
+  if (!demographics || (sex !== "" && sex !== "male" && sex !== "female")) return { ok: false, errors: ["Dati non validi."] };
   const value: ManualRegistrationInput = {
+    ...demographics,
+    internalSex: sex || null,
     groupId: optionalUuid(formData.get("groupId")) ?? "",
     firstName: optionalText(formData.get("firstName")) ?? "",
     lastName: optionalText(formData.get("lastName")) ?? "",
@@ -57,6 +69,7 @@ export function parseManualRegistrationForm(
     useLeaderEmail,
     phone: normalizePhone(formData.get("phone")),
     birthDate: optionalDate(formData.get("birthDate")),
+    cityOther: optionalText(formData.get("cityOther")) ?? "",
     preferredLocale: DEFAULT_LOCALE,
     participatesWithChildren,
     children: parseAccompanyingChildren(formData, participatesWithChildren),
@@ -70,7 +83,6 @@ export function parseManualRegistrationForm(
   const errors = validateManualRegistrationInput(value);
   for (const issue of validateContactFields(formData)) {
     if (issue.field === "email" && !useLeaderEmail) errors.push("Inserisci un indirizzo email valido.");
-    if (issue.field === "birthDate") errors.push("Inserisci una data di nascita valida.");
   }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value };
@@ -91,6 +103,16 @@ export function validateManualRegistrationInput(
 
   if (input.lastName.length < 2 || input.lastName.length > 120) {
     errors.push("Inserisci il cognome.");
+  }
+
+  if (!isValidBirthDate(input.birthDate)) {
+    errors.push("Inserisci una data di nascita valida.");
+  }
+
+  if (!input.cityOther?.trim()) {
+    errors.push("Inserisci la città in cui vivi abitualmente.");
+  } else if (input.cityOther.trim().length > 120) {
+    errors.push("Città di residenza: massimo 120 caratteri.");
   }
 
   if (!input.useLeaderEmail && !input.email) {
@@ -124,27 +146,34 @@ export function validateManualRegistrationInput(
 export function buildManualRegistrationQuestionnaireAnswers(
   input: ManualRegistrationInput,
   group: { id: string; name: string | null },
-  actorUserId?: string
+  actorUserId?: string,
+  actorRole: "capogruppo" | "manager" | "admin" = "capogruppo",
 ) {
   return {
-    source: "capogruppo_manual",
+    source: `${actorRole}_manual`,
+    nationality: input.nationality ?? null,
+    birthPlace: input.birthPlace ?? null,
     identity: {
       firstName: input.firstName,
       lastName: input.lastName,
       birthDate: input.birthDate,
     },
+    residence: {
+      countryOther: input.country ?? null,
+      cityOther: input.cityOther,
+    },
     contact: {
       hasEmail: Boolean(input.email),
       hasPhone: Boolean(input.phone),
-      useLeaderEmail: input.useLeaderEmail,
-      communicationDelegateUserId: input.useLeaderEmail ? actorUserId ?? null : null,
+      useLeaderEmail: actorRole === "capogruppo" && input.useLeaderEmail,
+      communicationDelegateUserId: actorRole === "capogruppo" && input.useLeaderEmail ? actorUserId ?? null : null,
     },
     groupParticipation: {
       hasPreviousSantegidioParticipation: true,
       participatesWithGroup: true,
       selectedGroupId: group.id,
       selectedGroupName: group.name,
-      enteredByGroupLeader: true,
+      enteredByGroupLeader: actorRole === "capogruppo",
     },
     attendance: {
       overallChoice: input.availabilityUnknown ? "unknown" : "yes",
@@ -156,7 +185,7 @@ export function buildManualRegistrationQuestionnaireAnswers(
       participatesWithChildren: input.participatesWithChildren,
       count: input.children.length,
       children: input.children,
-      enteredByGroupLeader: true,
+      enteredByGroupLeader: actorRole === "capogruppo",
     },
     accessibility: {
       hasAccessibilityNeeds: input.hasAccessibilityNeeds,
@@ -165,7 +194,8 @@ export function buildManualRegistrationQuestionnaireAnswers(
     consents: {
       privacyAccepted: true,
       dataProcessingAccepted: true,
-      acceptedByGroupLeader: true,
+      acceptedByGroupLeader: actorRole === "capogruppo",
+      acceptedByOperator: actorRole !== "capogruppo",
     },
   };
 }

@@ -1,3 +1,8 @@
+import { loadNationalities } from "../registrations/assisted-demographics.server.ts";
+import type { SupportedLocale } from "../i18n/config.ts";
+import { loadAccessibilitySummaries } from "../registrations/accessibility-summary.server.ts";
+import { loadEmailDelegations } from "../registrations/email-delegation.server.ts";
+import { loadAttendanceSummaries } from "../registrations/attendance-summary.server.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import { collectDescendantGroupIds } from "./capogruppo-dashboard.ts";
@@ -70,12 +75,13 @@ export async function loadLeaderAssignmentRows(
   db: SupabaseClient,
   eventId: string,
   groupIds: string[],
+  locale: SupportedLocale = "it",
 ): Promise<AssignmentRow[]> {
   const { data } = await loadRowsForIds(groupIds, (ids, from, to) =>
     db
       .from("participant_group_assignments")
       .select(
-        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id,is_assignable),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label)),participant_operational_tags(assigned_at,operational_tags(id,event_id,label,color))))",
+        "id,registration_id,group_id,status,source,confidence,is_current,assignment_reason,escalation_depth,leader_internal_note,leader_decision_at,created_at,updated_at,groups!participant_group_assignments_group_id_fkey(id,name,node_type,parent_group_id,is_assignable),registrations!inner(id,event_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position),participants(id,first_name,last_name,public_code,birth_date,country_other,city_other,participant_contacts(email,phone,is_primary),countries(name_it),cities(name),participates_with_group,participant_event_services(id,event_id,registration_id,participant_id,service_id,status,source,participant_note,operator_note,updated_at,event_services(label))))",
       )
       .in("group_id", ids)
       .eq("registrations.event_id", eventId)
@@ -84,5 +90,12 @@ export async function loadLeaderAssignmentRows(
       .order("id")
       .range(from, to),
   );
-  return data as unknown as AssignmentRow[];
+  const rows = data as unknown as AssignmentRow[];
+  const [attendance, emailDelegations, accessibility, nationalities] = await Promise.all([
+    loadAttendanceSummaries(db, rows.map(row => row.registration_id)),
+    loadEmailDelegations(db, rows.map(row => row.registration_id)),
+    loadAccessibilitySummaries(db, rows.map(row => row.registration_id), locale),
+    loadNationalities(db, rows.map(row => row.registration_id)),
+  ]);
+  return rows.map(row => ({ ...row, nationality: nationalities.get(row.registration_id), accessibility: accessibility.get(row.registration_id), emailDelegated: emailDelegations.has(row.registration_id), attendance: attendance.get(row.registration_id) ?? [] }));
 }

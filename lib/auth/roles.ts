@@ -82,13 +82,6 @@ export function isRoleAllowedForDashboard(
     return true;
   }
 
-  const hasManagerDashboard =
-    availableRoles.has("manager") || availableRoles.has("manager_viewer");
-
-  if (hasManagerDashboard) {
-    return requiredRole === "manager" || requiredRole === "manager_viewer";
-  }
-
   if (requiredRole === "partecipante") {
     return true;
   }

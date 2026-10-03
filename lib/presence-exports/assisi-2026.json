@@ -1,0 +1,876 @@
+{
+  "eventId": "d302dff4-f08d-4040-8d83-9ec2042a73d5",
+  "version": "2026-10-01",
+  "source": "Gruppi_ZRT.xlsx, Foglio1, righe 2-120",
+  "zones": [
+    {
+      "id": "roma",
+      "label": "Roma"
+    },
+    {
+      "id": "italia",
+      "label": "Italia (eccetto Roma)"
+    },
+    {
+      "id": "estero",
+      "label": "Altri paesi"
+    },
+    {
+      "id": "vari",
+      "label": "Associazioni-Vari"
+    }
+  ],
+  "groups": [
+    {
+      "groupId": "39f12df2-40d2-4f7b-b861-ca3560dbd38b",
+      "sourceName": "Anziani - Castelli",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_cast"
+    },
+    {
+      "groupId": "5f37a11c-fe8c-4ae0-b09c-7ee395e4d55d",
+      "sourceName": "Anziani - Fiumicino",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_fium"
+    },
+    {
+      "groupId": "56ab388c-950b-4ee6-af80-2a00c1e19f33",
+      "sourceName": "Anziani - Flaminio",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_flam"
+    },
+    {
+      "groupId": "62608ef3-ecab-47a5-a4b3-b720083b9b9c",
+      "sourceName": "Anziani - Garbatella",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_garb"
+    },
+    {
+      "groupId": "b3388a6f-2ec0-4c0f-bdd6-9e0d94555be2",
+      "sourceName": "Anziani - Laurentino",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_laur"
+    },
+    {
+      "groupId": "3a801516-35b6-4419-ab1e-3559cbb26de3",
+      "sourceName": "Anziani - Monti/Esquilino",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_esq"
+    },
+    {
+      "groupId": "7bd25cd2-2764-4dec-a07e-f2e43f80f1f4",
+      "sourceName": "Anziani - Ostia",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_osti"
+    },
+    {
+      "groupId": "8877405b-78c6-45ed-9d94-ead70b9bfc0b",
+      "sourceName": "Anziani - Primavalle",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_prim"
+    },
+    {
+      "groupId": "2555a834-cc8d-4008-ae30-331fa5c2bc07",
+      "sourceName": "Anziani - San Giovanni",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_sgio"
+    },
+    {
+      "groupId": "40143c39-a91b-487d-84b5-70047fae55f7",
+      "sourceName": "Anziani - Serpentara Prima Porta e San Basilio",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "4de66682-c793-455d-834b-f563ca0e2c1b",
+      "sourceName": "Anziani - Tiburtino",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_tibu"
+    },
+    {
+      "groupId": "999173c1-0ba1-46c7-a803-6c4328474399",
+      "sourceName": "Anziani - Tor Bella Monaca",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_tbm"
+    },
+    {
+      "groupId": "e10eadeb-045e-4857-b329-9f97643b1b89",
+      "sourceName": "Anziani - Torrenova",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_torr"
+    },
+    {
+      "groupId": "76919659-2fd9-402f-98ba-5173efa2ac46",
+      "sourceName": "Anziani - Trastevere",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_tras"
+    },
+    {
+      "groupId": "017709ef-5dcb-459f-9066-b0a1a3c5e98e",
+      "sourceName": "Anziani - Trullo",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_trul"
+    },
+    {
+      "groupId": "4ebe70c9-7375-479b-9732-422d4173f9ac",
+      "sourceName": "Anziani - Tuscolano",
+      "zoneId": "roma",
+      "rollup": "Anziani Roma",
+      "operatorTag": "acc_anz_tusc"
+    },
+    {
+      "groupId": "b1766bb7-a980-4203-be47-a039095009a1",
+      "sourceName": "Castelli",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "fb1011d4-bc8b-4ac8-a133-97b665888186",
+      "sourceName": "Centocelle - Tor Pignattara",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "c777c681-e3c5-4997-a760-cc18e7293f87",
+      "sourceName": "Civitavecchia",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "49328d17-afc9-43ad-8ecb-22706e18a42b",
+      "sourceName": "Comunità della mensa",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "9447a20a-81ec-477e-9df3-838ea34d6552",
+      "sourceName": "Esquilino",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "579b2f1a-576c-4217-b010-ea6254677bfe",
+      "sourceName": "Fiumicino",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "6a639f4a-92cc-4c7d-a540-277f7a16eda7",
+      "sourceName": "Flaminio",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "eb12afb3-b9f5-49d3-b534-29524b8a8c3a",
+      "sourceName": "Garbatella",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "bf1db1ef-0528-470c-8bb1-15ae7f9fae3b",
+      "sourceName": "Guidonia - Tivoli",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "fa6fc2f4-405b-40c4-a08b-78f40516bfb3",
+      "sourceName": "Laurentino Torrino",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "aa6bdada-3342-45ff-b071-03e0c751e4d8",
+      "sourceName": "Monterotondo",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "55543ab8-7c58-4e9a-b985-552c6feb780b",
+      "sourceName": "Nomentano",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "36726471-2acb-4be0-929d-583c38ed5717",
+      "sourceName": "Ostia",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "b1a5410e-ef1e-4d99-b535-e618e82c6d90",
+      "sourceName": "Prima Porta",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "55575324-af81-4f00-8c54-a962b96748d5",
+      "sourceName": "Primavalle",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "42ff7095-08d0-4aba-9bb8-3e5d31028b25",
+      "sourceName": "San Giovanni Appio",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "9df6335a-9063-4963-b8b0-895c6de890e0",
+      "sourceName": "Tiburtina",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "9376c8e2-c9d9-4bb3-9f0a-d2659b702a4f",
+      "sourceName": "Tor Bella Monaca",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "f094a4d5-8107-4b98-93ba-1ceba9a5e30e",
+      "sourceName": "Torrenova",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "d4f72af8-39e7-422f-ba86-acb6afe830eb",
+      "sourceName": "Trastevere",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "1566b051-926f-411a-a045-ef3866c95da2",
+      "sourceName": "Trullo Magliana",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "71a13065-1d42-4440-bc6a-a3c6778108e6",
+      "sourceName": "Tufello Serpentara",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "39803182-bc69-4863-b006-e8a155f653d5",
+      "sourceName": "Tuscolano",
+      "zoneId": "roma",
+      "rollup": "Comunità di Roma",
+      "operatorTag": null
+    },
+    {
+      "groupId": "0ee6da84-80a3-4c16-846f-c672f0779542",
+      "sourceName": "Amici San Bartolomeo",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "903e143c-c258-46c3-a79c-c35069040c07",
+      "sourceName": "Amici Sant'Egidio",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "bac6209e-2d2f-4471-8027-5ef58833ad98",
+      "sourceName": "Assemblea di Trastevere",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "73739754-c2c9-4eea-b4a9-2c6463274a8a",
+      "sourceName": "Europeans for Peace - Roma",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "0bc998d7-4869-44af-a920-1565b2f522a0",
+      "sourceName": "Genti di Pace - Studenti Scuola",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": "acc_gdp"
+    },
+    {
+      "groupId": "20acd326-2680-45cb-ad05-6949a1cf0f06",
+      "sourceName": "Movimento de \" Gli amici\"",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": "acc_ami"
+    },
+    {
+      "groupId": "669a0dfc-34d0-4a4a-8ef9-0ff38c852686",
+      "sourceName": "Pentecoste",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "aca1472e-f562-4535-a405-680a11ba9219",
+      "sourceName": "Resurrezione",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "0237950d-0f3c-4d03-a579-739d15d991cc",
+      "sourceName": "Resurrezione ‘68",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "237c247a-6283-4a66-991e-13bcd19eba67",
+      "sourceName": "Sant’Andrea",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "6e901702-fa63-4c21-a77a-67dd33a463fc",
+      "sourceName": "Sant’Egidio",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "0a59d335-2a43-4055-9401-c9b20e8033f5",
+      "sourceName": "Seminario",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "4bc26583-124a-488a-a0cd-1b9cf4d94d36",
+      "sourceName": "Universitari",
+      "zoneId": "roma",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "37215e1d-e397-4f49-9284-14b1ac7c0a5a",
+      "sourceName": "Bari",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "7403384a-dec2-4f0c-81b1-b3e7329eda7c",
+      "sourceName": "BOLOGNA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "d03b722b-fe5b-4841-a96b-f77bccf7e6b5",
+      "sourceName": "Brindisi",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "209cd59a-f8c7-4402-927f-e39a0a2ad8b1",
+      "sourceName": "CAGLIARI",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "97192b16-f36a-4070-81c7-4fd1c43651e3",
+      "sourceName": "CALABRIA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "168031c8-a546-4cef-a4d5-12575e34563a",
+      "sourceName": "CATANIA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "6e8df65c-fc81-4d13-90f4-9b06c0e7e7c1",
+      "sourceName": "Eremo di Campello",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "479613b6-c2bc-4d31-8809-d2e1b7de3d71",
+      "sourceName": "FIRENZE",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "229c215a-380c-472d-b682-f7da5de4a3fa",
+      "sourceName": "Foggia",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "1633576a-8f36-482e-9d9e-713b5f631219",
+      "sourceName": "FROSINONE",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "84ec03df-7778-4a1f-8013-c3be2d1a7455",
+      "sourceName": "GENOVA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "dcb59da1-a23d-407b-a45a-04af2259038c",
+      "sourceName": "Lecce",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "3b7044a3-936a-4492-8f92-ac4be1ca28e6",
+      "sourceName": "LIVORNO",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "7c81a6d6-8710-4e79-ba09-70e774aea22d",
+      "sourceName": "LUCCA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "57213dc8-8393-44ce-9e2d-9252af2983df",
+      "sourceName": "Marche",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "5dfbb09f-8449-4a3b-ad10-c3fc6c989602",
+      "sourceName": "MESSINA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "739e3fcb-d768-4657-a8c5-145d8071becf",
+      "sourceName": "MILANO",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "2d1885a0-67ba-4c90-b76e-25dddde4b1b5",
+      "sourceName": "NAPOLI ISERNIA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "18c76f81-d9d2-4a30-8726-a5537be07ee7",
+      "sourceName": "NOVARA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "59ab5c84-456e-425c-b538-8e5fbeb9e49f",
+      "sourceName": "Padova",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "2d335215-378e-47d6-9861-af414cc4bde4",
+      "sourceName": "PALERMO",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "a50c967e-2827-4e70-9dac-1df2aec2468f",
+      "sourceName": "PARMA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "2a1fbdab-7a05-438a-b1eb-fa155d1f7654",
+      "sourceName": "PAVIA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "4351559b-ca55-43da-85ae-71da8d1510ae",
+      "sourceName": "PERUGIA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "7f004fa6-81cc-4a6a-af75-89ef7c319670",
+      "sourceName": "PESCARA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "d2dbba6a-1539-4fd2-88b8-ab800a1eb4d1",
+      "sourceName": "PISA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "6ddd5938-7de3-41fa-b06c-fb57dd000001",
+      "sourceName": "REGGIO EMILIA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "65755599-9381-4ad0-aad0-df6a4c00acbe",
+      "sourceName": "SASSARI",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "48302d98-0f7b-4db3-8d84-e21738144a24",
+      "sourceName": "SAVONA",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "9b4e871e-5cdf-41c2-bd8f-8325863b9e3c",
+      "sourceName": "Taranto - Laterza",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "0fcc4db4-2300-40c5-9643-dc548813ed78",
+      "sourceName": "TERNI",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "0dc26082-bd15-4671-83d8-4764b7223141",
+      "sourceName": "TORINO",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "814321b8-b074-4182-8695-5c5c3016f437",
+      "sourceName": "Trento",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "2853e102-2daf-4095-a2e9-1d2248329373",
+      "sourceName": "Treviso",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "22457b13-679c-4200-bcaf-0189ac1896a4",
+      "sourceName": "TRIESTE",
+      "zoneId": "italia",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "0aa19f40-4e87-4ac9-a932-8b1bc0197928",
+      "sourceName": "Congo",
+      "zoneId": "estero",
+      "rollup": "Comunità africane",
+      "operatorTag": null
+    },
+    {
+      "groupId": "ca68d3a4-8963-407a-afc7-71082042c69e",
+      "sourceName": "Costa d'Avorio",
+      "zoneId": "estero",
+      "rollup": "Comunità africane",
+      "operatorTag": null
+    },
+    {
+      "groupId": "dfef8d5c-a832-4c6f-a692-a673a65e5f63",
+      "sourceName": "Malawi",
+      "zoneId": "estero",
+      "rollup": "Comunità africane",
+      "operatorTag": null
+    },
+    {
+      "groupId": "b7f1419e-3109-4f2a-b896-8342653c6ba2",
+      "sourceName": "Mozambico",
+      "zoneId": "estero",
+      "rollup": "Comunità africane",
+      "operatorTag": null
+    },
+    {
+      "groupId": "458b1119-3b62-4804-8631-034d29f884b2",
+      "sourceName": "Nigeria",
+      "zoneId": "estero",
+      "rollup": "Comunità africane",
+      "operatorTag": null
+    },
+    {
+      "groupId": "0f8adf88-c693-4765-8660-6ab5eafcc03d",
+      "sourceName": "Senegal",
+      "zoneId": "estero",
+      "rollup": "Comunità africane",
+      "operatorTag": null
+    },
+    {
+      "groupId": "ded9bb5a-d1be-480a-b0e4-139920b4f5fa",
+      "sourceName": "Uganda",
+      "zoneId": "estero",
+      "rollup": "Comunità africane",
+      "operatorTag": null
+    },
+    {
+      "groupId": "aa651d54-fce4-49ae-89fb-279f7ff88578",
+      "sourceName": "Colombia",
+      "zoneId": "estero",
+      "rollup": "Comunità dell’America Latina",
+      "operatorTag": null
+    },
+    {
+      "groupId": "f3121528-173b-4064-9be8-76e04d8308d5",
+      "sourceName": "Cuba",
+      "zoneId": "estero",
+      "rollup": "Comunità dell’America Latina",
+      "operatorTag": null
+    },
+    {
+      "groupId": "5290fe17-ced4-4d7a-bae3-07a3e78d46d7",
+      "sourceName": "Guatemala",
+      "zoneId": "estero",
+      "rollup": "Comunità dell’America Latina",
+      "operatorTag": null
+    },
+    {
+      "groupId": "1548af25-2550-4a50-bb08-aec05d966d5e",
+      "sourceName": "Messico",
+      "zoneId": "estero",
+      "rollup": "Comunità dell’America Latina",
+      "operatorTag": null
+    },
+    {
+      "groupId": "bda592c8-c9e3-4b5b-bd61-4db541109154",
+      "sourceName": "Nicaragua",
+      "zoneId": "estero",
+      "rollup": "Comunità dell’America Latina",
+      "operatorTag": null
+    },
+    {
+      "groupId": "b256bd86-5b58-4957-bb9f-6a5ca4fcc92a",
+      "sourceName": "Austria",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "3b690b3a-a3bf-444e-9eef-1ba7e50dc23d",
+      "sourceName": "Barcellona",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "7cf5e7dd-b3dd-48ca-822f-b3d008bfa590",
+      "sourceName": "Belgio",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "953acd4b-cf02-4d13-b3b0-f156c76aaa82",
+      "sourceName": "Cechia",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "0a683287-b70b-4e7d-b307-5b8ed2139c8c",
+      "sourceName": "Francia",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "00ac6387-a4d7-402d-914d-030032650745",
+      "sourceName": "Germania",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "26e116f9-d093-4299-82ad-6dcccd3f71ea",
+      "sourceName": "Londra",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "c64103c2-0464-42f9-a29d-68568e6212cf",
+      "sourceName": "Losanna",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "f3478460-446d-4185-883b-86e21a6e2436",
+      "sourceName": "Madrid",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "e2159a55-4688-46ec-bb25-1f96b1c26ba1",
+      "sourceName": "Mosca",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "966699c4-91f2-4888-980d-41b4ecd68ecc",
+      "sourceName": "Paesi Bassi",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "3834ca4f-a367-4010-8027-30ffe5e3933b",
+      "sourceName": "Portogallo",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "ca5e6b35-1233-4bfa-b655-1b8c9556616d",
+      "sourceName": "Poznan Chojna",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "38dd7004-956d-41c9-bcde-fa0a9e4841ad",
+      "sourceName": "Slovacchia",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "7f49d7a6-8385-4264-9080-dd7bf670afd4",
+      "sourceName": "Ucraina",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "d7901fc6-0b96-4ee0-b597-c18857525481",
+      "sourceName": "Ungheria",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "015ece2c-9a28-4093-ac25-789c696df605",
+      "sourceName": "United States",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "1f15a616-c24d-4770-b416-00cb72ceb4fa",
+      "sourceName": "Varsavia",
+      "zoneId": "estero",
+      "rollup": null,
+      "operatorTag": null
+    },
+    {
+      "groupId": "e24bf268-b7a3-46a8-a6a5-d024d4bdfece",
+      "sourceName": "Diocesi di Assisi",
+      "zoneId": "vari",
+      "rollup": null,
+      "operatorTag": null
+    }
+  ],
+  "zoneRoots": [
+    {
+      "groupId": "a23f8729-c4bf-4112-b086-0f84897fe2e1",
+      "sourceName": "Roma",
+      "zoneId": "roma"
+    },
+    {
+      "groupId": "0fa3931a-82a9-41d6-87b1-82d16bcb236e",
+      "sourceName": "Italia",
+      "zoneId": "italia"
+    },
+    {
+      "groupId": "1999a7fc-8ed1-452f-a050-a6fdc363169b",
+      "sourceName": "Polonia",
+      "zoneId": "estero"
+    },
+    {
+      "groupId": "ef0bc71b-a4e3-40d2-b7a8-f81d66c1168a",
+      "sourceName": "Spagna",
+      "zoneId": "estero"
+    }
+  ],
+  "unmatchedSourceGroups": [
+    "Giovani per la Pace (Scuole superiori e licei)"
+  ]
+}

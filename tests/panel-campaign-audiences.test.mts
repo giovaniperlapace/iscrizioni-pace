@@ -17,7 +17,7 @@ test("P9 persists teachers as a distinct campaign audience", async () => {
   assert.match(recipients, /recipientKey: `teacher:\$\{teacher\.id\}`/);
   assert.match(recipients, /new Set\(\(bookings \?\? \[\]\)[\s\S]*teacher_id/);
   assert.match(delivery, /recipient\.recipientType === "teacher"/);
-  assert.match(delivery, /provider_message_id: hashMessageId\(result\.messageId\)/);
+  assert.match(delivery, /provider_message_id: hashMessageId\(result\.messageId!\)/);
 });
 
 test("P9 panel filters use current canonical confirmed choices", async () => {

@@ -1,6 +1,8 @@
 "use client";
 
-import { useAssociatedFormPending } from "@/components/associated-form-pending";
+import { ProgressButton } from "@/components/button-progress";
+
+import { useAssociatedFormPending, useAssociatedFormFailed } from "@/components/associated-form-pending";
 
 type GroupPublicCatalogSwitchProps = {
   formId: string;
@@ -14,11 +16,12 @@ export function GroupPublicCatalogSwitch({
   isPublicCatalog,
 }: GroupPublicCatalogSwitchProps) {
   const isSaving = useAssociatedFormPending(formId);
+  const failed = useAssociatedFormFailed(formId);
   const optimisticValue = isSaving ? !isPublicCatalog : isPublicCatalog;
   const label = optimisticValue ? "Visibile" : "Nascosto";
 
   return (
-    <button
+    <ProgressButton progressError={failed}
       aria-checked={optimisticValue}
       aria-label={`${groupName}: ${
         optimisticValue ? "nascondi dal form pubblico" : "mostra nel form pubblico"
@@ -46,6 +49,6 @@ export function GroupPublicCatalogSwitch({
       <span className="min-w-14 text-left transition-opacity duration-200">
         {isSaving ? "Salvo..." : label}
       </span>
-    </button>
+    </ProgressButton>
   );
 }

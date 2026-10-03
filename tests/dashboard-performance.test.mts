@@ -1,0 +1,115 @@
+import { loadAssociations } from "../lib/registrations/association.server.ts";
+import { loadNationalities } from "../lib/registrations/assisted-demographics.server.ts";
+import * as reports from "../lib/registrations/statistics-reports.ts";
+import { loadAccessibilitySummaries } from "../lib/registrations/accessibility-summary.server.ts";
+import { loadEmailDelegations } from "../lib/registrations/email-delegation.server.ts";
+import { loadAttendanceSummaries } from "../lib/registrations/attendance-summary.server.ts";
+import { loadGroupCityLinks } from "../lib/groups/geography.server.ts";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import ts from "typescript";
+import { NextRequest, NextResponse } from "next/server.js";
+import { dashboardLoadPlan } from "../lib/registrations/dashboard-load-plan.ts";
+import { loadAllRows, loadRowsForIds } from "../lib/supabase/all-rows.ts";
+import * as operations from "../lib/registrations/operations-dashboard.ts";
+import * as statistics from "../lib/registrations/event-statistics.ts";
+
+function compile(path: string, modules: Record<string, unknown>, components = false) {
+  const code = ts.transpileModule(readFileSync(path, "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  const exports: Record<string, (...args: never[]) => Promise<unknown>> = {};
+  new Function("require", "exports", code)((name: string) => {
+    if (name in modules) return modules[name];
+    assert.ok(components, name);
+    return new Proxy({}, { get: (_, key) => {
+      if (key === "__esModule") return true;
+      return () => { throw new Error(`Unexpected call: ${name}.${String(key)}`); };
+    } });
+  }, exports);
+  return exports;
+}
+
+test("dashboard sections execute only the queries needed by their visible content", async () => {
+  for (const role of ["admin", "manager", "manager_viewer", "foreign_manager", "foreign_viewer"]) {
+    const foreign = role.startsWith("foreign_");
+    const dashboard = role === "admin" ? "admin" : "manager";
+    for (const section of ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])].filter(section => foreign ? section === "dashboard" : role !== "manager_viewer" || ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti"].includes(section))) {
+      const reads: string[] = [];
+      const db = { from(table: string) {
+        const query = new Proxy({}, { get: (_, key) => key === "then"
+          ? (resolve: (value: unknown) => unknown) => { reads.push(table); return Promise.resolve({ data: [], error: null }).then(resolve); }
+          : () => query });
+        return query;
+      } };
+      const jsx = (type: unknown, props: unknown) => ({ type, props });
+      const modules = {
+        "react/jsx-runtime": { jsx, jsxs: jsx },
+        "node:crypto": { randomUUID: () => "version" },
+        "@/lib/panels/panel-statistics": { emptyPanelStatisticsSnapshot: () => ({}), getPanelStatisticsSnapshot: async () => { reads.push("panel-statistics"); return {}; } },
+        "@/lib/registrations/dashboard-load-plan": { dashboardLoadPlan },
+        "@/lib/supabase/all-rows": { loadAllRows, loadRowsForIds },
+        "@/lib/groups/geography.server": { loadGroupCityLinks },
+        "@/lib/registrations/attendance-summary.server": { loadAttendanceSummaries },
+        "@/lib/registrations/accessibility-summary.server": { loadAccessibilitySummaries },
+        "@/lib/registrations/assisted-demographics.server": { loadNationalities },
+        "@/lib/registrations/association.server": { loadAssociations: async (...args: Parameters<typeof loadAssociations>) => { reads.push("participant-associations"); return loadAssociations(...args); } },
+        "@/lib/registrations/email-delegation.server": { loadEmailDelegations: async (...args: Parameters<typeof loadEmailDelegations>) => { reads.push("email-delegations"); return loadEmailDelegations(...args); } },
+        "@/lib/registrations/operations-dashboard": operations,
+        "@/lib/registrations/event-statistics": statistics,
+        "@/lib/registrations/statistics-reports": reports,
+        "@/lib/registrations/association-statistics.server": { loadAssociationStatistics: async () => { reads.push("associations"); return { people: [] }; } },
+        "@/lib/registrations/disability-statistics.server": { loadDisabilityStatistics: async () => { reads.push("disability"); return { people: [] }; } },
+        "@/lib/registrations/event-statistics.server": { loadEventStatisticsSnapshot: async () => { reads.push("statistics"); return {}; } },
+        "@/lib/auth/session": { getCurrentAuthContext: async () => ({ user: { id: "operator" }, eventRoles: [{ role: foreign ? (role === "foreign_viewer" ? "manager_viewer" : "manager") : role, eventId: role === "admin" ? null : foreign ? "other-event" : "event" }] }) },
+        "@/lib/supabase/server": { createSupabaseServerClient: async () => db },
+        "@/lib/supabase/service": { createSupabaseServiceClient: () => db },
+        "@/lib/events/current": { getCurrentOperationalEvent: async () => ({ id: "event", title: "Fixture" }) },
+        "@/lib/operational-users/identity": { getOperationalUserIdentities: async () => new Map() },
+      };
+      const page = compile(`app/dashboard/${dashboard}/page.tsx`, modules, true).default;
+      await page({ searchParams: Promise.resolve({ section: ["disability", "attendance", "age", "registrations"].includes(section) ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(["disability", "attendance", "age", "registrations"].includes(section) ? { report: section } : {}) }) } as never);
+      const context = `${role}/${section}`;
+      assert.equal(reads.includes("participant-associations"), ["iscritti", "disability-people"].includes(section), context);
+      assert.equal(reads.includes("email-delegations"), ["iscritti", "disability-people"].includes(section), context);
+      assert.equal(reads.includes("registrations"), ["iscritti", "disability-people", "gruppi"].includes(section), context);
+      assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);
+      assert.equal(reads.includes("event_user_roles"), section === "gruppi" || section === "ruoli", context);
+      assert.equal(reads.includes("statistics"), !foreign && ["dashboard", "attendance", "age", "registrations"].includes(section), context);
+      assert.equal(reads.includes("panel-statistics"), !foreign && ["dashboard", "attendance", "age", "registrations", "disability"].includes(section), context);
+      assert.equal(reads.includes("associations"), !foreign && section === "dashboard", context);
+      assert.equal(reads.includes("disability"), ["disability", "disability-people"].includes(section), context);
+      assert.equal(reads.includes("event_services"), ["iscritti", "disability-people", "gruppi", "impostazioni"].includes(section), context);
+    }
+  }
+});
+
+test("lazy attendance authenticates, checks event scope and never caches private responses", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  for (const scenario of ["anonymous", "participant", "leader", "viewer", "foreign", "manager", "admin", "invalid", "missing", "error"]) {
+    let reads = 0;
+    const roles = scenario === "admin" ? [{ role: "admin", eventId: null }] : [{
+      role: ({ participant: "partecipante", leader: "capogruppo", viewer: "manager_viewer" } as Record<string,string>)[scenario] ?? "manager",
+      eventId: scenario === "foreign" ? "other" : "event",
+    }];
+    const route = compile("app/dashboard/participants/attendance/route.ts", {
+      "next/server": { NextResponse },
+      "@/lib/auth/session": { getCurrentAuthContext: async () => scenario === "anonymous" ? null : { eventRoles: roles } },
+      "@/lib/supabase/server": { createSupabaseServerClient: async () => ({}) },
+      "@/lib/supabase/service": { createSupabaseServiceClient: () => ({}) },
+      "@/lib/registrations/operations-attendance.server": { loadOperationsAttendance: async (_db: unknown, registrationId: string, allowed: (id: string) => boolean) => {
+        reads++;
+        assert.equal(registrationId, id);
+        if (scenario === "error") throw new Error("database unavailable");
+        return scenario === "missing" || !allowed("event") ? null : { unknown: true, slots: [] };
+      } },
+    });
+    const response = await route.GET(new NextRequest(`http://localhost/dashboard/participants/attendance?registrationId=${scenario === "invalid" ? "invalid" : id}`) as never) as Response;
+    const expected = ({ anonymous: 401, participant: 403, leader: 403, viewer: 403, foreign: 404, manager: 200, admin: 200, invalid: 400, missing: 404, error: 500 } as Record<string, number>)[scenario];
+    assert.equal(response.status, expected, scenario);
+    assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+    assert.equal(reads, [401,403,400].includes(expected) ? 0 : 1);
+    if (expected !== 200) assert.deepEqual(await response.json(), {});
+  }
+});

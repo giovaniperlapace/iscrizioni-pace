@@ -1,3 +1,4 @@
+import { participantGeography } from "../registrations/geography.ts";
 import type { ParticipantOperationalTag } from "../registrations/operational-tags.ts";
 import type { ParticipantEventService } from "../registrations/event-services.ts";
 export type AssignmentCopy = {
@@ -14,6 +15,10 @@ type RegistrationChildRelationRow = {
 };
 
 export type AssignmentRow = {
+  nationality?: string | null;
+  accessibility?: string;
+  emailDelegated?: boolean;
+  attendance?: import("./leader-attendance.ts").AttendanceChoice[];
   id: string;
   registration_id: string;
   group_id: string;
@@ -223,6 +228,10 @@ export type AssignmentRow = {
 };
 
 export type AssignmentView = {
+  nationality?: string | null;
+  accessibility?: string;
+  emailDelegated?: boolean;
+  attendance?: import("./leader-attendance.ts").AttendanceChoice[];
   id: string;
   registrationId: string;
   eventId: string;
@@ -308,6 +317,10 @@ export function toAssignmentView(
   return {
     id: row.id,
     registrationId: row.registration_id,
+    attendance: row.attendance,
+    emailDelegated: row.emailDelegated,
+    accessibility: row.accessibility,
+    nationality: row.nationality,
     eventId: registration.event_id,
     participantId: participant.id,
     groupId: row.group_id,
@@ -331,10 +344,10 @@ export function toAssignmentView(
     participantCity:
       relatedOne(participant.cities)?.name ?? participant.city_other,
     participantCountry:
-      relatedOne(participant.countries)?.name_it ?? participant.country_other,
+      participantGeography(participant).country,
     participantPlace: formatPlace(
       relatedOne(participant.cities)?.name ?? participant.city_other,
-      relatedOne(participant.countries)?.name_it ?? participant.country_other,
+      participantGeography(participant).country,
       copy,
     ),
     birthDate: participant.birth_date,

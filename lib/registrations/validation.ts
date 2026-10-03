@@ -1,7 +1,11 @@
+import { isValidBirthDate } from "./birth-date.ts";
+import { publicChildBirthDateBounds } from "./public-child-age.ts";
+import { countryName } from "./country-names.ts";
 import {
   DEFAULT_LOCALE,
   type SupportedLocale,
 } from "../i18n/config.ts";
+import { isCountryName, COUNTRY_VALIDATION_MESSAGE } from "./country-validation.ts";
 import {
   attendanceSlotKey,
   parseAttendanceSlot,
@@ -123,7 +127,7 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
     nationality,
     preferredLocale: DEFAULT_LOCALE,
     countryId: null,
-    countryOther: optionalText(formData.get("countryOther")),
+    countryOther: countryName(optionalText(formData.get("countryOther"))),
     cityId: null,
     cityOther: optionalText(formData.get("cityOther")),
     hasPreviousSantegidioParticipation,
@@ -154,6 +158,18 @@ export function parseRegistrationForm(formData: FormData): ValidationResult<Regi
   };
 
   const errors = validateRegistrationInput(value);
+  // New public registrations only: shared validators also handle historical edits
+  // and assisted registrations, which must retain their existing behavior.
+  const childDateBounds = publicChildBirthDateBounds();
+  value.children.forEach((child, index) => {
+    if (child.birthDate && (child.birthDate < childDateBounds.min || child.birthDate > childDateBounds.max)) {
+      errors.push(`Il figlio ${index + 1} deve avere da 0 a 17 anni compiuti: questa funzione è riservata ai bambini accompagnati.`);
+    }
+  });
+  if (!normalizeEmail(formData.get("emailConfirmation")) ||
+      normalizeEmail(formData.get("emailConfirmation")) !== email) {
+    errors.unshift("Gli indirizzi email devono coincidere.");
+  }
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value };
 }
 
@@ -174,6 +190,8 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
 
   if (!input.birthDate) {
     errors.push("Inserisci la data di nascita.");
+  } else if (!isValidBirthDate(input.birthDate)) {
+    errors.push("Inserisci una data di nascita valida.");
   }
 
   if (!input.birthPlace) {
@@ -186,6 +204,8 @@ export function validateRegistrationInput(input: RegistrationInput): string[] {
 
   if (!input.countryId && !input.countryOther) {
     errors.push("Seleziona un paese o indica un paese non presente in lista.");
+  } else if (input.countryOther && !isCountryName(input.countryOther)) {
+    errors.push(COUNTRY_VALIDATION_MESSAGE.it);
   }
 
   if (!input.cityId && !input.cityOther) {

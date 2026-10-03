@@ -40,6 +40,8 @@ try {
     'document.querySelectorAll("tbody tr").length === 12 && !Array.from(document.querySelectorAll("th")).some(e => /Azioni|Dettagli/.test(e.textContent))',
     "no Actions or Details column",
   );
+  check('document.querySelectorAll("tbody ul").length === 1 && document.querySelector("tbody ul").textContent.includes("Sofia Bianchi · 6 anni") && document.querySelector("tbody ul").textContent.includes("Luca Bianchi · meno di 1 anno")', "children visible immediately under their parent with event age");
+  check('document.querySelector("tbody tr").textContent.includes("2 figli accompagnati") && !document.body.textContent.includes("Mostra figli accompagnati")', "always visible without a toggle");
   click("summary", "Colonne visibili");
   ab("snapshot", "-i");
   evaluate(
@@ -88,17 +90,24 @@ try {
   ab("open", `${base}/leader-participants-check`);
   ab("snapshot", "-i");
   ab("set", "viewport", "1280", "900");
+  evaluate('document.querySelector("tbody ul").scrollIntoView({block:"center"})');
   ab("screenshot", "/tmp/pace-leader-desktop.png");
   ab("set", "viewport", "390", "844");
   check(
     "document.documentElement.scrollWidth <= innerWidth",
     "mobile overflow stays within table",
   );
+  evaluate('document.querySelector("tbody ul").scrollIntoView({block:"center"})');
   ab("screenshot", "/tmp/pace-leader-mobile.png");
   check(
     '!document.querySelector("[data-nextjs-dialog]")',
     "no framework error overlay",
   );
+  for (const locale of ["en", "fr", "de", "es", "nl", "uk", "it"]) {
+    ab("select", 'select[aria-label="Lingua fixture"]', locale);
+    ab("snapshot", "-i");
+    check('document.querySelectorAll("tbody ul li").length === 2 && document.querySelector("tbody ul").textContent.includes("Sofia Bianchi") && document.documentElement.scrollWidth <= innerWidth', `${locale}: children remain visible after locale and column/sort changes on mobile`);
+  }
   assert.equal(ab("errors").trim(), "");
 } finally {
   ab("close");

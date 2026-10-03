@@ -26,6 +26,10 @@ export type OperationsGroupOption = {
 };
 
 export type OperationsParticipantRow = {
+  nationality?: string | null;
+  association?: string | null;
+  accessibility?: string;
+  attendance?: import("../groups/leader-attendance.ts").AttendanceChoice[];
   deletedAt?: string | null;
   deletedBy?: string | null;
   deletedByName?: string | null;
@@ -44,6 +48,7 @@ export type OperationsParticipantRow = {
   city: string | null;
   place: string;
   email: string | null;
+  emailDelegated?: boolean;
   phone: string | null;
   registrationStatus: string | null;
   submittedAt: string | null;

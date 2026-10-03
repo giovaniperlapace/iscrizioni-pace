@@ -1,3 +1,6 @@
+import { withStatisticsDifficulties } from "../registrations/disability-statistics.server.ts";
+import { loadAccessibilitySummaries } from "../registrations/accessibility-summary.server.ts";
+import { participantGeography, type ParticipantGeography } from "../registrations/geography.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashIdentityFingerprint } from "./fingerprint.server.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
@@ -15,6 +18,11 @@ import {
 } from "../registrations/event-statistics.ts";
 
 export type QualityPerson = Identity & {
+  nationality?: string | null;
+  association?: string | null;
+  sex?: import("../registrations/assisted-demographics.ts").InternalSex;
+  accessibility?: string;
+  attendance?: import("../registrations/attendance-summary.ts").SummaryAttendanceChoice[];
   participantId: string;
   eventId: string;
   eventTitle: string;
@@ -53,6 +61,8 @@ type Registration = {
     birth_date: string | null;
     country_other: string | null;
     city_other: string | null;
+    countries?: ParticipantGeography["countries"];
+    cities?: ParticipantGeography["cities"];
     public_code: string;
     auth_user_id: string | null;
   } | null;
@@ -73,7 +83,7 @@ export async function loadQualityPeople(
       db
         .from("registrations")
         .select(
-          "id,event_id,participant_id,status,submitted_at,deleted_at,participants(first_name,last_name,birth_date,country_other,city_other,public_code,auth_user_id),registration_children(id,first_name,last_name,birth_date,position)",
+          "id,event_id,participant_id,status,submitted_at,deleted_at,participants(first_name,last_name,birth_date,country_other,city_other,public_code,auth_user_id,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)",
         )
         .eq("event_id", eventId)
         .order("id")
@@ -141,6 +151,7 @@ export async function loadQualityPeople(
     .filter((row) => row.participants)
     .map((row) => {
       const p = row.participants!;
+      const geography = participantGeography(p);
       const contact = contactsByParticipant.get(row.participant_id);
       const group = groupsByRegistration.get(row.id);
       const groupRelation = group?.groups as unknown as { name: string } | null;
@@ -155,10 +166,10 @@ export async function loadQualityPeople(
         lastName: p.last_name,
         name: `${p.first_name} ${p.last_name}`,
         birthDate: p.birth_date,
-        country: p.country_other,
-        city: p.city_other,
+        country: geography.country,
+        city: geography.city,
         place:
-          [p.city_other, p.country_other].filter(Boolean).join(", ") ||
+          [geography.city, geography.country].filter(Boolean).join(", ") ||
           "Provenienza non indicata",
         publicCode: p.public_code,
         authUserId: p.auth_user_id,
@@ -264,7 +275,13 @@ export async function filteredExportPeople(
     ends_on: string | null;
   },
   params: URLSearchParams,
+  includeAccessibility = false,
+  canFilterAccessibility = false,
+  accessibilityDb: SupabaseClient = db,
 ) {
+  const drilldown = parseStatisticsDrilldown(params.get("stat") ?? undefined);
+  if (params.has("stat") && !drilldown) throw new Error("Filtro statistiche non valido.");
+  if (drilldown?.difficulty && !canFilterAccessibility) throw new Error("Non hai i permessi per questa operazione.");
   const all = (await loadQualityPeople(db, event.id)).map((person) => ({
     ...person,
     eventTitle: event.title,
@@ -288,9 +305,6 @@ export async function filteredExportPeople(
           .range(from, to),
     )
   ).data as StatisticsAttendanceChoice[];
-  const drilldown = parseStatisticsDrilldown(params.get("stat") ?? undefined);
-  if (params.has("stat") && !drilldown)
-    throw new Error("Filtro statistiche non valido.");
   if (drilldown) {
     const groups = (
       await loadAllRows((from, to) =>
@@ -317,12 +331,21 @@ export async function filteredExportPeople(
     });
     people = applyStatisticsDrilldownToOperations(
       people,
-      statistics,
+      drilldown.difficulty ? await withStatisticsDifficulties(accessibilityDb, statistics) : statistics,
       drilldown,
     ).participants;
   }
+  const accessibility = includeAccessibility
+    ? await loadAccessibilitySummaries(accessibilityDb, people.map(person => person.id))
+    : new Map<string, string>();
+  const attendanceByRegistration = new Map<string, StatisticsAttendanceChoice[]>();
+  for (const choice of attendance) {
+    const choices = attendanceByRegistration.get(choice.registration_id) ?? [];
+    choices.push(choice);
+    attendanceByRegistration.set(choice.registration_id, choices);
+  }
   return {
-    people,
+    people: people.map(person => ({ ...person, accessibility: accessibility.get(person.id), attendance: attendanceByRegistration.get(person.id) ?? [] })),
     attendance: attendance.filter((choice) =>
       people.some((person) => person.id === choice.registration_id),
     ),

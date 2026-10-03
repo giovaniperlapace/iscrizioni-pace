@@ -1,5 +1,7 @@
 "use client";
 
+import { ProgressButton } from "@/components/button-progress";
+
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 
@@ -30,7 +32,7 @@ export function CopyLinkButton({
         : label;
 
   return (
-    <button
+    <ProgressButton progressError={failed}
       type="button"
       disabled={isCopying}
       aria-busy={isCopying}
@@ -82,7 +84,7 @@ export function CopyLinkButton({
       ) : (
         statusLabel
       )}
-    </button>
+    </ProgressButton>
   );
 }
 

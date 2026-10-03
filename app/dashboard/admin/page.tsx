@@ -1,7 +1,27 @@
+import { loadAssociations } from "@/lib/registrations/association.server";
+import { ExportsSection } from "@/app/dashboard/exports-section";
+import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
+import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
+import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
+import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
+import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
+import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
+import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
+import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
+import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
+import { AdminGroupsTable } from "@/app/dashboard/admin/admin-groups-table";
+import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
+import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
+import { groupLeaderSummaries, type GroupLeaderSummary } from "@/lib/groups/leader-summary";
+import { loadEventStatisticsSnapshot } from "@/lib/registrations/event-statistics.server";
+import { participantGeography, type ParticipantGeography } from "@/lib/registrations/geography";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
-import { OperationalRoleRemoval } from "@/components/operational-role-removal";
+import { OperationalRoleDialog } from "@/components/operational-role-dialog";
+import { loadRolelessPerson } from "@/lib/operational-users/roleless-person";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { Settings } from "lucide-react";
@@ -11,6 +31,7 @@ import { permanentRedirect, redirect } from "next/navigation";
 import Link from "@/components/pending-link";
 import {
   BarChart3,
+  FileDown,
   Mail,
   MapPin,
   Network,
@@ -29,13 +50,11 @@ import {
   updateGroupPublicCatalogVisibility,
   updateGroupRegistrationLink,
   updateEventOpeningState,
-  updateOperationalUserRole,
 } from "@/app/actions";
 import {
   DashboardAreaDescription,
   DashboardRoleTabs,
 } from "@/app/dashboard/role-tabs";
-import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { GroupPublicCatalogSwitch } from "@/app/dashboard/group-public-catalog-switch";
 import {
   GroupAgeBandFields,
@@ -94,7 +113,6 @@ import {
 } from "@/lib/registrations/event-statistics";
 import {
   getOperationalUserIdentities,
-  splitFullName,
 } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
 import {
@@ -118,6 +136,9 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type AdminPageProps = {
   searchParams: Promise<{
+    manual?: string;
+    manualSaved?: string;
+    manualError?: string;
     openingError?: string;
     openingSaved?: string;
     adminError?: string;
@@ -152,6 +173,7 @@ type AdminPageProps = {
     nav?: string;
     section?: string;
     stat?: string;
+    report?: string;
     status?: string;
     locationError?: string;
     locationId?: string;
@@ -254,6 +276,8 @@ type AdminRegistrationRow = {
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
+        countries?: ParticipantGeography["countries"];
+        cities?: ParticipantGeography["cities"];
       }
     | Array<{
         id: string;
@@ -264,6 +288,8 @@ type AdminRegistrationRow = {
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
+        countries?: ParticipantGeography["countries"];
+        cities?: ParticipantGeography["cities"];
       }>
     | null;
 };
@@ -315,6 +341,11 @@ type AdminGroupTreeRow = {
   eventId: string;
   eventTitle: string;
   name: string;
+  countryId: string | null;
+  cityId: string | null;
+  cityScope?: "inherit" | "country";
+  cityIds?: string[];
+  updatedAt: string;
   parentGroupId: string | null;
   parentName: string | null;
   nodeType: string | null;
@@ -325,6 +356,7 @@ type AdminGroupTreeRow = {
   isPublicCatalog: boolean | null;
   publicOrder: number | null;
   primaryLeaderName: string | null;
+  leaders: GroupLeaderSummary[];
   publicLabel: string | null;
 };
 
@@ -404,14 +436,8 @@ type OperationalUserRoleAssignment = {
   groupName: string | null;
 };
 
-type AttendanceChoiceRow = {
-  registration_id: string;
-  day: string | null;
-  day_part: string | null;
-  choice: string | null;
-};
 
-type AdminSection = "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi" | "panel";
+type AdminSection = "panel" | "esportazioni" | "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
@@ -442,7 +468,11 @@ export default async function AdminDashboardPage({
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveAdminSection(params);
   const participantSchoolsView = activeSection === "iscritti" && params.view === "schools";
+  const statisticsReport = resolveStatisticsReport(params.report);
+  const statisticsDrilldown =
+    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const needsAdminOperations = activeSection !== "impostazioni";
+  const loadPlan = dashboardLoadPlan(activeSection);
   const currentEvent = needsAdminOperations
     ? await getCurrentOperationalEvent(
         serviceSupabase,
@@ -459,7 +489,7 @@ export default async function AdminDashboardPage({
     panelStatistics,
   ] = await Promise.all([
     activeSection === "impostazioni" ? getOpeningSnapshots() : Promise.resolve([]),
-    needsAdminOperations
+    needsAdminOperations && loadPlan.operations
       ? getAdminOperationsSnapshot(filters, currentEventId)
       : getAdminOperationsSnapshot(filters, null),
     activeSection === "panel" && currentEventId
@@ -475,15 +505,19 @@ export default async function AdminDashboardPage({
       ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
       : Promise.resolve(emptyPanelStatisticsSnapshot()),
   ]);
-  const statisticsDrilldown =
-    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
+  const associationStatistics = activeSection === "dashboard" && statisticsReport === "territory" && currentEventId
+    ? await loadAssociationStatistics(serviceSupabase, currentEventId, currentEvent?.starts_on ?? null, currentEvent?.ends_on ?? null)
+    : undefined;
+  const disabilityStatistics = (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty
+    ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
+    : undefined;
   const statistics =
-    activeSection === "dashboard" || statisticsDrilldown
+    (activeSection === "dashboard" && statisticsReport !== "disability") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getAdminStatisticsSnapshot(
-          adminOperations.groupTree,
           currentEventId,
           currentEvent?.starts_on ?? null,
-          currentEvent?.ends_on ?? null
+          currentEvent?.ends_on ?? null,
+          statisticsDrilldown || statisticsReport === "disability" ? "all" : statisticsReport
         )
       : buildEventStatisticsSnapshot({
           participants: [],
@@ -493,7 +527,7 @@ export default async function AdminDashboardPage({
   const statisticsSelection = statisticsDrilldown
     ? applyStatisticsDrilldownToOperations(
         adminOperations.participants,
-        statistics,
+        statisticsDrilldown.difficulty ? { ...statistics, people: disabilityStatistics?.people ?? [] } : statistics,
         statisticsDrilldown
       )
     : null;
@@ -513,7 +547,7 @@ export default async function AdminDashboardPage({
     null;
   const selectedOperationalRole =
     adminOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
-    null;
+    (params.roleUserId && params.section === "ruoli" ? await loadRolelessPerson(params.roleUserId) : null);
   const selectedLocation =
     panelLocations.find((location) => location.id === params.locationId) ?? null;
   const selectedPanel =
@@ -542,9 +576,10 @@ export default async function AdminDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <AdminSidebar activeSection={activeSection} navMode={navMode} />
+          <AdminSidebar activeSection={activeSection} navMode={navMode} report={statisticsReport} />
 
           <div className="grid min-w-0 gap-6">
+            <GroupAssignmentReports dashboard="admin" eventId={currentEventId} />
             <StatusMessage
               error={params.openingError}
               saved={params.openingSaved}
@@ -571,11 +606,17 @@ export default async function AdminDashboardPage({
                 eventId={currentEventId}
                 statistics={statistics}
                 panelStatistics={panelStatistics}
+                report={statisticsReport}
+                canViewDisability={true}
+                disabilityStatistics={disabilityStatistics}
+                associationStatistics={associationStatistics}
                 dashboard="admin"
                 navMode={navMode}
                 canManage
               />
             ) : null}
+
+            {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
             {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
@@ -584,6 +625,7 @@ export default async function AdminDashboardPage({
                 operatorId={auth.user.id}
                 eventId={currentEventId}
                 eventStartsOn={currentEvent?.starts_on ?? null}
+                eventEndsOn={currentEvent?.ends_on ?? null}
                 selectedParticipant={selectedAdminParticipant}
                 canManageEvent={() => true}
                 dashboard="admin"
@@ -652,6 +694,7 @@ export default async function AdminDashboardPage({
 
             {activeSection === "ruoli" ? (
               <AdminOperationalUsersSection
+                actorUserId={auth.user.id}
                 roles={adminOperations.roleUsers}
                 eventOptions={
                   currentEvent ? [{ id: currentEvent.id, title: currentEvent.title }] : []
@@ -721,75 +764,71 @@ export default async function AdminDashboardPage({
       };
     }
 
+    const empty = { data: [], error: null };
     const [
       { data: registrations },
       { data: groups },
       { data: groupTree },
-      { data: groupLinks, error: groupLinksError },
+      { data: groupLinks },
       { data: operationalTags },
       { data: eventServices },
       { data: eventRoles },
       { data: groupMemberships },
     ] = await Promise.all([
-      loadAllRows((from, to) => serviceSupabase
+      loadPlan.participants ? loadAllRows((from, to) => serviceSupabase
         .from("registrations")
         .select(
-          "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+          "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)"
         )
         .filter("deleted_at", activeSection === "iscritti" && params.view === "deleted" ? "not.is" : "is", "null")
         .eq("event_id", currentEventId)
         .order("submitted_at", { ascending: false })
-        .order("id").range(from, to)),
-      serviceSupabase
+        .order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.groups ? loadAllRows((from, to) => serviceSupabase
         .from("groups")
         .select("id,event_id,name,is_assignable,is_active")
         .eq("event_id", currentEventId)
         .eq("is_active", true)
         .eq("is_assignable", true)
-        .order("name", { ascending: true }),
-      serviceSupabase
+        .order("name", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.groupTree ? loadAllRows((from, to) => serviceSupabase
         .from("groups")
         .select(
-          "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
+          "id,event_id,name,public_label,country_id,city_id,city_scope,updated_at,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
         )
         .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
-        .order("name", { ascending: true }),
-      serviceSupabase
+        .order("name", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.groupLinks ? loadAllRows((from, to) => serviceSupabase
         .from("group_registration_links")
         .select(
           "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
         )
         .eq("event_id", currentEventId)
         .eq("is_canonical", true)
-        .order("created_at", { ascending: false }),
-      serviceSupabase
+        .order("created_at", { ascending: false }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.tags ? loadAllRows((from, to) => serviceSupabase
         .from("operational_tags")
         .select("id,event_id,label,color")
         .eq("event_id", currentEventId)
-        .order("label", { ascending: true }),
-      serviceSupabase
+        .order("label", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.services ? loadAllRows((from, to) => serviceSupabase
         .from("event_services")
         .select("id,event_id,label,description,is_active,public_order")
         .eq("event_id", currentEventId)
         .order("public_order", { ascending: true })
-        .order("label", { ascending: true }),
-      serviceSupabase
+        .order("label", { ascending: true }).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.roles ? loadAllRows((from, to) => serviceSupabase
         .from("event_user_roles")
         .select("user_id,role,event_id,events(title)")
-        .or(`event_id.is.null,event_id.eq.${currentEventId}`),
-      serviceSupabase
+        .or(`event_id.is.null,event_id.eq.${currentEventId}`).order("id").range(from, to)) : Promise.resolve(empty),
+      loadPlan.roles ? loadAllRows((from, to) => serviceSupabase
         .from("group_memberships")
         .select("user_id,role,is_primary,group_id,groups!inner(id,name,event_id,events(title))")
-        .eq("groups.event_id", currentEventId),
+        .eq("groups.event_id", currentEventId).order("id").range(from, to)) : Promise.resolve(empty),
     ]);
 
-    if (groupLinksError) {
-      console.error("[admin:group-registration-links]", {
-        code: groupLinksError.code,
-        message: groupLinksError.message,
-      });
-    }
+
     const registrationRows = (registrations ?? []) as AdminRegistrationRow[];
     const deletedActorIdentities = await getOperationalUserIdentities(serviceSupabase,
       registrationRows.flatMap(row => row.deleted_by ? [row.deleted_by] : []));
@@ -846,8 +885,18 @@ export default async function AdminDashboardPage({
     );
     const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
     const serviceByParticipantId = mapParticipantEventServices(participantServices);
+    const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities, associations] = activeSection === "iscritti"
+      ? await Promise.all([
+          loadAttendanceSummaries(serviceSupabase, registrationIds),
+          loadEmailDelegations(serviceSupabase, registrationIds),
+          loadAccessibilitySummaries(serviceSupabase, registrationIds),
+          loadNationalities(serviceSupabase, registrationIds),
+          loadAssociations(serviceSupabase, registrationIds),
+        ])
+      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>(), new Map<string, string | null>()];
     const participantRows = registrationRows.map((registration) => {
         const participant = relatedOne(registration.participants);
+        const geography = participantGeography(participant);
         const event = relatedOne(registration.events);
         const contact = contactByParticipantId.get(registration.participant_id);
         const assignment = assignmentByRegistrationId.get(registration.id);
@@ -860,6 +909,11 @@ export default async function AdminDashboardPage({
           deletedBy: registration.deleted_by,
           deletedByName: registration.deleted_by ? deletedActorIdentities.get(registration.deleted_by)?.fullName ?? deletedActorIdentities.get(registration.deleted_by)?.email ?? null : null,
           deletionReason: registration.deletion_reason,
+          attendance: attendanceByRegistration.get(registration.id) ?? [],
+          accessibility: accessibilityByRegistration.get(registration.id),
+        nationality: nationalities.get(registration.id),
+        association: associations.get(registration.id),
+          emailDelegated: emailDelegations.has(registration.id),
           registrationId: registration.id,
           eventId: registration.event_id,
           eventTitle: event?.title ?? "Evento",
@@ -873,9 +927,9 @@ export default async function AdminDashboardPage({
           ),
           publicCode: participant?.public_code ?? null,
           birthDate: participant?.birth_date ?? null,
-          country: participant?.country_other ?? null,
-          city: participant?.city_other ?? null,
-          place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
+          country: geography.country,
+          city: geography.city,
+          place: formatPlace(geography.city, geography.country),
           email: contact?.email ?? null,
           phone: contact?.phone ?? null,
           registrationStatus: registration.status,
@@ -900,10 +954,15 @@ export default async function AdminDashboardPage({
       participantRows,
       filters
     );
+    const cityLinks = await loadGroupCityLinks(serviceSupabase, (groupTree ?? []).map(group => group.id));
     const groupTreeRows = (groupTree ?? []) as Array<{
       id: string;
       event_id: string;
       name: string | null;
+      country_id: string | null;
+      city_id: string | null;
+      city_scope?: "inherit" | "country";
+      updated_at: string;
       parent_group_id: string | null;
       node_type: string | null;
       community_kind: string | null;
@@ -945,6 +1004,11 @@ export default async function AdminDashboardPage({
         eventId: group.event_id,
         eventTitle: relatedOne(group.events)?.title ?? "Evento",
         name: group.name ?? "Gruppo senza nome",
+        countryId: group.country_id,
+        cityId: group.city_id,
+        cityScope: group.city_scope,
+        cityIds: cityLinks.get(group.id) ?? [],
+        updatedAt: group.updated_at,
         parentGroupId: group.parent_group_id,
         parentName: group.parent_group_id
           ? groupNameById.get(group.parent_group_id) ?? null
@@ -957,6 +1021,7 @@ export default async function AdminDashboardPage({
         isPublicCatalog: group.is_public_catalog,
         publicOrder: group.public_order,
         primaryLeaderName: group.primary_leader_name,
+        leaders: groupLeaderSummaries(roleUsers, group.id, group.event_id),
         publicLabel: group.public_label,
       })),
       groupLinks: ((groupLinks ?? []) as AdminGroupRegistrationLinkRow[]).map(
@@ -1010,10 +1075,10 @@ export default async function AdminDashboardPage({
   }
 
   async function getAdminStatisticsSnapshot(
-    groupTree: AdminGroupTreeRow[],
     currentEventId: string | null,
     eventStartsOn: string | null,
-    eventEndsOn: string | null
+    eventEndsOn: string | null,
+    report: Exclude<StatisticsReport, "disability"> | "all"
   ): Promise<EventStatisticsSnapshot> {
     if (!currentEventId) {
       return buildEventStatisticsSnapshot({
@@ -1023,108 +1088,29 @@ export default async function AdminDashboardPage({
       });
     }
 
-    const { data: registrations } = await serviceSupabase
-      .from("registrations")
-      .select(
-        "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
-      )
-      .is("deleted_at", null)
-      .eq("event_id", currentEventId)
-      .order("submitted_at", { ascending: false })
-      .range(0, 9999);
-    const registrationRows = (registrations ?? []) as AdminRegistrationRow[];
-    const registrationIds = registrationRows.map((row) => row.id);
-    const [{ data: assignments }, { data: attendanceChoices }] = await Promise.all([
-      registrationIds.length > 0
-        ? serviceSupabase
-            .from("participant_group_assignments")
-            .select(
-              "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)"
-            )
-            .in("registration_id", registrationIds)
-            .eq("is_current", true)
-        : Promise.resolve({ data: [] }),
-      registrationIds.length > 0
-        ? serviceSupabase
-            .from("event_attendance_choices")
-            .select("registration_id,day,day_part,choice")
-            .in("registration_id", registrationIds)
-        : Promise.resolve({ data: [] }),
-    ]);
-    const assignmentByRegistrationId = new Map(
-      ((assignments ?? []) as AdminCurrentAssignmentRow[]).map((row) => [
-        row.registration_id,
-        row,
-      ])
-    );
-    const participants = registrationRows.map((registration) => {
-      const participant = relatedOne(registration.participants);
-      const event = relatedOne(registration.events);
-      const assignment = assignmentByRegistrationId.get(registration.id);
-      const group = relatedOne(assignment?.groups ?? null);
-
-      return {
-        registrationId: registration.id,
-        eventId: registration.event_id,
-        eventTitle: event?.title ?? "Evento",
-        participantId: registration.participant_id,
-        authUserId: participant?.auth_user_id ?? null,
-        name: formatParticipantName(
-          participant?.first_name ?? null,
-          participant?.last_name ?? null
-        ),
-        birthDate: participant?.birth_date ?? null,
-        publicCode: participant?.public_code ?? null,
-        country: participant?.country_other ?? null,
-        city: participant?.city_other ?? null,
-        place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
-        email: null,
-        phone: null,
-        registrationStatus: registration.status,
-        submittedAt: registration.submitted_at,
-        currentGroupId: assignment?.group_id ?? null,
-        currentGroupName: group?.name ?? null,
-        currentGroupStatus: assignment?.status ?? null,
-        childrenCount: registration.registration_children?.length ?? 0,
-        children: (registration.registration_children ?? []).map((child) => ({
-          id: child.id,
-          firstName: child.first_name,
-          lastName: child.last_name,
-          birthDate: child.birth_date,
-          position: child.position,
-        })),
-      };
-    });
-
-    return buildEventStatisticsSnapshot({
-      participants,
-      groups: groupTree,
-      attendanceChoices: (attendanceChoices ?? []) as AttendanceChoiceRow[],
-      eventStartsOn,
-      eventEndsOn,
-    });
+    return loadEventStatisticsSnapshot(serviceSupabase, currentEventId, { eventStartsOn, eventEndsOn }, report);
   }
 
   async function getOpeningSnapshots(): Promise<EventSnapshot[]> {
-    const { data: events } = await serviceSupabase
+    const { data: events } = await loadAllRows((from, to) => serviceSupabase
       .from("events")
       .select(
         "id,slug,title,status,is_current,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
       )
-      .order("starts_on", { ascending: false });
+      .order("starts_on", { ascending: false }).order("id").range(from, to));
 
     return Promise.all(((events ?? []) as EventRow[]).map(getEventSnapshot));
   }
 
   async function getEventSnapshot(event: EventRow): Promise<EventSnapshot> {
-    const { data: registrations } = await serviceSupabase
+    const { data: registrations } = await loadAllRows((from, to) => serviceSupabase
       .from("registrations")
       .select(
         "id,participant_id,status,submitted_at,registration_children(id,first_name,last_name,birth_date,position)"
       )
       .is("deleted_at", null)
       .eq("event_id", event.id)
-      .order("submitted_at", { ascending: false });
+      .order("submitted_at", { ascending: false }).order("id").range(from, to));
     const registrationRows = (registrations ?? []) as RegistrationRow[];
     const registrationIds = registrationRows.map((row) => row.id);
     const participantIds = registrationRows.map((row) => row.participant_id);
@@ -1139,32 +1125,32 @@ export default async function AdminDashboardPage({
       { data: emailErrors },
     ] = await Promise.all([
       registrationIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(registrationIds, (batch, from, to) => serviceSupabase
             .from("participant_group_assignments")
             .select("registration_id,status,source,is_current,assignment_reason")
-            .in("registration_id", registrationIds)
-            .eq("is_current", true)
+            .in("registration_id", batch)
+            .eq("is_current", true).order("id").range(from, to))
         : Promise.resolve(emptyResult),
       registrationIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(registrationIds, (batch, from, to) => serviceSupabase
             .from("qr_tokens")
             .select("registration_id")
-            .in("registration_id", registrationIds)
+            .in("registration_id", batch).order("id").range(from, to))
         : Promise.resolve(emptyResult),
       registrationIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(registrationIds, (batch, from, to) => serviceSupabase
             .from("accessibility_needs")
             .select("registration_id,needs_operational_support")
-            .in("registration_id", registrationIds)
+            .in("registration_id", batch).order("id").range(from, to))
         : Promise.resolve(emptyResult),
       participantIds.length > 0
-        ? serviceSupabase
+        ? loadRowsForIds(participantIds, (batch, from, to) => serviceSupabase
             .from("participant_contacts")
             .select("participant_id,email")
-            .in("participant_id", participantIds)
-            .eq("is_primary", true)
+            .in("participant_id", batch)
+            .eq("is_primary", true).order("id").range(from, to))
         : Promise.resolve(emptyResult),
-      serviceSupabase
+      loadAllRows((from, to) => serviceSupabase
         .from("audit_logs")
         .select("id")
         .eq("event_id", event.id)
@@ -1172,7 +1158,7 @@ export default async function AdminDashboardPage({
           "email.magic_link_failed",
           "email.registration_confirmation_failed",
         ])
-        .gte("created_at", since),
+        .gte("created_at", since).order("id").range(from, to)),
     ]);
     const assignmentByRegistrationId = new Map(
       ((assignments ?? []) as AssignmentRow[]).map((row) => [
@@ -1225,9 +1211,11 @@ export default async function AdminDashboardPage({
 function AdminSidebar({
   activeSection,
   navMode,
+  report,
 }: {
   activeSection: AdminSection;
   navMode: AdminNavMode;
+  report: StatisticsReport;
 }) {
   const isMini = navMode === "mini";
   const nextMode = isMini ? "full" : "mini";
@@ -1245,6 +1233,13 @@ function AdminSidebar({
       Icon: BarChart3,
       label: "Statistiche",
       help: "Evento e partecipanti",
+    },
+    {
+      key: "esportazioni",
+      href: adminPath("esportazioni", navMode),
+      Icon: FileDown,
+      label: "Esportazioni",
+      help: "Presenze per gruppo in Excel",
     },
     {
       key: "iscritti",
@@ -1297,7 +1292,7 @@ function AdminSidebar({
           Admin
         </span>
         <Link
-          href={adminPath(activeSection, nextMode)}
+          href={`${adminPath(activeSection, nextMode)}${activeSection === "dashboard" ? `&report=${report}` : ""}`}
           aria-label={toggleLabel}
           title={toggleLabel}
           className="btn-secondary grid min-h-9 min-w-9 place-items-center px-2 text-sm"
@@ -1519,7 +1514,7 @@ function aggregateOperationalUserRows(
   const rowsByKey = new Map<string, OperationalUserRoleRow>();
 
   for (const item of assignments) {
-    const key = item.email ? `email:${item.email.toLowerCase()}` : `user:${item.userId}`;
+    const key = `user:${item.userId}`;
     const row =
       rowsByKey.get(key) ??
       {
@@ -1761,12 +1756,14 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
 }
 
 function AdminOperationalUsersSection({
+  actorUserId,
   roles,
   eventOptions,
   groupOptions,
   selectedRole,
   navMode,
 }: {
+  actorUserId: string;
   roles: OperationalUserRoleRow[];
   eventOptions: Array<{ id: string; title: string }>;
   groupOptions: AdminGroupTreeRow[];
@@ -1861,6 +1858,7 @@ function AdminOperationalUsersSection({
 
       {selectedRole ? (
         <AdminOperationalRoleEditOverlay
+          actorUserId={actorUserId}
           role={selectedRole}
           eventOptions={eventOptions}
           groupOptions={groupOptions}
@@ -1872,136 +1870,19 @@ function AdminOperationalUsersSection({
 }
 
 function AdminOperationalRoleEditOverlay({
-  role,
-  eventOptions,
-  groupOptions,
-  navMode,
+  role, eventOptions, groupOptions, navMode, actorUserId,
 }: {
   role: OperationalUserRoleRow;
   eventOptions: Array<{ id: string; title: string }>;
   groupOptions: AdminGroupTreeRow[];
   navMode: AdminNavMode;
+  actorUserId: string;
 }) {
-  const nameParts = splitFullName(role.fullName);
-  const currentAssignment = preferredOperationalAssignment(role);
-
-  return (
-    <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[rgba(16,36,64,0.42)] px-4 py-8">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold">Modifica utente operativo</h3>
-            <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Aggiorna dati, ruolo e responsabilità della persona selezionata.
-            </p>
-          </div>
-          <Link
-            href={`/dashboard/admin?section=ruoli&nav=${navMode}`}
-            scroll={false}
-            aria-label="Chiudi"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--peace-border)] text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            <X className="size-5" aria-hidden="true" />
-          </Link>
-        </div>
-
-        <ReliableForm action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
-          <input type="hidden" name="sourceDashboard" value="admin" />
-          <input type="hidden" name="nav" value={navMode} />
-          <input type="hidden" name="currentUserId" value={role.userId} />
-          <input type="hidden" name="currentRole" value={preferredOperationalRole(role)} />
-          <input type="hidden" name="currentEventId" value={currentAssignment?.eventId ?? ""} />
-          <input type="hidden" name="currentGroupId" value={currentAssignment?.groupId ?? ""} />
-          <div className="grid gap-3 lg:grid-cols-3">
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Nome
-              <input
-                name="firstName"
-                className="field bg-white font-normal"
-                defaultValue={nameParts.firstName}
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Cognome
-              <input
-                name="lastName"
-                className="field bg-white font-normal"
-                defaultValue={nameParts.lastName}
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Email
-              <input
-                name="email"
-                type="email"
-                className="field bg-white font-normal"
-                defaultValue={role.email ?? ""}
-                readOnly
-                required
-              />
-            </label>
-          </div>
-          <OperationalRoleFields
-            eventOptions={eventOptions}
-            groupOptions={groupOptions.map((group) => ({
-              id: group.id,
-              name: group.name,
-              eventTitle: group.eventTitle,
-            }))}
-            roleOptions={[
-              { value: "capogruppo", label: "Capogruppo" },
-              { value: "manager", label: "Manager" },
-              { value: "manager_viewer", label: "Manager viewer" },
-              { value: "accoglienza", label: "Accoglienza" },
-              { value: "admin", label: "Admin globale" },
-            ]}
-            defaultRole={preferredOperationalRole(role)}
-            defaultEventId={role.eventRoles[0]?.eventId ?? role.groupLeaderAssignments[0]?.eventId}
-            defaultGroupIds={role.groupLeaderAssignments
-              .map((assignment) => assignment.groupId)
-              .filter((groupId): groupId is string => Boolean(groupId))}
-            defaultLeaderKindsByGroupId={Object.fromEntries(
-              role.groupLeaderAssignments
-                .filter((assignment) => assignment.groupId)
-                .map((assignment) => [
-                  assignment.groupId,
-                  assignment.isPrimaryGroupLeader ? "primary" : "secondary",
-                ])
-            )}
-            defaultLeaderKind={role.groupLeaderAssignments.some(
-              (assignment) => assignment.isPrimaryGroupLeader
-            )
-              ? "primary"
-              : "secondary"}
-            allowMultipleGroupLeaders
-          />
-          <div className="flex flex-wrap justify-end gap-3">
-            <Link
-              href={`/dashboard/admin?section=ruoli&nav=${navMode}`}
-              scroll={false}
-              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-ink)] transition hover:bg-[var(--peace-sky-100)]"
-            >
-              Annulla
-            </Link>
-            <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-              Salva modifiche
-            </PendingSubmitButton>
-          </div>
-        </ReliableForm>
-        <OperationalRoleRemoval
-          userId={role.userId}
-          assignments={role.assignments}
-          sourceDashboard="admin"
-          navMode={navMode}
-        />
-      </div>
-    </div>
-  );
+  return <OperationalRoleDialog key={role.userId} person={role} eventOptions={eventOptions}
+    groupOptions={groupOptions.map(({ id, eventId, name, eventTitle }) => ({ id, eventId, name, eventTitle }))} sourceDashboard="admin" navMode={navMode} actorUserId={actorUserId} />;
 }
 
-function AdminGroupTreeSection({
+async function AdminGroupTreeSection({
   groups,
   links,
   participants,
@@ -2026,7 +1907,7 @@ function AdminGroupTreeSection({
   createdUrl: string | null;
   navMode: AdminNavMode;
 }) {
-  const filteredGroups = filterGroupRows(groups, filters);
+  const locale = await getRequestLocale();
   const linksByGroupId = groupLinksByGroupId(links);
   const eventOptions = currentEventOption
     ? [currentEventOption]
@@ -2034,6 +1915,7 @@ function AdminGroupTreeSection({
 
   return (
     <section className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <GroupDeletionNotice locale={locale} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Gruppi</h2>
@@ -2050,97 +1932,23 @@ function AdminGroupTreeSection({
         </Link>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-4">
-        <EventValue label="Gruppi visibili" value={filteredGroups.length} />
-        <EventValue label="Iscrivibili" value={filteredGroups.filter((group) => group.isAssignable).length} />
-        <EventValue label="Nel form pubblico" value={filteredGroups.filter((group) => group.isPublicCatalog).length} />
-        <EventValue label="Link attivi" value={links.length} />
-      </div>
-
-      <div className="mt-5 overflow-x-auto">
-        <AutoFilterForm
-          action="/dashboard/admin"
-          blockWhilePending={false}
-          defaults={{
-            groupQ: "",
-            groupType: "all",
-            groupVisibility: "all",
-          }}
-        >
-          <input type="hidden" name="section" value="gruppi" />
-          <input type="hidden" name="nav" value={navMode} />
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
-                <th className="py-3 pr-4 font-semibold">Nodo</th>
-                <th className="py-3 pr-4 font-semibold">Età</th>
-                <th className="py-3 pr-4 font-semibold">Referente principale</th>
-                <th className="py-3 pr-4 font-semibold">Accesso iscrizione</th>
-                <th className="py-3 text-right font-semibold">Azioni</th>
-              </tr>
-              <tr className="border-b border-[var(--peace-border)] bg-[#f7fbfe] align-top">
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-group-q">Cerca gruppo</label>
-                  <input
-                    id="admin-group-q"
-                    name="groupQ"
-                    defaultValue={filters.q}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                    placeholder="Nome, referente, label"
-                  />
-                </th>
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-group-type">Tipo nodo</label>
-                  <select
-                    id="admin-group-type"
-                    name="groupType"
-                    defaultValue={filters.nodeType}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                  >
-                    <option value="all">Tutti i tipi</option>
-                    <option value="country">Paese</option>
-                    <option value="city">Città</option>
-                    <option value="area">Area</option>
-                    <option value="group">Gruppo</option>
-                    <option value="newcomers">Nuovi partecipanti</option>
-                  </select>
-                </th>
-                <th className="py-3 pr-4">
-                  <label className="sr-only" htmlFor="admin-group-visibility">Accesso iscrizione</label>
-                  <select
-                    id="admin-group-visibility"
-                    name="groupVisibility"
-                    defaultValue={filters.visibility}
-                    className="field min-h-10 bg-white text-sm font-normal"
-                  >
-                    <option value="all">Tutti</option>
-                    <option value="public">Nel form pubblico</option>
-                    <option value="reserved">Solo con link</option>
-                    <option value="not-assignable">Non iscrivibile</option>
-                  </select>
-                </th>
-                <th className="py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    {filters.q ||
-                    filters.eventId !== "all" ||
-                    filters.nodeType !== "all" ||
-                    filters.visibility !== "all" ? (
-                      <Link
-                        href={adminPath("gruppi", navMode)}
-                        className="inline-flex min-h-10 items-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-white"
-                      >
-                        Reset
-                      </Link>
-                    ) : null}
-                  </div>
-                </th>
-              </tr>
-            </thead>
-          <tbody>
-            {filteredGroups.map((group) => {
-              const isPublicCatalog = Boolean(group.isPublicCatalog);
-
-              return (
+      <AdminGroupsTable
+        key={JSON.stringify(filters)}
+        initialFilters={filters}
+        linkCount={links.length}
+        rows={groups.map((group) => {
+          const isPublicCatalog = Boolean(group.isPublicCatalog);
+          return {
+            id: group.id,
+            eventId: group.eventId,
+            nodeType: group.nodeType,
+            isAssignable: group.isAssignable,
+            isPublicCatalog: group.isPublicCatalog,
+            searchText: [group.name, group.parentName, group.primaryLeaderName,
+              ...group.leaders.map((leader) => leader.name), group.publicLabel,
+              group.eventTitle, groupNodeTypeLabel(group.nodeType)]
+              .filter(Boolean).join(" ").toLowerCase(),
+            content: (
                 <tr
                   key={group.id}
                   className="border-b border-[var(--peace-border)] align-top last:border-b-0"
@@ -2156,7 +1964,7 @@ function AdminGroupTreeSection({
                     {ageBandsLabel(group.ageBands)}
                   </td>
                   <td className="py-4 pr-4 text-[var(--peace-ink)]">
-                    {group.primaryLeaderName ?? "Da assegnare"}
+                    <GroupLeadersSummary leaders={group.leaders} legacyName={group.primaryLeaderName} />
                   </td>
                   <td className="py-4 pr-4">
                     <div className="grid gap-2">
@@ -2177,7 +1985,7 @@ function AdminGroupTreeSection({
                     </div>
                   </td>
                   <td className="py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <Link
                         href={adminPath(
                           "gruppi",
@@ -2211,45 +2019,36 @@ function AdminGroupTreeSection({
                       >
                         Capogruppo
                       </Link>
+                      <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} />
                     </div>
                   </td>
                 </tr>
-              );
-            })}
-            </tbody>
-          </table>
-        </AutoFilterForm>
-        {filteredGroups.map((group) => {
-          const isPublicCatalog = Boolean(group.isPublicCatalog);
-
-          if (!group.isAssignable) {
-            return null;
-          }
-
-          return (
-            <ReliableForm
-              key={group.id}
-              id={`admin-public-catalog-${group.id}`}
-              action={updateGroupPublicCatalogVisibility}
-              data-preserve-dashboard-scroll
-              className="hidden"
-            >
-              <input type="hidden" name="sourceDashboard" value="admin" />
-              <input type="hidden" name="groupId" value={group.id} />
-              <input type="hidden" name="nav" value={navMode} />
-              {!isPublicCatalog ? (
-                <input type="hidden" name="isPublicCatalog" value="on" />
-              ) : null}
-            </ReliableForm>
-          );
+            ),
+          };
         })}
-      </div>
-
-      {filteredGroups.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          Nessun gruppo corrisponde ai filtri correnti.
-        </p>
-      ) : null}
+      />
+      {groups.map((group) => {
+        const isPublicCatalog = Boolean(group.isPublicCatalog);
+        if (!group.isAssignable) {
+          return null;
+        }
+        return (
+          <ReliableForm
+            key={group.id}
+            id={`admin-public-catalog-${group.id}`}
+            action={updateGroupPublicCatalogVisibility}
+            data-preserve-dashboard-scroll
+            className="hidden"
+          >
+            <input type="hidden" name="sourceDashboard" value="admin" />
+            <input type="hidden" name="groupId" value={group.id} />
+            <input type="hidden" name="nav" value={navMode} />
+            {!isPublicCatalog ? (
+              <input type="hidden" name="isPublicCatalog" value="on" />
+            ) : null}
+          </ReliableForm>
+        );
+      })}
 
       {selectedTool === "edit" ? (
         <AdminGroupEditOverlay
@@ -2283,7 +2082,7 @@ function AdminGroupTreeSection({
   );
 }
 
-function AdminGroupEditOverlay({
+async function AdminGroupEditOverlay({
   group,
   groups,
   eventOptions,
@@ -2296,6 +2095,7 @@ function AdminGroupEditOverlay({
   leaders: OperationalUserRoleRow[];
   navMode: AdminNavMode;
 }) {
+  const [geography, locale] = await Promise.all([loadGroupGeographyCatalog(createSupabaseServiceClient()), getRequestLocale()]);
   const selectedEventId = group?.eventId ?? eventOptions[0]?.id ?? "";
 
   return (
@@ -2314,6 +2114,8 @@ function AdminGroupEditOverlay({
               group={group}
               groups={groups}
               eventId={selectedEventId}
+              geography={geography}
+              locale={locale}
             />
             <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] sm:col-span-2">
               Nome gruppo
@@ -2800,7 +2602,7 @@ function parseGroupTableFilters(input: {
     q: (input.groupQ ?? "").replace(/\s+/g, " ").trim().slice(0, 80),
     eventId: input.groupEvent?.trim() || "all",
     nodeType: isGroupNodeTypeFilter(input.groupType) ? input.groupType ?? "all" : "all",
-    visibility: isGroupVisibilityFilter(input.groupVisibility)
+    visibility: input.groupVisibility === "not-assignable" ? "internal" : isGroupVisibilityFilter(input.groupVisibility)
       ? input.groupVisibility ?? "all"
       : "all",
   };
@@ -2808,6 +2610,7 @@ function parseGroupTableFilters(input: {
 
 function resolveAdminSection(input: { section?: string; openingSaved?: string; openingError?: string; eventTool?: string }): AdminSection {
   if (
+    input.section === "esportazioni" ||
     input.section === "impostazioni" ||
     input.section === "dashboard" ||
     input.section === "iscritti" ||
@@ -2841,19 +2644,7 @@ function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string 
 }
 
 function operationalRoleRowKey(row: OperationalUserRoleRow): string {
-  return row.email ? `email:${row.email.toLowerCase()}` : `user:${row.userId}`;
-}
-
-function preferredOperationalRole(row: OperationalUserRoleRow): string {
-  return row.groupLeaderAssignments.length > 0
-    ? "capogruppo"
-    : (row.eventRoles[0]?.role ?? row.assignments[0]?.role ?? "manager");
-}
-
-function preferredOperationalAssignment(
-  row: OperationalUserRoleRow
-): OperationalUserRoleAssignment | null {
-  return row.groupLeaderAssignments[0] ?? row.eventRoles[0] ?? row.assignments[0] ?? null;
+  return `user:${row.userId}`;
 }
 
 function operationalRoleSummary(row: OperationalUserRoleRow): string {
@@ -2938,59 +2729,6 @@ function operationalRowsForGroupEdit(
         row.eventRoles[0]?.eventId ??
         null,
     }));
-}
-
-function filterGroupRows(
-  groups: AdminGroupTreeRow[],
-  filters: GroupTableFilters
-): AdminGroupTreeRow[] {
-  return groups.filter((group) => {
-    if (filters.eventId !== "all" && group.eventId !== filters.eventId) {
-      return false;
-    }
-
-    if (filters.nodeType !== "all" && group.nodeType !== filters.nodeType) {
-      return false;
-    }
-
-    if (!matchesGroupVisibility(group, filters.visibility)) {
-      return false;
-    }
-
-    if (!filters.q) {
-      return true;
-    }
-
-    const haystack = [
-      group.name,
-      group.parentName,
-      group.primaryLeaderName,
-      group.publicLabel,
-      group.eventTitle,
-      groupNodeTypeLabel(group.nodeType),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(filters.q.toLowerCase());
-  });
-}
-
-function matchesGroupVisibility(
-  group: AdminGroupTreeRow,
-  visibility: string
-): boolean {
-  switch (visibility) {
-    case "public":
-      return Boolean(group.isAssignable && group.isPublicCatalog);
-    case "reserved":
-      return Boolean(group.isAssignable && !group.isPublicCatalog);
-    case "internal":
-      return !group.isAssignable;
-    default:
-      return true;
-  }
 }
 
 function groupLinksByGroupId(

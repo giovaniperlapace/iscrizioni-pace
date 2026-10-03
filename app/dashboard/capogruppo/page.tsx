@@ -1,17 +1,23 @@
 import { LeaderSectionNavigation } from "@/app/dashboard/capogruppo/section-navigation";
+import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
+import { MANUAL_REGISTRATION_COPY, type ManualRegistrationCopy } from "@/lib/registrations/manual-registration-copy";
+import { ManualRegistrationSection } from "@/app/dashboard/manual-registration-section";
+import { ParticipantBirthDateField } from "@/components/participant-birth-date-field";
+import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-accessibility-editor";
+import { OperationalChildrenEditor } from "@/app/dashboard/operational-children-editor";
+import { loadRowsForIds } from "@/lib/supabase/all-rows";
+import { LocalOverlay } from "@/app/dashboard/local-overlay";
+import { LocalQueryLink } from "@/components/local-query-link";
 import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { LeaderParticipantAttendance } from "./participant-attendance";
 import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
-import { ManualPhoneFields } from "@/app/dashboard/capogruppo/manual-phone-fields";
-import { ManualEmailFields } from "./manual-email-fields";
 import { LeaderParticipantQr } from "./participant-qr";
 import { loadLeaderAssignmentQr } from "@/lib/groups/leader-qr.server";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
 import { LeaderParticipantsTable } from "./participants-table";
 import { filterLeaderRows, leaderReturnPath, toLeaderTableRow } from "@/lib/groups/leader-table";
-import { MANUAL_DUPLICATE_COPY } from "@/lib/data-quality/manual-copy";
 
 import { ReliableForm } from "@/components/reliable-form";
 import Link from "@/components/pending-link";
@@ -24,7 +30,6 @@ import {
   updateGroupRegistrationLink,
   updateGroupLeaderParticipantContact,
   updateGroupLeaderAttendance,
-  updateParticipantOperationalTags,
 } from "@/app/actions";
 import {
   DashboardAreaDescription,
@@ -34,9 +39,6 @@ import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { ConfirmSubmitButton } from "@/app/dashboard/confirm-submit-button";
 import { CopyLinkButton } from "@/app/dashboard/group-link-copy-tools";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { ManualAccessibilityFields } from "@/app/dashboard/capogruppo/manual-accessibility-fields";
-import { ManualAttendanceFields } from "@/app/dashboard/capogruppo/manual-attendance-fields";
-import { ManualChildrenFields } from "@/app/dashboard/capogruppo/manual-children-fields";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
@@ -49,9 +51,6 @@ import {
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { decryptQrToken } from "@/lib/qrcode/secure-token";
-import type {
-  OperationalTagOption,
-} from "@/lib/registrations/operational-tags";
 import {
   eventServiceStatusLabel,
   type ParticipantEventService,
@@ -136,17 +135,17 @@ type DashboardTool = "link" | "manual";
 
 type AssignmentSort = "name" | "updated" | "submitted" | "status";
 const GROUP_EXCEPTION_COPY = {
-  it: { reject: "Non appartiene al mio gruppo", help: "La persona verrà spostata in Senza gruppo e potrà essere riassegnata da admin o manager.", warning: (name: string) => `Spostare ${name} in Senza gruppo?` },
-  en: { reject: "Does not belong to my group", help: "The person will move to Without a group and can be reassigned by an admin or manager.", warning: (name: string) => `Move ${name} to Without a group?` },
-  fr: { reject: "Ne fait pas partie de mon groupe", help: "La personne sera déplacée dans Sans groupe et pourra être réaffectée par un administrateur ou un gestionnaire.", warning: (name: string) => `Déplacer ${name} dans Sans groupe ?` },
-  de: { reject: "Gehört nicht zu meiner Gruppe", help: "Die Person wird Ohne Gruppe zugeordnet und kann von Admin oder Manager neu zugewiesen werden.", warning: (name: string) => `${name} nach Ohne Gruppe verschieben?` },
-  es: { reject: "No pertenece a mi grupo", help: "La persona pasará a Sin grupo y podrá ser reasignada por un administrador o gestor.", warning: (name: string) => `¿Mover a ${name} a Sin grupo?` },
-  nl: { reject: "Hoort niet bij mijn groep", help: "De persoon gaat naar Zonder groep en kan door een beheerder of manager opnieuw worden toegewezen.", warning: (name: string) => `${name} naar Zonder groep verplaatsen?` },
-  uk: { reject: "Не належить до моєї групи", help: "Особу буде переміщено до категорії Без групи; адміністратор або менеджер зможе призначити їй групу.", warning: (name: string) => `Перемістити ${name} до категорії Без групи?` },
+  it: { reject: "Segnala un problema di gruppo", sent: "Segnalazione inviata a Manager e Admin. Il gruppo è rimasto invariato.", help: "Invia una segnalazione a Manager e Admin. Il gruppo della persona resterà invariato.", warning: (name: string) => `Segnalare che ${name} non appartiene al gruppo?` },
+  en: { reject: "Report a group issue", sent: "Report sent to Managers and Admins. The group is unchanged.", help: "Send a report to Managers and Admins. The person’s group will remain unchanged.", warning: (name: string) => `Report that ${name} does not belong to the group?` },
+  fr: { reject: "Signaler un problème de groupe", sent: "Signalement envoyé aux gestionnaires et administrateurs. Le groupe reste inchangé.", help: "Envoyez un signalement aux gestionnaires et administrateurs. Le groupe restera inchangé.", warning: (name: string) => `Signaler que ${name} ne fait pas partie du groupe ?` },
+  de: { reject: "Gruppenzuordnung melden", sent: "Meldung an Manager und Administratoren gesendet. Die Gruppe bleibt unverändert.", help: "Meldung an Manager und Administratoren senden. Die Gruppe bleibt unverändert.", warning: (name: string) => `Melden, dass ${name} nicht zur Gruppe gehört?` },
+  es: { reject: "Informar de un problema de grupo", sent: "Aviso enviado a gestores y administradores. El grupo no ha cambiado.", help: "Envía un aviso a gestores y administradores. El grupo no cambiará.", warning: (name: string) => `¿Informar de que ${name} no pertenece al grupo?` },
+  nl: { reject: "Probleem met groep melden", sent: "Melding verstuurd naar managers en beheerders. De groep is ongewijzigd.", help: "Stuur een melding naar managers en beheerders. De groep blijft ongewijzigd.", warning: (name: string) => `Melden dat ${name} niet bij de groep hoort?` },
+  uk: { reject: "Повідомити про проблему з групою", sent: "Повідомлення надіслано менеджерам та адміністраторам. Група залишилася без змін.", help: "Надішліть повідомлення менеджерам та адміністраторам. Група залишиться без змін.", warning: (name: string) => `Повідомити, що ${name} не належить до групи?` },
 };
 
-type GroupLeaderCopy = {
-  exception: { reject: string; help: string; warning: (name: string) => string };
+type GroupLeaderCopy = ManualRegistrationCopy & {
+  exception: { reject: string; sent: string; help: string; warning: (name: string) => string };
   srTitle: string;
   areaDescription: string;
   saved: string;
@@ -163,8 +162,6 @@ type GroupLeaderCopy = {
   manageLinks: string;
   linkSlug: string;
   linkSlugHelp: string;
-
-  addParticipant: string;
   inactiveGroupHelp: string;
   noGroups: string;
   close: string;
@@ -194,18 +191,6 @@ type GroupLeaderCopy = {
   internalLabel: string;
   internalLabelPlaceholder: string;
   internalLabelHelp: string;
-  noRegistrableGroups: string;
-  manualTitle: string;
-  manualHelp: string;
-  group: string;
-  selectGroup: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  birthDate: string;
-  internalNote: string;
-  consent: string;
   filters: {
     search: string;
     searchPlaceholder: string;
@@ -261,20 +246,6 @@ type GroupLeaderCopy = {
     decisionAt: string;
     escalationDepth: string;
   };
-  attendance: {
-    title: string;
-    help: string;
-    noDates: string;
-    unknown: string;
-  };
-  accessibility: {
-    title: string;
-    help: string;
-    question: string;
-    unknown: string;
-    no: string;
-    yes: string;
-  };
   statusLabels: {
 
     active: (date: string) => string;
@@ -292,6 +263,7 @@ type GroupLeaderCopy = {
 };
 
 const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
+  ...MANUAL_REGISTRATION_COPY.it,
   exception: GROUP_EXCEPTION_COPY.it,
   srTitle: "Dashboard capogruppo",
   areaDescription: "Gestisci i partecipanti dei tuoi gruppi e segnala soltanto chi non appartiene al gruppo.",
@@ -310,8 +282,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   manageLinks: "Gestisci link",
   linkSlug: "Slug (indirizzo del link)",
     linkSlugHelp: "Modificando lo slug, il vecchio URL non sarà più valido.",
-
-  addParticipant: "Inserisci partecipante",
   inactiveGroupHelp:
     "Questo gruppo è collegato al tuo account, ma non è attivo nel catalogo operativo. Prima di usare link o inserimenti manuali serve un intervento di un manager/admin per riattivarlo o collegarti al gruppo corretto.",
   noGroups: "Nessun gruppo collegato al tuo account.",
@@ -346,20 +316,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   internalLabelPlaceholder: "Per esempio: link mandato su WhatsApp",
   internalLabelHelp:
     "Non viene mostrato ai partecipanti. Serve solo a riconoscere questo link in dashboard.",
-  noRegistrableGroups: "Nessun gruppo gestito può ricevere iscrizioni in questo momento.",
-  manualTitle: "Inserimento manuale",
-  manualHelp:
-    "Aggiungi una persona direttamente a uno dei gruppi che gestisci. La persona risulta subito confermata nel gruppo scelto.",
-  group: "Gruppo",
-  selectGroup: "Seleziona gruppo",
-  firstName: "Nome",
-  lastName: "Cognome",
-  email: "Email",
-  phone: "Telefono",
-  birthDate: "Data di nascita",
-  internalNote: "Nota interna",
-  consent:
-    "Ho il consenso della persona iscritta al trattamento dei dati per questa iscrizione. Se inserisco uno o più figli, confermo che la persona mi ha dichiarato di esercitare la responsabilità genitoriale o di essere autorizzata a comunicarne i dati.",
   filters: {
     search: "Nome o codice",
     searchPlaceholder: "Nome o codice",
@@ -420,20 +376,6 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
     decisionAt: "Decisione",
     escalationDepth: "Passaggi di risalita",
   },
-  attendance: {
-    title: "Presenza",
-    help: "Se conosci già i giorni di presenza, selezionali. Altrimenti lascia indicato che saranno confermati più avanti.",
-    noDates: "Date dell'evento non disponibili.",
-    unknown: "Non lo so ancora, sarà confermato più avanti",
-  },
-  accessibility: {
-    title: "Accessibilità e supporto",
-    help: "Compila solo le informazioni che conosci. Potranno essere completate più avanti.",
-    question: "La persona ha bisogni di accessibilità?",
-    unknown: "Non so / da verificare",
-    no: "No",
-    yes: "Sì",
-  },
   statusLabels: {
 
     active: (date) => `Attivo dal ${date}`,
@@ -452,6 +394,7 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
 
 const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   ...IT_GROUP_LEADER_COPY,
+  ...MANUAL_REGISTRATION_COPY.en,
   exception: GROUP_EXCEPTION_COPY.en,
   srTitle: "Group leader dashboard",
   areaDescription: "Manage participants in your groups and report anyone who does not belong to the group.",
@@ -470,8 +413,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   manageLinks: "Manage links",
   linkSlug: "Slug (link address)",
     linkSlugHelp: "Changing the slug makes the previous URL invalid.",
-
-  addParticipant: "Add participant",
   inactiveGroupHelp:
     "This group is linked to your account, but it is not active in the operational catalogue. Before using links or manual entries, a manager/admin needs to reactivate it or connect you to the correct group.",
   noGroups: "No group is linked to your account.",
@@ -506,19 +447,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   internalLabelPlaceholder: "For example: link sent on WhatsApp",
   internalLabelHelp:
     "It is not shown to participants. It only helps you recognise this link in the dashboard.",
-  noRegistrableGroups: "None of the groups you manage can receive registrations right now.",
-  manualTitle: "Manual entry",
-  manualHelp:
-    "Add a person directly to one of the groups you manage. The person is immediately confirmed in the selected group.",
-  group: "Group",
-  selectGroup: "Select group",
-  firstName: "First name",
-  lastName: "Last name",
-  phone: "Phone",
-  birthDate: "Date of birth",
-  internalNote: "Internal note",
-  consent:
-    "I have the registered person's consent to process data for this registration. If I add one or more children, I confirm that the person has stated that they have parental responsibility or are authorised to provide their data.",
   filters: {
     search: "Name or code",
     searchPlaceholder: "Name or code",
@@ -579,20 +507,6 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
     decisionAt: "Decision",
     escalationDepth: "Escalation steps",
   },
-  attendance: {
-    title: "Attendance",
-    help: "If you already know the attendance days, select them. Otherwise leave the indication that they will be confirmed later.",
-    noDates: "Event dates are not available.",
-    unknown: "I do not know yet; it will be confirmed later",
-  },
-  accessibility: {
-    title: "Accessibility and support",
-    help: "Fill in only the information you know. It can be completed later.",
-    question: "Does the person have accessibility needs?",
-    unknown: "I do not know / to be checked",
-    no: "No",
-    yes: "Yes",
-  },
   statusLabels: {
 
     active: (date) => `Active since ${date}`,
@@ -614,6 +528,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   en: EN_GROUP_LEADER_COPY,
   fr: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.fr,
     exception: GROUP_EXCEPTION_COPY.fr,
     srTitle: "Dashboard responsable de groupe",
     areaDescription: "Gère les participants de tes groupes et signale les personnes qui n’en font pas partie.",
@@ -631,14 +546,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (adresse du lien)",
     linkSlugHelp: "Si vous modifiez le slug, l’ancienne URL ne sera plus valide.",
     saveLinkName: "Enregistrer le lien",
-
-    addParticipant: "Ajouter un participant",
     inactiveGroupHelp:
       "Ce groupe est relié à ton compte, mais il n'est pas actif dans le catalogue opérationnel. Avant d'utiliser des liens ou des ajouts manuels, un manager/admin doit le réactiver ou te relier au bon groupe.",
     noGroups: "Aucun groupe n'est relié à ton compte.",
-    manualTitle: "Ajout manuel",
-    manualHelp:
-      "Ajoute une personne directement à l'un des groupes que tu gères. La personne est immédiatement confirmée dans le groupe choisi.",
     linkTitle: "Lien d'inscription du groupe",
     linkHelp:
       "Tu peux générer des liens réservés uniquement pour les groupes que tu gères. Ces liens ne rendent pas le groupe visible dans le menu public.",
@@ -665,16 +575,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Par exemple : lien envoyé sur WhatsApp",
     internalLabelHelp:
       "Il n'est pas affiché aux participants. Il sert seulement à reconnaître ce lien dans le tableau de bord.",
-    noRegistrableGroups: "Aucun des groupes que tu gères ne peut recevoir d'inscriptions pour le moment.",
-    group: "Groupe",
-    selectGroup: "Sélectionner un groupe",
-    firstName: "Prénom",
-    lastName: "Nom",
-    phone: "Téléphone",
-    birthDate: "Date de naissance",
-    internalNote: "Note interne",
-    consent:
-      "J'ai le consentement de la personne inscrite pour traiter les données de cette inscription. Si j'ajoute un ou plusieurs enfants, je confirme que la personne a déclaré exercer la responsabilité parentale ou être autorisée à communiquer leurs données.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Nom ou code",
@@ -713,20 +613,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Enregistrer la note",
 
     },
-    attendance: {
-      title: "Présence",
-      help: "Si tu connais déjà les jours de présence, sélectionne-les. Sinon laisse indiqué qu'ils seront confirmés plus tard.",
-      noDates: "Dates de l'événement non disponibles.",
-      unknown: "Je ne sais pas encore, ce sera confirmé plus tard",
-    },
-    accessibility: {
-      title: "Accessibilité et support",
-      help: "Remplis seulement les informations que tu connais. Elles pourront être complétées plus tard.",
-      question: "La personne a-t-elle des besoins d'accessibilité ?",
-      unknown: "Je ne sais pas / à vérifier",
-      no: "Non",
-      yes: "Oui",
-    },
     statusLabels: {
 
       active: (date) => `Actif depuis ${date}`,
@@ -744,6 +630,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   de: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.de,
     exception: GROUP_EXCEPTION_COPY.de,
     srTitle: "Dashboard Gruppenleitung",
     areaDescription: "Verwalte die Teilnehmenden deiner Gruppen und melde Personen, die nicht zur Gruppe gehören.",
@@ -761,14 +648,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (Linkadresse)",
     linkSlugHelp: "Wenn Sie den Slug ändern, ist die bisherige URL nicht mehr gültig.",
     saveLinkName: "Link speichern",
-
-    addParticipant: "Teilnehmende Person hinzufügen",
     inactiveGroupHelp:
       "Diese Gruppe ist mit deinem Konto verbunden, aber im operativen Katalog nicht aktiv. Bevor Links oder manuelle Einträge verwendet werden, muss ein Manager/Admin sie reaktivieren oder dich mit der richtigen Gruppe verbinden.",
     noGroups: "Mit deinem Konto ist keine Gruppe verbunden.",
-    manualTitle: "Manuelle Eingabe",
-    manualHelp:
-      "Füge eine Person direkt zu einer der Gruppen hinzu, die du verwaltest. Die Person ist sofort in der ausgewählten Gruppe bestätigt.",
     linkTitle: "Gruppen-Anmeldelink",
     linkHelp:
       "Du kannst reservierte Links nur für die Gruppen erstellen, die du verwaltest. Diese Links machen die Gruppe nicht im öffentlichen Menü sichtbar.",
@@ -795,16 +677,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Zum Beispiel: Link per WhatsApp gesendet",
     internalLabelHelp:
       "Wird den Teilnehmenden nicht angezeigt. Hilft nur, diesen Link im Dashboard wiederzuerkennen.",
-    noRegistrableGroups: "Keine der von dir verwalteten Gruppen kann derzeit Anmeldungen erhalten.",
-    group: "Gruppe",
-    selectGroup: "Gruppe auswählen",
-    firstName: "Vorname",
-    lastName: "Nachname",
-    phone: "Telefon",
-    birthDate: "Geburtsdatum",
-    internalNote: "Interne Notiz",
-    consent:
-      "Ich habe die Zustimmung der angemeldeten Person zur Datenverarbeitung für diese Anmeldung. Wenn ich ein oder mehrere Kinder hinzufüge, bestätige ich, dass die Person die elterliche Verantwortung ausübt oder zur Angabe ihrer Daten berechtigt ist.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Name oder Code",
@@ -843,20 +715,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Notiz speichern",
 
     },
-    attendance: {
-      title: "Anwesenheit",
-      help: "Wenn du die Anwesenheitstage bereits kennst, wähle sie aus. Andernfalls lasse angegeben, dass sie später bestätigt werden.",
-      noDates: "Veranstaltungsdaten nicht verfügbar.",
-      unknown: "Ich weiß es noch nicht, es wird später bestätigt",
-    },
-    accessibility: {
-      title: "Barrierefreiheit und Unterstützung",
-      help: "Fülle nur die Informationen aus, die du kennst. Sie können später ergänzt werden.",
-      question: "Hat die Person Barrierefreiheitsbedarfe?",
-      unknown: "Ich weiß es nicht / zu prüfen",
-      no: "Nein",
-      yes: "Ja",
-    },
     statusLabels: {
 
       active: (date) => `Aktiv seit ${date}`,
@@ -874,6 +732,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   es: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.es,
     exception: GROUP_EXCEPTION_COPY.es,
     srTitle: "Panel responsable de grupo",
     areaDescription: "Gestiona los participantes de tus grupos e indica quién no pertenece al grupo.",
@@ -891,14 +750,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (dirección del enlace)",
     linkSlugHelp: "Al cambiar el slug, la URL anterior dejará de ser válida.",
     saveLinkName: "Guardar enlace",
-
-    addParticipant: "Añadir participante",
     inactiveGroupHelp:
       "Este grupo está vinculado a tu cuenta, pero no está activo en el catálogo operativo. Antes de usar enlaces o entradas manuales, un manager/admin debe reactivarlo o conectarte al grupo correcto.",
     noGroups: "Ningún grupo está vinculado a tu cuenta.",
-    manualTitle: "Entrada manual",
-    manualHelp:
-      "Añade una persona directamente a uno de los grupos que gestionas. La persona queda inmediatamente confirmada en el grupo elegido.",
     linkTitle: "Enlace de inscripción del grupo",
     linkHelp:
       "Puedes generar enlaces reservados solo para los grupos que gestionas. Estos enlaces no hacen que el grupo sea visible en el menú público.",
@@ -925,16 +779,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Por ejemplo: enlace enviado por WhatsApp",
     internalLabelHelp:
       "No se muestra a los participantes. Sirve solo para reconocer este enlace en el panel.",
-    noRegistrableGroups: "Ninguno de los grupos que gestionas puede recibir inscripciones en este momento.",
-    group: "Grupo",
-    selectGroup: "Selecciona grupo",
-    firstName: "Nombre",
-    lastName: "Apellidos",
-    phone: "Teléfono",
-    birthDate: "Fecha de nacimiento",
-    internalNote: "Nota interna",
-    consent:
-      "Tengo el consentimiento de la persona inscrita para tratar los datos de esta inscripción. Si añado uno o más hijos, confirmo que la persona ha declarado ejercer la responsabilidad parental o estar autorizada para comunicar sus datos.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Nombre o código",
@@ -973,20 +817,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Guardar nota",
 
     },
-    attendance: {
-      title: "Presencia",
-      help: "Si ya conoces los días de presencia, selecciónalos. Si no, deja indicado que se confirmarán más adelante.",
-      noDates: "Fechas del evento no disponibles.",
-      unknown: "Todavía no lo sé, se confirmará más adelante",
-    },
-    accessibility: {
-      title: "Accesibilidad y apoyo",
-      help: "Completa solo la información que conoces. Podrá completarse más adelante.",
-      question: "¿La persona tiene necesidades de accesibilidad?",
-      unknown: "No lo sé / por verificar",
-      no: "No",
-      yes: "Sí",
-    },
     statusLabels: {
 
       active: (date) => `Activo desde ${date}`,
@@ -1004,6 +834,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   nl: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.nl,
     exception: GROUP_EXCEPTION_COPY.nl,
     srTitle: "Dashboard groepsleider",
     areaDescription: "Beheer de deelnemers van je groepen en meld wie niet bij de groep hoort.",
@@ -1021,14 +852,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (linkadres)",
     linkSlugHelp: "Als je de slug wijzigt, is de vorige URL niet meer geldig.",
     saveLinkName: "Link opslaan",
-
-    addParticipant: "Deelnemer toevoegen",
     inactiveGroupHelp:
       "Deze groep is gekoppeld aan je account, maar is niet actief in de operationele catalogus. Voordat je links of handmatige invoer gebruikt, moet een manager/admin de groep opnieuw activeren of je aan de juiste groep koppelen.",
     noGroups: "Er is geen groep aan je account gekoppeld.",
-    manualTitle: "Handmatige invoer",
-    manualHelp:
-      "Voeg een persoon rechtstreeks toe aan een van de groepen die je beheert. De persoon is meteen bevestigd in de gekozen groep.",
     linkTitle: "Inschrijflink groep",
     linkHelp:
       "Je kunt alleen gereserveerde links genereren voor groepen die je beheert. Deze links maken de groep niet zichtbaar in het publieke menu.",
@@ -1055,16 +881,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Bijvoorbeeld: link gestuurd via WhatsApp",
     internalLabelHelp:
       "Wordt niet aan deelnemers getoond. Het helpt alleen om deze link in het dashboard te herkennen.",
-    noRegistrableGroups: "Geen van de groepen die je beheert kan momenteel inschrijvingen ontvangen.",
-    group: "Groep",
-    selectGroup: "Selecteer groep",
-    firstName: "Voornaam",
-    lastName: "Achternaam",
-    phone: "Telefoon",
-    birthDate: "Geboortedatum",
-    internalNote: "Interne notitie",
-    consent:
-      "Ik heb toestemming van de ingeschreven persoon om gegevens voor deze inschrijving te verwerken. Als ik een of meer kinderen toevoeg, bevestig ik dat de persoon het ouderlijk gezag uitoefent of gemachtigd is hun gegevens door te geven.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Naam of code",
@@ -1103,20 +919,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Notitie opslaan",
 
     },
-    attendance: {
-      title: "Aanwezigheid",
-      help: "Als je de aanwezigheidsdagen al kent, selecteer ze. Laat anders staan dat ze later worden bevestigd.",
-      noDates: "Evenementdata niet beschikbaar.",
-      unknown: "Ik weet het nog niet, het wordt later bevestigd",
-    },
-    accessibility: {
-      title: "Toegankelijkheid en ondersteuning",
-      help: "Vul alleen de informatie in die je kent. Die kan later worden aangevuld.",
-      question: "Heeft de persoon toegankelijkheidsbehoeften?",
-      unknown: "Ik weet het niet / te controleren",
-      no: "Nee",
-      yes: "Ja",
-    },
     statusLabels: {
 
       active: (date) => `Actief sinds ${date}`,
@@ -1134,6 +936,7 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
   },
   uk: {
     ...EN_GROUP_LEADER_COPY,
+    ...MANUAL_REGISTRATION_COPY.uk,
     exception: GROUP_EXCEPTION_COPY.uk,
     srTitle: "Панель керівника групи",
     areaDescription: "Керуйте учасниками своїх груп і повідомляйте про тих, хто не належить до групи.",
@@ -1151,14 +954,9 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     linkSlug: "Slug (адреса посилання)",
     linkSlugHelp: "Після зміни slug попередня URL-адреса більше не буде дійсною.",
     saveLinkName: "Зберегти посилання",
-
-    addParticipant: "Додати учасника",
     inactiveGroupHelp:
       "Ця група пов'язана з вашим обліковим записом, але не активна в робочому каталозі. Перед використанням посилань або ручного додавання manager/admin має повторно активувати її або прив'язати вас до правильної групи.",
     noGroups: "До вашого облікового запису не прив'язано жодної групи.",
-    manualTitle: "Ручне додавання",
-    manualHelp:
-      "Додайте людину безпосередньо до однієї з груп, якими ви керуєте. Людина одразу буде підтверджена у вибраній групі.",
     linkTitle: "Посилання для реєстрації групи",
     linkHelp:
       "Ви можете створювати зарезервовані посилання лише для груп, якими керуєте. Ці посилання не роблять групу видимою в публічному меню.",
@@ -1185,16 +983,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     internalLabelPlaceholder: "Наприклад: посилання надіслано у WhatsApp",
     internalLabelHelp:
       "Не показується учасникам. Потрібно лише для розпізнавання цього посилання на панелі.",
-    noRegistrableGroups: "Жодна з груп, якими ви керуєте, зараз не може приймати реєстрації.",
-    group: "Група",
-    selectGroup: "Виберіть групу",
-    firstName: "Ім'я",
-    lastName: "Прізвище",
-    phone: "Телефон",
-    birthDate: "Дата народження",
-    internalNote: "Внутрішня нотатка",
-    consent:
-      "Я маю згоду зареєстрованої особи на обробку даних для цієї реєстрації. Якщо я додаю одну або кількох дітей, я підтверджую, що ця особа має батьківську відповідальність або уповноважена надати їхні дані.",
     filters: {
       ...EN_GROUP_LEADER_COPY.filters,
       search: "Ім'я або код",
@@ -1233,20 +1021,6 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
       saveNote: "Зберегти нотатку",
 
     },
-    attendance: {
-      title: "Присутність",
-      help: "Якщо ви вже знаєте дні присутності, виберіть їх. Інакше залиште позначку, що їх буде підтверджено пізніше.",
-      noDates: "Дати події недоступні.",
-      unknown: "Я ще не знаю, буде підтверджено пізніше",
-    },
-    accessibility: {
-      title: "Доступність і підтримка",
-      help: "Заповніть лише ту інформацію, яку знаєте. Її можна буде доповнити пізніше.",
-      question: "Чи має особа потреби доступності?",
-      unknown: "Не знаю / потрібно перевірити",
-      no: "Ні",
-      yes: "Так",
-    },
     statusLabels: {
 
       active: (date) => `Активне з ${date}`,
@@ -1273,7 +1047,6 @@ export default async function CapogruppoDashboardPage({
   const query = normalizeSearchQuery(params.q);
   const contactQuery = normalizeSearchQuery(params.contact);
   const groupFilter = normalizeFilterParam(params.group);
-  const tagFilter = normalizeFilterParam(params.tag);
   const activeTool =
     params.groupLinkToken || params.groupLinkGroupId
       ? "link"
@@ -1296,11 +1069,10 @@ export default async function CapogruppoDashboardPage({
   const { groupRows, activeGroupRows, rootGroupIds, scopedGroupIds } =
     await loadLeaderScope(serviceSupabase, auth.user.id, currentEventId);
 
-  const [assignments, operationalTags, groupLinks] =
+  const [assignments, groupLinks] =
     await Promise.all([
       getAssignments([...scopedGroupIds]),
-      getOperationalTags(),
-      getGroupLinks([...scopedGroupIds]),
+      activeTool === "link" ? getGroupLinks([...scopedGroupIds]) : Promise.resolve([]),
     ]);
   const assignedGroups = groupRows
     .filter((group) => rootGroupIds.includes(group.id))
@@ -1379,9 +1151,7 @@ export default async function CapogruppoDashboardPage({
             query={query}
             contactQuery={contactQuery}
             groupFilter={effectiveGroupFilter}
-            tagFilter={tagFilter}
             groupOptions={groupFilterOptions}
-            tagOptions={operationalTags}
             showGroupColumn={showGroupColumn}
             copy={copy}
           />
@@ -1390,6 +1160,7 @@ export default async function CapogruppoDashboardPage({
             rows={tableAssignments.map(toLeaderTableRow)}
             operatorId={auth.user.id}
             startsOn={assignedGroups[0]?.eventStartsOn ?? null}
+            endsOn={assignedGroups[0]?.eventEndsOn ?? null}
             locale={locale}
           />
         </section>
@@ -1415,6 +1186,7 @@ export default async function CapogruppoDashboardPage({
               />
             ) : (
               <ManualRegistrationSection
+                action={createGroupLeaderManualRegistration}
                 groups={scopedGroups}
                 selectedGroupId={activeGroupId}
                 eventDays={getManualRegistrationEventDays(scopedGroups, locale)}
@@ -1426,18 +1198,19 @@ export default async function CapogruppoDashboardPage({
         ) : null}
 
         {selectedAssignment ? (
-          <DashboardToolOverlay title={copy.detail.title} copy={copy} closePath={leaderReturnPath(returnTo, { assignmentId: null })}>
-            <AssignmentDetailCard
-              returnTo={returnTo}
-              qr={selectedQr}
-              attendance={selectedAttendance}
-              attendanceSaved={params.saved === "attendance"}
-              locale={locale}
-              assignment={selectedAssignment}
-              tagOptions={operationalTags}
-              copy={copy}
-            />
-          </DashboardToolOverlay>
+          <LocalOverlay parameter="assignmentId" value={selectedAssignment.id}>
+            <DashboardToolOverlay localClose title={copy.detail.title} copy={copy} closePath={leaderReturnPath(returnTo, { assignmentId: null })}>
+              <AssignmentDetailCard
+                returnTo={returnTo}
+                qr={selectedQr}
+                attendance={selectedAttendance}
+                attendanceSaved={params.saved === "attendance"}
+                locale={locale}
+                assignment={selectedAssignment}
+                copy={copy}
+              />
+            </DashboardToolOverlay>
+          </LocalOverlay>
         ) : null}
 
       </section>
@@ -1451,7 +1224,7 @@ export default async function CapogruppoDashboardPage({
       return [];
     }
 
-    const data = await loadLeaderAssignmentRows(serviceSupabase, currentEventId!, groupIds);
+    const data = await loadLeaderAssignmentRows(serviceSupabase, currentEventId!, groupIds, locale);
 
     return data
       .map((row) => toAssignmentView(row, copy, groupRows))
@@ -1463,23 +1236,15 @@ export default async function CapogruppoDashboardPage({
       return [];
     }
 
-    const { data, error } = await serviceSupabase
+    const { data } = await loadRowsForIds(groupIds, (batch, from, to) => serviceSupabase
       .from("group_registration_links")
       .select(
         "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
       )
-      .in("group_id", groupIds)
+      .in("group_id", batch)
       .eq("event_id", currentEventId)
       .eq("is_canonical", true)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[capogruppo:group-registration-links]", {
-        code: error.code,
-        message: error.message,
-      });
-      return [];
-    }
+      .order("created_at", { ascending: false }).order("id").range(from, to));
 
     return ((data ?? []) as GroupLinkRow[]).map((link) => ({
       id: link.id,
@@ -1493,26 +1258,6 @@ export default async function CapogruppoDashboardPage({
       createdAt: link.created_at,
       expiresAt: link.expires_at,
       revokedAt: link.revoked_at,
-    }));
-  }
-
-  async function getOperationalTags(): Promise<OperationalTagOption[]> {
-    const { data } = await serviceSupabase
-      .from("operational_tags")
-      .select("id,event_id,label,color")
-      .eq("event_id", currentEventId)
-      .order("label", { ascending: true });
-
-    return ((data ?? []) as Array<{
-      id: string;
-      event_id: string;
-      label: string;
-      color: string;
-    }>).map((tag) => ({
-      id: tag.id,
-      eventId: tag.event_id,
-      label: tag.label,
-      color: tag.color,
     }));
   }
 }
@@ -1629,28 +1374,31 @@ function AssignedScopeSection({
 
 function DashboardToolOverlay({
   closePath = "/dashboard/capogruppo",
+  localClose = false,
   title,
   copy,
   children,
 }: {
   title: string;
   closePath?: string;
+  localClose?: boolean;
   copy: GroupLeaderCopy;
   children: ReactNode;
 }) {
+  const CloseLink = localClose ? LocalQueryLink : Link;
   return (
     <div className="dashboard-modal fixed inset-0 z-40 grid place-items-center modal-backdrop px-4 py-6">
       <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-[var(--peace-border)] bg-white p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-xl font-semibold text-[var(--peace-ink)]">{title}</h2>
-          <Link
+          <CloseLink
             href={closePath}
             scroll={false}
             className="inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             aria-label={copy.close}
           >
             {copy.close}
-          </Link>
+          </CloseLink>
         </div>
         {children}
       </div>
@@ -1815,131 +1563,24 @@ function GroupLeaderLinksSection({
   );
 }
 
-function ManualRegistrationSection({
-  groups,
-  selectedGroupId,
-  eventDays,
-  locale,
-  copy,
-}: {
-  groups: ScopedGroupView[];
-  selectedGroupId: string | null;
-  eventDays: AttendanceDayColumn[];
-  locale: SupportedLocale;
-  copy: GroupLeaderCopy;
-}) {
-  const assignableGroups = groups.filter((group) => group.isAssignable);
-  const defaultGroupId =
-    selectedGroupId && assignableGroups.some((group) => group.id === selectedGroupId)
-      ? selectedGroupId
-      : "";
-
-  return (
-    <section>
-      <div>
-        <h2 className="text-lg font-semibold">{copy.manualTitle}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-          {copy.manualHelp}
-        </p>
-      </div>
-
-      {assignableGroups.length > 0 ? (
-        <ReliableForm
-          action={createGroupLeaderManualRegistration}
-          validation="manualRegistration"
-          locale={locale}
-          className="mt-5 grid gap-4 lg:grid-cols-2"
-        >
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
-            {copy.group}
-            <select name="groupId" required className="field" defaultValue={defaultGroupId}>
-              <option value="">{copy.selectGroup}</option>
-              {assignableGroups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.firstName}
-            <input name="firstName" required minLength={2} className="field" />
-          </label>
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.lastName}
-            <input name="lastName" required minLength={2} className="field" />
-          </label>
-          <ManualEmailFields locale={locale} emailLabel={copy.email} />
-          <ManualPhoneFields locale={locale} label={copy.phone} />
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-            {copy.birthDate}
-            <input name="birthDate" type="date" className="field" />
-          </label>
-          <ManualAttendanceFields eventDays={eventDays} copy={copy.attendance} locale={locale} />
-          <ManualChildrenFields locale={locale} />
-          <ManualAccessibilityFields
-            locale={locale}
-            copy={copy.accessibility}
-          />
-          <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">
-            {copy.internalNote}
-            <textarea
-              name="leaderNote"
-              rows={3}
-              className="min-h-20 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 py-2 text-sm font-normal text-[var(--peace-ink)] outline-none transition focus:border-[var(--peace-sky-400)]"
-            />
-          </label>
-          <label className="flex gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3 text-sm font-medium text-[var(--peace-ink)] lg:col-span-2">
-            <input
-              name="consentConfirmed"
-              type="checkbox"
-              required
-              className="mt-1 h-4 w-4 accent-[var(--peace-blue-800)]"
-            />
-            {copy.consent}
-          </label>
-          <label className="grid gap-1 text-sm lg:col-span-2">
-            {MANUAL_DUPLICATE_COPY[locale]}
-            <textarea name="duplicateReason" className="field" minLength={3} maxLength={500} />
-          </label>
-          <div className="lg:col-span-2">
-            <PendingSubmitButton className="min-h-10 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-              {copy.addParticipant}
-            </PendingSubmitButton>
-          </div>
-        </ReliableForm>
-      ) : (
-        <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          {copy.noRegistrableGroups}
-        </p>
-      )}
-    </section>
-  );
-}
-
 function AssignmentFilters({
   query,
   contactQuery,
   groupFilter,
-  tagFilter,
   groupOptions,
-  tagOptions,
   showGroupColumn,
   copy,
 }: {
   query: string;
   contactQuery: string;
   groupFilter: string;
-  tagFilter: string;
   groupOptions: Array<{ id: string; name: string }>;
-  tagOptions: OperationalTagOption[];
   showGroupColumn: boolean;
   copy: GroupLeaderCopy;
 }) {
   const filterGridClassName = showGroupColumn
-    ? "grid min-w-[860px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(190px,1fr)_minmax(170px,1fr)_auto] gap-3"
-    : "grid min-w-[760px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(170px,1fr)_auto] gap-3";
+    ? "grid min-w-[690px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_minmax(190px,1fr)_auto] gap-3"
+    : "grid min-w-[590px] grid-cols-[minmax(220px,1.4fr)_minmax(220px,1.4fr)_auto] gap-3";
 
   return (
     <AutoFilterForm
@@ -1949,7 +1590,6 @@ function AssignmentFilters({
         q: "",
         contact: "",
         group: "all",
-        tag: "all",
       }}
     >
       <div className="overflow-x-auto rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-3">
@@ -1997,24 +1637,6 @@ function AssignmentFilters({
             </>
           ) : null}
 
-          <label className="sr-only" htmlFor="leader-participant-tag">
-            {copy.filters.tag}
-          </label>
-          <select
-            id="leader-participant-tag"
-            name="tag"
-            defaultValue={tagFilter}
-            className="field min-h-10 bg-white text-sm font-normal"
-          >
-            <option value="all">{copy.filters.allTags}</option>
-            <option value="none">{copy.filters.noTags}</option>
-            {tagOptions.map((tag) => (
-              <option key={tag.id} value={tag.id}>
-                {tag.label}
-              </option>
-            ))}
-          </select>
-
           <Link
             href="/dashboard/capogruppo#assegnazioni-gruppo"
             className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
@@ -2034,7 +1656,6 @@ function AssignmentDetailCard({
   locale,
   returnTo,
   assignment,
-  tagOptions,
   copy,
 }: {
   assignment: AssignmentView;
@@ -2043,7 +1664,6 @@ function AssignmentDetailCard({
   attendanceSaved: boolean;
   locale: SupportedLocale;
   returnTo: string;
-  tagOptions: OperationalTagOption[];
   copy: GroupLeaderCopy;
 }) {
 
@@ -2102,28 +1722,13 @@ function AssignmentDetailCard({
                 className="field bg-white font-normal"
               />
             </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              {copy.birthDate}
-              <input
-                name="birthDate"
-                type="date"
-                defaultValue={assignment.birthDate ?? ""}
-                className="field bg-white font-normal"
-              />
-            </label>
+            <ParticipantBirthDateField key={`${assignment.id}:${assignment.birthDate}`}
+              label={copy.birthDate} locale={locale} defaultValue={assignment.birthDate ?? ""} />
             <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
               Città
               <input
                 name="city"
                 defaultValue={assignment.participantCity ?? ""}
-                className="field bg-white font-normal"
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Paese
-              <input
-                name="country"
-                defaultValue={assignment.participantCountry ?? ""}
                 className="field bg-white font-normal"
               />
             </label>
@@ -2165,25 +1770,10 @@ function AssignmentDetailCard({
           </ReliableForm>
         </DetailBlock>
 
+        {assignment.isCurrent ? <OperationalDemographicsEditor key={`demographics:${assignment.registrationId}`} registrationId={assignment.registrationId} locale={locale} /> : null}
+        {assignment.isCurrent ? <OperationalAccessibilityEditor key={assignment.registrationId} registrationId={assignment.registrationId} locale={locale} /> : null}
         <DetailBlock title={`Figli partecipanti (${assignment.children.length})`}>
-          {assignment.children.length > 0 ? (
-            <div className="grid gap-2">
-              {assignment.children.map((child) => (
-                <div key={child.id} className="text-sm">
-                  <p className="font-semibold">
-                    {child.first_name} {child.last_name}
-                  </p>
-                  <p className="text-[var(--peace-muted)]">
-                    Data di nascita: {child.birth_date}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--peace-muted)]">
-              Nessun figlio associato all&apos;iscrizione.
-            </p>
-          )}
+          <OperationalChildrenEditor registrationId={assignment.registrationId} records={assignment.children} locale={locale} editable={assignment.isCurrent} />
         </DetailBlock>
       </div>
 
@@ -2193,12 +1783,12 @@ function AssignmentDetailCard({
           <ReliableForm action={updateGroupLeaderAssignment} className="mt-3 grid gap-3" data-preserve-dashboard-scroll>
             <input type="hidden" name="returnTo" value={returnTo} />
             <input type="hidden" name="assignmentId" value={assignment.id} />
-            <p className="text-sm text-[var(--peace-muted)]">{copy.exception.help}</p>
+            <p className="text-xs text-[var(--peace-muted)]">{copy.exception.help}</p>
             <ConfirmSubmitButton
               name="intent"
               value="reject"
               confirmMessage={copy.exception.warning(assignment.participantName)}
-              className="min-h-10 w-fit rounded-md border border-[#d1a7a0] bg-white px-4 text-sm font-semibold text-[#8a3f35] hover:bg-[#fff0ee]"
+              className="min-h-10 w-fit text-left text-xs text-[var(--peace-muted)] underline decoration-dotted underline-offset-4 hover:text-[var(--peace-ink)]"
             >
               {copy.exception.reject}
             </ConfirmSubmitButton>
@@ -2243,31 +1833,7 @@ function AssignmentDetailCard({
         </div>
       </ReliableForm>
 
-      <ReliableForm
-        action={updateParticipantOperationalTags}
-        className="grid gap-3 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4"
-        data-preserve-dashboard-scroll
-      >
-        <input type="hidden" name="sourceDashboard" value="capogruppo" />
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <input type="hidden" name="assignmentId" value={assignment.id} />
-        <input type="hidden" name="registrationId" value={assignment.registrationId} />
-        <input type="hidden" name="participantId" value={assignment.participantId} />
-        <input type="hidden" name="eventId" value={assignment.eventId} />
-        <fieldset className="grid gap-2">
-          <legend className="text-sm font-semibold text-[var(--peace-ink)]">
-            Tag operativi
-          </legend>
-          <TagCheckboxGrid
-            tagOptions={tagOptions}
-            selectedTagIds={assignment.tagIds}
-            emptyLabel="Nessun tag creato dal manager per questo evento."
-          />
-        </fieldset>
-        <PendingSubmitButton className="min-h-10 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-          Salva
-        </PendingSubmitButton>
-      </ReliableForm>
+
     </section>
   );
 }
@@ -2328,47 +1894,6 @@ function ParticipantServiceSummary({
   );
 }
 
-function TagCheckboxGrid({
-  tagOptions,
-  selectedTagIds,
-  emptyLabel,
-}: {
-  tagOptions: OperationalTagOption[];
-  selectedTagIds: string[];
-  emptyLabel: string;
-}) {
-  if (tagOptions.length === 0) {
-    return <p className="text-sm text-[var(--peace-muted)]">{emptyLabel}</p>;
-  }
-
-  const selected = new Set(selectedTagIds);
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {tagOptions.map((tag) => (
-        <label
-          key={tag.id}
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border)] bg-white px-3 text-sm font-semibold text-[var(--peace-ink)]"
-        >
-          <input
-            type="checkbox"
-            name="tagIds"
-            value={tag.id}
-            defaultChecked={selected.has(tag.id)}
-            className="size-4 accent-[var(--peace-blue-800)]"
-          />
-          <span
-            aria-hidden="true"
-            className="size-2.5 rounded-full"
-            style={{ backgroundColor: tag.color }}
-          />
-          {tag.label}
-        </label>
-      ))}
-    </div>
-  );
-}
-
 function StatusMessage({
   locale,
   error,
@@ -2383,7 +1908,7 @@ function StatusMessage({
   if (saved) {
     return (
       <SuccessMessage key={randomUUID()} clearQuery locale={locale} className="rounded-lg border border-[#bad2b8] bg-[#edf7ea] p-4 text-sm text-[#2f6541]">
-        {copy.saved}
+        {saved === "reported" ? copy.exception.sent : copy.saved}
       </SuccessMessage>
     );
   }

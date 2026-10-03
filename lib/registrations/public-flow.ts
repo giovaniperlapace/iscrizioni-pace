@@ -1,3 +1,8 @@
+import { loadGroupCityLinks } from "../groups/geography.server.ts";
+import { inheritGroupTerritories } from "../groups/territory.ts";
+import { countryName, findCountryId } from "./country-names.ts";
+import { emailParticipantIds, reusableIdentityParticipantIds } from "./email-identity.ts";
+import { loadRowsForIds, writeRowsForIds, loadAllRows } from "../supabase/all-rows.ts";
 import { participantQrFilename } from "@/lib/qrcode/filename";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -53,16 +58,13 @@ type PublicEvent = {
   ends_on: string | null;
 };
 
-type ExistingContactRow = {
-  participant_id: string;
-};
-
 type CreatedParticipant = {
   id: string;
   public_code: string;
 };
 
 type PublicCountryRow = {
+  iso2?: string | null;
   id: string;
   name_it: string;
   name_en: string;
@@ -81,6 +83,7 @@ type PublicGroupRow = {
   primary_leader_name: string | null;
   country_id: string | null;
   city_id: string | null;
+  city_scope?: "inherit" | "country";
   parent_group_id: string | null;
   node_type: string | null;
   community_kind: string | null;
@@ -104,7 +107,7 @@ type PublicGroupRegistrationLinkRow = {
 
 export type PublicRegistrationOptions = {
   event: PublicEvent | null;
-  countries: Array<{ id: string; name_it: string; name_en: string }>;
+  countries: Array<{ id: string; iso2?: string | null; name_it: string; name_en: string }>;
   cities: Array<{ id: string; country_id: string; name: string }>;
   groups: Array<{
     id: string;
@@ -113,6 +116,8 @@ export type PublicRegistrationOptions = {
     primaryLeaderName: string | null;
     countryId: string | null;
     cityId: string | null;
+    cityScope?: "inherit" | "country";
+    cityIds?: string[];
     parentGroupId: string | null;
     nodeType: GroupNodeType;
     communityKind: GroupCommunityKind;
@@ -144,36 +149,24 @@ export async function getPublicRegistrationOptions(
     : null;
 
   const [countries, cities, groups, moments] = await Promise.all([
-    supabase
+    loadAllRows((from, to) => supabase
       .from("countries")
-      .select("id,name_it,name_en")
+      .select("id,iso2,name_it,name_en")
       .eq("is_active", true)
-      .order("name_it"),
-    supabase
+      .order("name_it").order("id").range(from, to)),
+    loadAllRows((from, to) => supabase
       .from("cities")
       .select("id,country_id,name")
       .eq("is_active", true)
-      .order("name"),
+      .order("name").order("id").range(from, to)),
+    event ? getEventGroupCandidates(supabase, event.id) : Promise.resolve([]),
     event
-      ? supabase
-          .from("groups")
-          .select(
-            "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
-          )
-          .eq("event_id", event.id)
-          .eq("is_active", true)
-          .eq("is_public_catalog", true)
-          .eq("is_assignable", true)
-          .in("node_type", ["area", "group"])
-          .order("name")
-      : Promise.resolve({ data: [], error: null }),
-    event
-      ? supabase
+      ? loadAllRows((from, to) => supabase
           .from("event_moments")
           .select("id,title,starts_at")
           .eq("event_id", event.id)
           .eq("is_public", true)
-          .order("starts_at")
+          .order("starts_at").order("id").range(from, to))
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -181,7 +174,11 @@ export async function getPublicRegistrationOptions(
     event,
     countries: countries.data ?? [],
     cities: cities.data ?? [],
-    groups: ((groups.data ?? []) as PublicGroupRow[]).map(mapGroupRow),
+    // Resolve against the complete active tree, then expose only public choices.
+    groups: inheritGroupTerritories(groups).filter(group =>
+      group.isPublicCatalog && group.isAssignable &&
+      (group.nodeType === "city" || group.nodeType === "area" || group.nodeType === "group")
+    ),
     groupLink: groupLink
       ? {
           id: groupLink.id,
@@ -199,29 +196,13 @@ export async function hasExistingRegistrationForEmail(
   email: string,
   eventId: string
 ): Promise<boolean> {
-  const { data: contacts, error: contactError } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", email)
-    .limit(25);
-
-  if (contactError || !contacts?.length) {
-    return false;
-  }
-
-  const participantIds = (contacts as ExistingContactRow[]).map(
-    (contact) => contact.participant_id
-  );
-
-  const { data: registrations, error: registrationError } = await supabase
-    .from("registrations")
-    .select("id")
-    .eq("event_id", eventId)
-    .in("participant_id", participantIds)
-    .or("status.neq.cancelled,deleted_at.not.is.null")
-    .limit(1);
-
-  return !registrationError && Boolean(registrations?.length);
+  const participantIds = await emailParticipantIds(supabase, email);
+  const { data } = await loadRowsForIds(participantIds, (batch, from, to) => supabase
+    .from("registrations").select("id")
+    .eq("event_id", eventId).in("participant_id", batch)
+    .is("deleted_at", null).neq("status", "cancelled")
+    .order("id").range(from, to));
+  return data.length > 0;
 }
 
 export async function hasExistingAppAccessForEmail(
@@ -306,10 +287,9 @@ export async function sendMagicLinkEmail(
     },
   });
 
-  const actionLink = data.properties?.action_link;
   const hashedToken = data.properties?.hashed_token;
 
-  if (error || (!actionLink && !hashedToken)) {
+  if (error || !hashedToken) {
     throw error ?? new Error("Supabase did not return a magic link");
   }
 
@@ -317,7 +297,7 @@ export async function sendMagicLinkEmail(
     to: email,
     ...renderMagicLinkEmail({
       actionLink:
-        buildAppMagicLink(redirectTo, hashedToken ?? null) ?? actionLink ?? "",
+        buildAppMagicLink(redirectTo, hashedToken)!,
     }),
   });
 }
@@ -339,6 +319,13 @@ export async function createPublicRegistration(
     throw new Error("Questa email risulta già iscritta all'evento.");
   }
 
+  // Reject an invalid invitation before creating a participant or registration.
+  const groupLink = await resolveActiveGroupRegistrationLink(
+    supabase,
+    event.id,
+    input.groupRegistrationLinkToken
+  );
+
   const geography = await resolveParticipantGeography(supabase, input);
 
   const { data: participant, error: participantError } = await supabase
@@ -351,7 +338,7 @@ export async function createPublicRegistration(
       preferred_locale: input.preferredLocale,
       country_id: geography.countryId,
       city_id: geography.cityId,
-      country_other: input.countryOther,
+      country_other: countryName(input.countryOther),
       city_other: input.cityOther,
       has_previous_santegidio_participation:
         input.hasPreviousSantegidioParticipation,
@@ -411,11 +398,6 @@ export async function createPublicRegistration(
   const leaderGroupAssignment = authUserId
     ? await getConfirmedLeaderGroupAssignment(supabase, authUserId, event.id)
     : null;
-  const groupLink = await resolveActiveGroupRegistrationLink(
-    supabase,
-    event.id,
-    input.groupRegistrationLinkToken
-  );
   const selectedGroupId = resolveAllowedSelectedGroupId({
     groups,
     requestedGroupId: input.groupId,
@@ -608,6 +590,7 @@ export async function createPublicRegistration(
     await sendTransactionalEmail({
       to: input.email,
       ...renderRegistrationConfirmationEmail({
+        locale: input.preferredLocale,
         firstName: input.firstName,
         lastName: input.lastName,
         participantCode: createdParticipant.public_code,
@@ -649,25 +632,12 @@ export async function linkParticipantsToUserByEmail(
   userId: string,
   email: string
 ): Promise<void> {
-  const { data: contacts, error } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", email)
-    .limit(50);
-
-  if (error || !contacts?.length) {
-    return;
-  }
-
-  const participantIds = (contacts as ExistingContactRow[]).map(
-    (contact) => contact.participant_id
+  const participantIds = await reusableIdentityParticipantIds(
+    supabase, await emailParticipantIds(supabase, email)
   );
-
-  await supabase
-    .from("participants")
-    .update({ auth_user_id: userId })
-    .in("id", participantIds)
-    .is("auth_user_id", null);
+  await writeRowsForIds(participantIds, ids => supabase
+    .from("participants").update({ auth_user_id: userId })
+    .in("id", ids).is("auth_user_id", null));
 }
 
 async function getCurrentPublicEvent(
@@ -710,19 +680,14 @@ async function findCountryIdByName(
   supabase: SupabaseClient,
   countryName: string
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await loadAllRows<PublicCountryRow>((from, to) => supabase
     .from("countries")
-    .select("id,name_it,name_en")
-    .eq("is_active", true);
+    .select("id,iso2,name_it,name_en")
+    .eq("is_active", true)
+    .order("id")
+    .range(from, to));
 
-  const normalizedCountry = normalizeMatchText(countryName);
-  const match = ((data ?? []) as PublicCountryRow[]).find(
-    (country) =>
-      normalizeMatchText(country.name_it) === normalizedCountry ||
-      normalizeMatchText(country.name_en) === normalizedCountry
-  );
-
-  return match?.id ?? null;
+  return findCountryId(data, countryName);
 }
 
 async function findCityIdByName(
@@ -730,11 +695,11 @@ async function findCityIdByName(
   countryId: string,
   cityName: string
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await loadAllRows((from, to) => supabase
     .from("cities")
     .select("id,country_id,name")
     .eq("country_id", countryId)
-    .eq("is_active", true);
+    .eq("is_active", true).order("id").range(from, to));
 
   const normalizedCity = normalizeMatchText(cityName);
   const match = ((data ?? []) as PublicCityRow[]).find(
@@ -748,19 +713,18 @@ async function getEventGroupCandidates(
   supabase: SupabaseClient,
   eventId: string
 ): Promise<GroupMatchCandidate[]> {
-  const { data, error } = await supabase
+  const { data } = await loadAllRows<PublicGroupRow>((from, to) => supabase
     .from("groups")
     .select(
-      "id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
+      "id,name,public_label,primary_leader_name,country_id,city_id,city_scope,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order"
     )
     .eq("event_id", eventId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .order("id")
+    .range(from, to));
 
-  if (error) {
-    throw error;
-  }
-
-  return ((data ?? []) as PublicGroupRow[]).map(mapGroupRow);
+  const links = await loadGroupCityLinks(supabase, (data ?? []).map(row => row.id));
+  return ((data ?? []) as PublicGroupRow[]).map(row => ({ ...mapGroupRow(row), cityIds: links.get(row.id) ?? [] }));
 }
 
 function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
@@ -771,6 +735,7 @@ function mapGroupRow(row: PublicGroupRow): GroupMatchCandidate {
     primaryLeaderName: row.primary_leader_name,
     countryId: row.country_id,
     cityId: row.city_id,
+    cityScope: row.city_scope,
     parentGroupId: row.parent_group_id,
     nodeType: parseNodeType(row.node_type),
     communityKind: parseCommunityKind(row.community_kind),
@@ -806,7 +771,7 @@ async function resolveActiveGroupRegistrationLink(
   const { data, error } = await supabase
     .from("group_registration_links")
     .select(
-      "id,event_id,group_id,public_label,max_uses,use_count,expires_at,revoked_at,groups!inner(id,name,public_label,primary_leader_name,country_id,city_id,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order)"
+      "id,event_id,group_id,public_label,max_uses,use_count,expires_at,revoked_at,groups!inner(id,name,public_label,primary_leader_name,country_id,city_id,city_scope,parent_group_id,node_type,community_kind,age_brackets,is_assignable,is_public_catalog,public_order)"
     )
     .eq("event_id", eventId)
     .eq("token_hash", hashGroupRegistrationLinkToken(token))
@@ -823,7 +788,8 @@ async function resolveActiveGroupRegistrationLink(
     throw new Error("Link gruppo non valido o non più attivo.");
   }
 
-  const group = mapGroupRow(groupRow);
+  const links = await loadGroupCityLinks(supabase, [groupRow.id]);
+  const group = { ...mapGroupRow(groupRow), cityIds: links.get(groupRow.id) ?? [] };
   const status = getGroupRegistrationLinkStatus({
     expiresAt: link.expires_at,
     revokedAt: link.revoked_at,

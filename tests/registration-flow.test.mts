@@ -56,6 +56,8 @@ test("parseRegistrationForm validates required public registration fields", () =
   formData.set("dataProcessingAccepted", "on");
   formData.set("futureEventsCommunicationsAccepted", "on");
 
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
+
   const parsed = parseRegistrationForm(formData);
 
   assert.equal(parsed.ok, true);
@@ -124,6 +126,8 @@ test("parseRegistrationForm validates and stores accompanying children", () => {
   formData.set("child_2_lastName", "Rossi");
   formData.set("child_2_birthDate", "2021-06-07");
 
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
+
   const parsed = parseRegistrationForm(formData);
 
   assert.equal(parsed.ok, true);
@@ -163,6 +167,8 @@ test("parseRegistrationForm rejects incomplete or future child records", () => {
   formData.set("child_0_firstName", "Anna");
   formData.set("child_0_birthDate", "2999-01-01");
 
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
+
   const parsed = parseRegistrationForm(formData);
 
   assert.equal(parsed.ok, false);
@@ -191,6 +197,8 @@ test("questionnaire answers snapshot keeps configurable answers together", () =>
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
   formData.set("futureEventsCommunicationsAccepted", "on");
+
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
 
   const parsed = parseRegistrationForm(formData);
 
@@ -231,6 +239,8 @@ test("parseRegistrationForm accepts structured accessibility answers", () => {
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
 
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
+
   const parsed = parseRegistrationForm(formData);
 
   assert.equal(parsed.ok, true);
@@ -255,6 +265,8 @@ test("parseRegistrationForm requires sensitive consent only for accessibility ne
   formData.append("availabilityDays", "2026-10-25");
   formData.set("privacyAccepted", "on");
 
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
+
   const withoutAccessibilityNeeds = parseRegistrationForm(formData);
 
   assert.equal(withoutAccessibilityNeeds.ok, true);
@@ -268,11 +280,13 @@ test("parseRegistrationForm requires sensitive consent only for accessibility ne
 
   formData.set("hasAccessibilityNeeds", "yes");
   formData.set("accessibility_hearing", "on");
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
   const missingSensitiveConsent = parseRegistrationForm(formData);
 
   assert.equal(missingSensitiveConsent.ok, false);
 
   formData.set("dataProcessingAccepted", "on");
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
   const withSensitiveConsent = parseRegistrationForm(formData);
 
   assert.equal(withSensitiveConsent.ok, true);
@@ -295,6 +309,8 @@ test("parseRegistrationForm keeps phone optional but validates it when present",
   formData.set("privacyAccepted", "on");
   formData.set("dataProcessingAccepted", "on");
 
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
+
   const withoutPhone = parseRegistrationForm(formData);
 
   assert.equal(withoutPhone.ok, true);
@@ -303,11 +319,13 @@ test("parseRegistrationForm keeps phone optional but validates it when present",
   }
 
   formData.set("phone", "+39ABC");
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
   const withInvalidPhone = parseRegistrationForm(formData);
 
   assert.equal(withInvalidPhone.ok, false);
 
   formData.set("phone", "+2348012345678");
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
   const withCustomPrefixPhone = parseRegistrationForm(formData);
 
   assert.equal(withCustomPrefixPhone.ok, true);
@@ -324,6 +342,8 @@ test("parseRegistrationForm rejects missing consents", () => {
   formData.set("countryOther", "Italia");
   formData.set("cityOther", "Roma");
 
+  formData.set("emailConfirmation", String(formData.get("email") ?? ""));
+
   const parsed = parseRegistrationForm(formData);
 
   assert.equal(parsed.ok, false);
@@ -333,6 +353,8 @@ test("parseManualRegistrationForm accepts a minimal group leader entry", () => {
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
+  formData.set("cityOther", "Berlin");
   formData.set("lastName", "Bianchi");
   formData.set("useLeaderEmail", "on");
   formData.set("phone", "+39 333 123 4567");
@@ -371,6 +393,8 @@ test("parseManualRegistrationForm validates accompanying children", () => {
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
+  formData.set("cityOther", "Berlin");
   formData.set("lastName", "Bianchi");
   formData.set("email", "paolo@example.org");
   formData.set("availabilityUnknown", "on");
@@ -420,6 +444,8 @@ test("parseManualRegistrationForm requires contact and consent", () => {
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
+  formData.set("cityOther", "Berlin");
   formData.set("lastName", "Bianchi");
 
   const parsed = parseManualRegistrationForm(formData);
@@ -439,6 +465,8 @@ test("manual registration questionnaire snapshot marks group leader source", () 
   const formData = new FormData();
   formData.set("groupId", "11111111-1111-4111-8111-111111111111");
   formData.set("firstName", "Paolo");
+  formData.set("birthDate", "1990-01-02");
+  formData.set("cityOther", "Berlin");
   formData.set("lastName", "Bianchi");
   formData.set("email", "paolo@example.org");
   formData.set("availabilityUnknown", "on");
@@ -589,6 +617,7 @@ test("app magic links verify token hashes as email OTPs", () => {
 
 test("registration confirmation includes the short participant code", () => {
   const rendered = renderRegistrationConfirmationEmail({
+    locale: "it",
     firstName: "Maria",
     lastName: "Rossi",
     participantCode: "A7K2",

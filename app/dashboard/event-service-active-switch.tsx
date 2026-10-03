@@ -1,6 +1,8 @@
 "use client";
 
-import { useAssociatedFormPending } from "@/components/associated-form-pending";
+import { ProgressButton } from "@/components/button-progress";
+
+import { useAssociatedFormPending, useAssociatedFormFailed } from "@/components/associated-form-pending";
 
 type EventServiceActiveSwitchProps = {
   formId: string;
@@ -14,11 +16,12 @@ export function EventServiceActiveSwitch({
   serviceLabel,
 }: EventServiceActiveSwitchProps) {
   const isSaving = useAssociatedFormPending(formId);
+  const failed = useAssociatedFormFailed(formId);
   const optimisticValue = isSaving ? !isActive : isActive;
   const label = optimisticValue ? "Attivo" : "Non attivo";
 
   return (
-    <button
+    <ProgressButton progressError={failed}
       aria-checked={optimisticValue}
       aria-label={`${serviceLabel}: ${
         optimisticValue ? "disattiva servizio" : "attiva servizio"
@@ -46,6 +49,6 @@ export function EventServiceActiveSwitch({
       <span className="min-w-16 text-left transition-opacity duration-200">
         {isSaving ? "Salvo..." : label}
       </span>
-    </button>
+    </ProgressButton>
   );
 }

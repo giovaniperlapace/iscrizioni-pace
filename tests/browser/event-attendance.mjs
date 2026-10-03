@@ -13,7 +13,7 @@ const wait = code => ab('wait', '--fn', code);
 try {
   ab('open', `${base}/event-attendance-check`); ab('snapshot', '-i');
   wait('document.body.innerText.includes("Ingresso non registrato")');
-  ab('find', 'role', 'button', 'click', '--name', 'Mostra figli accompagnati', '--exact'); ab('snapshot', '-i');
+  check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Minore Prova")', 'accompanying children are always visible');
   ab('find', 'role', 'button', 'click', '--name', 'entered', '--exact'); ab('snapshot', '-i');
   wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")');
   check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Ingresso non registrato")', 'adult entry does not imply child entry');
@@ -36,6 +36,9 @@ try {
     check(`document.querySelector('${selector}').innerText.includes("Ingresso registrato") && document.querySelector('${selector}').innerText.includes("20 studenti")`, `school actual entry and booked quantities stay separate in ${view}`);
   }
   ab('set', 'viewport', '390', '844'); ab('snapshot', '-i');
+  // The browser driver may reload when changing viewport; restore the server fixture.
+  ab('find', 'role', 'button', 'click', '--name', 'entered', '--exact');
+  wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")');
   ab('screenshot', '/tmp/pace-p13-mobile.png', '--full');
   check('document.documentElement.scrollWidth <= innerWidth', 'mobile page has no horizontal overflow');
   ab('find', 'role', 'button', 'click', '--name', 'Apri scheda', '--exact');

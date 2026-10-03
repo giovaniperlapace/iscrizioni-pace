@@ -3,12 +3,17 @@ export const PARTICIPANT_COLUMNS = {
   email: "Email",
   phone: "Telefono",
   country: "Paese",
+  nationality: "Nazionalità",
+  association: "Associazione / organizzazione",
+  sex: "Sesso",
   city: "Città",
   age: "Età",
   group: "Gruppo",
   service: "Servizio",
   tags: "Tag",
+  attendance: "Giorni di presenza",
   submittedAt: "Data iscrizione",
+  accessibility: "Informazioni sulla disabilità",
 } as const;
 export type ParticipantColumn = keyof typeof PARTICIPANT_COLUMNS;
 export type TablePreferences = {
@@ -21,17 +26,17 @@ export const DEFAULT_TABLE_PREFERENCES: TablePreferences = {
   sort: "name",
   direction: "asc",
 };
-export function parseTablePreferences(value: unknown): TablePreferences {
+export function parseTablePreferences(value: unknown, canReadAccessibility = true): TablePreferences {
   const input =
     value && typeof value === "object"
       ? (value as Partial<TablePreferences>)
       : {};
   const columns = Array.isArray(input.columns)
-    ? [...new Set(input.columns)].filter(isParticipantColumn)
+    ? [...new Set(input.columns)].filter((column): column is ParticipantColumn => isParticipantColumn(column) && (canReadAccessibility || column !== "accessibility"))
     : DEFAULT_TABLE_PREFERENCES.columns;
   return {
     columns: ["name", ...columns.filter((column) => column !== "name")],
-    sort: isParticipantColumn(input.sort) ? input.sort : "name",
+    sort: isParticipantColumn(input.sort) && (canReadAccessibility || input.sort !== "accessibility") ? input.sort : "name",
     direction: input.direction === "desc" ? "desc" : "asc",
   };
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 
+import { ButtonProgress } from "@/components/button-progress";
 import { LANGUAGE_OPTIONS, type SupportedLocale } from "@/lib/i18n/config";
 
 type LanguageSelectorProps = {
@@ -53,7 +54,7 @@ export function LanguageSelector({
           aria-describedby={isBusy ? "locale-pending-status" : undefined}
           disabled={isBusy}
           value={selectedLocale}
-          className="peer absolute inset-0 z-10 h-full w-full cursor-pointer rounded-[var(--radius-sm)] opacity-0 disabled:cursor-wait"
+          className="peer absolute inset-0 z-10 h-full w-full cursor-pointer rounded-[var(--radius-sm)] opacity-0 disabled:cursor-default"
           onChange={(event) => {
             const nextLocale = event.currentTarget.value as SupportedLocale;
 
@@ -85,16 +86,15 @@ export function LanguageSelector({
         </select>
         <span
           aria-hidden="true"
-          className="pointer-events-none flex h-full w-full items-center justify-between rounded-[var(--radius-sm)] border border-[var(--peace-border-strong)] bg-white px-2.5 text-[var(--peace-blue-800)] transition peer-focus-visible:shadow-[var(--focus-ring)] peer-disabled:opacity-75"
+          data-button-progress="true"
+          data-pending={isBusy ? "true" : "false"}
+          className="pointer-events-none flex h-full w-full items-center justify-between rounded-[var(--radius-sm)] border border-[var(--peace-border-strong)] bg-white px-2.5 text-[var(--peace-blue-800)] transition peer-focus-visible:shadow-[var(--focus-ring)]"
         >
           <span className="inline-flex h-7 min-w-8 items-center justify-center overflow-visible text-[1.4rem] leading-none">
             {selectedOption.flag}
           </span>
-          {isBusy ? (
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--peace-blue-200)] border-t-[var(--peace-blue-800)]" />
-          ) : (
-            <ChevronDownIcon />
-          )}
+          <ChevronDownIcon />
+          <ButtonProgress pending={isBusy} />
         </span>
       </div>
       {isBusy ? (

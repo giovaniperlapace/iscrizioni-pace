@@ -1,3 +1,8 @@
+import { nationalityName } from "@/lib/registrations/nationality-names";
+import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
+import { EditableRegistrationInfo } from "./editable-registration-info";
+import { CancelRegistrationButton } from "./cancel-registration-button";
+import { SELF_CANCELLATION_COPY } from "@/lib/registrations/self-cancellation-copy";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { participantQrFilename } from "@/lib/qrcode/filename";
@@ -174,7 +179,6 @@ type ParticipantDashboardCopy = {
   attendanceUnknownSummary: string;
   accessibilityRequest: string;
   accessibilityTitle: string;
-  accessibilityHelp: string;
   editClosed: string;
   notProvided: string;
   notAssigned: string;
@@ -210,7 +214,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Modifiche salvate.",
     noRegistrationTitle: "Nessuna iscrizione collegata",
     noRegistrationBody:
-      "Questa sessione non risulta collegata a un partecipante. Usa il magic link ricevuto via email o avvia di nuovo l'accesso dalla home.",
+      "Non risulta ancora un’iscrizione personale collegata al tuo account. Usa il pulsante qui sotto per avviarla.",
     startRegistration: "Avvia la mia iscrizione",
     qrTitle: "Il tuo QR code personale",
     qrBody:
@@ -241,8 +245,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Da comunicare",
     accessibilityRequest: "Desidero richiedere supporto per l'accessibilità all'evento.",
     accessibilityTitle: "Quali aspetti dobbiamo considerare?",
-    accessibilityHelp:
-      "Puoi selezionare una o più opzioni utili per organizzare meglio l'accoglienza.",
     editClosed: "La finestra di modifica non è attiva per questa iscrizione.",
     notProvided: "Non indicata",
     notAssigned: "Non assegnato",
@@ -279,7 +281,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Changes saved.",
     noRegistrationTitle: "No linked registration",
     noRegistrationBody:
-      "This session is not linked to a participant. Use the magic link received by email or start access again from the home page.",
+      "Your account does not have a linked personal registration yet. Use the button below to start it.",
     startRegistration: "Start my registration",
     qrTitle: "Your personal QR code",
     qrBody:
@@ -310,8 +312,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "To be communicated",
     accessibilityRequest: "I would like to request accessibility support for the event.",
     accessibilityTitle: "Which aspects should we consider?",
-    accessibilityHelp:
-      "You can select one or more options that are useful for organising the welcome better.",
     editClosed: "The edit window is not active for this registration.",
     notProvided: "Not provided",
     notAssigned: "Not assigned",
@@ -348,7 +348,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Modifications enregistrées.",
     noRegistrationTitle: "Aucune inscription liée",
     noRegistrationBody:
-      "Cette session n'est pas liée à un participant. Utilise le magic link reçu par email ou recommence l'accès depuis l'accueil.",
+      "Ton compte n’a pas encore d’inscription personnelle liée. Utilise le bouton ci-dessous pour la commencer.",
     startRegistration: "Commencer mon inscription",
     qrTitle: "Ton QR code personnel",
     qrBody:
@@ -379,8 +379,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "À communiquer",
     accessibilityRequest: "Je souhaite demander un support d'accessibilité pour l'événement.",
     accessibilityTitle: "Quels aspects devons-nous prendre en compte ?",
-    accessibilityHelp:
-      "Tu peux sélectionner une ou plusieurs options utiles pour mieux organiser l'accueil.",
     editClosed: "La fenêtre de modification n'est pas active pour cette inscription.",
     notProvided: "Non indiqué",
     notAssigned: "Non attribué",
@@ -417,7 +415,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Änderungen gespeichert.",
     noRegistrationTitle: "Keine verknüpfte Anmeldung",
     noRegistrationBody:
-      "Diese Sitzung ist nicht mit einer teilnehmenden Person verknüpft. Nutze den Magic Link aus der E-Mail oder starte den Zugang erneut über die Startseite.",
+      "Mit deinem Konto ist noch keine persönliche Anmeldung verknüpft. Starte sie über die Schaltfläche unten.",
     startRegistration: "Meine Anmeldung starten",
     qrTitle: "Dein persönlicher QR-Code",
     qrBody:
@@ -448,8 +446,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Noch mitzuteilen",
     accessibilityRequest: "Ich möchte Unterstützung für Barrierefreiheit bei der Veranstaltung anfragen.",
     accessibilityTitle: "Welche Aspekte sollen wir berücksichtigen?",
-    accessibilityHelp:
-      "Du kannst eine oder mehrere Optionen auswählen, die für die Organisation des Empfangs hilfreich sind.",
     editClosed: "Das Bearbeitungsfenster ist für diese Anmeldung nicht aktiv.",
     notProvided: "Nicht angegeben",
     notAssigned: "Nicht zugewiesen",
@@ -486,7 +482,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Cambios guardados.",
     noRegistrationTitle: "No hay inscripción vinculada",
     noRegistrationBody:
-      "Esta sesión no está vinculada a un participante. Usa el magic link recibido por email o inicia de nuevo el acceso desde el inicio.",
+      "Tu cuenta aún no tiene una inscripción personal vinculada. Usa el botón de abajo para iniciarla.",
     startRegistration: "Iniciar mi inscripción",
     qrTitle: "Tu código QR personal",
     qrBody:
@@ -517,8 +513,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Por comunicar",
     accessibilityRequest: "Quiero solicitar apoyo de accesibilidad para el evento.",
     accessibilityTitle: "¿Qué aspectos debemos tener en cuenta?",
-    accessibilityHelp:
-      "Puedes seleccionar una o más opciones útiles para organizar mejor la acogida.",
     editClosed: "La ventana de modificación no está activa para esta inscripción.",
     notProvided: "No indicado",
     notAssigned: "No asignado",
@@ -555,7 +549,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Wijzigingen opgeslagen.",
     noRegistrationTitle: "Geen gekoppelde inschrijving",
     noRegistrationBody:
-      "Deze sessie is niet gekoppeld aan een deelnemer. Gebruik de magic link uit de e-mail of start de toegang opnieuw vanaf home.",
+      "Er is nog geen persoonlijke inschrijving aan je account gekoppeld. Gebruik de knop hieronder om te beginnen.",
     startRegistration: "Mijn inschrijving starten",
     qrTitle: "Je persoonlijke QR-code",
     qrBody:
@@ -586,8 +580,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Nog door te geven",
     accessibilityRequest: "Ik wil toegankelijkheidsondersteuning voor het evenement aanvragen.",
     accessibilityTitle: "Waar moeten we rekening mee houden?",
-    accessibilityHelp:
-      "Je kunt een of meer opties selecteren die nuttig zijn om de ontvangst beter te organiseren.",
     editClosed: "Het wijzigingsvenster is niet actief voor deze inschrijving.",
     notProvided: "Niet aangegeven",
     notAssigned: "Niet toegewezen",
@@ -624,7 +616,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     saved: "Зміни збережено.",
     noRegistrationTitle: "Немає пов'язаної реєстрації",
     noRegistrationBody:
-      "Ця сесія не пов'язана з учасником. Скористайтеся magic link з електронного листа або почніть доступ знову з головної сторінки.",
+      "До вашого облікового запису ще не прив’язано особисту реєстрацію. Скористайтеся кнопкою нижче, щоб розпочати її.",
     startRegistration: "Почати мою реєстрацію",
     qrTitle: "Ваш персональний QR-код",
     qrBody:
@@ -655,8 +647,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     attendanceUnknownSummary: "Буде повідомлено",
     accessibilityRequest: "Я хочу попросити підтримку доступності для події.",
     accessibilityTitle: "Що нам потрібно врахувати?",
-    accessibilityHelp:
-      "Можна вибрати один або кілька варіантів, корисних для кращої організації прийому.",
     editClosed: "Вікно редагування для цієї реєстрації не активне.",
     notProvided: "Не вказано",
     notAssigned: "Не призначено",
@@ -989,14 +979,21 @@ export default async function PartecipanteDashboardPage({
     redirect("/login");
   }
 
-  const { data: registrationData } = await supabase
+  const { data: registrationData, error: registrationError } = await supabase
     .from("registrations")
     .select(
       "id,event_id,participant_id,status,submitted_at,events!inner(id,title,slug,city,country,starts_on,ends_on,registration_closes_at,is_current),participants!inner(auth_user_id,first_name,last_name,birth_date,country_other,city_other,has_previous_santegidio_participation,participates_with_group,public_code)"
     )
     .is("deleted_at", null)
     .eq("events.is_current", true)
-    .order("submitted_at", { ascending: false });
+    .eq("participants.auth_user_id", auth.user.id)
+    .order("submitted_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1);
+
+  if (registrationError) {
+    throw new Error("Unable to load personal registration", { cause: registrationError });
+  }
 
   const registrations = ((registrationData ?? []) as RegistrationRow[]).filter(
     (registration) => relatedOne(registration.participants)?.auth_user_id === auth.user.id
@@ -1162,30 +1159,30 @@ export default async function PartecipanteDashboardPage({
     <main className="app-page text-[var(--peace-ink)]">
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
-            {copy.area}
-          </p>
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
-            <div>
-              <h1 className="text-3xl font-semibold sm:text-4xl">
-                {participant
-                  ? `${participant.first_name} ${participant.last_name}`
-                  : copy.fallbackTitle}
-              </h1>
-              {!event ? (
-                <p className="mt-3 max-w-3xl text-[var(--peace-muted)]">
-                  {copy.verifiedAccess(auth.user.email ?? "")}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="lg:flex lg:justify-end">
-              <DashboardRoleTabs
-                activeRole="partecipante"
-                eventRoles={auth.eventRoles}
-              />
-            </div>
+          <DashboardRoleTabs
+            activeRole="partecipante"
+            eventRoles={auth.eventRoles}
+          />
+          <div className="grid gap-2">
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
+              {copy.area}
+            </p>
+            <h1 className="text-3xl font-semibold sm:text-4xl">
+              {participant
+                ? `${participant.first_name} ${participant.last_name}`
+                : copy.fallbackTitle}
+            </h1>
+            {!event ? (
+              <p className="mt-1 max-w-3xl text-[var(--peace-muted)]">
+                {copy.verifiedAccess(auth.user.email ?? "")}
+              </p>
+            ) : null}
           </div>
+          {params.cancelled === "1" ? (
+            <SuccessMessage clearQuery locale={locale} className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+              {SELF_CANCELLATION_COPY[locale].success}
+            </SuccessMessage>
+          ) : null}
           {params.saved ? (
             <SuccessMessage key={randomUUID()} clearQuery locale={locale} className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
               {copy.saved}
@@ -1205,7 +1202,7 @@ export default async function PartecipanteDashboardPage({
               {copy.noRegistrationBody}
             </p>
             <Link
-              href={`/${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
+              href={`/registrazione${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
               className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
               {copy.startRegistration}
@@ -1233,6 +1230,7 @@ export default async function PartecipanteDashboardPage({
                   />
                 </div>
                 <RegistrationSummaryCard
+                  registrationId={selectedRegistration.id}
                   copy={copy}
                   participant={participant}
                   primaryContact={primaryContact}
@@ -1258,9 +1256,10 @@ export default async function PartecipanteDashboardPage({
               <ParticipantDashboardOverlay
                 closeHref="/dashboard/partecipante"
                 closeLabel={copy.close}
+                title={activeOverlay === "iscrizione" ? copy.registrationSummary : activeOverlay === "qr" ? copy.qrTitle : messageCopy.title}
               >
                 {activeOverlay === "qr" ? (
-                  <section className="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center">
+                  <section className="grid gap-4 pr-8 md:grid-cols-[14rem_1fr] md:items-center">
                     <QrPreview
                       participantCode={participant.public_code ?? ""}
                       qrDataUrl={qrDataUrl}
@@ -1297,20 +1296,24 @@ export default async function PartecipanteDashboardPage({
                 {activeOverlay === "iscrizione" ? (
                   <section className="grid gap-6">
                     <section className="flex flex-col gap-4">
-                      <div className="border-b border-[var(--peace-border)] pb-2">
-                        <h2 className="text-xl font-semibold">
-                          {copy.registrationSummary}
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
-                          {copy.registrationSummaryBody(
-                            event.title,
-                            formatDateRange(event.starts_on, event.ends_on, locale, copy)
-                          )}
-                        </p>
+                      <div className="flex items-start gap-4 border-b border-[var(--peace-border)] pb-5 pr-8">
+                        <span className="hidden size-12 shrink-0 place-items-center rounded-xl bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)] sm:grid"><ContactRound size={24} aria-hidden="true" /></span>
+                        <div>
+                          <h2 className="text-xl font-semibold">
+                            {copy.registrationSummary}
+                          </h2>
+                          <p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">
+                            {copy.registrationSummaryBody(
+                              event.title,
+                              formatDateRange(event.starts_on, event.ends_on, locale, copy)
+                            )}
+                          </p>
+                        </div>
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <EditableInfo
+                        <EditableRegistrationInfo
+                          icon={UserRound}
                           label={`${childrenCopy.firstName} / ${childrenCopy.lastName}`}
                           value={`${participant.first_name} ${participant.last_name}`.trim()}
                           editable={Boolean(editable)}
@@ -1356,7 +1359,7 @@ export default async function PartecipanteDashboardPage({
                             </div>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                           </ReliableForm>
-                        </EditableInfo>
+                        </EditableRegistrationInfo>
                         <Info
                           label={copy.submittedAt}
                           value={formatDateTime(selectedRegistration.submitted_at, locale, copy)}
@@ -1369,7 +1372,8 @@ export default async function PartecipanteDashboardPage({
                             copy.notProvided
                           }
                         />
-                        <EditableInfo
+                        <EditableRegistrationInfo
+                          icon={Phone}
                           label={copy.phone}
                           value={primaryContact?.phone ?? copy.notProvided}
                           editable={Boolean(editable)}
@@ -1398,7 +1402,7 @@ export default async function PartecipanteDashboardPage({
                             </Field>
                             <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                           </ReliableForm>
-                        </EditableInfo>
+                        </EditableRegistrationInfo>
                         <Info
                           label={copy.birthDate}
                           value={formatDate(participant.birth_date, locale, copy)}
@@ -1409,11 +1413,12 @@ export default async function PartecipanteDashboardPage({
                         />
                         <Info
                           label={copy.nationality}
-                          value={questionnaire?.answers?.nationality ?? copy.notProvided}
+                          value={nationalityName(questionnaire?.answers?.nationality, locale) ?? copy.notProvided}
                         />
                       </div>
 
-                      <EditableInfo
+                      <EditableRegistrationInfo
+                        icon={Baby}
                         label={childrenCopy.section}
                         value={childrenSummary}
                         editable={Boolean(editable)}
@@ -1448,9 +1453,10 @@ export default async function PartecipanteDashboardPage({
                             save: copy.save,
                           }}
                         />
-                      </EditableInfo>
+                      </EditableRegistrationInfo>
 
-                      <EditableInfo
+                      <EditableRegistrationInfo
+                        icon={CalendarDays}
                         label={copy.expectedPresence}
                         value={attendanceSummary}
                         editable={Boolean(editable)}
@@ -1488,9 +1494,10 @@ export default async function PartecipanteDashboardPage({
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                         </ReliableForm>
-                      </EditableInfo>
+                      </EditableRegistrationInfo>
 
-                      <EditableInfo
+                      <EditableRegistrationInfo
+                        icon={Accessibility}
                         label={copy.accessibilitySupport}
                         value={supportSummary}
                         editable={Boolean(editable)}
@@ -1536,9 +1543,6 @@ export default async function PartecipanteDashboardPage({
                                 <h3 className="font-semibold">
                                   {copy.accessibilityTitle}
                                 </h3>
-                                <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-                                  {copy.accessibilityHelp}
-                                </p>
                               </div>
                               <div className="grid gap-3 sm:grid-cols-2">
                                 {ACCESSIBILITY_DIFFICULTIES.map((difficulty) => (
@@ -1567,7 +1571,7 @@ export default async function PartecipanteDashboardPage({
                           </fieldset>
                           <SaveInlineButton editable={Boolean(editable)} copy={copy} />
                         </ReliableForm>
-                      </EditableInfo>
+                      </EditableRegistrationInfo>
 
                       {!editable ? (
                         <p className="text-sm text-[#6f7f91]">
@@ -1580,7 +1584,7 @@ export default async function PartecipanteDashboardPage({
 
                 {activeOverlay === "messaggio" ? (
                   <section className="grid gap-5">
-                    <div className="border-b border-[var(--peace-border)] pb-4">
+                    <div className="border-b border-[var(--peace-border)] pb-4 pr-8">
                       <h2 className="text-xl font-semibold">
                         {messageCopy.title}
                       </h2>
@@ -1652,41 +1656,6 @@ function QrPreview({
   );
 }
 
-function EditableInfo({
-  label,
-  value,
-  editable,
-  copy,
-  children,
-}: {
-  label: string;
-  value: string;
-  editable: boolean;
-  copy: ParticipantDashboardCopy;
-  children: React.ReactNode;
-}) {
-  return (
-    <details className="group rounded-md border border-[var(--peace-border)] p-4 sm:col-span-2">
-      <summary className="grid cursor-pointer list-none gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
-            {label}
-          </p>
-          <p className="mt-1 text-sm leading-6">{value}</p>
-        </div>
-        <span
-          className="grid size-8 place-items-center rounded-full border border-[var(--peace-border-strong)] text-lg text-[var(--peace-blue-800)] group-open:bg-[var(--peace-sky-100)]"
-          aria-hidden="true"
-          title={editable ? copy.edit : copy.editUnavailable}
-        >
-          &#9998;
-        </span>
-      </summary>
-      <div className="mt-4 border-t border-[var(--peace-border)] pt-4">{children}</div>
-    </details>
-  );
-}
-
 function BaseDashboardFields({ registrationId }: { registrationId: string }) {
   return <input type="hidden" name="registrationId" value={registrationId} />;
 }
@@ -1708,36 +1677,25 @@ function AttendanceSlotTable({
     return null;
   }
 
-  const gridTemplateColumns = `minmax(7rem, 0.7fr) repeat(${columns.length}, minmax(5.5rem, 1fr))`;
-
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--peace-border)]">
-      <div
-        className="grid bg-[#f7fbfe] text-center text-xs font-semibold uppercase text-[var(--peace-muted)]"
-        style={{ gridTemplateColumns }}
-      >
-        <div className="border-r border-[var(--peace-border)] px-3 py-3 text-left">
-          Fascia
+    <div className="@container min-w-0">
+      <div className="grid grid-cols-2 gap-3 @min-[32rem]:flex @min-[32rem]:gap-0 @min-[32rem]:overflow-hidden @min-[32rem]:rounded-lg @min-[32rem]:border @min-[32rem]:border-[var(--peace-border)]">
+        <div className="hidden @min-[32rem]:block @min-[32rem]:w-28 @min-[32rem]:shrink-0">
+          <div className="flex h-14 items-center bg-[#f7fbfe] px-3 text-xs font-semibold text-[var(--peace-muted)]">
+            Fascia
+          </div>
+          {ATTENDANCE_PARTS.map((part) => (
+            <div key={part.value} className="flex min-h-14 items-center border-t border-[var(--peace-border)] bg-[#fbfdff] px-3 text-sm font-medium">
+              {part.label[locale] ?? part.label.en}
+            </div>
+          ))}
         </div>
         {columns.map((column) => (
-          <div
-            key={column.day}
-            className="border-r border-[var(--peace-border)] px-3 py-3 last:border-r-0"
-          >
-            {column.label}
-          </div>
-        ))}
-      </div>
-      {ATTENDANCE_PARTS.map((part) => (
-        <div
-          key={part.value}
-          className="grid border-t border-[var(--peace-border)]"
-          style={{ gridTemplateColumns }}
-        >
-          <div className="border-r border-[var(--peace-border)] bg-[#fbfdff] px-3 py-3 text-sm font-medium text-[var(--peace-ink)]">
-            {part.label[locale] ?? part.label.en}
-          </div>
-          {columns.map((column) => {
+          <div key={column.day} className="min-w-0 overflow-hidden rounded-lg border border-[var(--peace-border)] @min-[32rem]:flex-1 @min-[32rem]:rounded-none @min-[32rem]:border-0 @min-[32rem]:border-l">
+            <div className="flex h-14 items-center justify-center bg-[#f7fbfe] px-2 text-center text-sm font-semibold text-[var(--peace-ink)] @min-[32rem]:text-xs">
+              {column.label}
+            </div>
+          {ATTENDANCE_PARTS.map((part) => {
             const slotAvailable = column.parts.includes(part.value);
             const slotValue = encodeAttendanceSlot({
               day: column.day,
@@ -1747,19 +1705,20 @@ function AttendanceSlotTable({
             return (
               <label
                 key={`${column.day}-${part.value}`}
-                className={`flex min-h-14 items-center justify-center border-r border-[var(--peace-border)] px-3 py-2 last:border-r-0 ${
+                className={`flex min-h-14 items-center justify-between gap-2 border-t border-[var(--peace-border)] px-2 py-2 text-xs @min-[32rem]:justify-center ${
                   slotAvailable
                     ? "bg-white text-[var(--peace-ink)]"
                     : "bg-[#f3f6f9] text-[#9aa8b8]"
                 }`}
               >
+                <span className="min-w-0 break-words font-medium @min-[32rem]:hidden">{part.label[locale] ?? part.label.en}</span>
                 {slotAvailable ? (
                   <input
                     type="checkbox"
                     name="availabilitySlots"
                     value={slotValue}
                     defaultChecked={selectedSlots.has(slotValue)}
-                    className="h-4 w-4 accent-[var(--peace-blue-800)]"
+                    className="h-5 w-5 shrink-0 accent-[var(--peace-blue-800)]"
                     aria-label={`${part.label[locale] ?? part.label.en} ${column.label}`}
                   />
                 ) : (
@@ -1768,8 +1727,9 @@ function AttendanceSlotTable({
               </label>
             );
           })}
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1829,9 +1789,9 @@ function SaveInlineButton({
   return (
     <PendingSubmitButton
       disabled={!editable}
-      className="w-fit rounded-md bg-[var(--peace-blue-800)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--peace-blue-900)] disabled:cursor-not-allowed disabled:bg-[#8aa6bd]"
+      className="btn-primary inline-flex min-h-11 w-fit items-center gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {copy.save}
+      <Save size={16} aria-hidden="true" />{copy.save}
     </PendingSubmitButton>
   );
 }
@@ -1911,6 +1871,7 @@ function QrActionButtons({
 }
 
 function RegistrationSummaryCard({
+  registrationId,
   copy,
   participant,
   primaryContact,
@@ -1921,6 +1882,7 @@ function RegistrationSummaryCard({
   active,
   locale,
 }: {
+  registrationId: string;
   copy: ParticipantDashboardCopy;
   participant: ParticipantRow;
   primaryContact: ContactRow | null;
@@ -1935,67 +1897,76 @@ function RegistrationSummaryCard({
     <details
       open
       data-testid="registration-summary-card"
-      className="group w-full rounded-lg border border-[var(--peace-border-strong)] bg-white shadow-sm"
+      className="group w-full rounded-xl border border-[var(--peace-border)] bg-white shadow-sm"
     >
       <summary
         data-testid="registration-summary-toggle"
-        className="grid cursor-pointer list-none gap-3 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center"
+        className="flex min-h-20 cursor-pointer list-none items-center gap-3 rounded-xl p-4 transition hover:bg-[var(--peace-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
       >
-        <div className="min-w-0">
+        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]"><ContactRound size={20} aria-hidden="true" /></span>
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold leading-tight text-[var(--peace-ink)] sm:text-xl">
             {copy.registrationSummary}
           </h2>
         </div>
         <span
-          className="inline-flex min-h-10 w-fit items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 text-sm font-semibold text-[var(--peace-blue-800)] transition group-open:bg-[var(--peace-sky-100)]"
+          className="inline-flex shrink-0 items-center justify-center gap-2 text-sm font-semibold text-[var(--peace-blue-800)]"
           aria-hidden="true"
         >
-          <span className="group-open:hidden">{copy.expand}</span>
-          <span className="hidden group-open:inline">{copy.collapse}</span>
+          <span className="hidden sm:inline group-open:sm:hidden">{copy.expand}</span>
+          <span className="hidden group-open:sm:inline">{copy.collapse}</span>
           <ChevronIcon />
         </span>
       </summary>
-      <div className="border-t border-[var(--peace-border)] px-4 pb-4 pt-3">
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+      <div className="border-t border-[var(--peace-border)] p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <SummaryInfo
+            icon={Mail}
             label="Email"
             value={primaryContact?.email ?? copy.notProvided}
-            className="col-span-2 xl:col-span-1"
+            className="sm:col-span-2 xl:col-span-1"
           />
           <SummaryInfo
+            icon={Phone}
             label={copy.phone}
             value={primaryContact?.phone ?? copy.notProvided}
           />
           <SummaryInfo
+            icon={CalendarDays}
             label={copy.birthDate}
             value={formatDate(participant.birth_date, locale, copy)}
           />
           <SummaryInfo
+            icon={MapPin}
             label={copy.birthPlace}
             value={questionnaire?.answers?.birthPlace ?? copy.notProvided}
           />
           <SummaryInfo
+            icon={Flag}
             label={copy.nationality}
-            value={questionnaire?.answers?.nationality ?? copy.notProvided}
+            value={nationalityName(questionnaire?.answers?.nationality, locale) ?? copy.notProvided}
           />
-          <SummaryInfo label={copy.expectedPresence} value={attendanceSummary} />
-          <SummaryInfo label={copy.accessibilitySupport} value={supportSummary} />
+          <SummaryInfo icon={CalendarDays} label={copy.expectedPresence} value={attendanceSummary} />
+          <SummaryInfo icon={Accessibility} label={copy.accessibilitySupport} value={supportSummary} />
           {serviceLabel ? (
             <SummaryInfo label={copy.eventService} value={serviceLabel} />
           ) : null}
         </div>
-        <div className="mt-3 flex flex-wrap justify-start gap-2">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--peace-border)] pt-4">
           <Link
             href="/dashboard/partecipante?overlay=iscrizione"
             className={
               active
-                ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white"
-                : "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
+                ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white"
+                : "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             }
           >
-            <ActionIcon icon="form" active={active} />
+            <Pencil size={18} aria-hidden="true" />
             {copy.edit}
           </Link>
+          <div className="ml-auto flex justify-end">
+            <CancelRegistrationButton registrationId={registrationId} locale={locale} />
+          </div>
         </div>
       </div>
     </details>
@@ -2035,22 +2006,25 @@ function ParticipantOrganizerContactCard({
 }
 
 function SummaryInfo({
+  icon: Icon,
   label,
   value,
   className = "",
 }: {
+  icon?: LucideIcon;
   label: string;
   value: string;
   className?: string;
 }) {
   return (
     <div
-      className={`min-w-0 rounded-md border border-[var(--peace-border)] bg-[var(--peace-soft)] px-3 py-1.5 ${className}`}
+      className={`min-w-0 rounded-xl border border-[var(--peace-border)] bg-white p-3 ${className}`}
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#6f7f91]">
+      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--peace-blue-900)]">
+        {Icon ? <Icon size={18} className="shrink-0 text-[var(--peace-blue-800)]" aria-hidden="true" /> : null}
         {label}
       </p>
-      <p className="mt-0.5 break-words text-sm leading-5 text-[var(--peace-ink)]">
+      <p className="mt-2 break-words text-sm leading-6 text-[var(--peace-muted)]">
         {value}
       </p>
     </div>
@@ -2109,55 +2083,6 @@ function ChevronIcon() {
     >
       <path d="m6 9 6 6 6-6" />
     </svg>
-  );
-}
-
-function ActionIcon({
-  icon,
-  active,
-}: {
-  icon: "qr" | "form";
-  active: boolean;
-}) {
-  if (icon === "qr") {
-    const activeCells = new Set([0, 1, 3, 4, 5, 6, 8, 9, 12, 15, 16, 18, 20, 21, 22, 24]);
-
-    return (
-      <span
-        aria-hidden="true"
-        className="grid size-6 shrink-0 grid-cols-5 gap-0.5 rounded-sm"
-      >
-        {Array.from({ length: 25 }, (_, cell) => (
-          <span
-            key={cell}
-            className={
-              activeCells.has(cell)
-                ? active
-                  ? "rounded-[1px] bg-white"
-                  : "rounded-[1px] bg-[var(--peace-blue-800)]"
-                : "rounded-[1px] bg-transparent"
-            }
-          />
-        ))}
-      </span>
-    );
-  }
-
-  return (
-    <span
-      aria-hidden="true"
-      className={
-        active
-          ? "grid size-6 shrink-0 gap-1 rounded-sm border border-white p-1"
-          : "grid size-6 shrink-0 gap-1 rounded-sm border border-[var(--peace-blue-800)] p-1"
-      }
-    >
-      <span className={active ? "h-0.5 w-3 bg-white" : "h-0.5 w-3 bg-[var(--peace-blue-800)]"} />
-      <span className={active ? "h-0.5 w-4 bg-white" : "h-0.5 w-4 bg-[var(--peace-blue-800)]"} />
-      <span
-        className={active ? "h-0.5 w-3.5 bg-white" : "h-0.5 w-3.5 bg-[var(--peace-blue-800)]"}
-      />
-    </span>
   );
 }
 

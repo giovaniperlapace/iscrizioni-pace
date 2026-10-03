@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 
 const source = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
-function actionHarness(actorRole = "manager", actorEvent = "event", profileExists = true, options: { allowNew?: boolean; mailFails?: boolean; writeFails?: boolean } = {}) {
+function actionHarness(actorRole = "manager", actorEvent = "event", profileExists = true, options: { allowNew?: boolean; mailFails?: boolean; writeFails?: boolean; opposite?: boolean } = {}) {
   const writes: Array<{ table: string; value: Record<string, unknown> }> = [];
   const reads: string[] = [];
   const sends: Record<string, unknown>[] = [];
@@ -14,16 +14,16 @@ function actionHarness(actorRole = "manager", actorEvent = "event", profileExist
       select() { return this; }, eq() { return this; }, is() { return this; }, limit() { return this; },
       maybeSingle() { return Promise.resolve({ data: table === "profiles" && profileExists ? { id: "existing", email: "existing@example.test", full_name: "Nome originale" } : null, error: null }); },
       insert(value: Record<string, unknown>) { writes.push({ table, value }); return { error: options.writeFails ? { message: "write failed" } : null }; },
-      data: [], error: null,
+      data: options.opposite ? [{ id: "opposite" }] : [], error: null,
     };
     return query;
   } };
   const dependencies = {
-    validateContactFields: () => [], formFailure: (value: unknown) => value,
+    validateContactFields: () => [], formFailure: (issues: unknown) => ({ status: "error", issues }),
     optionalText: (value: unknown) => typeof value === "string" && value ? value : null,
     normalizeEmail: (value: unknown) => String(value ?? "").trim().toLowerCase(),
     getOperationalUsersDashboardPath: () => "/dashboard/manager?section=ruoli",
-    parseGroupLeaderKind: () => "secondary", isAssignableOperationalRole: (role: string) => ["manager", "accoglienza", "admin"].includes(role),
+    parseGroupLeaderKind: () => "secondary", isAssignableOperationalRole: (role: string) => ["manager", "manager_viewer", "accoglienza", "admin"].includes(role),
     formFailureFromRedirect: (path: string) => path,
     createSupabaseServerClient: async () => db, createSupabaseServiceClient: () => db,
     getCurrentAuthContext: async () => ({ user: { id: "actor" }, eventRoles: [{ role: actorRole, eventId: actorEvent }] }),
@@ -105,7 +105,7 @@ test("existing role invitations use the server profile and never send when role 
   await assert.rejects(h.action(h.form), /roleSaved=1/);
   assert.equal(h.sends[0].email, "existing@example.test");
   const failed = actionHarness("manager", "event", true, { writeFails: true }); failed.form.set("sendInvite", "on");
-  assert.match(await failed.action(failed.form), /roleError/); assert.equal(failed.sends.length, 0);
+  assert.equal((await failed.action(failed.form)).status, "error"); assert.equal(failed.sends.length, 0);
 });
 
 test("admin assignment links the selected account to all events", async () => {
@@ -118,4 +118,48 @@ test("admin assignment links the selected account to all events", async () => {
     value: { user_id: "existing", event_id: null, role: "admin", created_by: "actor" },
   });
   assert.equal(h.sends.length, 0);
+});
+
+
+test("manager and viewer conflict is explicit and causes no writes or email", async () => {
+  for (const role of ["manager", "manager_viewer"]) {
+    const h = actionHarness("manager", "event", true, { opposite: true }); h.form.set("role", role);
+    assert.deepEqual(await h.action(h.form), { status: "error", issues: [{ field: null, code: "roleExclusive" }] });
+    assert.equal(h.writes.length, 0); assert.equal(h.sends.length, 0);
+  }
+});
+
+test("inline assignment preserves the selected person and does not navigate", async () => {
+  const h = actionHarness(); h.form.set("inline", "on");
+  assert.deepEqual(await h.action(h.form), { status: "success" });
+  assert.equal(h.writes[0].table, "event_user_roles");
+});
+
+test("legacy selector changes only add roles and ignore submitted personal identity", async () => {
+  const calls: FormData[] = [];
+  const code = source.slice(source.indexOf("export async function updateOperationalUserRole"), source.indexOf("export async function deleteOperationalUserRole")).replace("export async", "async");
+  const js = ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const action = new Function("assignOperationalUserRole", "formFailure", `${js}; return updateOperationalUserRole;`)(async (data: FormData) => { calls.push(data); return { status: "success" }; }, (issues: unknown) => ({ status: "error", issues }));
+  const f = new FormData(); f.set("currentUserId", "target"); f.set("role", "manager"); f.set("firstName", "Forged");
+  assert.deepEqual(await action(f), { status: "success" });
+  assert.equal(calls[0].get("existingUserId"), "target"); assert.equal(calls[0].has("firstName"), false);
+});
+
+test("candidate search includes scoped assisted participants and aliases without duplicating linked accounts", async () => {
+  const code = readFileSync(new URL("../lib/operational-users/role-candidates.ts", import.meta.url), "utf8");
+  const js = ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+  const candidateModule = { exports: {} as { loadRoleCandidates: (db: unknown, events: string[]) => Promise<Array<{ id: string; searchText?: string }>> } };
+  new Function("exports", js)(candidateModule.exports);
+  const scopes: unknown[] = [];
+  const linked = { id: "linked", auth_user_id: "account", first_name: "José", last_name: "Rossi", public_code: "AB12", participant_contacts: [] };
+  const assisted = { id: "assisted", auth_user_id: null, first_name: "Anna", last_name: "Verdi", public_code: "CD34", participant_contacts: [{ email: "anna@example.test", is_primary: true }] };
+  const db = { from(table: string) { return {
+    select() { return this; }, order() { return this; }, eq(key: string, value: string) { scopes.push([key, value]); return this; }, is(key: string, value: unknown) { scopes.push([key, value]); return this; },
+    range() { return { error: null, data: table === "profiles" ? [{ id: "account", full_name: "Account name", email: "jose@example.test" }] : [{ participants: linked },{ participants: assisted },{ participants: assisted }] }; },
+  }; } };
+  const rows = await candidateModule.exports.loadRoleCandidates(db, ["event"]);
+  assert.equal(rows.length, 2);
+  assert.match(rows.find(row => row.id === "account")!.searchText!, /José Rossi AB12/);
+  assert.equal(rows.find(row => row.id === "participant:assisted")!.searchText, "CD34");
+  assert.deepEqual(scopes, [["event_id", "event"], ["deleted_at", null]]);
 });

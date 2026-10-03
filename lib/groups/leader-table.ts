@@ -1,3 +1,6 @@
+import { nationalityName } from "../registrations/nationality-names.ts";
+import { internalSexText, type InternalSex } from "../registrations/assisted-demographics.ts";
+import { attendanceSummary } from "../registrations/attendance-summary.ts";
 import { LEADER_SERVICE_STATUS_COPY } from "./leader-table-copy.ts";
 import type { AssignmentView } from "./leader-assignments.ts";
 import { calculateAgeAtDate } from "./matching.ts";
@@ -16,6 +19,7 @@ export type LeaderTableRow = Pick<
   | "participantName"
   | "participantCode"
   | "participantPlace"
+  | "emailDelegated"
   | "participantEmail"
   | "participantPhone"
   | "participantCountry"
@@ -24,7 +28,13 @@ export type LeaderTableRow = Pick<
   | "groupName"
   | "submittedAt"
   | "tagIds"
+  | "children"
+  | "attendance"
+  | "accessibility"
+  | "nationality"
 > & {
+  sex?: InternalSex;
+  sexText?: string | null;
   serviceLabel: string | null;
   serviceStatus?: keyof typeof LEADER_SERVICE_STATUS_COPY.it | null;
   tags: { id: string; label: string; color: string }[];
@@ -38,6 +48,7 @@ export function toLeaderTableRow(row: AssignmentView): LeaderTableRow {
     participantCode: row.participantCode,
     participantPlace: row.participantPlace,
     participantEmail: row.participantEmail,
+    emailDelegated: row.emailDelegated,
     participantPhone: row.participantPhone,
     participantCountry: row.participantCountry,
     participantCity: row.participantCity,
@@ -45,6 +56,10 @@ export function toLeaderTableRow(row: AssignmentView): LeaderTableRow {
     groupName: row.groupName,
     submittedAt: row.submittedAt,
     tagIds: row.tagIds,
+    children: row.children,
+    attendance: row.attendance,
+    accessibility: row.accessibility,
+    nationality: row.nationality,
     serviceLabel: row.service?.serviceLabel ?? null,
     serviceStatus: row.service?.status ?? null,
     tags: row.tags.map(({ id, label, color }) => ({ id, label, color })),
@@ -56,6 +71,16 @@ export function leaderColumnValue(
   startsOn: string | null,
 ): string | number | null {
   switch (column) {
+    case "association":
+      return null;
+    case "nationality":
+      return row.nationality ?? null;
+    case "sex":
+      return row.sexText ?? row.sex ?? null;
+    case "accessibility":
+      return row.accessibility ?? null;
+    case "attendance":
+      return attendanceSummary(row.attendance);
     case "name":
       return row.participantName;
     case "email":
@@ -89,6 +114,9 @@ export function leaderCellText(
   startsOn: string | null,
   locale: SupportedLocale,
 ): string {
+  if (column === "nationality") return nationalityName(row.nationality, locale) ?? "—";
+  if (column === "sex") return row.sexText ?? internalSexText(row.sex, locale);
+  if (column === "attendance") return attendanceSummary(row.attendance, locale);
   const value = leaderColumnValue(row, column, startsOn);
   if (column === "service" && value && row.serviceStatus)
     return `${value}\n${LEADER_SERVICE_STATUS_COPY[locale][row.serviceStatus]}`;
@@ -116,7 +144,6 @@ export function filterLeaderRows<
     .slice(0, 80)
     .toLowerCase();
   const group = params.get("group")?.trim() || "all";
-  const tag = params.get("tag")?.trim() || "all";
   return rows.filter(
     (row) =>
       [row.participantName, row.participantCode]
@@ -129,9 +156,7 @@ export function filterLeaderRows<
         .join(" ")
         .toLowerCase()
         .includes(contact) &&
-      (group === "all" || row.groupId === group) &&
-      (tag === "all" ||
-        (tag === "none" ? row.tagIds.length === 0 : row.tagIds.includes(tag))),
+      (group === "all" || row.groupId === group),
   );
 }
 export function sortLeaderRows(
@@ -141,8 +166,8 @@ export function sortLeaderRows(
   locale: SupportedLocale,
 ): LeaderTableRow[] {
   return [...rows].sort((a, b) => {
-    const av = leaderColumnValue(a, preferences.sort, startsOn),
-      bv = leaderColumnValue(b, preferences.sort, startsOn);
+    const av = preferences.sort === "nationality" ? nationalityName(a.nationality, locale) : leaderColumnValue(a, preferences.sort, startsOn),
+      bv = preferences.sort === "nationality" ? nationalityName(b.nationality, locale) : leaderColumnValue(b, preferences.sort, startsOn);
     if (av === null || bv === null)
       return av === bv ? a.id.localeCompare(b.id) : av === null ? 1 : -1;
     const cmp =
@@ -162,13 +187,14 @@ export function leaderPreferences(
   stored: unknown = undefined,
 ): TablePreferences {
   const base = parseTablePreferences(stored);
-  return parseTablePreferences({
+  const preferences = parseTablePreferences({
     columns: params.has("columns")
       ? params.get("columns")!.split(",")
       : base.columns,
     sort: params.get("sort") ?? base.sort,
     direction: params.get("direction") ?? base.direction,
   });
+  return { ...preferences, columns: preferences.columns.filter(column => column !== "tags" && column !== "association"), sort: (preferences.sort === "tags" || preferences.sort === "association") ? "name" : preferences.sort };
 }
 // Accept only this dashboard and known table state. Never reflect arbitrary URLs.
 export function leaderReturnPath(

@@ -12,8 +12,8 @@ const operationsSection = readFileSync(
   "utf8"
 );
 
-test("statistics keep three focused reports and remove person-detail tables", () => {
-  assert.equal(statisticsSection.match(/<ReportBlock name=/g)?.length, 4);
+test("statistics keep six focused reports and remove person-detail tables", () => {
+  assert.equal(statisticsSection.match(/<ReportBlock name=/g)?.length, 6);
   assert.match(statisticsSection, /name="territory"/);
   assert.match(statisticsSection, /name="attendance"/);
   assert.match(statisticsSection, /name="age"/);
@@ -23,26 +23,12 @@ test("statistics keep three focused reports and remove person-detail tables", ()
   assert.doesNotMatch(statisticsSection, /Cerca nella tabella/);
 });
 
-test("territory report uses an expandable country-city-group attendance pivot", () => {
-  for (const marker of [
-    "TerritoryAttendancePivot",
-    "buildTerritoryPivotRows",
-    'level: "country"',
-    'level: "city"',
-    'level: "group"',
-    "groups.size > 1",
-    "ChevronRight",
-    "ChevronDown",
-    "attendanceSlots.map",
-    "Totale",
-  ]) {
-    assert.ok(statisticsSection.includes(marker), `missing pivot marker: ${marker}`);
+test("group report uses expandable assignment hierarchy and preserves attendance columns", () => {
+  for (const marker of ["buildAssignedGroupTree", "row.type", "attendanceSlots.map", "Totale", "Gruppo o nodo"]) {
+    assert.ok(statisticsSection.includes(marker));
   }
-
-  assert.match(
-    statisticsSection,
-    /overflow-x-auto overscroll-x-contain/
-  );
+  assert.doesNotMatch(statisticsSection, /person\.country|person\.city|territorySummary/);
+  assert.match(statisticsSection, /overflow-x-auto overscroll-x-contain/);
 });
 
 test("attendance summary groups only morning and afternoon by date", () => {

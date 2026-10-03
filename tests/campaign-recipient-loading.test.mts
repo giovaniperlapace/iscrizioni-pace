@@ -1,3 +1,4 @@
+import * as allRows from "../lib/supabase/all-rows.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -14,6 +15,7 @@ function previewLoader(failAt = 0) {
         eq() { return query; },
         order() { return query; },
         not() { return query; },
+        range() { return query; },
         in(_column: string, values: string[]) { ids = values; return query; },
         then(resolve: (value: unknown) => unknown) {
           const tooLong = new URLSearchParams({ select: "id,first_name,last_name", id: `in.(${ids.join(",")})` }).toString().length > 8000;
@@ -35,6 +37,7 @@ function previewLoader(failAt = 0) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   new Function("require", "exports", source)((id: string) => {
+    if (id.includes("supabase/all-rows")) return allRows;
     if (id.includes("supabase/service")) return { createSupabaseServiceClient: () => service };
     if (id.includes("operational-users/identity")) return { getOperationalUserIdentities: async () => new Map() };
     return {};

@@ -1,3 +1,7 @@
+import { nationalityName } from "../registrations/nationality-names.ts";
+import { internalSexText } from "../registrations/assisted-demographics.ts";
+import { CHILDREN_EXPORT_COPY, childrenExportValues } from "../registrations/children-export.ts";
+import { attendanceTableColumns, attendanceSlotText } from "../registrations/attendance-summary.ts";
 import ExcelJS from "exceljs";
 import yauzl from "yauzl";
 import { calculateAgeAtDate } from "../groups/matching.ts";
@@ -19,7 +23,7 @@ import {
 
 // Inspect and fully drain each entry with an actual decompression budget before
 // ExcelJS materializes the workbook. Never extract uploaded archives to disk.
-async function inspectArchive(buffer: Buffer): Promise<void> {
+export async function inspectArchive(buffer: Buffer): Promise<void> {
   if (buffer.length > MAX_FILE_BYTES) throw new Error("Il file supera 2 MiB.");
   await new Promise<void>((resolve, reject) =>
     yauzl.fromBuffer(
@@ -194,8 +198,10 @@ export async function writeVisibleParticipantsWorkbook(
   catalog: Catalog,
   selectedColumns: ParticipantColumn[],
   eventStartsOn: string | null,
+  eventEndsOn: string | null = null,
 ): Promise<Buffer> {
   const { columns } = parseTablePreferences({ columns: selectedColumns });
+  const attendanceColumns = attendanceTableColumns(eventStartsOn, eventEndsOn);
   const services = new Map(
     catalog.services.map((item) => [item.id, item.label]),
   );
@@ -205,8 +211,18 @@ export async function writeVisibleParticipantsWorkbook(
     timeZone: "Europe/Rome",
   });
   const rows = people.map((person) =>
-    columns.map((column) => {
+    columns.flatMap((column) => {
       switch (column) {
+        case "association":
+          return person.association ?? "—";
+        case "nationality":
+          return nationalityName(person.nationality) ?? "—";
+        case "sex":
+          return internalSexText(person.sex, "it");
+        case "accessibility":
+          return person.accessibility ?? "—";
+        case "attendance":
+          return attendanceColumns.map(slot => attendanceSlotText(person.attendance, slot));
         case "name":
           return person.name;
         case "email":
@@ -239,16 +255,31 @@ export async function writeVisibleParticipantsWorkbook(
             ? dateFormat.format(new Date(person.submittedAt))
             : "—";
       }
-    }),
+    }).concat(childrenExportValues(person.children ?? [])),
   );
-  return writeTableWorkbook("Iscritti", columns.map((column) => PARTICIPANT_COLUMNS[column]), rows);
+  const headers = columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [PARTICIPANT_COLUMNS[column]]);
+  headers.push(...CHILDREN_EXPORT_COPY.it.headers);
+  return writeTableWorkbook("Iscritti", headers, rows);
 }
 
 export async function writeTableWorkbook(name: string, headers: string[], rows: string[][]): Promise<Buffer> {
   const book = new ExcelJS.Workbook();
   book.creator = "Iscrizioni Pace";
   book.subject = "Esportazione colonne visibili";
-  addSheet(book, name, headers, rows);
+  const sheet = addSheet(book, name, headers, rows);
+  sheet.columns.forEach((column, index) => {
+    if (headers[index].length > 28) column.width = 44;
+    column.alignment = { wrapText: true, vertical: "top" };
+  });
+  sheet.eachRow(row => {
+    let lines = 1;
+    row.eachCell(cell => {
+      const width = (sheet.getColumn(cell.col).width ?? 24) - 3;
+      lines = Math.max(lines, String(cell.value ?? "").split("\n")
+        .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / width)), 0));
+    });
+    row.height = Math.max(30, lines * 16 + 12);
+  });
   return Buffer.from(await book.xlsx.writeBuffer());
 }
 

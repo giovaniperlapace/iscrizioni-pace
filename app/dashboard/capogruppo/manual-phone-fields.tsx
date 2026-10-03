@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredIndicator } from "@/components/required-indicator";
 import { useId, useState } from "react";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { PHONE_INPUT_COPY } from "@/lib/i18n/phone-input";
@@ -38,10 +39,13 @@ export function ManualPhoneFields({ locale, label }: { locale: SupportedLocale; 
           onChange={event => setNumber(event.target.value)} />
       </div>
       {prefix === OTHER_PHONE_PREFIX ? (
-        <input type="tel" className="field" inputMode="tel" pattern="\+[1-9][0-9]{0,3}"
-          aria-label={copy.phonePrefixLabel} placeholder={copy.phonePrefixPlaceholder}
-          required={number.length > 0} value={customPrefix} data-field="phone"
-          onChange={event => setCustomPrefix(event.target.value)} />
+        <label className="grid gap-1">
+          <span>{copy.phonePrefixLabel}{number.length > 0 ? <RequiredIndicator /> : null}</span>
+          <input type="tel" className="field" inputMode="tel" pattern="\+[1-9][0-9]{0,3}"
+            aria-label={copy.phonePrefixLabel} placeholder={copy.phonePrefixPlaceholder}
+            required={number.length > 0} value={customPrefix} data-field="phone"
+            onChange={event => setCustomPrefix(event.target.value)} />
+        </label>
       ) : null}
     </div>
   );

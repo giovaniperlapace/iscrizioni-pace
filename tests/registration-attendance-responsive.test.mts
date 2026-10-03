@@ -20,7 +20,7 @@ test("public attendance choices use cards on mobile and a table on wider screens
 test("reserved group links keep registration bound to the quoted group", () => {
   assert.match(
     registrationForm,
-    /groupLinkPrefix: "Questo link iscrive al gruppo di"/
+    /groupLinkPrefix: "Usa questo link per iscriverti con il gruppo"/
   );
   assert.match(
     registrationForm,

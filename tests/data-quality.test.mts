@@ -172,11 +172,10 @@ test("preview detects existing and intra-file duplicates; errors and all skips r
     catalog,
     [{ ...person, lastName: "Rossi", deletedAt: "2026-01-01" }],
   );
-  assert.throws(() =>
-    validateDecisions(archived, [
-      { row: 2, action: "import", reason: "different" },
-    ]),
-  );
+  assert.deepEqual(archived[0].candidates, []);
+  assert.equal(validateDecisions(archived, [
+    { row: 2, action: "import", reason: "" },
+  ]).length, 1);
 });
 test("canonical template is empty with examples on a separate sheet; export roundtrip preserves text and all rows", async () => {
   const template = await writeWorkbook([], catalog);
@@ -276,4 +275,34 @@ test("preview envelope rejects another operator, another event, wrong purpose, e
       "e",
     ),
   );
+});
+
+test("Excel requires birth dates and rechecks previews created before the requirement", () => {
+  for (const date of ["", "   ", "2026-02-30", "2999-01-01"]) {
+    const preview = buildPreviewRows([{ row: 2, values: row({ data_nascita: date }), cellErrors: [] }], catalog, []);
+    assert.ok(preview[0].errors.some(error => error.startsWith("data_nascita:")));
+    // A sealed preview from an earlier version may have no recorded errors.
+    preview[0].errors = [];
+    assert.throws(() => validateDecisions(preview, [{ row: 2, action: "import", reason: "" }]), /data di nascita/);
+    assert.equal(validateDecisions(preview, [{ row: 2, action: "skip", reason: "Data da raccogliere" }]).length, 1);
+  }
+});
+
+test("Excel accepts a valid date under one year without a confirmation", () => {
+  const birthDate = new Date().toISOString().slice(0, 10);
+  const preview = buildPreviewRows([{ row: 2, values: row({ data_nascita: birthDate }), cellErrors: [] }], catalog, []);
+  const decision = { row: 2, action: "import" as const, reason: "" };
+  assert.deepEqual(preview[0].errors, []);
+  assert.equal(validateDecisions(preview, [decision]).length, 1);
+});
+
+
+test("Excel requires residence city in preview and revalidates older sealed previews", () => {
+  for (const city of ["", "   ", "x".repeat(121)]) {
+    const preview = buildPreviewRows([{ row: 2, values: row({ citta: city }), cellErrors: [] }], catalog, []);
+    assert.ok(preview[0].errors.some(error => error.startsWith("citta:")));
+    preview[0].errors = []; // Preview issued before this requirement.
+    assert.throws(() => validateDecisions(preview, [{ row: 2, action: "import", reason: "" }]), /città di residenza/);
+    assert.equal(validateDecisions(preview, [{ row: 2, action: "skip", reason: "Dato da raccogliere" }]).length, 1);
+  }
 });

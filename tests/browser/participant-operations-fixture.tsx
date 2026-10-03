@@ -22,6 +22,7 @@ import {
 
 const seed: Row[] = Array.from({ length: 12 }, (_, i) => ({
   registrationId: `reg-${i}`,
+  attendance: i === 1 ? [] : [{ day: "2026-10-25", day_part: "morning", choice: "yes" }],
   participantId: `person-${i}`,
   eventId: "event",
   eventTitle: "Fixture event",
@@ -46,8 +47,12 @@ const seed: Row[] = Array.from({ length: 12 }, (_, i) => ({
   service: null,
   tagIds: [],
   tags: [],
-  childrenCount: 0,
-  children: [],
+  accessibility: i === 0 ? "Sentire, anche usando apparecchi acustici; Camminare o salire gradini" : undefined,
+  childrenCount: i === 0 ? 2 : 0,
+  children: i === 0 ? [
+    {id: "c1", first_name: "Sofia", last_name: "Bianchi", birth_date: "2020-01-01", position: 0},
+    {id: "c2", first_name: "Luca", last_name: "Bianchi", birth_date: "2022-01-01", position: 1},
+  ] : [],
 }));
 const groupOptions = [
   { id: "group1", eventId: "event", name: "Gruppo Roma" },
@@ -226,7 +231,8 @@ export default function Fixture() {
   return (
     <AppRouterContext.Provider
       value={{
-        bfcacheId: "test",
+        // Keep the mock compatible with Next 16.2 and 16.3 router types.
+        ...{ bfcacheId: "participant-operations-fixture" },
         back() {},
         forward() {},
         refresh() {},
@@ -305,6 +311,7 @@ export default function Fixture() {
         )}
         {(!duplicatesView || params.has("edit")) && (
           <OperationsParticipantsTable
+            attendancePanel={<></>}
             dialogOnly={duplicatesView}
             snapshot={snapshot}
             selectedParticipant={
@@ -319,6 +326,7 @@ export default function Fixture() {
             operatorId={operatorId}
             eventId="event"
             eventStartsOn="2026-10-25"
+            eventEndsOn="2026-10-27"
           />
         )}
       </main>

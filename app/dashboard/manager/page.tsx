@@ -1,7 +1,26 @@
+import { loadAssociations } from "@/lib/registrations/association.server";
+import { ExportsSection } from "@/app/dashboard/exports-section";
+import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
+import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
+import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
+import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
+import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
+import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
+import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
+import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { GroupDeleteButton, GroupDeletionNotice } from "@/app/dashboard/group-delete-button";
+import { dashboardLoadPlan } from "@/lib/registrations/dashboard-load-plan";
+import { GroupAssignmentReports } from "@/app/dashboard/group-assignment-reports";
+import { GroupLeadersSummary } from "@/app/dashboard/group-leaders-summary";
+import { groupLeaderSummaries, type GroupLeaderSummary } from "@/lib/groups/leader-summary";
+import { loadEventStatisticsSnapshot } from "@/lib/registrations/event-statistics.server";
+import { participantGeography, type ParticipantGeography } from "@/lib/registrations/geography";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
 import { OperationalUserTarget } from "@/app/dashboard/operational-user-target";
-import { OperationalRoleRemoval } from "@/components/operational-role-removal";
+import { OperationalRoleDialog } from "@/components/operational-role-dialog";
+import { loadRolelessPerson } from "@/lib/operational-users/roleless-person";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 
@@ -9,6 +28,7 @@ import { ReliableForm } from "@/components/reliable-form";
 import Link from "@/components/pending-link";
 import {
   BarChart3,
+  FileDown,
   Settings,
   Mail,
   MapPin,
@@ -27,7 +47,6 @@ import {
   saveOperationsGroup,
   updateGroupPublicCatalogVisibility,
   updateGroupRegistrationLink,
-  updateOperationalUserRole,
 } from "@/app/actions";
 import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
 import { EventServiceActiveSwitch } from "@/app/dashboard/event-service-active-switch";
@@ -86,7 +105,6 @@ import {
 } from "@/lib/registrations/event-statistics";
 import {
   getOperationalUserIdentities,
-  splitFullName,
 } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
 import {
@@ -110,6 +128,9 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type ManagerPageProps = {
   searchParams: Promise<{
+    manual?: string;
+    manualSaved?: string;
+    manualError?: string;
     openingError?: string;
     openingSaved?: string;
     managerError?: string;
@@ -167,6 +188,7 @@ type ManagerPageProps = {
     nav?: string;
     section?: string;
     stat?: string;
+    report?: string;
     status?: string;
   }>;
 };
@@ -209,6 +231,8 @@ type ManagerRegistrationRow = {
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
+        countries?: ParticipantGeography["countries"];
+        cities?: ParticipantGeography["cities"];
       }
     | Array<{
         id: string;
@@ -219,6 +243,8 @@ type ManagerRegistrationRow = {
         public_code: string | null;
         country_other: string | null;
         city_other: string | null;
+        countries?: ParticipantGeography["countries"];
+        cities?: ParticipantGeography["cities"];
       }>
     | null;
 };
@@ -244,6 +270,11 @@ type ManagerGroupTreeRow = {
   eventId: string;
   eventTitle: string;
   name: string;
+  countryId: string | null;
+  cityId: string | null;
+  cityScope?: "inherit" | "country";
+  cityIds?: string[];
+  updatedAt: string;
   parentGroupId: string | null;
   parentName: string | null;
   nodeType: string | null;
@@ -254,6 +285,7 @@ type ManagerGroupTreeRow = {
   isPublicCatalog: boolean | null;
   publicOrder: number | null;
   primaryLeaderName: string | null;
+  leaders: GroupLeaderSummary[];
   publicLabel: string | null;
 };
 
@@ -362,25 +394,14 @@ type OperationalUserRoleAssignment = {
   groupName: string | null;
 };
 
-type AttendanceChoiceRow = {
-  registration_id: string;
-  day: string | null;
-  day_part: string | null;
-  choice: string | null;
-};
 
-type ManagerSection = "dashboard" | "iscritti" | "impostazioni" | "panel" | "email" | "ruoli" | "gruppi";
+type ManagerSection = "panel" | "esportazioni" | "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
   searchParams,
 }: ManagerPageProps) {
   const params = await searchParams;
-  if (params.section === "servizi") {
-    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
-    legacy.set("section", "impostazioni");
-    permanentRedirect(`/dashboard/manager?${legacy}`);
-  }
   const supabase = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(supabase, "manager");
 
@@ -398,11 +419,27 @@ export default async function ManagerDashboardPage({
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveManagerSection(params);
   const participantSchoolsView = activeSection === "iscritti" && params.view === "schools";
+  const statisticsReport = resolveStatisticsReport(params.report);
+  const statisticsDrilldown =
+    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const currentEvent = await getCurrentOperationalEvent(
     serviceSupabase,
     "id,title,starts_on,ends_on"
   );
   const currentEventId = currentEvent?.id ?? null;
+  const canManage = currentEventId ? scope.canManageEvent(currentEventId) : scope.isAdmin;
+  const canViewStatistics = scope.isAdmin || Boolean(currentEventId && scope.eventIds?.has(currentEventId));
+  // Authorize the resolved section before any operational data is loaded,
+  // including legacy URLs, inferred sections and remembered navigation.
+  if (!canAccessManagerSection(activeSection, canManage) ||
+      (!canViewStatistics && (activeSection === "esportazioni" || (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
+    redirect("/dashboard/manager?section=dashboard&nav=mini");
+  }
+  if (params.section === "servizi") {
+    const legacy = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    legacy.set("section", "impostazioni");
+    permanentRedirect(`/dashboard/manager?${legacy}`);
+  }
   const canSeeCurrentEvent = Boolean(
     currentEventId && (!scope.eventIds || scope.eventIds.has(currentEventId))
   );
@@ -422,26 +459,31 @@ export default async function ManagerDashboardPage({
       ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
       : Promise.resolve(emptyPanelStatisticsSnapshot());
   const managerOperations =
-    activeSection === "email"
+    !dashboardLoadPlan(activeSection).operations
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
       : await getManagerOperationsSnapshot(
           serviceSupabase,
           scope,
           filters,
-          currentEventId
+          currentEventId,
+          activeSection
         );
-  const statisticsDrilldown =
-    activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const panelStatistics = await panelStatisticsPromise;
+  const associationStatistics = activeSection === "dashboard" && statisticsReport === "territory" && currentEventId && canViewStatistics
+    ? await loadAssociationStatistics(serviceSupabase, currentEventId, currentEvent?.starts_on ?? null, currentEvent?.ends_on ?? null)
+    : undefined;
+  const disabilityStatistics = (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty
+    ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
+    : undefined;
   const statistics =
-    activeSection === "dashboard" || statisticsDrilldown
+    (activeSection === "dashboard" && statisticsReport !== "disability") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getManagerStatisticsSnapshot(
           serviceSupabase,
           scope,
-          managerOperations.groupTree,
           currentEventId,
           currentEvent?.starts_on ?? null,
-          currentEvent?.ends_on ?? null
+          currentEvent?.ends_on ?? null,
+          statisticsDrilldown || statisticsReport === "disability" ? "all" : statisticsReport
         )
       : buildEventStatisticsSnapshot({
           participants: [],
@@ -451,7 +493,7 @@ export default async function ManagerDashboardPage({
   const statisticsSelection = statisticsDrilldown
     ? applyStatisticsDrilldownToOperations(
         managerOperations.participants,
-        statistics,
+        statisticsDrilldown.difficulty ? { ...statistics, people: disabilityStatistics?.people ?? [] } : statistics,
         statisticsDrilldown
       )
     : null;
@@ -471,7 +513,7 @@ export default async function ManagerDashboardPage({
     null;
   const selectedOperationalRole =
     managerOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
-    null;
+    (params.roleUserId && params.section === "ruoli" ? await loadRolelessPerson(params.roleUserId) : null);
   const selectedLocation =
     panelLocations.find((location) => location.id === params.locationId) ?? null;
   const selectedPanel =
@@ -496,9 +538,10 @@ export default async function ManagerDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <ManagerSidebar activeSection={activeSection} navMode={navMode} />
+          <ManagerSidebar activeSection={activeSection} navMode={navMode} report={statisticsReport} canManage={canManage} />
 
           <div className="grid min-w-0 gap-6">
+            <GroupAssignmentReports dashboard="manager" eventId={currentEventId} />
             <StatusMessage
               error={params.openingError}
               saved={params.openingSaved}
@@ -519,6 +562,10 @@ export default async function ManagerDashboardPage({
                 eventId={currentEventId}
                 statistics={statistics}
                 panelStatistics={panelStatistics}
+                report={statisticsReport}
+                canViewDisability={canViewStatistics}
+                disabilityStatistics={disabilityStatistics}
+                associationStatistics={associationStatistics}
                 dashboard="manager"
                 navMode={navMode}
                 canManage={Boolean(
@@ -527,6 +574,8 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
+            {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
+
             {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
                 searchParams={params}
@@ -534,6 +583,7 @@ export default async function ManagerDashboardPage({
                 operatorId={auth.user.id}
                 eventId={currentEventId}
                 eventStartsOn={currentEvent?.starts_on ?? null}
+                eventEndsOn={currentEvent?.ends_on ?? null}
                 selectedParticipant={selectedParticipant}
                 canManageEvent={scope.canManageEvent}
                 dashboard="manager"
@@ -636,6 +686,7 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "ruoli" ? (
               <ManagerOperationalUsersSection
+                actorUserId={auth.user.id}
                 roles={managerOperations.roleUsers}
                 eventOptions={
                   currentEvent ? [{ id: currentEvent.id, title: currentEvent.title }] : []
@@ -691,9 +742,13 @@ export default async function ManagerDashboardPage({
 function ManagerSidebar({
   activeSection,
   navMode,
+  report,
+  canManage,
 }: {
   activeSection: ManagerSection;
   navMode: ManagerNavMode;
+  report: StatisticsReport;
+  canManage: boolean;
 }) {
   const isMini = navMode === "mini";
   const nextMode = isMini ? "full" : "mini";
@@ -713,11 +768,18 @@ function ManagerSidebar({
       help: "Evento e partecipanti",
     },
     {
+      key: "esportazioni",
+      href: "/dashboard/manager?section=esportazioni&nav=mini",
+      Icon: FileDown,
+      label: "Esportazioni",
+      help: "Presenze per gruppo in Excel",
+    },
+    {
       key: "iscritti",
       href: "/dashboard/manager?section=iscritti&nav=mini",
       Icon: Users,
       label: "Gestione iscritti",
-      help: "Elenco e modifiche",
+      help: canManage ? "Elenco e modifiche" : "Elenco partecipanti",
     },
     {
       key: "panel",
@@ -763,7 +825,7 @@ function ManagerSidebar({
           Manager
         </span>
         <Link
-          href={`/dashboard/manager?section=${activeSection}&nav=${nextMode}`}
+          href={`/dashboard/manager?section=${activeSection}&nav=${nextMode}${activeSection === "dashboard" ? `&report=${report}` : ""}`}
           aria-label={toggleLabel}
           title={toggleLabel}
           className="btn-secondary grid min-h-9 min-w-9 place-items-center px-2 text-sm"
@@ -772,7 +834,7 @@ function ManagerSidebar({
         </Link>
       </div>
       <nav aria-label="Sezioni dashboard manager" className="grid gap-1.5 p-2">
-        {items.map((item) => {
+        {items.filter((item) => canAccessManagerSection(item.key, canManage)).map((item) => {
           const isActive = item.key === activeSection;
           const Icon = item.Icon;
 
@@ -931,7 +993,7 @@ function aggregateOperationalUserRows(
   const rowsByKey = new Map<string, OperationalUserRoleRow>();
 
   for (const item of assignments) {
-    const key = item.email ? `email:${item.email.toLowerCase()}` : `user:${item.userId}`;
+    const key = `user:${item.userId}`;
     const row =
       rowsByKey.get(key) ??
       {
@@ -989,7 +1051,7 @@ function deduplicateOperationalAssignments(
 }
 
 function getManagerEventScope(eventRoles: EventUserRole[]) {
-  const isAdmin = eventRoles.some((role) => role.role === "admin");
+  const isAdmin = eventRoles.some((role) => role.role === "admin" && role.eventId === null);
   const managerEventIds = new Set(
     eventRoles
       .filter((role) => role.role === "manager")
@@ -1004,14 +1066,21 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
   );
 
   return {
+    isAdmin,
     canSeeDashboard: isAdmin || visibleEventIds.size > 0,
     eventIds: isAdmin ? null : visibleEventIds,
     canManageEvent: (eventId: string) => isAdmin || managerEventIds.has(eventId),
   };
 }
 
+function canAccessManagerSection(section: ManagerSection, canManage: boolean): boolean {
+  return canManage || section === "dashboard" || section === "iscritti" || section === "esportazioni";
+}
+
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
+  if (params.section === "servizi") return "impostazioni";
   if (
+    params.section === "esportazioni" ||
     params.section === "dashboard" ||
     params.section === "iscritti" ||
     params.section === "impostazioni" ||
@@ -1075,7 +1144,8 @@ async function getManagerOperationsSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   scope: ReturnType<typeof getManagerEventScope>,
   filters: OperationsDashboardFilters,
-  currentEventId: string | null
+  currentEventId: string | null,
+  section: ManagerSection = "iscritti"
 ): Promise<ManagerOperationsSnapshot> {
   if (
     !currentEventId ||
@@ -1095,88 +1165,84 @@ async function getManagerOperationsSnapshot(
     };
   }
 
-  const registrationsQuery = loadAllRows((from, to) => supabase
+  const loadPlan = dashboardLoadPlan(section);
+  const empty = { data: [], error: null };
+  const registrationsQuery = () => loadAllRows((from, to) => supabase
     .from("registrations")
     .select(
-      "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
+      "id,event_id,participant_id,status,submitted_at,deleted_at,deleted_by,deletion_reason,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)"
     )
     .is("deleted_at", null)
     .eq("event_id", currentEventId)
     .order("submitted_at", { ascending: false })
     .order("id").range(from, to));
-  const groupsQuery = supabase
+  const groupsQuery = () => loadAllRows((from, to) => supabase
     .from("groups")
     .select("id,event_id,name,is_assignable,is_active")
     .eq("event_id", currentEventId)
     .eq("is_active", true)
     .eq("is_assignable", true)
-    .order("name", { ascending: true });
+    .order("name", { ascending: true }).order("id").range(from, to));
 
-  const groupTreeQuery = supabase
+  const groupTreeQuery = () => loadAllRows((from, to) => supabase
     .from("groups")
     .select(
-      "id,event_id,name,public_label,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
+      "id,event_id,name,public_label,country_id,city_id,city_scope,updated_at,parent_group_id,node_type,community_kind,age_brackets,is_active,is_assignable,is_public_catalog,primary_leader_name,public_order,events(title)"
     )
     .eq("event_id", currentEventId)
     .eq("is_active", true)
     .order("public_order", { ascending: true })
-    .order("name", { ascending: true });
+    .order("name", { ascending: true }).order("id").range(from, to));
 
-  const groupLinksQuery = supabase
+  const groupLinksQuery = () => loadAllRows((from, to) => supabase
     .from("group_registration_links")
     .select(
       "id,event_id,group_id,public_label,internal_label,token_encrypted,slug,use_count,max_uses,created_at,expires_at,revoked_at"
     )
     .eq("event_id", currentEventId)
     .eq("is_canonical", true)
-    .order("created_at", { ascending: false });
-  const operationalTagsQuery = supabase
+    .order("created_at", { ascending: false }).order("id").range(from, to));
+  const operationalTagsQuery = () => loadAllRows((from, to) => supabase
     .from("operational_tags")
     .select("id,event_id,label,color")
     .eq("event_id", currentEventId)
-    .order("label", { ascending: true });
-  const eventServicesQuery = supabase
+    .order("label", { ascending: true }).order("id").range(from, to));
+  const eventServicesQuery = () => loadAllRows((from, to) => supabase
     .from("event_services")
     .select("id,event_id,label,description,is_active,public_order")
     .eq("event_id", currentEventId)
     .order("public_order", { ascending: true })
-    .order("label", { ascending: true });
+    .order("label", { ascending: true }).order("id").range(from, to));
 
-  const eventRolesQuery = supabase
+  const eventRolesQuery = () => loadAllRows((from, to) => supabase
     .from("event_user_roles")
     .select("user_id,role,event_id,events(title)")
-    .eq("event_id", currentEventId);
-  const groupMembershipsQuery = supabase
+    .eq("event_id", currentEventId).order("id").range(from, to));
+  const groupMembershipsQuery = () => loadAllRows((from, to) => supabase
     .from("group_memberships")
     .select("user_id,role,is_primary,group_id,groups!inner(id,name,event_id,events(title))")
-    .eq("groups.event_id", currentEventId);
+    .eq("groups.event_id", currentEventId).order("id").range(from, to));
 
   const [
     { data: registrations },
     { data: groups },
     { data: groupTree },
-    { data: groupLinks, error: groupLinksError },
+    { data: groupLinks },
     { data: operationalTags },
     { data: eventServices },
     { data: eventRoles },
     { data: groupMemberships },
   ] = await Promise.all([
-    registrationsQuery,
-    groupsQuery,
-    groupTreeQuery,
-    groupLinksQuery,
-    operationalTagsQuery,
-    eventServicesQuery,
-    eventRolesQuery,
-    groupMembershipsQuery,
+    loadPlan.participants ? registrationsQuery() : Promise.resolve(empty),
+    loadPlan.groups ? groupsQuery() : Promise.resolve(empty),
+    loadPlan.groupTree ? groupTreeQuery() : Promise.resolve(empty),
+    loadPlan.groupLinks ? groupLinksQuery() : Promise.resolve(empty),
+    loadPlan.tags ? operationalTagsQuery() : Promise.resolve(empty),
+    loadPlan.services ? eventServicesQuery() : Promise.resolve(empty),
+    loadPlan.roles ? eventRolesQuery() : Promise.resolve(empty),
+    loadPlan.roles ? groupMembershipsQuery() : Promise.resolve(empty),
   ]);
 
-  if (groupLinksError) {
-    console.error("[manager:group-registration-links]", {
-      code: groupLinksError.code,
-      message: groupLinksError.message,
-    });
-  }
   const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
   const registrationIds = registrationRows.map((row) => row.id);
   const participantIds = registrationRows.map((row) => row.participant_id);
@@ -1229,10 +1295,15 @@ async function getManagerOperationsSnapshot(
       row,
     ])
   );
+  const cityLinks = await loadGroupCityLinks(supabase, (groupTree ?? []).map(group => group.id));
   const groupTreeRows = (groupTree ?? []) as Array<{
     id: string;
     event_id: string;
     name: string | null;
+    country_id: string | null;
+    city_id: string | null;
+    city_scope?: "inherit" | "country";
+    updated_at: string;
     parent_group_id: string | null;
     node_type: string | null;
     community_kind: string | null;
@@ -1260,8 +1331,18 @@ async function getManagerOperationsSnapshot(
     scope.eventIds
   );
 
-  const participantRows = registrationRows.map((registration) => {
+  const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities, associations] = section === "iscritti"
+      ? await Promise.all([
+          loadAttendanceSummaries(supabase, registrationIds),
+          loadEmailDelegations(supabase, registrationIds),
+          loadAccessibilitySummaries(supabase, registrationIds),
+          loadNationalities(supabase, registrationIds),
+          loadAssociations(supabase, registrationIds),
+        ])
+      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>(), new Map<string, string | null>()];
+    const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
+      const geography = participantGeography(participant);
       const event = relatedOne(registration.events);
       const contact = contactByParticipantId.get(registration.participant_id);
       const assignment = assignmentByRegistrationId.get(registration.id);
@@ -1273,7 +1354,12 @@ async function getManagerOperationsSnapshot(
         deletedAt: registration.deleted_at,
         deletedBy: registration.deleted_by,
         deletionReason: registration.deletion_reason,
-        registrationId: registration.id,
+        attendance: attendanceByRegistration.get(registration.id) ?? [],
+        accessibility: accessibilityByRegistration.get(registration.id),
+        nationality: nationalities.get(registration.id),
+        association: associations.get(registration.id),
+        emailDelegated: emailDelegations.has(registration.id),
+          registrationId: registration.id,
         eventId: registration.event_id,
         eventTitle: event?.title ?? "Evento",
         participantId: registration.participant_id,
@@ -1286,9 +1372,9 @@ async function getManagerOperationsSnapshot(
         ),
         publicCode: participant?.public_code ?? null,
         birthDate: participant?.birth_date ?? null,
-        country: participant?.country_other ?? null,
-        city: participant?.city_other ?? null,
-        place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
+        country: geography.country,
+        city: geography.city,
+        place: formatPlace(geography.city, geography.country),
         email: contact?.email ?? null,
         phone: contact?.phone ?? null,
         registrationStatus: registration.status,
@@ -1331,6 +1417,11 @@ async function getManagerOperationsSnapshot(
       eventId: group.event_id,
       eventTitle: relatedOne(group.events)?.title ?? "Evento",
       name: group.name ?? "Gruppo senza nome",
+      countryId: group.country_id,
+      cityId: group.city_id,
+      cityScope: group.city_scope,
+      cityIds: cityLinks.get(group.id) ?? [],
+      updatedAt: group.updated_at,
       parentGroupId: group.parent_group_id,
       parentName: group.parent_group_id
         ? groupNameById.get(group.parent_group_id) ?? null
@@ -1343,6 +1434,7 @@ async function getManagerOperationsSnapshot(
       isPublicCatalog: group.is_public_catalog,
       publicOrder: group.public_order,
       primaryLeaderName: group.primary_leader_name,
+      leaders: groupLeaderSummaries(roleUsers, group.id, group.event_id),
       publicLabel: group.public_label,
     })),
     groupLinks: ((groupLinks ?? []) as ManagerGroupRegistrationLinkRow[]).map(
@@ -1398,10 +1490,10 @@ async function getManagerOperationsSnapshot(
 async function getManagerStatisticsSnapshot(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   scope: ReturnType<typeof getManagerEventScope>,
-  groupTree: ManagerGroupTreeRow[],
   currentEventId: string | null,
   eventStartsOn: string | null,
-  eventEndsOn: string | null
+  eventEndsOn: string | null,
+  report: Exclude<StatisticsReport, "disability"> | "all"
 ): Promise<EventStatisticsSnapshot> {
   if (
     !currentEventId ||
@@ -1414,95 +1506,10 @@ async function getManagerStatisticsSnapshot(
     });
   }
 
-  const registrationsQuery = supabase
-    .from("registrations")
-    .select(
-      "id,event_id,participant_id,status,submitted_at,events(title),participants(id,auth_user_id,first_name,last_name,birth_date,public_code,country_other,city_other),registration_children(id,first_name,last_name,birth_date,position)"
-    )
-    .is("deleted_at", null)
-    .eq("event_id", currentEventId)
-    .order("submitted_at", { ascending: false })
-    .range(0, 9999);
-
-  const { data: registrations } = await registrationsQuery;
-  const registrationRows = (registrations ?? []) as ManagerRegistrationRow[];
-  const registrationIds = registrationRows.map((row) => row.id);
-  const [{ data: assignments }, { data: attendanceChoices }] = await Promise.all([
-    registrationIds.length > 0
-      ? supabase
-          .from("participant_group_assignments")
-          .select(
-            "registration_id,group_id,status,groups!participant_group_assignments_group_id_fkey(name)"
-          )
-          .in("registration_id", registrationIds)
-          .eq("is_current", true)
-      : Promise.resolve({ data: [] }),
-    registrationIds.length > 0
-      ? supabase
-          .from("event_attendance_choices")
-          .select("registration_id,day,day_part,choice")
-          .in("registration_id", registrationIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-  const assignmentByRegistrationId = new Map(
-    ((assignments ?? []) as ManagerCurrentAssignmentRow[]).map((row) => [
-      row.registration_id,
-      row,
-    ])
-  );
-  const participants = registrationRows.map((registration) => {
-    const participant = relatedOne(registration.participants);
-    const event = relatedOne(registration.events);
-    const assignment = assignmentByRegistrationId.get(registration.id);
-    const group = relatedOne(assignment?.groups ?? null);
-
-    return {
-      registrationId: registration.id,
-      eventId: registration.event_id,
-      eventTitle: event?.title ?? "Evento",
-      participantId: registration.participant_id,
-      authUserId: participant?.auth_user_id ?? null,
-      firstName: participant?.first_name ?? null,
-      lastName: participant?.last_name ?? null,
-      name: formatParticipantName(
-        participant?.first_name ?? null,
-        participant?.last_name ?? null
-      ),
-      publicCode: participant?.public_code ?? null,
-      birthDate: participant?.birth_date ?? null,
-      country: participant?.country_other ?? null,
-      city: participant?.city_other ?? null,
-      place: formatPlace(participant?.city_other ?? null, participant?.country_other ?? null),
-      email: null,
-      phone: null,
-      registrationStatus: registration.status,
-      submittedAt: registration.submitted_at,
-      currentGroupId: assignment?.group_id ?? null,
-      currentGroupName: group?.name ?? null,
-      currentGroupStatus: assignment?.status ?? null,
-      childrenCount: registration.registration_children?.length ?? 0,
-      children: (registration.registration_children ?? []).map((child) => ({
-        id: child.id,
-        firstName: child.first_name,
-        lastName: child.last_name,
-        birthDate: child.birth_date,
-        position: child.position,
-      })),
-      tagIds: [],
-      tags: [],
-    };
-  });
-
-  return buildEventStatisticsSnapshot({
-    participants,
-    groups: groupTree,
-    attendanceChoices: (attendanceChoices ?? []) as AttendanceChoiceRow[],
-    eventStartsOn,
-    eventEndsOn,
-  });
+  return loadEventStatisticsSnapshot(supabase, currentEventId, { eventStartsOn, eventEndsOn }, report);
 }
 
-function ManagerGroupTreeSection({
+async function ManagerGroupTreeSection({
   groups,
   links,
   participants,
@@ -1529,6 +1536,7 @@ function ManagerGroupTreeSection({
   createdUrl: string | null;
   navMode: ManagerNavMode;
 }) {
+  const locale = await getRequestLocale();
   const filteredGroups = filterGroupRows(groups, filters);
   const linksByGroupId = groupLinksByGroupId(links);
   const eventOptions = currentEventOption
@@ -1537,6 +1545,7 @@ function ManagerGroupTreeSection({
 
   return (
     <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-5">
+      <GroupDeletionNotice locale={locale} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Gruppi</h2>
@@ -1580,7 +1589,7 @@ function ManagerGroupTreeSection({
               <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
                 <th className="py-3 pr-4 font-semibold">Nodo</th>
                 <th className="py-3 pr-4 font-semibold">Età</th>
-                <th className="py-3 pr-4 font-semibold">Referente principale</th>
+                <th className="py-3 pr-4 font-semibold">Referenti</th>
                 <th className="py-3 pr-4 font-semibold">Accesso iscrizione</th>
                 <th className="py-3 text-right font-semibold">Azioni</th>
               </tr>
@@ -1663,7 +1672,7 @@ function ManagerGroupTreeSection({
                     {ageBandsLabel(group.ageBands)}
                   </td>
                   <td className="py-4 pr-4 text-[var(--peace-ink)]">
-                    {group.primaryLeaderName ?? "Da assegnare"}
+                    <GroupLeadersSummary leaders={group.leaders} legacyName={group.primaryLeaderName} />
                   </td>
                   <td className="py-4 pr-4">
                     <div className="grid gap-2">
@@ -1684,7 +1693,7 @@ function ManagerGroupTreeSection({
                     </div>
                   </td>
                   <td className="py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       {canManage ? (
                         <Link
                           href={`${managerPath("gruppi", navMode)}&groupTool=edit&groupId=${group.id}`}
@@ -1710,6 +1719,7 @@ function ManagerGroupTreeSection({
                           Capogruppo
                         </Link>
                       ) : null}
+                      {canManage ? <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} /> : null}
                     </div>
                   </td>
                 </tr>
@@ -1785,7 +1795,7 @@ function ManagerGroupTreeSection({
   );
 }
 
-function ManagerGroupEditOverlay({
+async function ManagerGroupEditOverlay({
   group,
   groups,
   eventOptions,
@@ -1798,6 +1808,7 @@ function ManagerGroupEditOverlay({
   leaders: OperationalUserRoleRow[];
   navMode: ManagerNavMode;
 }) {
+  const [geography, locale] = await Promise.all([loadGroupGeographyCatalog(createSupabaseServiceClient()), getRequestLocale()]);
   const selectedEventId = group?.eventId ?? eventOptions[0]?.id ?? "";
 
   return (
@@ -1816,6 +1827,8 @@ function ManagerGroupEditOverlay({
               group={group}
               groups={groups}
               eventId={selectedEventId}
+              geography={geography}
+              locale={locale}
             />
             <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] sm:col-span-2">
               Nome gruppo
@@ -2274,12 +2287,14 @@ function ManagerServiceEditOverlay({
 }
 
 function ManagerOperationalUsersSection({
+  actorUserId,
   roles,
   eventOptions,
   groupOptions,
   selectedRole,
   navMode,
 }: {
+  actorUserId: string;
   roles: OperationalUserRoleRow[];
   eventOptions: Array<{ id: string; title: string }>;
   groupOptions: ManagerGroupTreeRow[];
@@ -2372,6 +2387,7 @@ function ManagerOperationalUsersSection({
 
       {selectedRole ? (
         <ManagerOperationalRoleEditOverlay
+          actorUserId={actorUserId}
           role={selectedRole}
           eventOptions={eventOptions}
           groupOptions={groupOptions}
@@ -2383,132 +2399,16 @@ function ManagerOperationalUsersSection({
 }
 
 function ManagerOperationalRoleEditOverlay({
-  role,
-  eventOptions,
-  groupOptions,
-  navMode,
+  role, eventOptions, groupOptions, navMode, actorUserId,
 }: {
   role: OperationalUserRoleRow;
   eventOptions: Array<{ id: string; title: string }>;
   groupOptions: ManagerGroupTreeRow[];
   navMode: ManagerNavMode;
+  actorUserId: string;
 }) {
-  const nameParts = splitFullName(role.fullName);
-  const currentAssignment = preferredOperationalAssignment(role);
-
-  return (
-    <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[rgba(16,36,64,0.42)] px-4 py-8">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold">Modifica utente operativo</h3>
-            <p className="mt-1 text-sm text-[var(--peace-muted)]">
-              Aggiorna dati, ruolo e responsabilità della persona selezionata.
-            </p>
-          </div>
-          <Link
-            href={`/dashboard/manager?section=ruoli&nav=${navMode}`}
-            scroll={false}
-            aria-label="Chiudi"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--peace-border)] text-[var(--peace-muted)] transition hover:bg-[var(--peace-sky-100)]"
-          >
-            <X className="size-5" aria-hidden="true" />
-          </Link>
-        </div>
-
-        <ReliableForm action={updateOperationalUserRole} className="mt-5 grid gap-4" data-preserve-dashboard-scroll>
-          <input type="hidden" name="sourceDashboard" value="manager" />
-          <input type="hidden" name="nav" value={navMode} />
-          <input type="hidden" name="currentUserId" value={role.userId} />
-          <input type="hidden" name="currentRole" value={preferredOperationalRole(role)} />
-          <input type="hidden" name="currentEventId" value={currentAssignment?.eventId ?? ""} />
-          <input type="hidden" name="currentGroupId" value={currentAssignment?.groupId ?? ""} />
-          <div className="grid gap-3 lg:grid-cols-3">
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Nome
-              <input
-                name="firstName"
-                className="field bg-white font-normal"
-                defaultValue={nameParts.firstName}
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Cognome
-              <input
-                name="lastName"
-                className="field bg-white font-normal"
-                defaultValue={nameParts.lastName}
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-[var(--peace-ink)]">
-              Email
-              <input
-                name="email"
-                type="email"
-                className="field bg-white font-normal"
-                defaultValue={role.email ?? ""}
-                readOnly
-                required
-              />
-            </label>
-          </div>
-          <OperationalRoleFields
-            eventOptions={eventOptions}
-            groupOptions={groupOptions.map((group) => ({
-              id: group.id,
-              name: group.name,
-              eventTitle: group.eventTitle,
-            }))}
-            roleOptions={[
-              { value: "capogruppo", label: "Capogruppo" },
-              { value: "manager", label: "Manager" },
-              { value: "manager_viewer", label: "Manager viewer" },
-              { value: "accoglienza", label: "Accoglienza" },
-            ]}
-            defaultRole={preferredOperationalRole(role)}
-            defaultEventId={role.eventRoles[0]?.eventId ?? role.groupLeaderAssignments[0]?.eventId}
-            defaultGroupIds={role.groupLeaderAssignments
-              .map((assignment) => assignment.groupId)
-              .filter((groupId): groupId is string => Boolean(groupId))}
-            defaultLeaderKindsByGroupId={Object.fromEntries(
-              role.groupLeaderAssignments
-                .filter((assignment) => assignment.groupId)
-                .map((assignment) => [
-                  assignment.groupId,
-                  assignment.isPrimaryGroupLeader ? "primary" : "secondary",
-                ])
-            )}
-            defaultLeaderKind={role.groupLeaderAssignments.some(
-              (assignment) => assignment.isPrimaryGroupLeader
-            )
-              ? "primary"
-              : "secondary"}
-            allowMultipleGroupLeaders
-          />
-          <div className="flex flex-wrap justify-end gap-3">
-            <Link
-              href={`/dashboard/manager?section=ruoli&nav=${navMode}`}
-              scroll={false}
-              className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-ink)] transition hover:bg-[var(--peace-sky-100)]"
-            >
-              Annulla
-            </Link>
-            <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
-              Salva modifiche
-            </PendingSubmitButton>
-          </div>
-        </ReliableForm>
-        <OperationalRoleRemoval
-          userId={role.userId}
-          assignments={role.assignments}
-          sourceDashboard="manager"
-          navMode={navMode}
-        />
-      </div>
-    </div>
-  );
+  return <OperationalRoleDialog key={role.userId} person={role} eventOptions={eventOptions}
+    groupOptions={groupOptions.map(({ id, eventId, name, eventTitle }) => ({ id, eventId, name, eventTitle }))} sourceDashboard="manager" navMode={navMode} actorUserId={actorUserId} />;
 }
 
 function StatusMessage({
@@ -2736,6 +2636,7 @@ function filterGroupRows(
       group.name,
       group.parentName,
       group.primaryLeaderName,
+      ...group.leaders.map((leader) => leader.name),
       group.publicLabel,
       group.eventTitle,
       groupNodeTypeLabel(group.nodeType),
@@ -2828,19 +2729,7 @@ function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string 
 }
 
 function operationalRoleRowKey(row: OperationalUserRoleRow): string {
-  return row.email ? `email:${row.email.toLowerCase()}` : `user:${row.userId}`;
-}
-
-function preferredOperationalRole(row: OperationalUserRoleRow): string {
-  return row.groupLeaderAssignments.length > 0
-    ? "capogruppo"
-    : (row.eventRoles[0]?.role ?? row.assignments[0]?.role ?? "manager");
-}
-
-function preferredOperationalAssignment(
-  row: OperationalUserRoleRow
-): OperationalUserRoleAssignment | null {
-  return row.groupLeaderAssignments[0] ?? row.eventRoles[0] ?? row.assignments[0] ?? null;
+  return `user:${row.userId}`;
 }
 
 function operationalRoleSummary(row: OperationalUserRoleRow): string {

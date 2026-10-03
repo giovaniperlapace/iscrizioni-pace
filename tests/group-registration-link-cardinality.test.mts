@@ -43,10 +43,10 @@ test("all dashboards edit automatic links without manual generation", () => {
   }
 });
 
-test("link loading failures are logged instead of silently becoming an empty list", () => {
-  assert.match(managerDashboard, /\[manager:group-registration-links\]/);
-  assert.match(adminDashboard, /\[admin:group-registration-links\]/);
-  assert.match(groupLeaderDashboard, /\[capogruppo:group-registration-links\]/);
+test("link reads use the fail-closed paginated loaders", () => {
+  for (const dashboard of [managerDashboard, adminDashboard, groupLeaderDashboard]) {
+    assert.match(dashboard, /load(?:AllRows|RowsForIds)\([^;]+\.from\("group_registration_links"\)[^;]+\.range\(from, to\)/);
+  }
 });
 
 test("operational link cards expose public-name editing but no revocation", () => {

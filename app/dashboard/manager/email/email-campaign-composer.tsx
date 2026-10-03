@@ -1,5 +1,7 @@
 "use client";
 
+import { ProgressButton } from "@/components/button-progress";
+
 import { SuccessMessage } from "@/components/success-message";
 
 import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
@@ -365,14 +367,7 @@ export function EmailCampaignComposer({
     });
     if (data) {
       setShowSendConfirmation(false);
-      setNotice(
-        (data.scheduled > 0
-          ? `Prima tranche conclusa: ${data.sent} inviate, ${data.failed} non riuscite. ${data.scheduled} email sono programmate per i prossimi giorni, fino a 300 al giorno.`
-          : `Invio concluso: ${data.sent} riuscite, ${data.failed} non riuscite.`) +
-        (data.sent > 0
-          ? ` Ricorda ai destinatari: «${EMAIL_DELIVERY_COPY.it.checkSpam} ${EMAIL_DELIVERY_COPY.it.safeSender}»`
-          : "")
-      );
+      setNotice(`Campagna presa in carico: ${data.scheduled} email in coda. L’invio prosegue automaticamente; puoi chiudere questa pagina e consultare gli esiti nell’elenco campagne.`);
       resetPreview();
     }
   }
@@ -460,8 +455,8 @@ export function EmailCampaignComposer({
 
       {error ? <p className="status-error">{error}</p> : null}
       {notice ? noticeDismissible
-        ? <SuccessMessage key={noticeVersion} className="status-success">{notice}</SuccessMessage>
-        : <p className="status-success">{notice}</p> : null}
+        ? <SuccessMessage key={noticeVersion} attention className="status-success">{notice}</SuccessMessage>
+        : <SuccessMessage key={notice} attention persistent className="status-success">{notice}</SuccessMessage> : null}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(17rem,1fr)]">
         <section className="surface-card grid gap-5 p-5 sm:p-6">
@@ -582,8 +577,8 @@ export function EmailCampaignComposer({
             </p>
           </div>
           <span className="max-w-sm rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-3 py-2 text-xs font-semibold text-[var(--peace-muted)]">
-            Nessun limite di selezione. L’invio usa tranche automatiche fino a
-            300 email al giorno.
+            Nessun limite di selezione. L’invio prosegue automaticamente
+            in piccoli gruppi.
           </span>
         </div>
         <div
@@ -968,16 +963,16 @@ export function EmailCampaignComposer({
             L’anteprima congela messaggio, destinatari e allegati. Poi dovrai inviare una prova prima dell’invio definitivo.
           </p>
         </div>
-        <button
+        <ProgressButton progressError={!!(error || templateSaveError)}
           type="button"
-          className="btn-primary"
+          className="btn-primary inline-flex items-center justify-center gap-2"
           aria-busy={busy}
           disabled={busy || selectedRecipientIds.length === 0}
           onClick={createPreview}
         >
-          <Eye aria-hidden="true" className="h-4 w-4" />
+          <Eye aria-hidden="true" className="h-4 w-4 shrink-0" />
           Controlla anteprima
-        </button>
+        </ProgressButton>
       </section>
 
       <section className="surface-card p-5 sm:p-6">
@@ -1145,7 +1140,7 @@ export function EmailCampaignComposer({
               >
                 Annulla
               </button>
-              <button
+              <ProgressButton progressError={!!(error || templateSaveError)}
                 type="submit"
                 className="btn-primary inline-flex items-center justify-center gap-2 px-4"
                 aria-busy={busy}
@@ -1157,7 +1152,7 @@ export function EmailCampaignComposer({
                   : selectedTemplate
                     ? "Salva nuovo modello"
                     : "Salva modello"}
-              </button>
+              </ProgressButton>
             </div>
           </form>
         </div>
@@ -1181,11 +1176,10 @@ export function EmailCampaignComposer({
                     ? `${preview.recipientCount} email ai capigruppo.`
                     : `${preview.recipientCount} destinatari: ${preview.directCount} email ai partecipanti e ${preview.delegatedCount} ai referenti.`}
                 </p>
-                {preview.recipientCount > 300 ? (
+                {preview.recipientCount > 25 ? (
                   <p className="mt-2 text-sm font-semibold text-[var(--peace-blue-800)]">
-                    Le prime 300 email compatibili con la quota giornaliera
-                    partiranno oggi; le altre saranno programmate
-                    automaticamente nei giorni successivi, fino a 300 al giorno.
+                    L’invio inizierà dopo la conferma e proseguirà automaticamente
+                    fino a completare la coda.
                   </p>
                 ) : null}
               </div>
@@ -1244,14 +1238,14 @@ export function EmailCampaignComposer({
                 </p>
               ) : null}
               {!testSent ? (
-                <button type="button" className="btn-secondary justify-self-start" disabled={busy} aria-busy={busy} onClick={sendTest}>
+                <ProgressButton progressError={!!(error || templateSaveError)} type="button" className="btn-secondary justify-self-start" disabled={busy} aria-busy={busy} onClick={sendTest}>
                   <Send aria-hidden="true" className="h-4 w-4" />
                   <span className="break-all text-left">
                     {busy
                       ? "Invio dell’email di prova in corso…"
                       : `1. Invia la prova a ${preview.testRecipientEmail}`}
                   </span>
-                </button>
+                </ProgressButton>
               ) : null}
               {testSent ? (
                 <div role="status" className="rounded-md border border-[#bde4ce] bg-[#edf9f2] p-4 text-sm text-[#16613d]">
@@ -1322,12 +1316,12 @@ export function EmailCampaignComposer({
                 </h3>
                 <p id="campaign-send-confirmation-description" className="mt-3 text-sm text-[var(--peace-muted)]">
                   Stai per inviare “{preview.previewSubject}” a {preview.recipientCount} destinatari.
-                  L’invio e la pianificazione delle tranche successive non possono
-                  essere annullati dopo la conferma.
+                  L’invio non può
+                  essere annullato dopo la conferma.
                 </p>
-                {preview.recipientCount > 300 ? (
+                {preview.recipientCount > 25 ? (
                   <p className="mt-2 text-sm font-semibold text-[var(--peace-blue-800)]">
-                    Saranno accodate tranche fino a 300 email al giorno.
+                    Le email saranno inviate progressivamente fino a completare la coda.
                   </p>
                 ) : null}
                 {preview.attachments.length ? (
@@ -1344,7 +1338,7 @@ export function EmailCampaignComposer({
                   >
                     Annulla
                   </button>
-                  <button
+                  <ProgressButton progressError={!!(error || templateSaveError)}
                     type="button"
                     className="btn-primary"
                     disabled={busy}
@@ -1352,7 +1346,7 @@ export function EmailCampaignComposer({
                     onClick={sendCampaign}
                   >
                     Conferma
-                  </button>
+                  </ProgressButton>
                 </div>
               </section>
             </div>
@@ -1432,6 +1426,7 @@ function campaignStatusLabel(status: string) {
     case "completed": return "Completata";
     case "partial": return "Parziale";
     case "failed": return "Non riuscita";
+    case "attention": return "Esiti da verificare";
     case "scheduled": return "Programmata";
     case "sending": return "In invio";
     case "ready": return "Test inviato";

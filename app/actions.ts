@@ -1,5 +1,18 @@
 "use server";
 
+import { resolveRoleParticipant } from "@/lib/operational-users/role-participant";
+import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
+import { canCreateOperationsRegistration } from "@/lib/registrations/manual-registration-access";
+
+import { parseGroupGeography } from "@/lib/groups/geography";
+
+import { emailParticipantIds, reusableIdentityParticipantIds } from "@/lib/registrations/email-identity";
+
+import { getRequestLocale } from "@/lib/i18n/server";
+
+import { findAuthUserByEmail } from "@/lib/operational-users/auth-user.server";
+import { loadAllRows } from "@/lib/supabase/all-rows";
+
 import { sendAccountAccessEmail } from "@/lib/email/account-access.server";
 
 import { loadLeaderAttendance } from "@/lib/groups/leader-attendance.server";
@@ -26,6 +39,7 @@ import {
   type GroupTreeNode,
 } from "@/lib/groups/capogruppo-dashboard";
 import {
+  buildRegistrationRetryPath,
   isValidGroupRegistrationLinkToken,
   hashGroupRegistrationLinkToken,
   isReservedGroupRegistrationLinkToken,
@@ -38,6 +52,7 @@ import {
   preserveAccessibilityUnlessEdited,
   preserveChildrenUnlessEdited,
 } from "@/lib/registrations/participant-dashboard";
+import { parseOperationalChild } from "@/lib/registrations/operational-child";
 import { toRegistrationChildRows } from "@/lib/registrations/registration-children";
 import {
   buildManualRegistrationQuestionnaireAnswers,
@@ -223,19 +238,19 @@ export async function startPublicEmailFlow(formData: FormData) {
 export async function submitPublicRegistration(formData: FormData) {
   const parsed = parseRegistrationForm(formData);
   const email = normalizeEmail(formData.get("email"));
+  const rawGroupToken = formData.get("groupRegistrationLinkToken");
+  const groupToken = typeof rawGroupToken === "string" ? rawGroupToken.trim() || null : null;
   const ipAddress = await getIpAddress();
 
   if (!parsed.ok) {
     redirect(
-      `/registrazione?email=${encodeURIComponent(email)}&error=${encodeURIComponent(
-        parsed.errors[0] ?? "invalid"
-      )}`
+      buildRegistrationRetryPath({ token: groupToken, email, error: parsed.errors[0] ?? "invalid" })
     );
   }
 
   if (!checkRateLimit(`registration:${ipAddress}:${parsed.value.email}`, REGISTRATION_RATE_LIMIT)) {
     redirect(
-      `/registrazione?email=${encodeURIComponent(parsed.value.email)}&error=rate-limit`
+      buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: "rate-limit" })
     );
   }
 
@@ -253,7 +268,7 @@ export async function submitPublicRegistration(formData: FormData) {
   try {
     await createPublicRegistration(
       supabase,
-      parsed.value,
+      { ...parsed.value, preferredLocale: await getRequestLocale() },
       {
         ipAddress: ipAddress === "local" ? null : ipAddress,
         userAgent: headerStore.get("user-agent"),
@@ -265,9 +280,7 @@ export async function submitPublicRegistration(formData: FormData) {
     const message = getPublicRegistrationErrorMessage(error);
 
     redirect(
-      `/registrazione?email=${encodeURIComponent(parsed.value.email)}&error=${encodeURIComponent(
-        message
-      )}`
+      buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: message })
     );
   }
 
@@ -307,33 +320,28 @@ export async function updateParticipantDashboard(formData: FormData) {
     return formFailureFromRedirect("/dashboard/partecipante?error=not-found");
   }
 
+  type RegistrationEvent = {
+    starts_on: string | null;
+    ends_on: string | null;
+    registration_closes_at: string | null;
+  };
+  type RegistrationOwner = {
+    auth_user_id: string | null;
+    first_name: string;
+    last_name: string;
+  };
   const rawRegistration = registration as unknown as {
     id: string;
     event_id: string;
     participant_id: string;
     status: string | null;
-    events:
-      | Array<{
-          starts_on: string | null;
-          ends_on: string | null;
-          registration_closes_at: string | null;
-        }>
-      | null;
-    participants:
-      | Array<{
-          auth_user_id: string | null;
-          first_name: string;
-          last_name: string;
-        }>
-      | null;
+    events: RegistrationEvent | RegistrationEvent[] | null;
+    participants: RegistrationOwner | RegistrationOwner[] | null;
   };
   const registrationRow = {
-    id: rawRegistration.id,
-    event_id: rawRegistration.event_id,
-    participant_id: rawRegistration.participant_id,
-    status: rawRegistration.status,
-    events: rawRegistration.events?.[0] ?? null,
-    participants: rawRegistration.participants?.[0] ?? null,
+    ...rawRegistration,
+    events: relatedOne(rawRegistration.events),
+    participants: relatedOne(rawRegistration.participants),
   };
 
   if (registrationRow.participants?.auth_user_id !== auth.user.id) {
@@ -358,13 +366,7 @@ export async function updateParticipantDashboard(formData: FormData) {
     return formFailureFromRedirect("/dashboard/partecipante?error=invalid-days");
   }
 
-  const [
-    { data: contacts },
-    { data: attendanceChoices },
-    { data: momentChoices },
-    { data: accessibility },
-    { data: children },
-  ] = await Promise.all([
+  const previousResults = await Promise.all([
     supabase
       .from("participant_contacts")
       .select("id,phone,is_primary")
@@ -390,6 +392,17 @@ export async function updateParticipantDashboard(formData: FormData) {
       .eq("registration_id", registrationRow.id)
       .order("position"),
   ]);
+
+  if (previousResults.some((result) => result.error)) {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  const [
+    { data: contacts },
+    { data: attendanceChoices },
+    { data: momentChoices },
+    { data: accessibility },
+    { data: children },
+  ] = previousResults;
 
   const primaryContact = contacts?.[0] as
     | { id: string; phone: string | null }
@@ -878,11 +891,11 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   if (!currentEventId) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=scope");
   }
-  const { data: memberships, error: membershipError } = await serviceSupabase
+  const { data: memberships, error: membershipError } = await loadAllRows((from, to) => serviceSupabase
     .from("group_memberships")
     .select("group_id")
     .eq("user_id", auth.user.id)
-    .eq("role", "capogruppo");
+    .eq("role", "capogruppo").order("id").range(from, to));
 
   if (membershipError || !memberships?.length) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=scope");
@@ -891,11 +904,11 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   const rootGroupIds = (memberships as Array<{ group_id: string | null }>)
     .map((membership) => membership.group_id)
     .filter((groupId): groupId is string => Boolean(groupId));
-  const { data: groups, error: groupsError } = await serviceSupabase
+  const { data: groups, error: groupsError } = await loadAllRows((from, to) => serviceSupabase
     .from("groups")
     .select("id,parent_group_id")
     .eq("event_id", currentEventId)
-    .eq("is_active", true);
+    .eq("is_active", true).order("id").range(from, to));
 
   if (groupsError) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=groups");
@@ -971,7 +984,7 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
   }
 
   if (intent === "reject") {
-    const { error } = await serviceSupabase.rpc("reject_group_assignment", {
+    const { error } = await serviceSupabase.rpc("report_group_assignment", {
       p_assignment_id: assignmentRow.id,
       p_actor_user_id: auth.user.id,
       p_note: note,
@@ -984,10 +997,58 @@ export async function updateGroupLeaderAssignment(formData: FormData) {
     revalidatePath("/dashboard/capogruppo");
     revalidatePath("/dashboard/manager");
     revalidatePath("/dashboard/admin");
-    redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId: null, saved: "1" }));
+    redirect(leaderReturnPath(formData.get("returnTo"), { assignmentId: null, saved: "reported" }));
   }
 
   return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
+}
+
+export async function updateOperationalChild(formData: FormData) {
+  const auth = await getCurrentAuthContext(await createSupabaseServerClient());
+  if (!auth) return formFailure([{ field: null, code: "forbidden" }]);
+  const parsed = parseOperationalChild(formData);
+  if ("status" in parsed) return parsed;
+  try {
+    // The service-only RPC repeats current event/group/role checks in the same
+    // transaction as the child edit and audit. Actor always comes from Auth.
+    const { error } = await createSupabaseServiceClient().rpc("update_operational_child", {
+      p_child_id: parsed.childId, p_actor_user_id: auth.user.id,
+      p_expected: parsed.expected, p_child: parsed.child,
+    });
+    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : (error.code === "PT409" || error.code === "40001") ? "conflict" : "failed" }]);
+  } catch {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  for (const path of ["/dashboard/admin", "/dashboard/manager", "/dashboard/capogruppo", "/dashboard/partecipante"]) revalidatePath(path);
+  return { status: "success" as const };
+}
+
+export async function updateOperationsAttendance(formData: FormData) {
+  const dashboard = formData.get("sourceDashboard") === "admin" ? "admin" : "manager";
+  const auth = await getCurrentAuthContext(await createSupabaseServerClient(), dashboard);
+  if (!auth) return formFailure([{ field: null, code: "forbidden" }]);
+  const registrationId = optionalText(formData.get("registrationId"));
+  if (!registrationId || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(registrationId)) return formFailure([{ field: null, code: "forbidden" }]);
+  const db = createSupabaseServiceClient();
+  try {
+    const { loadOperationsAttendance } = await import("@/lib/registrations/operations-attendance.server");
+    const current = await loadOperationsAttendance(db, registrationId, eventId => auth.eventRoles.some(role =>
+      (role.role === "admin" && role.eventId === null) || (role.role === "manager" && role.eventId === eventId)));
+    if (!current) return formFailure([{ field: null, code: "forbidden" }]);
+    const input = parseLeaderAttendance(formData, current.startsOn, current.endsOn);
+    if (!input) return formFailure([{ field: "availabilitySlots", code: "attendance" }]);
+    const { error } = await db.rpc("update_operations_attendance", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id, p_unknown: input.unknown, p_slots: input.slots,
+    });
+    if (error) return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : "failed" }]);
+  } catch {
+    return formFailure([{ field: null, code: "failed" }]);
+  }
+  for (const path of ["/dashboard/admin", "/dashboard/manager", "/dashboard/capogruppo", "/dashboard/partecipante"]) revalidatePath(path);
+  const { operationsReturnPath } = await import("@/lib/registrations/operations-table");
+  const destination = new URL(operationsReturnPath(formData.get("returnTo"), dashboard, "full"), "https://local.invalid");
+  destination.searchParams.set(`${dashboard}Saved`, "1");
+  redirect(destination.pathname + destination.search);
 }
 
 export async function updateGroupLeaderAttendance(formData: FormData) {
@@ -1036,6 +1097,9 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
     formData.has("city") ||
     formData.has("country");
 
+  // Identity saves write birth_date too; an omitted field must not erase it.
+  if (hasIdentityUpdate && !birthDate) return formFailure([{ field: "birthDate", code: "date" }]);
+
   if (!assignmentId || !participantId || (!email && !phone && !hasIdentityUpdate)) {
     return formFailureFromRedirect("/dashboard/capogruppo?error=invalid");
   }
@@ -1063,16 +1127,14 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
   if (email) {
     // An email enables personal access: never attach the operator's address or
     // an address already identifying a different participant.
-    const { data: otherContacts, error: emailLookupError } = await serviceSupabase
-      .from("participant_contacts")
-      .select("id")
-      .eq("email", email)
-      .neq("participant_id", participantId)
-      .limit(1);
-    if (emailLookupError) return formFailure([{ field: "email", code: "failed" }]);
-    if (otherContacts?.length) {
-      return formFailure([{ field: "email", code: "duplicateEmail" }]);
+    let otherIds: string[];
+    try {
+      otherIds = await reusableIdentityParticipantIds(serviceSupabase,
+        (await emailParticipantIds(serviceSupabase, email)).filter(id => id !== participantId));
+    } catch {
+      return formFailure([{ field: "email", code: "failed" }]);
     }
+    if (otherIds.length) return formFailure([{ field: "email", code: "duplicateEmail" }]);
     if (email === normalizeEmail(auth.user.email ?? null)) {
       const { data: participant, error } = await serviceSupabase.from("participants")
         .select("auth_user_id").eq("id", participantId).maybeSingle();
@@ -1091,7 +1153,7 @@ export async function updateGroupLeaderParticipantContact(formData: FormData) {
         last_name: lastName,
         birth_date: birthDate,
         city_other: city,
-        country_other: country,
+        ...(formData.has("country") ? { country_other: country } : {}),
       })
       .eq("id", participantId);
 
@@ -1255,38 +1317,24 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     redirect("/login");
   }
 
+  const canUpdate = auth.eventRoles.some(
+    (role) => role.role === "admin" || (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canUpdate) {
+    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
+  }
+
   const serviceSupabase = createSupabaseServiceClient();
   const { data: activeRegistration, error: activeRegistrationError } = await serviceSupabase
     .from("registrations").select("id").eq("id", registrationId ?? "")
     .eq("participant_id", participantId).eq("event_id", eventId).is("deleted_at", null).maybeSingle();
   if (activeRegistrationError || !activeRegistration) return formFailure([{ field: null, code: "failed" }]);
 
-  const canUpdate = isCapogruppo
-    ? await canGroupLeaderTagParticipant(
-        serviceSupabase,
-        auth.user.id,
-        participantId,
-        eventId,
-        assignmentId
-      )
-    : auth.eventRoles.some(
-        (role) =>
-          role.role === "admin" ||
-          (role.role === "manager" && role.eventId === eventId)
-      );
-
-  if (!canUpdate) {
-    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=forbidden`);
-  }
-
-  const { data: tags, error: tagsError } = await serviceSupabase
+  const { data: tags } = await loadAllRows((from, to) => serviceSupabase
     .from("operational_tags")
     .select("id")
-    .eq("event_id", eventId);
-
-  if (tagsError) {
-    return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(tagsError.message)}`);
-  }
+    .eq("event_id", eventId).order("id").range(from, to));
 
   const eventTagIds = ((tags ?? []) as Array<{ id: string }>).map((tag) => tag.id);
   const eventTagIdSet = new Set(eventTagIds);
@@ -1295,12 +1343,12 @@ export async function updateParticipantOperationalTags(formData: FormData) {
     return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=invalid`);
   }
 
-  if (eventTagIds.length > 0) {
+  for (let offset = 0; offset < eventTagIds.length; offset += 100) {
     const { error: deleteError } = await serviceSupabase
       .from("participant_operational_tags")
       .delete()
       .eq("participant_id", participantId)
-      .in("tag_id", eventTagIds);
+      .in("tag_id", eventTagIds.slice(offset, offset + 100));
 
     if (deleteError) {
       return formFailureFromRedirect(`${dashboardPath}${isCapogruppo ? "?" : "&"}${isCapogruppo ? "error" : operationsErrorParam}=${encodeURIComponent(deleteError.message)}`);
@@ -2260,12 +2308,12 @@ async function canGroupLeaderTagParticipant(
   assignmentId: string | null
 ): Promise<boolean> {
   const [{ data: memberships }, { data: groups }] = await Promise.all([
-    supabase.from("group_memberships").select("group_id").eq("user_id", userId),
-    supabase
+    loadAllRows((from, to) => supabase.from("group_memberships").select("group_id").eq("user_id", userId).order("id").range(from, to)),
+    loadAllRows((from, to) => supabase
       .from("groups")
       .select("id,parent_group_id")
       .eq("event_id", eventId)
-      .eq("is_active", true),
+      .eq("is_active", true).order("id").range(from, to)),
   ]);
   const rootGroupIds = ((memberships ?? []) as Array<{ group_id: string | null }>)
     .map((membership) => membership.group_id)
@@ -2283,23 +2331,19 @@ async function canGroupLeaderTagParticipant(
     return false;
   }
 
-  let query = supabase
-    .from("participant_group_assignments")
-    .select("id,group_id,registrations!inner(event_id,participant_id)")
-    .eq("is_current", true)
-    .eq("registrations.event_id", eventId)
-    .eq("registrations.participant_id", participantId)
-    .is("registrations.deleted_at", null)
-    .in("group_id", [...scopedGroupIds])
-    .limit(1);
+  const { data } = await loadAllRows((from, to) => {
+    let query = supabase
+      .from("participant_group_assignments")
+      .select("id,group_id,registrations!inner(event_id,participant_id)")
+      .eq("is_current", true)
+      .eq("registrations.event_id", eventId)
+      .eq("registrations.participant_id", participantId)
+      .is("registrations.deleted_at", null);
+    if (assignmentId) query = query.eq("id", assignmentId);
+    return query.order("id").range(from, to);
+  });
 
-  if (assignmentId) {
-    query = query.eq("id", assignmentId);
-  }
-
-  const { data, error } = await query;
-
-  return !error && Boolean(data?.length);
+  return data.some(row => scopedGroupIds.has(row.group_id));
 }
 
 export async function createGroupLeaderManualRegistration(formData: FormData) {
@@ -2313,18 +2357,27 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     return formFailure(parsed.errors.map(issueFromMessage));
   }
 
+  const operational = formData.get("sourceDashboard") === "manager";
+  const dashboardPath = operational ? "/dashboard/manager/nuovo" : "/dashboard/capogruppo";
   const supabase = await createSupabaseServerClient();
-  const auth = await getCurrentAuthContext(supabase, "capogruppo");
+  const auth = await getCurrentAuthContext(supabase, operational ? "manager" : "capogruppo");
 
-  if (!auth || auth.dashboardRole !== "capogruppo") {
+  if (!auth || (!operational && auth.dashboardRole !== "capogruppo")) {
     redirect("/login");
   }
 
-  if (parsed.value.useLeaderEmail && !auth.user.email) {
+  if (!operational && parsed.value.useLeaderEmail && !auth.user.email) {
     return formFailure([{ field: "useLeaderEmail", code: "invalid" }]);
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  const currentEventId = operational ? await getCurrentOperationalEventId(serviceSupabase) : null;
+  if (operational && (!currentEventId || !canCreateOperationsRegistration(auth.eventRoles, currentEventId))) {
+    return formFailure([{ field: null, code: "forbidden" }]);
+  }
+  const actorRole = operational
+    ? auth.eventRoles.some(role => role.role === "admin" && role.eventId === null) ? "admin" : "manager"
+    : "capogruppo";
   const { data: group, error: groupError } = await serviceSupabase
     .from("groups")
     .select("id,event_id,name,country_id,city_id,is_active,is_assignable,events(starts_on,ends_on)")
@@ -2348,16 +2401,17 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     !groupRow ||
     !groupRow.is_active ||
     !groupRow.is_assignable ||
+    (operational && groupRow.event_id !== currentEventId) ||
     !(await canManageGroupRegistrationLink(
       serviceSupabase,
       auth.user.id,
       auth.eventRoles,
       groupRow.id,
       groupRow.event_id,
-      "capogruppo"
+      operational ? "manager" : "capogruppo"
     ))
   ) {
-    return formFailureFromRedirect("/dashboard/capogruppo?manualError=forbidden");
+    return formFailureFromRedirect(`${dashboardPath}?manualError=forbidden`);
   }
 
   if (parsed.value.email && parsed.value.email === normalizeEmail(auth.user.email ?? null)) {
@@ -2372,20 +2426,19 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       groupRow.event_id
     ))
   ) {
-    return formFailureFromRedirect("/dashboard/capogruppo?manualError=duplicate-email");
+    return formFailureFromRedirect(`${dashboardPath}?manualError=duplicate-email`);
   }
 
   const eventDates = relatedOne(groupRow.events);
   const { compareIdentities, identityFingerprint } = await import("@/lib/data-quality/duplicates");
   const { hashIdentityFingerprint } = await import("@/lib/data-quality/fingerprint.server");
   const { loadQualityPeople } = await import("@/lib/data-quality/data.server");
-  const duplicateCandidates = (await loadQualityPeople(serviceSupabase, groupRow.event_id)).filter(person => compareIdentities({
+  const duplicateCandidates = (await loadQualityPeople(serviceSupabase, groupRow.event_id)).filter(person => !person.deletedAt && compareIdentities({
     id: "manual-entry", firstName: parsed.value.firstName, lastName: parsed.value.lastName,
     birthDate: parsed.value.birthDate, email: parsed.value.email, phone: parsed.value.phone,
     country: null, city: null,
   }, person));
   const duplicateReason = String(formData.get("duplicateReason") ?? "").trim();
-  if (duplicateCandidates.some(person => person.deletedAt)) return formFailure([{ field: null, code: "forbidden" }]);
   if (duplicateCandidates.length && (duplicateReason.length < 3 || duplicateReason.length > 500))
     return formFailure([{ field: "duplicateReason", code: "duplicate" }]);
   const allowedAttendanceSlots = buildAllowedAttendanceSlotKeys(
@@ -2399,7 +2452,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       (slot) => !allowedAttendanceSlots.has(attendanceSlotKey(slot))
     )
   ) {
-    return formFailureFromRedirect("/dashboard/capogruppo?manualError=invalid-days");
+    return formFailureFromRedirect(`${dashboardPath}?manualError=invalid-days`);
   }
 
 
@@ -2410,8 +2463,10 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       last_name: parsed.value.lastName,
       birth_date: parsed.value.birthDate,
       preferred_locale: parsed.value.preferredLocale,
-      country_id: groupRow.country_id,
-      city_id: groupRow.city_id,
+      country_id: null,
+      country_other: parsed.value.country ?? null,
+      city_id: null,
+      city_other: parsed.value.cityOther,
       has_previous_santegidio_participation: true,
       participates_with_group: true,
     })
@@ -2419,7 +2474,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     .single();
 
   if (participantError || !participant) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}?manualError=${encodeURIComponent(
         participantError?.message ?? "participant"
       )}`);
   }
@@ -2430,14 +2485,14 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     .insert({
       event_id: groupRow.event_id,
       participant_id: participantRow.id,
-      source: "capogruppo",
+      source: operational ? "admin" : "capogruppo",
       created_by: auth.user.id,
     })
     .select("id")
     .single();
 
   if (registrationError || !registration) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}?manualError=${encodeURIComponent(
         registrationError?.message ?? "registration"
       )}`);
   }
@@ -2464,7 +2519,7 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       answers: buildManualRegistrationQuestionnaireAnswers(parsed.value, {
         id: groupRow.id,
         name: groupRow.name,
-      }, auth.user.id),
+      }, auth.user.id, actorRole),
       visibility_summary: getQuestionnaireVisibilitySummary(),
     });
   if (questionnaireError) return formFailure([{ field: null, code: "failed" }]);
@@ -2510,15 +2565,15 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       registration_id: registrationId,
       group_id: groupRow.id,
       status: "confirmed",
-      source: "capogruppo",
+      source: actorRole,
       confidence: 1,
       is_current: true,
-      assignment_reason: "group_leader_manual_entry",
-      matcher_version: "group-leader-manual-v1",
+      assignment_reason: operational ? "operations_manual_entry" : "group_leader_manual_entry",
+      matcher_version: operational ? "operations-manual-v1" : "group-leader-manual-v1",
       confirmed_by: auth.user.id,
       confirmed_at: new Date().toISOString(),
-      leader_decision_by: auth.user.id,
-      leader_decision_at: new Date().toISOString(),
+      leader_decision_by: operational ? null : auth.user.id,
+      leader_decision_at: operational ? null : new Date().toISOString(),
 
       leader_internal_note: parsed.value.leaderNote,
       leader_note_updated_by: parsed.value.leaderNote ? auth.user.id : null,
@@ -2529,14 +2584,15 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
     serviceSupabase.from("audit_logs").insert({
       event_id: groupRow.event_id,
       actor_user_id: auth.user.id,
-      action: "registration.created_by_group_leader",
+      action: operational ? `registration.created_by_${actorRole}` : "registration.created_by_group_leader",
       entity_table: "registrations",
       entity_id: registrationId,
       metadata: {
         group_id: groupRow.id,
-        source: "capogruppo",
+        source: actorRole,
         has_email: Boolean(parsed.value.email),
-        communication_delegate_user_id: parsed.value.useLeaderEmail ? auth.user.id : null,
+        communication_delegate_user_id: !operational && parsed.value.useLeaderEmail ? auth.user.id : null,
+        delivery_mode: parsed.value.useLeaderEmail ? operational ? "group_leader" : "actor" : "personal",
         has_phone: Boolean(parsed.value.phone),
         accompanying_children_count: parsed.value.children.length,
         participant_public_code: participantRow.public_code,
@@ -2569,9 +2625,16 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
   const failedWrite = results.find((result) => result.error);
 
   if (failedWrite?.error) {
-    return formFailureFromRedirect(`/dashboard/capogruppo?manualError=${encodeURIComponent(
+    return formFailureFromRedirect(`${dashboardPath}?manualError=${encodeURIComponent(
         failedWrite.error.message
       )}`);
+  }
+
+  if (parsed.value.internalSex) {
+    const { error } = await serviceSupabase.rpc("set_assisted_registration_sex", {
+      p_registration_id: registrationId, p_actor_user_id: auth.user.id, p_sex: parsed.value.internalSex,
+    });
+    if (error) return formFailure([{ field: null, code: "failed" }]);
   }
 
   const accessEmailSent = !parsed.value.useLeaderEmail && parsed.value.email
@@ -2585,7 +2648,17 @@ export async function createGroupLeaderManualRegistration(formData: FormData) {
       })
     : true;
   revalidatePath("/dashboard/capogruppo");
-  redirect(`/dashboard/capogruppo?manualSaved=1${accessEmailSent ? "" : "&manualError=access-email"}`);
+  if (operational) {
+    revalidatePath("/dashboard/manager");
+    revalidatePath("/dashboard/admin");
+    const returnTo = formData.get("returnTo");
+    const dashboard = actorRole === "admin" && typeof returnTo === "string" && returnTo.startsWith("/dashboard/admin?") ? "admin" : "manager";
+    const destination = new URL(manualRegistrationPath(returnTo, dashboard, true), "https://local.invalid");
+    destination.searchParams.set("manualSaved", "1");
+    if (!accessEmailSent) destination.searchParams.set("manualError", "access-email");
+    redirect(`${destination.pathname}?${destination.searchParams}`);
+  }
+  redirect(`${dashboardPath}?manualSaved=1${accessEmailSent ? "" : "&manualError=access-email"}`);
 }
 
 export async function updateGroupRegistrationLink(formData: FormData) {
@@ -2748,8 +2821,8 @@ export async function saveOperationsGroup(formData: FormData) {
     }
   }
 
-  const { data: tree, error: treeError } = await serviceSupabase
-    .from("groups").select("id,parent_group_id,node_type").eq("event_id", eventId);
+  const { data: tree, error: treeError } = await loadAllRows((from, to) => serviceSupabase
+    .from("groups").select("id,parent_group_id,node_type").eq("event_id", eventId).order("id").range(from, to));
   const parent = tree?.find((row) => row.id === parentGroupId);
   const descendants = collectDescendantGroupIds((tree ?? []).map((row) => ({
     id: row.id, parentGroupId: row.parent_group_id,
@@ -2782,15 +2855,20 @@ export async function saveOperationsGroup(formData: FormData) {
   const isActive = formData.has("isActive")
     ? formData.get("isActive") === "on"
     : currentGroupRow?.is_active ?? true;
-  const publicOrder =
-    currentGroupRow?.public_order ??
-    (await getNextGroupPublicOrder(serviceSupabase, eventId, parentGroupId));
+
 
   if (
     !isValidGroupCommunityKind(communityKind) ||
     hasInvalidAgeBand
   ) {
     return formFailureFromRedirect(`${dashboardPath}?groupError=invalid`);
+  }
+
+  const geography = parseGroupGeography(formData);
+  if (!geography.ok) return formFailure([{ field: geography.field, code: "invalid" }]);
+  const expectedUpdatedAt = optionalText(formData.get("groupExpectedUpdatedAt"));
+  if (groupId && (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt)))) {
+    return formFailure([{ field: null, code: "groupConflict" }]);
   }
 
   let assignedLeader: GroupLeaderTargetResult | null = null;
@@ -2800,12 +2878,14 @@ export async function saveOperationsGroup(formData: FormData) {
       serviceSupabase,
       primaryLeaderUserId
     );
-  } else if (primaryLeaderMode === "new") {
-    assignedLeader = await getNewGroupLeaderTarget(serviceSupabase, {
-      firstName: optionalText(formData.get("leaderFirstName")),
-      lastName: optionalText(formData.get("leaderLastName")),
-      email: normalizeEmail(formData.get("leaderEmail")),
-    });
+  }
+  const newLeaderInput = {
+    firstName: optionalText(formData.get("leaderFirstName")),
+    lastName: optionalText(formData.get("leaderLastName")),
+    email: normalizeEmail(formData.get("leaderEmail")),
+  };
+  if (primaryLeaderMode === "new" && (!newLeaderInput.firstName || !newLeaderInput.lastName || !newLeaderInput.email)) {
+    return formFailure([{ field: "primaryLeaderUserId", code: "invalid" }]);
   }
 
   if (assignedLeader && !assignedLeader.ok) {
@@ -2823,21 +2903,31 @@ export async function saveOperationsGroup(formData: FormData) {
     is_public_catalog: isPublicCatalog,
     is_active: isActive,
     public_label: normalizeGroupRegistrationPublicLabel(name),
-    public_order: publicOrder,
   };
-  const result = groupId
-    ? await serviceSupabase.from("groups").update(values).eq("id", groupId)
-    : await serviceSupabase.from("groups").insert(values).select("id").single();
-
+  const result = await serviceSupabase.rpc("save_operational_group", {
+    p_actor_user_id: auth.user.id,
+    p_event_id: eventId,
+    p_group_id: groupId,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_values: values,
+    p_geography: geography.value,
+  });
   if (result.error) {
-    return formFailureFromRedirect(`${dashboardPath}?groupError=${encodeURIComponent(result.error.message)}`);
+    const code = result.error.code;
+    return formFailure([{ field: code === "23505" ? "name" : null,
+      code: code === "PT409" ? "groupConflict" : code === "PT422" ? "groupTerritory" :
+        code === "42501" ? "forbidden" : code === "23505" ? "duplicate" : "failed" }]);
   }
-
-  const savedGroupId =
-    groupId || ((result.data as { id?: string } | null)?.id ?? null);
+  const savedGroupId = result.data as string | null;
 
   if (!savedGroupId) {
     return formFailureFromRedirect(`${dashboardPath}?groupError=create`);
+  }
+
+  // Do not touch identities until the geography and group transaction succeeds.
+  if (primaryLeaderMode === "new") {
+    assignedLeader = await getNewGroupLeaderTarget(serviceSupabase, newLeaderInput);
+    if (!assignedLeader.ok) return formFailureFromRedirect(`${dashboardPath}?groupError=${assignedLeader.error}`);
   }
 
   if (assignedLeader?.ok) {
@@ -2857,23 +2947,9 @@ export async function saveOperationsGroup(formData: FormData) {
     }
   }
 
-  await serviceSupabase.from("audit_logs").insert({
-    event_id: eventId,
-    actor_user_id: auth.user.id,
-    action: groupId ? "group.updated" : "group.created",
-    entity_table: "groups",
-    entity_id: savedGroupId,
-    metadata: {
-      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
-      is_assignable: isAssignable,
-      is_public_catalog: isPublicCatalog,
-      is_active: isActive,
-      assigned_primary_leader: Boolean(assignedLeader?.ok),
-    },
-  });
-
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
+  revalidatePath("/registrazione");
   redirect(`${dashboardPath}?groupSaved=1`);
 }
 
@@ -3178,7 +3254,13 @@ export async function assignOperationalUserRole(formData: FormData) {
   }
 
   let userId: string | null;
-  if (mode === "existing") {
+  if (mode === "existing" && existingUserId?.startsWith("participant:")) {
+    const profile = await resolveRoleParticipant(serviceSupabase, existingUserId.slice("participant:".length), roleEventId ?? currentEventId ?? "");
+    if (!profile) return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
+    userId = profile.id;
+    email = normalizeEmail(profile.email);
+    fullName = profile.full_name || email;
+  } else if (mode === "existing") {
     // Resolve the selected account again on the server. Submitted identity
     // fields must never rename or relink an existing user's personal record.
     const { data: profile, error } = await serviceSupabase.from("profiles")
@@ -3197,6 +3279,14 @@ export async function assignOperationalUserRole(formData: FormData) {
     await syncOperationalIdentityByEmail(serviceSupabase, {
       email, firstName: firstName!, lastName: lastName!, userId,
     });
+  }
+
+  if (role === "manager" || role === "manager_viewer") {
+    const { data: opposite, error } = await serviceSupabase.from("event_user_roles")
+      .select("id").eq("user_id", userId).eq("event_id", roleEventId)
+      .eq("role", role === "manager" ? "manager_viewer" : "manager").limit(1);
+    if (error) return formFailure([{ field: null, code: "roleAssignmentFailed" }]);
+    if (opposite?.length) return formFailure([{ field: null, code: "roleExclusive" }]);
   }
 
   if (role === "capogruppo") {
@@ -3255,7 +3345,7 @@ export async function assignOperationalUserRole(formData: FormData) {
         });
 
       if (insertError) {
-        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`);
+        return formFailure([{ field: null, code: insertError.message.includes("event_user_roles_manager_access_unique") ? "roleExclusive" : "roleAssignmentFailed" }]);
       }
     }
   }
@@ -3292,395 +3382,25 @@ export async function assignOperationalUserRole(formData: FormData) {
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/capogruppo");
+  if (formData.get("inline") === "on") return { status: "success" as const };
   redirect(`${dashboardPath}&roleSaved=1`);
 }
 
+// Compatibility for already-open forms: changing the selector is additive.
+// Removing an assignment is exclusively handled by the explicit removal action.
 export async function updateOperationalUserRole(formData: FormData) {
-  const contactIssues = validateContactFields(formData);
-  if (contactIssues.length) return formFailure(contactIssues);
-  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
-  const navMode = optionalText(formData.get("nav"));
-  const dashboardPath = getOperationalUsersDashboardPath(sourceDashboard, navMode);
-  const currentUserId = optionalText(formData.get("currentUserId"));
-  const currentRole = optionalText(formData.get("currentRole"));
-  const currentEventId = optionalText(formData.get("currentEventId"));
-  const currentGroupId = optionalText(formData.get("currentGroupId"));
-  const firstName = optionalText(formData.get("firstName"));
-  const lastName = optionalText(formData.get("lastName"));
-  const email = normalizeEmail(formData.get("email"));
-  const role = optionalText(formData.get("role"));
-  const eventId = optionalText(formData.get("eventId"));
-  const groupId = optionalText(formData.get("groupId"));
-  const selectedGroupIds = Array.from(
-    new Set(
-      formData
-        .getAll("groupIds")
-        .map((value) => optionalText(value))
-        .filter((value): value is string => Boolean(value))
-    )
-  );
-  const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
-  const isPrimaryLeader = leaderKind === "primary";
-  const selectedLeaderKindsByGroupId = Object.fromEntries(
-    selectedGroupIds.map((selectedGroupId) => [
-      selectedGroupId,
-      parseGroupLeaderKind(
-        formData.get(`leaderKindByGroup:${selectedGroupId}`) ??
-          formData.get("leaderKind")
-      ),
-    ])
-  ) as Record<string, GroupLeaderKind>;
-
-  if (
-    !currentUserId ||
-    !isAssignableOperationalRole(currentRole) ||
-    !firstName ||
-    !lastName ||
-    !email ||
-    !isAssignableOperationalRole(role)
-  ) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
+  const data = new FormData();
+  for (const [key, value] of formData) data.append(key, value);
+  data.set("mode", "existing");
+  data.set("existingUserId", String(formData.get("currentUserId") ?? ""));
+  data.delete("firstName"); data.delete("lastName"); data.delete("email");
+  if (data.get("role") === "capogruppo" && !data.get("groupId")) {
+    const groups = data.getAll("groupIds");
+    if (groups.length !== 1) return formFailure([{ field: null, code: "roleReload" }]);
+    data.set("groupId", groups[0]);
+    data.set("leaderKind", String(data.get(`leaderKindByGroup:${groups[0]}`) ?? "secondary"));
   }
-
-  const supabase = await createSupabaseServerClient();
-  const requestedRole = sourceDashboard === "admin" ? "admin" : "manager";
-  const auth = await getCurrentAuthContext(supabase, requestedRole);
-
-  if (!auth) {
-    redirect("/login");
-  }
-
-  const serviceSupabase = createSupabaseServiceClient();
-  const isAdmin = auth.eventRoles.some((eventRole) => eventRole.role === "admin");
-  const currentOperationalEventId = await getCurrentOperationalEventId(serviceSupabase);
-  const currentTarget = await resolveOperationalRoleTarget(serviceSupabase, {
-    userId: currentUserId,
-    role: currentRole,
-    eventId: currentEventId,
-    groupId: currentGroupId,
-  });
-
-  if (!currentTarget.ok) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
-  }
-
-  if (
-    !canManageOperationalRole(auth.eventRoles, isAdmin, {
-      role: currentRole,
-      eventId: currentTarget.eventId,
-    })
-  ) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
-  }
-
-  const nextTarget = await resolveOperationalRoleTarget(serviceSupabase, {
-    userId: null,
-    role,
-    eventId: role === "admin" || role === "capogruppo" ? eventId : currentOperationalEventId,
-    groupId: role === "capogruppo" ? (selectedGroupIds[0] ?? groupId) : groupId,
-  });
-
-  if (!nextTarget.ok) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=invalid`);
-  }
-
-  if (
-    !canManageOperationalRole(auth.eventRoles, isAdmin, {
-      role,
-      eventId: nextTarget.eventId,
-    })
-  ) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
-  }
-
-  const fullName = `${firstName} ${lastName}`.trim();
-  const targetUserId = await ensureAuthUserForGroupLeader(serviceSupabase, {
-    email,
-    fullName,
-  });
-
-  if (!targetUserId) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=auth-user`);
-  }
-
-  if (targetUserId !== currentUserId) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=email-taken`);
-  }
-
-  await syncOperationalIdentityByEmail(serviceSupabase, {
-    email,
-    firstName,
-    lastName,
-    userId: targetUserId,
-  });
-
-  if (role === "capogruppo" && selectedGroupIds.length > 0) {
-    const { data: selectedGroups, error: selectedGroupsError } = await serviceSupabase
-      .from("groups")
-      .select("id,event_id")
-      .in("id", selectedGroupIds);
-    const selectedGroupRows = (selectedGroups ?? []) as Array<{
-      id: string;
-      event_id: string;
-    }>;
-
-    if (selectedGroupsError || selectedGroupRows.length !== selectedGroupIds.length) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=invalid-group`);
-    }
-
-    const selectedGroupIdsSet = new Set(selectedGroupIds);
-
-    if (
-      selectedGroupRows.some(
-        (group) =>
-          !canManageOperationalRole(auth.eventRoles, isAdmin, {
-            role: "capogruppo",
-            eventId: group.event_id,
-          })
-      )
-    ) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
-    }
-
-    const { data: existingMemberships } = await serviceSupabase
-      .from("group_memberships")
-      .select("group_id,is_primary,groups!inner(id,event_id)")
-      .eq("user_id", targetUserId)
-      .eq("role", "capogruppo");
-    const manageableExistingMemberships = ((existingMemberships ?? []) as Array<{
-      group_id: string | null;
-      is_primary: boolean | null;
-      groups:
-        | { id: string; event_id: string }
-        | Array<{ id: string; event_id: string }>
-        | null;
-    }>).filter((membership) => {
-      const group = relatedOne(membership.groups);
-
-      return Boolean(
-        membership.group_id &&
-          group &&
-          canManageOperationalRole(auth.eventRoles, isAdmin, {
-            role: "capogruppo",
-            eventId: group.event_id,
-          })
-      );
-    });
-    const removedMemberships = manageableExistingMemberships.filter(
-      (membership) =>
-        membership.group_id && !selectedGroupIdsSet.has(membership.group_id)
-    );
-    if (removedMemberships.length > 0) {
-      const removedGroupIds = removedMemberships
-        .map((membership) => membership.group_id)
-        .filter((removedGroupId): removedGroupId is string => Boolean(removedGroupId));
-      const { error: removeError } = await serviceSupabase
-        .from("group_memberships")
-        .delete()
-        .eq("user_id", targetUserId)
-        .eq("role", "capogruppo")
-        .in("group_id", removedGroupIds);
-
-      if (removeError) {
-        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError.message)}`);
-      }
-
-      for (const membership of removedMemberships) {
-        if (membership.is_primary && membership.group_id) {
-          const syncError = await syncGroupPrimaryLeaderName(
-            serviceSupabase,
-            membership.group_id,
-            null
-          );
-
-          if (syncError) {
-            return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
-          }
-        }
-      }
-    }
-
-    for (const selectedGroupId of selectedGroupIds) {
-      const selectedLeaderKind =
-        selectedLeaderKindsByGroupId[selectedGroupId] ?? "secondary";
-      const isSelectedPrimaryLeader = selectedLeaderKind === "primary";
-
-      const membership = await serviceSupabase.from("group_memberships").upsert(
-        {
-          group_id: selectedGroupId,
-          user_id: targetUserId,
-          role: "capogruppo",
-          is_primary: isSelectedPrimaryLeader,
-          created_by: auth.user.id,
-        },
-        { onConflict: "group_id,user_id" }
-      );
-
-      if (membership.error) {
-        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`);
-      }
-
-      const syncError = await syncGroupPrimaryLeaderName(
-        serviceSupabase,
-        selectedGroupId,
-        isSelectedPrimaryLeader ? fullName : null
-      );
-
-      if (syncError) {
-        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
-      }
-    }
-
-    await serviceSupabase.from("audit_logs").insert({
-      event_id: selectedGroupRows[0]?.event_id ?? null,
-      actor_user_id: auth.user.id,
-      action: "operational_user.group_leader_groups_updated",
-      entity_table: "group_memberships",
-      entity_id: targetUserId,
-      metadata: {
-        source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
-        role,
-        email_hash: hashEmailForAudit(email),
-        group_ids: selectedGroupIds,
-        removed_group_ids: removedMemberships
-          .map((membership) => membership.group_id)
-          .filter(Boolean),
-        leader_kinds_by_group_id: selectedLeaderKindsByGroupId,
-      },
-    });
-
-    revalidatePath("/dashboard/admin");
-    revalidatePath("/dashboard/manager");
-    revalidatePath("/dashboard/capogruppo");
-    redirect(`${dashboardPath}&roleSaved=1`);
-  }
-
-  const currentSignature = operationalRoleSignature({
-    userId: currentUserId,
-    role: currentRole,
-    eventId: currentRole === "admin" ? null : currentTarget.eventId,
-    groupId: currentTarget.groupId,
-  });
-  const nextSignature = operationalRoleSignature({
-    userId: targetUserId,
-    role,
-    eventId: role === "admin" ? null : nextTarget.eventId,
-    groupId: nextTarget.groupId,
-  });
-
-  if (currentUserId === auth.user.id && currentSignature !== nextSignature) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=self-role`);
-  }
-
-  if (currentSignature !== nextSignature) {
-    const removeError = await removeOperationalRoleAssignment(serviceSupabase, {
-      userId: currentUserId,
-      role: currentRole,
-      eventId: currentRole === "admin" ? null : currentTarget.eventId,
-      groupId: currentTarget.groupId,
-    });
-
-    if (removeError) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
-    }
-
-    if (currentTarget.isPrimaryGroupLeader && currentTarget.groupId) {
-      const syncError = await syncGroupPrimaryLeaderName(
-        serviceSupabase,
-        currentTarget.groupId,
-        null
-      );
-
-      if (syncError) {
-        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
-      }
-    }
-  }
-
-  if (role === "capogruppo") {
-    if (!nextTarget.groupId) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=missing-group`);
-    }
-
-    const membership = await serviceSupabase.from("group_memberships").upsert(
-      {
-        group_id: nextTarget.groupId,
-        user_id: targetUserId,
-        role: "capogruppo",
-        is_primary: isPrimaryLeader,
-        created_by: auth.user.id,
-      },
-      { onConflict: "group_id,user_id" }
-    );
-
-    if (membership.error) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(membership.error.message)}`);
-    }
-
-    const syncError = await syncGroupPrimaryLeaderName(
-      serviceSupabase,
-      nextTarget.groupId,
-      isPrimaryLeader ? fullName : null
-    );
-
-    if (syncError) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
-    }
-  } else {
-    const roleMatch = serviceSupabase
-      .from("event_user_roles")
-      .select("id")
-      .eq("user_id", targetUserId)
-      .eq("role", role)
-      .limit(1);
-    const { data: existingRole, error: selectError } =
-      role === "admin"
-        ? await roleMatch.is("event_id", null)
-        : await roleMatch.eq("event_id", nextTarget.eventId);
-
-    if (selectError) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(selectError.message)}`);
-    }
-
-    if (!existingRole?.length) {
-      const { error: insertError } = await serviceSupabase
-        .from("event_user_roles")
-        .insert({
-          user_id: targetUserId,
-          event_id: role === "admin" ? null : nextTarget.eventId,
-          role,
-          created_by: auth.user.id,
-        });
-
-      if (insertError) {
-        return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(insertError.message)}`);
-      }
-    }
-  }
-
-  await serviceSupabase.from("audit_logs").insert({
-    event_id: nextTarget.eventId,
-    actor_user_id: auth.user.id,
-    action: "operational_user.role_updated",
-    entity_table: role === "capogruppo" ? "group_memberships" : "event_user_roles",
-    entity_id: targetUserId,
-    metadata: {
-      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
-      previous_user_id: currentUserId,
-      previous_role: currentRole,
-      previous_event_id: currentTarget.eventId,
-      previous_group_id: currentTarget.groupId,
-      role,
-      email_hash: hashEmailForAudit(email),
-      group_id: nextTarget.groupId,
-      leader_kind: role === "capogruppo" ? leaderKind : null,
-    },
-  });
-
-  revalidatePath("/dashboard/admin");
-  revalidatePath("/dashboard/manager");
-  revalidatePath("/dashboard/capogruppo");
-  redirect(`${dashboardPath}&roleSaved=1`);
+  return assignOperationalUserRole(data);
 }
 
 export async function deleteOperationalUserRole(formData: FormData) {
@@ -3730,45 +3450,22 @@ export async function deleteOperationalUserRole(formData: FormData) {
     return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
   }
 
-  const removeError = await removeOperationalRoleAssignment(serviceSupabase, {
-    userId,
-    role,
-    eventId: role === "admin" ? null : target.eventId,
-    groupId: target.groupId,
+  const { error } = await serviceSupabase.rpc("remove_operational_role", {
+    p_actor_user_id: auth.user.id,
+    p_user_id: userId,
+    p_role: role,
+    p_event_id: role === "admin" ? null : target.eventId,
+    p_group_id: target.groupId,
   });
-
-  if (removeError) {
-    return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(removeError)}`);
+  if (error) {
+    console.error("Operational role removal failed", { code: error.code });
+    return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : /^[0-9]{2}[0-9A-Z]{3}$/.test(error.code ?? "") ? "roleRemovalFailed" : "roleOutcomeUnknown" }]);
   }
-
-  if (target.isPrimaryGroupLeader && target.groupId) {
-    const syncError = await syncGroupPrimaryLeaderName(
-      serviceSupabase,
-      target.groupId,
-      null
-    );
-
-    if (syncError) {
-      return formFailureFromRedirect(`${dashboardPath}&roleError=${encodeURIComponent(syncError)}`);
-    }
-  }
-
-  await serviceSupabase.from("audit_logs").insert({
-    event_id: target.eventId,
-    actor_user_id: auth.user.id,
-    action: "operational_user.role_deleted",
-    entity_table: role === "capogruppo" ? "group_memberships" : "event_user_roles",
-    entity_id: userId,
-    metadata: {
-      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
-      role,
-      group_id: target.groupId,
-    },
-  });
 
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/capogruppo");
+  if (formData.get("inline") === "on") return { status: "success" as const };
   redirect(`${dashboardPath}&roleSaved=1`);
 }
 
@@ -3913,14 +3610,9 @@ async function getNewGroupLeaderTarget(
     return { ok: false, error: "auth-user" };
   }
 
-  const { data: existingContacts } = await supabase
-    .from("participant_contacts")
-    .select("participant_id")
-    .eq("email", input.email)
-    .limit(1);
-  const existingParticipantId = (
-    existingContacts as Array<{ participant_id: string }> | null
-  )?.[0]?.participant_id;
+  const existingParticipantId = (await reusableIdentityParticipantIds(
+    supabase, await emailParticipantIds(supabase, input.email)
+  ))[0];
 
   if (existingParticipantId) {
     const { error: updateError } = await supabase
@@ -4012,18 +3704,7 @@ async function ensureAuthUserForGroupLeader(
     return null;
   }
 
-  const { data: users, error: listError } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-
-  if (listError) {
-    return null;
-  }
-
-  const existing = users.users.find(
-    (user) => user.email?.toLowerCase() === input.email
-  );
+  const existing = await findAuthUserByEmail(supabase, input.email);
 
   if (!existing) {
     return null;
@@ -4056,30 +3737,6 @@ type GroupLeaderKind = "primary" | "secondary";
 
 function parseGroupLeaderKind(value: FormDataEntryValue | null): GroupLeaderKind {
   return value === "primary" ? "primary" : "secondary";
-}
-
-async function getNextGroupPublicOrder(
-  supabase: ReturnType<typeof createSupabaseServiceClient>,
-  eventId: string,
-  parentGroupId: string | null
-): Promise<number> {
-  let query = supabase
-    .from("groups")
-    .select("public_order")
-    .eq("event_id", eventId)
-    .order("public_order", { ascending: false })
-    .limit(1);
-
-  query = parentGroupId
-    ? query.eq("parent_group_id", parentGroupId)
-    : query.is("parent_group_id", null);
-
-  const { data } = await query;
-  const currentMax =
-    ((data ?? []) as Array<{ public_order: number | null }>)[0]?.public_order ??
-    90;
-
-  return currentMax + 10;
 }
 
 async function assignPrimaryGroupLeaderToGroup(
@@ -4728,57 +4385,6 @@ function canManageOperationalRole(
   );
 }
 
-async function removeOperationalRoleAssignment(
-  supabase: ReturnType<typeof createSupabaseServiceClient>,
-  input: {
-    userId: string;
-    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo";
-    eventId: string | null;
-    groupId: string | null;
-  }
-): Promise<string | null> {
-  if (input.role === "capogruppo") {
-    if (!input.groupId) {
-      return "missing-group";
-    }
-
-    const { error } = await supabase
-      .from("group_memberships")
-      .delete()
-      .eq("user_id", input.userId)
-      .eq("group_id", input.groupId)
-      .eq("role", "capogruppo");
-
-    return error?.message ?? null;
-  }
-
-  const roleQuery = supabase
-    .from("event_user_roles")
-    .delete()
-    .eq("user_id", input.userId)
-    .eq("role", input.role);
-  const { error } =
-    input.role === "admin"
-      ? await roleQuery.is("event_id", null)
-      : await roleQuery.eq("event_id", input.eventId);
-
-  return error?.message ?? null;
-}
-
-function operationalRoleSignature(input: {
-  userId: string;
-  role: string;
-  eventId: string | null;
-  groupId: string | null;
-}): string {
-  return [
-    input.userId,
-    input.role,
-    input.eventId ?? "global",
-    input.groupId ?? "no-group",
-  ].join(":");
-}
-
 function getEventOpeningUpdate(
   intent: string,
   event: {
@@ -4876,8 +4482,8 @@ async function canManageGroupRegistrationLink(
   }
 
   const [{ data: memberships }, { data: groups }] = await Promise.all([
-    supabase.from("group_memberships").select("group_id").eq("user_id", userId),
-    supabase.from("groups").select("id,parent_group_id").eq("is_active", true),
+    loadAllRows((from, to) => supabase.from("group_memberships").select("group_id").eq("user_id", userId).order("id").range(from, to)),
+    loadAllRows((from, to) => supabase.from("groups").select("id,parent_group_id").eq("is_active", true).order("id").range(from, to)),
   ]);
   const rootGroupIds = ((memberships ?? []) as Array<{ group_id: string | null }>)
     .map((membership) => membership.group_id)
