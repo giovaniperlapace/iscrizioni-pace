@@ -1,5 +1,33 @@
 # AGENTS.md
 
+## Migration staging applicate — 2026-10-06
+
+Su richiesta esplicita dell'utente applicate e registrate in un'unica transazione
+le 20 migration mancanti applicabili: le 18 importate da main, gli accessi panel
+`20261006120000` e il QR gruppo/coda badge `20261006150000`. Container verificato:
+`supabase-db-jiio6ou5wzmma2xwas53cf1d`. Production invariata; nessun invio email.
+
+Backup PostgreSQL custom prima dell'aggiornamento, conservato sul server in
+`/tmp/iscrizioni-pace-staging-before-panel-20261006124116.dump`; indice archivio
+verificato con pg_restore. Applicazione con lock e timeout, DDL e registro nella
+stessa transazione, notifica finale di ricarica PostgREST. Nessuna migration
+versionata riscritta; rimosse soltanto le cornici BEGIN/COMMIT nello stream di
+esecuzione per mantenere atomico il lotto completo.
+
+Verifica finale: tutte le 20 versioni presenti; RLS attiva sulle cinque nuove
+tabelle panel/gruppi; RPC operative panel/gruppi riservate a service_role,
+negate ad anon/authenticated; nuove tabelle raggiungibili via PostgREST (HTTP 200).
+Conservati 9 iscrizioni, 9 partecipanti, 85 gruppi e 6 check-in; hash dei check-in
+invariato al netto della nuova colonna nullable. Nessun destinatario email in
+coda e nessuna identità storica da scollegare nel backfill previsto.
+
+Rimane non applicabile `20260813170000_rename_anziani_and_amici_groups.sql`:
+zero gruppi sorgente nello staging, mentre il file richiede esattamente 19.
+Non eseguita e non registrata falsamente come applicata. Non è una dipendenza
+dei nuovi flussi. Il collaudo autenticato, su dispositivi e stampanti resta
+separato; l'aggiornamento DB non certifica il deployment applicativo.
+
+
 ## Pubblicazione del branch panel richiesta il 2026-10-06
 
 L'utente richiede commit di tutte le modifiche locali e push del branch panel,

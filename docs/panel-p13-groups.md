@@ -1,5 +1,12 @@
 # P13-G — QR gruppo e preparazione dei badge
 
+Aggiornamento successivo del 6 ottobre 2026: codice pubblicato sul branch panel
+(commit `9c4a9f1`); tutte le 20 migration applicabili mancanti, incluse P13 e
+P13-G, applicate e registrate nello staging. Installazione, privilegi, API e
+invarianza dei check-in verificati. Resta esclusa la rinomina storica dei gruppi
+assenti in staging. Collaudo autenticato/hardware ancora aperto. Il dettaglio
+operativo corrente è in AGENTS e nel piano; le note locali sotto sono lo storico.
+
 Stato al 6 ottobre 2026: implementazione software locale sul branch panel.
 Migrazione `20261006150000_group_reception.sql` non applicata a database remoti.
 Nessun commit, push o deployment. P13 resta aperta; non sono avviate P14/P15.

@@ -1,5 +1,12 @@
 # P13 — attivazione report e accessi panel/sala, 6 ottobre 2026
 
+Aggiornamento successivo del 6 ottobre 2026: codice pubblicato sul branch panel
+(commit `9c4a9f1`); tutte le 20 migration applicabili mancanti, incluse P13 e
+P13-G, applicate e registrate nello staging. Installazione, privilegi, API e
+invarianza dei check-in verificati. Resta esclusa la rinomina storica dei gruppi
+assenti in staging. Collaudo autenticato/hardware ancora aperto. Il dettaglio
+operativo corrente è in AGENTS e nel piano; le note locali sotto sono lo storico.
+
 ## Perimetro concordato
 
 L'utente ha chiesto di attivare il report in staging senza collaudo e proseguire
