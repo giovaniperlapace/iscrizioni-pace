@@ -1,6 +1,7 @@
+import type { CeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 export type BadgeItem = { registrationId: string; position: number; state: "pending" | "prepared" | "verified"; attempts: number; name: string | null; code: string | null; available: boolean };
 export type BadgeQueue = { status: "queue"; batchId: string; items: BadgeItem[] };
-export type BadgeResult = BadgeQueue | { status: "ready"; image: string; name: string; code: string } | { status: "empty" | "invalid" | "conflict" | "forbidden" | "unavailable" | "qr_unavailable" | "already_prepared" };
+export type BadgeResult = BadgeQueue | { status: "ready"; ceremonies?: CeremonySeatInfo[]; image: string; name: string; code: string } | { status: "empty" | "invalid" | "conflict" | "forbidden" | "unavailable" | "qr_unavailable" | "already_prepared" };
 export type BadgeCommand = { token: string; action: "create" | "read" | "prepare" | "verify" | "reprint"; batchId?: string; registrationIds?: string[]; snapshot?: string; registrationId?: string; expectedAttempts?: number };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function parseBadgeCommand(input: unknown): BadgeCommand | null {

@@ -1,3 +1,4 @@
+import type { CeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 export type ReceptionLookup = { kind: "qr" | "code"; value: string };
 export type ReceptionCommand = {
   duty: "event_entry" | "panel_entry" | "room_assistance";
@@ -13,6 +14,7 @@ export type ReceptionCommand = {
   reason?: "selection_error" | "count_error" | "entry_cancelled";
 };
 export type ReceptionPerson = {
+  ceremonies?: CeremonySeatInfo[];
   id: string;
   kind: "adult" | "child";
   firstName: string;

@@ -44,6 +44,29 @@ Stato di partenza al 2026-08-04:
 
 ## 2. Metodo obbligatorio per ogni milestone
 
+### P13-E1 — cerimonie con sedi indipendenti — 2026-10-06
+
+- Su richiesta dell’utente rinviata P13-S finché saranno noti fonte e formato
+  degli accrediti; avviata la prossima milestone suggerita P13-E1. Precisazione
+  esplicita: inaugurazione e cerimonia finale possono avere location e strutture
+  completamente diverse, ancora sconosciute. Nessuna capienza inventata.
+- Tranche software locale: due viste condivise admin/manager/viewer, configurazioni
+  admin indipendenti in bozza/validate, settori quantitativi, quote per categoria,
+  dotazioni manager ai gruppi e assegnazione di un posto alla persona ammissibile.
+  Regola presenza scelta dall’admin (giorno/mattina/pomeriggio), date sconosciute
+  distinte dalle assenze. Nessun check-in o prenotazione volontaria creato.
+- Migration locale `20261006180000_ceremony_allocations.sql`: quattro tabelle RLS,
+  RPC service-only, controllo attore/evento sia server sia DB, revisioni e lock,
+  audit minimale, capienze e duplicati protetti. Vecchi editor location/momenti
+  bloccati per le configurazioni collegate, anche se usano service_role.
+- Cambio gruppo/date o cancellazione segnala posti da rivedere senza liberarli.
+  Dotazione gruppo consuma subito capienza; distribuzione nominale, regole posti
+  minori/accompagnatori e consultazione personale restano E2; mappe numerate E3.
+- Piano e dettaglio in `docs/panel-p13-ceremonies.md`. Nessuna migration remota,
+  commit, push o deployment. P13-E1 resta aperta per staging, collaudo autenticato,
+  sedi reali e revisione dell’utente; P13-S sospesa, non completata.
+
+
 ### Migration staging applicate — 2026-10-06
 
 Su richiesta esplicita dell'utente applicate e registrate in un'unica transazione
@@ -408,7 +431,10 @@ estendere il modulo.
 
 ### 3.7 Inaugurazione e cerimonia finale
 
-- Due momenti con vista gestionale dedicata e assegnazione manager. L'iscrizione
+- Due momenti con vista gestionale dedicata e assegnazione manager.
+  Decisione esplicita del 2026-10-06: location, caratteristiche, capienze e
+  settori indipendenti per inaugurazione e cerimonia finale; entrambi possono
+  restare sconosciuti. Nessuna dipendenza da una sede o piantina condivisa. L'iscrizione
   alla Preghiera per la pace comporta partecipazione prevista quando le presenze
   dichiarate coprono il giorno del momento. Non serve prenotazione del partecipante.
   Date non comunicate restano «da verificare»; la regola per le fasce orarie è
@@ -1024,6 +1050,9 @@ essere verificata atomicamente, senza conferme parziali nascoste.
 
 ### Milestone P13-S - riconoscimento accrediti stampa e badge
 
+**Rinviata il 2026-10-06 su indicazione dell’utente:** fonte e formato degli
+accrediti non ancora noti. Si prosegue con P13-E1; P14/P15 richiedono l’hardware.
+
 Deliverable: verifica della fonte e formato accrediti, riconoscimento scanner,
 collegamento certo all'eventuale iscritto, stato accredito e badge dedicato,
 struttura configurabile dei diritti di accesso senza abilitarne di presunti.
@@ -1036,6 +1065,13 @@ Il collaudo degli accessi specifici segue la definizione dei luoghi ammessi.
 
 ### Milestone P13-E1 - eventi speciali, settori e quote
 
+Tranche software implementata localmente il 2026-10-06. Due configurazioni
+indipendenti, una per sede/cerimonia; stato, controlli e limiti in
+`docs/panel-p13-ceremonies.md`. Migration remota, collaudo autenticato e
+validazione delle sedi reali ancora aperti. Verificati 763 test, lint, TypeScript,
+build staging, SQL temporaneo con concorrenza e browser sintetico desktop/mobile.
+Nessun avanzamento automatico a E2.
+
 Deliverable: due viste dedicate, ammissibilità dalle date dichiarate, modello
 admin delle sedi in bozza, settori e quote categoria, assegnazioni manager a
 persone e gruppi. Nessun acquisto o prenotazione a scelta del partecipante.
@@ -1046,6 +1082,16 @@ permessi verificati anche per URL/API diretti; piantina modificabile solo admin.
 
 ### Milestone P13-E2 - distribuzione nominale ai gruppi
 
+Stato 2026-10-06: tranche software locale implementata su richiesta dell’utente. Manager e
+capogruppo possono assegnare alle singole persone; il manager opera dalla vista
+evento su tutti i gruppi, oltre al percorso di assegnazione diretta E1. Per i
+minori decisione esplicita caso per caso: posto oppure nessun posto, senza
+regole automatiche di età o eredità dal genitore. Registro nominale unico,
+consultazione personale, revoca/trasferimento, retry e conflitti condivisi.
+Dettagli e verifiche in `docs/panel-p13-ceremonies.md`. Migration E2 solo locale;
+collaudo autenticato e accettazione ancora aperti. E3 avviata successivamente
+su nuova richiesta esplicita dell’utente, come descritto sotto.
+
 Deliverable: vista capogruppo delle dotazioni per cerimonia/settore/categoria,
 assegnazione ai propri membri, residui, consultazione personale e flussi espliciti
 di revoca/riallocazione. Testi capogruppo e partecipante nelle sette lingue.
@@ -1055,6 +1101,24 @@ alla persona, rispetto scope e settore, cambio gruppo/date e conflitti manager�
 capogruppo. Posti stampa integrabili solo secondo diritti e quote configurati.
 
 ### Milestone P13-E3 - piantina interattiva e posti numerati
+
+Aggiornamento pubblicazione 2026-10-06: su nuova autorizzazione dell’utente,
+applicate atomicamente in staging le tre migration E1/E2/E3 con backup e verifica
+di conservazione dei dati. Autorizzati commit/push sul branch panel. Questo
+supera lo stato «solo locale» del database nelle note di sviluppo sottostanti;
+non certifica il collaudo autenticato o la validazione delle sedi.
+
+Stato 2026-10-06: tranche software locale implementata su richiesta dell’utente.
+Editor admin a file/sedute con coordinate, bozze e versioni immutabili; mappa con
+zoom, selezione multipla/consecutiva, filtri e alternativa tabellare. Manager
+riserva sedute alle dotazioni o assegnazioni dirette, manager/capogruppo le
+attribuiscono ai nominativi E2. Conversione quantitativa senza doppio conteggio,
+revoche esplicite, protezione delle versioni occupate, retry e revisioni comuni.
+Consultazione personale sette lingue, elenco stampabile e raccordo informativo
+con scanner evento/gruppo e anteprima badge; nessun nuovo diritto d’ingresso.
+Migration E3 solo locale; dettagli, verifiche e limiti in
+`docs/panel-p13-ceremonies.md`. Staging autenticato, sedi e stampanti reali restano
+aperti. P13 non conclusa; P14/P15 non avviate.
 
 Deliverable: editor admin generico, mappe versionate, scelta manager di sedute
 singole/multiple, assegnazione a gruppi o persone e distribuzione delle sedute

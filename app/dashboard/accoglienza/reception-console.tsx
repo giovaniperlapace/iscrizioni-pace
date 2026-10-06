@@ -1,4 +1,5 @@
 "use client";
+import { ceremonySeatText } from "@/lib/ceremonies/seat-projection";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { BadgeCommand, BadgeResult } from "@/lib/reception/group-badges";
@@ -171,6 +172,7 @@ function PresenceSummary({ result }: { result: VerifiedReception }) {
     <p>{result.kind === "group" ? `${result.groupName} · ${result.persons.length} persone` : `Codice ${result.code}`}</p>
     {result.persons.map(person => <p key={person.id} className="break-words">
       <strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}
+      {person.ceremonies?.map(s=><span className="block text-sm" key={s.kind}>{ceremonySeatText(s)} · Assegnazione, non ingresso</span>)}
       <span className="block">{person.eventCheckedIn === false ? "Passare prima dall’accoglienza evento. " : ""}{person.checkedInAt ? `Presente dal ${date(person.checkedInAt)}` : "Ingresso non registrato"}</span>
     </p>)}
   </div>;

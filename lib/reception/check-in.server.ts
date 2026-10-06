@@ -1,3 +1,4 @@
+import { parseCeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashQrToken } from "../qrcode/token.ts";
 import { parseReceptionCommand, type ReceptionResult } from "./contracts.ts";
@@ -86,16 +87,18 @@ export function projectReceptionResult(data: unknown): ReceptionResult {
   if (row.kind === "group" && typeof row.groupId === "string" && typeof row.groupName === "string" &&
     typeof row.snapshot === "string" && /^[a-f0-9]{64}$/.test(row.snapshot) && Array.isArray(row.persons) && row.persons.length <= 10000 &&
     row.persons.every(p => p && typeof p.id === "string" && typeof p.registrationId === "string" && typeof p.code === "string" &&
-      ["adult","child"].includes(p.kind) && typeof p.firstName === "string" && typeof p.lastName === "string" && timestamp(p.checkedInAt))) {
+      ["adult","child"].includes(p.kind) && typeof p.firstName === "string" && typeof p.lastName === "string" && timestamp(p.checkedInAt) && parseCeremonySeatInfo(p.ceremonies)!==null)) {
     return { ...common, kind: "group", groupId: row.groupId, groupName: row.groupName, snapshot: row.snapshot,
       persons: row.persons.map(p => ({ id:p.id, registrationId:p.registrationId, code:p.code, kind:p.kind,
-        firstName:p.firstName, lastName:p.lastName, checkedInAt:p.checkedInAt })) };
+        firstName:p.firstName, lastName:p.lastName, checkedInAt:p.checkedInAt,
+        ...(p.ceremonies !== undefined ? {ceremonies:parseCeremonySeatInfo(p.ceremonies)!} : {}) })) };
   }
   if (row.kind === "family" && typeof row.code === "string" && Array.isArray(row.persons) && row.persons.length >= 1 && row.persons.length <= 11 &&
     row.persons.every(p => p && typeof p.id === "string" && ["adult","child"].includes(p.kind) &&
-      typeof p.firstName === "string" && typeof p.lastName === "string" && timestamp(p.checkedInAt))) {
+      typeof p.firstName === "string" && typeof p.lastName === "string" && timestamp(p.checkedInAt) && parseCeremonySeatInfo(p.ceremonies)!==null)) {
     return { ...common, kind: "family", code: row.code, persons: row.persons.map(p => ({
       id:p.id, kind:p.kind, firstName:p.firstName, lastName:p.lastName, checkedInAt:p.checkedInAt,
+        ...(p.ceremonies !== undefined ? {ceremonies:parseCeremonySeatInfo(p.ceremonies)!} : {}),
       ...(typeof p.eventCheckedIn === "boolean" ? { eventCheckedIn: p.eventCheckedIn } : {}),
     })) };
   }

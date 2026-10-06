@@ -1,3 +1,4 @@
+import { parseCeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseBadgeCommand, type BadgeResult } from "./group-badges.ts";
 import { hashQrToken } from "../qrcode/token.ts";
@@ -22,9 +23,11 @@ export async function executeBadgeCommand(session: SupabaseClient, service: () =
     if (error) return { status:error.code==="42501"?"forbidden":"unavailable" };
     if (["empty","invalid","conflict","qr_unavailable","already_prepared"].includes(data?.status)) return { status:data.status };
     if (data?.status==="ready") {
+      const ceremonies=parseCeremonySeatInfo(data.ceremonies);
+      if(ceremonies===null)return {status:"unavailable"};
       const token = decryptQrToken(data.encrypted);
       if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token) || hashQrToken(token)!==data.hash || typeof data.person?.firstName!=="string" || typeof data.person?.lastName!=="string" || typeof data.person?.code!=="string") return { status:"qr_unavailable" };
-      return { status:"ready", image:await renderQrDataUrl(token), name:`${data.person.firstName} ${data.person.lastName}`, code:data.person.code };
+      return { status:"ready", ...(data.ceremonies !== undefined ? {ceremonies} : {}), image:await renderQrDataUrl(token), name:`${data.person.firstName} ${data.person.lastName}`, code:data.person.code };
     }
     if (data?.status!=="queue" || typeof data.batchId!=="string" || !Array.isArray(data.items) || !data.items.every((i:Record<string,unknown>)=>
       typeof i.registrationId==="string" && Number.isSafeInteger(i.position) && Number.isSafeInteger(i.attempts) && ["pending","prepared","verified"].includes(String(i.state)) &&

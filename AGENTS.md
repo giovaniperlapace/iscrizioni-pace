@@ -1,5 +1,99 @@
 # AGENTS.md
 
+## Pubblicazione cerimonie E1/E2/E3 in staging — 2026-10-06
+
+- Nuova autorizzazione esplicita dell’utente: commit/push delle modifiche
+  cerimonie e migration necessarie per lo staging. Nessun rilascio production.
+- Applicate e registrate insieme, in una transazione, le migration
+  `20261006180000`, `20261006200000`, `20261006220000` nel container verificato
+  `supabase-db-jiio6ou5wzmma2xwas53cf1d` (PostgreSQL 15.8). Backup custom sul
+  server: `/tmp/iscrizioni-pace-staging-before-ceremonies-20261006151320.dump`,
+  indice verificato con pg_restore prima dell’applicazione.
+- Conteggi e hash delle 51 tabelle pubbliche preesistenti invariati: conservati
+  9 iscrizioni, 9 partecipanti, 85 gruppi e 6 check-in. Zero destinatari email;
+  nessun invio. Dieci tabelle cerimonie con RLS; RPC solo service_role.
+- Resta esclusa la rinomina storica `20260813170000`, non applicabile per
+  mancanza dei gruppi sorgente e non dipendenza delle cerimonie.
+- Codice verificato: 775 test, lint senza warning, TypeScript, build staging,
+  PostgreSQL temporaneo e browser sintetico desktop/mobile sette lingue.
+  Pubblicazione del branch distinta dal collaudo autenticato e dalle sedi reali.
+
+
+## P13-E3 — piantine e sedute numerate locali — 2026-10-06
+
+- Su richiesta dell’utente implementata E3 sul branch panel, conservando E1/E2.
+  Fetch/pull: zero divergenze; origin/main già incluso. Sedi indipendenti e
+  nessuna capienza reale inventata.
+- Editor admin con file, sedute stabili, coordinate, etichette, posti bloccati,
+  bozza e pubblicazione esplicita/versioni immutabili. Mappa con zoom, filtri,
+  selezione multipla/consecutiva e alternativa tabellare desktop/mobile.
+- Manager riserva le sedute entro le dotazioni E1 o le assegnazioni dirette;
+  manager/capogruppo attribuiscono quelle ricevute ai nominativi E2. Viewer
+  sola lettura. Scelte individuali dei minori conservate; senza posto esclude
+  una seduta. Nessun secondo consumo di quota o riempimento automatico.
+- Nuove versioni non eliminano/bloccano/rinominano sedute impegnate. Revoche e
+  trasferimenti E1/E2 richiedono prima rilascio esplicito delle sedute collegate.
+  Cambi gruppo/date/minori continuano a segnalare revisione senza liberare posti.
+- Migration E3 aggiuntiva solo locale, RLS e RPC service-only, attore dalla
+  sessione, lock/revisioni comuni, UUID retry stabile e audit minimizzato.
+- Posto personale nelle sette lingue, elenco stampabile e indicazione dei posti
+  nello scanner evento/gruppo e anteprima badge con QR attivo. Raccordo solo
+  informativo: nessun incarico/accesso cerimonia o check-in creato. Badge già
+  preparati sono snapshot; una riallocazione richiede ristampa esplicita.
+- Verificati 775 test, lint senza warning, TypeScript e build staging.
+  Verifiche SQL temporanee incluse 1.501 sedute, ruoli, versioni, conversione,
+  ultimo posto concorrente e retry; browser sintetico desktop/mobile sette
+  lingue. Esiti finali in `docs/panel-p13-ceremonies.md`.
+- Nessuna migration remota, commit, push, deployment o email. Collaudo
+  autenticato, sedi reali e accettazione aperti; P13 non conclusa, P14/P15 ferme.
+
+
+## P13-E2 — manager, capigruppo e scelte individuali minori — 2026-10-06
+
+- Richiesta esplicita dell’utente di procedere con E2. Precisazioni vincolanti:
+  anche i manager assegnano posti alle singole persone dalla vista dell’evento;
+  per i minori si decide caso per caso, senza regole automatiche di età/famiglia.
+- Distribuzione nominale gestibile da manager/admin per tutti i gruppi evento,
+  da capogruppo per gruppi e discendenti autorizzati. Assegnazione diretta E1
+  della persona mantenuta. Viewer sola lettura, ruoli cumulativi.
+- Registro comune per dirette e dotazioni, scelta esplicita senza posto per
+  ciascun minore, consultazione personale sette lingue, revoca e trasferimento.
+  Nessuna doppia occupazione; cambi gruppo/date/minori segnalati, non liberati.
+- Migration E2 aggiuntiva solo locale, RPC service-only, attore dalla sessione,
+  UUID retry stabile, lock/revisioni comuni e storico minori conservato.
+- Verificati 768 test, lint, TypeScript, build staging, SQL temporaneo e browser
+  sintetico desktop/mobile sette lingue; ultimo posto nominale concorrente
+  manager/capogruppo, retry e snapshot oltre 1.000. Dettagli nel documento
+  `docs/panel-p13-ceremonies.md`; collaudo autenticato e sedi reali ancora aperti.
+- Nessuna migration remota, commit, push o deployment. P13-E3 non avviata.
+
+
+## P13-E1 — cerimonie con sedi indipendenti — 2026-10-06
+
+- Su richiesta dell’utente rinviata P13-S finché saranno noti fonte e formato
+  degli accrediti; avviata la prossima milestone suggerita P13-E1. Precisazione
+  esplicita: inaugurazione e cerimonia finale possono avere location e strutture
+  completamente diverse, ancora sconosciute. Nessuna capienza inventata.
+- Tranche software locale: due viste condivise admin/manager/viewer, configurazioni
+  admin indipendenti in bozza/validate, settori quantitativi, quote per categoria,
+  dotazioni manager ai gruppi e assegnazione di un posto alla persona ammissibile.
+  Regola presenza scelta dall’admin (giorno/mattina/pomeriggio), date sconosciute
+  distinte dalle assenze. Nessun check-in o prenotazione volontaria creato.
+- Migration locale `20261006180000_ceremony_allocations.sql`: quattro tabelle RLS,
+  RPC service-only, controllo attore/evento sia server sia DB, revisioni e lock,
+  audit minimale, capienze e duplicati protetti. Vecchi editor location/momenti
+  bloccati per le configurazioni collegate, anche se usano service_role.
+- Cambio gruppo/date o cancellazione segnala posti da rivedere senza liberarli.
+  Dotazione gruppo consuma subito capienza; distribuzione nominale, regole posti
+  minori/accompagnatori e consultazione personale restano E2; mappe numerate E3.
+- Verificati npm ci, 763 test, lint, TypeScript, build staging, PostgreSQL 17
+  temporaneo (permessi, oltre 1.000 iscrizioni, ultimo posto concorrente) e browser
+  sintetico desktop/mobile. Accesso diretto senza sessione rimanda al login.
+- Piano e dettaglio in `docs/panel-p13-ceremonies.md`. Nessuna migration remota,
+  commit, push o deployment. P13-E1 resta aperta per staging, collaudo autenticato,
+  sedi reali e revisione dell’utente; P13-S sospesa, non completata.
+
+
 ## Migration staging applicate — 2026-10-06
 
 Su richiesta esplicita dell'utente applicate e registrate in un'unica transazione

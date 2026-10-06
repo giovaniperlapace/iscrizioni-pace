@@ -1,3 +1,4 @@
+import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { nationalityName } from "@/lib/registrations/nationality-names";
 import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
 import { EditableRegistrationInfo } from "./editable-registration-info";
@@ -1243,6 +1244,8 @@ export default async function PartecipanteDashboardPage({
                 />
               </div>
             </section>
+
+            <Link href="/dashboard/partecipante/cerimonie" className="btn-secondary min-h-11 justify-self-start px-4">{DISTRIBUTION_COPY[locale].title}</Link>
 
             <ParticipantPanelBookings
               locale={locale}

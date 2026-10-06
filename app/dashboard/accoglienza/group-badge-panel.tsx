@@ -1,4 +1,5 @@
 "use client";
+import { ceremonySeatText,type CeremonySeatInfo } from "@/lib/ceremonies/seat-projection";
 import { ProgressButton } from "@/components/button-progress";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -6,7 +7,7 @@ import type { ReceptionResult } from "@/lib/reception/contracts";
 import type { BadgeCommand, BadgeQueue, BadgeResult } from "@/lib/reception/group-badges";
 import { groupBadgeCommand } from "./actions";
 type Group = Extract<ReceptionResult,{kind:"group"}>;
-type Preview = {id:string; image:string; name:string; code:string};
+type Preview = {ceremonies?:CeremonySeatInfo[];id:string; image:string; name:string; code:string};
 const messages: Record<string,string> = {empty:"Nessun lotto salvato per questo gruppo.",invalid:"QR non valido.",conflict:"Il gruppo o la coda sono cambiati: riprendi la coda salvata e rileggi il QR prima di proseguire.",forbidden:"Incarico non più autorizzato. Accedi nuovamente.",unavailable:"Esito da verificare: ricarica la coda prima di riprendere. Non inviare di nuovo alla stampa.",qr_unavailable:"QR personale non disponibile. Contatta il responsabile; il codice non viene rigenerato.",already_prepared:"Badge già preparato: verifica l’esito oppure richiedi esplicitamente una ristampa."};
 export function GroupBadgePanel({token,group,commandAction=groupBadgeCommand,onBusyChange}:{token:string;group:Group;commandAction?:(c:BadgeCommand)=>Promise<BadgeResult>;onBusyChange?:(busy:boolean)=>void}) {
  const [queue,setQueue]=useState<BadgeQueue|null>(null); const [message,setMessage]=useState(""); const [busy,setBusy]=useState(false); const lock=useRef(false);
@@ -30,7 +31,7 @@ export function GroupBadgePanel({token,group,commandAction=groupBadgeCommand,onB
    for(const item of queue.items.filter(i=>i.state==="pending" && i.available)) {
     const r=await call({token,action:"prepare",batchId:queue.batchId,registrationId:item.registrationId});
     if(r.status!=="ready"){setMessage(`${item.name??item.code}: ${messages[r.status]??"Preparazione non disponibile."}`);break;}
-    setPreviews(p=>[...p.filter(x=>x.id!==item.registrationId),{id:item.registrationId,image:r.image,name:r.name,code:r.code}]);
+    setPreviews(p=>[...p.filter(x=>x.id!==item.registrationId),{id:item.registrationId,image:r.image,name:r.name,code:r.code,ceremonies:r.ceremonies}]);
    }
    const refreshed=await call({token,action:"read",batchId:queue.batchId});
    if(refreshed.status==="queue")setQueue(refreshed);else setMessage(messages[refreshed.status]??"");
@@ -46,7 +47,7 @@ export function GroupBadgePanel({token,group,commandAction=groupBadgeCommand,onB
   popup.document.title="Badge gruppo";
   const notice=popup.document.createElement("p");notice.textContent="Anteprima: formato etichetta da adattare alla stampante. Dopo la stampa verifica i badge nella coda.";popup.document.body.append(notice);
   const button=popup.document.createElement("button");button.textContent="Stampa badge in sequenza";button.onclick=()=>popup.print();popup.document.body.append(button);
-  for(const p of previews){const article=popup.document.createElement("article");const name=popup.document.createElement("h2");name.textContent=p.name;const img=popup.document.createElement("img");img.src=p.image;img.alt="QR personale";const code=popup.document.createElement("h3");code.textContent=p.code;article.append(name,img,code);popup.document.body.append(article);}
+  for(const p of previews){const article=popup.document.createElement("article");const name=popup.document.createElement("h2");name.textContent=p.name;const img=popup.document.createElement("img");img.src=p.image;img.alt="QR personale";const code=popup.document.createElement("h3");code.textContent=p.code;article.append(name,img,code);for(const seat of p.ceremonies??[]){const info=popup.document.createElement("div");info.textContent=ceremonySeatText(seat);article.append(info);}popup.document.body.append(article);}
  }
  return <section className="grid gap-3 rounded-xl border p-3" aria-label="Badge del gruppo">
   <h4 className="font-semibold">Badge del gruppo</h4><p className="text-sm">Un badge per ogni QR personale esistente. I minori restano collegati al QR del genitore. Preparare o stampare non registra presenze. Il formato per le etichette deve ancora essere adattato alla stampante.</p>
@@ -65,6 +66,6 @@ export function GroupBadgePanel({token,group,commandAction=groupBadgeCommand,onB
     {i.available && <div className="flex flex-wrap gap-2">{i.state==="prepared" && <button className="btn-secondary min-h-12 px-3" disabled={busy} onClick={()=>void run({token,action:"verify",batchId:queue.batchId,registrationId:i.registrationId,expectedAttempts:i.attempts})}>Confermo il badge stampato</button>}
     {i.state!=="pending" && <button className="btn-secondary min-h-12 px-3" disabled={busy} onClick={()=>{setPreviews(p=>p.filter(x=>x.id!==i.registrationId));void run({token,action:"reprint",batchId:queue.batchId,registrationId:i.registrationId,expectedAttempts:i.attempts});}}>Richiedi ristampa di questo badge</button>}</div>}
    </li>)}</ul></>}
-  {previews.length>0 && <><button className="btn-primary min-h-12 px-3" disabled={busy} onClick={print}>Apri anteprima di stampa · {previews.length} badge</button><div className="grid grid-cols-2 gap-3">{previews.map(p=><figure key={p.id}><Image unoptimized src={p.image} alt={`QR ${p.code}`} width={160} height={160}/><figcaption className="text-sm">{p.name} · {p.code}</figcaption></figure>)}</div></>}
+  {previews.length>0 && <><button className="btn-primary min-h-12 px-3" disabled={busy} onClick={print}>Apri anteprima di stampa · {previews.length} badge</button><div className="grid grid-cols-2 gap-3">{previews.map(p=><figure key={p.id}><Image unoptimized src={p.image} alt={`QR ${p.code}`} width={160} height={160}/><figcaption className="text-sm">{p.name} · {p.code}{p.ceremonies?.map(s=><span className="block" key={s.kind}>{ceremonySeatText(s)}</span>)}</figcaption></figure>)}</div></>}
  </section>;
 }
