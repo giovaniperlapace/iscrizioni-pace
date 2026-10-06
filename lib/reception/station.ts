@@ -14,10 +14,14 @@ export type StationState = {
   problem?: Exclude<ReceptionResult["status"], "valid">;
 };
 const messages = {
+  not_booked: "Non risulta una prenotazione valida per questo panel. Rivolgiti all’organizzazione.",
+  event_entry_required: "Ingresso all’evento non registrato. Passa prima dall’accoglienza dell’evento.",
+  capacity_exceeded: "Capienza disponibile superata. Rivolgiti al responsabile del panel.",
+  panel_unavailable: "Panel o sala non disponibili. Verifica con l’organizzazione.",
   invalid: "Codice non valido o iscrizione non disponibile per questo evento.",
   forbidden: "Sessione scaduta o incarico non più autorizzato. Accedi di nuovo e verifica l’incarico prima di riprendere.",
   invalid_request: "Controlla il codice, le persone selezionate e le quantità inserite. Verifica di nuovo il codice.",
-  conflict: "Un altro operatore ha aggiornato le presenze. Verifica di nuovo il codice prima di correggerle.",
+  conflict: "Il gruppo o le presenze sono cambiati. Rileggi il codice e controlla l’elenco aggiornato.",
   unavailable: "Esito da verificare. La scansione è sospesa: riprova la stessa richiesta senza ricaricare la pagina.",
 };
 export const EVENT_RECEPTION_DUTY = "event_entry" as const;
@@ -51,7 +55,9 @@ export class ReceptionStationSession {
   private requestId: () => string;
   private timeoutMs: number;
   private active = true;
-  constructor(commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>, requestId: () => string, timeoutMs = 20000) {
+  private context: Pick<ReceptionCommand, "duty" | "panelId">;
+  constructor(commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>, requestId: () => string, timeoutMs = 20000, context: Pick<ReceptionCommand, "duty" | "panelId"> = { duty: EVENT_RECEPTION_DUTY }) {
+    this.context = context;
     this.commandAction = commandAction; this.requestId = requestId; this.timeoutMs = timeoutMs;
   }
   setActive(active: boolean) { this.active = active; }
@@ -64,16 +70,20 @@ export class ReceptionStationSession {
   isLocked() { return ["pending", "uncertain", "blocked"].includes(this.state.phase); }
   canScan() { return this.state.mode === "enter" && ["ready", "result", "error"].includes(this.state.phase); }
   setMode(mode: ReceptionMode) {
-    if (this.isLocked()) return;
+    if (this.isLocked() || (this.context.duty === "room_assistance" && mode !== "enter")) return;
     this.update({ mode, phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
   next() {
     if (this.isLocked()) return;
     this.update({ phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
+  finishGroupInspection() {
+    if (this.state.phase === "selection" && this.state.mode === "enter" && this.state.result?.kind === "group")
+      this.update({ phase: "result", message: "Gruppo verificato. Nessuna presenza modificata." });
+  }
   async inspect(lookup: ReceptionLookup) {
     if (this.isLocked() || this.state.phase === "selection") return;
-    const command = parseReceptionCommand({ duty: EVENT_RECEPTION_DUTY, action: "inspect", lookup });
+    const command = parseReceptionCommand({ ...this.context, action: "inspect", lookup });
     this.update({ result: null, lookup: null, message: "", problem: undefined });
     if (!command) { this.update({ phase: "error", problem: "invalid", message: messages.invalid }); return; }
     this.update({ lookup: command.lookup });
@@ -89,12 +99,13 @@ export class ReceptionStationSession {
     await this.edit(this.state.lookup);
   }
   private async edit(lookup: ReceptionLookup) {
+    if (this.context.duty === "room_assistance") return;
     this.setMode("correct");
     await this.inspect(lookup);
   }
   private remember(result: VerifiedReception, lookup: ReceptionLookup, reading: boolean) {
     // Schools have only QR lookup; families deduplicate QR and manual reads by public code.
-    const key = result.kind === "family" ? `family:${result.code}` : `school:${lookup.value}`;
+    const key = result.kind === "family" ? `family:${result.code}` : `${result.kind}:${lookup.value}`;
     const existing = this.state.recent.find(item => item.key === key);
     const entry = { key, lookup, result, readAt: reading || !existing ? new Date().toISOString() : existing.readAt };
     const recent = reading || !existing ? [entry, ...this.state.recent.filter(item => item.key !== key)].slice(0, 15)
@@ -102,21 +113,21 @@ export class ReceptionStationSession {
     this.update({ recent });
   }
   async submit(values: Pick<ReceptionCommand, "subjectIds" | "students" | "companions">, confirmed = false, cancelSchool = false) {
-    if (this.state.phase !== "selection" || !this.state.lookup || !this.state.result) return;
+    if (this.context.duty === "room_assistance" || this.state.phase !== "selection" || !this.state.lookup || !this.state.result || this.state.result.kind === "room") return;
     if (this.state.mode !== "enter" && !confirmed) return;
-    const cancelAll = this.state.mode === "correct" && (this.state.result.kind === "family"
+    const cancelAll = this.state.mode === "correct" && ((this.state.result.kind === "family" || this.state.result.kind === "group")
       ? values.subjectIds?.length === 0 : cancelSchool);
     const action = cancelAll ? "cancel" : this.state.mode;
-    if (cancelAll && this.state.result.kind === "family") {
+    if (cancelAll && (this.state.result.kind === "family" || this.state.result.kind === "group")) {
       values = { subjectIds: this.state.result.persons.filter(person => person.checkedInAt).map(person => person.id) };
       if (!values.subjectIds?.length) return;
     }
     if (cancelAll && this.state.result.kind === "school") values = {};
     const command: ReceptionCommand = {
-      duty: EVENT_RECEPTION_DUTY, lookup: this.state.lookup, action, requestId: this.requestId(), ...values,
+      ...this.context, ...(this.state.result.kind === "group" ? { groupSnapshot: this.state.result.snapshot } : {}), lookup: this.state.lookup, action, requestId: this.requestId(), ...values,
       ...(this.state.mode === "enter" ? {} : {
         expectedRevision: this.state.result.revision,
-        reason: action === "cancel" ? "entry_cancelled" : this.state.result.kind === "family" ? "selection_error" : "count_error",
+        reason: action === "cancel" ? "entry_cancelled" : (this.state.result.kind === "family" || this.state.result.kind === "group") ? "selection_error" : "count_error",
       }),
     };
     if (!parseReceptionCommand(command)) return;
@@ -152,11 +163,19 @@ export class ReceptionStationSession {
     this.remember(response, command.lookup, command.action === "inspect" && this.state.mode === "enter");
     if (command.action === "inspect") {
       this.update({ result: response });
+      if (this.context.duty === "room_assistance") {
+        this.update({ phase: "result", message: "Prenotazione verificata. Consulta sala e settore nel riepilogo." });
+        return;
+      }
+      if (this.context.duty === "panel_entry" && this.state.mode === "enter" && response.kind === "family" && response.persons.every(person => !person.eventCheckedIn)) {
+        this.update({ phase: "error", problem: "event_entry_required", message: messages.event_entry_required });
+        return;
+      }
       if (this.state.mode === "enter" && response.kind === "family" && response.persons.every(person => person.checkedInAt)) {
         this.update({ phase: "result", message: "Presenze già registrate: nessuna modifica." });
       } else if (this.state.mode === "enter" && response.kind === "family" && response.persons.length === 1) {
         // Keep the pending interlock across verification and automatic entry.
-        await this.run({ duty: EVENT_RECEPTION_DUTY, lookup: command.lookup, action: "enter", requestId: this.requestId(), subjectIds: [response.persons[0].id] });
+        await this.run({ ...this.context, lookup: command.lookup, action: "enter", requestId: this.requestId(), subjectIds: [response.persons[0].id] });
       } else if (this.state.mode === "enter" && response.kind === "school" && response.checkedInAt) {
         this.update({ phase: "result", message: "Ingresso già registrato." });
       } else this.update({ phase: "selection" });

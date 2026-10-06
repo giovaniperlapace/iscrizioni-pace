@@ -21,7 +21,7 @@ export default async function GroupPanelPage({searchParams}: {searchParams: Prom
   if (result?.error) console.error("[group-panel:load]", result.error.code, result.error.message);
   return <main className="app-page text-[var(--peace-ink)]">
     <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8 sm:px-8">
-      <DashboardRoleTabs activeRole="capogruppo" eventRoles={auth.eventRoles} />
+      <DashboardRoleTabs activeRole="capogruppo" eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments} />
       <LeaderSectionNavigation active="panels" locale={locale} />
       <header><h1 className="text-xl font-semibold text-[var(--peace-blue-900)]">{copy.title}</h1><p className="mt-2 text-sm leading-6 text-[var(--peace-muted)]">{copy.intro}</p></header>
       {result?.data && !result.error ? <GroupPanelBookings key={section ?? "none"} view={result.data as GroupPanelView} sectionId={section} locale={locale} /> :

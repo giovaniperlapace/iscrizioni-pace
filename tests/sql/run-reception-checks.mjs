@@ -39,7 +39,7 @@ try {
   }
   psql(`do $$ begin
     assert (select count(*)=1 from check_ins);
-    assert (select payload=to_jsonb(c)-array['child_id','school_booking_id','student_count','companion_count','cancelled_at','updated_at','updated_by']
+    assert (select payload=to_jsonb(c)-array['child_id','school_booking_id','student_count','companion_count','cancelled_at','updated_at','updated_by','seat_section_id']
       from check_ins c,p11_legacy_before b where c.id=(b.payload->>'id')::uuid), 'legacy row changed';
     assert (select child_id is null and school_booking_id is null from check_ins);
     end $$; drop table public.p11_legacy_before;`);
@@ -48,12 +48,30 @@ try {
   console.log(file(join(root,'tests/sql/reception-event-duty.sql')).trim());
   console.log(file(join(root,'tests/sql/event-attendance.sql')).trim());
   console.log(file(join(root,'tests/sql/reception-report.sql')).trim());
+  console.log(file(join(root,'tests/sql/group-reception.sql')).trim());
   // Separate connections compete for the same family, then same school booking.
   const concurrent=(sql)=>new Promise((resolve,reject)=>{
     const child=spawn(join(bin,'psql'),args,{stdio:['pipe','pipe','pipe']}); let out='',err='';
     child.stdout.on('data',x=>out+=x); child.stderr.on('data',x=>err+=x);
     child.on('error',reject); child.on('exit',code=>code===0?resolve(out):reject(new Error(err))); child.stdin.end(sql);
   });
+  psql(`insert into groups(id,event_id,name) values(f(3000),f(1),'Concurrent group');
+    insert into group_reception_tokens(group_id,token_hash,token_encrypted) values(f(3000),repeat('9',64),'synthetic');
+    update participant_group_assignments set is_current=false where registration_id=f(10);
+    insert into participant_group_assignments(registration_id,group_id,is_current,source,status) values(f(10),f(3000),true,'manager','confirmed');`);
+  const snapshot=()=>execFileSync(join(bin,'psql'),[...args,'-tA','-c',"select reception_group_check_in(f(1),f(30),repeat('9',64))->>'snapshot'"],{encoding:'utf8'}).trim();
+  const groupSnap=snapshot();
+  const groupResults=await Promise.all(Array.from({length:8},()=>concurrent(`set role service_role;
+    select reception_group_check_in(f(1),f(30),repeat('9',64),'correct',f(3001),array[f(40)],'${groupSnap}')->>'outcome';`)));
+  assert.equal(groupResults.filter(x=>/replayed/.test(x)).length,7);
+  const groupSnap2=snapshot();
+  const groupCorrections=await Promise.all([0,1].map(i=>concurrent(`set role service_role;
+    select reception_group_check_in(f(1),f(30),repeat('9',64),'correct',f(${3010+i}),array[f(${i===0?10:41})],'${groupSnap2}')->>'status';`)));
+  assert.equal(groupCorrections.filter(x=>/valid/.test(x)).length,1);
+  assert.equal(groupCorrections.filter(x=>/conflict/.test(x)).length,1);
+  // Restore the family fixture expected by the older concurrent checks.
+  psql(`select reception_group_check_in(f(1),f(30),repeat('9',64),'correct',f(3020),'{}','${snapshot()}');`);
+  console.log('PASS group concurrent identical retries (7 replayed) and competing corrections (1 valid/1 conflict)');
   for (const school of [false,true]) {
     const jobs=Array.from({length:8},(_,i)=>concurrent(`set role service_role;
       select public.reception_event_check_in('event_entry',f(1),f(30),'${school?'qr':'code'}','${school?'b'.repeat(64):'TST1'}','enter',f(${(school?800:700)+i}),${school?"'{}',8,1":"array[f(10)]"});`));

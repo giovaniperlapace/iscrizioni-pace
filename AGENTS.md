@@ -1,5 +1,239 @@
 # AGENTS.md
 
+## Pubblicazione del branch panel richiesta il 2026-10-06
+
+L'utente richiede commit di tutte le modifiche locali e push del branch panel,
+compresi i 69 commit precedenti non pubblicati e il merge main `296f3e9`.
+Verifiche della versione applicativa: 758 test, lint, TypeScript/build staging,
+SQL temporaneo e browser sintetico già superati nella tranche P13-G.
+Fetch prima del commit: zero commit remoti da incorporare; diff senza errori.
+`staging:verify` superato. Inventario DB staging ricontrollato in sola lettura:
+restano 21 migration assenti (18 importate da main, la storica rinomina gruppi,
+accessi panel e QR gruppo). Il push autorizzato riguarda il codice; nessuna
+migration remota applicata, email inviata o modifica a main/production.
+Il completamento del push non certifica il deployment né l'operatività dei
+nuovi flussi finché il database staging non viene aggiornato separatamente.
+
+
+## P13-G — QR gruppo e coda badge locali — 2026-10-06
+
+- Su richiesta dell'utente implementata P13-G sul panel, preservando tutte le
+  modifiche P13 locali. Fetch: branch avanti 69, zero commit da incorporare.
+  Nessun commit/push/deploy o migration remota.
+- Decisioni esplicite: QR per solo gruppo selezionato, sottogruppi esclusi;
+  minori ancora sul QR genitore, selezionabili individualmente per la presenza.
+  Accoglienza reale non filtrata dalle date dichiarate; queste restano invariate.
+- QR gruppo `G:` + token opaco cifrato/hashato, gestibile dal capogruppo nella
+  sezione link nelle sette lingue; revoca e rinnovo espliciti. Scanner unico,
+  riconoscimento solo incarico evento, conferma elenco senza ingressi automatici.
+- Presenze canoniche atomiche con snapshot di composizione/revisioni, retry UUID
+  stabile e correzione esplicita. Audit compatibile col report evento. Nessun
+  check-in panel o scuola creato dal QR gruppo; niente QR autonomi ai minori.
+- Coda badge persistente e riprendibile: un lotto aperto per gruppo, ordine,
+  preparati da verificare, conferma operatore e ristampa singola con controllo
+  tentativi. QR personali attivi riusati; niente rigenerazione durante stampa.
+  Preparazione/stampa non registra presenze, errore stampa non le annulla.
+- Migration locale `20261006150000_group_reception.sql`: tre tabelle RLS e RPC
+  service-only con verifica DB di ruolo, evento, gruppo e credenziale ad ogni
+  chiamata. Elenco completo oltre 1.000, limite difensivo 10.000, nessun parziale.
+  Lock conservativi di tabelle gruppi/assegnazioni/minori da misurare sotto carico.
+- Verificati 758 test applicativi, lint, TypeScript/build staging, PostgreSQL 17
+  temporaneo e browser sintetico desktop/mobile. Collaudo autenticato completo,
+  dispositivi e hardware restano da collaudare; P14/P15 non avviate. Stato, limiti
+  e ripresa della coda in `docs/panel-p13-groups.md`. P13-G non accettata sul campo.
+
+## Nuove necessità panel — pianificazione del 2026-10-06
+
+- Aggiornato solo il piano: P13-G (prima priorità, QR gruppo e lotti badge),
+  P13-S (accrediti stampa), P13-E1/E2/E3 (cerimonie, quote, assegnazioni e mappe).
+  Nessuna di queste funzioni è dichiarata implementata; P13 resta da collaudare.
+- Inaugurazione e cerimonia finale: partecipazione prevista dall'iscrizione e
+  dai giorni dichiarati, distinta da posto assegnato e ingresso reale. Niente
+  prenotazione volontaria. Manager ripartisce settore → categoria → gruppo/persona;
+  capogruppo distribuisce soltanto i posti ricevuti ai propri membri.
+- Solo admin modella la piantina; partire da settori/quantità in bozza e poi
+  sedute stabili/versionate. Superata l'esclusione storica di piantine e posti
+  numerati per questi due momenti, non per i panel ordinari. Dotazione gruppo
+  e distribuzione nominale non devono consumare due volte la stessa capienza.
+- QR gruppo distinto da QR persona/scuola; conferma intero gruppo o sottoinsieme
+  realmente arrivato, ingressi nominali idempotenti e stampa in sequenza dei QR
+  personali attivi. Coda preparabile prima di P14; stampa fisica accettata solo
+  dopo hardware P14/P15. Strategia QR minori e scope sottogruppi da definire.
+- Accredito stampa verificato/revocabile e badge dedicato; City Panel e riserve
+  alle cerimonie sono diritti possibili ancora da definire, non accessi automatici.
+- Dettagli, dipendenze, decisioni aperte e accettazione in
+  `PIANO_DI_LAVORO_PANEL.md`, sezioni 3.5–3.7 e nuove milestone. Conservate tutte
+  le modifiche locali precedenti; fetch iniziale: 69 commit avanti, zero indietro
+  rispetto all'upstream panel, nessun riallineamento necessario.
+
+## Regole non negoziabili di main anche sul branch panel — 2026-10-06
+
+Su richiesta dell'utente, i vincoli di `main` valgono anche per lo sviluppo su
+`codex/panel-p0-p10`. Fonte verificata: `main` e `origin/main` a `0b7e4d1`, già
+integrati nel merge panel `296f3e9`. Questa sezione rende espliciti i vincoli
+trasversali; non sostituisce le specifiche dettagliate e lo storico sottostanti.
+
+### Precedenza delle decisioni e protezione nei merge
+
+- Una nuova funzionalità panel non autorizza a rimuovere comportamenti,
+  controlli o correzioni già approvati su main. Restano altrettanto vincolanti
+  le decisioni consolidate del branch panel su scuole, prenotazioni e scanner.
+- Non risolvere conflitti scegliendo in blocco l'AGENTS o il codice di un solo
+  branch (`ours` / `theirs`). Confrontare le decisioni di entrambi e conservare
+  quelle compatibili; documentare puntualmente ogni requisito superato.
+- Tra note storiche incompatibili vale la decisione esplicita più recente
+  dell'utente sul medesimo comportamento, non il branch di provenienza né
+  l'ordine dei paragrafi. Se il conflitto non è risolvibile dalle decisioni
+  documentate, chiedere chiarimento prima di cambiare quel comportamento.
+- Esempi di regole superate da non ripristinare: tag ai capigruppo, ruoli
+  esclusivi che nascondono altre dashboard, figli nascosti dietro un pulsante,
+  blocco dell'area personale per manager/viewer, avanzamento fermo al 90%.
+- A ogni riallineamento confrontare anche `AGENTS.md` di main e panel, riportare
+  qui eventuali nuovi vincoli trasversali e conservare le specifiche panel.
+  Date, test e autorizzazioni di un rilascio passato sono fatti storici, non
+  autorizzazioni permanenti per pubblicare, applicare SQL o inviare email.
+
+### Git, ambienti e dati
+
+- Seguire «Workflow Git e postazioni multiple» e «Strategia Git»: main è il
+  default; panel si usa su indicazione esplicita. Conservare il branch panel
+  anche dopo un merge, finché l'utente non ne richiede la rimozione.
+- Verificare percorso, branch e stato, eseguire fetch e riallineamento
+  fast-forward sicuro all'upstream prima di modificare. Preservare lavoro
+  locale, commit non integrati e stash; non forzare sincronizzazioni divergenti.
+  Usare clone locale fuori dalle cartelle cloud e GitHub per sincronizzarlo.
+- Integrare periodicamente `origin/main` nel panel tramite merge, senza rebase
+  del branch condiviso. Non creare branch, worktree o PR, né fare commit/push
+  senza richiesta esplicita. Nessun reset distruttivo o sovrascrittura di
+  lavoro altrui per semplificare un conflitto.
+- Merge e pubblicazione del codice non applicano né autorizzano migration
+  remote. SQL versionato, milestone dedicata e diff revisionabile; prima di
+  una preview/rilascio confrontare il registro DB dell'ambiente interessato
+  con le migration richieste e verificare la configurazione email.
+- Non alterare dati reali né inviare email di collaudo come effetto collaterale
+  delle verifiche. Usare fixture sintetiche e database temporanei per i test.
+  Nessun segreto, token, dump o documento con dati personali in Git o nei log.
+
+### Autorizzazioni e dati canonici
+
+- L'evento operativo è quello unico con `events.is_current`; il multievento è
+  archivio storico. Admin globale, manager/viewer limitati all'evento corrente,
+  capogruppo alla gerarchia autorizzata. Controllare i permessi sul server
+  prima dei loader, anche per URL diretti, export e parametri memorizzati.
+- I ruoli si sommano e tutte le dashboard assegnate restano accessibili,
+  compresa l'area personale. Anche la membership capogruppo secondaria abilita
+  l'accesso. Manager e viewer sono alternativi nello stesso evento: cambio
+  tramite rimozione esplicita, senza cancellare altri incarichi. Vietata la
+  rimozione del proprio account; elenchi ruoli deduplicati per ID Auth.
+- Viewer in sola lettura per le sezioni autorizzate, comprese le esportazioni
+  presenze; niente azioni di gestione o dati interni esclusi dal suo ruolo.
+  Solo admin gestisce il ciclo evento e assegna il ruolo manager.
+- Tag: gestione solo admin/manager, lettura viewer; capogruppo escluso da
+  catalogo, filtri, colonne, export e accesso DB, anche con vecchie preferenze.
+  Servizi modificabili da admin/manager, in sola lettura per capogruppo.
+- Service role solo lato server, attore ricavato dalla sessione e scope
+  verificato; non sostituire RLS con soli controlli UI. Conservare controlli
+  DB, snapshot/conflitti, lock e audit atomico delle operazioni che li usano.
+- Letture paginate e per ID autorizzati anche oltre 1.000 record. Errori
+  bloccanti: nessun totale/export parziale e nessun dato non caricato mostrato
+  come zero, assenza o risposta negativa. Matching per ID o corrispondenze
+  esplicite, senza associazioni approssimative tra persone o gruppi.
+- Associazione dichiarata: `answers.externalGroupAssociation` del questionario
+  più recente, anche quando vuota; non recuperare valori precedenti. Modifica
+  admin/manager fino a 200 caratteri, preservando le altre risposte e senza
+  testo dell'associazione nell'audit.
+- Sesso interno separato e protetto: niente questionario, loader ordinari,
+  audit, email, statistiche, QR o preferenze salvate; viewer escluso anche
+  dall'export. Accessibilità limitata alle opzioni dichiarate, senza inferenze
+  né reintroduzione del testo libero ritirato; colonna/export disabilità
+  esclusi al viewer secondo i permessi specifici documentati.
+- Non inventare o completare dati storici: nascita reale/non futura e città
+  richieste nei nuovi inserimenti previsti, ma schede storiche incomplete e
+  relativi figli restano visibili. Residenza mai dedotta dal gruppo.
+  Localizzare i paesi riconosciuti preservando valori sconosciuti e dati salvati.
+
+### Comportamenti applicativi da preservare
+
+- Viste operative condivise tra admin/manager, evitando duplicazioni per ruolo.
+  Figli sempre visibili; numero e nomi inclusi negli export operativi previsti.
+  Statistiche da gerarchia e assegnazioni reali, figli inclusi nei conteggi
+  previsti; negli export presenze per gruppo i figli restano nel gruppo
+  d'iscrizione anche se il genitore ha servizi o tag.
+- Presenze previste «Da comunicare» distinte dalle assenze, calendario completo
+  e fasce conservati. Le presenze effettive/check-in individuali restano
+  separate dalle dichiarazioni e dalle presenze del genitore.
+- Form operativi con `ReliableForm`: valori conservati in caso di errore,
+  messaggi accessibili accanto ai campi, focus al primo errore, invio esplicito
+  e protezione dai doppi invii. Nessun redirect su errore nei nuovi overlay,
+  né bozze operative in localStorage, sessionStorage o URL.
+- Modali con scroll interno utilizzabile desktop/mobile, sfondo bloccato,
+  chiusura X/Escape e ripristino di focus, filtri e scroll della dashboard.
+  Preservare `dashboard-modal` e il pattern `preserve-dashboard-scroll`;
+  non introdurre `overflow-hidden` senza un contenitore interno scrollabile.
+- `ButtonProgress` condiviso in tutto il sito, overlay al 25%, partenza rapida
+  e avanzamento continuo rallentato nelle attese lunghe. Completamento solo
+  alla risposta reale, mai al 100% per errore; accessibilità e movimento
+  ridotto conservati. Conferma email «in coda» distinta dalla consegna.
+- Partecipante e capogruppo nelle sette lingue fin dall'inizio: it, en, fr, de,
+  es, nl, uk, inclusi stati, errori, overlay ed export. Niente testi tecnici
+  nelle interfacce operative; traduzioni legali definitive con revisione umana.
+- Magic link: GET/HEAD non consumano il token; rinnovo dell'inattività solo
+  dopo nuova verifica OTP/PKCE e accesso riusciti. Timeout di 24 ore e cookie
+  protetto conservati, senza rinnovo per il solo riuso della sessione.
+- Email: preservare coda Postmark, destinatari espliciti, anteprima/test e
+  conferma previsti prima delle campagne; nessun reinvio cieco con esito
+  incerto. Consegna al referente distinta dall'email personale; non copiare
+  quella del referente nel contatto del partecipante. Conservare le indicazioni
+  multilingue su spam e mittente sicuro, anche cambiando provider.
+- QR con token opaco/revocabile, check-in idempotente e auditabile, dati minimi
+  all'accoglienza. Conservare il flusso scanner consolidato del panel, i retry
+  con lo stesso UUID e la gestione dell'esito incerto. Arrivo all'evento e
+  accesso a panel/sala sono operazioni distinte.
+
+### Verifica e avanzamento
+
+- Diff piccoli e controlli proporzionati: test pertinenti, lint, TypeScript e
+  build per modifiche applicative; dipendenze riproducibili dal lockfile con
+  `npm ci`. UI significativa verificata nel browser desktop/mobile; modifiche
+  a permessi e SQL verificate anche per ruoli diversi e casi di conflitto.
+- Leggere `PIANO_DI_LAVORO_PANEL.md` prima della milestone; rispettarne i punti
+  di revisione. Non dichiarare conclusa una milestone per il solo merge:
+  Il report SQL è attivato in staging dal 6 ottobre; P13 resta da collaudare
+  integralmente, secondo la nota dedicata a questa tranche.
+- Aggiornare piano e documenti quando cambiano decisioni o flussi. Distinguere
+  verifiche locali, stato del database e rilascio effettivo: il solo push non
+  dimostra che il deployment sia riuscito.
+
+## P13 — report attivato in staging e accessi panel locali — 2026-10-06
+
+- Su richiesta dell'utente attivato il report senza collaudo: migration
+  `20260930180000_reception_operational_report.sql` applicata e registrata
+  atomicamente nel solo staging; funzione e privilegi verificati. Nessuna
+  prova di ingressi, invio email o modifica production. Superate le precedenti
+  note «report da attivare»; resta da verificarlo nel collaudo completo.
+- L'utente rinvia il testing completo al termine dello sviluppo e autorizza
+  a proseguire con gli accessi panel/sala senza il precedente collaudo intermedio.
+  Non dichiarare P13 conclusa né avviare automaticamente P14 o un rilascio.
+- Incarichi separati per account/evento/panel: `panel_entry` e `room_assistance`,
+  senza concedere il ruolo evento accoglienza. Gestione admin/manager dal catalogo
+  panel su account esistenti, senza inviti; viewer escluso dalla gestione.
+  La capability di navigazione non autorizza alcuna scrittura: server e DB
+  rileggono l'incarico esatto a ogni comando, anche durante i retry.
+- Scelta incarico prima dello scanner; nessun cambio durante richieste/esito
+  incerto. QR, codice personale, famiglie, scuole e feedback riusano la console
+  consolidata. Ingresso al panel richiede prenotazione e ingresso evento reale;
+  quantità scuola limitate anche agli arrivi evento. Sala in sola consultazione.
+- Nuova migration locale `20261006120000_panel_reception_access.sql`, non
+  applicata in remoto: check-in con moment_id/settore, revisioni separate,
+  capienza serializzata, audit e retry distinti. Le letture scuola della RPC
+  evento sono ristrette esplicitamente a moment_id nullo. Statistiche panel
+  mostrano gli ingressi validi al caricamento, senza inventare permanenza/no-show.
+- TypeScript, lint e build staging superati; predisposte regressioni ma non
+  eseguite. SQL, browser, autenticazione e hardware rinviati al testing completo.
+  Prima della pubblicazione va risolto l'inventario delle migration main ancora
+  assenti nello staging, senza applicazioni indiscriminate. Nessun commit/push.
+  Dettagli e verifiche future in `docs/panel-p13-access.md`.
+
 ## Riallineamento main nel branch panel — 2026-10-03
 
 - Su richiesta dell’utente integrato `origin/main` a `0b7e4d1` nella base panel

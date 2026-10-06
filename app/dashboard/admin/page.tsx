@@ -563,7 +563,7 @@ export default async function AdminDashboardPage({
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard admin</h1>
-          <DashboardRoleTabs activeRole="admin" eventRoles={auth.eventRoles} />
+          <DashboardRoleTabs activeRole="admin" eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments} />
           <DashboardAreaDescription>
             In questa area puoi aprire o sospendere le iscrizioni, controllare
             i numeri principali e gestire gruppi e ruoli operativi.

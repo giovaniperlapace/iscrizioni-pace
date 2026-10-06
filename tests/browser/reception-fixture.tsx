@@ -6,7 +6,7 @@ import type { CameraSource } from "@/lib/reception/camera";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 const adult="11111111-1111-4111-8111-111111111111";
 const child="22222222-2222-4222-8222-222222222222";
-type Valid = Extract<ReceptionResult,{status:"valid"}>;
+type Valid = Extract<ReceptionResult,{kind:"family" | "school"}>;
 export default function ReceptionFixture() {
   const records=useRef(new Map<string,Valid>());
   const [mode,setMode]=useState("normal");

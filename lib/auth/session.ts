@@ -1,5 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
+import { hasPanelReceptionDuty } from "../reception/duties.server";
 import { pickDashboardRole, type DashboardRole, type EventRole } from "./roles";
 
 export type EventUserRole = {
@@ -11,6 +12,7 @@ export type AuthContext = {
   user: User;
   eventRoles: EventUserRole[];
   dashboardRole: DashboardRole;
+  hasReceptionAssignments: boolean;
   dashboardPath: string;
 };
 
@@ -40,15 +42,19 @@ export async function getCurrentAuthContext(
     return null;
   }
 
-  const eventRoles = await getEventRolesForCurrentUser(supabase, user.id);
+  const [eventRoles, hasReceptionAssignments] = await Promise.all([
+    getEventRolesForCurrentUser(supabase, user.id), hasPanelReceptionDuty(supabase),
+  ]);
   const dashboardRole = pickDashboardRole(
     eventRoles.map((role) => role.role),
-    requestedRole
+    requestedRole,
+    hasReceptionAssignments
   );
 
   return {
     user,
     eventRoles,
+    hasReceptionAssignments,
     dashboardRole,
     dashboardPath: dashboardPathForRole(dashboardRole),
   };

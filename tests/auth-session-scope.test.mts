@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import * as roles from "../lib/auth/roles.ts";
+import * as duties from "../lib/reception/duties.server.ts";
 import * as persistence from "../lib/auth/session-persistence.ts";
 
 function loadModule<T>(path: string, dependencies: Record<string, unknown>) {
+  dependencies = { "../reception/duties.server": duties, "@/lib/reception/duties.server": duties, ...dependencies };
   const source = readFileSync(new URL(path, import.meta.url), "utf8");
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports: Record<string, unknown> = {};
@@ -16,7 +18,7 @@ function loadModule<T>(path: string, dependencies: Record<string, unknown>) {
   return exports as T;
 }
 
-function database(ownRole: string | null, secondaryLeader = false) {
+function database(ownRole: string | null, secondaryLeader = false, panelDuty = false) {
   const rows = {
     event_user_roles: [
       ...Array.from({ length: 1000 }, (_, i) => ({ user_id: `other-${i}`, role: "manager", event_id: "event" })),
@@ -29,6 +31,7 @@ function database(ownRole: string | null, secondaryLeader = false) {
     ],
   };
   return {
+    rpc: async (name: string) => { assert.equal(name, "has_panel_reception_duty"); return { data: panelDuty, error: null }; },
     auth: { getUser: async () => ({ data: { user: { id: "current" } }, error: null }) },
     from(table: keyof typeof rows) {
       let selected: Record<string, unknown>[] = rows[table];
@@ -132,3 +135,12 @@ for (const managerRole of ["manager", "manager_viewer"]) {
     }
   });
 }
+
+
+test("a panel assignment opens reception without fabricating an event role", async () => {
+  const result = await session.getCurrentAuthContext(database(null, false, true), "accoglienza");
+  assert.deepEqual(result.eventRoles, []);
+  assert.equal(result.dashboardPath, "/dashboard/accoglienza");
+  const revoked = await session.getCurrentAuthContext(database(null, false, false), "accoglienza");
+  assert.equal(revoked.dashboardPath, "/dashboard/partecipante");
+});

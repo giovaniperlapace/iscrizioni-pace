@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { NextRequest, NextResponse } from "next/server.js";
 import ts from "typescript";
+import * as duties from "../lib/reception/duties.server.ts";
 import * as roles from "../lib/auth/roles.ts";
 import * as persistence from "../lib/auth/session-persistence.ts";
 import * as confirmation from "../lib/auth/magic-link-confirmation.ts";
@@ -35,6 +36,7 @@ function harness(lastActivity: string | null, options: { existingUser?: boolean;
     return { error: null };
   };
   const db = {
+    rpc: async () => ({ data: false, error: null }),
     auth: {
       verifyOtp: verify,
       exchangeCodeForSession: verify,
@@ -45,6 +47,7 @@ function harness(lastActivity: string | null, options: { existingUser?: boolean;
   };
   const shared = {
     "next/server": { NextResponse },
+    "@/lib/reception/duties.server": duties,
     "@/lib/auth/roles": roles,
     "@/lib/auth/session-persistence": persistence,
     "@/lib/supabase/server": { createSupabaseServerClient: async () => db },

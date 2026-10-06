@@ -12,7 +12,10 @@ Questo documento organizza lo sviluppo delle funzioni relative a:
 - destinatari delle campagne email collegati a panel e scuole;
 - statistiche sui panel;
 - accesso all'evento tramite QR e rilevazione delle presenze effettive;
-- stampa del QR su etichette per i badge all'accoglienza.
+- stampa del QR su etichette per i badge all'accoglienza;
+- QR di gruppo, accoglienza collettiva e stampa in sequenza dei badge personali;
+- riconoscimento degli accrediti stampa e relativi badge;
+- inaugurazione e cerimonia finale con quote, assegnazioni e piantine dei posti.
 
 Il lavoro va eseguito in milestone piccole. Ogni milestone deve essere
 implementata, verificata e provata nell'interfaccia prima di iniziare la
@@ -40,6 +43,52 @@ Stato di partenza al 2026-08-04:
   spagnolo, neerlandese e ucraino.
 
 ## 2. Metodo obbligatorio per ogni milestone
+
+### Pubblicazione del branch panel richiesta il 2026-10-06
+
+L'utente richiede commit di tutte le modifiche locali e push del branch panel,
+compresi i 69 commit precedenti non pubblicati e il merge main `296f3e9`.
+Verifiche della versione applicativa: 758 test, lint, TypeScript/build staging,
+SQL temporaneo e browser sintetico già superati nella tranche P13-G.
+Fetch prima del commit: zero commit remoti da incorporare; diff senza errori.
+`staging:verify` superato. Inventario DB staging ricontrollato in sola lettura:
+restano 21 migration assenti (18 importate da main, la storica rinomina gruppi,
+accessi panel e QR gruppo). Il push autorizzato riguarda il codice; nessuna
+migration remota applicata, email inviata o modifica a main/production.
+Il completamento del push non certifica il deployment né l'operatività dei
+nuovi flussi finché il database staging non viene aggiornato separatamente.
+
+
+### Estensione del 2026-10-06 — gruppi, stampa ed eventi speciali
+
+Richiesta recepita nel piano; P13-G ha ora una tranche software locale, come
+documentato nella milestone. Le altre estensioni restano da implementare. Prima nuova priorità:
+QR di gruppo e stampa in sequenza; poi accrediti stampa; quindi inaugurazione
+e cerimonia finale. P13 conserva lo stato aperto e il collaudo rinviato già
+documentati. Questo aggiornamento è di pianificazione e non avvia sviluppo,
+migration o rilascio. Le nuove milestone P13-G, P13-S e P13-E1/E2/E3 si inseriscono
+prima del collaudo finale P16, senza rinumerare le milestone storiche.
+
+È superata l'esclusione generale di piantine e sedute numerate, limitatamente
+ai due eventi speciali. Restano invariati i panel ordinari a prenotazione.
+La preparazione software della coda di stampa di gruppo può precedere P14;
+la stampa operativa e la sua accettazione dipendono ancora da P14/P15.
+
+### Decisione del 2026-10-06 — attivazione report e prosecuzione P13
+
+L'utente richiede l'attivazione del report in staging senza collaudo e il
+completamento dello sviluppo degli accessi panel/sala; il testing completo viene
+rinviato al termine. Per questa tranche la richiesta supera il collaudo
+intermedio prima della prosecuzione. P13 resta aperta fino al testing e alla
+revisione finale, senza avanzamento automatico a P14.
+
+Report: migration `20260930180000_reception_operational_report.sql` applicata e
+registrata atomicamente nel solo staging; verificati installazione e privilegi,
+non eseguite prove funzionali. Accessi panel/sala implementati localmente con
+nuova migration `20261006120000_panel_reception_access.sql`, non applicata in
+remoto. TypeScript, lint e build staging superati; regressioni predisposte, non
+eseguite. Nessun commit, push o deployment. Dettagli, inventario DB e testing
+rinviato in `docs/panel-p13-access.md`.
 
 ### Riallineamento del 2026-10-03
 
@@ -285,6 +334,94 @@ estendere il modulo.
 - L'etichetta iniziale contiene QR ad alto contrasto, codice partecipante e il
   minimo testo approvato. Dimensioni, densita' e contenuti finali dipendono
   dalla stampante e vanno verificati con badge reali.
+
+### 3.5 QR di gruppo e stampa collettiva
+
+- Un QR opaco e revocabile identifica un gruppo nell'evento corrente; è distinto
+  dal QR personale e dalla prenotazione scuola. Non incorpora l'elenco persone.
+- Nell'incarico accoglienza evento, la scansione carica i membri autorizzati
+  correnti e un riepilogo nominale: comando unico per confermare tutto il gruppo,
+  con possibilità di escludere assenti e gestire arrivi parziali. Scansionare il
+  codice non deve dichiarare automaticamente presenti persone non arrivate.
+- L'operazione registra presenze individuali, comprese quelle dei minori
+  esplicitamente confermati. Non sostituisce i conteggi scuola con nomi fittizi.
+  Già presenti riconosciuti senza duplicati; retry con lo stesso identificativo,
+  controllo dei cambi di composizione e correzioni auditabili.
+- Dallo stesso flusso si prepara un lotto ordinato di badge personali, uno dopo
+  l'altro, con anteprima e quantità. Deve essere possibile stampare l'intero
+  elenco del gruppo; per arrivi parziali si propone il sottoinsieme confermato.
+  Stampare badge non equivale a registrare ingressi.
+- Ogni badge riusa il QR personale attivo. Verificare prima dello sviluppo come
+  rappresentare i minori privi di QR autonomo, senza inventare token o duplicare
+  quello del genitore come se identificasse persone diverse.
+- Coda riprendibile, errori per elemento e ristampa esplicita: un'interruzione
+  non ripete automaticamente tutto il lotto. Senza conferma dal dispositivo,
+  mostrare «inviato alla stampa / da verificare», non «stampato».
+- Decisioni P13-G del 6 ottobre: solo gruppo selezionato, senza sottogruppi;
+  minori selezionabili per la presenza tramite QR del genitore. Il capogruppo
+  recupera/revoca il QR dalla gestione link. Le date dichiarate non impediscono
+  all'operatore di confermare un arrivo reale; non vengono riscritte.
+
+### 3.6 Accrediti stampa
+
+- L'accoglienza generale riconosce il QR collegato all'accredito e ne verifica
+  lato server identità, evento, validità e revoca, quindi consente di preparare
+  il badge stampa. Accredito, consegna/stampa badge e ingresso sono stati distinti.
+- Se la persona è anche iscritta, collegare le identità con associazione certa,
+  evitando presenze e badge duplicati. La fonte degli accrediti, il formato QR
+  esistente e l'eventuale assenza di iscrizione vanno verificati prima di P13-S.
+- I diritti di accesso sono configurabili per luogo/momento e separati dalla
+  validità dell'accredito. City Panel e posti stampa alle due cerimonie sono
+  possibilità indicate dall'utente, non autorizzazioni già definite.
+- Un accredito valido non assegna da solo una seduta: eventuali riserve stampa
+  consumano le quote dei settori e passano dal flusso manager degli eventi speciali.
+- Riutilizzare scanner, incarichi, token sicuri e coda badge; mostrare agli
+  operatori soltanto dati e indicazioni necessari all'incarico.
+
+### 3.7 Inaugurazione e cerimonia finale
+
+- Due momenti con vista gestionale dedicata e assegnazione manager. L'iscrizione
+  alla Preghiera per la pace comporta partecipazione prevista quando le presenze
+  dichiarate coprono il giorno del momento. Non serve prenotazione del partecipante.
+  Date non comunicate restano «da verificare»; la regola per le fasce orarie è
+  da precisare. Partecipazione prevista, posto assegnato e ingresso effettivo
+  devono essere tre stati distinti, anche nei report.
+- Solo admin crea e modifica la piantina: aree/settori, capienze, file, sedute,
+  etichette, geometria e posti non utilizzabili. Manager assegna posti e quote;
+  capogruppo distribuisce solo la dotazione ricevuta ai membri autorizzati e
+  ammissibili del proprio gruppo; partecipante consulta la propria assegnazione.
+- Catena di allocazione: capienza del settore → quota categoria → dotazione
+  gruppo o assegnazione diretta alla persona → distribuzione nominale del gruppo.
+  Le categorie devono essere esplicite; non dedurle da dati sensibili o tag.
+  Il catalogo e le eventuali sovrapposizioni fra categorie restano da definire.
+- Il manager vede disponibilità e residui per settore/categoria/gruppo e può
+  assegnare quantità oppure, quando disponibili, sedute specifiche singole o
+  multiple, anche contigue. Il capogruppo non può superare dotazione o settore
+  ricevuti né scegliere posti assegnati ad altri gruppi.
+- La dotazione di gruppo occupa capienza subito: attribuirla ai membri non la
+  consuma una seconda volta. Una persona non può ricevere due posti nello stesso
+  momento tramite assegnazione diretta e gruppo; definire il fabbisogno dei minori
+  e degli accompagnatori prima dell'assegnazione operativa.
+- Prima fase senza sedi definitive: configurazioni in bozza, settori e quote
+  quantitative. Capienza sconosciuta diversa da zero e da illimitata; dati demo
+  esplicitamente tali. Nessuna assegnazione operativa oltre capienze validate.
+- Seconda fase: mappa tipo cinema/stadio con zoom, legenda, selezione singola e
+  multipla, filtri e alternativa tabellare accessibile. I posti hanno ID stabili;
+  le coordinate servono alla vista, non definiscono l'identità della seduta.
+- Piantine versionate: con assegnazioni esistenti, vietato eliminare posti o
+  ridurre quote sotto gli impegni senza un flusso esplicito di riallocazione.
+  Il passaggio da quantità a sedute conserva le dotazioni e segnala i membri
+  ancora senza seduta, senza annullamenti o riassegnazioni silenziosi.
+- Quote e sedute protette da transazioni/lock, controlli server e DB, audit e
+  gestione dei conflitti fra manager. Revoche, cambio gruppo o cambio date
+  segnalano assegnazioni da rivedere; nessuna liberazione automatica non concordata.
+- Riusare evento, persone, gruppi, momenti e check-in canonici. Le nuove entità
+  logiche sono piantina/versione, settore/seduta, quota, dotazione e assegnazione;
+  la scelta tra estensione delle tabelle esistenti e nuove tabelle richiede
+  verifica dello schema. Non simulare una prenotazione volontaria del partecipante.
+- Accesso alle cerimonie tramite identità QR e assegnazione valida, con incarichi
+  dedicati; stampa e consultazione devono mostrare settore ed eventuale posto.
+  I diritti stampa seguono le configurazioni approvate, senza bypass di capienza.
 
 ## 4. Modello dati da verificare nella prima fase
 
@@ -776,6 +913,12 @@ accedere alla scheda completa del partecipante.
 
 ### Milestone P13 - presenza panel e quadro operativo dell'evento
 
+Aggiornamento 6 ottobre: report attivato nel database staging; accessi panel/sala
+implementati localmente. Le note seguenti conservano lo storico. I vincoli di
+prenotazione, ingresso evento, incarico e capienza sono implementati nella nuova
+tranche; collaudo complessivo rinviato su richiesta dell'utente. Stato e limiti
+in `docs/panel-p13-access.md`; P13 non è ancora accettata.
+
 Prima tranche implementata localmente il 2026-09-30 su richiesta dell’utente:
 stato/orario di ingresso in elenco e scheda operativa admin/manager/viewer,
 minori distinti, conteggi evento per persone e scuole, aggiornamento ogni 10
@@ -829,6 +972,70 @@ come effetto collaterale di una scansione panel o di assistenza.
 
 Accettazione: il numero dei presenti effettivi e' disponibile ai manager e
 non deriva soltanto dalle intenzioni dichiarate nell'iscrizione.
+
+### Milestone P13-G - QR gruppo, accoglienza e preparazione stampa (prima priorità)
+
+Aggiornamento 6 ottobre 2026: tranche software implementata localmente.
+Confermate dall'utente esclusione dei sottogruppi e permanenza dei minori sul QR
+del genitore. Credenziale gruppo revocabile dal capogruppo, ingresso collettivo
+o parziale, correzioni, coda persistente e anteprima sequenziale disponibili
+nel codice. Migration `20261006150000_group_reception.sql` soltanto locale.
+Verifiche tecniche e limiti in `docs/panel-p13-groups.md`; collaudo autenticato,
+attivazione staging e prova hardware ancora aperti. Non è accettazione finale.
+
+Deliverable: risoluzione sicura del QR gruppo, riepilogo e conferma collettiva o
+parziale, presenze nominali idempotenti, lotto badge e anteprima, coda riprendibile.
+Prima tranche: modello, accoglienza e preparazione software; completamento stampa
+fisica insieme a P14/P15, senza dichiarare il flusso completo prima di tale prova.
+
+Accettazione: gruppo intero e arrivo parziale, minori, membri già presenti,
+cambio composizione, due operatori, retry dopo rete interrotta, QR revocato o
+altro evento, autorizzazioni e ristampa selettiva. Un errore stampa non annulla
+presenze confermate e non crea nuovi ingressi. La composizione confermata deve
+essere verificata atomicamente, senza conferme parziali nascoste.
+
+### Milestone P13-S - riconoscimento accrediti stampa e badge
+
+Deliverable: verifica della fonte e formato accrediti, riconoscimento scanner,
+collegamento certo all'eventuale iscritto, stato accredito e badge dedicato,
+struttura configurabile dei diritti di accesso senza abilitarne di presunti.
+Dipende dalla coda badge condivisa P13-G/P15 per la stampa; l'assegnazione di
+posti riservati dipende da P13-E1/E2.
+
+Accettazione: accredito valido/revocato/altro evento, persona già iscritta,
+ristampa, permessi, dati minimi e rifiuto di accesso a luogo non autorizzato.
+Il collaudo degli accessi specifici segue la definizione dei luoghi ammessi.
+
+### Milestone P13-E1 - eventi speciali, settori e quote
+
+Deliverable: due viste dedicate, ammissibilità dalle date dichiarate, modello
+admin delle sedi in bozza, settori e quote categoria, assegnazioni manager a
+persone e gruppi. Nessun acquisto o prenotazione a scelta del partecipante.
+
+Accettazione: date ignote/assenti, capienze sconosciute, quote insufficienti,
+dotazioni concorrenti e impossibilità di allocare oltre il settore. Schema e
+permessi verificati anche per URL/API diretti; piantina modificabile solo admin.
+
+### Milestone P13-E2 - distribuzione nominale ai gruppi
+
+Deliverable: vista capogruppo delle dotazioni per cerimonia/settore/categoria,
+assegnazione ai propri membri, residui, consultazione personale e flussi espliciti
+di revoca/riallocazione. Testi capogruppo e partecipante nelle sette lingue.
+
+Accettazione: nessun doppio conteggio della dotazione, nessuna doppia assegnazione
+alla persona, rispetto scope e settore, cambio gruppo/date e conflitti manager–
+capogruppo. Posti stampa integrabili solo secondo diritti e quote configurati.
+
+### Milestone P13-E3 - piantina interattiva e posti numerati
+
+Deliverable: editor admin generico, mappe versionate, scelta manager di sedute
+singole/multiple, assegnazione a gruppi o persone e distribuzione delle sedute
+ricevute dal capogruppo; alternativa tabellare e raccordo a badge/accessi/report.
+
+Accettazione: prototipo su sedi sintetiche, selezione accessibile desktop/mobile,
+concorrenza sull'ultimo posto, conversione delle dotazioni quantitative, modifica
+piantina con assegnazioni e nessuna perdita silenziosa. La validazione delle
+sedi reali resta aperta fino alla consegna di capienze e piantine definitive.
 
 ### Milestone P14 - prova tecnica delle stampanti per etichette
 
@@ -884,7 +1091,8 @@ Scopo: preparare il sistema all'uso reale con carico, operatori e hardware.
 Deliverable:
 
 - test end-to-end dei flussi manager, partecipante, docente, campagne,
-  statistiche, QR, accoglienza e stampa;
+  statistiche, QR, accoglienza e stampa, inclusi gruppi, accrediti stampa,
+  quote cerimonie, distribuzione nominale e piantine;
 - prova concorrente sulle ultime disponibilita' di un panel;
 - prova operativa con piu' postazioni di accoglienza;
 - verifica RLS completa e revisione dei dati minimi mostrati;
@@ -913,14 +1121,19 @@ Ordine raccomandato:
 3. P7-P8: prenotazioni scuole.
 4. P9-P10: campagne e statistiche basate su dati ormai stabili.
 5. P11-P13: accesso QR, presenza effettiva e accesso panel con incarichi distinti.
-6. P14-P15: prova hardware e stampa integrata.
-7. P16: hardening e prova generale.
+6. P13-G: prima nuova priorità, QR gruppo e preparazione dei lotti badge.
+7. P14-P15: prova hardware e stampa integrata, inclusi i lotti gruppo.
+8. P13-S: accrediti stampa e badge.
+9. P13-E1/E2/E3: quote eventi speciali, distribuzione nominale e piantine.
+10. P16: hardening e prova generale estesa a tutti i nuovi flussi.
 
 P9 dipende da P6 per il filtro partecipanti e da P7-P8 per l'audience
 professori. P10 puo' iniziare dopo P6, ma il report completo richiede scuole e
 check-in. P14 puo' essere anticipata in parallelo come attivita' organizzativa,
-ma P15 non deve iniziare finche' stampante e postazione non sono state scelte e
-provate.
+ma l’integrazione hardware P15 richiede stampante e postazione scelte e
+provate. La preparazione software P13-G non dipende dalla scelta hardware;
+se questa tarda, le altre nuove milestone possono proseguire conservando
+aperta l’accettazione della stampa fisica.
 
 ## 7. Rischi principali e contromisure
 
@@ -951,8 +1164,9 @@ provate.
 
 Queste funzioni non vanno aggiunte incidentalmente:
 
-- scelta di sedute numerate;
-- piantina grafica della sala;
+- scelta autonoma di sedute numerate da parte del partecipante;
+- estensione delle piantine ai panel ordinari (quelle delle due cerimonie sono
+  invece incluse da P13-E3);
 - trasferimento automatico di posti inutilizzati da una sezione a un'altra;
 - lista d'attesa e promozione automatica;
 - algoritmi di assegnazione automatica dei panel;
@@ -976,5 +1190,10 @@ Il piano e' completato quando:
   manuale;
 - il badge puo' ricevere un'etichetta con lo stesso QR personale tramite la
   postazione scelta;
+- il QR gruppo consente accoglienza collettiva o parziale e stampa sequenziale
+  riprendibile dei badge personali;
+- gli accrediti stampa sono riconosciuti e i badge rispettano i diritti definiti;
+- inaugurazione e cerimonia finale hanno quote e posti assegnati dai manager,
+  distribuzione ai membri da parte dei capigruppo e piantine configurate dagli admin;
 - permessi, privacy, audit, test, runbook e prova hardware sono verificati in
   condizioni realistiche.

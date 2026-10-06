@@ -529,7 +529,7 @@ export default async function ManagerDashboardPage({
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard manager</h1>
-          <DashboardRoleTabs activeRole="manager" eventRoles={auth.eventRoles} />
+          <DashboardRoleTabs activeRole="manager" eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments} />
         </header>
 
         <div

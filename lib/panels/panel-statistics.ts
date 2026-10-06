@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { loadPanelAttendanceTotals } from "../reception/panel-attendance.server.ts";
 import { PANEL_TIME_ZONE } from "./panel-drafts.ts";
 
 export type PanelStatisticsBookingChannel =
@@ -239,12 +240,13 @@ export async function getPanelStatisticsSnapshot(
 
   const panels = (panelsResult.data ?? []) as PanelDbRow[];
   const panelIds = panels.map((panel) => panel.id);
-  const [individualChoices, schoolReservations] = await Promise.all([
+  const [individualChoices, schoolReservations, actualTotals] = await Promise.all([
     getAllIndividualChoices(supabase, panelIds),
     getAllSchoolReservations(supabase, eventId),
+    loadPanelAttendanceTotals(supabase, eventId),
   ]);
 
-  return buildPanelStatisticsSnapshot({
+  const snapshot = buildPanelStatisticsSnapshot({
     panels: panels.map((panel) => ({
       id: panel.id,
       title: panel.title,
@@ -277,6 +279,11 @@ export async function getPanelStatisticsSnapshot(
     individualChoices,
     schoolReservations,
   });
+  if (actualTotals !== null) {
+    snapshot.actualAttendanceAvailable = true;
+    snapshot.panels = snapshot.panels.map(panel => ({ ...panel, actualPeople: actualTotals.get(panel.id) ?? 0 }));
+  }
+  return snapshot;
 }
 
 export function buildPanelStatisticsSnapshot({

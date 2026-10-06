@@ -1,5 +1,11 @@
 # P13 — report operativo dell’accoglienza
 
+Aggiornamento 6 ottobre 2026: migration report applicata e registrata in staging
+con verifica di installazione/privilegi, senza collaudo su richiesta dell’utente.
+Accessi panel/sala implementati localmente; nuova migration non applicata in
+remoto. Il testing completo è rinviato. Stato corrente in
+[Accessi panel/sala](panel-p13-access.md); le note datate sotto sono storico.
+
 Implementazione locale del 30 settembre 2026, branch `codex/panel-p0-p10`.
 Questa tranche completa il report minimo; non certifica la chiusura dell’intera
 P13, il collaudo hardware o gli accessi ai panel.
@@ -94,7 +100,8 @@ postazione né una prova fisica su telefono.
 
 Il piano richiede di concordare le decisioni aperte che cambiano dati o flusso.
 La scelta è stata presentata all’utente mentre veniva completato il report.
-Proposta concreta, ancora da confermare prima dell’implementazione:
+Proposta storica, recepita nella prosecuzione richiesta il 6 ottobre 2026
+con i dettagli e i vincoli aggiornati in `panel-p13-access.md`:
 
 1. Assegnazioni per utente, evento e singolo panel: `panel_entry` oppure
    `room_assistance`, gestite e revocabili da admin/manager; viewer in sola lettura.

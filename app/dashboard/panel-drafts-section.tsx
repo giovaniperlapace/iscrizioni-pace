@@ -82,6 +82,7 @@ export function PanelDraftsSection({
         </div>
 
         <PanelTabs dashboard={dashboard} navMode={navMode} active="panels" />
+        {canManage && event && <Link href="/dashboard/manager/panel-incarichi" className="mt-4 inline-flex min-h-12 items-center rounded-md border border-[var(--peace-border)] px-4 font-semibold">Incarichi per panel e sala</Link>}
 
         <PanelStatus error={error} saved={saved} />
 

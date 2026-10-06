@@ -1,3 +1,4 @@
+import { GroupReceptionQr } from "./qr-gruppo/group-qr";
 import { LeaderSectionNavigation } from "@/app/dashboard/capogruppo/section-navigation";
 import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
 import { MANUAL_REGISTRATION_COPY, type ManualRegistrationCopy } from "@/lib/registrations/manual-registration-copy";
@@ -1109,7 +1110,7 @@ export default async function CapogruppoDashboardPage({
           <h1 className="sr-only">{copy.srTitle}</h1>
           <DashboardRoleTabs
             activeRole="capogruppo"
-            eventRoles={auth.eventRoles}
+            eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments}
           />
           <DashboardAreaDescription>
             {copy.areaDescription}
@@ -1471,6 +1472,8 @@ function GroupLeaderLinksSection({
                     {group.eventTitle} - {copy.leader}{" "}
                     {group.primaryLeaderName ?? copy.leaderMissing}
                   </p>
+
+                  <GroupReceptionQr groupId={group.id} locale={locale} />
 
                   {createdUrl && createdGroupId === group.id ? (
                     <label className="mt-4 grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">

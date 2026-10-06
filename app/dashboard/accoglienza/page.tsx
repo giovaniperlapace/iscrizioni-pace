@@ -1,4 +1,5 @@
-import { ReceptionConsole } from "./reception-console";
+import { ReceptionWorkstation } from "./reception-workstation";
+import { loadPanelReceptionDuties, type ReceptionDuty } from "@/lib/reception/duties.server";
 import { receptionCheckIn } from "./actions";
 
 import { redirect } from "next/navigation";
@@ -21,6 +22,9 @@ export default async function AccoglienzaDashboardPage() {
     (role.role === "admin" && role.eventId === null) ||
     (["manager", "accoglienza"].includes(role.role) && role.eventId === event.id));
 
+  const duties: ReceptionDuty[] = event ? await loadPanelReceptionDuties(supabase) : [];
+  if (authorized) duties.unshift({ key: "event_entry", duty: "event_entry", title: "Accoglienza evento", room: null });
+
   return (
     <main className="app-page text-[var(--peace-ink)]">
       <section className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8 sm:px-8">
@@ -28,12 +32,10 @@ export default async function AccoglienzaDashboardPage() {
           <h1 className="sr-only">Dashboard accoglienza</h1>
           <DashboardRoleTabs
             activeRole="accoglienza"
-            eventRoles={auth.eventRoles}
+            eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments}
           />
         </header>
-        {authorized ?
-          <ReceptionConsole commandAction={receptionCheckIn.bind(null, event.id)} />
-        : <p role="alert" className="surface-card p-5">Nessun incarico di accoglienza autorizzato nell’evento corrente. Rivolgiti a un amministratore.</p>}
+        <ReceptionWorkstation duties={duties} commandAction={receptionCheckIn.bind(null, event?.id ?? "")} />
       </section>
     </main>
   );

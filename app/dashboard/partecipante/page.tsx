@@ -1161,7 +1161,7 @@ export default async function PartecipanteDashboardPage({
         <header className="grid gap-4">
           <DashboardRoleTabs
             activeRole="partecipante"
-            eventRoles={auth.eventRoles}
+            eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments}
           />
           <div className="grid gap-2">
             <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">

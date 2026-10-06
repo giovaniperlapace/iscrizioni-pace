@@ -32,7 +32,8 @@ const ROLE_TAB_LABELS: Record<DashboardTabRole, string> = {
 
 export function getDashboardRoleTabs(
   eventRoles: Array<{ role: EventRole; eventId: string | null }>,
-  locale: SupportedLocale = "it"
+  locale: SupportedLocale = "it",
+  hasReceptionAssignments = false
 ): DashboardRoleTab[] {
   const available = new Set<DashboardTabRole>(["partecipante"]);
   const hasAdmin = eventRoles.some((role) => role.role === "admin");
@@ -45,6 +46,8 @@ export function getDashboardRoleTabs(
       available.add(normalizeDashboardTabRole(eventRole.role));
     }
   }
+
+  if (hasReceptionAssignments) available.add("accoglienza");
 
   return ROLE_TAB_ORDER.filter((role) => available.has(role)).map((role) => ({
     key: role,

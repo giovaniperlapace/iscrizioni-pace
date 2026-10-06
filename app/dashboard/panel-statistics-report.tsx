@@ -228,15 +228,16 @@ export function PanelStatisticsReport({
         </p>
       ) : null}
 
+      {statistics.actualAttendanceAvailable && <p className="mt-4 text-sm text-[var(--peace-muted)]">Gli ingressi ai panel sono quelli validi al caricamento della pagina, distinti dalle prenotazioni e dagli ingressi all’evento. Non misurano permanenza, uscite o assenze.</p>}
       {!statistics.actualAttendanceAvailable ? (
         <div className="mt-5 rounded-md border border-dashed border-[#b9cbd9] bg-[#f7fbfe] px-4 py-3">
           <p className="text-sm font-semibold text-[var(--peace-ink)]">
-            Presenze effettive e no-show
+            Ingressi ai panel non disponibili
           </p>
           <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-            Il confronto previsto/effettivo dei panel sarà disponibile con gli
-            ingressi ai singoli panel. Gli ingressi all’evento sono riportati
-            separatamente e non attestano la partecipazione a un panel.
+            Non è stato possibile caricare gli ingressi ai singoli panel. Gli
+            ingressi all’evento restano separati e non attestano la partecipazione
+            a un panel. Nessun conteggio mancante viene mostrato come zero.
           </p>
         </div>
       ) : null}
@@ -314,6 +315,7 @@ function PanelStatisticsCard({
 
       <div className="grid gap-3 border-t border-[var(--peace-border)] px-4 py-4 sm:grid-cols-2 lg:grid-cols-5">
         <PanelMetric label="Capienza" value={panel.capacity} />
+        {panel.actualPeople !== null && <PanelMetric label="Ingressi al panel" value={panel.actualPeople} />}
         <PanelMetric
           label="Partecipanti individuali"
           value={panel.individualPeople}
