@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Contatori gruppi capogruppo — 2026-10-06
+
+- Su richiesta dell’utente, ogni riquadro gruppo con Inserisci partecipante e
+  Gestisci link mostra il numero di persone assegnate direttamente al gruppo,
+  inclusi i figli accompagnati ed esclusi i sottogruppi. Questa aggiunta supera
+  per questo contatore la precedente esclusione dei riepiloghi numerici.
+- Conteggio sulle assegnazioni correnti già caricate nello scope autorizzato,
+  prima dei filtri della tabella; iscrizioni eliminate escluse dal loader.
+  Etichette nelle sette lingue, zero esplicito per i gruppi vuoti.
+- Modifica locale su main; nessuna nuova query, migration o scrittura dati.
+
 ## Pubblicazione correzioni dashboard e associazione — 2026-10-02
 
 - L’utente ha richiesto commit e push di tutte le modifiche locali su `main`:

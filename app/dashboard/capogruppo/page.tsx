@@ -153,6 +153,8 @@ type GroupLeaderCopy = ManualRegistrationCopy & {
   yourGroups: string;
   yourGroupsHelp: string;
   registrableCount: (count: number) => string;
+  groupPeople: string;
+  groupPeopleHelp: string;
   canRegister: string;
   cannotRegister: string;
   publicVisible: string;
@@ -273,6 +275,8 @@ const IT_GROUP_LEADER_COPY: GroupLeaderCopy = {
   yourGroups: "I tuoi gruppi",
   yourGroupsHelp: "Questi sono i gruppi collegati al tuo account capogruppo.",
   registrableCount: (count) => `${count} iscrivibili`,
+  groupPeople: "Persone nel gruppo",
+  groupPeopleHelp: "Figli accompagnati inclusi; sottogruppi esclusi.",
   canRegister: "Può ricevere iscrizioni",
   cannotRegister: "Non disponibile per iscrizioni",
   publicVisible: "Visibile nel form pubblico",
@@ -404,6 +408,8 @@ const EN_GROUP_LEADER_COPY: GroupLeaderCopy = {
   yourGroups: "Your groups",
   yourGroupsHelp: "These are the groups linked to your group leader account.",
   registrableCount: (count) => `${count} can receive registrations`,
+  groupPeople: "People in this group",
+  groupPeopleHelp: "Accompanying children included; subgroups excluded.",
   canRegister: "Can receive registrations",
   cannotRegister: "Not available for registrations",
   publicVisible: "Visible in the public form",
@@ -534,6 +540,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     yourGroups: "Tes groupes",
     yourGroupsHelp: "Voici les groupes reliés à ton compte de responsable de groupe.",
     registrableCount: (count) => `${count} peuvent recevoir des inscriptions`,
+    groupPeople: "Personnes dans le groupe",
+    groupPeopleHelp: "Enfants accompagnés inclus ; sous-groupes exclus.",
     canRegister: "Peut recevoir des inscriptions",
     cannotRegister: "Non disponible pour les inscriptions",
     publicVisible: "Visible dans le formulaire public",
@@ -636,6 +644,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     yourGroups: "Deine Gruppen",
     yourGroupsHelp: "Das sind die Gruppen, die mit deinem Gruppenleitungs-Konto verbunden sind.",
     registrableCount: (count) => `${count} können Anmeldungen erhalten`,
+    groupPeople: "Personen in der Gruppe",
+    groupPeopleHelp: "Begleitete Kinder eingeschlossen; Untergruppen ausgeschlossen.",
     canRegister: "Kann Anmeldungen erhalten",
     cannotRegister: "Nicht für Anmeldungen verfügbar",
     publicVisible: "Im öffentlichen Formular sichtbar",
@@ -738,6 +748,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     yourGroups: "Tus grupos",
     yourGroupsHelp: "Estos son los grupos vinculados a tu cuenta de responsable de grupo.",
     registrableCount: (count) => `${count} pueden recibir inscripciones`,
+    groupPeople: "Personas en el grupo",
+    groupPeopleHelp: "Incluye a los hijos acompañados; excluye los subgrupos.",
     canRegister: "Puede recibir inscripciones",
     cannotRegister: "No disponible para inscripciones",
     publicVisible: "Visible en el formulario público",
@@ -840,6 +852,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     yourGroups: "Je groepen",
     yourGroupsHelp: "Dit zijn de groepen die aan je groepsleidersaccount zijn gekoppeld.",
     registrableCount: (count) => `${count} kunnen inschrijvingen ontvangen`,
+    groupPeople: "Personen in de groep",
+    groupPeopleHelp: "Meereizende kinderen inbegrepen; subgroepen niet inbegrepen.",
     canRegister: "Kan inschrijvingen ontvangen",
     cannotRegister: "Niet beschikbaar voor inschrijvingen",
     publicVisible: "Zichtbaar in het publieke formulier",
@@ -942,6 +956,8 @@ const GROUP_LEADER_COPY: Record<SupportedLocale, GroupLeaderCopy> = {
     yourGroups: "Ваші групи",
     yourGroupsHelp: "Це групи, пов'язані з вашим обліковим записом керівника групи.",
     registrableCount: (count) => `${count} можуть приймати реєстрації`,
+    groupPeople: "Осіб у групі",
+    groupPeopleHelp: "Включно із супроводжуваними дітьми; без підгруп.",
     canRegister: "Може приймати реєстрації",
     cannotRegister: "Недоступно для реєстрацій",
     publicVisible: "Видно в публічній формі",
@@ -1082,6 +1098,13 @@ export default async function CapogruppoDashboardPage({
   const currentAssignments = assignments.filter(
     (assignment) => assignment.isCurrent
   );
+  const peopleByGroup = new Map<string, number>();
+  for (const assignment of currentAssignments) {
+    peopleByGroup.set(
+      assignment.groupId,
+      (peopleByGroup.get(assignment.groupId) ?? 0) + 1 + assignment.children.length,
+    );
+  }
   const groupFilterOptions = buildGroupFilterOptions(currentAssignments, locale);
   const showGroupColumn = groupFilterOptions.length > 1 || groupFilter !== "all";
   const effectiveGroupFilter = groupFilter;
@@ -1126,6 +1149,7 @@ export default async function CapogruppoDashboardPage({
 
         <AssignedScopeSection
           assignedGroups={assignedGroups}
+          peopleByGroup={peopleByGroup}
           assignableGroups={scopedGroups.filter(
             (group) => group.isActive && group.isAssignable
           )}
@@ -1282,10 +1306,12 @@ function toScopedGroupView(
 
 function AssignedScopeSection({
   assignedGroups,
+  peopleByGroup,
   assignableGroups,
   copy,
 }: {
   assignedGroups: ScopedGroupView[];
+  peopleByGroup: Map<string, number>;
   assignableGroups: ScopedGroupView[];
   copy: GroupLeaderCopy;
 }) {
@@ -1314,6 +1340,13 @@ function AssignedScopeSection({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold text-[var(--peace-ink)]">{group.name}</h3>
+                    <span
+                      title={copy.groupPeopleHelp}
+                      className="inline-flex items-center gap-2 rounded-full border border-[var(--peace-border-strong)] bg-white px-3 py-1 text-sm text-[var(--peace-blue-800)]"
+                    >
+                      {copy.groupPeople}
+                      <strong className="tabular-nums">{peopleByGroup.get(group.id) ?? 0}</strong>
+                    </span>
                     <ScopeBadge
                       label={
                         group.isActive && group.isAssignable
