@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Rimozione wallet — 2026-10-07
+
+- Rimossi il pulsante wallet non implementato, la relativa icona e i testi
+  nelle sette lingue dalla dashboard personale, anche nella vista QR in overlay.
+  Resta Scarica immagine. Google/Apple Wallet non sono previsti per l’evento;
+  questa decisione supera i precedenti riferimenti a un’integrazione futura.
+- Il QR individuale Capogruppo resta nella scheda aperta cliccando sul nome
+  del partecipante, con download nominativo e autorizzazioni esistenti.
+  Al controllo iniziale main e produzione coincidono su b1b1405 e non contengono
+  una funzione QR di gruppo; richiesta all’utente la pagina della segnalazione.
+- Verificati 635 test, lint, TypeScript e build production con Next 16.2.9
+  coerente col lockfile. Nessuna migration, modifica dati o email.
+  Pubblicazione su main/production richiesta dall’utente.
+
 ## Contatori gruppi capogruppo — 2026-10-06
 
 - Su richiesta dell’utente, ogni riquadro gruppo con Inserisci partecipante e
