@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## QR individuale nelle schede Manager/Admin — 2026-10-07
+
+- Chiarimento dell’utente: la segnalazione riguarda la scheda Manager, che non
+  mostrava il QR individuale. Aggiunto il riquadro condiviso col Capogruppo
+  alla modale operativa Manager/Admin, con stato e download PNG nominativo.
+- Lettura solo all’apertura della scheda tramite GET autenticata e no-store:
+  Admin globale o Manager dell’evento corrente, iscrizione non eliminata,
+  identità dal database. Viewer e altri ruoli esclusi, anche da chiamate dirette.
+  Riutilizzato il QR esistente senza creazione, rotazione o scritture.
+- Risposta legata alla scheda selezionata; richieste annullate alla chiusura o
+  al cambio partecipante. Errori con Riprova, stati revocato/scaduto/non
+  disponibile senza immagine utilizzabile. Nessuna migration o email.
+- Test loader/handler in tests/operations-qr.test.mts; fixture browser sintetica
+  tests/browser/operations-qr.mjs per Manager/Admin, download, mobile, retry,
+  cambio rapido di scheda e Viewer. Verificati 639 test, lint, TypeScript e
+  build production. Pubblicazione su main/production richiesta.
+
 ## Rimozione wallet — 2026-10-07
 
 - Rimossi il pulsante wallet non implementato, la relativa icona e i testi

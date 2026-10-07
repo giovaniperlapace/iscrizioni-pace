@@ -320,7 +320,7 @@ export default function Fixture() {
               ) ?? null
             }
             editableEventIds={viewer ? [] : ["event"]}
-            dashboard="admin"
+            dashboard={params.get("dashboard") === "manager" ? "manager" : "admin"}
             navMode="mini"
             canDeleteRegistration={!viewer}
             operatorId={operatorId}

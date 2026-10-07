@@ -17,6 +17,7 @@ import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-acce
 import { OperationalChildrenEditor } from "./operational-children-editor";
 
 import { LocalQueryLink } from "@/components/local-query-link";
+import { OperationsParticipantQr } from "./operations-participant-qr";
 import { OperationsAttendance } from "./operations-attendance";
 import { PendingDownload } from "@/components/pending-download";
 import { SuccessMessage } from "@/components/success-message";
@@ -907,6 +908,10 @@ export function OperationsParticipantsTable({
     </section>}
       {selected && (
         <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath}>
+          {!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
+            <OperationsParticipantQr key={`qr:${selected.registrationId}`} registrationId={selected.registrationId}
+              participantName={selected.name} participantCode={selected.publicCode} locale={locale} />
+          ) : null}
           {attendancePanel ?? (!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsAttendance key={`${selected.registrationId}:${dataVersion}`} registrationId={selected.registrationId} dashboard={dashboard} returnTo={returnTo} />
           ) : null)}
