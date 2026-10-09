@@ -281,3 +281,54 @@ controllo preventivo del riallineamento rileva conflitti in 12 file, inclusi
 scanner/dashboard/documentazione: non sono state fatte sostituzioni automatiche.
 Riconciliare queste differenze prima di riprendere lo sviluppo sul panel;
 nessun push o deployment dello staging fa parte di questa pubblicazione admin.
+
+## Elenco iscritti per panel ed Excel — correzione locale 2026-10-09
+
+**Aggiornamento pubblicazione:** l’utente ha autorizzato commit e push di tutte
+le correzioni locali qui descritte, insieme all’avanzamento del tasto Modifica
+e alla rimozione dell’avviso futuro dalle statistiche. Superati 726 test,
+ESLint e build production con TypeScript. Nessuna migration, scrittura dati,
+email o apertura pubblica. Il deployment viene verificato dopo il push;
+le indicazioni di modifica locale nei paragrafi seguenti descrivono la fase
+precedente all’autorizzazione.
+
+Terminologia aggiornata su richiesta dell’utente: stati **Bozza/Pubblicato**,
+comando **Pubblica panel** e **Pubblica selezionati**. Questi testi sostituiscono
+Convalida/Pronto. Lo stato pubblicato rende il panel idoneo al catalogo quando
+quest’ultimo verrà aperto; non cambia la modalità riservata dell’evento né apre
+le iscrizioni. Conferma ed editor ricordano la separazione tra stato del panel
+e apertura del catalogo. Aggiornamento locale, non ancora pubblicato.
+
+Nella riga del panel il pulsante **Iscritti** apre una scheda senza perdere
+filtri, menu o scroll. Mostra un nominativo per iscritto e per figlio
+accompagnato, con collegamento testuale al genitore, e le scuole/classi con
+studenti e accompagnatori. I posti ospiti sono riportati separatamente come
+riservati: nessuna iscrizione, presenza o identità fittizia viene creata.
+
+**Esporta in Excel** produce quattro fogli: Riepilogo, Partecipanti, Scuole,
+Ospiti riservati. I numeri di studenti/accompagnatori provengono dalla
+prenotazione di quel panel, non dai totali generali della scuola. Ogni iscritto
+e figlio occupa un posto; i posti ospiti non entrano nel totale delle
+prenotazioni nominative e scuola. Il riepilogo distingue prenotati e riservati.
+Nominativi che iniziano con caratteri di formula restano celle testo.
+
+Scheda ed endpoint `/dashboard/admin/panel-iscritti/export?panelId=UUID`
+ammettono soltanto l’admin, anche quando possiede altri ruoli. Ruolo e panel
+dell’evento corrente sono verificati prima delle letture dei partecipanti;
+manager/viewer sono negati anche mediante richiesta diretta. Le protezioni
+SQL del rilascio riservato restano operative senza nuove migration.
+
+Il loader comune legge soltanto prenotazioni attive, identità, codici pubblici,
+figli, scuole e quote. Non legge email, contatti, date di nascita o QR.
+Le letture sono paginate, anche oltre 1.000 righe, e un errore interrompe
+l’intero caricamento/export. Il download rilegge i dati e restituisce una
+risposta privata `no-store`; può quindi differire da una scheda aperta prima
+di una modifica. Le query successive non costituiscono uno snapshot
+transazionale: in presenza di modifiche contemporanee ricaricare la scheda
+o scaricare di nuovo il file. Nessuna scrittura viene eseguita.
+
+Test sintetici in `tests/panel-roster.test.mts`: ruoli e scope negativi,
+iscritti senza email, figli, cancellazioni, quantità scuola per panel,
+ospiti separati, errori senza risultato parziale, 1.205 persone, handler GET
+reale e rilettura XLSX. Il collaudo visivo desktop/mobile è affidato all’utente.
+Questa modifica è locale su main: commit/push e deployment non eseguiti.

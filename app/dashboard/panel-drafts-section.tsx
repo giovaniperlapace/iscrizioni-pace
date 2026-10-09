@@ -65,7 +65,7 @@ export function PanelDraftsSection({
             </p>
             <h2 className="mt-1 text-xl font-semibold">Catalogo panel</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
-              Prepara contenuti, orari, location e quote di posti, poi convalida
+              Prepara contenuti, orari, location e quote di posti, poi pubblica
               singoli panel o una selezione completa.
             </p>
           </div>
@@ -119,7 +119,7 @@ export function PanelDraftsSection({
               <select name="panelStatus" defaultValue={filters.status} className="field font-normal">
                 <option value="all">Tutti</option>
                 <option value="draft">Bozza</option>
-                <option value="published">Pronto</option>
+                <option value="published">Pubblicato</option>
               </select>
             </label>
             <label className="grid gap-1 text-sm font-semibold">
@@ -216,9 +216,9 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
               <div className="px-5 py-5">
                 {panel?.publicationStatus === "published" ? (
                   <div className="mb-5 grid gap-2 rounded-md border border-[#c9d9e7] bg-[#f2f8fc] px-4 py-3 text-sm">
-                    <p className="font-semibold">Modifica di un panel già convalidato</p>
+                    <p className="font-semibold">Modifica di un panel già pubblicato</p>
                     <p className="text-[var(--peace-muted)]">
-                      Le modifiche sono subito visibili nel programma e vengono registrate in audit.
+                      Le modifiche aggiornano il panel mantenendo le prenotazioni esistenti. Saranno visibili al pubblico quando il catalogo sarà aperto.
                       {panel.confirmedRegistrationCount > 0
                         ? ` Le persone già iscritte coinvolte sono ${panel.confirmedRegistrationCount}.`
                         : " Non risultano ancora persone iscritte a questo panel."}
@@ -285,10 +285,10 @@ function PanelStatus({ error, saved }: { error?: string; saved?: string }) {
     const messages: Record<string, string> = {
       created: "Bozza panel creata.",
       updated: "Bozza panel aggiornata.",
-      published: "Panel convalidato per la gestione interna.",
-      "batch-published": "I panel selezionati sono stati convalidati.",
-      "already-published": "I panel selezionati risultano già convalidati.",
-      "published-updated": "Panel convalidato aggiornato.",
+      published: "Panel pubblicato.",
+      "batch-published": "I panel selezionati sono stati pubblicati.",
+      "already-published": "I panel selezionati risultano già pubblicati.",
+      "published-updated": "Panel pubblicato aggiornato.",
     };
     return <p className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">{messages[saved] ?? "Operazione panel completata."}</p>;
   }
@@ -302,9 +302,9 @@ function PanelStatus({ error, saved }: { error?: string; saved?: string }) {
     "outside-event": "Gli orari devono rientrare nelle date dell'evento.",
     "booked-capacity": "La quota per gli iscritti non può scendere sotto le prenotazioni già confermate.",
     "capacity-total": "La somma dei posti delle sezioni non può superare la capienza della location.",
-    "publish-selection": "Seleziona almeno una bozza da convalidare.",
-    "publish-invalid": "La selezione contiene un panel incompleto: nessun panel è stato convalidato.",
-    "publish-failed": "Non è stato possibile convalidare i panel selezionati. Nessun panel è stato modificato.",
+    "publish-selection": "Seleziona almeno una bozza da pubblicare.",
+    "publish-invalid": "La selezione contiene un panel incompleto: nessun panel è stato pubblicato.",
+    "publish-failed": "Non è stato possibile pubblicare i panel selezionati. Nessun panel è stato modificato.",
   };
   return <p className="mt-5 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">{messages[error] ?? "Non è stato possibile salvare la bozza."}</p>;
 }

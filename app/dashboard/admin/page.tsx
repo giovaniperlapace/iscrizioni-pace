@@ -74,6 +74,9 @@ import {
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
 import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
 import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
+import { PanelRosterOverlay } from "@/app/dashboard/panel-roster-overlay";
+import { LocalOverlay } from "@/app/dashboard/local-overlay";
+import { loadPanelRoster, type PanelRoster } from "@/lib/panels/panel-roster.server";
 import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
@@ -184,6 +187,7 @@ type AdminPageProps = {
     panelDate?: string;
     panelError?: string;
     panelId?: string;
+    panelRoster?: string;
     panelLocation?: string;
     panelQ?: string;
     panelSaved?: string;
@@ -557,10 +561,25 @@ export default async function AdminDashboardPage({
     schoolCatalog.bookings.find((booking) => booking.id === params.schoolId) ?? null;
   const panelView = params.panelView === "locations" || params.panelView === "schools" ? params.panelView : "panels";
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
+  let panelRoster: PanelRoster | null = null;
+  let panelRosterError: string | null = null;
+  const rosterId = activeSection === "panel" && typeof params.panelRoster === "string" ? params.panelRoster : null;
+  const rosterCloseParams = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[0] !== "panelRoster"));
+  if (rosterId) {
+    try {
+      panelRoster = await loadPanelRoster(serviceSupabase, rosterId, auth.eventRoles);
+      if (!panelRoster) panelRosterError = "Il panel non è disponibile nell’evento corrente.";
+    } catch {
+      panelRosterError = "Impossibile caricare l’elenco completo. Riprova.";
+    }
+  }
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
       <PreserveDashboardScroll />
+      {rosterId ? <LocalOverlay parameter="panelRoster" value={rosterId}>
+        <PanelRosterOverlay key={rosterId} roster={panelRoster} error={panelRosterError} closePath={`/dashboard/admin?${rosterCloseParams}`} />
+      </LocalOverlay> : null}
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard admin</h1>

@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { CalendarCheck, Pencil, Send, X } from "lucide-react";
+import Link from "@/components/pending-link";
+import { CalendarCheck, Pencil, Send, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { publishPanels } from "@/app/actions";
@@ -98,7 +98,7 @@ export function PanelPublicationTable({
             className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="size-4" aria-hidden="true" />
-            Convalida selezionati
+            Pubblica selezionati
           </button>
         ) : null}
       </div>
@@ -136,6 +136,7 @@ export function PanelPublicationTable({
                     panelPath={panelPath}
                     canManage={canManage}
                   />
+                  {dashboard === "admin" && canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
                   {canManage && panel.publicationStatus === "draft" ? (
                     <button
                       type="button"
@@ -143,7 +144,7 @@ export function PanelPublicationTable({
                       className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
                     >
                       <Send className="size-4" aria-hidden="true" />
-                      Convalida
+                      Pubblica panel
                     </button>
                   ) : null}
                 </div>
@@ -211,6 +212,7 @@ export function PanelPublicationTable({
                 <td className="py-4 pl-4 text-right">
                   <div className="flex flex-col items-stretch gap-2">
                     <PanelEditLink panel={panel} panelPath={panelPath} canManage={canManage} />
+                    {dashboard === "admin" && canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
                     {canManage && panel.publicationStatus === "draft" ? (
                       <button
                         type="button"
@@ -218,7 +220,7 @@ export function PanelPublicationTable({
                         className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
                       >
                         <Send className="size-4" aria-hidden="true" />
-                        Convalida
+                        Pubblica panel
                       </button>
                     ) : null}
                   </div>
@@ -241,17 +243,17 @@ export function PanelPublicationTable({
             <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
               <div>
                 <h3 id="publish-panel-dialog-title" className="text-xl font-semibold">
-                  Convalida {dialogPanels.length === 1 ? "il panel" : `${dialogPanels.length} panel`}
+                  Pubblica {dialogPanels.length === 1 ? "panel" : `${dialogPanels.length} panel`}
                 </h3>
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                  La convalida rende i panel pronti per la gestione. Catalogo pubblico e iscrizioni seguono le rispettive aperture: durante la preparazione riservata restano chiusi. Se un panel non è valido, nessuno viene convalidato.
+                  Il panel sarà visibile al pubblico quando apriremo il catalogo. Le iscrizioni seguiranno la propria apertura. Se un panel non è valido, nessuno viene pubblicato.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setDialogIds(null)}
                 className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)]"
-                aria-label="Chiudi conferma convalida"
+                aria-label="Chiudi conferma pubblicazione"
               >
                 <X className="size-5" aria-hidden="true" />
               </button>
@@ -280,7 +282,7 @@ export function PanelPublicationTable({
                 Annulla
               </button>
               <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white">
-                Conferma convalida
+                Conferma pubblicazione
               </PendingSubmitButton>
             </form>
           </div>
@@ -321,6 +323,14 @@ function PanelEditLink({ panel, panelPath, canManage }: { panel: PanelDraftRow; 
   );
 }
 
+function PanelRosterLink({ panel, panelPath }: { panel: PanelDraftRow; panelPath: string }) {
+  return <Link href={`${panelPath}&panelRoster=${encodeURIComponent(panel.id)}`} scroll={false} prefetch={false}
+    aria-label={`Iscritti a ${panel.title}`}
+    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]">
+    <Users className="size-4" aria-hidden="true" />Iscritti
+  </Link>;
+}
+
 function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; compact?: boolean }) {
   const difference = panelCapacityDifference(panel.assignedCapacity, panel.locationCapacity);
   const bookableSections = panel.sections.filter(section => section.bookingChannel !== "internal_assignment");
@@ -346,7 +356,7 @@ function PublicationBadge({ panel }: { panel: PanelDraftRow }) {
   if (panel.publicationStatus === "published") {
     return (
       <span className="grid gap-1">
-        <span className="w-fit rounded-full bg-[#e7f4e9] px-2.5 py-1 text-xs font-bold text-[#255532]">Pronto</span>
+        <span className="w-fit rounded-full bg-[#e7f4e9] px-2.5 py-1 text-xs font-bold text-[#255532]">Pubblicato</span>
         <span className="text-xs text-[var(--peace-muted)]">{formatPublicationDate(panel.publishedAt)}</span>
       </span>
     );

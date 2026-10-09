@@ -63,11 +63,11 @@ test("server actions authorize publication and route published edits to the dedi
 
 test("responsive catalog supports filtered selection, single publication and confirmation", () => {
   assert.match(table, /Seleziona tutte le bozze filtrate/);
-  assert.match(table, /Convalida selezionati/);
+  assert.match(table, /Pubblica selezionati/);
   assert.match(table, /setDialogIds\(\[panel\.id\]\)/);
-  assert.match(table, /nessuno viene convalidato/);
+  assert.match(table, /nessuno viene pubblicato/);
   assert.match(table, /name="panelIds"/);
   assert.match(table, /formatPublicationDate/);
-  assert.match(section, /Modifica di un panel già convalidato/);
+  assert.match(section, /Modifica di un panel già pubblicato/);
   assert.match(section, /campaignPanel=\$\{encodeURIComponent\(panel\.id\)\}/);
 });

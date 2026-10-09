@@ -228,19 +228,6 @@ export function PanelStatisticsReport({
         </p>
       ) : null}
 
-      {!statistics.actualAttendanceAvailable ? (
-        <div className="mt-5 rounded-md border border-dashed border-[#b9cbd9] bg-[#f7fbfe] px-4 py-3">
-          <p className="text-sm font-semibold text-[var(--peace-ink)]">
-            Presenze effettive e no-show
-          </p>
-          <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-            Il confronto previsto/effettivo sarà disponibile dopo l’introduzione
-            del check-in individuale, dei minori e delle scuole nella Milestone
-            P11. Questa vista non usa i check-in legacy per evitare confronti
-            parziali o fuorvianti.
-          </p>
-        </div>
-      ) : null}
     </article>
   );
 }

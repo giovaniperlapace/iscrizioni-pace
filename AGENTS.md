@@ -1,5 +1,56 @@
 # AGENTS.md
 
+## Pubblicazione correzioni collaudo panel — 2026-10-09
+
+- L’utente autorizza commit e push di tutte le modifiche locali: elenco
+  Iscritti e relativo Excel, avanzamento del pulsante Modifica, terminologia
+  Bozza/Pubblicato/Pubblica panel e rimozione dell’avviso futuro statistiche.
+  Questa pubblicazione supera le note locali senza autorizzazione sottostanti.
+- Verificati 726 test, ESLint e build production con controllo TypeScript.
+  Nessuna migration o apertura del catalogo/iscrizioni; gestione solo admin.
+  Branch panel e stash preservati. Deployment verificato separatamente.
+
+## Collaudo panel: terminologia pubblicazione — 2026-10-09
+
+- Su indicazione dell’utente, stati Bozza/Pubblicato e comando Pubblica panel
+  (Pubblica selezionati per il batch). Aggiornati filtro, conferme, esiti ed
+  editor: questa decisione supera i precedenti testi Convalida/Pronto.
+- Nessuna apertura pubblica implicita: il panel pubblicato sarà visibile
+  quando verrà aperto il catalogo; le iscrizioni mantengono apertura separata.
+  Solo testi locali su main, nessuna modifica a permessi, dati o migration.
+
+## Collaudo panel: avanzamento del pulsante Modifica — 2026-10-09
+
+- La tabella panel usa ora il componente PendingLink condiviso: Modifica,
+  Consulta e Iscritti mostrano lo stesso avanzamento degli altri comandi
+  della dashboard durante l’apertura. Navigazione e scroll invariati.
+- Correzione locale su main; nessun commit/push o deployment. Controlli
+  mirati ESLint e TypeScript; collaudo funzionale affidato all’utente.
+
+## Collaudo panel: elenco iscritti ed Excel — 2026-10-09
+
+- Aggiunto localmente su main il pulsante Iscritti nella riga del panel,
+  desktop/mobile. Scheda con iscritti e figli accompagnati, scuole/classi con
+  studenti/accompagnatori e posti ospiti riservati senza nominativi fittizi.
+  Chiusura conserva filtri, menu e scroll; nessuna nuova milestone.
+- Export XLSX con Riepilogo, Partecipanti, Scuole e Ospiti riservati. Dati
+  riletti al download, conteggi scuola dalla prenotazione del singolo panel,
+  cancellazioni escluse. Letture paginate e nessun elenco/export parziale
+  in caso di errore. Dettagli in docs/panel-reserved-release.md.
+- Solo admin, anche con ruoli cumulativi; endpoint diretto e loader negano
+  gli altri ruoli prima delle letture dei partecipanti. Nessuna migration,
+  scrittura dati o email; nessun commit/push o deployment per questa modifica.
+- Verifiche mirate su dati sintetici: scope, ruoli, minori, scuole, ospiti,
+  paginazione oltre 1.000 righe, errori e round-trip Excel; 9 test mirati,
+  ESLint, TypeScript e build production superati. Collaudo visivo affidato
+  all’utente secondo la modalità concordata.
+
+## Collaudo statistiche panel: rimozione avviso futuro — 2026-10-09
+
+- Rimosso dal report il riquadro Presenze effettive e no-show con riferimenti
+  alla Milestone P11 e ai check-in legacy. Conteggi e logica invariati.
+  Correzione locale su main; nessun commit/push o deployment richiesto.
+
 ## Collaudo gestionale panel: disposizione azioni — 2026-10-09
 
 - Correzione locale: Modifica e Convalida incolonnati nelle viste desktop e
