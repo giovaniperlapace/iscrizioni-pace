@@ -14,7 +14,10 @@
   iscrizione, prenotazione, destinatario o email di collaudo.
 - Commit/push su main e normale rilascio Vercel autorizzati. Verifiche locali
   già superate: 733 test, ESLint, TypeScript, build e SQL/RLS sintetico.
-  Deployment sul dominio reale da verificare separatamente dopo il push.
+  Codice `b0e8355` pubblicato: deployment `dpl_6KauhRCQCNzsRuf65aXENsPTzKev`
+  production READY verificato sul dominio reale. Home con testo identico
+  prima/dopo, scuole pubbliche chiuse e percorsi gestionali protetti dal login;
+  nessun errore/fatal restituito dalla ricerca nei log del deployment.
   Capogruppo chiuso fino alla futura pubblicazione dei panel sulla home.
   Branch panel e stash preservati.
 

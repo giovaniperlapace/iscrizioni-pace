@@ -17,8 +17,9 @@ revisionabile `20261009170000_manager_panel_access.sql` per helper e policy
 SQL; test su ruoli cumulativi, scope evento, RPC/RLS, roster/export e campagne.
 Nessuna nuova funzione P11–P13 o sviluppo del branch panel in questa tranche.
 Pubblicazione e migration production autorizzate dall’utente. Applicata e
-registrata `20261009170000` con dati invariati; deployment da verificare dopo
-il push. Capogruppo chiuso fino alla futura pubblicazione sulla home.
+registrata `20261009170000` con dati invariati; codice `b0e8355` pubblicato e
+deployment production READY verificato sul dominio reale. Capogruppo chiuso
+fino alla futura pubblicazione sulla home.
 Dettagli e verifiche in `docs/panel-reserved-release.md`.
 
 ## Rilascio admin autorizzato — aggiornamento 2026-10-09

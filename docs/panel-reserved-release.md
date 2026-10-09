@@ -56,9 +56,20 @@ Capogruppo ancora chiuso. Nessun account/sessione, destinatario email o dato di
 collaudo creato. Privilegi di scrittura verificati precedentemente sui dati
 sintetici locali, senza provarli su persone reali.
 
-Codice pronto al commit/push autorizzato con 733 test, ESLint, TypeScript e build
-superati. Il deployment effettivo e il dominio verranno verificati dopo il push;
-il collaudo autenticato dell’interfaccia resta all’utente.
+Codice `b0e8355683c9cee6ee529b50fe6b6a6a80a70c69` pubblicato su main,
+con 733 test, ESLint, TypeScript e build superati. Deployment Vercel
+`dpl_6KauhRCQCNzsRuf65aXENsPTzKev` production **READY**, verificato anche
+attraverso il dominio `registrationspeace.santegidio.org`.
+
+Confronto HTTP prima/dopo: home 200 e testo visibile identico; scuole e accesso
+scuole rimandano alla home. Dashboard Manager, pagina panel Capogruppo ed
+export richiedono il login alle richieste senza sessione. Ricerca runtime
+error/fatal limitata al nuovo deployment: nessun risultato nel periodo
+verificato. Il progetto non ha Drains configurati; questo controllo documenta
+la ricerca disponibile, senza aggiungere monitoraggi o notifiche.
+
+La registrazione di questo esito cambia soltanto la documentazione. Il
+collaudo autenticato dell’interfaccia resta all’utente.
 
 Le sezioni successive documentano il rilascio Admin precedente; la loro
 esclusione del Manager è superata solo da questa nuova tranche autorizzata.
