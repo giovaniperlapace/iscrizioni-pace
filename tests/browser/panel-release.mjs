@@ -28,7 +28,7 @@ check('document.documentElement.scrollWidth<=innerWidth','future catalog mobile 
 ab('screenshot','/tmp/pace-release-future-mobile.png');
 control('http://127.0.0.1:55440/mode?value=internal');
 ab('open',base+'/release-panel-check');snap();
-check('document.body.innerText.includes("58 prenotati · 42 disponibili")&&document.body.innerText.includes("Scuole: 12 disponibili su 30")','admin canonical remaining seats by audience');
+check('document.body.innerText.includes("58 prenotati da iscritti e scuole")&&document.body.innerText.includes("Iscritti: 30 disponibili su 70")&&document.body.innerText.includes("Scuole: 12 disponibili su 30")','admin canonical remaining seats by audience');
 check('document.documentElement.scrollWidth<=innerWidth','admin mobile width');
 ab('screenshot','/tmp/pace-release-manager-mobile.png');
 for(const width of ['390','1440']){

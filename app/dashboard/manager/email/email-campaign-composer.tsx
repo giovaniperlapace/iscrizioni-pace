@@ -4,7 +4,7 @@ import { ProgressButton } from "@/components/button-progress";
 
 import { SuccessMessage } from "@/components/success-message";
 
-import { Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
+import { ChevronDown, Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
@@ -103,7 +103,7 @@ export function EmailCampaignComposer({
   const [tagFilter, setTagFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [panelFilter, setPanelFilter] = useState(
-    () => panels.find((panel) => panel.id === initialPanelId)?.label ?? ""
+    () => panels.find((panel) => panel.id === initialPanelId)?.id ?? ""
   );
   const [schoolFilter, setSchoolFilter] = useState("");
   const [groupMembershipFilter, setGroupMembershipFilter] = useState<
@@ -153,7 +153,7 @@ export function EmailCampaignComposer({
     const groupIds = matchingOptionIds(groups, groupFilter);
     const tagIds = matchingOptionIds(tags, tagFilter);
     const serviceIds = matchingOptionIds(services, serviceFilter);
-    const panelIds = matchingOptionIds(panels, panelFilter);
+    const panelIds = new Set(panelFilter ? [panelFilter] : panels.map(panel => panel.id));
     const search = normalizeRecipientSearch(recipientSearch);
     const schoolSearch = normalizeRecipientSearch(schoolFilter);
 
@@ -717,7 +717,7 @@ export function EmailCampaignComposer({
                 value={serviceFilter}
                 onChange={setServiceFilter}
               />
-              {allowPanelManagement ? <RecipientFilterInput
+              {allowPanelManagement ? <RecipientPanelFilter
                 id="campaign-recipient-panel"
                 label="Panel"
                 options={panels}
@@ -738,7 +738,7 @@ export function EmailCampaignComposer({
                 autoComplete="off"
               />
             </label>
-            <RecipientFilterInput
+            <RecipientPanelFilter
               id="campaign-teacher-panel"
               label="Panel"
               options={panels}
@@ -1396,6 +1396,66 @@ function RecipientFilterInput({
       </datalist>
     </label>
   );
+}
+
+function RecipientPanelFilter({ id, label, options, placeholder, value, onChange }: {
+  id: string;
+  label: string;
+  options: Option[];
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = options.find(option => option.id === value);
+  const results = options.filter(option => normalizeRecipientSearch(option.label).includes(normalizeRecipientSearch(query)));
+  const listId = `${id}-options`;
+
+  function select(optionId: string) {
+    onChange(optionId);
+    document.getElementById(id)?.focus();
+    setOpen(false);
+  }
+
+  return <div className="relative grid min-w-0 gap-1 text-sm font-semibold" onBlur={event => {
+    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+  }} onKeyDown={event => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      document.getElementById(id)?.focus();
+      setOpen(false);
+    }
+  }}>
+    <label htmlFor={id}>{label}</label>
+    <div className="relative">
+      <input id={id} type="search" role="combobox" aria-expanded={open} aria-controls={listId} aria-autocomplete="list"
+        className="field w-full pr-9 font-normal" autoComplete="off" placeholder={selected?.label ?? placeholder}
+        value={open ? query : selected?.label ?? ""}
+        onFocus={() => { setQuery(""); setOpen(true); }}
+        onClick={() => { if (!open) { setQuery(""); setOpen(true); } }}
+        onChange={event => { setQuery(event.target.value); setOpen(true); }}
+        onKeyDown={event => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setOpen(true);
+            document.getElementById(listId)?.querySelector<HTMLButtonElement>("button")?.focus();
+          }
+        }} />
+      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[var(--peace-muted)]" />
+      {open ? <div id={listId} role="listbox" aria-label={label} className="absolute top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-[var(--peace-border-strong)] bg-white shadow-lg">
+        {[{ id: "", label: placeholder }, ...results].map(option => <button key={option.id} type="button" role="option" aria-selected={value === option.id}
+          className="block min-h-11 w-full px-3 py-2 text-left font-normal hover:bg-[var(--peace-sky-100)] focus:bg-[var(--peace-sky-100)]"
+          onMouseDown={event => event.preventDefault()} onClick={() => select(option.id)}
+          onKeyDown={event => {
+            const target = event.key === "ArrowDown" ? event.currentTarget.nextElementSibling : event.key === "ArrowUp" ? event.currentTarget.previousElementSibling : null;
+            if (target instanceof HTMLElement) { event.preventDefault(); target.focus(); }
+            else if (event.key === "ArrowUp") { event.preventDefault(); document.getElementById(id)?.focus(); }
+          }}>{option.label}</button>)}
+        {results.length === 0 ? <p className="px-3 py-2 font-normal text-[var(--peace-muted)]">Nessun panel trovato.</p> : null}
+      </div> : null}
+    </div>
+  </div>;
 }
 
 function matchingOptionIds(options: Option[], query: string) {

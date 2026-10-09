@@ -130,7 +130,7 @@ export function PanelPublicationTable({
                   {panel.locationName ?? "Location da definire"}
                 </p>
                 <CapacitySummary panel={panel} />
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-col items-stretch gap-2">
                   <PanelEditLink
                     panel={panel}
                     panelPath={panelPath}
@@ -140,7 +140,7 @@ export function PanelPublicationTable({
                     <button
                       type="button"
                       onClick={() => setDialogIds([panel.id])}
-                      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
                     >
                       <Send className="size-4" aria-hidden="true" />
                       Convalida
@@ -159,10 +159,10 @@ export function PanelPublicationTable({
             {canManage ? <col className="w-[5%]" /> : null}
             <col className="w-[22%]" />
             <col className="w-[17%]" />
-            <col className="w-[15%]" />
-            <col className="w-[16%]" />
             <col className="w-[13%]" />
-            <col className="w-[12%]" />
+            <col className="w-[16%]" />
+            <col className="w-[11%]" />
+            <col className="w-[16%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
@@ -209,13 +209,13 @@ export function PanelPublicationTable({
                 <td className="py-4 pr-4"><CapacitySummary panel={panel} compact /></td>
                 <td className="py-4 pr-4"><PublicationBadge panel={panel} /></td>
                 <td className="py-4 pl-4 text-right">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-col items-stretch gap-2">
                     <PanelEditLink panel={panel} panelPath={panelPath} canManage={canManage} />
                     {canManage && panel.publicationStatus === "draft" ? (
                       <button
                         type="button"
                         onClick={() => setDialogIds([panel.id])}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
                       >
                         <Send className="size-4" aria-hidden="true" />
                         Convalida
@@ -313,7 +313,7 @@ function PanelEditLink({ panel, panelPath, canManage }: { panel: PanelDraftRow; 
     <Link
       href={`${panelPath}&panelId=${encodeURIComponent(panel.id)}`}
       scroll={false}
-      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
+      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
     >
       <Pencil className="size-4" aria-hidden="true" />
       {canManage ? "Modifica" : "Consulta"}
@@ -323,15 +323,20 @@ function PanelEditLink({ panel, panelPath, canManage }: { panel: PanelDraftRow; 
 
 function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; compact?: boolean }) {
   const difference = panelCapacityDifference(panel.assignedCapacity, panel.locationCapacity);
-  const occupied = panel.sections.every(section => Number.isInteger(section.occupied))
-    ? panel.sections.reduce((sum, section) => sum + section.occupied!, 0) : null;
+  const bookableSections = panel.sections.filter(section => section.bookingChannel !== "internal_assignment");
+  const hasReservedSeats = panel.sections.some(section => section.bookingChannel === "internal_assignment");
+  const occupied = bookableSections.every(section => Number.isInteger(section.occupied))
+    ? bookableSections.reduce((sum, section) => sum + section.occupied!, 0) : null;
   return (
     <div className={compact ? "space-y-1 tabular-nums" : "mt-2 space-y-1 text-sm tabular-nums text-[var(--peace-muted)]"}>
       <p>{panel.assignedCapacity} / {panel.locationCapacity ?? "—"} posti nelle quote</p>
-      <p>{occupied === null ? "Disponibilità da verificare" : `${occupied} prenotati · ${panel.assignedCapacity - occupied} disponibili`}</p>
+      <p>{occupied === null ? "Disponibilità da verificare" : `${occupied} prenotati da iscritti e scuole`}</p>
       {panel.sections.map(section => <p key={section.id} className="text-xs">
-        {section.audienceName}: {section.occupied === undefined ? "da verificare" : `${section.capacity - section.occupied} disponibili su ${section.capacity}`}
+        {section.audienceName}: {section.bookingChannel === "internal_assignment"
+          ? `${section.capacity} posti riservati`
+          : section.occupied === undefined ? "da verificare" : `${section.capacity - section.occupied} disponibili su ${section.capacity}`}
       </p>)}
+      {hasReservedSeats ? <p className="text-xs text-[var(--peace-muted)]">I posti riservati agli ospiti non sono prenotabili tramite il form pubblico.</p> : null}
       {difference !== null && difference !== 0 ? <p className="text-xs">{difference > 0 ? `${difference} posti fuori dalle quote` : `${Math.abs(difference)} posti oltre capienza`}</p> : null}
     </div>
   );

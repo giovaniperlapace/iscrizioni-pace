@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Collaudo gestionale panel: disposizione azioni — 2026-10-09
+
+- Correzione locale: Modifica e Convalida incolonnati nelle viste desktop e
+  mobile, con colonna Azioni più ampia per evitare sovrapposizioni con lo stato.
+  ESLint e TypeScript superati; collaudo visivo affidato all’utente.
+- Gestione ospiti approvata: nel catalogo i posti con canale internal_assignment
+  sono riservati e non mostrati come disponibili. Il riepilogo distingue le
+  prenotazioni di iscritti/scuole e le disponibilità di ciascuna quota, con
+  spiegazione dell’esclusione ospiti dal form pubblico. Capienza fisica e
+  ripartizione conservate; nessuna iscrizione o presenza fittizia.
+- Commit/push su main e normale rilascio Vercel autorizzati, insieme al filtro
+  Panel cercabile. Nessuna migration, email o modifica di dati remoti.
+
+## Collaudo gestionale panel: filtro cercabile Comunicazioni — 2026-10-09
+
+- Correzione locale su main: filtro Panel nelle audience Partecipanti e
+  Professori con elenco a discesa cercabile, scelta esplicita e Tutti i panel.
+  Ricerca senza distinzione di accenti/maiuscole; filtro e payload usano l’ID
+  del panel selezionato, conservando prefiltri e selezioni dei destinatari.
+- Controlli mirati ESLint e TypeScript superati; collaudo funzionale affidato
+  all’utente. Pubblicazione autorizzata insieme alla gestione posti ospiti.
+
 ## Modalità di collaudo gestionale aggiornata — 2026-10-09
 
 - L’utente conferma personalmente la riuscita delle correzioni. Per i piccoli

@@ -1,5 +1,21 @@
 # Rilascio gestionale panel riservato all’admin — 9 ottobre 2026
 
+## Correzioni del collaudo: posti ospiti, azioni e filtro Panel
+
+Approvata la distinzione nel catalogo tra posti prenotabili e quota ospiti:
+`internal_assignment` compare come posti riservati, esclusi dal form pubblico.
+Il riepilogo conserva capienza fisica e ripartizione completa, mostra le
+prenotazioni di iscritti/scuole e le disponibilità separate delle rispettive
+quote, senza una disponibilità totale che includa gli ospiti. Nessuna
+iscrizione o presenza fittizia viene generata; nessuna modifica SQL o dati.
+Azioni Modifica/Convalida incolonnate e filtro Panel nelle Comunicazioni
+cercabile con selezione per ID. Commit/push e normale rilascio Vercel
+autorizzati; collaudo funzionale affidato all’utente.
+Verificati ESLint sui componenti modificati, TypeScript, build production e
+18 regressioni panel/campagne/autorizzazioni. Rendering sintetico del caso
+400 = 355 Iscritti + 25 Scuole + 20 Ospiti, prenotazioni e conteggi mancanti;
+nessuna prova browser ripetuta. Fixture browser allineata al nuovo riepilogo.
+
 ## Correzione del collaudo: ritorno a Location
 
 Il redirect condiviso delle action location ora include `panelView=locations`:
