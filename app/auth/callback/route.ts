@@ -1,3 +1,4 @@
+import { getPanelReleaseMode } from "@/lib/panels/release";
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
@@ -144,6 +145,10 @@ async function completeAuthentication(request: NextRequest, params: URLSearchPar
         user.id,
         user.email
       );
+      if (await getPanelReleaseMode(supabase) === "open") {
+        const linked = await supabase.rpc("link_current_school_teacher_identity");
+        if (linked.error) throw linked.error;
+      }
     }
   } catch (error) {
     logAuthCallbackIssue(requestUrl, "profile", {

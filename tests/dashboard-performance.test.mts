@@ -47,6 +47,7 @@ test("dashboard sections execute only the queries needed by their visible conten
       const modules = {
         "react/jsx-runtime": { jsx, jsxs: jsx },
         "node:crypto": { randomUUID: () => "version" },
+        "@/lib/panels/panel-statistics": { emptyPanelStatisticsSnapshot: () => ({}), getPanelStatisticsSnapshot: async () => { reads.push("panel-statistics"); return {}; } },
         "@/lib/registrations/dashboard-load-plan": { dashboardLoadPlan },
         "@/lib/supabase/all-rows": { loadAllRows, loadRowsForIds },
         "@/lib/groups/geography.server": { loadGroupCityLinks },
@@ -76,6 +77,7 @@ test("dashboard sections execute only the queries needed by their visible conten
       assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);
       assert.equal(reads.includes("event_user_roles"), section === "gruppi" || section === "ruoli", context);
       assert.equal(reads.includes("statistics"), !foreign && ["dashboard", "attendance", "age", "registrations"].includes(section), context);
+      assert.equal(reads.includes("panel-statistics"), false, context);
       assert.equal(reads.includes("associations"), !foreign && section === "dashboard", context);
       assert.equal(reads.includes("disability"), ["disability", "disability-people"].includes(section), context);
       assert.equal(reads.includes("event_services"), ["iscritti", "disability-people", "gruppi", "impostazioni"].includes(section), context);

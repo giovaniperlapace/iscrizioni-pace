@@ -13,6 +13,7 @@ const js = ts.transpileModule(readFileSync(new URL("../app/dashboard/statistics-
 }).outputText;
 const exports: { StatisticsSection?: React.ComponentType<Record<string, unknown>> } = {};
 new Function("require", "exports", js)((name: string) => {
+  if (name.endsWith("panel-statistics-report")) return { PanelStatisticsReport: () => React.createElement("div", null, "Panel report") };
   if (name === "react") return React;
   if (name === "react/jsx-runtime") return runtime;
   if (name === "lucide-react") return { Baby: "svg", ChevronRight: "svg", ChevronDown: "svg", UserRound: "svg", Users: "svg" };
@@ -33,10 +34,11 @@ test("one report at a time, default/fallback to first, role and menu preserved i
   for (const dashboard of ["admin", "manager"]) for (const navMode of ["full", "mini"]) {
     for (const value of [undefined, "invalid", ...reports.STATISTICS_REPORTS.map(r => r.key)]) {
       const report = reports.resolveStatisticsReport(value);
-      const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, dashboard, navMode, report, canViewDisability: true, disabilityStatistics: { people: [] } }));
+      if (dashboard === "manager" && report === "panels") continue;
+      const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, panelStatistics: {}, dashboard, navMode, report, canViewDisability: true, disabilityStatistics: { people: [] } }));
       assert.deepEqual([...html.matchAll(/data-statistics-report="([^"]+)"/g)].map(m => m[1]), [report]);
       assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-      for (const category of reports.STATISTICS_REPORTS) {
+      for (const category of reports.STATISTICS_REPORTS.filter(r => dashboard === "admin" || r.key !== "panels")) {
         assert.ok(html.includes(`/dashboard/${dashboard}?section=dashboard&amp;nav=${navMode}&amp;report=${category.key}`));
       }
     }
@@ -50,4 +52,10 @@ test("unscoped users do not render disability category or report, even with inje
   const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
   const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, dashboard: "manager", navMode: "mini", report: "disability", canViewDisability: false, disabilityStatistics: { people: [] } }));
   assert.doesNotMatch(html, /report=disability|Protected report|data-statistics-report="disability"/);
+});
+
+test("manager cannot render panel statistics even with injected data", () => {
+  const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
+  const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, dashboard: "manager", navMode: "mini", report: "panels", panelStatistics: {} }));
+  assert.doesNotMatch(html, /report=panels|Panel report|data-statistics-report="panels"/);
 });

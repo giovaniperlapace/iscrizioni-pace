@@ -152,6 +152,7 @@ test("legacy delegation remains compatible and read failures stop resolution", a
 test("a queued delegated delivery is refreshed before rendering and sending to a newly assigned email", async () => {
   const current: CampaignRecipient = {
     recipientKey: "participant:person", recipientType: "participant",
+    schoolTeacherId: null,
     participantId: "person", registrationId: "reg", recipientUserId: null,
     deliveryKind: "direct", delegateUserId: null,
   };

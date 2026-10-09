@@ -1,5 +1,69 @@
 # Piano di lavoro Panel
 
+## Rilascio admin autorizzato — aggiornamento 2026-10-09
+
+- Nuova indicazione esplicita: pubblicare in production e applicare le migration,
+  ma rendere le nuove funzioni panel disponibili solo nella dashboard admin.
+  Manager e viewer attendono il via libera dell’utente dopo il suo collaudo.
+  Questa decisione supera l’accesso manager/viewer descritto nella preparazione.
+- La home rimane pubblica e invariata, con le iscrizioni all’evento operative;
+  non mostra la nuova sezione panel. Restano chiuse solo catalogo e iscrizioni
+  pubbliche dei panel, compreso il flusso scuole pubblico.
+- Controlli prima dei loader e delle azioni, RPC/RLS limitate all’admin,
+  statistiche e campagne panel/scuole protette anche da richieste dirette.
+  Comunicazioni condivisa disponibile direttamente nella dashboard admin.
+- Migration aggiuntive `20261009140000_admin_panel_acceptance.sql` e
+  `20261009150000_panel_default_audiences.sql`: restrizione ruoli e catalogo
+  Iscritti/Scuole/Ospiti; nessuna location o capienza di esempio in production.
+- Inventario production: lotto di 16 migration panel; esclusa la correzione dati
+  storica non dipendente `20260726120000`, assente nel registro remoto.
+  Backup server verificato; procedure ed esiti in `docs/panel-reserved-release.md`.
+- Lotto applicato e registrato in production in un’unica transazione; verificati
+  conteggi e hash delle 39 tabelle preesistenti. Conservati 3.350 iscrizioni,
+  3.457 partecipanti, 125 gruppi e zero check-in. Nessun nuovo destinatario email.
+  Verifiche finali: 719 test, lint, TypeScript, build e browser desktop/mobile.
+- Preservare branch panel e stash del collaudo. Il riallineamento autorizzato
+  deve mantenere le funzioni future e le decisioni più recenti, non sovrascriverle.
+
+
+## Aggiornamento prioritario — rilascio riservato, 2026-10-09
+
+L'utente richiede di preparare su main il gestionale panel P0–P10 per
+production: location, panel, ripartizione quote, scuole interne, destinatari
+email e statistiche. Home attuale senza annunci, catalogo e iscrizioni
+pubbliche chiusi. Questa decisione supera il rinvio storico del rilascio
+P0–P10 fino al completamento delle milestone successive; non autorizza
+automaticamente commit/push, deployment o migration remote.
+
+Preparazione locale completata sulla base main `79897d7` integrando `32e7d41`
+senza commit. Nuova modalità DB `internal` (default), `catalog`, `open`, con
+protezione server/RPC/RLS. La convalida dei panel non cambia tale modalità.
+La home production è conservata separatamente, così la home futura resta
+disponibile. Catalogo gestionale con posti prenotati/rimanenti per quota,
+letture complete oltre 1.000 righe e viewer in sola lettura.
+
+Il branch panel `42bfcca` conserva P11–P13 e le successive decisioni di
+accoglienza e cerimonie; il suo piano più recente non viene sostituito con
+questa copia per il rilascio P0–P10. L'utente autorizza la sincronizzazione
+delle nuove correzioni verso panel, da effettuare con merge dopo il commit
+autorizzato, conservando le funzioni future. Il collaudo etichette è sospeso;
+prossimo passo: pulsante stampa singolo QR esistente, senza rigenerazione o
+registrazione di presenza. Annotazioni e strumenti non tracciati preservati
+nello stash `fa1ec7fa339a2b944045bf67e90cc2a1e9efec85`, da ripristinare sul panel.
+
+Nuovo requisito prima dell'apertura pubblica: posti rimanenti nel catalogo e
+lista d'attesa quando esauriti, con gestione dei posti liberati dalle disdette.
+Superata l'esclusione storica della coda. Una milestone dedicata deve definire
+quote, priorità, nuclei familiari, assegnazione e notifiche; nessuna regola di
+promozione automatica o scadenza è già concordata. Non blocca il primo rilascio
+riservato e non è dichiarata implementata da questa tranche.
+
+Verifiche locali: 711 test, lint, TypeScript, build, SQL PostgreSQL 17 con ruoli
+e concorrenza, browser sintetico desktop/mobile e home sette lingue. Mancano
+inventario DB/email production, applicazione autorizzata delle migration,
+pubblicazione e collaudo autenticato. Stato, conservazione Git, dipendenze e
+procedura in `docs/panel-reserved-release.md`.
+
 ## 1. Scopo del documento
 
 Questo documento organizza lo sviluppo delle funzioni relative a:
@@ -40,6 +104,62 @@ Stato di partenza al 2026-08-04:
   spagnolo, neerlandese e ucraino.
 
 ## 2. Metodo obbligatorio per ogni milestone
+
+### Strategia di integrazione P0-P16 — aggiornata il 2026-09-12
+
+- L'utente conferma il buon esito delle novità fino a P10. P0-P10 e le
+  successive correzioni costituiscono la base da conservare; P11-P16 proseguono
+  sullo stesso branch `codex/panel-p0-p10` e sullo staging esistente, senza
+  rinominarlo o ricrearlo. La prossima milestone è P11.
+- Questa decisione sostituisce il rilascio previsto dopo P10 e il ciclo
+  separato per P11-P16. Nessun merge verso `main` o rilascio production ora:
+  il rilascio resta una decisione esplicita futura, non scatta automaticamente
+  al completamento di una milestone, neppure P16.
+- Ogni milestone mantiene commit, verifiche e pausa di revisione distinti.
+  Le note datate nelle sezioni P0-P10 restano storico delle singole tranche,
+  non istruzioni per rifare o sovrascrivere il lavoro già accettato. Il buon
+  esito riferito dall'utente non sostituisce nuove evidenze dei test di rilascio.
+- Le migration nuove restano destinate esclusivamente allo staging durante
+  lo sviluppo; applicazioni remote, commit e push richiedono la richiesta
+  esplicita già prevista dal piano.
+- Le attività ordinarie continuano su `main`. Prima di ogni nuova milestone
+  panel e dopo rilasci rilevanti: `git fetch origin`, controllo dello stato e
+  `git pull --ff-only` sul proprio upstream `origin/codex/panel-p0-p10`.
+  Esaminare poi i commit e il diff da `origin/main` non ancora incorporati.
+- Integrare periodicamente `origin/main` **nel branch panel** con un merge,
+  preservando la storia condivisa: niente rebase, reset distruttivi o force
+  push. Prima del merge mettere al sicuro le modifiche locali con commit
+  autorizzati; non trascinare lavoro non proprio o sostituire interi file
+  scegliendo indiscriminatamente una delle due versioni.
+- Risolvere i conflitti conservando sia le correzioni di `main` sia le funzioni
+  panel già accettate. Controllare in particolare action condivise, dashboard,
+  QR, campagne, permessi e documentazione. Le migration già applicate non si
+  riscrivono: verificare ordine e dipendenze, usando nuove migration correttive
+  quando necessario. Un merge Git non applica automaticamente il database.
+- Annotare per ogni sincronizzazione commit di `origin/main` incorporato,
+  conflitti risolti, migration da applicare allo staging ed esiti dei test.
+  Eseguire regressioni delle aree toccate e dei panel prima di proseguire.
+- Prima del futuro merge verso `main`: nuovo riallineamento, regressione
+  completa iscrizioni/iscritti/gruppi/servizi/campagne/QR e P11-P16 realizzate,
+  verifica RLS e concorrenza, inventario migration rispetto alla production,
+  backup e piano di rollback. Restano le verifiche hardware P14-P16 e
+  l'approvazione separata dell'estensione opzionale P13.
+
+Sincronizzazione del 2026-09-12: incorporato `origin/main` a `0bc2997` nella
+base panel `39deb81`; esaminati tutti i 10 commit. Conflitti risolti conservando
+le evoluzioni di entrambi i branch. Dettagli, adattamento del test campagne e
+verifiche in `docs/panel-main-integration-2026-09-12.md`.
+La nuova migration `20260910120000_leader_attendance.sql` resta da applicare
+allo staging su richiesta prima del collaudo del relativo salvataggio; nessun
+push, deploy o SQL remoto eseguito durante la sincronizzazione. Il prossimo
+sviluppo resta P11, dopo il completamento del riallineamento dello staging.
+
+Stato integrazione al 2026-08-07: le migration P2-P9 sono applicate e
+registrate soltanto nel database staging. Home panel e modulo pubblico scuole
+sono stati verificati con la fixture sintetica P1. La Preview stabile del
+branch usa le variabili applicative dedicate e la allowlist Auth staging;
+production e `main` restano invariati. Restano il collaudo autenticato dei
+ruoli, i test SQL/RLS e concorrenza e la verifica decisionale del report P10.
 
 Prima di iniziare:
 
@@ -129,9 +249,11 @@ estendere il modulo.
   contemporanee.
 - Il partecipante vede solo sezioni abilitate all'iscrizione individuale. Le
   quote ospiti o scuola non sono selezionabili dal flusso ordinario.
-- Nella prima versione non c'e' lista d'attesa: quando la quota e' esaurita il
-  panel risulta completo. Una lista d'attesa potra' essere aggiunta solo con
-  una milestone separata.
+- Decisione aggiornata il 2026-10-09: la lista d'attesa è richiesta prima
+  dell'apertura pubblica delle iscrizioni, insieme ai posti rimanenti nel
+  catalogo. Prevedere una milestone dedicata; il gestionale riservato può
+  essere rilasciato prima. Le regole di assegnazione dei posti liberati restano
+  da definire esplicitamente.
 - Panel sovrapposti per la stessa persona vanno bloccati, mostrando chiaramente
   il conflitto.
 - Come regola iniziale coerente con il modello attuale, i minori collegati
@@ -237,6 +359,9 @@ solo nel browser:
 
 ### Milestone P0 - conferma regole e dati pilota
 
+Stato: completata il 2026-08-05. Decisioni registrate in
+`docs/panel-p0-decisions.md`.
+
 Scopo: chiudere le decisioni che cambiano schema o hardware prima di scrivere
 migration.
 
@@ -261,7 +386,13 @@ Verifica e revisione:
 Accettazione: non restano ambiguita' che richiederebbero di rifare chiavi,
 vincoli di capienza o formato delle prenotazioni.
 
+Documento di lavoro: `docs/panel-p0-decisions.md`.
+
 ### Milestone P1 - schema panel, location, sezioni e RLS
+
+Stato: completata sullo staging il 2026-08-05. Migration, seed sintetico,
+vincoli transazionali e RLS sono stati verificati prima con rollback e poi
+applicati in modo persistente soltanto allo staging. Production resta invariata.
 
 Scopo: costruire la base dati canonica senza ancora esporre form pubblici.
 
@@ -289,6 +420,10 @@ al database remoto.
 
 ### Milestone P2 - gestione manager delle location
 
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione funzionale e applicazione della migration P2 soltanto
+allo staging. Nessuna modifica P2 e' stata applicata in production.
+
 Scopo: aggiungere alla dashboard manager/admin una sezione `Panel` con la
 prima sottovista `Location`.
 
@@ -309,6 +444,11 @@ negative o incoerenti.
 
 ### Milestone P3 - bozze panel e sezioni di posti
 
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione funzionale e applicazione delle migration P2/P3
+esclusivamente allo staging. Nessuna modifica P3 e' stata applicata in
+production.
+
 Scopo: permettere la creazione completa di panel in bozza.
 
 Deliverable:
@@ -328,6 +468,11 @@ Accettazione: il manager prepara panel complessi senza renderli pubblici e
 capisce immediatamente cosa manca per pubblicarli.
 
 ### Milestone P4 - pubblicazione singola, multipla e modifica successiva
+
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione SQL/RLS, applicazione delle migration P2-P4 soltanto
+allo staging e collaudo funzionale autenticato. Nessuna modifica P4 e' stata
+applicata in production.
 
 Scopo: rendere sicuro il passaggio da bozza a programma pubblico.
 
@@ -351,6 +496,11 @@ batch parzialmente pubblicato.
 
 ### Milestone P5 - programma panel nella home pubblica
 
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di applicazione della migration P5 esclusivamente allo staging e di
+revisione funzionale con panel pubblicati. Nessuna modifica P5 e' stata
+applicata in production.
+
 Scopo: mostrare sulla home le informazioni pubbliche dei panel.
 
 Deliverable:
@@ -371,6 +521,11 @@ Accettazione: chi visita la home comprende il programma e raggiunge il proprio
 accesso senza vedere bozze o dati operativi.
 
 ### Milestone P6 - iscrizione individuale ai panel
+
+Stato: implementata localmente sul branch `codex/panel-p0-p10` il 2026-08-05,
+in attesa di revisione SQL/RLS, applicazione della migration P6 esclusivamente
+allo staging e collaudo funzionale autenticato, inclusa la concorrenza
+sull'ultimo posto. Nessuna modifica P6 e' stata applicata in production.
 
 Scopo: attivare l'area panel gia' predisposta nella dashboard partecipante.
 
@@ -395,6 +550,12 @@ le proprie scelte reali.
 
 ### Milestone P7 - schema e backoffice delle prenotazioni scuole
 
+Stato: avviata e implementata localmente sul branch `codex/panel-p0-p10` il
+2026-08-05. Migration, backoffice e test applicativi sono presenti; migration
+e RPC hanno superato un test transazionale con rollback sullo staging, ma non
+sono ancora state applicate in modo persistente ne' collaudate nel browser
+autenticato. Nessuna modifica P7 e' stata applicata in production.
+
 Scopo: creare la base separata per classi e docenti senza raccogliere i nomi
 degli studenti.
 
@@ -417,6 +578,18 @@ falsi partecipanti individuali.
 
 ### Milestone P8 - flusso pubblico scuole
 
+Stato: avviata localmente sul branch `codex/panel-p0-p10` il 2026-08-06.
+La prima tranche comprende route pubblica `Scuole`, creazione atomica sulla
+quota scuola, consenso versionato, email con QR e magic link, recupero accesso
+e pagina docente per consultare, modificare, ridurre o annullare. Il
+2026-08-07 i testi di accesso, conferma e dashboard docente sono stati
+completati nelle sette lingue supportate; il catalogo pubblico usa ora una RPC
+dedicata che restituisce gli identificativi necessari senza esporre le
+capienze delle quote scuola o consentire letture anonime dirette delle
+sezioni. Restano da completare test SQL transazionale sullo staging e collaudo
+browser autenticato mobile/accessibile. Nessuna modifica P8 e' stata applicata
+in production.
+
 Scopo: permettere al professore di prenotare biglietti per una o piu' classi.
 
 Deliverable:
@@ -438,6 +611,22 @@ Accettazione: un docente completa e recupera la prenotazione senza account
 manuale e senza inserire dati degli studenti.
 
 ### Milestone P9 - destinatari campagne per panel e professori
+
+Stato: avviata localmente sul branch `codex/panel-p0-p10` il 2026-08-06.
+La prima tranche completa il nucleo applicativo: filtro panel dei partecipanti
+basato su `moment_attendance_choices` confermate, audience alternativa
+`Professori` deduplicata per docente, filtri scuola/panel, selezione esplicita
+isolata tra tab, anteprima/test/invio tramite la coda globale e campi template
+`scuola`/`panel`. La migration locale e'
+`20260806200000_panel_campaign_audiences.sql`. Il 2026-08-07 sono stati
+aggiunti la scorciatoia da panel pubblicato alla console gia' prefiltrata, il
+controllo server del perimetro evento per tutte le operazioni campagna, label
+panel disambiguate per data/ora e caricamento parallelo dei dati iniziali.
+Test (192), lint, typecheck, build e collaudo browser delle route pubbliche
+modificate sono verdi. Restano obbligatori prima della chiusura: applicazione
+ordinata P2-P9 sullo staging, test SQL/RLS e collaudo end-to-end autenticato
+con cancellazione panel, docente multi-classe e invio in modalita' log. Nessuna
+modifica P9 e' in production.
 
 Scopo: estendere la console campagne senza alterare la selezione esplicita
 esistente.
@@ -463,6 +652,24 @@ uno specifico panel oppure ai professori selezionati, senza mescolare le due
 audience.
 
 ### Milestone P10 - report statistiche panel
+
+Stato: avviata localmente sul branch `codex/panel-p0-p10` il 2026-08-07.
+La prima tranche aggiunge il report panel condiviso nelle statistiche admin e
+manager, senza nuova migration: l'aggregazione server legge le tabelle
+canoniche P1-P8 e passa al client soltanto conteggi e metadati dei panel. Il
+report separa partecipanti individuali, minori ereditati, prenotazioni scuola
+e persone scuola, esclude iscrizioni/prenotazioni annullate, dettaglia ogni
+sezione e segnala panel pieni, quasi pieni (occupazione almeno al 90%), non
+configurati o incoerenti. Sono disponibili filtri per giorno, location, panel,
+tipo pubblico e stato, oltre ai collegamenti verso gestione panel e campagne
+prefiltrate; `manager_viewer` conserva la vista read-only e non vede la CTA
+campagna. Il confronto previsto/effettivo resta intenzionalmente disattivato:
+verra' collegato al modello completo di check-in individuale, minori e scuole
+della P11, senza usare i check-in legacy in modo parziale. Prima della chiusura
+restano il collaudo sui dati sintetici dello staging dopo l'applicazione
+ordinata P2-P9 e la verifica browser autenticata admin/manager/manager_viewer.
+Sono verdi 195 test, lint, typecheck, `staging:verify` e build production
+locale. Nessuna modifica P10 e' in production.
 
 Scopo: aggiungere alla sezione statistiche una vista decisionale sui panel.
 
@@ -622,6 +829,11 @@ senza overbooking, perdita di presenze o esposizione di dati fuori ruolo.
 
 ## 6. Dipendenze e ordine di rilascio
 
+P11-P16 proseguono sul branch panel e sullo staging esistente dopo il buon
+esito di P0-P10. Il primo merge verso `main` e il rilascio production restano
+sospesi fino a una futura richiesta esplicita e alle verifiche della sezione
+2. Le pause di revisione fra milestone restano obbligatorie.
+
 Ordine raccomandato:
 
 1. P0-P4: catalogo manager affidabile e pubblicazione.
@@ -670,7 +882,8 @@ Queste funzioni non vanno aggiunte incidentalmente:
 - scelta di sedute numerate;
 - piantina grafica della sala;
 - trasferimento automatico di posti inutilizzati da una sezione a un'altra;
-- lista d'attesa e promozione automatica;
+- promozione automatica dalla lista d'attesa senza regole concordate (la coda
+  è invece richiesta dalla decisione del 2026-10-09);
 - algoritmi di assegnazione automatica dei panel;
 - pagamenti per scuole o partecipanti;
 - raccolta dei nomi degli studenti;

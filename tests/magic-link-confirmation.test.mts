@@ -19,6 +19,7 @@ function harness(failVerification = false) {
   }
   const code=ts.transpileModule(readFileSync(new URL("../app/auth/callback/route.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   new Function("require","exports",code)((id:string)=>{
+    if(id.endsWith("panels/release")) return {getPanelReleaseMode:async()=>"internal"};
     if(id==="next/server") return {NextResponse:MockResponse};
     if(id.includes("magic-link-confirmation")) return confirmation;
     if(id.includes("i18n/config")) return locale;

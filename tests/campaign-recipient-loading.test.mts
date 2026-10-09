@@ -15,6 +15,7 @@ function previewLoader(failAt = 0) {
         eq() { return query; },
         order() { return query; },
         range() { return query; },
+        not() { return query; },
         in(_column: string, values: string[]) { ids = values; return query; },
         then(resolve: (value: unknown) => unknown) {
           const tooLong = new URLSearchParams({ select: "id,first_name,last_name", id: `in.(${ids.join(",")})` }).toString().length > 8000;
@@ -23,7 +24,9 @@ function previewLoader(failAt = 0) {
             ? ids.map(id => ({ id, first_name: "Person", last_name: id }))
             : table === "participant_contacts"
               ? ids.map(id => ({ participant_id: id, email: `${id}@example.test`, is_primary: true }))
-              : [];
+              : table === "moment_attendance_choices"
+                ? ids.map(id => ({ registration_id: id, moment_id: "panel-confirmed" }))
+                : [];
           return Promise.resolve({ data, error: tooLong || failed ? { message: tooLong ? "URI too long" : "read failed" } : null }).then(resolve);
         },
       };
@@ -39,7 +42,7 @@ function previewLoader(failAt = 0) {
     if (id.includes("operational-users/identity")) return { getOperationalUserIdentities: async () => new Map() };
     return {};
   }, exports);
-  return exports.loadCampaignRecipientPreviews as (...args: unknown[]) => Promise<Array<{ recipientKey: string }>>;
+  return exports.loadCampaignRecipientPreviews as (...args: unknown[]) => Promise<Array<{ recipientKey: string; panelIds: string[] }>>;
 }
 
 const recipients = Array.from({ length: 1268 }, (_, i) => {
@@ -50,6 +53,7 @@ const recipients = Array.from({ length: 1268 }, (_, i) => {
 test("campaign preview loads every recipient without exceeding the proxy URI limit", async () => {
   const result = await previewLoader()(recipients, new Set(), "event");
   assert.equal(result.length, recipients.length);
+  assert.ok(result.every(row => row.panelIds.length === 1 && row.panelIds[0] === "panel-confirmed"));
   assert.deepEqual(new Set(result.map(row => row.recipientKey)), new Set(recipients.map(row => row.recipientKey)));
 });
 

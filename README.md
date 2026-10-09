@@ -14,10 +14,12 @@ Base tecnica per la web app multi-evento di iscrizioni, gruppi, comunicazioni, Q
 
 ```bash
 npm run dev
+npm run dev:staging
 npm run lint
 npm run typecheck
 npm test
 npm run build
+npm run staging:verify
 ```
 
 ## Ambiente
@@ -34,6 +36,10 @@ Variabili previste:
 - `NEXT_PUBLIC_APP_URL`
 
 Non committare segreti.
+
+Per il lavoro panel P0-P10 usare `.env.staging.local`, derivato da
+`.env.staging.example`, e avviare l'app con `npm run dev:staging`. Il comando
+`npm run staging:verify` deve passare prima di usare il nuovo ambiente.
 
 ## Workflow
 

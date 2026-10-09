@@ -14,7 +14,7 @@ const functions = ast.statements.filter(node => ts.isFunctionDeclaration(node) &
 const page = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ManagerDashboardPage")!.getText(ast);
 // Execute the production entry point through the authorization boundary. A
 // sentinel replaces the loaders so a denied URL must never reach them.
-const boundary = page.slice(0, page.indexOf("  const managerOperations =")) + ' return {canManage, activeSection}; }';
+const boundary = page.slice(0, page.indexOf("  const canSeeCurrentEvent =")) + ' return {canManage, activeSection}; }';
 const js = ts.transpileModule(functions + "\n" + boundary.replace("export default ", ""), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
 }).outputText;
@@ -32,7 +32,7 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
     parseOperationsDashboardFilters: () => ({}),
     redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); },
     permanentRedirect: (url: string) => { throw new Error(`PERMANENT:${url}`); },
-    Link: "a", FileDown: "svg", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
+    Link: "a", MapPin: "svg", FileDown: "svg", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
   };
   const api = new Function(...Object.keys(deps), `${js}; return {ManagerDashboardPage, ManagerSidebar};`)(...Object.values(deps));
   return { ...api, reads };
@@ -107,3 +107,12 @@ test("viewer can read disability statistics and drilldowns only for their curren
     assert.deepEqual(foreign.reads,["current-event"]);
   }
 });
+
+for (const role of ["admin", "manager", "manager_viewer"]) {
+  test(`panel routes and statistics stay out of manager dashboard for ${role}`, async () => {
+    for (const params of [{section: "panel"}, {section: "dashboard", report: "panels"}]) {
+      const f = fixture([{role, eventId: role === "admin" ? null : "current"}]);
+      await assert.rejects(f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), /REDIRECT:/);
+    }
+  });
+}

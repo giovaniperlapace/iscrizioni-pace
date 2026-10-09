@@ -1,3 +1,4 @@
+import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
 import { loadAssociations } from "@/lib/registrations/association.server";
 import { ExportsSection } from "@/app/dashboard/exports-section";
 import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
@@ -33,6 +34,7 @@ import {
   BarChart3,
   FileDown,
   Mail,
+  MapPin,
   Network,
   Pencil,
   ShieldCheck,
@@ -70,6 +72,9 @@ import {
   type OperationsParticipantRow,
 } from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
+import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
+import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -111,6 +116,22 @@ import {
   getOperationalUserIdentities,
 } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
+import {
+  getEventLocations,
+  normalizeEventLocationSearch,
+} from "@/lib/panels/event-locations";
+import {
+  getPanelDraftCatalog,
+  parsePanelDraftFilters,
+} from "@/lib/panels/panel-drafts";
+import {
+  emptyPanelStatisticsSnapshot,
+  getPanelStatisticsSnapshot,
+} from "@/lib/panels/panel-statistics";
+import {
+  getSchoolBookingCatalog,
+  parseSchoolBookingFilters,
+} from "@/lib/panels/school-bookings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -155,6 +176,28 @@ type AdminPageProps = {
     stat?: string;
     report?: string;
     status?: string;
+    locationError?: string;
+    locationId?: string;
+    locationQ?: string;
+    locationSaved?: string;
+    locationTool?: string;
+    panelDate?: string;
+    panelError?: string;
+    panelId?: string;
+    panelLocation?: string;
+    panelQ?: string;
+    panelSaved?: string;
+    panelStatus?: string;
+    panelTool?: string;
+    panelView?: string;
+    campaignPanel?: string;
+    schoolError?: string;
+    schoolId?: string;
+    schoolPanel?: string;
+    schoolQ?: string;
+    schoolSaved?: string;
+    schoolStatus?: string;
+    schoolTool?: string;
   }>;
 };
 
@@ -396,7 +439,7 @@ type OperationalUserRoleAssignment = {
 };
 
 
-type AdminSection = "esportazioni" | "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
+type AdminSection = "panel" | "esportazioni" | "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
@@ -438,11 +481,30 @@ export default async function AdminDashboardPage({
       )
     : null;
   const currentEventId = currentEvent?.id ?? null;
-  const [snapshots, adminOperations] = await Promise.all([
+  const [
+    snapshots,
+    adminOperations,
+    panelLocations,
+    panelCatalog,
+    schoolCatalog,
+    panelStatistics,
+  ] = await Promise.all([
     activeSection === "impostazioni" ? getOpeningSnapshots() : Promise.resolve([]),
     needsAdminOperations && loadPlan.operations
       ? getAdminOperationsSnapshot(filters, currentEventId)
       : getAdminOperationsSnapshot(filters, null),
+    activeSection === "panel" && currentEventId
+      ? getEventLocations(serviceSupabase, currentEventId)
+      : Promise.resolve([]),
+    activeSection === "panel" && currentEventId
+      ? getPanelDraftCatalog(supabase, currentEventId)
+      : Promise.resolve({ panels: [], audienceTypes: [] }),
+    activeSection === "panel" && currentEventId
+      ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
+      : Promise.resolve({ bookings: [], panelOptions: [] }),
+    activeSection === "dashboard" && statisticsReport === "panels" && currentEventId
+      ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
+      : Promise.resolve(emptyPanelStatisticsSnapshot()),
   ]);
   const associationStatistics = activeSection === "dashboard" && statisticsReport === "territory" && currentEventId
     ? await loadAssociationStatistics(serviceSupabase, currentEventId, currentEvent?.starts_on ?? null, currentEvent?.ends_on ?? null)
@@ -451,7 +513,7 @@ export default async function AdminDashboardPage({
     ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
     : undefined;
   const statistics =
-    (activeSection === "dashboard" && statisticsReport !== "disability") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
+    (activeSection === "dashboard" && statisticsReport !== "disability" && statisticsReport !== "panels") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getAdminStatisticsSnapshot(
           currentEventId,
           currentEvent?.starts_on ?? null,
@@ -487,6 +549,13 @@ export default async function AdminDashboardPage({
   const selectedOperationalRole =
     adminOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
     (params.roleUserId && params.section === "ruoli" ? await loadRolelessPerson(params.roleUserId) : null);
+  const selectedLocation =
+    panelLocations.find((location) => location.id === params.locationId) ?? null;
+  const selectedPanel =
+    panelCatalog.panels.find((panel) => panel.id === params.panelId) ?? null;
+  const selectedSchoolBooking =
+    schoolCatalog.bookings.find((booking) => booking.id === params.schoolId) ?? null;
+  const panelView = params.panelView === "locations" || params.panelView === "schools" ? params.panelView : "panels";
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
 
   return (
@@ -540,10 +609,14 @@ export default async function AdminDashboardPage({
                 canViewDisability={true}
                 disabilityStatistics={disabilityStatistics}
                 associationStatistics={associationStatistics}
+                panelStatistics={panelStatistics}
                 dashboard="admin"
                 navMode={navMode}
+                canManage
               />
             ) : null}
+
+            {activeSection === "email" ? <ManagerEmailSection eventId={currentEventId} canManage={true} allowPanelManagement={true} initialPanelId={params.campaignPanel} /> : null}
 
             {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
@@ -560,6 +633,63 @@ export default async function AdminDashboardPage({
                 dashboard="admin"
                 navMode={navMode}
                 canDeleteRegistration
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "locations" ? (
+              <PanelLocationsSection
+                dashboard="admin"
+                navMode={navMode}
+                event={currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}
+                locations={panelLocations}
+                selectedLocation={selectedLocation}
+                isCreating={params.locationTool === "new"}
+                canManage
+                query={normalizeEventLocationSearch(params.locationQ)}
+                error={params.locationError}
+                saved={params.locationSaved}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "panels" ? (
+              <PanelDraftsSection
+                dashboard="admin"
+                navMode={navMode}
+                event={
+                  currentEvent
+                    ? {
+                        id: currentEvent.id,
+                        title: currentEvent.title,
+                        startsOn: currentEvent.starts_on ?? "",
+                        endsOn: currentEvent.ends_on ?? "",
+                      }
+                    : null
+                }
+                panels={panelCatalog.panels}
+                locations={panelLocations}
+                audienceTypes={panelCatalog.audienceTypes}
+                selectedPanel={selectedPanel}
+                isCreating={params.panelTool === "new"}
+                canManage
+                filters={parsePanelDraftFilters(params)}
+                error={params.panelError}
+                saved={params.panelSaved}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "schools" ? (
+              <SchoolBookingsSection
+                dashboard="admin"
+                navMode={navMode}
+                event={currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}
+                bookings={schoolCatalog.bookings}
+                panelOptions={schoolCatalog.panelOptions}
+                selectedBooking={selectedSchoolBooking}
+                isCreating={params.schoolTool === "new"}
+                canManage
+                filters={parseSchoolBookingFilters(params)}
+                error={params.schoolError}
+                saved={params.schoolSaved}
               />
             ) : null}
 
@@ -1120,8 +1250,15 @@ function AdminSidebar({
       help: "Elenco e modifiche",
     },
     {
+      key: "panel",
+      href: adminPath("panel", navMode),
+      Icon: MapPin,
+      label: "Panel",
+      help: "Location e programma",
+    },
+    {
       key: "email",
-      href: "/dashboard/manager?section=email",
+      href: adminPath("email", navMode),
       Icon: Mail,
       label: "Comunicazioni",
       help: "Template e campagne email",
@@ -2478,6 +2615,8 @@ function resolveAdminSection(input: { section?: string; openingSaved?: string; o
     input.section === "impostazioni" ||
     input.section === "dashboard" ||
     input.section === "iscritti" ||
+    input.section === "panel" ||
+    input.section === "email" ||
     input.section === "ruoli" ||
     input.section === "gruppi"
   ) {

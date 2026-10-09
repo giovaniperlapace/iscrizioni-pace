@@ -1,3 +1,4 @@
+import { getPanelReleaseMode } from "@/lib/panels/release";
 import { nationalityName } from "@/lib/registrations/nationality-names";
 import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
 import { EditableRegistrationInfo } from "./editable-registration-info";
@@ -22,6 +23,10 @@ import {
   type ParticipantMessageFormCopy,
 } from "@/app/dashboard/partecipante/participant-message-form";
 import { ParticipantDashboardOverlay } from "@/app/dashboard/partecipante/participant-dashboard-overlay";
+import {
+  ParticipantPanelBookings,
+  type ParticipantPanelCatalogRow,
+} from "@/app/dashboard/partecipante/participant-panel-bookings";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -115,6 +120,7 @@ type MomentRow = {
   title: string;
   starts_at: string | null;
   ends_at: string | null;
+  moment_type: "general" | "panel";
 };
 
 type MomentChoiceRow = {
@@ -952,6 +958,7 @@ export default async function PartecipanteDashboardPage({
   const params = searchParams ? await searchParams : {};
   const activeOverlay = parseDashboardOverlay(firstParam(params.overlay));
   const supabase = await createSupabaseServerClient();
+  const panelBookingsOpen = await getPanelReleaseMode(supabase) === "open";
   const auth = await getCurrentAuthContext(supabase, "partecipante");
 
   if (!auth) {
@@ -997,6 +1004,7 @@ export default async function PartecipanteDashboardPage({
     childrenResult,
     qrStatusResult,
     participantServiceResult,
+    panelCatalogResult,
   ] = registrationId && participantId && eventId
     ? await Promise.all([
         supabase
@@ -1016,7 +1024,7 @@ export default async function PartecipanteDashboardPage({
           .order("day"),
         supabase
           .from("event_moments")
-          .select("id,title,starts_at,ends_at")
+          .select("id,title,starts_at,ends_at,moment_type")
           .eq("event_id", eventId)
           .eq("is_public", true)
           .order("starts_at"),
@@ -1044,6 +1052,9 @@ export default async function PartecipanteDashboardPage({
           .eq("participant_id", participantId)
           .eq("status", "assigned")
           .maybeSingle(),
+        panelBookingsOpen ? supabase.rpc("get_participant_panel_catalog", {
+          p_registration_id: registrationId,
+        }) : Promise.resolve({ data: [], error: null }),
       ])
     : [
         { data: [] },
@@ -1055,6 +1066,7 @@ export default async function PartecipanteDashboardPage({
         { data: [] },
         { data: null },
         { data: null },
+        { data: [] },
       ];
 
   const contacts = (contactsResult.data ?? []) as ContactRow[];
@@ -1068,6 +1080,8 @@ export default async function PartecipanteDashboardPage({
   const registrationChildren = (childrenResult.data ?? []) as RegistrationChildRow[];
   const qrStatus = qrStatusResult.data as QrStatusRow | null;
   const participantService = participantServiceResult.data as ParticipantServiceRow | null;
+  if ("error" in panelCatalogResult && panelCatalogResult.error) throw panelCatalogResult.error;
+  const panelCatalog = (panelCatalogResult.data ?? []) as ParticipantPanelCatalogRow[];
   const participantServiceLabel =
     relatedOne(participantService?.event_services ?? null)?.label ?? null;
   const qrPreview = participant ? await registrationQrPreview(qrStatus, participant) : null;
@@ -1099,8 +1113,11 @@ export default async function PartecipanteDashboardPage({
   const availabilityUnknown =
     attendanceChoices.length === 0 ||
     attendanceChoices.some((choice) => choice.choice === "unknown");
-  const momentChoiceById = new Map(
-    momentChoices.map((choice) => [choice.moment_id, choice.choice])
+  const generalMomentIds = new Set(
+    moments.filter((moment) => moment.moment_type !== "panel").map((moment) => moment.id)
+  );
+  const generalMomentChoices = momentChoices.filter((choice) =>
+    generalMomentIds.has(choice.moment_id)
   );
   const sensitiveNeedCount = Object.values(
     accessibility?.washington_group_answers ?? {}
@@ -1115,9 +1132,6 @@ export default async function PartecipanteDashboardPage({
         selectedAttendanceSlotKeys,
         locale
       ) || copy.notProvided;
-  const selectedPanels = moments.filter(
-    (moment) => momentChoiceById.get(moment.id) === "yes"
-  );
   const supportSummary = hasAccessibilityRequest
     ? copy.supportRequested
     : copy.supportNotRequested;
@@ -1217,27 +1231,13 @@ export default async function PartecipanteDashboardPage({
               </div>
             </section>
 
-            <section className="grid gap-4">
-              <Panel title={copy.panelsTitle}>
-                {selectedPanels.length > 0 ? (
-                  selectedPanels.map((panel) => (
-                    <div
-                      key={panel.id}
-                      className="grid gap-1 border-b border-[var(--peace-border)] pb-3 last:border-b-0 last:pb-0"
-                    >
-                      <p className="font-medium">{panel.title}</p>
-                      <p className="text-sm text-[#6f7f91]">
-                        {formatDateTime(panel.starts_at, locale, copy)}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm leading-6 text-[#6f7f91]">
-                    {copy.panelsEmpty}
-                  </p>
-                )}
-              </Panel>
-            </section>
+            {panelBookingsOpen ? <ParticipantPanelBookings
+              locale={locale}
+              registrationId={registrationId}
+              rows={panelCatalog}
+              saved={firstParam(params.panelSaved)}
+              error={firstParam(params.panelError)}
+            /> : null}
 
             {activeOverlay ? (
               <ParticipantDashboardOverlay
@@ -1319,7 +1319,7 @@ export default async function PartecipanteDashboardPage({
                               availabilityUnknown={availabilityUnknown}
                               selectedSlots={selectedAttendanceSlots}
                             />
-                            <PreserveMoments momentChoices={momentChoices} />
+                            <PreserveMoments momentChoices={generalMomentChoices} />
                             <div className="grid gap-3 sm:grid-cols-2">
                               <Field label={childrenCopy.firstName}>
                                 <input
@@ -1377,7 +1377,7 @@ export default async function PartecipanteDashboardPage({
                               availabilityUnknown={availabilityUnknown}
                               selectedSlots={selectedAttendanceSlots}
                             />
-                            <PreserveMoments momentChoices={momentChoices} />
+                            <PreserveMoments momentChoices={generalMomentChoices} />
                             <Field label={copy.phone}>
                               <input
                                 name="phone"
@@ -1423,7 +1423,7 @@ export default async function PartecipanteDashboardPage({
                           selectedAttendanceSlots={selectedAttendanceSlots.map(
                             encodeAttendanceSlot
                           )}
-                          momentChoices={momentChoices.map((choice) => ({
+                          momentChoices={generalMomentChoices.map((choice) => ({
                             momentId: choice.moment_id,
                             choice: choice.choice,
                           }))}
@@ -1457,7 +1457,7 @@ export default async function PartecipanteDashboardPage({
                             registrationId={selectedRegistration.id}
                           />
                           <PreservePhone value={primaryContact?.phone ?? null} />
-                          <PreserveMoments momentChoices={momentChoices} />
+                          <PreserveMoments momentChoices={generalMomentChoices} />
                           <fieldset
                             disabled={!editable}
                             className="grid gap-3 disabled:opacity-70"
@@ -1502,7 +1502,7 @@ export default async function PartecipanteDashboardPage({
                             availabilityUnknown={availabilityUnknown}
                             selectedSlots={selectedAttendanceSlots}
                           />
-                          <PreserveMoments momentChoices={momentChoices} />
+                          <PreserveMoments momentChoices={generalMomentChoices} />
                           <input
                             type="hidden"
                             name="updatesAccessibility"
@@ -2061,21 +2061,6 @@ function MessageIcon({ active }: { active: boolean }) {
       <path d="M8 9h8" className={active ? "stroke-white" : undefined} />
       <path d="M8 13h5" className={active ? "stroke-white" : undefined} />
     </svg>
-  );
-}
-
-function Panel({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="grid gap-3 rounded-lg border border-[var(--peace-border)] bg-white p-5">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="grid gap-3">{children}</div>
-    </section>
   );
 }
 

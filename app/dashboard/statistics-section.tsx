@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 
+import type { PanelStatisticsSnapshot } from "@/lib/panels/panel-statistics";
+import { PanelStatisticsReport } from "@/app/dashboard/panel-statistics-report";
 import {
   serializeStatisticsDrilldown,
   buildAssignedGroupTree,
@@ -40,6 +42,8 @@ type StatisticsSectionProps = {
   associationStatistics?: AssociationStatisticsSnapshot;
   dashboard: StatisticsDashboard;
   navMode: StatisticsNavMode;
+  panelStatistics?: PanelStatisticsSnapshot;
+  canManage?: boolean;
 };
 
 type AssignedGroupRow = ReturnType<typeof buildAssignedGroupTree>[number];
@@ -58,6 +62,8 @@ export function StatisticsSection({
   canViewDisability = false,
   disabilityStatistics,
   associationStatistics,
+  panelStatistics,
+  canManage = false,
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
@@ -77,7 +83,7 @@ export function StatisticsSection({
       </div>
 
       <nav aria-label="Categorie di statistiche" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
-        {STATISTICS_REPORTS.filter(item => item.key !== "disability" || canViewDisability).map(({ key, label }) => (
+        {STATISTICS_REPORTS.filter(item => (item.key !== "disability" || canViewDisability) && (item.key !== "panels" || dashboard === "admin")).map(({ key, label }) => (
           <Link
             key={key}
             href={`/dashboard/${dashboard}?${new URLSearchParams({ section: "dashboard", nav: navMode, report: key })}`}
@@ -90,6 +96,15 @@ export function StatisticsSection({
           </Link>
         ))}
       </nav>
+
+      {dashboard === "admin" && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Panel">
+        <PanelStatisticsReport
+          statistics={panelStatistics}
+          dashboard={dashboard}
+          navMode={navMode}
+          canManage={canManage}
+        />
+      </ReportBlock> : null}
 
       {report === "territory" ? <ReportBlock name="territory" title="Partecipanti per gruppo o nodo">
         <TerritoryStatisticsSummary
@@ -141,7 +156,7 @@ function ReportBlock({
   title,
   children,
 }: {
-  name: StatisticsReport;
+  name: StatisticsReport | "panels";
   title: string;
   children: ReactNode;
 }) {

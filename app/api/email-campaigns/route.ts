@@ -1,8 +1,9 @@
+import { canAccessPanelManagement, isPanelCampaign } from "@/lib/panels/management-access";
 import { loadAllRows, writeRowsForIds } from "@/lib/supabase/all-rows";
 import { getEmailConfig } from "@/lib/email/config";
 import { randomUUID } from "node:crypto";
 import { after, NextResponse } from "next/server";
-import { getCurrentAuthContext } from "@/lib/auth/session";
+import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
 import { resolveSelectedCampaignRecipientIds } from "@/lib/email/campaign-selection";
 import { renderCampaignTemplate, validateCampaignTemplate } from "@/lib/email/campaign-templates";
 import { campaignHtmlToText, renderSafeCampaignHtml } from "@/lib/email/campaign-html.server";
@@ -81,19 +82,21 @@ export async function POST(request: Request) {
       : "preview"
   ) as CampaignAction;
   try {
-    if (action === "recipients") return await previewRecipients(body);
+    if (!canAccessPanelManagement(auth.eventRoles!) && isPanelCampaign(body)) return error("Accesso panel riservato all’amministratore.", 403);
+    if (action === "recipients") return await previewRecipients(auth.eventRoles!, body);
     if (action === "preview") {
-      return await previewCampaign(auth.userId!, auth.userEmail!, body, attachments);
+      return await previewCampaign(auth.userId!, auth.userEmail!, auth.eventRoles!, body, attachments);
     }
     if (action === "update_recipients") {
       return await updateCampaignRecipients(
         auth.userId!,
         auth.userEmail!,
+        auth.eventRoles!,
         String(body.campaignId ?? ""),
         body.selectedRecipientKeys ?? body.selectedParticipantIds
       );
     }
-    return await deliverCampaign(auth.userId!, auth.userEmail!, String(body.campaignId ?? ""), action);
+    return await deliverCampaign(auth.userId!, auth.userEmail!, auth.eventRoles!, String(body.campaignId ?? ""), action);
   } catch (cause) {
     const publicError = publicCampaignError(cause, action);
     if (publicError.unexpected) {
@@ -109,13 +112,19 @@ async function requireCampaignManager() {
   if (!auth?.user.email) return { response: error("Accesso non autorizzato.", 401) };
   const canSend = auth.eventRoles.some((role) => role.role === "admin" || role.role === "manager");
   if (!canSend) return { response: error("Il ruolo manager viewer non può inviare comunicazioni.", 403) };
-  return { response: null, userId: auth.user.id, userEmail: auth.user.email };
+  return {
+    response: null,
+    userId: auth.user.id,
+    userEmail: auth.user.email,
+    eventRoles: auth.eventRoles,
+  };
 }
 
-async function previewRecipients(body: Record<string, unknown>) {
+async function previewRecipients(eventRoles: EventUserRole[], body: Record<string, unknown>) {
   const service = createSupabaseServiceClient();
   const event = await getCurrentOperationalEvent(service, "id");
   if (!event) throw new Error("Nessun evento corrente configurato.");
+  assertCanManageCampaignEvent(eventRoles, event.id);
   const filters = campaignFilters(body);
   const recipients = await resolveCampaignRecipients(event.id, filters);
   if (!recipients.length) throw new Error("I filtri non individuano destinatari raggiungibili.");
@@ -123,7 +132,8 @@ async function previewRecipients(body: Record<string, unknown>) {
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
     selectedIds,
-    event.id
+    event.id,
+    canAccessPanelManagement(eventRoles)
   );
   return NextResponse.json({
     ...recipientSelectionSummary(recipientPreviews),
@@ -134,12 +144,14 @@ async function previewRecipients(body: Record<string, unknown>) {
 async function previewCampaign(
   userId: string,
   testEmail: string,
+  eventRoles: EventUserRole[],
   body: Record<string, unknown>,
   attachments: IncomingAttachment[]
 ) {
   const service = createSupabaseServiceClient();
   const event = await getCurrentOperationalEvent(service, "id,title");
   if (!event) throw new Error("Nessun evento corrente configurato.");
+  assertCanManageCampaignEvent(eventRoles, event.id);
   const name = clean(body.name, 120);
   const subject = clean(body.subject, 180);
   const message = clean(body.message, 20000);
@@ -185,6 +197,7 @@ async function previewCampaign(
         delivery_kind: recipient.deliveryKind,
         delivery_order: selectionOrder.get(recipient.recipientKey) ?? null,
         delegate_user_id: recipient.delegateUserId,
+        school_teacher_id: recipient.schoolTeacherId,
         status: selectedIds.has(recipient.recipientKey) ? "pending" : "skipped",
       }))
     );
@@ -203,12 +216,14 @@ async function previewCampaign(
     service,
     event.id,
     event.title,
-    selectedSample
+    selectedSample,
+    canAccessPanelManagement(eventRoles)
   );
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
     selectedIds,
-    event.id
+    event.id,
+    canAccessPanelManagement(eventRoles)
   );
   await service.from("audit_logs").insert({ event_id: event.id, actor_user_id: userId, action: "email_campaign.preview_created", entity_table: "email_campaigns", entity_id: campaign.id, metadata: { recipient_count: selectedIds.size, filters, attachment_count: attachments.length } });
   return NextResponse.json({
@@ -231,6 +246,7 @@ async function previewCampaign(
 async function updateCampaignRecipients(
   userId: string,
   testEmail: string,
+  eventRoles: EventUserRole[],
   campaignId: string,
   selectedValue: unknown
 ) {
@@ -242,9 +258,10 @@ async function updateCampaignRecipients(
   const service = createSupabaseServiceClient();
   const event = await getCurrentOperationalEvent(service, "id,title");
   if (!event) throw new Error("Nessun evento corrente configurato.");
+  assertCanManageCampaignEvent(eventRoles, event.id);
   const { data: campaign } = await service
     .from("email_campaigns")
-    .select("id,event_id,status,subject_template,body_template")
+    .select("id,event_id,status,subject_template,body_template,filters_snapshot")
     .eq("id", campaignId)
     .eq("event_id", event.id)
     .maybeSingle();
@@ -252,9 +269,11 @@ async function updateCampaignRecipients(
     throw new Error("La lista destinatari non è più modificabile.");
   }
 
+  if (!canAccessPanelManagement(eventRoles) && isPanelCampaign({ ...campaign.filters_snapshot, subject_template: campaign.subject_template, body_template: campaign.body_template })) return error("Accesso panel riservato all’amministratore.", 403);
+
   const { data: rows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
-    .select("recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id")
+    .select("recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,school_teacher_id")
     .eq("campaign_id", campaignId).order("id").range(from, to));
 
   const recipients = (rows ?? []).map<Recipient>((row) => ({
@@ -265,7 +284,9 @@ async function updateCampaignRecipients(
     recipientUserId: row.recipient_user_id,
     deliveryKind: row.delivery_kind as Recipient["deliveryKind"],
     delegateUserId: row.delegate_user_id,
+    schoolTeacherId: row.school_teacher_id,
   }));
+  if (!canAccessPanelManagement(eventRoles) && recipients.some(recipient => recipient.recipientType === "teacher")) return error("Accesso panel riservato all’amministratore.", 403);
   const availableIds = new Set(recipients.map((recipient) => recipient.recipientKey));
   const selectedIds = new Set(selectedRecipientKeys.filter((id) => availableIds.has(id)));
   if (!selectedIds.size) throw new Error("Seleziona almeno un destinatario valido.");
@@ -303,7 +324,8 @@ async function updateCampaignRecipients(
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
     selectedIds,
-    event.id
+    event.id,
+    canAccessPanelManagement(eventRoles)
   );
   const selectedSample = recipients.find((recipient) =>
     selectedIds.has(recipient.recipientKey)
@@ -313,7 +335,8 @@ async function updateCampaignRecipients(
     service,
     event.id,
     event.title,
-    selectedSample
+    selectedSample,
+    canAccessPanelManagement(eventRoles)
   );
   await audit(service, event.id, userId, campaignId, "email_campaign.recipients_updated", {
     recipient_count: selectedIds.size,
@@ -330,19 +353,22 @@ async function updateCampaignRecipients(
   });
 }
 
-async function deliverCampaign(userId: string, testEmail: string, campaignId: string, action: "test" | "send") {
+async function deliverCampaign(userId: string, testEmail: string, eventRoles: EventUserRole[], campaignId: string, action: "test" | "send") {
   const service = createSupabaseServiceClient();
   const { data: campaign } = await service.from("email_campaigns").select("*").eq("id", campaignId).maybeSingle();
   if (!campaign || !["draft", "ready", "partial"].includes(campaign.status)) {
     throw new Error("Campagna non disponibile o già inviata.");
   }
+  assertCanManageCampaignEvent(eventRoles, campaign.event_id);
+  if (!canAccessPanelManagement(eventRoles) && isPanelCampaign({ ...campaign.filters_snapshot, subject_template: campaign.subject_template, body_template: campaign.body_template })) return error("Accesso panel riservato all’amministratore.", 403);
   const { data: recipientRows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
     .select(
-      "id,campaign_id,recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,status"
+      "id,campaign_id,recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,school_teacher_id,status"
     )
     .eq("campaign_id", campaignId)
     .eq("status", "pending").order("id").range(from, to));
+  if (!canAccessPanelManagement(eventRoles) && (recipientRows ?? []).some(row => row.recipient_type === "teacher")) return error("Accesso panel riservato all’amministratore.", 403);
   const recipients = (recipientRows ?? []).map((row) =>
     campaignRecipientFromDatabaseRow({
       ...row,
@@ -432,6 +458,7 @@ function recipientSelectionSummary(recipients: RecipientPreview[]) {
     directCount: selected.filter((recipient) => recipient.deliveryKind === "direct").length,
     delegatedCount: selected.filter((recipient) => recipient.deliveryKind === "delegated").length,
     leaderCount: selected.filter((recipient) => recipient.deliveryKind === "leader").length,
+    teacherCount: selected.filter((recipient) => recipient.deliveryKind === "teacher").length,
   };
 }
 
@@ -441,7 +468,13 @@ function campaignFilters(body: Record<string, unknown>) {
     tagId: clean(body.tagId, 80) || null,
     serviceId: clean(body.serviceId, 80) || null,
     status: clean(body.status, 30) || "active",
-    audience: body.audience === "group_leaders" ? "group_leaders" as const : "participants" as const,
+    audience: body.audience === "group_leaders"
+      ? "group_leaders" as const
+      : body.audience === "teachers"
+        ? "teachers" as const
+        : "participants" as const,
+    panelId: clean(body.panelId, 80) || null,
+    schoolName: clean(body.schoolName, 180) || null,
   };
 }
 
@@ -457,6 +490,15 @@ function parseJsonStringArray(value: unknown) {
       : [];
   } catch {
     return [];
+  }
+}
+
+function assertCanManageCampaignEvent(eventRoles: EventUserRole[], eventId: string) {
+  const canManage = eventRoles.some(
+    (role) => role.role === "admin" || (role.role === "manager" && role.eventId === eventId)
+  );
+  if (!canManage) {
+    throw new Error("Non puoi gestire le campagne di questo evento.");
   }
 }
 

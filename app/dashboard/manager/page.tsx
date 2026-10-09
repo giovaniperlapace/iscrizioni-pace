@@ -31,6 +31,7 @@ import {
   FileDown,
   Settings,
   Mail,
+  MapPin,
   Network,
   Pencil,
   ShieldCheck,
@@ -66,6 +67,9 @@ import {
   type OperationsParticipantRow,
 } from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
+import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
+import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
@@ -103,6 +107,22 @@ import {
   getOperationalUserIdentities,
 } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEvent } from "@/lib/events/current";
+import {
+  getEventLocations,
+  normalizeEventLocationSearch,
+} from "@/lib/panels/event-locations";
+import {
+  getPanelDraftCatalog,
+  parsePanelDraftFilters,
+} from "@/lib/panels/panel-drafts";
+import {
+  emptyPanelStatisticsSnapshot,
+  getPanelStatisticsSnapshot,
+} from "@/lib/panels/panel-statistics";
+import {
+  getSchoolBookingCatalog,
+  parseSchoolBookingFilters,
+} from "@/lib/panels/school-bookings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -130,6 +150,28 @@ type ManagerPageProps = {
     serviceError?: string;
     serviceId?: string;
     serviceSaved?: string;
+    locationError?: string;
+    locationId?: string;
+    locationQ?: string;
+    locationSaved?: string;
+    locationTool?: string;
+    panelDate?: string;
+    panelError?: string;
+    panelId?: string;
+    panelLocation?: string;
+    panelQ?: string;
+    panelSaved?: string;
+    panelStatus?: string;
+    panelTool?: string;
+    panelView?: string;
+    campaignPanel?: string;
+    schoolError?: string;
+    schoolId?: string;
+    schoolPanel?: string;
+    schoolQ?: string;
+    schoolSaved?: string;
+    schoolStatus?: string;
+    schoolTool?: string;
     roleError?: string;
     roleSaved?: string;
     roleUserId?: string;
@@ -353,7 +395,7 @@ type OperationalUserRoleAssignment = {
 };
 
 
-type ManagerSection = "esportazioni" | "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
+type ManagerSection = "panel" | "esportazioni" | "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -377,6 +419,7 @@ export default async function ManagerDashboardPage({
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveManagerSection(params);
   const statisticsReport = resolveStatisticsReport(params.report);
+  if (params.report === "panels") redirect("/dashboard/manager?section=dashboard&nav=mini");
   const statisticsDrilldown =
     activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const currentEvent = await getCurrentOperationalEvent(
@@ -397,6 +440,21 @@ export default async function ManagerDashboardPage({
     legacy.set("section", "impostazioni");
     permanentRedirect(`/dashboard/manager?${legacy}`);
   }
+  const canSeeCurrentEvent = Boolean(
+    currentEventId && (!scope.eventIds || scope.eventIds.has(currentEventId))
+  );
+  const [panelLocations, panelCatalog, schoolCatalog] =
+    activeSection === "panel" && currentEventId && canSeeCurrentEvent
+      ? await Promise.all([
+          getEventLocations(serviceSupabase, currentEventId),
+          getPanelDraftCatalog(supabase, currentEventId),
+          getSchoolBookingCatalog(serviceSupabase, currentEventId),
+        ])
+      : [[], { panels: [], audienceTypes: [] }, { bookings: [], panelOptions: [] }];
+  const panelStatisticsPromise =
+    activeSection === "dashboard" && statisticsReport === "panels" && currentEventId && canSeeCurrentEvent
+      ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
+      : Promise.resolve(emptyPanelStatisticsSnapshot());
   const managerOperations =
     !dashboardLoadPlan(activeSection).operations
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
@@ -413,8 +471,9 @@ export default async function ManagerDashboardPage({
   const disabilityStatistics = (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty
     ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
     : undefined;
+  const panelStatistics = await panelStatisticsPromise;
   const statistics =
-    (activeSection === "dashboard" && statisticsReport !== "disability") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
+    (activeSection === "dashboard" && statisticsReport !== "disability" && statisticsReport !== "panels") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getManagerStatisticsSnapshot(
           serviceSupabase,
           scope,
@@ -452,6 +511,13 @@ export default async function ManagerDashboardPage({
   const selectedOperationalRole =
     managerOperations.roleUsers.find((role) => role.userId === params.roleUserId) ??
     (params.roleUserId && params.section === "ruoli" ? await loadRolelessPerson(params.roleUserId) : null);
+  const selectedLocation =
+    panelLocations.find((location) => location.id === params.locationId) ?? null;
+  const selectedPanel =
+    panelCatalog.panels.find((panel) => panel.id === params.panelId) ?? null;
+  const selectedSchoolBooking =
+    schoolCatalog.bookings.find((booking) => booking.id === params.schoolId) ?? null;
+  const panelView = params.panelView === "locations" || params.panelView === "schools" ? params.panelView : "panels";
   const navMode: ManagerNavMode = params.nav === "full" ? "full" : "mini";
 
   return (
@@ -495,8 +561,12 @@ export default async function ManagerDashboardPage({
                 canViewDisability={canViewStatistics}
                 disabilityStatistics={disabilityStatistics}
                 associationStatistics={associationStatistics}
+                panelStatistics={panelStatistics}
                 dashboard="manager"
                 navMode={navMode}
+                canManage={Boolean(
+                  currentEventId && scope.canManageEvent(currentEventId)
+                )}
               />
             ) : null}
 
@@ -540,6 +610,72 @@ export default async function ManagerDashboardPage({
               <ManagerEmailSection
                 eventId={currentEventId}
                 canManage={currentEventId ? scope.canManageEvent(currentEventId) : false}
+                initialPanelId={params.campaignPanel}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "locations" ? (
+              <PanelLocationsSection
+                dashboard="manager"
+                navMode={navMode}
+                event={
+                  currentEvent && canSeeCurrentEvent
+                    ? { id: currentEvent.id, title: currentEvent.title }
+                    : null
+                }
+                locations={panelLocations}
+                selectedLocation={selectedLocation}
+                isCreating={params.locationTool === "new"}
+                canManage={Boolean(
+                  currentEventId && scope.canManageEvent(currentEventId)
+                )}
+                query={normalizeEventLocationSearch(params.locationQ)}
+                error={params.locationError}
+                saved={params.locationSaved}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "panels" ? (
+              <PanelDraftsSection
+                dashboard="manager"
+                navMode={navMode}
+                event={
+                  currentEvent && canSeeCurrentEvent
+                    ? {
+                        id: currentEvent.id,
+                        title: currentEvent.title,
+                        startsOn: currentEvent.starts_on ?? "",
+                        endsOn: currentEvent.ends_on ?? "",
+                      }
+                    : null
+                }
+                panels={panelCatalog.panels}
+                locations={panelLocations}
+                audienceTypes={panelCatalog.audienceTypes}
+                selectedPanel={selectedPanel}
+                isCreating={params.panelTool === "new"}
+                canManage={Boolean(
+                  currentEventId && scope.canManageEvent(currentEventId)
+                )}
+                filters={parsePanelDraftFilters(params)}
+                error={params.panelError}
+                saved={params.panelSaved}
+              />
+            ) : null}
+
+            {activeSection === "panel" && panelView === "schools" ? (
+              <SchoolBookingsSection
+                dashboard="manager"
+                navMode={navMode}
+                event={currentEvent && canSeeCurrentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}
+                bookings={schoolCatalog.bookings}
+                panelOptions={schoolCatalog.panelOptions}
+                selectedBooking={selectedSchoolBooking}
+                isCreating={params.schoolTool === "new"}
+                canManage={Boolean(currentEventId && scope.canManageEvent(currentEventId))}
+                filters={parseSchoolBookingFilters(params)}
+                error={params.schoolError}
+                saved={params.schoolSaved}
               />
             ) : null}
 
@@ -639,6 +775,13 @@ function ManagerSidebar({
       Icon: Users,
       label: "Gestione iscritti",
       help: canManage ? "Elenco e modifiche" : "Elenco partecipanti",
+    },
+    {
+      key: "panel",
+      href: "/dashboard/manager?section=panel&nav=mini",
+      Icon: MapPin,
+      label: "Panel",
+      help: "Location e programma",
     },
     {
       key: "email",
@@ -926,7 +1069,7 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 }
 
 function canAccessManagerSection(section: ManagerSection, canManage: boolean): boolean {
-  return canManage || section === "dashboard" || section === "iscritti" || section === "esportazioni";
+  return section !== "panel" && (canManage || section === "dashboard" || section === "iscritti" || section === "esportazioni");
 }
 
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {
@@ -936,6 +1079,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
     params.section === "dashboard" ||
     params.section === "iscritti" ||
     params.section === "impostazioni" ||
+    params.section === "panel" ||
     params.section === "email" ||
     params.section === "ruoli" ||
     params.section === "gruppi"

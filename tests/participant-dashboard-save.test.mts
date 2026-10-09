@@ -10,7 +10,7 @@ import { toRegistrationChildRows } from "../lib/registrations/registration-child
 
 // Run the complete production action with the real PostgREST request builder.
 const source = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
-const action = source.slice(source.indexOf("export async function updateParticipantDashboard("), source.indexOf("export async function updateEventOpeningState("));
+const action = source.slice(source.indexOf("export async function updateParticipantDashboard("), source.indexOf("export async function setParticipantPanelBooking("));
 const compiled = ts.transpileModule(action.replace("export async", "async"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
 const registrationId = "11111111-1111-4111-8111-111111111111";
 function fixture({ role = "partecipante", array = false, owner = "self", failure = "", closed = false, cancelled = false } = {}) {

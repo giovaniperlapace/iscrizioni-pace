@@ -1,5 +1,70 @@
 # AGENTS.md
 
+## Rilascio admin autorizzato — aggiornamento 2026-10-09
+
+- Nuova indicazione esplicita: pubblicare in production e applicare le migration,
+  ma rendere le nuove funzioni panel disponibili solo nella dashboard admin.
+  Manager e viewer attendono il via libera dell’utente dopo il suo collaudo.
+  Questa decisione supera l’accesso manager/viewer descritto nella preparazione.
+- La home rimane pubblica e invariata, con le iscrizioni all’evento operative;
+  non mostra la nuova sezione panel. Restano chiuse solo catalogo e iscrizioni
+  pubbliche dei panel, compreso il flusso scuole pubblico.
+- Controlli prima dei loader e delle azioni, RPC/RLS limitate all’admin,
+  statistiche e campagne panel/scuole protette anche da richieste dirette.
+  Comunicazioni condivisa disponibile direttamente nella dashboard admin.
+- Migration aggiuntive `20261009140000_admin_panel_acceptance.sql` e
+  `20261009150000_panel_default_audiences.sql`: restrizione ruoli e catalogo
+  Iscritti/Scuole/Ospiti; nessuna location o capienza di esempio in production.
+- Inventario production: lotto di 16 migration panel; esclusa la correzione dati
+  storica non dipendente `20260726120000`, assente nel registro remoto.
+  Backup server verificato; procedure ed esiti in `docs/panel-reserved-release.md`.
+- Lotto applicato e registrato in production in un’unica transazione; verificati
+  conteggi e hash delle 39 tabelle preesistenti. Conservati 3.350 iscrizioni,
+  3.457 partecipanti, 125 gruppi e zero check-in. Nessun nuovo destinatario email.
+  Verifiche finali: 719 test, lint, TypeScript, build e browser desktop/mobile.
+- Preservare branch panel e stash del collaudo. Il riallineamento autorizzato
+  deve mantenere le funzioni future e le decisioni più recenti, non sovrascriverle.
+
+
+## Preparazione rilascio gestionale riservato — 2026-10-09
+
+- L'utente richiede di preparare su main le funzioni gestionali panel già
+  realizzate fino a P10, mantenendo la home production senza annunci e senza
+  aprire catalogo, iscrizioni personali, capigruppo o scuole pubbliche.
+  Location, quote, prenotazioni scuola interne, statistiche e destinatari
+  campagne restano utilizzabili da admin/manager; viewer in sola lettura.
+- Integrata localmente la base panel `32e7d41` in main `79897d7`, con merge
+  senza commit e conflitti risolti conservando le correzioni recenti di main.
+  P11–P13, cerimonie, scanner e badge restano sul panel `42bfcca`. Nessun
+  commit, push, deployment, SQL remoto o email in questa preparazione.
+- Nuova migration locale `20261009120000_reserved_panel_release.sql`:
+  `events.panel_access_mode` internal/catalog/open, default internal,
+  controlli RPC/RLS e azioni server, chiusura serializzata con le prenotazioni,
+  audit della modalità e conteggio canonico dei posti. Convalidare un panel
+  non apre l'evento al pubblico. Nessun comando UI di apertura aggiunto.
+- Home production conservata in `app/registration-home.tsx`; home futura e
+  programma panel mantenuti, selezionati solo dalla modalità esplicita.
+  Catalogo gestionale con prenotati e rimanenti per quota; letture paginate
+  oltre 1.000 righe, errori bloccanti senza risultati parziali o zeri inventati.
+- L'utente autorizza a sincronizzare il panel quando necessario, preservando
+  le funzioni future. Dopo il commit autorizzato, integrare main nel panel con
+  merge e verifica staging, senza sostituzioni di file in blocco. Il branch
+  panel non è stato modificato durante questa preparazione senza commit.
+- Collaudo etichette sospeso: prossimo passo pulsante per stampare un singolo
+  QR esistente senza rigenerazione o presenza. Tutto il lavoro locale del
+  collaudo è nello stash `fa1ec7fa339a2b944045bf67e90cc2a1e9efec85` (inclusi
+  file non tracciati); ripristinarlo solo sul panel, non su main. Conservato
+  anche lo stash precedente sulle migration production.
+- La richiesta di posti rimanenti nel catalogo pubblico e lista d'attesa
+  supera la precedente esclusione della coda. Pianificare una milestone prima
+  dell'apertura delle iscrizioni; nessuna regola FIFO, priorità o scadenza
+  decisa implicitamente. Non sono implementate da questa tranche gestionale.
+- Verificati 711 test, lint, TypeScript, build, SQL PostgreSQL 17 temporaneo
+  con ruoli e concorrenza, browser sintetico desktop/mobile e home sette lingue.
+  Registro migration/configurazione email production e collaudo autenticato
+  del deployment restano da verificare. Dettagli e procedura di rilascio in
+  `docs/panel-reserved-release.md`; niente pubblicazione dichiarata conclusa.
+
 ## QR individuale nelle schede Manager/Admin — 2026-10-07
 
 - Chiarimento dell’utente: la segnalazione riguarda la scheda Manager, che non
@@ -1212,6 +1277,24 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Sincronizzazione main nel panel — 2026-09-12
+
+- Integrato `origin/main` a `0bc2997` sulla base panel `39deb81`; analisi dei
+  10 commit, conflitti e verifiche in `docs/panel-main-integration-2026-09-12.md`.
+  Restano P11-P16 sul branch panel e il rinvio del rilascio production.
+- Conservate le correzioni applicative di main e le funzioni panel. Il branch
+  panel mantiene il proprio lockfile Next 16.3.0/React 19.2.8; usare `npm ci`
+  dopo il cambio branch. La nota storica Next 16.2.9 riguarda main: la fixture
+  panel richiede ancora `bfcacheId`, come verificato dal typecheck.
+- La migration `20260910120000_leader_attendance.sql` è presente nel codice
+  ma non ancora registrata nello staging (RPC assente al controllo read-only).
+  Applicarla su richiesta prima del collaudo del salvataggio disponibilità.
+  Queste sono intenzioni dichiarate, distinte da prenotazioni panel e dalle
+  presenze effettive P11. Nessuna modifica SQL remota durante il merge.
+- L'assenza della migration dati `20260813170000` è preesistente e legata alla
+  fixture; non applicarla automaticamente. Le migration panel risultano
+  registrate. Nessun push/deploy incluso in questa sincronizzazione locale.
+
 ## Indicatori di attesa condivisi — 2026-09-12
 
 - I collegamenti applicativi usano `components/pending-link.tsx`, wrapper di
@@ -2107,6 +2190,19 @@ notifica capogruppo e coda territoriale, incluse le tranche 9, 14.1 e 24 agosto.
 - La Milestone 14 ha sostituito la favicon placeholder con `app/favicon.ico`:
   colomba bianca stilizzata su sfondo blu istituzionale, coerente con la
   locandina e leggibile nelle tab browser.
+- Dal 2026-08-13 la prima schermata della home include in fondo un richiamo
+  localizzato e accessibile al programma dei panel sottostante. Il richiamo
+  riusa il motivo grafico `PeaceLineMark` e una freccia animata con fallback
+  `prefers-reduced-motion`; il click scorre in modo fluido fino all'ancora
+  `#panel-program`, mentre con movimento ridotto torna allo spostamento
+  immediato. Il richiamo deve restare visibile come ponte tra accesso e
+  programma. La CTA inversa per registrarsi o accedere compare soltanto dopo
+  l'intero elenco dei panel e punta a `#personal-access` sulla sezione hero,
+  non direttamente all'input: in questo modo il ritorno animato ripristina la
+  prima schermata con il modulo email centrato nel layout. La CTA inversa
+  riprende la stessa pillola grafica, il `PeaceLineMark` e una freccia verso
+  l'alto; non mostrare sotto una descrizione dell'accesso, già presente nella
+  hero di destinazione.
 - Il 2026-06-22, dopo chiusura della Milestone 14, la roadmap e' stata
   aggiornata: prima della vecchia Milestone 15 sulle email personalizzate
   bisogna completare Milestone 14.1 e 14.2. Milestone 14.1 consolida il flusso
@@ -2818,18 +2914,31 @@ Applicazione su Hetzner/Coolify:
 - La CLI raggiunge il DB interno ma fallisce con TLS verso Postgres self-hosted; la migration e' stata applicata con `psql` dentro il container database.
 - La versione e' registrata in `supabase_migrations.schema_migrations` come `20260613120000:initial_schema_and_rls`.
 
-Procedura rapida per migration future su questo Supabase self-hosted:
+Procedura storica per migration su questo Supabase self-hosted:
 
 - Creare una nuova migration versionata in `supabase/migrations/<timestamp>_<nome>.sql`.
 - Verificare staticamente il diff SQL e non inserire segreti o dati personali.
 - Applicare la migration con:
 
+Dal 2026-08-05 lo script non accetta piu' un target implicito e non contiene
+fallback verso production:
+
 ```bash
-./scripts/apply-remote-migration.sh supabase/migrations/<timestamp>_<nome>.sql
+npm run db:migrate:staging -- supabase/migrations/<timestamp>_<nome>.sql
+npm run db:migrate:production -- supabase/migrations/<timestamp>_<nome>.sql \
+  --confirm-production <timestamp>
 ```
 
-- Lo script usa `.env.local` se presente, altrimenti i default operativi già noti: SSH `root@91.99.81.31`, chiave `~/.ssh/id_ed25519_hetzner_20260613`, container `supabase-db-ammnuajlmd83t94cfy3us6cw`.
-- Lo script copia il file SQL sul server, lo applica con `psql` dentro il container DB, registra la versione in `supabase_migrations.schema_migrations` e invia `notify pgrst, 'reload schema'`.
+- Staging legge soltanto `.env.staging.local`; production legge soltanto
+  `.env.production.local`.
+- Entrambi richiedono `DEPLOYMENT_ENVIRONMENT` coerente, host SSH, path chiave
+  assoluto, stack e container espliciti. Staging rifiuta il container
+  production noto.
+- Il comando production richiede inoltre la conferma con la versione esatta
+  della migration. Per il ciclo panel P0-P16 richiede il collaudo complessivo
+  e una richiesta esplicita di rilascio; il rilascio è attualmente rinviato.
+- Lo script copia il file SQL sul server, lo applica con `psql` nel container
+  selezionato, registra la versione e invia `notify pgrst, 'reload schema'`.
 - Non usare `supabase db push` su questo ambiente finché la connessione CLI verso il Postgres interno continua a fallire con TLS.
 
 Verifiche eseguite dopo applicazione:
@@ -4257,6 +4366,368 @@ Quando il piano verrà cancellato:
 - Test su confini temporali, ora legale, cambio anno, settimane vuote e loader
   oltre 1.000 schede. Nessuna migration o modifica dei dati richiesta.
 
+- Decisione aggiornata il 2026-09-12: l'utente conferma il buon esito fino a
+  P10 e mantiene P11-P16 sullo stesso branch `codex/panel-p0-p10` e staging.
+  Conservare P0-P10 e le correzioni successive; non rinominare o ricreare il
+  branch. Sostituita la precedente previsione di rilascio dopo P10 e ciclo
+  separato P11-P16. Merge verso `main` e production restano rinviati fino a
+  richiesta esplicita futura, anche dopo P16; prossima milestone P11.
+- Il lavoro ordinario continua su `main`. Incorporare periodicamente
+  `origin/main` nel branch panel con merge, mai rebase/reset/force push,
+  dopo verifica e tutela del lavoro locale. Risolvere i conflitti conservando
+  entrambe le evoluzioni, senza sostituzioni indiscriminate di file. Annotare
+  SHA incorporato, conflitti, migration e regressioni nel piano panel.
+  Non riscrivere migration già applicate; verificare ordine e dipendenze sullo
+  staging. Il merge Git non autorizza né esegue applicazioni SQL remote.
+- `PIANO_DI_LAVORO_PANEL.md`, sezione 2, definisce sincronizzazione e rilascio:
+  test delle funzioni esistenti e nuove, RLS/concorrenza, inventario migration,
+  backup e rollback. Le vecchie note datate P0-P10 sono storico delle tranche,
+  non richieste di rifare quanto accettato; mantenere le evidenze di collaudo.
+- Durante il bootstrap staging del 2026-08-05 e' stato rimosso il file
+  ridondante `20260728120000_single_active_group_registration_link.sql`: aveva
+  lo stesso timestamp di `20260728120000_single_group_registration_link.sql`
+  ma ne conteneva soltanto un sottoinsieme. Production registra correttamente
+  la versione `20260728120000` col nome `single_group_registration_link`; il
+  file canonico e' quindi quello completo ancora presente nel repository.
+- Il 2026-08-05 e' stato creato in Coolify l'ambiente `staging` del progetto
+  `iscrizioni_pace_cool`, con stack Supabase indipendente
+  `jiio6ou5wzmma2xwas53cf1d` e API HTTPS
+  `https://supabase-staging-jiio6ou5wzmma2xwas53cf1d.91.99.81.31.sslip.io`.
+  Lo stack ha database, Auth, Storage e chiavi distinti dalla production; tutte
+  le migration canoniche fino alla P1 risultano applicate. Sono
+  presenti soltanto utenti sintetici con domini `.example.invalid` per i ruoli
+  admin, manager e partecipante. Non copiare dati personali dalla production.
+- Su Vercel sono state configurate per l'ambiente `Preview`, senza modificare
+  lo scope `Production`, le variabili Supabase staging, i segreti QR/cron e la
+  consegna email in modalita' `log`. Le tre URL applicative
+  `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` non vanno impostate con
+  localhost: verranno aggiunte dopo il primo deploy del branch usando il suo
+  URL Preview stabile. Nello stesso momento bisogna aggiungere quell'URL alla
+  site URL/allowlist redirect di Supabase Auth staging. Fino ad allora login e
+  callback Auth del deploy Preview non sono considerati collaudabili.
+- `npm run dev:staging` e `npm run build:staging` eseguono prima il readiness
+  check e poi avviano Next tramite `scripts/run-next-staging.mjs`. Non
+  sostituirli con `node --env-file=.env.staging.local ...`: Next crea worker
+  Node che rifiutano `--env-file` quando viene ereditato in `NODE_OPTIONS`.
+- La Milestone panel P0 e' stata approvata il 2026-08-05. I pubblici iniziali
+  sono `Iscritti`/`individual`, `Scuole`/`school_booking` e
+  `Ospiti`/`internal_assignment`; partecipante e minori collegati consumano
+  `1 + minori attivi` e condividono la scelta panel nella prima versione;
+  `Ospiti` e' assegnabile soltanto internamente. Un panel pubblicato richiede
+  location, intervallo valido e almeno una sezione; la somma delle sezioni puo'
+  essere inferiore alla capienza fisica ma non puo' superarla. Le traduzioni
+  restano applicative. Un pubblico disattivato
+  resta nello storico e non e' aggiungibile a nuovi panel; questa possibilita'
+  e' una tutela tecnica, non un caso d'uso che richiede enfasi nella UI.
+- La Milestone P1 usa la migration
+  `20260805160000_panel_foundation.sql` e il seed esclusivamente sintetico
+  `supabase/seeds/panel-p1-staging.sql`. Estende le tabelle canoniche
+  `event_locations` ed `event_moments`, mantiene compatibilita' con
+  `is_public`, aggiunge `panel_audience_types` e `panel_seat_sections`, blocca
+  sovrapposizioni di location e valida le capienze con constraint trigger
+  differibili. Le bozze sono leggibili solo da admin/manager/manager_viewer;
+  il pubblico legge soltanto panel pubblicati. Pubblicazione e ritiro sono
+  auditati.
+- Il 2026-08-05 migration, vincoli e seed P1 sono stati prima eseguiti sul
+  database staging dentro transazioni terminate deliberatamente in rollback.
+  I test reali hanno accettato configurazione e fixture valide e rifiutato
+  totale errato, location sovrapposta e nuovo uso di un pubblico inattivo.
+  Dopo questa revisione la versione `20260805160000` e' stata applicata e
+  registrata soltanto nello staging, seguita dalla fixture sintetica: 2
+  location, 3 pubblici, 3 panel pubblicati e 9 sezioni, senza errori di
+  capienza. Un test RLS con rollback ha confermato che anon vede i tre panel
+  pubblicati ma non le bozze e che `manager_viewer` legge le bozze. Bozza e
+  ruolo temporanei non sono rimasti nel database. La REST API anon restituisce
+  esattamente i tre panel sintetici. Production non contiene la migration P1.
+- Il 2026-08-05 la Milestone panel P2 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  Admin, manager e manager viewer condividono la stessa sezione dashboard
+  `Panel`, inizialmente composta dalla sottovista `Location`. La sottovista
+  usa `event_locations` come fonte canonica, mostra nome, indirizzo, capienza
+  e tutti i panel `event_moments` di tipo `panel` associati, con stato bozza o
+  pubblicato; la ricerca copre anche i titoli dei panel. Su mobile le location
+  sono card, da `md` in poi tabella.
+- Creazione e modifica location usano le Server Actions
+  `saveEventLocation`/`deleteEventLocation` e il componente condiviso
+  `app/dashboard/panel-locations-section.tsx`. Nome e indirizzo sono limitati
+  rispettivamente a 100 e 240 caratteri; la capienza deve essere un intero
+  positivo. Le location legacy con `max_capacity` nullo restano visibili come
+  `Capienza da definire` e possono essere completate dall'overlay. Una
+  location e' eliminabile soltanto se nessun momento la usa. Il ruolo
+  `manager_viewer` vede location e associazioni ma non riceve controlli di
+  scrittura; le Server Actions verificano comunque admin globale o manager
+  dello stesso evento.
+- La capienza di una location collegata a panel pubblicati puo' essere cambiata
+  soltanto se resta almeno pari alla somma dei posti delle sezioni di ogni panel
+  collegato; la Server Action mostra un messaggio esplicito e il constraint
+  trigger resta l'ultima protezione transazionale. Creazione, modifica ed
+  eliminazione location producono audit `event_location.created`,
+  `event_location.updated` ed `event_location.deleted` senza registrare
+  l'indirizzo nei metadata.
+- La migration P2 locale e'
+  `20260805200000_panel_location_management.sql`: aggiunge i constraint di
+  lunghezza/non-vuoto e la policy RLS di scrittura location per il solo ruolo
+  `manager`; `manager_viewer` conserva la sola lettura. Al termine del lavoro
+  locale del 2026-08-05 la migration non e' applicata ne' allo staging ne'
+  alla production. Prima della revisione remota applicarla esclusivamente allo
+  staging secondo `PIANO_DI_LAVORO_PANEL.md`.
+- Il 2026-08-05 la Milestone P3 e' stata implementata localmente sul branch
+  `codex/panel-p0-p10`, senza commit, push, deploy o migration remota. La
+  sezione `Panel` usa ora due sottoviste condivise da admin e manager:
+  `Panel`, predefinita, e `Location`. La tabella panel e' filtrabile per testo,
+  stato, data e location; usa card su mobile e tabella da `md` in poi. Il ruolo
+  `manager_viewer` consulta panel e quote in sola lettura.
+- Le bozze panel si creano e modificano in overlay con titolo, descrizione,
+  orari nel fuso `Europe/Rome`, location e righe dinamiche di sezioni. Titolo e
+  descrizione sono limitati a 160 e 2000 caratteri; sono ammesse al massimo 20
+  sezioni, ciascun tipo pubblico puo' comparire una sola volta e la capienza di
+  sezione e' un intero non negativo. La bozza puo' essere salvata senza sezioni
+  o con somma inferiore alla capienza, ma mai con una somma superiore; la UI
+  mostra in tempo reale assegnati, capienza e differenza e disabilita il
+  salvataggio in caso di eccedenza. Location e intervallo sono invece obbligatori e devono
+  rientrare nelle date evento. La UI segnala subito le sovrapposizioni note e
+  disabilita il salvataggio finche' orario o location non vengono corretti; il
+  vincolo exclusion P1 resta la protezione definitiva.
+- La migration P3 locale e'
+  `20260805220000_panel_draft_management.sql`. Aggiunge i constraint di
+  lunghezza per i panel e la RPC autenticata `public.save_panel_draft`, che in
+  una sola transazione crea o aggiorna esclusivamente una bozza, sostituisce le
+  sue `panel_seat_sections`, verifica scope evento/pubblici/location e registra
+  audit `panel.draft_created` o `panel.draft_updated`. La funzione autorizza
+  admin globale e manager dell'evento tramite `app.has_event_role`; non
+  autorizza `manager_viewer`. Al termine del lavoro locale la migration non e'
+  applicata ne' allo staging ne' alla production.
+- Il 2026-08-05 la Milestone panel P4 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  La tabella panel permette al manager/admin di pubblicare una singola bozza o
+  una selezione esplicita delle bozze filtrate; checkbox di riga e intestazione
+  ignorano i panel gia' pubblicati. Il dialogo riepiloga numero e titoli e
+  chiarisce che il batch e' atomico. Stato e data di pubblicazione sono
+  visibili sia nelle card mobile sia nella tabella desktop. Il
+  `manager_viewer` conserva la consultazione senza controlli di scrittura.
+- La migration P4 locale e'
+  `20260805230000_panel_publication_management.sql`. La RPC autenticata
+  `public.publish_panels` blocca panel e sezioni, verifica scope, intervallo,
+  location attiva, presenza delle sezioni e totale non superiore alla capienza
+  per ogni elemento, quindi pubblica tutto nella stessa transazione. I retry sono idempotenti;
+  oltre agli audit individuali `panel.published` gia' prodotti dalla P1, i
+  batch con piu' elementi registrano `panel.batch_published`.
+- I panel pubblicati sono modificabili con la RPC transazionale
+  `public.save_published_panel`, che sostituisce contenuti e sezioni soltanto
+  se la configurazione resta pubblicabile, impedisce che la capienza
+  individuale scenda sotto le scelte `moment_attendance_choices` confermate di
+  iscrizioni non annullate e registra `panel.published_updated`. L'audit
+  contiene solo indicatori di modifica, orari/location e numero aggregato
+  delle iscrizioni coinvolte, non dati personali. Prima della P6 le scelte
+  canoniche non identificano ancora la sezione: il controllo usa quindi la
+  somma delle sezioni col canale `individual`; la P6 dovra' rendere il vincolo
+  puntuale sulla sezione quando estendera' le prenotazioni atomiche.
+- L'overlay di modifica pubblicata mostra sempre quante iscrizioni confermate
+  risultano coinvolte e segnala che il collegamento a campagne filtrate per
+  panel verra' attivato dalla P9. Il salvataggio revalida anche la home per
+  rendere immediatamente visibile il catalogo pubblico alle future UI P5.
+  Test applicativi, lint, typecheck e build sono verdi; migration, RLS,
+  concorrenza e UI autenticata restano da collaudare esclusivamente sullo
+  staging prima di considerare conclusa P4. Il test transazionale predisposto
+  e' `tests/sql/panel-publication-rollback-check.sql`: verifica rollback totale
+  del batch invalido, batch valido, retry idempotente, modifica pubblicata,
+  audit e rifiuto del `manager_viewer`, terminando con errore deliberato per
+  annullare tutte le fixture. Production resta invariata.
+- Dal 2026-08-07 la migration
+  `20260807120000_allow_underfilled_panel_sections.sql` sostituisce la regola
+  iniziale di uguaglianza esatta: i posti non distribuiti sono ammessi sia in
+  bozza sia per panel pubblicati, mentre ogni eccedenza e' bloccata nella UI,
+  nella Server Action e dai vincoli/RPC database. Le statistiche considerano
+  incoerente soltanto il superamento della capienza, non una distribuzione
+  inferiore. La migration e' stata applicata e registrata sullo staging il
+  2026-08-07; il deploy Preview e' stato verificato con eccedenza bloccante e
+  distribuzione inferiore consentita, senza salvare modifiche ai panel
+  sintetici. Production resta invariata.
+- Il 2026-08-05 la Milestone panel P5 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  La home anonima contiene ora una sezione programma accessibile e responsive,
+  raggruppata per giorno nel fuso `Europe/Rome`, con titolo, descrizione,
+  orario, location, indirizzo, stato disponibilita' e CTA verso il form email
+  di accesso personale. La sezione e i metadata sono tradotti in italiano,
+  inglese, francese, tedesco, spagnolo, neerlandese e ucraino; lo stato vuoto
+  resta esplicito quando non esistono panel pubblicati.
+- La migration P5 locale e'
+  `20260806090000_public_panel_program.sql`. La funzione security-definer
+  `public.get_public_panel_program()` restituisce soltanto i panel pubblicati
+  dell'evento corrente e uno stato aggregato `available`, `full` o
+  `unavailable` riferito al solo canale individuale. Non espone capienze,
+  occupazione o quote scuola/ospiti. Nel calcolo provvisorio P5 ogni scelta
+  confermata vale `1 + minori collegati`; la P6 dovra' aggiornare la funzione
+  insieme alla nuova identificazione canonica della sezione. Se la RPC non e'
+  ancora installata durante un rollout migration-first, la home mostra il solo
+  stato programma in aggiornamento; errori diversi da `PGRST202` non vengono
+  nascosti.
+- Test applicativi, lint, typecheck, build e revisione browser dello stato
+  vuoto sono verdi, inclusi responsive mobile e cambio italiano/inglese. Il
+  test SQL staging predisposto e'
+  `tests/sql/public-panel-program-rollback-check.sql`. Prima di considerare P5
+  conclusa bisogna applicare la migration esclusivamente allo staging e
+  collaudare card reali, bozze invisibili, stato completo e tutte le lingue.
+  Production resta invariata.
+- Il 2026-08-05 la Milestone panel P6 e' stata implementata localmente sul
+  branch `codex/panel-p0-p10`, senza commit, push, deploy o migration remota.
+  La migration locale e'
+  `20260806120000_individual_panel_bookings.sql`: estende la tabella canonica
+  `moment_attendance_choices` con `seat_section_id`, senza creare una seconda
+  tabella prenotazioni, e aggiunge le RPC autenticate
+  `get_participant_panel_catalog` e `set_individual_panel_booking`. La scelta
+  self-service e la cancellazione sono idempotenti; la prenotazione blocca in
+  ordine registrazione, panel e sezioni, ricontrolla evento/panel/pubblico,
+  sezione `individual`, capienza e sovrapposizioni nella stessa transazione e
+  registra audit senza dati personali.
+- Ogni scelta individuale confermata occupa dinamicamente `1 + minori
+  collegati`. I constraint trigger P6 impediscono sia di ridurre una sezione
+  pubblicata sotto l'occupazione reale sia di aggiungere minori oltre la
+  capienza gia' prenotata. La dashboard partecipante sostituisce i minori con
+  la RPC transazionale `replace_owned_registration_children`, così una
+  modifica del nucleo non puo' lasciare una sostituzione parziale. Le scelte
+  dei panel non vengono piu' reinviate nei campi hidden dei form anagrafici:
+  quei form preservano soltanto le scelte dei momenti generali, mentre i panel
+  passano sempre dalla RPC atomica dedicata.
+- L'area partecipante mostra panel pubblicati e sezioni individuali, scelte
+  correnti, data/ora/location, numero di posti richiesti dal nucleo e stato
+  `Disponibile`, `Completo` o conflitto; i testi sono presenti in tutte le
+  sette lingue supportate. Il conteggio pubblico P5 e' stato sostituito con un
+  calcolo puntuale per sezione senza esporre capienza o occupazione. Test
+  applicativi, lint, typecheck e build sono verdi. Il test SQL con rollback
+  predisposto e' `tests/sql/individual-panel-bookings-rollback-check.sql`;
+  migration, RLS, ultimo posto concorrente, doppio click e UI autenticata
+  desktop/mobile devono essere collaudati esclusivamente sullo staging prima
+  di considerare P6 conclusa. Production resta invariata.
+- Il 2026-08-05 e' stata avviata la Milestone panel P7 sul branch
+  `codex/panel-p0-p10`, senza applicazione remota, commit o push. La migration
+  locale `20260806160000_school_panel_bookings.sql` introduce entita' separate
+  per docenti (`school_booking_teachers`), prenotazioni di classe
+  (`school_bookings`), righe panel (`school_panel_reservations`) e QR opachi di
+  gruppo (`school_booking_qr_tokens`): non crea partecipanti o iscrizioni
+  individuali fittizie e non raccoglie identita' degli studenti. Il docente e'
+  deduplicato per evento ed email normalizzata; una sessione autenticata
+  possiede le prenotazioni che corrispondono all'email verificata del JWT,
+  mentre manager/admin gestiscono e `manager_viewer` legge soltanto.
+- Le RPC P7 `save_school_booking` e `cancel_school_booking` bloccano panel e
+  sezioni in ordine stabile, accettano esclusivamente sezioni col canale
+  `school_booking`, sostituiscono atomicamente le righe prenotate, bloccano
+  sovrapposizioni e overbooking, liberano i posti all'annullamento e revocano
+  il QR attivo. La capienza canonica di una sezione ora somma anche le
+  prenotazioni scuola, mantenendo compatibilita' con i controlli P6. Le azioni
+  producono audit aggregato senza email, telefono, nome scuola o nomi studenti.
+- Il backoffice condiviso admin/manager aggiunge la sottovista `Scuole` nella
+  sezione `Panel`, con ricerca, filtri per stato/panel, tabella scuola-docente-
+  panel-quantita', overlay di creazione/modifica/annullamento e vista read-only
+  per `manager_viewer`. La creazione manuale richiede che l'operatore dichiari
+  il consenso privacy del docente e genera un QR gruppo opaco. Prima di
+  considerare P7 conclusa restano obbligatori verifica RLS tramite API,
+  concorrenza reale sullo staging e collaudo browser desktop/mobile.
+- Il test SQL P7 e' `tests/sql/school-panel-bookings-rollback-check.sql`. Il
+  2026-08-05 e' stato eseguito sul database staging dopo aver caricato P2-P7
+  nella stessa transazione non persistente: ha confermato sovrapposizione
+  rifiutata, quota scuola piena, riuso dello stesso docente per piu' classi,
+  annullamento con rilascio posti, proprieta' tramite email verificata e rifiuto
+  dell'utente estraneo. La transazione e' terminata in rollback e nello staging
+  resta applicata soltanto P1; per il collaudo browser bisogna applicare
+  ordinatamente P2-P7 allo staging, mai alla production in questa fase.
+- Il 2026-08-06 e' stata avviata localmente la Milestone panel P8 sul branch
+  `codex/panel-p0-p10`. La migration
+  `20260806190000_public_school_booking_flow.sql` aggiunge la creazione
+  pubblica atomica delle prenotazioni sulla sola quota `school_booking` e il
+  collegamento dell'identita' docente dopo verifica email. La route `/scuole`
+  raccoglie una classe/gruppo per prenotazione senza dati degli studenti;
+  conferma, QR e magic link sono inviati come email transazionale. La route
+  `/dashboard/docente` consente alla stessa email verificata di consultare piu'
+  classi, correggere/ridurre posti, annullare e scaricare il QR. La prima
+  tranche non e' ancora stata applicata allo staging: prima della revisione
+  completare testi docente multilingua, test SQL con rollback e collaudo
+  browser mobile/accessibile. Nessuna modifica P8 e' in production.
+- Il 2026-08-06 e' stata avviata localmente la Milestone panel P9 sul branch
+  `codex/panel-p0-p10`. La console campagne ha ora il filtro cercabile `Panel`
+  nella tab partecipanti, derivato dalle sole scelte canoniche correnti
+  `moment_attendance_choices.choice = 'yes'` con sezione panel, senza usare tag
+  o snapshot. La nuova audience alternativa `Professori` deduplica per
+  `school_booking_teachers`, include soltanto docenti con prenotazioni
+  submitted/confirmed e riserve panel attive, mostra scuole e panel e offre i
+  relativi filtri. Cambiare audience azzera sempre la selezione; cambiare
+  filtri non la azzera e la checkbox di intestazione continua ad agire sulle
+  sole righe filtrate.
+- La migration P9 locale e'
+  `20260806200000_panel_campaign_audiences.sql`: aggiunge a
+  `email_campaign_recipients` il target tipizzato `teacher`, il riferimento
+  `school_teacher_id` e il delivery kind dedicato, preservando coda globale,
+  recipient key esplicite e log senza indirizzi/corpi in chiaro. I template
+  campagne supportano anche `{{scuola}}` e `{{panel}}`; per audience diverse i
+  valori non pertinenti restano vuoti. Test (192), lint, typecheck, build e
+  collaudo browser della console demo sono verdi. Prima di chiudere P9 restano
+  applicazione ordinata P2-P9 sullo staging, verifica SQL/RLS e collaudo
+  end-to-end autenticato in delivery mode `log`; production resta invariata.
+- Il 2026-08-07 e' stato eseguito un audit locale complessivo delle Milestone
+  panel P0-P9 rispetto a `PIANO_DI_LAVORO_PANEL.md`. La sostituzione dei minori
+  in P6 ora blocca prima la registrazione proprietaria, nello stesso ordine
+  della prenotazione individuale, così aggiornamento del nucleo e ultimo posto
+  non possono calcolare contemporaneamente dimensioni diverse. In P8 il form
+  pubblico riceve le opzioni scuola dalla RPC security-definer
+  `get_public_school_booking_options`, che non restituisce capienza o
+  occupazione; la lettura anonima diretta di `panel_seat_sections` e' revocata
+  e la policy SELECT resta soltanto operativa. Accesso, conferma e dashboard
+  docente usano testi completi per tutte le sette lingue supportate.
+- Nello stesso audit P9, tutte le operazioni della route campagne verificano
+  lato server che il manager sia assegnato all'evento della campagna; l'admin
+  conserva il perimetro globale. La console carica in parallelo cataloghi e
+  audience, propone soltanto panel pubblicati con label data/ora univoca e usa
+  mappe indicizzate per renderizzare i nomi. La modifica di un panel pubblico
+  con iscritti offre la scorciatoia alla console campagne con quel panel gia'
+  prefiltrato, mantenendo comunque vuota la selezione esplicita dei
+  destinatari.
+- L'audit dipendenze del 2026-08-07 ha aggiornato in modo coordinato Next.js ed
+  `eslint-config-next` a 16.3.0, React/React DOM a 19.2.8 e il plugin PostCSS di
+  Tailwind a 4.3.3. `npm audit` non segnala vulnerabilita'. Sono verdi 192 test,
+  lint, typecheck, `staging:verify`, build production e verifica browser locale
+  di home, accesso scuola italiano/inglese e conferma email fallita, senza
+  overlay o errori console. Le migration P2-P9 non sono state applicate
+  persistentemente allo staging o alla production durante questo audit.
+- Il 2026-08-07 e' stata avviata localmente la Milestone panel P10 sul branch
+  `codex/panel-p0-p10`, senza migration remota, commit, push o deploy. La
+  sezione `Statistiche` condivisa da admin e manager contiene ora per prima la
+  vista decisionale panel: capienza, prenotati e residui per panel, dettaglio
+  per sezione/pubblico e conteggi distinti di partecipanti individuali,
+  minori che ereditano la scelta, prenotazioni scuola e persone scuola. La
+  fonte resta canonica: `moment_attendance_choices` confermate con
+  `seat_section_id`, minori correnti di `registration_children` e riserve
+  `school_panel_reservations` attive; iscrizioni e prenotazioni annullate non
+  occupano posti. La lettura server e' paginata e il payload del report non
+  contiene identita' o contatti.
+- Gli stati P10 sono `Disponibile`, `Quasi pieno`, `Pieno`, `Non configurato`
+  e `Incoerente`; `Quasi pieno` parte dal 90% di occupazione e viene calcolato
+  soltanto con capienza positiva. Capienza zero non produce percentuali. I
+  filtri coprono giorno, location, panel, tipo pubblico e stato. Ogni riga
+  collega alla gestione panel; la campagna prefiltrata compare solo per panel
+  pubblicati e utenti con gestione evento. `manager_viewer` consulta lo stesso
+  report e il dettaglio panel in sola lettura, senza CTA campagna.
+- Il confronto P10 tra previsto, effettivo e no-show e' predisposto nel tipo
+  dati ma resta nullo finche' P11 non introduce il modello completo di
+  check-in per adulto, minori e scuole. Non usare i `check_ins` legacy per
+  mostrare un confronto parziale. Prima di chiudere P10 restano applicazione
+  ordinata P2-P9 esclusivamente allo staging, collaudo dei conteggi su fixture
+  sintetiche e verifica browser autenticata per admin, manager e
+  `manager_viewer`. Sono verdi 195 test, lint, typecheck, `staging:verify` e
+  build production locale. Production resta invariata.
+- Il 2026-08-07 le migration panel P2-P9 sono state applicate e registrate in
+  ordine esclusivamente sul database staging. La migration P8 usa ora `drop
+  policy if exists` sia per la policy pubblica precedente sia per quella
+  operativa, cosi' il passaggio resta idempotente anche se la policy RLS e'
+  gia' stata aggiornata durante un tentativo precedente. Home e `/scuole`
+  mostrano i tre panel sintetici P1 senza errori console. Il branch
+  `codex/panel-p0-p10` usa l'alias Preview stabile
+  `https://iscrizioni-pace-git-codex-pan-f98a13-giovaniperlapaces-projects.vercel.app`:
+  `NEXT_PUBLIC_APP_URL`, `APP_URL` e `PUBLIC_SITE_URL` sono limitate a quel
+  branch nello scope Vercel Preview; GoTrue staging usa lo stesso site URL e
+  accetta callback dall'alias e da localhost. Production e `main` non sono
+  stati modificati. Restano da completare collaudo autenticato dei ruoli,
+  test SQL/RLS e concorrenza e verifica dei conteggi P10.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
@@ -4294,3 +4765,86 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   nelle sette lingue e su mobile. Commit/push su main autorizzati dall’utente
   il 25 settembre insieme all’import servizi. Verificati insieme 559 test,
   lint, TypeScript e build con npm ci in copia pulita.
+
+## Iscrizione multipla capogruppo ai panel — 2026-09-09
+
+- La dashboard capogruppo offre `Iscrizioni ai panel`, pagina dedicata
+  `/dashboard/capogruppo/panel`: prima si sceglie un panel/sezione individuale,
+  poi si selezionano iscrizioni correnti dei propri gruppi e discendenti attivi.
+  Nome/codice e gruppo filtrano solo la vista; la checkbox generale agisce sui
+  partecipanti disponibili filtrati e preserva le selezioni nascoste. Cambiare
+  panel azzera la selezione. Un riepilogo nominale precede la conferma.
+- Le RPC autenticate `get_group_panel_booking_view` e `book_group_panel`, nella
+  migration `20260909120000_group_panel_bookings.sql`, verificano autonomamente
+  evento corrente, membership capogruppo e scope ricorsivo. Nessun actor id o
+  service role viene passato dal client. Manager/manager_viewer con membership
+  restano esclusi (salvo admin); gli admin usano comunque lo scope delle proprie
+  membership in questa vista. Nessuna nuova policy amplia l'accesso alle tabelle.
+- Le prenotazioni riusano `moment_attendance_choices` e le sezioni individuali.
+  Un lotto e' atomico: gruppi non autorizzati, iscrizioni annullate/eliminate,
+  panel indisponibile, sovrapposizioni o capienza insufficiente annullano tutto.
+  Il lock segue registrazioni ordinate, assegnazioni, panel e sezione; i minori
+  collegati consumano posti tramite `app.registration_panel_party_size`.
+  Duplicati e persone gia' prenotate sono idempotenti. Audit per iscrizione:
+  `panel.group_booking_confirmed`. Nessun invio email automatico.
+- Test funzionali SQL reversibili:
+  `tests/sql/group-panel-bookings-rollback-check.sql`. Fixture sintetica per
+  collaudo UI esclusivamente staging:
+  `supabase/seeds/group-panel-dashboard-staging.sql` (4 adulti, 1 minore,
+  gruppo `Test iscrizioni panel`). L'account staging dedicato e'
+  `capogruppo.panel.staging@example.invalid`, con membership sul nodo Italia.
+- Il 2026-09-09 e' stato integrato `origin/main` nel branch panel, preservando
+  panel/scuole e aggiornando le dashboard con le modifiche recenti di main.
+  Le migration mancanti da `20260822100000` a `20260908180000` e le nuove RPC
+  sono state applicate solo allo staging. La migration dati
+  `20260813170000_rename_anziani_and_amici_groups.sql` non e' applicabile alla
+  fixture staging (mancano i gruppi sorgente); il tentativo e' stato annullato
+  e non e' stato registrato come riuscito. La route `scuole` e' stata aggiunta
+  agli slug riservati nell'app e nella migration `20260909121000`.
+- Diagnosi accesso: il certificato staging e' valido sul server `91.99.81.31`.
+  Il resolver locale della postazione restituiva invece `151.5.216.190` per
+  l'hostname sslip.io. Per le operazioni di diagnosi e preparazione account e'
+  stato usato l'IP verificato mantenendo SNI e verifica HTTPS; nessuna modifica
+  al DNS globale e nessuna disattivazione della verifica certificati.
+
+### Navigazione e stile panel capogruppo — 2026-09-09
+
+- `LeaderSectionNavigation` condivide tra elenco partecipanti e pagina panel
+  il menu a due schede con icone, stato attivo e `aria-current`, coerente con
+  le sezioni della gestione iscritti. Sostituisce pulsante isolato e link indietro.
+- La vista panel usa pulsanti `btn-primary`/`btn-secondary`, token bordo
+  `--peace-border`, icone per luogo/orario e aggiornamento, evidenziazione delle
+  righe selezionate e badge della disponibilita'.
+- `Aggiorna disponibilità` ha una descrizione in sette lingue, alla sua destra
+  e sotto su mobile, collegata con `aria-describedby`. Spiega il ricaricamento
+  dei posti/iscrizioni e l'azzeramento della selezione. Comportamento e RPC
+  invariati; nessuna migration.
+
+- Il selettore panel riunisce titolo, data, inizio/fine, sala e pubblico. Non
+  ripetere questi dettagli sotto il selettore: la riga sottostante contiene
+  soltanto i posti disponibili, allineati a sinistra anche su mobile.
+
+### Azioni per partecipante nei panel — 2026-09-09
+
+- Sostituiscono la selezione multipla e il riepilogo: ogni riga mostra lo stato
+  `Iscritto`/`Non iscritto` separato dal pulsante `Disiscrivi`/`Iscrivi`.
+  Sovrapposizione e posti insufficienti sono motivi espliciti di disabilitazione.
+  Feedback nella riga, blocco delle azioni durante il salvataggio, refresh anche
+  dopo errori per aggiornare disponibilità e stato; filtri conservati.
+- `setGroupPanelBooking` passa una sola iscrizione e uno stato desiderato
+  booleano alla RPC autenticata `set_group_panel_booking`, mai un toggle.
+  La prenotazione riusa i controlli atomici di `book_group_panel`; la rimozione
+  ricontrolla evento, membership, scope e iscrizione attiva sotto lock,
+  aggiorna la scelta a `no` e libera la sezione effettivamente prenotata.
+  I figli seguono il genitore in entrambe le operazioni. Retry idempotenti;
+  audit `panel.group_booking_cancelled` solo quando la scelta cambia.
+- Migration `20260909210000_group_panel_row_actions.sql`: nessun ampliamento
+  RLS, nessun invio email. Test SQL con rollback in
+  `tests/sql/group-panel-bookings-rollback-check.sql`: rimozione, figli,
+  nuova iscrizione, capienza, sovrapposizioni, scope, viewer e anon.
+- La descrizione di Aggiorna disponibilità riguarda solo posti e iscrizioni:
+  non esiste più una selezione da azzerare. Testi e azioni in sette lingue.
+
+- Su richiesta dell’utente, niente messaggi di successo dopo iscrizione o
+  rimozione: stato, pulsante e posti aggiornati confermano l’esito. Restano
+  gli errori nella riga interessata.

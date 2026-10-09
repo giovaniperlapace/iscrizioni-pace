@@ -9,6 +9,7 @@ export const GROUP_REGISTRATION_LINK_RESERVED_TOKENS = new Set([
   "auth",
   "dashboard",
   "dev-email-preview",
+  "scuole",
   "login",
   "registrazione",
 ]);

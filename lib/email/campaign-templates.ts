@@ -4,6 +4,8 @@ export const CAMPAIGN_TEMPLATE_FIELDS = [
   { token: "{{nome_completo}}", label: "Nome completo" },
   { token: "{{codice_partecipante}}", label: "Codice partecipante" },
   { token: "{{gruppo}}", label: "Gruppo" },
+  { token: "{{scuola}}", label: "Scuola" },
+  { token: "{{panel}}", label: "Panel prenotati" },
   { token: "{{evento}}", label: "Evento" },
 ] as const;
 
@@ -12,6 +14,8 @@ export type CampaignTemplateData = {
   lastName: string;
   participantCode: string | null;
   groupName: string | null;
+  schoolName?: string | null;
+  panelNames?: string | null;
   eventTitle: string;
 };
 
@@ -22,6 +26,8 @@ function values(data: CampaignTemplateData): Record<string, string> {
     nome_completo: `${data.firstName} ${data.lastName}`.trim(),
     codice_partecipante: data.participantCode?.trim() ?? "",
     gruppo: data.groupName?.trim() ?? "",
+    scuola: data.schoolName?.trim() ?? "",
+    panel: data.panelNames?.trim() ?? "",
     evento: data.eventTitle.trim(),
   };
 }

@@ -12,8 +12,8 @@ const operationsSection = readFileSync(
   "utf8"
 );
 
-test("statistics keep five focused reports and remove person-detail tables", () => {
-  assert.equal(statisticsSection.match(/<ReportBlock name=/g)?.length, 5);
+test("statistics keep six focused reports and remove person-detail tables", () => {
+  assert.equal(statisticsSection.match(/<ReportBlock name=/g)?.length, 6);
   assert.match(statisticsSection, /name="territory"/);
   assert.match(statisticsSection, /name="attendance"/);
   assert.match(statisticsSection, /name="age"/);

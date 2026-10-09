@@ -28,14 +28,16 @@ type CampaignSummary = {
 };
 type RecipientRow = {
   recipientKey: string;
-  recipientType: "participant" | "group_leader";
+  recipientType: "participant" | "group_leader" | "teacher";
   fullName: string;
   destinationEmail: string;
-  deliveryKind: "direct" | "delegated" | "leader";
+  deliveryKind: "direct" | "delegated" | "leader" | "teacher";
   selected: boolean;
   groupIds: string[];
   tagIds: string[];
   serviceIds: string[];
+  panelIds: string[];
+  schoolNames: string[];
 };
 type AttachmentDraft = {
   id: string;
@@ -49,6 +51,7 @@ type Preview = {
   directCount: number;
   delegatedCount: number;
   leaderCount: number;
+  teacherCount: number;
   testRecipientEmail: string;
   sampleRecipientName: string;
   previewSubject: string;
@@ -66,6 +69,9 @@ type EmailCampaignComposerProps = {
   groups: Option[];
   tags: Option[];
   services: Option[];
+  panels: Option[];
+  allowPanelManagement?: boolean;
+  initialPanelId?: string | null;
   initialRecipients: RecipientRow[];
   templates: Template[];
   campaigns: CampaignSummary[];
@@ -75,6 +81,9 @@ export function EmailCampaignComposer({
   groups,
   tags,
   services,
+  panels,
+  allowPanelManagement = false,
+  initialPanelId,
   initialRecipients,
   templates: initialTemplates,
   campaigns,
@@ -93,10 +102,14 @@ export function EmailCampaignComposer({
   const [groupFilter, setGroupFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
+  const [panelFilter, setPanelFilter] = useState(
+    () => panels.find((panel) => panel.id === initialPanelId)?.label ?? ""
+  );
+  const [schoolFilter, setSchoolFilter] = useState("");
   const [groupMembershipFilter, setGroupMembershipFilter] = useState<
     "all" | "with_group" | "without_group"
   >("all");
-  const [audience, setAudience] = useState<"participants" | "group_leaders">(
+  const [audience, setAudience] = useState<"participants" | "group_leaders" | "teachers">(
     "participants"
   );
   const [recipientSearch, setRecipientSearch] = useState("");
@@ -121,6 +134,10 @@ export function EmailCampaignComposer({
     () => new Map(groups.map((group) => [group.id, group.label])),
     [groups]
   );
+  const panelLabelById = useMemo(
+    () => new Map(panels.map((panel) => [panel.id, panel.label])),
+    [panels]
+  );
 
   const resetPreview = useCallback(() => {
     setPreview(null);
@@ -136,26 +153,34 @@ export function EmailCampaignComposer({
     const groupIds = matchingOptionIds(groups, groupFilter);
     const tagIds = matchingOptionIds(tags, tagFilter);
     const serviceIds = matchingOptionIds(services, serviceFilter);
+    const panelIds = matchingOptionIds(panels, panelFilter);
     const search = normalizeRecipientSearch(recipientSearch);
+    const schoolSearch = normalizeRecipientSearch(schoolFilter);
 
     return recipientRows.filter((recipient) =>
       (audience === "participants"
         ? recipient.recipientType === "participant"
-        : recipient.recipientType === "group_leader") &&
-      (!groupFilter || recipient.groupIds.some((id) => groupIds.has(id))) &&
+        : audience === "group_leaders"
+          ? recipient.recipientType === "group_leader"
+          : recipient.recipientType === "teacher") &&
+      (audience === "teachers" || !groupFilter || recipient.groupIds.some((id) => groupIds.has(id))) &&
       (audience === "group_leaders" ||
         groupMembershipFilter === "all" ||
         (groupMembershipFilter === "with_group" && recipient.groupIds.length > 0) ||
         (groupMembershipFilter === "without_group" && recipient.groupIds.length === 0)) &&
       (audience === "group_leaders" ||
+        audience === "teachers" ||
         !tagFilter ||
         recipient.tagIds.some((id) => tagIds.has(id))) &&
       (audience === "group_leaders" ||
+        audience === "teachers" ||
         !serviceFilter ||
         recipient.serviceIds.some((id) => serviceIds.has(id))) &&
-      (!search || normalizeRecipientSearch(`${recipient.fullName} ${recipient.destinationEmail}`).includes(search))
+      (!panelFilter || recipient.panelIds.some((id) => panelIds.has(id))) &&
+      (audience !== "teachers" || !schoolFilter || recipient.schoolNames.some((name) => normalizeRecipientSearch(name).includes(schoolSearch))) &&
+      (!search || normalizeRecipientSearch(`${recipient.fullName} ${recipient.destinationEmail} ${recipient.schoolNames.join(" ")}`).includes(search))
     );
-  }, [audience, groupFilter, groupMembershipFilter, groups, recipientRows, recipientSearch, serviceFilter, services, tagFilter, tags]);
+  }, [audience, groupFilter, groupMembershipFilter, groups, panelFilter, panels, recipientRows, recipientSearch, schoolFilter, serviceFilter, services, tagFilter, tags]);
   const selectedRecipientRows = useMemo(
     () => recipientRows.filter((recipient) =>
       selectedRecipientIdSet.has(recipient.recipientKey)
@@ -252,6 +277,8 @@ export function EmailCampaignComposer({
       formData.set("message", message);
       formData.set("status", "active");
       formData.set("audience", audience);
+      formData.set("panelId", panelFilter);
+      formData.set("schoolName", schoolFilter);
       formData.set("selectedRecipientKeys", JSON.stringify(selectedRecipientIds));
       formData.set(
         "inlineAttachmentIndexes",
@@ -309,7 +336,7 @@ export function EmailCampaignComposer({
     setError("");
   }
 
-  function changeAudience(nextAudience: "participants" | "group_leaders") {
+  function changeAudience(nextAudience: "participants" | "group_leaders" | "teachers") {
     if (nextAudience === audience) return;
     setAudience(nextAudience);
     setSelectedRecipientIds([]);
@@ -317,6 +344,8 @@ export function EmailCampaignComposer({
     setGroupFilter("");
     setTagFilter("");
     setServiceFilter("");
+    setPanelFilter("");
+    setSchoolFilter("");
     setGroupMembershipFilter("all");
     resetPreview();
     setNotice("");
@@ -399,8 +428,8 @@ export function EmailCampaignComposer({
   }
 
   return (
-    <div className="grid gap-6">
-      <section className="surface-card p-5 sm:p-6">
+    <div className="grid min-w-0 grid-cols-1 gap-6">
+      <section className="surface-card min-w-0 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Comunicazioni</p>
@@ -431,8 +460,8 @@ export function EmailCampaignComposer({
         ? <SuccessMessage key={noticeVersion} attention className="status-success">{notice}</SuccessMessage>
         : <SuccessMessage key={notice} attention persistent className="status-success">{notice}</SuccessMessage> : null}
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(17rem,1fr)]">
-        <section className="surface-card grid gap-5 p-5 sm:p-6">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(17rem,1fr)]">
+        <section className="surface-card min-w-0 grid gap-5 p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="eyebrow">Passaggio 1</p>
@@ -513,13 +542,13 @@ export function EmailCampaignComposer({
         </section>
 
         <aside className="grid gap-6 xl:self-center">
-          <section className="surface-card p-5">
+          <section className="surface-card min-w-0 p-5">
             <h3 className="font-bold">Campi personalizzati</h3>
             <p className="mt-1 text-xs text-[var(--peace-muted)]">
               Inserisci il campo nella posizione corrente del cursore.
             </p>
             <div className="mt-4 grid gap-2">
-              {CAMPAIGN_TEMPLATE_FIELDS.map((field) => (
+              {CAMPAIGN_TEMPLATE_FIELDS.filter(field => allowPanelManagement || !["{{panel}}", "{{scuola}}"].includes(field.token)).map((field) => (
                 <button
                   key={field.token}
                   type="button"
@@ -535,7 +564,7 @@ export function EmailCampaignComposer({
         </aside>
       </div>
 
-      <section className="surface-card grid gap-5 p-5 sm:p-6">
+      <section className="surface-card min-w-0 grid gap-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Passaggio 2</p>
@@ -591,6 +620,22 @@ export function EmailCampaignComposer({
           >
             Capigruppo
           </button>
+          {allowPanelManagement ? <button
+            type="button"
+            role="tab"
+            id="campaign-audience-teachers-tab"
+            aria-controls="campaign-audience-panel"
+            aria-selected={audience === "teachers"}
+            className={[
+              "rounded px-4 py-2 text-sm font-bold",
+              audience === "teachers"
+                ? "bg-[var(--peace-blue-800)] text-white"
+                : "text-[var(--peace-blue-900)]",
+            ].join(" ")}
+            onClick={() => changeAudience("teachers")}
+          >
+            Professori
+          </button> : null}
         </div>
         <div
           id="campaign-audience-panel"
@@ -598,21 +643,25 @@ export function EmailCampaignComposer({
           aria-labelledby={
             audience === "participants"
               ? "campaign-audience-participants-tab"
-              : "campaign-audience-leaders-tab"
+              : audience === "group_leaders"
+                ? "campaign-audience-leaders-tab"
+                : "campaign-audience-teachers-tab"
           }
           className="grid gap-5"
         >
           <p className="text-sm text-[var(--peace-muted)]">
             {audience === "participants"
               ? "Questa tabella contiene gli iscritti raggiungibili, comprese le persone senza gruppo."
-              : "Questa tabella contiene solo i capigruppo dell’evento. Ogni capogruppo compare una sola volta anche se segue più gruppi."}
+              : audience === "group_leaders"
+                ? "Questa tabella contiene solo i capigruppo dell’evento. Ogni capogruppo compare una sola volta anche se segue più gruppi."
+                : "Questa tabella contiene i professori con prenotazioni scuola attive. Ogni docente compare una sola volta anche se segue più classi o panel."}
           </p>
           <div className={[
             "grid gap-4 md:grid-cols-2",
-            audience === "participants" ? "xl:grid-cols-5" : "xl:grid-cols-3",
+            audience === "participants" ? "xl:grid-cols-6" : audience === "teachers" ? "xl:grid-cols-3" : "xl:grid-cols-3",
           ].join(" ")}>
           <label className="grid gap-1 text-sm font-semibold">
-            {audience === "participants" ? "Cerca partecipante" : "Cerca capogruppo"}
+            {audience === "participants" ? "Cerca partecipante" : audience === "group_leaders" ? "Cerca capogruppo" : "Cerca professore"}
             <input
               type="search"
               className="field font-normal"
@@ -622,14 +671,14 @@ export function EmailCampaignComposer({
               autoComplete="off"
             />
           </label>
-          <RecipientFilterInput
-            id="campaign-recipient-group"
-            label="Gruppo"
-            options={groups}
-            placeholder="Tutti i gruppi"
-            value={groupFilter}
-            onChange={setGroupFilter}
-          />
+          {audience !== "teachers" ? <RecipientFilterInput
+              id="campaign-recipient-group"
+              label="Gruppo"
+              options={groups}
+              placeholder="Tutti i gruppi"
+              value={groupFilter}
+              onChange={setGroupFilter}
+            /> : null}
           {audience === "participants" ? (
             <>
               <label
@@ -668,13 +717,43 @@ export function EmailCampaignComposer({
                 value={serviceFilter}
                 onChange={setServiceFilter}
               />
+              {allowPanelManagement ? <RecipientFilterInput
+                id="campaign-recipient-panel"
+                label="Panel"
+                options={panels}
+                placeholder="Tutti i panel"
+                value={panelFilter}
+                onChange={setPanelFilter}
+              /> : null}
             </>
-          ) : null}
+          ) : audience === "teachers" ? <>
+            <label className="grid gap-1 text-sm font-semibold">
+              Scuola
+              <input
+                type="search"
+                className="field font-normal"
+                value={schoolFilter}
+                onChange={(event) => setSchoolFilter(event.target.value)}
+                placeholder="Tutte le scuole"
+                autoComplete="off"
+              />
+            </label>
+            <RecipientFilterInput
+              id="campaign-teacher-panel"
+              label="Panel"
+              options={panels}
+              placeholder="Tutti i panel"
+              value={panelFilter}
+              onChange={setPanelFilter}
+            />
+          </> : null}
           </div>
         {recipientRows.some((recipient) =>
           audience === "participants"
             ? recipient.recipientType === "participant"
-            : recipient.recipientType === "group_leader"
+            : audience === "group_leaders"
+              ? recipient.recipientType === "group_leader"
+              : recipient.recipientType === "teacher"
         ) ? (
           <div className="grid gap-5">
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--peace-sky-400)] bg-[var(--peace-sky-100)] p-4 shadow-sm">
@@ -685,7 +764,9 @@ export function EmailCampaignComposer({
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
                   {audience === "participants"
                     ? `${selectedDirectCount} email ai partecipanti e ${selectedDelegatedCount} invii delegati ai referenti.`
-                    : `${selectedRecipientIds.length} email ai capigruppo.`}
+                    : audience === "group_leaders"
+                      ? `${selectedRecipientIds.length} email ai capigruppo.`
+                      : `${selectedRecipientIds.length} email ai professori.`}
                 </p>
               </div>
               {selectedRecipientIds.length ? (
@@ -722,7 +803,7 @@ export function EmailCampaignComposer({
                       <th className="px-3 py-3">Persona</th>
                       <th className="px-3 py-3">Email</th>
                       <th className="px-3 py-3">
-                        {audience === "participants" ? "Recapito" : "Gruppi"}
+                        {audience === "participants" ? "Recapito" : audience === "group_leaders" ? "Gruppi" : "Scuole e panel"}
                       </th>
                     </tr>
                   </thead>
@@ -757,6 +838,11 @@ export function EmailCampaignComposer({
                         <td className="px-3 py-3">
                           {audience === "group_leaders" ? (
                             groupLabels(recipient.groupIds, groupLabelById)
+                          ) : audience === "teachers" ? (
+                            <span className="text-xs text-[var(--peace-muted)]">
+                              {recipient.schoolNames.join(", ") || "Scuola non indicata"}
+                              {recipient.panelIds.length ? ` · ${recipient.panelIds.flatMap((id) => panelLabelById.get(id) ?? []).join(", ")}` : ""}
+                            </span>
                           ) : recipient.deliveryKind === "delegated" ? (
                             <span className="inline-flex rounded-full bg-[var(--peace-sky-100)] px-2 py-1 text-[0.7rem] font-bold text-[var(--peace-blue-800)]">
                               Invio al referente
@@ -790,13 +876,15 @@ export function EmailCampaignComposer({
           <p className="rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">
             {audience === "participants"
               ? "Non ci sono partecipanti raggiungibili per l’evento corrente."
-              : "Non ci sono capigruppo raggiungibili per l’evento corrente."}
+              : audience === "group_leaders"
+                ? "Non ci sono capigruppo raggiungibili per l’evento corrente."
+                : "Non ci sono professori con prenotazioni attive per l’evento corrente."}
           </p>
         )}
         </div>
       </section>
 
-      <section className="surface-card grid gap-5 p-5 sm:p-6">
+      <section className="surface-card min-w-0 grid gap-5 p-5 sm:p-6">
         <div>
           <p className="eyebrow">Passaggio 3 · facoltativo</p>
           <div className="flex items-center gap-2">
@@ -869,7 +957,7 @@ export function EmailCampaignComposer({
         )}
       </section>
 
-      <section className="surface-card flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+      <section className="surface-card min-w-0 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
         <div>
           <p className="eyebrow">Passaggio 4</p>
           <h3 className="mt-1 text-lg font-bold">Controlla e prepara l’invio</h3>
@@ -889,7 +977,7 @@ export function EmailCampaignComposer({
         </ProgressButton>
       </section>
 
-      <section className="surface-card p-5 sm:p-6">
+      <section className="surface-card min-w-0 p-5 sm:p-6">
         <div className="flex items-center gap-2">
           <History aria-hidden="true" className="h-5 w-5" />
           <h3 className="text-lg font-bold">Campagne inviate</h3>
@@ -1084,7 +1172,9 @@ export function EmailCampaignComposer({
               <div>
                 <h3 id="campaign-preview-title" className="text-xl font-bold">Anteprima prima dell’invio</h3>
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                  {preview.leaderCount > 0
+                  {preview.teacherCount > 0
+                    ? `${preview.recipientCount} email ai professori.`
+                    : preview.leaderCount > 0
                     ? `${preview.recipientCount} email ai capigruppo.`
                     : `${preview.recipientCount} destinatari: ${preview.directCount} email ai partecipanti e ${preview.delegatedCount} ai referenti.`}
                 </p>

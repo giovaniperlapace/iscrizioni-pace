@@ -51,6 +51,13 @@ lunghe, rischiose, parallele o che includono migration e permessi/RLS. Solo una
 nuova richiesta esplicita dell'utente puo' cambiare questa scelta. Eventuali
 branch e worktree preesistenti non vanno eliminati o integrati automaticamente.
 
+Eccezione approvata per il modulo panel: le milestone P0-P10 vivono sul branch
+di lunga durata `codex/panel-p0-p10`, collegato allo staging, e vengono unite a
+`main` soltanto dopo il collaudo complessivo della P10. I bugfix delle
+iscrizioni restano su `main`; dopo ogni correzione rilasciata, integrare `main`
+nel branch panel. Non applicare migration panel P0-P10 al database production
+prima della procedura finale di rilascio.
+
 ## Qualità
 
 Prima di chiudere una milestone eseguire i comandi pertinenti:

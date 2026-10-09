@@ -8,6 +8,7 @@ type ConfirmSubmitButtonProps = {
   children: ReactNode;
   className?: string;
   confirmMessage: string;
+  formAction?: (formData: FormData) => void | Promise<void>;
   name: string;
   value: string;
 };
@@ -16,6 +17,7 @@ export function ConfirmSubmitButton({
   children,
   className,
   confirmMessage,
+  formAction,
   name,
   value,
 }: ConfirmSubmitButtonProps) {
@@ -23,6 +25,7 @@ export function ConfirmSubmitButton({
     <PendingSubmitButton
       name={name}
       value={value}
+      formAction={formAction}
       className={className}
       onClick={(event) => {
         if (!window.confirm(confirmMessage)) {

@@ -18,7 +18,13 @@
     "opening:verify": "node --env-file=.env.local scripts/verify-opening-readiness.mjs",
     "opening:verify:production": "node --env-file=.env.production.local scripts/verify-opening-readiness.mjs --production",
     "dev:postmark": "node --env-file=.env.local --env-file=.env.postmark.local node_modules/next/dist/bin/next dev",
-    "email:verify:postmark": "node --env-file=.env.postmark.local scripts/verify-email-config.mjs"
+    "email:verify:postmark": "node --env-file=.env.postmark.local scripts/verify-email-config.mjs",
+    "dev:staging": "npm run staging:verify && node scripts/run-next-staging.mjs dev",
+    "build:staging": "npm run staging:verify && node scripts/run-next-staging.mjs build",
+    "db:migrate:staging": "scripts/apply-remote-migration.sh staging",
+    "db:migrate:production": "scripts/apply-remote-migration.sh production",
+    "staging:sync-env": "node --env-file=.env.local scripts/sync-staging-env.mjs",
+    "staging:verify": "node --env-file=.env.staging.local scripts/verify-staging-readiness.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

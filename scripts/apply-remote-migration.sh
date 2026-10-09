@@ -1,79 +1,159 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 supabase/migrations/<version>_<name>.sql" >&2
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  apply-remote-migration.sh staging <migration.sql>
+  apply-remote-migration.sh production <migration.sql> --confirm-production <migration-version>
+USAGE
+}
+
+if [ "$#" -lt 2 ]; then
+  usage
   exit 2
 fi
 
-MIGRATION_PATH="$1"
-
-if [ ! -f "$MIGRATION_PATH" ]; then
-  echo "Migration not found: $MIGRATION_PATH" >&2
-  exit 2
-fi
+TARGET="$1"
+MIGRATION_PATH="$2"
+shift 2
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="$ROOT_DIR/.env.local"
 
-if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
+case "$TARGET" in
+  staging)
+    ENV_FILE="$ROOT_DIR/.env.staging.local"
+    if [ "$#" -ne 0 ]; then
+      usage
+      exit 2
+    fi
+    ;;
+  production)
+    ENV_FILE="$ROOT_DIR/.env.production.local"
+    ;;
+  *)
+    echo "Target non valido: usare staging o production." >&2
+    exit 2
+    ;;
+esac
+
+if [ ! -f "$MIGRATION_PATH" ]; then
+  echo "Migration non trovata: $MIGRATION_PATH" >&2
+  exit 2
 fi
-
-SSH_HOST="${SERVER_SSH_HOST:-91.99.81.31}"
-SSH_PORT="${SERVER_SSH_PORT:-22}"
-SSH_USER="${SERVER_SSH_USER:-root}"
-SSH_KEY="${SERVER_SSH_KEY:-$HOME/.ssh/id_ed25519_hetzner_20260613}"
-STACK_ID="${SUPABASE_COOLIFY_STACK_ID:-ammnuajlmd83t94cfy3us6cw}"
-DB_CONTAINER="${SUPABASE_DB_CONTAINER:-supabase-db-ammnuajlmd83t94cfy3us6cw}"
-REMOTE_ENV_FILE="${SUPABASE_REMOTE_ENV_FILE:-/data/coolify/services/$STACK_ID/.env}"
 
 BASE_NAME="$(basename "$MIGRATION_PATH")"
 VERSION="${BASE_NAME%%_*}"
 NAME="${BASE_NAME#${VERSION}_}"
 NAME="${NAME%.sql}"
-REMOTE_SQL="/tmp/iscrizioni-pace-migration-${BASE_NAME}"
 
 if ! [[ "$VERSION" =~ ^[0-9]{14}$ ]]; then
-  echo "Migration filename must start with a 14-digit timestamp: $BASE_NAME" >&2
+  echo "Il nome della migration deve iniziare con un timestamp di 14 cifre: $BASE_NAME" >&2
   exit 2
 fi
 
+if ! [[ "$NAME" =~ ^[A-Za-z0-9_]+$ ]]; then
+  echo "Il nome della migration puo' contenere soltanto lettere, numeri e underscore: $BASE_NAME" >&2
+  exit 2
+fi
+
+if [ "$TARGET" = "production" ]; then
+  if [ "$#" -ne 2 ] || [ "$1" != "--confirm-production" ] || [ "$2" != "$VERSION" ]; then
+    echo "Production richiede: --confirm-production $VERSION" >&2
+    exit 2
+  fi
+fi
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Configurazione $TARGET assente: $ENV_FILE" >&2
+  exit 2
+fi
+
+set -a
+# shellcheck disable=SC1090
+. "$ENV_FILE"
+set +a
+
+require_env() {
+  local name="$1"
+  if [ -z "${!name:-}" ]; then
+    echo "Variabile richiesta non configurata in $ENV_FILE: $name" >&2
+    exit 2
+  fi
+}
+
+for name in \
+  DEPLOYMENT_ENVIRONMENT \
+  SERVER_SSH_HOST \
+  SERVER_SSH_PORT \
+  SERVER_SSH_USER \
+  SERVER_SSH_KEY \
+  SUPABASE_COOLIFY_STACK_ID \
+  SUPABASE_DB_CONTAINER; do
+  require_env "$name"
+done
+
+if [ "$DEPLOYMENT_ENVIRONMENT" != "$TARGET" ]; then
+  echo "DEPLOYMENT_ENVIRONMENT=$DEPLOYMENT_ENVIRONMENT non coincide con il target $TARGET." >&2
+  exit 2
+fi
+
+if [[ "$SERVER_SSH_KEY" != /* ]] || [ ! -f "$SERVER_SSH_KEY" ]; then
+  echo "SERVER_SSH_KEY deve essere un file esistente con path assoluto." >&2
+  exit 2
+fi
+
+KNOWN_PRODUCTION_DB_CONTAINER="supabase-db-ammnuajlmd83t94cfy3us6cw"
+if [ "$TARGET" = "staging" ] && [ "$SUPABASE_DB_CONTAINER" = "$KNOWN_PRODUCTION_DB_CONTAINER" ]; then
+  echo "Blocco di sicurezza: il target staging indica il container production noto." >&2
+  exit 2
+fi
+
+DB_USER="${SUPABASE_DB_USER:-postgres}"
+DB_NAME="${SUPABASE_DB_NAME:-postgres}"
+REMOTE_SQL="/tmp/iscrizioni-pace-${TARGET}-${BASE_NAME}"
+REMOTE="$SERVER_SSH_USER@$SERVER_SSH_HOST"
+
+for safe_value in "$SUPABASE_COOLIFY_STACK_ID" "$SUPABASE_DB_CONTAINER" "$DB_USER" "$DB_NAME"; do
+  if ! [[ "$safe_value" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    echo "Stack, container, utente e database possono contenere soltanto lettere, numeri, trattini e underscore." >&2
+    exit 2
+  fi
+done
+
 SSH_OPTS=(
-  -i "$SSH_KEY"
+  -i "$SERVER_SSH_KEY"
   -o BatchMode=yes
   -o IdentitiesOnly=yes
   -o StrictHostKeyChecking=accept-new
-  -p "$SSH_PORT"
+  -p "$SERVER_SSH_PORT"
 )
 
 SCP_OPTS=(
-  -i "$SSH_KEY"
+  -i "$SERVER_SSH_KEY"
   -o BatchMode=yes
   -o IdentitiesOnly=yes
   -o StrictHostKeyChecking=accept-new
-  -P "$SSH_PORT"
+  -P "$SERVER_SSH_PORT"
 )
 
-REMOTE="$SSH_USER@$SSH_HOST"
+echo "Target verificato: $TARGET"
+echo "Stack: $SUPABASE_COOLIFY_STACK_ID"
+echo "Container database: $SUPABASE_DB_CONTAINER"
+echo "Controllo migration $VERSION..."
 
-echo "Checking migration $VERSION on $REMOTE..."
-if ssh "${SSH_OPTS[@]}" "$REMOTE" "docker exec $DB_CONTAINER psql -U postgres -d postgres -At -c \"select 1 from supabase_migrations.schema_migrations where version='$VERSION';\" 2>/dev/null" | grep -qx "1"; then
-  echo "Migration $VERSION is already registered. Nothing to do."
+ssh "${SSH_OPTS[@]}" "$REMOTE" "docker inspect --type container '$SUPABASE_DB_CONTAINER' >/dev/null"
+
+if ssh "${SSH_OPTS[@]}" "$REMOTE" "docker exec '$SUPABASE_DB_CONTAINER' psql -U '$DB_USER' -d '$DB_NAME' -At -c \"select 1 from supabase_migrations.schema_migrations where version='$VERSION';\" 2>/dev/null" | grep -qx "1"; then
+  echo "Migration $VERSION già registrata. Nessuna modifica eseguita."
   exit 0
 fi
 
-echo "Copying $BASE_NAME to server..."
+echo "Copia di $BASE_NAME sul server..."
 scp "${SCP_OPTS[@]}" "$MIGRATION_PATH" "$REMOTE:$REMOTE_SQL"
 
-echo "Applying migration inside $DB_CONTAINER..."
-ssh "${SSH_OPTS[@]}" "$REMOTE" "docker cp '$REMOTE_SQL' '$DB_CONTAINER:$REMOTE_SQL' && docker exec '$DB_CONTAINER' psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f '$REMOTE_SQL'"
-
-echo "Registering migration $VERSION and reloading PostgREST schema..."
-ssh "${SSH_OPTS[@]}" "$REMOTE" "docker exec -i '$DB_CONTAINER' psql -U postgres -d postgres -v ON_ERROR_STOP=1" <<SQL
+echo "Applicazione e registrazione atomica sul database $TARGET..."
+ssh "${SSH_OPTS[@]}" "$REMOTE" "docker cp '$REMOTE_SQL' '$SUPABASE_DB_CONTAINER:$REMOTE_SQL' && docker exec -i '$SUPABASE_DB_CONTAINER' psql -U '$DB_USER' -d '$DB_NAME' -X -v ON_ERROR_STOP=1 -1 -f '$REMOTE_SQL' -f -" <<SQL
 create schema if not exists supabase_migrations;
 create table if not exists supabase_migrations.schema_migrations (
   version text primary key,
@@ -86,7 +166,6 @@ on conflict (version) do update set name = excluded.name;
 notify pgrst, 'reload schema';
 SQL
 
-echo "Verifying registration..."
-ssh "${SSH_OPTS[@]}" "$REMOTE" "docker exec '$DB_CONTAINER' psql -U postgres -d postgres -At -c \"select version || ':' || coalesce(name,'') from supabase_migrations.schema_migrations where version='$VERSION';\""
+ssh "${SSH_OPTS[@]}" "$REMOTE" "docker exec '$SUPABASE_DB_CONTAINER' psql -U '$DB_USER' -d '$DB_NAME' -At -c \"select version || ':' || coalesce(name,'') from supabase_migrations.schema_migrations where version='$VERSION';\" && docker exec '$SUPABASE_DB_CONTAINER' rm -f '$REMOTE_SQL' && rm -f '$REMOTE_SQL'"
 
-echo "Done."
+echo "Migration completata su $TARGET."

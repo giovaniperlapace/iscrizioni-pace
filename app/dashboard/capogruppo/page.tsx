@@ -1,3 +1,4 @@
+import { getPanelReleaseMode } from "@/lib/panels/release";
 import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
 import { MANUAL_REGISTRATION_COPY, type ManualRegistrationCopy } from "@/lib/registrations/manual-registration-copy";
 import { ManualRegistrationSection } from "@/app/dashboard/manual-registration-section";
@@ -7,6 +8,7 @@ import { OperationalChildrenEditor } from "@/app/dashboard/operational-children-
 import { loadRowsForIds } from "@/lib/supabase/all-rows";
 import { LocalOverlay } from "@/app/dashboard/local-overlay";
 import { LocalQueryLink } from "@/components/local-query-link";
+import { LeaderSectionNavigation } from "@/app/dashboard/capogruppo/section-navigation";
 import { ACCESS_EMAIL_COPY } from "@/lib/email/account-access";
 import { randomUUID } from "node:crypto";
 import { SuccessMessage } from "@/components/success-message";
@@ -1068,6 +1070,7 @@ export default async function CapogruppoDashboardPage({
       : parseDashboardTool(params.tool);
   const activeGroupId = params.groupLinkGroupId ?? params.groupId ?? null;
   const supabase = await createSupabaseServerClient();
+  const panelBookingsOpen = await getPanelReleaseMode(supabase) === "open";
   const auth = await getCurrentAuthContext(supabase, "capogruppo");
 
   if (!auth || auth.dashboardRole !== "capogruppo") {
@@ -1136,6 +1139,7 @@ export default async function CapogruppoDashboardPage({
           <DashboardAreaDescription>
             {copy.areaDescription}
           </DashboardAreaDescription>
+          {panelBookingsOpen ? <LeaderSectionNavigation active="participants" locale={locale} /> : null}
         </header>
 
         <StatusMessage

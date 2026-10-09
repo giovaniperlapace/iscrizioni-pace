@@ -1,3 +1,4 @@
+import { canAccessPanelManagement, isPanelCampaign } from "../lib/panels/management-access.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -79,6 +80,8 @@ function campaignFixture(fail?: (url: URL, method: string) => boolean) {
     ...loaders, createSupabaseServiceClient: () => db, getCurrentOperationalEvent: async () => ({ id: "event" }),
     loadCampaignRecipientPreviews: async (rows: unknown[]) => rows,
     loadCampaignDeliveryData: async () => ({ templateData: { firstName: "A", lastName: "B" } }),
+    canAccessPanelManagement, isPanelCampaign,
+    assertCanManageCampaignEvent: (roles: Array<{ role: string; eventId: string }>, eventId: string) => { assert.ok(roles.some(role => role.role === "manager" && role.eventId === eventId)); },
     audit: async () => {}, recipientSelectionSummary: () => ({}), renderCampaignTemplate: () => "", renderSafeCampaignHtml: () => "",
     NextResponse: { json: (value: unknown) => value },
   });
@@ -86,13 +89,13 @@ function campaignFixture(fail?: (url: URL, method: string) => boolean) {
 }
 test("campaign selection updates recipients after row 1,000, with bounded write filters", async () => {
   const { update, recipients } = campaignFixture();
-  const result = await update("operator", "test@example.test", "campaign", recipients.filter((_, i) => i % 2 === 0).map(r => r.recipient_key));
+  const result = await update("operator", "test@example.test", [{ role: "manager", eventId: "event" }], "campaign", recipients.filter((_, i) => i % 2 === 0).map(r => r.recipient_key));
   assert.equal(result.recipients.length, 1205);
   for (const [i, row] of recipients.entries()) assert.equal(row.status, i % 2 === 0 ? "pending" : "skipped");
 });
 test("campaign selection fails before any write if a later read page fails", async () => {
   const { update, recipients, calls } = campaignFixture(url => Number(url.searchParams.get("offset")) >= 500);
-  await assert.rejects(update("operator", "test@example.test", "campaign", [recipients[0].recipient_key]), /later page failed/);
+  await assert.rejects(update("operator", "test@example.test", [{ role: "manager", eventId: "event" }], "campaign", [recipients[0].recipient_key]), /later page failed/);
   assert.equal(calls.filter(c => c.method !== "GET").length, 0);
 });
 test("write batches stop at the first error", async () => {
@@ -143,7 +146,7 @@ test("a single ID batch may span more than 1,000 child rows; later errors must r
 test("a failed selection write invalidates the previous send test", async () => {
   let writes = 0;
   const { update, recipients, campaign } = campaignFixture((url, method) => method === "PATCH" && url.pathname.endsWith("email_campaign_recipients") && ++writes === 2);
-  await assert.rejects(update("operator", "test@example.test", "campaign", recipients.map(r => r.recipient_key)), /later page failed/);
+  await assert.rejects(update("operator", "test@example.test", [{ role: "manager", eventId: "event" }], "campaign", recipients.map(r => r.recipient_key)), /later page failed/);
   assert.equal(campaign.status, "draft");
   assert.equal(campaign.test_sent_at, null);
   assert.equal(writes, 2);

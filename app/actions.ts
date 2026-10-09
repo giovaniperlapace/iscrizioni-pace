@@ -1,4 +1,5 @@
 "use server";
+import { requirePanelAdministrator, requirePublicPanelBookings } from "@/lib/panels/release.server";
 
 import { resolveRoleParticipant } from "@/lib/operational-users/role-participant";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
@@ -85,6 +86,31 @@ import {
 } from "@/lib/registrations/event-services";
 import { syncOperationalIdentityByEmail } from "@/lib/operational-users/identity";
 import { getCurrentOperationalEventId } from "@/lib/events/current";
+import {
+  EVENT_LOCATION_ADDRESS_MAX_LENGTH,
+  EVENT_LOCATION_NAME_MAX_LENGTH,
+  normalizeEventLocationAddress,
+  normalizeEventLocationName,
+  parseEventLocationCapacity,
+} from "@/lib/panels/event-locations";
+import {
+  PANEL_DESCRIPTION_MAX_LENGTH,
+  PANEL_MAX_SECTIONS,
+  PANEL_TITLE_MAX_LENGTH,
+  normalizePanelDescription,
+  normalizePanelTitle,
+  parsePanelCapacity,
+} from "@/lib/panels/panel-drafts";
+import {
+  SCHOOL_BOOKING_NOTES_MAX_LENGTH,
+  SCHOOL_BOOKING_PRIVACY_VERSION,
+  type SchoolBookingStatus,
+} from "@/lib/panels/school-bookings";
+import {
+  getPublicSchoolBookingOptions,
+  parsePublicSchoolBookingForm,
+} from "@/lib/panels/public-school-bookings";
+import { createPublicSchoolBooking } from "@/lib/panels/public-school-flow";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -104,6 +130,7 @@ import {
 
 const EMAIL_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 const REGISTRATION_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
+const SCHOOL_BOOKING_RATE_LIMIT = { limit: 5, windowMs: 60 * 60 * 1000 };
 const MAGIC_LINK_SEND_COOLDOWN_MS = 60 * 1000;
 
 type OperationsGroupRow = {
@@ -353,7 +380,7 @@ export async function updateParticipantDashboard(formData: FormData) {
       .eq("registration_id", registrationRow.id),
     supabase
       .from("moment_attendance_choices")
-      .select("moment_id,choice")
+      .select("moment_id,choice,event_moments!inner(moment_type)")
       .eq("registration_id", registrationRow.id),
     supabase
       .from("accessibility_needs")
@@ -382,9 +409,20 @@ export async function updateParticipantDashboard(formData: FormData) {
     | { id: string; phone: string | null }
     | undefined;
   const previousMomentChoices = Object.fromEntries(
-    ((momentChoices ?? []) as Array<{ moment_id: string; choice: string }>).map(
-      (choice) => [choice.moment_id, choice.choice]
-    )
+    ((momentChoices ?? []) as Array<{
+      moment_id: string;
+      choice: string;
+      event_moments:
+        | { moment_type: "general" | "panel" }
+        | Array<{ moment_type: "general" | "panel" }>;
+    }>)
+      .filter((choice) => {
+        const moment = Array.isArray(choice.event_moments)
+          ? choice.event_moments[0]
+          : choice.event_moments;
+        return moment?.moment_type !== "panel";
+      })
+      .map((choice) => [choice.moment_id, choice.choice])
   );
   const previousAvailabilitySlots = ((attendanceChoices ?? []) as Array<{
     day: string | null;
@@ -497,15 +535,6 @@ export async function updateParticipantDashboard(formData: FormData) {
     );
   }
 
-  if (updatesChildren) {
-    writes.push(
-      supabase
-        .from("registration_children")
-        .delete()
-        .eq("registration_id", registrationRow.id)
-    );
-  }
-
   const writeResults = await Promise.all(writes);
   const failedWrite = writeResults.find((result) => result.error);
 
@@ -537,15 +566,19 @@ export async function updateParticipantDashboard(formData: FormData) {
     momentRows.length > 0
       ? supabase.from("moment_attendance_choices").insert(momentRows)
       : Promise.resolve({ error: null }),
-    updatesChildren && dashboardUpdate.children.length > 0
-      ? supabase
-          .from("registration_children")
-          .insert(
-            toRegistrationChildRows(
-              registrationRow.id,
-              dashboardUpdate.children
-            )
-          )
+    updatesChildren
+      ? supabase.rpc("replace_owned_registration_children", {
+          p_registration_id: registrationRow.id,
+          p_children: toRegistrationChildRows(
+            registrationRow.id,
+            dashboardUpdate.children
+          ).map(({ first_name, last_name, birth_date, position }) => ({
+            first_name,
+            last_name,
+            birth_date,
+            position,
+          })),
+        })
       : Promise.resolve({ error: null }),
   ]);
   const failedInsert = insertResults.find((result) => result.error);
@@ -573,6 +606,60 @@ export async function updateParticipantDashboard(formData: FormData) {
 
   revalidatePath("/dashboard/partecipante");
   redirect("/dashboard/partecipante?saved=1");
+}
+
+export async function setParticipantPanelBooking(formData: FormData) {
+  await requirePublicPanelBookings();
+  const registrationId = optionalText(formData.get("registrationId"));
+  const panelId = optionalText(formData.get("panelId"));
+  const sectionId = optionalText(formData.get("sectionId"));
+  const intent = optionalText(formData.get("intent"));
+
+  if (
+    !registrationId ||
+    !panelId ||
+    !sectionId ||
+    (intent !== "book" && intent !== "cancel")
+  ) {
+    redirect("/dashboard/partecipante?panelError=invalid");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, "partecipante");
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const { error } = await supabase.rpc("set_individual_panel_booking", {
+    p_registration_id: registrationId,
+    p_panel_id: panelId,
+    p_section_id: sectionId,
+    p_booked: intent === "book",
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    const errorCode =
+      error.code === "23P01" || message.includes("overlap")
+        ? "overlap"
+        : message.includes("full") || message.includes("capacity exceeded")
+          ? "full"
+          : error.code === "42501" || message.includes("not found for this participant")
+            ? "forbidden"
+            : error.code === "P0002" || message.includes("not found")
+              ? "not-found"
+              : message.includes("not available")
+                ? "unavailable"
+                : "failed";
+    redirect(`/dashboard/partecipante?panelError=${errorCode}`);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/dashboard/partecipante");
+  redirect(
+    `/dashboard/partecipante?panelSaved=${intent === "book" ? "booked" : "cancelled"}`
+  );
 }
 
 export async function updateEventOpeningState(formData: FormData) {
@@ -1421,6 +1508,657 @@ export async function saveEventService(formData: FormData) {
 
   const savedParam = sourceDashboard === "admin" ? "adminSaved" : "serviceSaved";
   redirect(`${dashboardPath}&${savedParam}=service`);
+}
+
+export async function saveEventLocation(formData: FormData) {
+  await requirePanelAdministrator();
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelLocationsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const locationId = optionalText(formData.get("locationId"));
+  const name = normalizeEventLocationName(formData.get("name"));
+  const address = normalizeEventLocationAddress(formData.get("address"));
+  const maxCapacity = parseEventLocationCapacity(formData.get("maxCapacity"));
+
+  if (!eventId || !name || maxCapacity === null) {
+    redirect(`${dashboardPath}&locationError=invalid`);
+  }
+
+  if (name.length > EVENT_LOCATION_NAME_MAX_LENGTH) {
+    redirect(`${dashboardPath}&locationError=name-too-long`);
+  }
+
+  if (address && address.length > EVENT_LOCATION_ADDRESS_MAX_LENGTH) {
+    redirect(`${dashboardPath}&locationError=address-too-long`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&locationError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  type CurrentEventLocationRow = {
+    id: string;
+    event_id: string;
+    name: string;
+    max_capacity: number | null;
+    is_active: boolean | null;
+  };
+  let currentLocation: CurrentEventLocationRow | null = null;
+
+  if (locationId) {
+    const { data, error } = await serviceSupabase
+      .from("event_locations")
+      .select("id,event_id,name,max_capacity,is_active")
+      .eq("id", locationId)
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (error || !data) {
+      redirect(`${dashboardPath}&locationError=not-found`);
+    }
+
+    currentLocation = data as CurrentEventLocationRow;
+
+  }
+
+  const payload = {
+    event_id: eventId,
+    name,
+    address,
+    max_capacity: maxCapacity,
+    is_active: currentLocation?.is_active ?? true,
+  };
+  const result = locationId
+    ? await serviceSupabase
+        .from("event_locations")
+        .update(payload)
+        .eq("id", locationId)
+        .eq("event_id", eventId)
+        .select("id")
+        .maybeSingle()
+    : await serviceSupabase
+        .from("event_locations")
+        .insert(payload)
+        .select("id")
+        .single();
+
+  if (result.error || !result.data) {
+    const errorMessage = result.error?.message.toLowerCase() ?? "";
+    const errorCode =
+      errorMessage.includes("section capacity total") ||
+      errorMessage.includes("capacity limit") ||
+      errorMessage.includes("published panels require")
+        ? "published-capacity"
+        : "conflict";
+    redirect(`${dashboardPath}&locationError=${errorCode}`);
+  }
+
+  const savedLocationId = (result.data as { id: string }).id;
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: locationId ? "event_location.updated" : "event_location.created",
+    entity_table: "event_locations",
+    entity_id: savedLocationId,
+    metadata: {
+      name,
+      max_capacity: maxCapacity,
+      previous_max_capacity: currentLocation?.max_capacity ?? null,
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(
+    `${dashboardPath}&locationSaved=${locationId ? "updated" : "created"}`
+  );
+}
+
+export async function deleteEventLocation(formData: FormData) {
+  await requirePanelAdministrator();
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelLocationsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const locationId = optionalText(formData.get("locationId"));
+
+  if (!eventId || !locationId) {
+    redirect(`${dashboardPath}&locationError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&locationError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const [{ data: location, error: locationError }, { count, error: usageError }] =
+    await Promise.all([
+      serviceSupabase
+        .from("event_locations")
+        .select("id,event_id,name,max_capacity")
+        .eq("id", locationId)
+        .eq("event_id", eventId)
+        .maybeSingle(),
+      serviceSupabase
+        .from("event_moments")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId)
+        .eq("location_id", locationId),
+    ]);
+
+  if (locationError || !location) {
+    redirect(`${dashboardPath}&locationError=not-found`);
+  }
+
+  if (usageError || (count ?? 0) > 0) {
+    redirect(`${dashboardPath}&locationError=location-in-use`);
+  }
+
+  const { error: deleteError } = await serviceSupabase
+    .from("event_locations")
+    .delete()
+    .eq("id", locationId)
+    .eq("event_id", eventId);
+
+  if (deleteError) {
+    redirect(`${dashboardPath}&locationError=conflict`);
+  }
+
+  await serviceSupabase.from("audit_logs").insert({
+    event_id: eventId,
+    actor_user_id: auth.user.id,
+    action: "event_location.deleted",
+    entity_table: "event_locations",
+    entity_id: locationId,
+    metadata: {
+      name: (location as { name: string }).name,
+      max_capacity: (location as { max_capacity: number | null }).max_capacity,
+      source_dashboard: sourceDashboard === "admin" ? "admin" : "manager",
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&locationSaved=deleted`);
+}
+
+export async function savePanelDraft(formData: FormData) {
+  await requirePanelAdministrator();
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelDraftsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const panelId = optionalText(formData.get("panelId"));
+  const publicationStatus =
+    optionalText(formData.get("publicationStatus")) === "published"
+      ? "published"
+      : "draft";
+  const title = normalizePanelTitle(formData.get("title"));
+  const description = normalizePanelDescription(formData.get("description"));
+  const locationId = optionalText(formData.get("locationId"));
+  const startsAt = parseIsoDateTime(formData.get("startsAt"));
+  const endsAt = parseIsoDateTime(formData.get("endsAt"));
+  const audienceTypeIds = formData
+    .getAll("audienceTypeIds")
+    .map((value) => optionalText(value));
+  const sectionCapacities = formData
+    .getAll("sectionCapacities")
+    .map((value) => parsePanelCapacity(value));
+
+  if (
+    !eventId ||
+    !title ||
+    title.length > PANEL_TITLE_MAX_LENGTH ||
+    (description?.length ?? 0) > PANEL_DESCRIPTION_MAX_LENGTH ||
+    !locationId ||
+    !startsAt ||
+    !endsAt ||
+    endsAt <= startsAt ||
+    audienceTypeIds.length !== sectionCapacities.length ||
+    audienceTypeIds.length > PANEL_MAX_SECTIONS ||
+    audienceTypeIds.some((value) => !value) ||
+    sectionCapacities.some((value) => value === null)
+  ) {
+    redirect(`${dashboardPath}&panelError=invalid`);
+  }
+
+  const normalizedAudienceIds = audienceTypeIds as string[];
+  if (new Set(normalizedAudienceIds).size !== normalizedAudienceIds.length) {
+    redirect(`${dashboardPath}&panelError=duplicate-audience`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&panelError=forbidden`);
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+  const { data: panelLocation, error: panelLocationError } =
+    await serviceSupabase
+      .from("event_locations")
+      .select("max_capacity")
+      .eq("id", locationId)
+      .eq("event_id", eventId)
+      .eq("is_active", true)
+      .maybeSingle();
+  const assignedCapacity = (sectionCapacities as number[]).reduce(
+    (total, capacity) => total + capacity,
+    0
+  );
+
+  if (
+    panelLocationError ||
+    !panelLocation?.max_capacity ||
+    assignedCapacity > panelLocation.max_capacity
+  ) {
+    redirect(`${dashboardPath}&panelError=capacity-total`);
+  }
+
+  const rpcName =
+    panelId && publicationStatus === "published"
+      ? "save_published_panel"
+      : "save_panel_draft";
+  const { error } = await supabase.rpc(rpcName, {
+    p_event_id: eventId,
+    p_panel_id: panelId,
+    p_title: title,
+    p_description: description,
+    p_location_id: locationId,
+    p_starts_at: startsAt.toISOString(),
+    p_ends_at: endsAt.toISOString(),
+    p_sections: normalizedAudienceIds.map((audienceTypeId, index) => ({
+      audience_type_id: audienceTypeId,
+      capacity: sectionCapacities[index] as number,
+    })),
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    const errorCode =
+      error.code === "23P01" || message.includes("conflicting key value")
+        ? "overlap"
+        : error.code === "23505" || message.includes("duplicated")
+          ? "duplicate-audience"
+          : error.code === "42501" || message.includes("forbidden")
+            ? "forbidden"
+            : error.code === "P0002" || message.includes("not found")
+              ? "not-found"
+              : message.includes("confirmed registrations")
+                ? "booked-capacity"
+                : message.includes("capacity total")
+                  ? "capacity-total"
+                  : message.includes("inside the event")
+                ? "outside-event"
+                : "invalid";
+    redirect(`${dashboardPath}&panelError=${errorCode}`);
+  }
+
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(
+    `${dashboardPath}&panelSaved=${
+      publicationStatus === "published"
+        ? "published-updated"
+        : panelId
+          ? "updated"
+          : "created"
+    }`
+  );
+}
+
+export async function publishPanels(formData: FormData) {
+  await requirePanelAdministrator();
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getPanelDraftsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const panelIds = [
+    ...new Set(
+      formData
+        .getAll("panelIds")
+        .map((value) => optionalText(value))
+        .filter((value): value is string => Boolean(value))
+    ),
+  ];
+
+  if (!eventId || panelIds.length === 0 || panelIds.length > 200) {
+    redirect(`${dashboardPath}&panelError=publish-selection`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(
+    supabase,
+    sourceDashboard === "admin" ? "admin" : "manager"
+  );
+
+  if (!auth) {
+    redirect("/login");
+  }
+
+  const canManageEvent = auth.eventRoles.some(
+    (role) =>
+      role.role === "admin" ||
+      (role.role === "manager" && role.eventId === eventId)
+  );
+
+  if (!canManageEvent) {
+    redirect(`${dashboardPath}&panelError=forbidden`);
+  }
+
+  const { data, error } = await supabase.rpc("publish_panels", {
+    p_event_id: eventId,
+    p_panel_ids: panelIds,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    const errorCode =
+      error.code === "42501" || message.includes("forbidden")
+        ? "forbidden"
+        : error.code === "P0002" || message.includes("not found")
+          ? "not-found"
+          : error.code === "23514" || message.includes("incomplete")
+            ? "publish-invalid"
+            : "publish-failed";
+    redirect(`${dashboardPath}&panelError=${errorCode}`);
+  }
+
+  const publishedCount =
+    typeof data === "object" && data !== null && "published_count" in data
+      ? Number(data.published_count)
+      : panelIds.length;
+
+  revalidatePath("/");
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(
+    `${dashboardPath}&panelSaved=${
+      publishedCount === 0
+        ? "already-published"
+        : publishedCount > 1
+          ? "batch-published"
+          : "published"
+    }&panelCount=${Math.max(0, publishedCount)}`
+  );
+}
+
+export async function saveSchoolBooking(formData: FormData) {
+  await requirePanelAdministrator();
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav);
+  const eventId = optionalText(formData.get("eventId"));
+  const bookingId = optionalText(formData.get("bookingId"));
+  const teacherEmailValue = optionalText(formData.get("teacherEmail"));
+  const teacherEmail = teacherEmailValue ? normalizeEmail(teacherEmailValue) : null;
+  const teacherFirstName = optionalText(formData.get("teacherFirstName"));
+  const teacherLastName = optionalText(formData.get("teacherLastName"));
+  const teacherPhone = optionalText(formData.get("teacherPhone"));
+  const schoolName = optionalText(formData.get("schoolName"));
+  const schoolCity = optionalText(formData.get("schoolCity"));
+  const classDescription = optionalText(formData.get("classDescription"));
+  const studentCount = parsePositiveInteger(formData.get("studentCount"), 1000);
+  const companionCount = parsePositiveInteger(formData.get("companionCount"), 100);
+  const internalNotes = optionalText(formData.get("internalNotes"));
+  const statusValue = optionalText(formData.get("status"));
+  const status: SchoolBookingStatus = statusValue === "submitted" ? "submitted" : "confirmed";
+  const sectionIds = [...new Set(formData.getAll("sectionIds").map((value) => optionalText(value)).filter((value): value is string => Boolean(value)))];
+  const privacyAccepted = formData.get("privacyAccepted") === "yes";
+
+  if (
+    !eventId || !teacherEmail || !teacherFirstName || !teacherLastName ||
+    !teacherPhone || !schoolName || !schoolCity || !classDescription ||
+    studentCount === null || companionCount === null ||
+    (internalNotes?.length ?? 0) > SCHOOL_BOOKING_NOTES_MAX_LENGTH ||
+    sectionIds.length < 1 || sectionIds.length > 50 ||
+    (!bookingId && !privacyAccepted)
+  ) {
+    redirect(`${dashboardPath}&schoolError=invalid`);
+  }
+
+  const panelReservations = sectionIds.map((sectionId) => ({
+    section_id: sectionId,
+    panel_id: optionalText(formData.get(`panelId:${sectionId}`)),
+    student_count: parsePositiveInteger(formData.get(`students:${sectionId}`), studentCount),
+    companion_count: parsePositiveInteger(formData.get(`companions:${sectionId}`), companionCount),
+  }));
+  if (panelReservations.some((row) => !row.panel_id || row.student_count === null || row.companion_count === null)) {
+    redirect(`${dashboardPath}&schoolError=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, sourceDashboard === "admin" ? "admin" : "manager");
+  if (!auth) redirect("/login");
+  const canManageEvent = auth.eventRoles.some((role) => role.role === "admin" || (role.role === "manager" && role.eventId === eventId));
+  if (!canManageEvent) redirect(`${dashboardPath}&schoolError=forbidden`);
+
+  const qrToken = bookingId ? null : createOpaqueQrToken();
+  const { error } = await supabase.rpc("save_school_booking", {
+    p_event_id: eventId,
+    p_booking_id: bookingId,
+    p_teacher_email: teacherEmail,
+    p_teacher_first_name: teacherFirstName,
+    p_teacher_last_name: teacherLastName,
+    p_teacher_phone: teacherPhone,
+    p_school_name: schoolName,
+    p_school_city: schoolCity,
+    p_class_description: classDescription,
+    p_student_count: studentCount,
+    p_companion_count: companionCount,
+    p_privacy_version: SCHOOL_BOOKING_PRIVACY_VERSION,
+    p_internal_notes: internalNotes,
+    p_status: status,
+    p_panel_reservations: panelReservations,
+    p_qr_token_hash: qrToken?.tokenHash ?? null,
+    p_qr_token_encrypted: qrToken ? encryptQrToken(qrToken.token) : null,
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    const code = error.code === "23P01" || message.includes("overlap")
+      ? "overlap"
+      : error.code === "P0001" || message.includes("capacity") || message.includes("full")
+        ? "capacity"
+        : error.code === "42501" ? "forbidden" : "invalid";
+    redirect(`${dashboardPath}&schoolError=${code}`);
+  }
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&schoolSaved=${bookingId ? "updated" : "created"}`);
+}
+
+export async function submitPublicSchoolBooking(formData: FormData) {
+  await requirePublicPanelBookings();
+  const parsed = parsePublicSchoolBookingForm(formData);
+  const locale = normalizeLocale(String(formData.get("locale") ?? "")) ?? DEFAULT_LOCALE;
+  const errorPath = (code: string) => `/scuole?error=${encodeURIComponent(code)}`;
+  if (!parsed.ok) redirect(errorPath("invalid"));
+
+  const ipAddress = await getIpAddress();
+  if (!checkRateLimit(`school-booking:${ipAddress}:${parsed.value.teacherEmail}`, SCHOOL_BOOKING_RATE_LIMIT)) {
+    redirect(errorPath("rate"));
+  }
+
+  const supabase = createSupabaseServiceClient();
+  const options = await getPublicSchoolBookingOptions(supabase);
+  if (!options.event) redirect(errorPath("closed"));
+  const validSections = new Map(options.panels.map((panel) => [panel.sectionId, panel.panelId]));
+  if (parsed.value.reservations.some((row) => validSections.get(row.sectionId) !== row.panelId)) {
+    redirect(errorPath("invalid"));
+  }
+
+  let emailSent = false;
+  try {
+    const result = await createPublicSchoolBooking(
+      supabase,
+      parsed.value,
+      options.event,
+      options.panels,
+      getPublicSiteUrl()
+    );
+    emailSent = result.emailSent;
+  } catch (error) {
+    const message = getUnknownErrorMessage(error).toLowerCase();
+    const code = message.includes("overlap") ? "overlap" :
+      message.includes("capacity") || message.includes("full") ? "capacity" : "invalid";
+    redirect(errorPath(code));
+  }
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`/scuole/conferma?locale=${locale}&email=${emailSent ? "sent" : "failed"}`);
+}
+
+function getUnknownErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String(error.message);
+  }
+  return "";
+}
+
+export async function requestSchoolBookingAccess(formData: FormData) {
+  await requirePublicPanelBookings();
+  const email = normalizeEmail(formData.get("email"));
+  const ipAddress = await getIpAddress();
+  const sentPath = `/scuole/accesso?sent=1`;
+  if (!email || !email.includes("@")) redirect("/scuole/accesso?error=invalid");
+  if (!checkRateLimit(`school-access:${ipAddress}:${email}`, EMAIL_RATE_LIMIT)) redirect("/scuole/accesso?error=rate");
+  const supabase = createSupabaseServiceClient();
+  const { data: teacher } = await supabase.from("school_booking_teachers").select("id").eq("email", email).limit(1).maybeSingle();
+  if (!teacher) redirect(sentPath);
+  try {
+    await sendMagicLinkEmail(
+      supabase,
+      email,
+      `${getPublicSiteUrl()}/auth/callback?redirect_to=${encodeURIComponent("/dashboard/docente")}`
+    );
+  } catch {
+    redirect("/scuole/accesso?error=send");
+  }
+  redirect(sentPath);
+}
+
+export async function updateTeacherSchoolBooking(formData: FormData) {
+  await requirePublicPanelBookings();
+  const bookingId = optionalText(formData.get("bookingId"));
+  const eventId = optionalText(formData.get("eventId"));
+  const teacherEmail = optionalText(formData.get("teacherEmail"));
+  const teacherFirstName = optionalText(formData.get("teacherFirstName"));
+  const teacherLastName = optionalText(formData.get("teacherLastName"));
+  const teacherPhone = optionalText(formData.get("teacherPhone"));
+  const schoolName = optionalText(formData.get("schoolName"));
+  const schoolCity = optionalText(formData.get("schoolCity"));
+  const classDescription = optionalText(formData.get("classDescription"));
+  const studentCount = parsePositiveInteger(formData.get("studentCount"), 1000);
+  const companionCount = parsePositiveInteger(formData.get("companionCount"), 100);
+  const sectionIds = [...new Set(formData.getAll("sectionIds").map((value) => optionalText(value)).filter((value): value is string => Boolean(value)))];
+  if (!bookingId || !eventId || !teacherEmail || !teacherFirstName || !teacherLastName || !teacherPhone || !schoolName || !schoolCity || !classDescription || studentCount === null || companionCount === null || sectionIds.length < 1) {
+    redirect("/dashboard/docente?error=invalid");
+  }
+  const reservations = sectionIds.map((sectionId) => ({
+    section_id: sectionId,
+    panel_id: optionalText(formData.get(`panelId:${sectionId}`)),
+    student_count: parsePositiveInteger(formData.get(`students:${sectionId}`), studentCount),
+    companion_count: parsePositiveInteger(formData.get(`companions:${sectionId}`), companionCount),
+  }));
+  if (reservations.some((row) => !row.panel_id || row.student_count === null || row.companion_count === null)) redirect("/dashboard/docente?error=invalid");
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.email?.toLowerCase() !== teacherEmail.toLowerCase()) redirect("/login");
+  const { error } = await supabase.rpc("save_school_booking", {
+    p_event_id: eventId, p_booking_id: bookingId, p_teacher_email: teacherEmail,
+    p_teacher_first_name: teacherFirstName, p_teacher_last_name: teacherLastName,
+    p_teacher_phone: teacherPhone, p_school_name: schoolName, p_school_city: schoolCity,
+    p_class_description: classDescription, p_student_count: studentCount,
+    p_companion_count: companionCount, p_privacy_version: SCHOOL_BOOKING_PRIVACY_VERSION,
+    p_internal_notes: null, p_status: "submitted", p_panel_reservations: reservations,
+    p_qr_token_hash: null, p_qr_token_encrypted: null,
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    redirect(`/dashboard/docente?error=${message.includes("overlap") ? "overlap" : message.includes("capacity") ? "capacity" : "invalid"}`);
+  }
+  revalidatePath("/dashboard/docente");
+  redirect("/dashboard/docente?saved=1");
+}
+
+export async function cancelTeacherSchoolBooking(formData: FormData) {
+  await requirePublicPanelBookings();
+  const bookingId = optionalText(formData.get("bookingId"));
+  if (!bookingId) redirect("/dashboard/docente?error=invalid");
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { error } = await supabase.rpc("cancel_school_booking", { p_booking_id: bookingId });
+  if (error) redirect("/dashboard/docente?error=forbidden");
+  revalidatePath("/dashboard/docente");
+  redirect("/dashboard/docente?cancelled=1");
+}
+
+export async function cancelSchoolBooking(formData: FormData) {
+  await requirePanelAdministrator();
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav);
+  const bookingId = optionalText(formData.get("bookingId"));
+  if (!bookingId) redirect(`${dashboardPath}&schoolError=invalid`);
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, sourceDashboard === "admin" ? "admin" : "manager");
+  if (!auth) redirect("/login");
+  const { error } = await supabase.rpc("cancel_school_booking", { p_booking_id: bookingId });
+  if (error) redirect(`${dashboardPath}&schoolError=${error.code === "42501" ? "forbidden" : "invalid"}`);
+  revalidatePath("/dashboard/manager");
+  revalidatePath("/dashboard/admin");
+  redirect(`${dashboardPath}&schoolSaved=cancelled`);
 }
 
 export async function updateParticipantEventService(formData: FormData) {
@@ -3296,6 +4034,29 @@ function optionalDateTimeLocal(value: FormDataEntryValue | null): string | null 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function parseIsoDateTime(value: FormDataEntryValue | null): Date | null {
+  const text = optionalText(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parsePositiveInteger(
+  value: FormDataEntryValue | null,
+  maximum: number
+): number | null {
+  const text = optionalText(value);
+  if (!text || !/^\d+$/.test(text)) return null;
+  const parsed = Number(text);
+  return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= maximum
+    ? parsed
+    : null;
+}
+
 function getGroupManagementDashboardPath(sourceDashboard: string | null): string {
   if (sourceDashboard === "capogruppo") {
     return "/dashboard/capogruppo";
@@ -3386,6 +4147,49 @@ function getEventServicesDashboardPath(
     params.set("nav", navMode);
   }
 
+  return `${basePath}?${params.toString()}`;
+}
+
+function getPanelLocationsDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath =
+    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({ section: "panel" });
+
+  if (navMode === "mini" || navMode === "full") {
+    params.set("nav", navMode);
+  }
+
+  return `${basePath}?${params.toString()}`;
+}
+
+function getPanelDraftsDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath =
+    sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({
+    section: "panel",
+    panelView: "panels",
+  });
+
+  if (navMode === "mini" || navMode === "full") {
+    params.set("nav", navMode);
+  }
+
+  return `${basePath}?${params.toString()}`;
+}
+
+function getSchoolBookingsDashboardPath(
+  sourceDashboard: string | null,
+  navMode?: string | null
+): string {
+  const basePath = sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
+  const params = new URLSearchParams({ section: "panel", panelView: "schools" });
+  if (navMode === "mini" || navMode === "full") params.set("nav", navMode);
   return `${basePath}?${params.toString()}`;
 }
 

@@ -50,6 +50,7 @@ function harness(lastActivity: string | null, options: { existingUser?: boolean;
     "@/lib/supabase/server": { createSupabaseServerClient: async () => db },
   };
   const callback = load("../app/auth/callback/route.ts", {
+    "@/lib/panels/release": { getPanelReleaseMode: async () => "internal" },
     ...shared,
     "@/lib/auth/magic-link-confirmation": confirmation,
     "@/lib/i18n/config": locale,
