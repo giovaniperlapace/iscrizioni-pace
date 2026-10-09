@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Collaudo panel: stile scheda Iscritti — 2026-10-09
+
+- Uniformata la scheda Iscritti alle modali operative: intestazione e footer
+  con fondo soft, titoli blu, superfici condivise per riepiloghi ed elenchi,
+  tabelle con intestazioni evidenziate. Corretto il padding dei pulsanti
+  Esporta/Chiudi; export primario, a larghezza piena su mobile.
+- Larghezza massima ridotta, corpo scorrevole e tabelle con scroll locale;
+  dati, conteggi, export e autorizzazioni invariati. Collaudo visivo affidato
+  all’utente. Commit/push e normale rilascio autorizzati dall’utente.
+
 ## Pubblicazione correzioni collaudo panel — 2026-10-09
 
 - L’utente autorizza commit e push di tutte le modifiche locali: elenco
