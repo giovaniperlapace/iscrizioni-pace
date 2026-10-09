@@ -2,6 +2,19 @@
 
 ## Rilascio admin autorizzato — aggiornamento 2026-10-09
 
+- Esito: main pubblicato (`eab1293`), deployment Vercel production READY sul
+  dominio reale. Home confrontata prima/dopo: testo identico, email presente,
+  sezione panel assente. Admin ammesso e manager negato nelle verifiche DB in
+  sola lettura; accettazione funzionale dell’utente e apertura manager rinviate.
+- Nella verifica finale aggiunta e applicata `20261009160000`: protezione delle
+  scritture REST di campagne/destinatari panel e scuola. Totale 17 migration
+  registrate (lotto di 16 più una transazione finale), senza nuove email o
+  modifiche a persone reali. Dettagli e backup nel documento di rilascio.
+- Panel a `42bfcca` e stash preservati. Il merge preventivo segnala 12 conflitti:
+  riconciliare prima di riprendere lo sviluppo, conservando scanner e cerimonie.
+  Nessuna pubblicazione staging eseguita in questo rilascio production.
+
+
 - Nuova indicazione esplicita: pubblicare in production e applicare le migration,
   ma rendere le nuove funzioni panel disponibili solo nella dashboard admin.
   Manager e viewer attendono il via libera dell’utente dopo il suo collaudo.

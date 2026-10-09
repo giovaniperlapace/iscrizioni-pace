@@ -110,10 +110,12 @@ Dipendenze panel importate, immutate:
 | `20261009120000` | **Nuova:** rilascio riservato, protezioni e disponibilità |
 | `20261009140000` | **Nuova:** accettazione riservata all’admin, RPC/RLS e campagne |
 | `20261009150000` | **Nuova:** tre tipi di quota del catalogo, senza dati di esempio |
+| `20261009160000` | **Nuova:** restrizioni anche sulle scritture REST delle campagne |
 
 Inventario production verificato via SSH nel container
-`supabase-db-ammnuajlmd83t94cfy3us6cw` (PostgreSQL 15.8): le 16 versioni elencate
-risultavano mancanti. È assente anche `20260726120000`, correzione storica di
+`supabase-db-ammnuajlmd83t94cfy3us6cw` (PostgreSQL 15.8): le prime 16 versioni elencate
+risultavano mancanti; aggiunta nella verifica finale la protezione REST campagne
+`20261009160000`, applicata e registrata in una seconda transazione. È assente anche `20260726120000`, correzione storica di
 assegnazioni che non è una dipendenza panel: esclusa dal lotto per non cambiare
 assegnazioni reali estranee a questo rilascio. Il registro non viene falsificato.
 Nessun conflitto tra il nuovo percorso `/scuole` e gli slug di gruppo esistenti.
@@ -222,3 +224,34 @@ Verifiche software definitive: 719 test, lint, TypeScript, build Next production
 browser sintetico desktop/mobile con filtri email admin e home invariata.
 Il collaudo funzionale dell’utente e il conseguente via libera al manager restano
 aperti. Il deployment effettivo viene verificato separatamente dalla migration.
+
+## Deployment production verificato
+
+Il codice applicativo `eab129305d4a8e7be80ae1dbd32171b7d84e0207` è stato
+pubblicato su main. Vercel ha completato il deployment
+`dpl_HfWPoHo8tCQV35cuQ8FcXNSQVjbC`, URL
+`https://iscrizioni-pace-ismuq8tiu-giovaniperlapaces-projects.vercel.app`, stato
+READY e target production. Verificato che il dominio reale
+`https://registrationspeace.santegidio.org` punti a quel deployment.
+
+Confronto browser prima/dopo: testo della home identico, campo email presente,
+nessuna sezione panel o scuole. URL scuole rimandati alla home e dashboard
+protette dal login. Nessun errore restituito dalla ricerca dei runtime log del
+nuovo deployment. Verifica production in sola lettura con identità ricavata
+internamente dai ruoli: admin ammesso, manager senza ruolo admin negato alle
+RPC gestionali e ai tipi di quota. Nessuna sessione o account reale creato per
+il collaudo. Le nuove funzioni sono pronte per il test autenticato dell’utente.
+
+La verifica finale ha aggiunto la migration `20261009160000`: anche le scritture
+REST dirette di campagne e destinatari scuola/panel sono riservate all’admin.
+Collaudate in transazione locale con rollback, verificando il rifiuto di INSERT
+e UPDATE proibiti e la conservazione delle normali campagne manager. Applicata
+in production in una seconda transazione: totale 17 versioni registrate,
+nessuna modifica ai dati. Il successivo commit di documentazione, test SQL e
+questa migration mantiene identico il codice applicativo già verificato.
+
+Il branch panel resta preservato a `42bfcca`, con i due stash intatti. Il
+controllo preventivo del riallineamento rileva conflitti in 12 file, inclusi
+scanner/dashboard/documentazione: non sono state fatte sostituzioni automatiche.
+Riconciliare queste differenze prima di riprendere lo sviluppo sul panel;
+nessun push o deployment dello staging fa parte di questa pubblicazione admin.

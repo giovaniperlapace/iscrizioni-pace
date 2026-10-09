@@ -82,6 +82,15 @@ do $$ begin
 end $$;
 reset role;
 
+-- Explicit table grants emulate Supabase defaults; RLS must still deny the new audiences.
+grant select, insert, update, delete on public.email_campaigns, public.email_campaign_recipients to authenticated;
+-- Both campaigns exist as real rows only inside this rolled-back fixture.
+insert into public.email_campaigns(id,event_id,name,subject_template,body_template,filters_snapshot,created_by)
+values(release_fixture_id(201),release_fixture_id(100),'Synthetic general','Subject','Body','{}',release_fixture_id(1)),
+(release_fixture_id(202),release_fixture_id(100),'Synthetic private','Subject','Body','{"audience":"teachers"}',release_fixture_id(1));
+create temporary table release_teacher as select id from school_booking_teachers where email='release-5@example.invalid';
+grant select on release_teacher to authenticated;
+
 -- Managers cannot reach management RPCs or direct REST tables either.
 select set_config('request.jwt.claim.sub',release_fixture_id(2)::text,true);
 set local role authenticated;
@@ -91,6 +100,12 @@ do $$ begin
  assert (select count(*)=0 from public.panel_seat_sections);
  assert (select count(*)=0 from public.panel_audience_types);
  assert (select count(*)=0 from public.school_bookings);
+ assert (select count(*)=1 from public.email_campaigns);
+ perform release_expect_denied(format('insert into public.email_campaigns(event_id,name,subject_template,body_template,filters_snapshot,created_by) values(%L,''Denied'',''Subject'',''Body'',''{"audience":"teachers"}'',%L)',(select event_id from release_context),release_fixture_id(2)));
+ perform release_expect_denied(format('update public.email_campaigns set filters_snapshot=''{"panelId":"synthetic"}'' where id=%L',release_fixture_id(201)));
+ perform release_expect_denied(format('insert into public.email_campaign_recipients(campaign_id,recipient_key,recipient_type,school_teacher_id,delivery_kind) values(%L,''teacher:synthetic'',''teacher'',%L,''teacher'')',release_fixture_id(201),(select id from release_teacher)));
+ update public.email_campaigns set name='Synthetic ordinary update allowed' where id=release_fixture_id(201);
+ assert (select name='Synthetic ordinary update allowed' from public.email_campaigns where id=release_fixture_id(201));
  perform release_expect_denied(format('select public.publish_panels(%L,array[%L]::uuid[])',(select event_id from release_context),(select panel_id from release_context)));
  perform release_expect_denied(format('insert into public.event_locations(event_id,name) values(%L,''Denied location'')',(select event_id from release_context)));
  perform release_expect_denied(format('select public.save_school_booking(%L,null,null,null,null,null,null,null,null,1,1,null,null,''confirmed'',''[]''::jsonb,null,null)',(select event_id from release_context)));
