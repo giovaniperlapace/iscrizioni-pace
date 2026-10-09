@@ -1,5 +1,12 @@
 # AGENTS.md
 
+## Collaudo panel: colonna Quando — 2026-10-09
+
+- Rinominata Orario in Quando; giorno mostrato una sola volta seguito dalla
+  fascia senza zero iniziale, ad esempio 26 ott, 9:30 - 12:30. Stesso formato
+  in desktop, mobile e conferma pubblicazione; fuso Europe/Rome conservato.
+- Modifica solo di presentazione; commit/push e normale rilascio autorizzati.
+
 ## Collaudo panel: ordinamento alfabetico catalogo — 2026-10-09
 
 - Il catalogo gestionale ordina i panel per titolo in italiano, ignorando

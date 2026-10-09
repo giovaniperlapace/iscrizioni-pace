@@ -181,7 +181,7 @@ export function PanelPublicationTable({
                 </th>
               ) : null}
               <th className="py-3 pr-4 font-semibold">Panel</th>
-              <th className="py-3 pr-4 font-semibold">Orario</th>
+              <th className="py-3 pr-4 font-semibold">Quando</th>
               <th className="py-3 pr-4 font-semibold">Location</th>
               <th className="py-3 pr-4 font-semibold">Posti</th>
               <th className="py-3 pr-4 font-semibold">Stato</th>
@@ -366,8 +366,11 @@ function PublicationBadge({ panel }: { panel: PanelDraftRow }) {
 
 function formatSchedule(panel: PanelDraftRow): string {
   if (!panel.startsAt || !panel.endsAt) return "Orario da definire";
-  const formatter = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-  return `${formatter.format(new Date(panel.startsAt))} – ${formatter.format(new Date(panel.endsAt))}`;
+  const start = new Date(panel.startsAt);
+  const end = new Date(panel.endsAt);
+  const day = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "numeric", month: "short" });
+  const time = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  return `${day.format(start)}, ${time.format(start).replace(/^0/, "")} - ${time.format(end).replace(/^0/, "")}`;
 }
 
 function formatPublicationDate(value: string | null): string {
