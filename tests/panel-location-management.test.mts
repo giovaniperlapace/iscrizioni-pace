@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import ts from "typescript";
 
 import {
   EVENT_LOCATION_ADDRESS_MAX_LENGTH,
@@ -126,4 +127,53 @@ test("admin and manager share the Panel location section and preserve nav mode",
   assert.match(managerDashboard, /<PanelLocationsSection/);
   assert.match(adminDashboard, /<PanelLocationsSection/);
   assert.match(locationSection, /section=panel&panelView=locations&nav=\$\{navMode\}/);
+});
+
+test("location actions close the overlay and return to Locations for both nav modes", async () => {
+  const ast = ts.createSourceFile("actions.ts", actions, ts.ScriptTarget.Latest, true);
+  const names = ["saveEventLocation", "deleteEventLocation", "getPanelLocationsDashboardPath"];
+  const source = ast.statements.filter(node => ts.isFunctionDeclaration(node) && names.includes(node.name?.text ?? ""))
+    .map(node => node.getText(ast).replace(/^export /, "")).join("\n");
+  const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  let authorizations = 0;
+  const result = { data: { id: "synthetic-location", event_id: "synthetic-event", name: "Sala sintetica", max_capacity: 100 }, count: 0, error: null };
+  const query = {
+    select() { return query; }, eq() { return query; }, insert() { return query; },
+    update() { return query; }, delete() { return query; },
+    async single() { return result; }, async maybeSingle() { return result; },
+    then(resolve: (value: typeof result) => unknown) { return Promise.resolve(result).then(resolve); },
+  };
+  const deps = {
+    requirePanelAdministrator: async () => { authorizations++; },
+    optionalText: (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null,
+    normalizeEventLocationName, normalizeEventLocationAddress, parseEventLocationCapacity,
+    EVENT_LOCATION_NAME_MAX_LENGTH, EVENT_LOCATION_ADDRESS_MAX_LENGTH,
+    createSupabaseServerClient: async () => ({}),
+    getCurrentAuthContext: async () => ({ user: { id: "synthetic-admin" }, eventRoles: [{ role: "admin" }] }),
+    createSupabaseServiceClient: () => ({ from: () => query }),
+    revalidatePath: () => {},
+    redirect: (path: string) => { throw new Error(path); },
+  };
+  const handlers = new Function(...Object.keys(deps), `${code}; return {saveEventLocation, deleteEventLocation};`)(...Object.values(deps)) as Record<string, (form: FormData) => Promise<void>>;
+  for (const nav of ["full", "mini"]) {
+    for (const operation of ["created", "updated", "deleted", "invalid"]) {
+      const form = new FormData();
+      for (const [key, value] of Object.entries({ sourceDashboard: "admin", nav, eventId: "synthetic-event", name: "Sala sintetica", maxCapacity: "100" })) form.set(key, value);
+      if (operation === "updated" || operation === "deleted") form.set("locationId", "synthetic-location");
+      if (operation === "invalid") form.set("maxCapacity", "0");
+      const handler = operation === "deleted" ? handlers.deleteEventLocation : handlers.saveEventLocation;
+      await assert.rejects(handler(form), (error: Error) => {
+        const url = new URL(error.message, "https://example.invalid");
+        assert.equal(url.pathname, "/dashboard/admin");
+        assert.equal(url.searchParams.get("section"), "panel");
+        assert.equal(url.searchParams.get("panelView"), "locations");
+        assert.equal(url.searchParams.get("nav"), nav);
+        assert.equal(url.searchParams.get(operation === "invalid" ? "locationError" : "locationSaved"), operation);
+        assert.equal(url.searchParams.has("locationTool"), false);
+        assert.equal(url.searchParams.has("locationId"), false);
+        return true;
+      });
+    }
+  }
+  assert.equal(authorizations, 8);
 });

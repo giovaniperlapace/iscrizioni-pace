@@ -4156,7 +4156,7 @@ function getPanelLocationsDashboardPath(
 ): string {
   const basePath =
     sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
-  const params = new URLSearchParams({ section: "panel" });
+  const params = new URLSearchParams({ section: "panel", panelView: "locations" });
 
   if (navMode === "mini" || navMode === "full") {
     params.set("nav", navMode);

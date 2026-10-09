@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Modalità di collaudo gestionale aggiornata — 2026-10-09
+
+- L’utente conferma personalmente la riuscita delle correzioni. Per i piccoli
+  bug del collaudo non eseguire automaticamente prove browser o suite complete
+  a ogni intervento: usare controlli mirati e proporzionati, riservando le
+  verifiche più ampie a modifiche delicate e preparazione della pubblicazione.
+  Questa indicazione supera il controllo browser e completo a ogni correzione.
+
+## Collaudo gestionale panel: ritorno a Location — 2026-10-09
+
+- Correzione su main: creazione, modifica ed eliminazione location
+  chiudono la modale e mantengono la sottosezione Location e il menu full/mini.
+  Il redirect delle action ometteva `panelView=locations`, aprendo i panel.
+- Regressione delle action reali con database sintetico, inclusi errori;
+  vista risultante verificata nel browser locale desktop/mobile. 720 test,
+  lint, TypeScript e build production verificati. Commit/push su main e normale
+  rilascio Vercel autorizzati dall’utente; deployment da verificare separatamente.
+  Nessuna migration, email o modifica di dati remoti in questa correzione.
+
 ## Rilascio admin autorizzato — aggiornamento 2026-10-09
 
 - Esito: main pubblicato (`eab1293`), deployment Vercel production READY sul

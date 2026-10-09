@@ -1,5 +1,15 @@
 # Rilascio gestionale panel riservato all’admin — 9 ottobre 2026
 
+## Correzione del collaudo: ritorno a Location
+
+Il redirect condiviso delle action location ora include `panelView=locations`:
+creazione, modifica ed eliminazione chiudono la modale e mantengono l’elenco
+Location, conservando il menu full/mini. Anche gli errori restano nella stessa
+sottosezione. Verificate le action reali con database sintetico e la vista
+risultante desktop/mobile; 720 test, lint, TypeScript e build production.
+Commit/push su main e normale rilascio Vercel autorizzati dall’utente; verificare
+separatamente il deployment effettivo. Nessuna migration o modifica di dati remoti.
+
 ## Stato e perimetro
 
 L’utente autorizza la pubblicazione production, le migration e il deployment,
