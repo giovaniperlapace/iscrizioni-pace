@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Collaudo panel: ordine delle quote — 2026-10-09
+
+- Il catalogo ordina le sezioni con l’ordine configurato dei tipi di pubblico
+  (Iscritti, Scuole, Ospiti), anziché con gli UUID delle sezioni. Stesso ordine
+  nei riepiloghi desktop/mobile e nel form di modifica di ogni panel.
+- Correzione locale del loader; nessuna riscrittura dei panel, quote o
+  prenotazioni, nessuna migration. Commit/push e normale rilascio autorizzati
+  dall’utente; 12 test mirati, ESLint e TypeScript superati.
+
 ## Collaudo panel: colonna Quando — 2026-10-09
 
 - Rinominata Orario in Quando; giorno mostrato una sola volta seguito dalla

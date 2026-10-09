@@ -153,6 +153,7 @@ export async function getPanelDraftCatalog(
 
   const audienceRows = (audienceResult.data ?? []) as AudienceRow[];
   const audienceById = new Map(audienceRows.map((row) => [row.id, row]));
+  const audienceOrder = new Map(audienceRows.map((row, index) => [row.id, index]));
   const locationsById = new Map(
     ((locationsResult.data ?? []) as LocationRow[]).map((row) => [row.id, row])
   );
@@ -180,7 +181,9 @@ export async function getPanelDraftCatalog(
   const panels = panelRows.map((row) => {
     const location = row.location_id ? locationsById.get(row.location_id) : null;
     if (row.location_id && !location) throw new Error("Location panel non caricata.");
-    const sections = sectionsByPanel.get(row.id) ?? [];
+    const sections = (sectionsByPanel.get(row.id) ?? []).sort((left, right) =>
+      audienceOrder.get(left.audienceTypeId)! - audienceOrder.get(right.audienceTypeId)!
+    );
 
     return {
       id: row.id,
