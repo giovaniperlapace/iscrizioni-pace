@@ -333,7 +333,10 @@ export function filterPanelDrafts(
     }
 
     return true;
-  });
+  }).sort((left, right) =>
+    left.title.localeCompare(right.title, "it", { sensitivity: "base", numeric: true }) ||
+    left.id.localeCompare(right.id)
+  );
 }
 
 export function isValidPanelDayRange(start: Date, end: Date): boolean {

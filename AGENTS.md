@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Collaudo panel: ordinamento alfabetico catalogo — 2026-10-09
+
+- Il catalogo gestionale ordina i panel per titolo in italiano, ignorando
+  differenze di maiuscole e usando numeri naturali (Forum 2 prima di Forum 10).
+  Ordinamento applicato dopo i filtri, condiviso desktop/mobile; array origine,
+  selezioni, dati e permessi preservati. Commit/push e normale rilascio
+  autorizzati dall’utente; 12 test mirati, ESLint e TypeScript superati.
+
 ## Collaudo panel: giorno unico e orari separati — 2026-10-09
 
 - Il form creazione/modifica panel seleziona un solo Giorno e due orari,
