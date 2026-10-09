@@ -1,5 +1,26 @@
 # Piano di lavoro Panel
 
+### Attivazione Capogruppo rinviata — 2026-10-09
+
+Su indicazione dell’utente, attivare la funzione panel del Capogruppo nella
+futura tranche di pubblicazione dei panel sulla home del sito. Il rilascio
+Manager attuale non la apre; menu, pagina, action e RPC restano protetti dalla
+modalità pubblica esistente. Non attivarla con la sola pubblicazione gestionale
+dei singoli panel.
+
+### Tranche di rilascio P0–P10: apertura Manager — 2026-10-09
+
+L’utente autorizza l’integrazione locale delle funzioni Admin già collaudate
+nella dashboard Manager dell’evento corrente, conservando le correzioni e
+usando gli stessi componenti. Viewer e pubblico restano esclusi. Migration
+revisionabile `20261009170000_manager_panel_access.sql` per helper e policy
+SQL; test su ruoli cumulativi, scope evento, RPC/RLS, roster/export e campagne.
+Nessuna nuova funzione P11–P13 o sviluppo del branch panel in questa tranche.
+Pubblicazione e migration production autorizzate dall’utente. Applicata e
+registrata `20261009170000` con dati invariati; deployment da verificare dopo
+il push. Capogruppo chiuso fino alla futura pubblicazione sulla home.
+Dettagli e verifiche in `docs/panel-reserved-release.md`.
+
 ## Rilascio admin autorizzato — aggiornamento 2026-10-09
 
 - Esito: main pubblicato (`eab1293`), deployment Vercel production READY sul

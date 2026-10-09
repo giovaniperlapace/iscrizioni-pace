@@ -1,3 +1,4 @@
+import { DeskMicrophoneIcon } from "@/components/desk-microphone-icon";
 import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
 import { loadAssociations } from "@/lib/registrations/association.server";
 import { ExportsSection } from "@/app/dashboard/exports-section";
@@ -31,10 +32,10 @@ import { ReliableForm } from "@/components/reliable-form";
 import { permanentRedirect, redirect } from "next/navigation";
 import Link from "@/components/pending-link";
 import {
+  type LucideProps,
   BarChart3,
   FileDown,
   Mail,
-  MapPin,
   Network,
   Pencil,
   ShieldCheck,
@@ -1243,7 +1244,7 @@ function AdminSidebar({
   const items: Array<{
     key: AdminSection;
     href: string;
-    Icon: typeof BarChart3;
+    Icon: React.ComponentType<LucideProps>;
     label: string;
     help: string;
   }> = [
@@ -1271,7 +1272,7 @@ function AdminSidebar({
     {
       key: "panel",
       href: adminPath("panel", navMode),
-      Icon: MapPin,
+      Icon: DeskMicrophoneIcon,
       label: "Panel",
       help: "Location e programma",
     },

@@ -32,14 +32,14 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
     parseOperationsDashboardFilters: () => ({}),
     redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); },
     permanentRedirect: (url: string) => { throw new Error(`PERMANENT:${url}`); },
-    Link: "a", MapPin: "svg", FileDown: "svg", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
+    Link: "a", DeskMicrophoneIcon: "svg", FileDown: "svg", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
   };
   const api = new Function(...Object.keys(deps), `${js}; return {ManagerDashboardPage, ManagerSidebar};`)(...Object.values(deps));
   return { ...api, reads };
 }
 
 const deniedParams = [
-  ...["email", "ruoli", "gruppi", "impostazioni", "servizi"].map(section => ({ section })),
+  ...["email", "ruoli", "gruppi", "impostazioni", "servizi", "panel"].map(section => ({ section })),
   { groupTool: "links" }, { groupId: "group" }, { groupLinkToken: "secret" },
   { roleSaved: "1" }, { serviceId: "service" },
 ];
@@ -73,7 +73,7 @@ test("manager rights belong to the current event and global admin remains unrest
     [{ role: "manager", eventId: "current" }, { role: "manager_viewer", eventId: "current" }],
   ]) {
     const f = fixture(roles);
-    for (const section of ["dashboard", "esportazioni", "iscritti", "email", "ruoli", "gruppi", "impostazioni"]) {
+    for (const section of ["dashboard", "esportazioni", "iscritti", "panel", "email", "ruoli", "gruppi", "impostazioni"]) {
       assert.deepEqual(await f.ManagerDashboardPage({ searchParams: Promise.resolve({ section }) }), { canManage: true, activeSection: section });
     }
   }
@@ -92,7 +92,7 @@ test("both sidebar modes render only the allowed read-only viewer menu items", (
       const html = renderToStaticMarkup(f.ManagerSidebar({ activeSection: "dashboard", navMode, canManage, report: "territory" }));
       const menu = html.slice(html.indexOf("<nav"));
       const sections = [...menu.matchAll(/href="\/dashboard\/manager\?section=([a-z]+)&amp;nav=mini"/g)].map(match => match[1]);
-      assert.deepEqual(sections, canManage ? ["dashboard", "esportazioni", "iscritti", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "esportazioni", "iscritti"]);
+      assert.deepEqual(sections, canManage ? ["dashboard", "esportazioni", "iscritti", "panel", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "esportazioni", "iscritti"]);
     }
   }
 });
@@ -109,10 +109,26 @@ test("viewer can read disability statistics and drilldowns only for their curren
 });
 
 for (const role of ["admin", "manager", "manager_viewer"]) {
-  test(`panel routes and statistics stay out of manager dashboard for ${role}`, async () => {
+  test(`panel routes and statistics follow current-event management rights for ${role}`, async () => {
     for (const params of [{section: "panel"}, {section: "dashboard", report: "panels"}]) {
       const f = fixture([{role, eventId: role === "admin" ? null : "current"}]);
-      await assert.rejects(f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), /REDIRECT:/);
+      if (role === "manager_viewer") {
+        await assert.rejects(f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), /REDIRECT:/);
+      } else {
+        assert.deepEqual(await f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), {canManage: true, activeSection: params.section});
+      }
     }
   });
 }
+
+
+test("foreign manager and cumulative viewer cannot reach current-event panel loaders", async () => {
+  for (const roles of [
+    [{role: "manager", eventId: "other"}],
+    [{role: "manager", eventId: "other"}, {role: "manager_viewer", eventId: "current"}],
+  ]) for (const params of [{section: "panel"}, {section: "dashboard", report: "panels"}]) {
+    const f = fixture(roles);
+    await assert.rejects(f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), /REDIRECT:/);
+    assert.deepEqual(f.reads, ["current-event"]);
+  }
+});

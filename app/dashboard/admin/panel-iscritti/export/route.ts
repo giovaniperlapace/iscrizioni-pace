@@ -21,7 +21,8 @@ export async function GET(request: Request) {
       ...headers, "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="iscritti-panel-${panelId}.xlsx"`,
     } });
-  } catch {
+  } catch (cause) {
+    if (cause instanceof Error && cause.message === "Panel roster forbidden") return new Response("Accesso non consentito.", { status: 403, headers });
     return new Response("Impossibile esportare l’elenco. Riprova.", { status: 500, headers });
   }
 }

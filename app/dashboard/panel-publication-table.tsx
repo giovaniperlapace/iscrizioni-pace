@@ -136,7 +136,7 @@ export function PanelPublicationTable({
                     panelPath={panelPath}
                     canManage={canManage}
                   />
-                  {dashboard === "admin" && canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
+                  {canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
                   {canManage && panel.publicationStatus === "draft" ? (
                     <button
                       type="button"
@@ -212,7 +212,7 @@ export function PanelPublicationTable({
                 <td className="py-4 pl-4 text-right">
                   <div className="flex flex-col items-stretch gap-2">
                     <PanelEditLink panel={panel} panelPath={panelPath} canManage={canManage} />
-                    {dashboard === "admin" && canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
+                    {canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
                     {canManage && panel.publicationStatus === "draft" ? (
                       <button
                         type="button"

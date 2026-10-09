@@ -43,9 +43,9 @@ function fixture(overrides: Record<string, Row[]> = {}, failure = "", failFrom =
   return { db, reads, pages };
 }
 
-test("panel roster rejects non-admin roles and invalid IDs before data reads", async () => {
+test("panel roster rejects unauthorized roles and invalid IDs before data reads", async () => {
   await assert.rejects(loadPanelRoster(fixture().db, panelId, []));
-  for (const role of ["manager", "manager_viewer", "capogruppo", "accoglienza"] as const) {
+  for (const role of ["manager_viewer", "capogruppo", "accoglienza"] as const) {
     const h = fixture();
     await assert.rejects(loadPanelRoster(h.db, panelId, [{ role, eventId: "event" }]));
     assert.deepEqual(h.reads, []);
@@ -121,7 +121,7 @@ test("Excel contains four sheets, one row per person, numeric seats and literal 
 test("real export GET denies forged direct requests before service access and returns a private workbook", async () => {
   const js = ts.transpileModule(readFileSync("app/dashboard/admin/panel-iscritti/export/route.ts", "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
   const roster = (await loadPanelRoster(fixture().db, panelId, admin))!;
-  for (const [roles, id, status] of [[null, panelId, 401], [[], panelId, 403], [[{ role: "manager", eventId: "event" }], panelId, 403], [[{ role: "manager_viewer", eventId: "event" }], panelId, 403], [admin, "invalid", 400], [admin, panelId, 404], [admin, panelId, 500], [admin, panelId, 200]] as const) {
+  for (const [roles, id, status] of [[null, panelId, 401], [[], panelId, 403], [[{ role: "manager", eventId: "event" }], panelId, 200], [[{ role: "manager_viewer", eventId: "event" }], panelId, 403], [[{ role: "manager", eventId: "other" }], panelId, 403], [admin, "invalid", 400], [admin, panelId, 404], [admin, panelId, 500], [admin, panelId, 200]] as const) {
     let reads = 0;
     const deps: Record<string, unknown> = {
       "@/lib/auth/session": { getCurrentAuthContext: async () => roles === null ? null : { eventRoles: roles } },
@@ -129,6 +129,7 @@ test("real export GET denies forged direct requests before service access and re
       "@/lib/supabase/service": { createSupabaseServiceClient: () => { reads++; return {}; } },
       "@/lib/panels/management-access": { canAccessPanelManagement },
       "@/lib/panels/panel-roster.server": { isPanelRosterId, loadPanelRoster: async () => {
+        if (roles?.some(role => role.role === "manager" && role.eventId === "other")) throw new Error("Panel roster forbidden");
         if (status === 500) throw new Error("Synthetic query failure");
         return status === 404 ? null : roster;
       } },
@@ -139,7 +140,7 @@ test("real export GET denies forged direct requests before service access and re
     const response = await exports.GET!(new Request(`https://example.invalid/dashboard/admin/panel-iscritti/export?panelId=${id}`));
     assert.equal(response.status, status);
     assert.equal(response.headers.get("cache-control"), "private, no-store");
-    assert.equal(reads, [200, 404, 500].includes(status) ? 1 : 0);
+    assert.equal(reads, [200, 404, 500].includes(status) || roles?.some(role => role.role === "manager" && role.eventId === "other") ? 1 : 0);
     if (status !== 200) assert.ok(!response.headers.get("content-disposition"));
     if (status === 200) {
       assert.ok(response.headers.get("content-type")?.includes("spreadsheetml"));
@@ -147,5 +148,19 @@ test("real export GET denies forged direct requests before service access and re
       await book.xlsx.load(Buffer.from(await response.arrayBuffer()) as unknown as ExcelJS.Buffer);
       assert.equal(book.getWorksheet("Partecipanti")!.rowCount, 3);
     }
+  }
+});
+
+
+test("manager roster matches admin, foreign event denied before participant reads", async () => {
+  const expected = await loadPanelRoster(fixture().db, panelId, admin);
+  assert.deepEqual(await loadPanelRoster(fixture().db, panelId, [{role: "manager", eventId: "event"}]), expected);
+  for (const roles of [
+    [{role: "manager" as const, eventId: "other"}],
+    [{role: "manager" as const, eventId: "other"}, {role: "manager_viewer" as const, eventId: "event"}],
+  ]) {
+    const h = fixture();
+    await assert.rejects(loadPanelRoster(h.db, panelId, roles), /forbidden/);
+    assert.deepEqual(h.reads, ["events"]);
   }
 });

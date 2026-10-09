@@ -1,5 +1,53 @@
 # AGENTS.md
 
+## Pubblicazione Manager autorizzata — 2026-10-09
+
+- L’utente richiede migration production, commit e push. Applicata e registrata
+  `20261009170000_manager_panel_access` in una sola transazione, con verifica
+  delle impronte e dei conteggi di tutte le 45 tabelle pubbliche: 73.760 righe
+  invariate nello snapshot, 24 panel conservati, modalità `internal` immutata.
+  Nessuna modifica a funzioni o policy estranee, privilegi tabelle invariati.
+- Backup custom verificato sul server, permessi 600:
+  `/tmp/iscrizioni-pace-production-before-manager-panels-20261009.dump`.
+  Verifiche production in sola lettura con identità dei ruoli esistenti:
+  Admin/Manager ammessi, Viewer e pubblico esclusi; nessuna nuova sessione,
+  iscrizione, prenotazione, destinatario o email di collaudo.
+- Commit/push su main e normale rilascio Vercel autorizzati. Verifiche locali
+  già superate: 733 test, ESLint, TypeScript, build e SQL/RLS sintetico.
+  Deployment sul dominio reale da verificare separatamente dopo il push.
+  Capogruppo chiuso fino alla futura pubblicazione dei panel sulla home.
+  Branch panel e stash preservati.
+
+## Panel Capogruppo rinviati alla pubblicazione sulla home — 2026-10-09
+
+- L’utente rinvia l’attivazione della funzione panel del Capogruppo alla
+  futura pubblicazione dei panel sulla home del sito. Questa attivazione farà
+  parte di quella tranche esplicita, insieme ai relativi controlli di accesso.
+- L’integrazione Manager attuale non abilita menu, pagina, prenotazioni o RPC
+  panel del Capogruppo. Restano i controlli esistenti sulla modalità `open`;
+  la pubblicazione di un panel nel gestionale non apre questi flussi.
+
+## Integrazione panel nella dashboard Manager — 2026-10-09
+
+- Su via libera dell’utente, le funzioni panel già collaudate nell’Admin sono
+  disponibili anche al Manager dell’evento corrente: Panel/Location/Scuole,
+  Iscritti ed Excel, statistiche e audience Comunicazioni. Riutilizzati i
+  componenti condivisi, conservando tutte le correzioni di “Correggi il
+  gestionale panel”: SuccessMessage a 5 secondi, ordine quote/titoli, Quando,
+  giorno unico, scheda Iscritti, PendingLink, pubblicazione e filtro cercabile.
+- Viewer e manager di altri eventi restano esclusi anche da URL, action,
+  export, API e database; ruoli cumulativi verificati sullo scope corrente.
+  Il via libera supera la precedente restrizione solo Admin per il Manager,
+  senza estenderla al Viewer o aprire catalogo/iscrizioni pubbliche.
+- Tranche locale di apertura Manager P0–P10: migration versionata
+  `20261009170000_manager_panel_access.sql`, che aggiorna il controllo condiviso
+  e le policy di lettura/campagne; nessuna riscrittura delle migration storiche
+  o dei dati. Icona SVG microfono da tavolo condivisa nei menu Admin/Manager.
+- Lavoro locale su main; nessun commit/push, deployment, migration remota o
+  email. Branch panel e stash preservati. Migration da applicare prima del
+  rilascio del codice. Verificati 733 test, ESLint, TypeScript, build e
+  SQL/RLS PostgreSQL 17 con dati sintetici e rollback. Collaudo visivo all’utente.
+
 ## Collaudo panel: conferme sempre temporanee — 2026-10-09
 
 - Regola generale: le semplici conferme di operazione riuscita devono usare

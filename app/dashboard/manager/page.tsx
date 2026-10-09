@@ -27,11 +27,11 @@ import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { ReliableForm } from "@/components/reliable-form";
 import Link from "@/components/pending-link";
 import {
+  type LucideProps,
   BarChart3,
   FileDown,
   Settings,
   Mail,
-  MapPin,
   Network,
   Pencil,
   ShieldCheck,
@@ -67,6 +67,10 @@ import {
   type OperationsParticipantRow,
 } from "@/app/dashboard/operations-participants-section";
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
+import { DeskMicrophoneIcon } from "@/components/desk-microphone-icon";
+import { LocalOverlay } from "@/app/dashboard/local-overlay";
+import { PanelRosterOverlay } from "@/app/dashboard/panel-roster-overlay";
+import { loadPanelRoster, type PanelRoster } from "@/lib/panels/panel-roster.server";
 import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
 import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
 import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
@@ -158,6 +162,7 @@ type ManagerPageProps = {
     panelDate?: string;
     panelError?: string;
     panelId?: string;
+    panelRoster?: string;
     panelLocation?: string;
     panelQ?: string;
     panelSaved?: string;
@@ -419,7 +424,6 @@ export default async function ManagerDashboardPage({
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveManagerSection(params);
   const statisticsReport = resolveStatisticsReport(params.report);
-  if (params.report === "panels") redirect("/dashboard/manager?section=dashboard&nav=mini");
   const statisticsDrilldown =
     activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
   const currentEvent = await getCurrentOperationalEvent(
@@ -431,7 +435,7 @@ export default async function ManagerDashboardPage({
   const canViewStatistics = scope.isAdmin || Boolean(currentEventId && scope.eventIds?.has(currentEventId));
   // Authorize the resolved section before any operational data is loaded,
   // including legacy URLs, inferred sections and remembered navigation.
-  if (!canAccessManagerSection(activeSection, canManage) ||
+  if ((!canManage && statisticsReport === "panels") || !canAccessManagerSection(activeSection, canManage) ||
       (!canViewStatistics && (activeSection === "esportazioni" || (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
     redirect("/dashboard/manager?section=dashboard&nav=mini");
   }
@@ -520,9 +524,25 @@ export default async function ManagerDashboardPage({
   const panelView = params.panelView === "locations" || params.panelView === "schools" ? params.panelView : "panels";
   const navMode: ManagerNavMode = params.nav === "full" ? "full" : "mini";
 
+  let panelRoster: PanelRoster | null = null;
+  let panelRosterError: string | null = null;
+  const rosterId = activeSection === "panel" && typeof params.panelRoster === "string" ? params.panelRoster : null;
+  const rosterCloseParams = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[0] !== "panelRoster"));
+  if (rosterId) {
+    try {
+      panelRoster = await loadPanelRoster(serviceSupabase, rosterId, auth.eventRoles);
+      if (!panelRoster) panelRosterError = "Il panel non è disponibile nell’evento corrente.";
+    } catch {
+      panelRosterError = "Impossibile caricare l’elenco completo. Riprova.";
+    }
+  }
+
   return (
     <main className="app-page text-[var(--peace-ink)]">
       <PreserveDashboardScroll />
+      {rosterId ? <LocalOverlay parameter="panelRoster" value={rosterId}>
+        <PanelRosterOverlay key={rosterId} dashboard="manager" roster={panelRoster} error={panelRosterError} closePath={`/dashboard/manager?${rosterCloseParams}`} />
+      </LocalOverlay> : null}
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard manager</h1>
@@ -610,6 +630,7 @@ export default async function ManagerDashboardPage({
               <ManagerEmailSection
                 eventId={currentEventId}
                 canManage={currentEventId ? scope.canManageEvent(currentEventId) : false}
+                allowPanelManagement={canManage}
                 initialPanelId={params.campaignPanel}
               />
             ) : null}
@@ -751,7 +772,7 @@ function ManagerSidebar({
   const items: Array<{
     key: ManagerSection;
     href: string;
-    Icon: typeof BarChart3;
+    Icon: React.ComponentType<LucideProps>;
     label: string;
     help: string;
   }> = [
@@ -779,7 +800,7 @@ function ManagerSidebar({
     {
       key: "panel",
       href: "/dashboard/manager?section=panel&nav=mini",
-      Icon: MapPin,
+      Icon: DeskMicrophoneIcon,
       label: "Panel",
       help: "Location e programma",
     },
@@ -1069,7 +1090,7 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 }
 
 function canAccessManagerSection(section: ManagerSection, canManage: boolean): boolean {
-  return section !== "panel" && (canManage || section === "dashboard" || section === "iscritti" || section === "esportazioni");
+  return canManage || section === "dashboard" || section === "iscritti" || section === "esportazioni";
 }
 
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {

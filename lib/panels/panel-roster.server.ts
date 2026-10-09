@@ -25,6 +25,7 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
   if (event.error) throw new Error("Current event unavailable");
   if (!event.data) return null;
   const eventId = event.data.id as string;
+  if (!canAccessPanelManagement(roles, eventId)) throw new Error("Panel roster forbidden");
   const panel = await db.from("event_moments").select("id,title").eq("id", panelId).eq("event_id", eventId).eq("moment_type", "panel").maybeSingle();
   if (panel.error) throw new Error("Panel unavailable");
   if (!panel.data) return null;

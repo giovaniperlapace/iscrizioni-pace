@@ -1,5 +1,68 @@
 # Rilascio gestionale panel riservato all’admin — 9 ottobre 2026
 
+## Apertura Manager autorizzata — 9 ottobre 2026
+
+Il via libera dell’utente estende al Manager dell’evento corrente le funzioni
+P0–P10 già collaudate dall’Admin. Le sezioni Panel, Location e Scuole usano gli
+stessi componenti e conservano tutte le correzioni del collaudo. Sono inclusi
+Iscritti con export XLSX, statistiche e audience panel/professori nelle
+Comunicazioni. Entrambi i menu laterali usano l’icona SVG microfono da tavolo.
+Viewer e manager di altri eventi restano esclusi. Home, catalogo pubblico e
+prenotazioni pubbliche conservano la modalità esplicita esistente.
+
+L’utente conferma il rinvio della funzione panel del Capogruppo: la attiveremo
+nella futura tranche di pubblicazione dei panel sulla home del sito. Il
+rilascio Manager non modifica i suoi menu, percorsi o prenotazioni; pagina e
+action continuano a richiedere la modalità `open`, con protezioni anche SQL.
+
+La migration `20261009170000_manager_panel_access.sql` aggiorna il controllo
+condiviso `app.panel_management_allowed` e le policy di lettura di QR scuola,
+scelte panel e campagne/destinatari. Conserva i controlli RPC su ruolo/evento,
+le policy permissive, la protezione del pubblico e le restrizioni sulle scritture
+delle scelte individuali. Non modifica dati o migration già applicate.
+
+La preparazione locale è stata approvata: l’utente richiede migration
+production, commit e push su main. Applicata **solo la nuova migration** prima
+del codice, senza riapplicare le precedenti; i controlli sintetici coprono anche
+Manager esterno e ruoli cumulativi. Nessuna email di prova su persone reali.
+
+Verifiche locali: 733 test applicativi, ESLint, TypeScript e build production;
+`tests/sql/manager-panel-access.sql` su clone PostgreSQL 17 temporaneo con
+rollback per RPC, RLS, location, bozze/pubblicazione/modifica, scuole, campagne,
+QR scuola e scelte panel. Test applicativi su navigazione e ruoli cumulativi,
+action guard, loader ed export paginati, preview destinatari senza delivery.
+Collaudo visivo e funzionale in produzione da eseguire dopo il rilascio.
+
+### Esito migration Manager in produzione
+
+`20261009170000_manager_panel_access` applicata e registrata in un’unica
+transazione a isolamento repeatable read. Impronte e conteggi delle **45 tabelle
+pubbliche** conservati: **73.760 righe** nello snapshot e **24 panel** invariati.
+Modalità `internal` preservata; nessuna modifica alle funzioni o policy estranee
+alla migration, né ai privilegi/RLS delle relazioni.
+
+Backup custom sul server, senza download o inserimento in Git:
+`/tmp/iscrizioni-pace-production-before-manager-panels-20261009.dump`,
+7.421.569 byte, permessi 600 e indice pg_restore verificato (1.719 righe).
+Credenziali SSH già disponibili per il medesimo host usate con il container
+production esplicito `supabase-db-ammnuajlmd83t94cfy3us6cw`; nessuna
+configurazione staging o variabile applicativa modificata.
+
+Verifica post-migration in transazione read-only con rollback e identità tratte
+internamente dai ruoli esistenti: Manager corrente vede tutti i panel, quote e
+RPC disponibilità; Admin conserva l’accesso; Viewer non vede i panel né le quote
+e riceve il rifiuto dalla RPC. Il pubblico non vede programma o opzioni scuola.
+Capogruppo ancora chiuso. Nessun account/sessione, destinatario email o dato di
+collaudo creato. Privilegi di scrittura verificati precedentemente sui dati
+sintetici locali, senza provarli su persone reali.
+
+Codice pronto al commit/push autorizzato con 733 test, ESLint, TypeScript e build
+superati. Il deployment effettivo e il dominio verranno verificati dopo il push;
+il collaudo autenticato dell’interfaccia resta all’utente.
+
+Le sezioni successive documentano il rilascio Admin precedente; la loro
+esclusione del Manager è superata solo da questa nuova tranche autorizzata.
+
 ## Correzioni del collaudo: posti ospiti, azioni e filtro Panel
 
 Approvata la distinzione nel catalogo tra posti prenotabili e quota ospiti:

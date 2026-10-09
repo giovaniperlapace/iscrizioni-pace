@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { PendingDownload } from "@/components/pending-download";
 import type { PanelRoster } from "@/lib/panels/panel-roster.server";
 
-export function PanelRosterOverlay({ roster, error, closePath }: {
+export function PanelRosterOverlay({ roster, error, closePath, dashboard = "admin" }: {
+  dashboard?: "admin" | "manager";
   roster: PanelRoster | null;
   error: string | null;
   closePath: string;
@@ -45,7 +46,7 @@ export function PanelRosterOverlay({ roster, error, closePath }: {
         </div>
         <p className="text-sm font-semibold text-[var(--peace-blue-900)]">Totale posti prenotati: {roster.individualSeats + roster.schoolSeats} · Posti ospiti riservati: {roster.reservedGuestSeats}</p>
         <div className="grid justify-items-start gap-2">
-          <PendingDownload href={`/dashboard/admin/panel-iscritti/export?panelId=${encodeURIComponent(roster.panelId)}`} filename={`iscritti-panel-${roster.panelId}.xlsx`} className="btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-2 text-sm sm:w-auto"><Download size={18} aria-hidden="true" />Esporta in Excel</PendingDownload>
+          <PendingDownload href={`/dashboard/${dashboard}/panel-iscritti/export?panelId=${encodeURIComponent(roster.panelId)}`} filename={`iscritti-panel-${roster.panelId}.xlsx`} className="btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-2 text-sm sm:w-auto"><Download size={18} aria-hidden="true" />Esporta in Excel</PendingDownload>
           <p className="text-xs text-[var(--peace-muted)]">Il file contiene le prenotazioni correnti al momento del download.</p>
         </div>
         <section className="surface-panel grid min-w-0 gap-3 p-4 sm:p-5"><h3 className="font-bold text-[var(--peace-blue-900)]">Iscritti e minori accompagnati</h3>

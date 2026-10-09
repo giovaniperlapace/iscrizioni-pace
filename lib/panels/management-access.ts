@@ -1,9 +1,11 @@
 import type { EventUserRole } from "../auth/session";
 
-// First production acceptance is reserved to global administrators.
-// Opening manager access requires an explicit subsequent release (and matching SQL).
-export function canAccessPanelManagement(roles: EventUserRole[]): boolean {
-  return roles.some(role => role.role === "admin");
+// Without an event ID this is only a role preflight; loaders must check the
+// resolved current event before reading operational panel data.
+export function canAccessPanelManagement(roles: EventUserRole[], eventId?: string | null): boolean {
+  return roles.some(role => (role.role === "admin" && role.eventId === null) ||
+    (role.role === "manager" && Boolean(role.eventId) &&
+      (eventId === undefined || role.eventId === eventId)));
 }
 
 export function isPanelCampaign(filters: unknown): boolean {

@@ -83,7 +83,7 @@ export function StatisticsSection({
       </div>
 
       <nav aria-label="Categorie di statistiche" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
-        {STATISTICS_REPORTS.filter(item => (item.key !== "disability" || canViewDisability) && (item.key !== "panels" || dashboard === "admin")).map(({ key, label }) => (
+        {STATISTICS_REPORTS.filter(item => (item.key !== "disability" || canViewDisability) && (item.key !== "panels" || dashboard === "admin" || canManage)).map(({ key, label }) => (
           <Link
             key={key}
             href={`/dashboard/${dashboard}?${new URLSearchParams({ section: "dashboard", nav: navMode, report: key })}`}
@@ -97,7 +97,7 @@ export function StatisticsSection({
         ))}
       </nav>
 
-      {dashboard === "admin" && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Panel">
+      {(dashboard === "admin" || canManage) && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Panel">
         <PanelStatisticsReport
           statistics={panelStatistics}
           dashboard={dashboard}

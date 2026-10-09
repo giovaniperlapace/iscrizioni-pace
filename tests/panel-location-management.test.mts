@@ -144,7 +144,7 @@ test("location actions close the overlay and return to Locations for both nav mo
     then(resolve: (value: typeof result) => unknown) { return Promise.resolve(result).then(resolve); },
   };
   const deps = {
-    requirePanelAdministrator: async () => { authorizations++; },
+    requirePanelManager: async () => { authorizations++; },
     optionalText: (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null,
     normalizeEventLocationName, normalizeEventLocationAddress, parseEventLocationCapacity,
     EVENT_LOCATION_NAME_MAX_LENGTH, EVENT_LOCATION_ADDRESS_MAX_LENGTH,
