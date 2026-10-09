@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import Link from "next/link";
 import { Pencil, Plus, Search, X } from "lucide-react";
 
@@ -444,9 +446,9 @@ function LocationStatus({ error, saved }: { error?: string; saved?: string }) {
     };
 
     return (
-      <p className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
+      <SuccessMessage key={randomUUID()} clearQuery className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">
         {messages[saved] ?? "Location aggiornata."}
-      </p>
+      </SuccessMessage>
     );
   }
 

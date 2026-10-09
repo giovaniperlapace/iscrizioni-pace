@@ -7,7 +7,7 @@ const CLOSE_LABEL: Record<SupportedLocale, string> = {
   it: "Chiudi messaggio", en: "Dismiss message", fr: "Fermer le message",
   de: "Meldung schließen", es: "Cerrar mensaje", nl: "Bericht sluiten", uk: "Закрити повідомлення",
 };
-const SUCCESS_PARAMS = ["saved", "openingSaved", "adminSaved", "managerSaved", "groupSaved", "groupLinkSaved", "roleSaved", "serviceSaved", "manualSaved"];
+const SUCCESS_PARAMS = ["saved", "openingSaved", "adminSaved", "managerSaved", "groupSaved", "groupLinkSaved", "roleSaved", "serviceSaved", "manualSaved", "panelSaved", "panelCount", "locationSaved", "schoolSaved"];
 
 export function SuccessMessage({ children, locale = "it", className = "", clearQuery = false, attention = false, persistent = false }: {
   children: ReactNode;

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import Link from "next/link";
 import { CalendarDays, MapPin, Plus, School, Search, X } from "lucide-react";
 
@@ -89,7 +91,13 @@ function SchoolBookingOverlay({ dashboard, navMode, event, booking, panelOptions
 
 function Field({ label, name, defaultValue, type = "text", maxLength, min, max, wide = false }: { label: string; name: string; defaultValue?: string | number; type?: string; maxLength?: number; min?: number; max?: number; wide?: boolean }) { return <label className={`grid gap-1 text-sm font-semibold ${wide ? "md:col-span-2" : ""}`}>{label}<input required name={name} defaultValue={defaultValue} type={type} maxLength={maxLength} min={min} max={max} className="field font-normal" /></label>; }
 function StatusBadge({ status }: { status: SchoolBookingRow["status"] }) { const labels = { draft: "Bozza", submitted: "Da verificare", confirmed: "Confermata", cancelled: "Annullata" }; return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${status === "confirmed" ? "bg-[#e8f6e8] text-[#27613a]" : status === "cancelled" ? "bg-[#fff0eb] text-[#8a3323]" : "bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]"}`}>{labels[status]}</span>; }
-function SchoolStatus({ error, saved }: { error?: string; saved?: string }) { const errors: Record<string, string> = { invalid: "Controlla dati, quantità e panel selezionati.", forbidden: "Non hai i permessi per modificare questa prenotazione.", overlap: "I panel scelti si sovrappongono.", capacity: "La quota Scuole di almeno un panel non ha posti sufficienti." }; const savedLabels: Record<string, string> = { created: "Prenotazione scuola creata e QR gruppo generato.", updated: "Prenotazione scuola aggiornata.", cancelled: "Prenotazione scuola annullata e posti liberati." }; if (!error && !saved) return null; return <p role="status" className={`mt-5 rounded-md border px-4 py-3 text-sm ${error ? "border-[#d9a99d] bg-[#fff0eb] text-[#7f2f20]" : "border-[#a9d5b1] bg-[#eef9ef] text-[#255b34]"}`}>{error ? errors[error] ?? "Operazione non riuscita." : savedLabels[saved ?? ""] ?? "Operazione completata."}</p>; }
+function SchoolStatus({ error, saved }: { error?: string; saved?: string }) {
+  const errors: Record<string, string> = { invalid: "Controlla dati, quantità e panel selezionati.", forbidden: "Non hai i permessi per modificare questa prenotazione.", overlap: "I panel scelti si sovrappongono.", capacity: "La quota Scuole di almeno un panel non ha posti sufficienti." };
+  const savedLabels: Record<string, string> = { created: "Prenotazione scuola creata e QR gruppo generato.", updated: "Prenotazione scuola aggiornata.", cancelled: "Prenotazione scuola annullata e posti liberati." };
+  if (error) return <p role="alert" className="mt-5 rounded-md border border-[#d9a99d] bg-[#fff0eb] px-4 py-3 text-sm text-[#7f2f20]">{errors[error] ?? "Operazione non riuscita."}</p>;
+  if (!saved) return null;
+  return <SuccessMessage key={randomUUID()} clearQuery className="mt-5 rounded-md border border-[#a9d5b1] bg-[#eef9ef] px-4 py-3 text-sm text-[#255b34]">{savedLabels[saved] ?? "Operazione completata."}</SuccessMessage>;
+}
 function uniquePanels(options: SchoolPanelOption[]) { return [...new Map(options.map((row) => [row.panelId, row])).values()]; }
 function formatSchedule(row: SchoolPanelOption) { return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(row.startsAt)); }
 function formatDateTime(value: string) { return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value)); }

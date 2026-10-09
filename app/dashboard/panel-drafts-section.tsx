@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import Link from "next/link";
 import { Plus, Search, X } from "lucide-react";
 
@@ -290,7 +292,7 @@ function PanelStatus({ error, saved }: { error?: string; saved?: string }) {
       "already-published": "I panel selezionati risultano già pubblicati.",
       "published-updated": "Panel pubblicato aggiornato.",
     };
-    return <p className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">{messages[saved] ?? "Operazione panel completata."}</p>;
+    return <SuccessMessage key={randomUUID()} clearQuery className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">{messages[saved] ?? "Operazione panel completata."}</SuccessMessage>;
   }
   if (!error) return null;
   const messages: Record<string, string> = {

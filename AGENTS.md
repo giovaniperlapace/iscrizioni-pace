@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Collaudo panel: conferme sempre temporanee — 2026-10-09
+
+- Regola generale: le semplici conferme di operazione riuscita devono usare
+  SuccessMessage, sparire dopo 5 secondi e consentire chiusura con ×. Errori,
+  istruzioni e stati operativi persistenti conservano le rispettive regole.
+- Applicato anche a Panel, Location e Scuole; chiave nuova per ogni risposta
+  e pulizia dei parametri di successo senza perdere filtri, menu o scroll.
+  Nessuna modifica dati; commit/push e normale rilascio autorizzati dall’utente.
+  Superati 22 test mirati, ESLint e TypeScript.
+
 ## Collaudo panel: ordine delle quote — 2026-10-09
 
 - Il catalogo ordina le sezioni con l’ordine configurato dei tipi di pubblico
