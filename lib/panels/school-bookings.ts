@@ -1,3 +1,4 @@
+import { loadAllRows } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const SCHOOL_BOOKING_SEARCH_MAX_LENGTH = 80;
@@ -97,41 +98,42 @@ export async function getSchoolBookingCatalog(
 ): Promise<{ bookings: SchoolBookingRow[]; panelOptions: SchoolPanelOption[] }> {
   const [bookingsResult, teachersResult, reservationsResult, panelsResult, sectionsResult, audiencesResult, locationsResult, qrResult] =
     await Promise.all([
-      supabase
+      loadAllRows((from, to) => supabase
         .from("school_bookings")
         .select("id,event_id,teacher_id,school_name,school_city,class_description,student_count,companion_count,status,privacy_version,privacy_accepted_at,internal_notes,submitted_at,updated_at")
         .eq("event_id", eventId)
         .order("updated_at", { ascending: false })
-        .limit(500),
-      supabase
+        .order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("school_booking_teachers")
         .select("id,first_name,last_name,email,phone")
-        .eq("event_id", eventId),
-      supabase
+        .eq("event_id", eventId).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("school_panel_reservations")
         .select("booking_id,panel_id,seat_section_id,student_count,companion_count,status")
-        .eq("event_id", eventId),
-      supabase
+        .eq("event_id", eventId).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("event_moments")
         .select("id,title,starts_at,ends_at,location_id")
         .eq("event_id", eventId)
         .eq("moment_type", "panel")
         .eq("publication_status", "published")
-        .order("starts_at", { ascending: true }),
-      supabase
+        .order("starts_at", { ascending: true }).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("panel_seat_sections")
         .select("id,panel_id,audience_type_id")
-        .eq("event_id", eventId),
-      supabase
+        .eq("event_id", eventId).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("panel_audience_types")
         .select("id,name,booking_channel,is_active")
         .eq("event_id", eventId)
-        .eq("booking_channel", "school_booking"),
-      supabase.from("event_locations").select("id,name").eq("event_id", eventId),
-      supabase
+        .eq("booking_channel", "school_booking").order("id").range(from, to)),
+      loadAllRows((from, to) => supabase.from("event_locations").select("id,name").eq("event_id", eventId).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("school_booking_qr_tokens")
-        .select("booking_id")
-        .eq("status", "active"),
+        .select("booking_id,school_bookings!inner(event_id)")
+        .eq("school_bookings.event_id", eventId)
+        .eq("status", "active").order("id").range(from, to)),
     ]);
 
   for (const result of [bookingsResult, teachersResult, reservationsResult, panelsResult, sectionsResult, audiencesResult, locationsResult, qrResult]) {

@@ -267,7 +267,7 @@ function PanelStatisticsCard({
   const dashboardPath =
     dashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
   const panelHref = `${dashboardPath}?section=panel&panelView=panels&nav=${navMode}&panelId=${encodeURIComponent(panel.id)}`;
-  const campaignHref = `/dashboard/manager?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`;
+  const campaignHref = `/dashboard/${dashboard}?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`;
 
   return (
     <section className="overflow-hidden rounded-lg border border-[var(--peace-border)] [content-visibility:auto] [contain-intrinsic-size:auto_34rem]">

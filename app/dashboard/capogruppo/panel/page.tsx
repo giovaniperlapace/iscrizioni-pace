@@ -1,3 +1,4 @@
+import { requirePublicPanelBookings } from "@/lib/panels/release.server";
 import { LeaderSectionNavigation } from "@/app/dashboard/capogruppo/section-navigation";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -11,6 +12,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { GroupPanelBookings } from "./panel-bookings";
 
 export default async function GroupPanelPage({searchParams}: {searchParams: Promise<{section?: string}>}) {
+  await requirePublicPanelBookings();
   const db = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(db, "capogruppo");
   if (!auth || auth.dashboardRole !== "capogruppo") redirect("/login");

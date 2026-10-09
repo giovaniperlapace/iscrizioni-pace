@@ -12,6 +12,7 @@ import {
 } from "@/lib/panels/public-program";
 
 type PublicPanelProgramProps = {
+  bookingsOpen?: boolean;
   locale: SupportedLocale;
   panels: PublicPanelProgramItem[];
   copy: ReturnType<typeof getMessages>["panelProgram"];
@@ -35,7 +36,7 @@ function AvailabilityIcon({ availability }: { availability: PublicPanelAvailabil
   return <LockKeyhole aria-hidden="true" className="h-4 w-4" />;
 }
 
-export function PublicPanelProgram({ locale, panels, copy }: PublicPanelProgramProps) {
+export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true }: PublicPanelProgramProps) {
   const groups = groupPublicPanelsByDay(panels);
 
   return (
@@ -105,7 +106,7 @@ export function PublicPanelProgram({ locale, panels, copy }: PublicPanelProgramP
           </div>
         )}
 
-        <div className="mt-12 border-t border-[var(--peace-border)] pt-8 text-center sm:mt-16 sm:pt-10">
+        {bookingsOpen ? <div className="mt-12 border-t border-[var(--peace-border)] pt-8 text-center sm:mt-16 sm:pt-10">
           <a
             className="panel-access-cue group relative inline-flex min-h-14 max-w-full items-center gap-3 overflow-hidden rounded-full border border-[var(--peace-blue-700)] bg-[var(--peace-blue-900)] py-2 pl-5 pr-2 text-left text-sm font-bold text-white shadow-[0_12px_30px_rgba(8,47,95,0.18)] sm:text-base"
             href="#personal-access"
@@ -116,7 +117,7 @@ export function PublicPanelProgram({ locale, panels, copy }: PublicPanelProgramP
               <ArrowUp aria-hidden="true" className="h-5 w-5" strokeWidth={2.5} />
             </span>
           </a>
-        </div>
+        </div> : null}
       </div>
     </section>
   );

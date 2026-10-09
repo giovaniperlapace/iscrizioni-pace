@@ -1,3 +1,4 @@
+import { loadAllRows } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const EVENT_LOCATION_NAME_MAX_LENGTH = 100;
@@ -41,17 +42,17 @@ export async function getEventLocations(
   eventId: string
 ): Promise<EventLocationOption[]> {
   const [locationsResult, panelsResult] = await Promise.all([
-    supabase
+    loadAllRows((from, to) => supabase
       .from("event_locations")
       .select("id,event_id,name,address,max_capacity,is_active")
       .eq("event_id", eventId)
-      .order("name", { ascending: true }),
-    supabase
+      .order("name", { ascending: true }).order("id").range(from, to)),
+    loadAllRows((from, to) => supabase
       .from("event_moments")
       .select("id,location_id,title,publication_status")
       .eq("event_id", eventId)
       .eq("moment_type", "panel")
-      .order("starts_at", { ascending: true }),
+      .order("starts_at", { ascending: true }).order("id").range(from, to)),
   ]);
 
   if (locationsResult.error) {

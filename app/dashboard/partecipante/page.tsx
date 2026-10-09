@@ -1,4 +1,5 @@
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
+import { getPanelReleaseMode } from "@/lib/panels/release";
 import { nationalityName } from "@/lib/registrations/nationality-names";
 import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
 import { EditableRegistrationInfo } from "./editable-registration-info";
@@ -198,8 +199,6 @@ type ParticipantDashboardCopy = {
   expired: string;
   preparing: string;
   downloadImage: string;
-  addToWallet: string;
-  availableLater: string;
   close: string;
   personalQrAlt: string;
   personalQrFile: string;
@@ -264,8 +263,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     expired: "Scaduto",
     preparing: "In preparazione",
     downloadImage: "Scarica immagine",
-    addToWallet: "Aggiungi al tuo wallet",
-    availableLater: "Disponibile più avanti",
     close: "Chiudi",
     personalQrAlt: "QR code personale",
     personalQrFile: "personale",
@@ -331,8 +328,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     expired: "Expired",
     preparing: "In preparation",
     downloadImage: "Download image",
-    addToWallet: "Add to your wallet",
-    availableLater: "Available later",
     close: "Close",
     personalQrAlt: "Personal QR code",
     personalQrFile: "personal",
@@ -398,8 +393,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     expired: "Expiré",
     preparing: "En préparation",
     downloadImage: "Télécharger l'image",
-    addToWallet: "Ajouter à ton wallet",
-    availableLater: "Disponible plus tard",
     close: "Fermer",
     personalQrAlt: "QR code personnel",
     personalQrFile: "personnel",
@@ -465,8 +458,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     expired: "Abgelaufen",
     preparing: "In Vorbereitung",
     downloadImage: "Bild herunterladen",
-    addToWallet: "Zum Wallet hinzufügen",
-    availableLater: "Später verfügbar",
     close: "Schließen",
     personalQrAlt: "Persönlicher QR-Code",
     personalQrFile: "persoenlich",
@@ -532,8 +523,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     expired: "Caducado",
     preparing: "En preparación",
     downloadImage: "Descargar imagen",
-    addToWallet: "Añadir a tu wallet",
-    availableLater: "Disponible más adelante",
     close: "Cerrar",
     personalQrAlt: "Código QR personal",
     personalQrFile: "personal",
@@ -599,8 +588,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     expired: "Verlopen",
     preparing: "In voorbereiding",
     downloadImage: "Afbeelding downloaden",
-    addToWallet: "Aan je wallet toevoegen",
-    availableLater: "Later beschikbaar",
     close: "Sluiten",
     personalQrAlt: "Persoonlijke QR-code",
     personalQrFile: "persoonlijk",
@@ -666,8 +653,6 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     expired: "Термін дії минув",
     preparing: "Готується",
     downloadImage: "Завантажити зображення",
-    addToWallet: "Додати до wallet",
-    availableLater: "Буде доступно пізніше",
     close: "Закрити",
     personalQrAlt: "Персональний QR-код",
     personalQrFile: "personal",
@@ -974,6 +959,7 @@ export default async function PartecipanteDashboardPage({
   const params = searchParams ? await searchParams : {};
   const activeOverlay = parseDashboardOverlay(firstParam(params.overlay));
   const supabase = await createSupabaseServerClient();
+  const panelBookingsOpen = await getPanelReleaseMode(supabase) === "open";
   const auth = await getCurrentAuthContext(supabase, "partecipante");
 
   if (!auth) {
@@ -1067,9 +1053,9 @@ export default async function PartecipanteDashboardPage({
           .eq("participant_id", participantId)
           .eq("status", "assigned")
           .maybeSingle(),
-        supabase.rpc("get_participant_panel_catalog", {
+        panelBookingsOpen ? supabase.rpc("get_participant_panel_catalog", {
           p_registration_id: registrationId,
-        }),
+        }) : Promise.resolve({ data: [], error: null }),
       ])
     : [
         { data: [] },
@@ -1095,6 +1081,7 @@ export default async function PartecipanteDashboardPage({
   const registrationChildren = (childrenResult.data ?? []) as RegistrationChildRow[];
   const qrStatus = qrStatusResult.data as QrStatusRow | null;
   const participantService = participantServiceResult.data as ParticipantServiceRow | null;
+  if ("error" in panelCatalogResult && panelCatalogResult.error) throw panelCatalogResult.error;
   const panelCatalog = (panelCatalogResult.data ?? []) as ParticipantPanelCatalogRow[];
   const participantServiceLabel =
     relatedOne(participantService?.event_services ?? null)?.label ?? null;
@@ -1247,13 +1234,13 @@ export default async function PartecipanteDashboardPage({
 
             <Link href="/dashboard/partecipante/cerimonie" className="btn-secondary min-h-11 justify-self-start px-4">{DISTRIBUTION_COPY[locale].title}</Link>
 
-            <ParticipantPanelBookings
+            {panelBookingsOpen ? <ParticipantPanelBookings
               locale={locale}
               registrationId={registrationId}
               rows={panelCatalog}
               saved={firstParam(params.panelSaved)}
               error={firstParam(params.panelError)}
-            />
+            /> : null}
 
             {activeOverlay ? (
               <ParticipantDashboardOverlay
@@ -1860,15 +1847,6 @@ function QrActionButtons({
           {copy.downloadImage}
         </button>
       )}
-      <button
-        type="button"
-        disabled
-        title={copy.availableLater}
-        className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[#6f7f91]"
-      >
-        <WalletIcon />
-        {copy.addToWallet}
-      </button>
     </div>
   );
 }
@@ -2049,25 +2027,6 @@ function DownloadIcon() {
       <path d="M12 3v11" />
       <path d="m7 10 5 5 5-5" />
       <path d="M5 21h14" />
-    </svg>
-  );
-}
-
-function WalletIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-5 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a3 3 0 0 1 3-3h12" />
-      <path d="M16 13h6v4h-6a2 2 0 0 1 0-4Z" />
-      <path d="M6 5h11a2 2 0 0 1 2 2" />
     </svg>
   );
 }

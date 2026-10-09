@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { SuccessMessage } from "@/components/success-message";
 import Link from "next/link";
 import { Plus, Search, X } from "lucide-react";
 
@@ -217,16 +219,16 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
               <div className="px-5 py-5">
                 {panel?.publicationStatus === "published" ? (
                   <div className="mb-5 grid gap-2 rounded-md border border-[#c9d9e7] bg-[#f2f8fc] px-4 py-3 text-sm">
-                    <p className="font-semibold">Modifica di un panel già pubblico</p>
+                    <p className="font-semibold">Modifica di un panel già pubblicato</p>
                     <p className="text-[var(--peace-muted)]">
-                      Le modifiche sono subito visibili nel programma e vengono registrate in audit.
+                      Le modifiche aggiornano il panel mantenendo le prenotazioni esistenti. Saranno visibili al pubblico quando il catalogo sarà aperto.
                       {panel.confirmedRegistrationCount > 0
                         ? ` Le persone già iscritte coinvolte sono ${panel.confirmedRegistrationCount}.`
                         : " Non risultano ancora persone iscritte a questo panel."}
                     </p>
                     {panel.confirmedRegistrationCount > 0 ? (
                       <Link
-                        href={`/dashboard/manager?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`}
+                        href={`/dashboard/${dashboard}?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`}
                         className="w-fit text-xs font-semibold text-[var(--peace-blue-800)] underline decoration-1 underline-offset-4"
                       >
                         Prepara una comunicazione per le persone iscritte a questo panel
@@ -289,9 +291,9 @@ function PanelStatus({ error, saved }: { error?: string; saved?: string }) {
       published: "Panel pubblicato.",
       "batch-published": "I panel selezionati sono stati pubblicati.",
       "already-published": "I panel selezionati risultano già pubblicati.",
-      "published-updated": "Panel pubblico aggiornato.",
+      "published-updated": "Panel pubblicato aggiornato.",
     };
-    return <p className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">{messages[saved] ?? "Operazione panel completata."}</p>;
+    return <SuccessMessage key={randomUUID()} clearQuery className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">{messages[saved] ?? "Operazione panel completata."}</SuccessMessage>;
   }
   if (!error) return null;
   const messages: Record<string, string> = {

@@ -1,3 +1,4 @@
+import { requirePublicPanelBookings } from "@/lib/panels/release.server";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -12,11 +13,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type Props = { searchParams: Promise<{ error?: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
+  await requirePublicPanelBookings();
   const copy = getSchoolBookingCopy(await getRequestLocale());
   return { title: `${copy.homeTitle} - UNARMED AND DISARMING PEACE`, description: copy.homeBody };
 }
 
 export default async function SchoolBookingPage({ searchParams }: Props) {
+  await requirePublicPanelBookings();
   const [locale, params, supabase] = await Promise.all([getRequestLocale(), searchParams, createSupabaseServerClient()]);
   const copy = getSchoolBookingCopy(locale);
   const options = await getPublicSchoolBookingOptions(supabase);

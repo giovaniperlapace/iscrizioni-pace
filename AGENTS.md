@@ -1,5 +1,341 @@
 # AGENTS.md
 
+## Riallineamento panel con main — 2026-10-09
+
+- Richiesta esplicita: merge di main a858340 nel panel 42bfcca, conservando le
+  correzioni del gestionale e P11–P13, scanner, QR gruppo, badge e cerimonie.
+  Risolti 16 file in conflitto combinando le decisioni compatibili; nessuna
+  scelta in blocco di un branch. Gestione Admin/Manager conservata; Viewer
+  escluso dai panel e Capogruppo rinviato all’apertura pubblica sulla home.
+- Catalogo con client autenticato per disponibilità; statistiche Panel nella
+  categoria dedicata con presenze reali P13, separate dagli ingressi evento.
+  Conferme SuccessMessage, ordine, Quando, pubblicazione, Iscritti ed Excel
+  mantengono le correzioni del collaudo. Flussi futuri conservati e protetti.
+- Stash fa1ec7f e 2ad9881 identici e non ripristinati; main, produzione e
+  worktree delegato invariati. Merge locale; nessun push o SQL remoto.
+- Verificati 807 test, lint, TypeScript, npm ci, build staging e PostgreSQL
+  temporaneo con tutti i confini permessi, scanner/gruppi/cerimonie e concorrenza.
+  Le cinque migration 20261009 importate da main sono ancora assenti nello
+  staging (inventario read-only); applicarle prima del relativo rilascio.
+  Dettagli in docs/panel-main-integration-2026-10-09.md. Hardware ancora da collaudare.
+
+
+## Pubblicazione Manager autorizzata — 2026-10-09
+
+- L’utente richiede migration production, commit e push. Applicata e registrata
+  `20261009170000_manager_panel_access` in una sola transazione, con verifica
+  delle impronte e dei conteggi di tutte le 45 tabelle pubbliche: 73.760 righe
+  invariate nello snapshot, 24 panel conservati, modalità `internal` immutata.
+  Nessuna modifica a funzioni o policy estranee, privilegi tabelle invariati.
+- Backup custom verificato sul server, permessi 600:
+  `/tmp/iscrizioni-pace-production-before-manager-panels-20261009.dump`.
+  Verifiche production in sola lettura con identità dei ruoli esistenti:
+  Admin/Manager ammessi, Viewer e pubblico esclusi; nessuna nuova sessione,
+  iscrizione, prenotazione, destinatario o email di collaudo.
+- Commit/push su main e normale rilascio Vercel autorizzati. Verifiche locali
+  già superate: 733 test, ESLint, TypeScript, build e SQL/RLS sintetico.
+  Codice `b0e8355` pubblicato: deployment `dpl_6KauhRCQCNzsRuf65aXENsPTzKev`
+  production READY verificato sul dominio reale. Home con testo identico
+  prima/dopo, scuole pubbliche chiuse e percorsi gestionali protetti dal login;
+  nessun errore/fatal restituito dalla ricerca nei log del deployment.
+  Capogruppo chiuso fino alla futura pubblicazione dei panel sulla home.
+  Branch panel e stash preservati.
+
+## Panel Capogruppo rinviati alla pubblicazione sulla home — 2026-10-09
+
+- L’utente rinvia l’attivazione della funzione panel del Capogruppo alla
+  futura pubblicazione dei panel sulla home del sito. Questa attivazione farà
+  parte di quella tranche esplicita, insieme ai relativi controlli di accesso.
+- L’integrazione Manager attuale non abilita menu, pagina, prenotazioni o RPC
+  panel del Capogruppo. Restano i controlli esistenti sulla modalità `open`;
+  la pubblicazione di un panel nel gestionale non apre questi flussi.
+
+## Integrazione panel nella dashboard Manager — 2026-10-09
+
+- Su via libera dell’utente, le funzioni panel già collaudate nell’Admin sono
+  disponibili anche al Manager dell’evento corrente: Panel/Location/Scuole,
+  Iscritti ed Excel, statistiche e audience Comunicazioni. Riutilizzati i
+  componenti condivisi, conservando tutte le correzioni di “Correggi il
+  gestionale panel”: SuccessMessage a 5 secondi, ordine quote/titoli, Quando,
+  giorno unico, scheda Iscritti, PendingLink, pubblicazione e filtro cercabile.
+- Viewer e manager di altri eventi restano esclusi anche da URL, action,
+  export, API e database; ruoli cumulativi verificati sullo scope corrente.
+  Il via libera supera la precedente restrizione solo Admin per il Manager,
+  senza estenderla al Viewer o aprire catalogo/iscrizioni pubbliche.
+- Tranche locale di apertura Manager P0–P10: migration versionata
+  `20261009170000_manager_panel_access.sql`, che aggiorna il controllo condiviso
+  e le policy di lettura/campagne; nessuna riscrittura delle migration storiche
+  o dei dati. Icona SVG microfono da tavolo condivisa nei menu Admin/Manager.
+- Lavoro locale su main; nessun commit/push, deployment, migration remota o
+  email. Branch panel e stash preservati. Migration da applicare prima del
+  rilascio del codice. Verificati 733 test, ESLint, TypeScript, build e
+  SQL/RLS PostgreSQL 17 con dati sintetici e rollback. Collaudo visivo all’utente.
+
+## Collaudo panel: conferme sempre temporanee — 2026-10-09
+
+- Regola generale: le semplici conferme di operazione riuscita devono usare
+  SuccessMessage, sparire dopo 5 secondi e consentire chiusura con ×. Errori,
+  istruzioni e stati operativi persistenti conservano le rispettive regole.
+- Applicato anche a Panel, Location e Scuole; chiave nuova per ogni risposta
+  e pulizia dei parametri di successo senza perdere filtri, menu o scroll.
+  Nessuna modifica dati; commit/push e normale rilascio autorizzati dall’utente.
+  Superati 22 test mirati, ESLint e TypeScript.
+
+## Collaudo panel: ordine delle quote — 2026-10-09
+
+- Il catalogo ordina le sezioni con l’ordine configurato dei tipi di pubblico
+  (Iscritti, Scuole, Ospiti), anziché con gli UUID delle sezioni. Stesso ordine
+  nei riepiloghi desktop/mobile e nel form di modifica di ogni panel.
+- Correzione locale del loader; nessuna riscrittura dei panel, quote o
+  prenotazioni, nessuna migration. Commit/push e normale rilascio autorizzati
+  dall’utente; 12 test mirati, ESLint e TypeScript superati.
+
+## Collaudo panel: colonna Quando — 2026-10-09
+
+- Rinominata Orario in Quando; giorno mostrato una sola volta seguito dalla
+  fascia senza zero iniziale, ad esempio 26 ott, 9:30 - 12:30. Stesso formato
+  in desktop, mobile e conferma pubblicazione; fuso Europe/Rome conservato.
+- Modifica solo di presentazione; commit/push e normale rilascio autorizzati.
+
+## Collaudo panel: ordinamento alfabetico catalogo — 2026-10-09
+
+- Il catalogo gestionale ordina i panel per titolo in italiano, ignorando
+  differenze di maiuscole e usando numeri naturali (Forum 2 prima di Forum 10).
+  Ordinamento applicato dopo i filtri, condiviso desktop/mobile; array origine,
+  selezioni, dati e permessi preservati. Commit/push e normale rilascio
+  autorizzati dall’utente; 12 test mirati, ESLint e TypeScript superati.
+
+## Collaudo panel: giorno unico e orari separati — 2026-10-09
+
+- Il form creazione/modifica panel seleziona un solo Giorno e due orari,
+  Inizio/Fine. Entrambi i timestamp derivano dal giorno comune in Europe/Rome;
+  limiti date evento, controlli quote e sovrapposizioni conservati.
+- Fine deve essere successiva a Inizio; controllo browser e action server
+  del medesimo giorno, anche per payload diretti. Nessuna migration o modifica
+  dei dati storici. Collaudo visivo affidato all’utente. Commit/push e normale
+  rilascio autorizzati dall’utente; 17 test mirati, ESLint e TypeScript superati.
+
+## Collaudo panel: stile scheda Iscritti — 2026-10-09
+
+- Uniformata la scheda Iscritti alle modali operative: intestazione e footer
+  con fondo soft, titoli blu, superfici condivise per riepiloghi ed elenchi,
+  tabelle con intestazioni evidenziate. Corretto il padding dei pulsanti
+  Esporta/Chiudi; export primario, a larghezza piena su mobile.
+- Larghezza massima ridotta, corpo scorrevole e tabelle con scroll locale;
+  dati, conteggi, export e autorizzazioni invariati. Collaudo visivo affidato
+  all’utente. Commit/push e normale rilascio autorizzati dall’utente.
+
+## Pubblicazione correzioni collaudo panel — 2026-10-09
+
+- L’utente autorizza commit e push di tutte le modifiche locali: elenco
+  Iscritti e relativo Excel, avanzamento del pulsante Modifica, terminologia
+  Bozza/Pubblicato/Pubblica panel e rimozione dell’avviso futuro statistiche.
+  Questa pubblicazione supera le note locali senza autorizzazione sottostanti.
+- Verificati 726 test, ESLint e build production con controllo TypeScript.
+  Nessuna migration o apertura del catalogo/iscrizioni; gestione solo admin.
+  Branch panel e stash preservati. Deployment verificato separatamente.
+
+## Collaudo panel: terminologia pubblicazione — 2026-10-09
+
+- Su indicazione dell’utente, stati Bozza/Pubblicato e comando Pubblica panel
+  (Pubblica selezionati per il batch). Aggiornati filtro, conferme, esiti ed
+  editor: questa decisione supera i precedenti testi Convalida/Pronto.
+- Nessuna apertura pubblica implicita: il panel pubblicato sarà visibile
+  quando verrà aperto il catalogo; le iscrizioni mantengono apertura separata.
+  Solo testi locali su main, nessuna modifica a permessi, dati o migration.
+
+## Collaudo panel: avanzamento del pulsante Modifica — 2026-10-09
+
+- La tabella panel usa ora il componente PendingLink condiviso: Modifica,
+  Consulta e Iscritti mostrano lo stesso avanzamento degli altri comandi
+  della dashboard durante l’apertura. Navigazione e scroll invariati.
+- Correzione locale su main; nessun commit/push o deployment. Controlli
+  mirati ESLint e TypeScript; collaudo funzionale affidato all’utente.
+
+## Collaudo panel: elenco iscritti ed Excel — 2026-10-09
+
+- Aggiunto localmente su main il pulsante Iscritti nella riga del panel,
+  desktop/mobile. Scheda con iscritti e figli accompagnati, scuole/classi con
+  studenti/accompagnatori e posti ospiti riservati senza nominativi fittizi.
+  Chiusura conserva filtri, menu e scroll; nessuna nuova milestone.
+- Export XLSX con Riepilogo, Partecipanti, Scuole e Ospiti riservati. Dati
+  riletti al download, conteggi scuola dalla prenotazione del singolo panel,
+  cancellazioni escluse. Letture paginate e nessun elenco/export parziale
+  in caso di errore. Dettagli in docs/panel-reserved-release.md.
+- Solo admin, anche con ruoli cumulativi; endpoint diretto e loader negano
+  gli altri ruoli prima delle letture dei partecipanti. Nessuna migration,
+  scrittura dati o email; nessun commit/push o deployment per questa modifica.
+- Verifiche mirate su dati sintetici: scope, ruoli, minori, scuole, ospiti,
+  paginazione oltre 1.000 righe, errori e round-trip Excel; 9 test mirati,
+  ESLint, TypeScript e build production superati. Collaudo visivo affidato
+  all’utente secondo la modalità concordata.
+
+## Collaudo statistiche panel: rimozione avviso futuro — 2026-10-09
+
+- Rimosso dal report il riquadro Presenze effettive e no-show con riferimenti
+  alla Milestone P11 e ai check-in legacy. Conteggi e logica invariati.
+  Correzione locale su main; nessun commit/push o deployment richiesto.
+
+## Collaudo gestionale panel: disposizione azioni — 2026-10-09
+
+- Correzione locale: Modifica e Convalida incolonnati nelle viste desktop e
+  mobile, con colonna Azioni più ampia per evitare sovrapposizioni con lo stato.
+  ESLint e TypeScript superati; collaudo visivo affidato all’utente.
+- Gestione ospiti approvata: nel catalogo i posti con canale internal_assignment
+  sono riservati e non mostrati come disponibili. Il riepilogo distingue le
+  prenotazioni di iscritti/scuole e le disponibilità di ciascuna quota, con
+  spiegazione dell’esclusione ospiti dal form pubblico. Capienza fisica e
+  ripartizione conservate; nessuna iscrizione o presenza fittizia.
+- Commit/push su main e normale rilascio Vercel autorizzati, insieme al filtro
+  Panel cercabile. Nessuna migration, email o modifica di dati remoti.
+
+## Collaudo gestionale panel: filtro cercabile Comunicazioni — 2026-10-09
+
+- Correzione locale su main: filtro Panel nelle audience Partecipanti e
+  Professori con elenco a discesa cercabile, scelta esplicita e Tutti i panel.
+  Ricerca senza distinzione di accenti/maiuscole; filtro e payload usano l’ID
+  del panel selezionato, conservando prefiltri e selezioni dei destinatari.
+- Controlli mirati ESLint e TypeScript superati; collaudo funzionale affidato
+  all’utente. Pubblicazione autorizzata insieme alla gestione posti ospiti.
+
+## Modalità di collaudo gestionale aggiornata — 2026-10-09
+
+- L’utente conferma personalmente la riuscita delle correzioni. Per i piccoli
+  bug del collaudo non eseguire automaticamente prove browser o suite complete
+  a ogni intervento: usare controlli mirati e proporzionati, riservando le
+  verifiche più ampie a modifiche delicate e preparazione della pubblicazione.
+  Questa indicazione supera il controllo browser e completo a ogni correzione.
+
+## Collaudo gestionale panel: ritorno a Location — 2026-10-09
+
+- Correzione su main: creazione, modifica ed eliminazione location
+  chiudono la modale e mantengono la sottosezione Location e il menu full/mini.
+  Il redirect delle action ometteva `panelView=locations`, aprendo i panel.
+- Regressione delle action reali con database sintetico, inclusi errori;
+  vista risultante verificata nel browser locale desktop/mobile. 720 test,
+  lint, TypeScript e build production verificati. Commit/push su main e normale
+  rilascio Vercel autorizzati dall’utente; deployment da verificare separatamente.
+  Nessuna migration, email o modifica di dati remoti in questa correzione.
+
+## Rilascio admin autorizzato — aggiornamento 2026-10-09
+
+- Esito: main pubblicato (`eab1293`), deployment Vercel production READY sul
+  dominio reale. Home confrontata prima/dopo: testo identico, email presente,
+  sezione panel assente. Admin ammesso e manager negato nelle verifiche DB in
+  sola lettura; accettazione funzionale dell’utente e apertura manager rinviate.
+- Nella verifica finale aggiunta e applicata `20261009160000`: protezione delle
+  scritture REST di campagne/destinatari panel e scuola. Totale 17 migration
+  registrate (lotto di 16 più una transazione finale), senza nuove email o
+  modifiche a persone reali. Dettagli e backup nel documento di rilascio.
+- Panel a `42bfcca` e stash preservati. Il merge preventivo segnala 12 conflitti:
+  riconciliare prima di riprendere lo sviluppo, conservando scanner e cerimonie.
+  Nessuna pubblicazione staging eseguita in questo rilascio production.
+
+
+- Nuova indicazione esplicita: pubblicare in production e applicare le migration,
+  ma rendere le nuove funzioni panel disponibili solo nella dashboard admin.
+  Manager e viewer attendono il via libera dell’utente dopo il suo collaudo.
+  Questa decisione supera l’accesso manager/viewer descritto nella preparazione.
+- La home rimane pubblica e invariata, con le iscrizioni all’evento operative;
+  non mostra la nuova sezione panel. Restano chiuse solo catalogo e iscrizioni
+  pubbliche dei panel, compreso il flusso scuole pubblico.
+- Controlli prima dei loader e delle azioni, RPC/RLS limitate all’admin,
+  statistiche e campagne panel/scuole protette anche da richieste dirette.
+  Comunicazioni condivisa disponibile direttamente nella dashboard admin.
+- Migration aggiuntive `20261009140000_admin_panel_acceptance.sql` e
+  `20261009150000_panel_default_audiences.sql`: restrizione ruoli e catalogo
+  Iscritti/Scuole/Ospiti; nessuna location o capienza di esempio in production.
+- Inventario production: lotto di 16 migration panel; esclusa la correzione dati
+  storica non dipendente `20260726120000`, assente nel registro remoto.
+  Backup server verificato; procedure ed esiti in `docs/panel-reserved-release.md`.
+- Lotto applicato e registrato in production in un’unica transazione; verificati
+  conteggi e hash delle 39 tabelle preesistenti. Conservati 3.350 iscrizioni,
+  3.457 partecipanti, 125 gruppi e zero check-in. Nessun nuovo destinatario email.
+  Verifiche finali: 719 test, lint, TypeScript, build e browser desktop/mobile.
+- Preservare branch panel e stash del collaudo. Il riallineamento autorizzato
+  deve mantenere le funzioni future e le decisioni più recenti, non sovrascriverle.
+
+
+## Preparazione rilascio gestionale riservato — 2026-10-09
+
+- L'utente richiede di preparare su main le funzioni gestionali panel già
+  realizzate fino a P10, mantenendo la home production senza annunci e senza
+  aprire catalogo, iscrizioni personali, capigruppo o scuole pubbliche.
+  Location, quote, prenotazioni scuola interne, statistiche e destinatari
+  campagne restano utilizzabili da admin/manager; viewer in sola lettura.
+- Integrata localmente la base panel `32e7d41` in main `79897d7`, con merge
+  senza commit e conflitti risolti conservando le correzioni recenti di main.
+  P11–P13, cerimonie, scanner e badge restano sul panel `42bfcca`. Nessun
+  commit, push, deployment, SQL remoto o email in questa preparazione.
+- Nuova migration locale `20261009120000_reserved_panel_release.sql`:
+  `events.panel_access_mode` internal/catalog/open, default internal,
+  controlli RPC/RLS e azioni server, chiusura serializzata con le prenotazioni,
+  audit della modalità e conteggio canonico dei posti. Convalidare un panel
+  non apre l'evento al pubblico. Nessun comando UI di apertura aggiunto.
+- Home production conservata in `app/registration-home.tsx`; home futura e
+  programma panel mantenuti, selezionati solo dalla modalità esplicita.
+  Catalogo gestionale con prenotati e rimanenti per quota; letture paginate
+  oltre 1.000 righe, errori bloccanti senza risultati parziali o zeri inventati.
+- L'utente autorizza a sincronizzare il panel quando necessario, preservando
+  le funzioni future. Dopo il commit autorizzato, integrare main nel panel con
+  merge e verifica staging, senza sostituzioni di file in blocco. Il branch
+  panel non è stato modificato durante questa preparazione senza commit.
+- Collaudo etichette sospeso: prossimo passo pulsante per stampare un singolo
+  QR esistente senza rigenerazione o presenza. Tutto il lavoro locale del
+  collaudo è nello stash `fa1ec7fa339a2b944045bf67e90cc2a1e9efec85` (inclusi
+  file non tracciati); ripristinarlo solo sul panel, non su main. Conservato
+  anche lo stash precedente sulle migration production.
+- La richiesta di posti rimanenti nel catalogo pubblico e lista d'attesa
+  supera la precedente esclusione della coda. Pianificare una milestone prima
+  dell'apertura delle iscrizioni; nessuna regola FIFO, priorità o scadenza
+  decisa implicitamente. Non sono implementate da questa tranche gestionale.
+- Verificati 711 test, lint, TypeScript, build, SQL PostgreSQL 17 temporaneo
+  con ruoli e concorrenza, browser sintetico desktop/mobile e home sette lingue.
+  Registro migration/configurazione email production e collaudo autenticato
+  del deployment restano da verificare. Dettagli e procedura di rilascio in
+  `docs/panel-reserved-release.md`; niente pubblicazione dichiarata conclusa.
+
+## QR individuale nelle schede Manager/Admin — 2026-10-07
+
+- Chiarimento dell’utente: la segnalazione riguarda la scheda Manager, che non
+  mostrava il QR individuale. Aggiunto il riquadro condiviso col Capogruppo
+  alla modale operativa Manager/Admin, con stato e download PNG nominativo.
+- Lettura solo all’apertura della scheda tramite GET autenticata e no-store:
+  Admin globale o Manager dell’evento corrente, iscrizione non eliminata,
+  identità dal database. Viewer e altri ruoli esclusi, anche da chiamate dirette.
+  Riutilizzato il QR esistente senza creazione, rotazione o scritture.
+- Risposta legata alla scheda selezionata; richieste annullate alla chiusura o
+  al cambio partecipante. Errori con Riprova, stati revocato/scaduto/non
+  disponibile senza immagine utilizzabile. Nessuna migration o email.
+- Test loader/handler in tests/operations-qr.test.mts; fixture browser sintetica
+  tests/browser/operations-qr.mjs per Manager/Admin, download, mobile, retry,
+  cambio rapido di scheda e Viewer. Verificati 639 test, lint, TypeScript e
+  build production. Pubblicazione su main/production richiesta.
+
+## Rimozione wallet — 2026-10-07
+
+- Rimossi il pulsante wallet non implementato, la relativa icona e i testi
+  nelle sette lingue dalla dashboard personale, anche nella vista QR in overlay.
+  Resta Scarica immagine. Google/Apple Wallet non sono previsti per l’evento;
+  questa decisione supera i precedenti riferimenti a un’integrazione futura.
+- Il QR individuale Capogruppo resta nella scheda aperta cliccando sul nome
+  del partecipante, con download nominativo e autorizzazioni esistenti.
+  Al controllo iniziale main e produzione coincidono su b1b1405 e non contengono
+  una funzione QR di gruppo; richiesta all’utente la pagina della segnalazione.
+- Verificati 635 test, lint, TypeScript e build production con Next 16.2.9
+  coerente col lockfile. Nessuna migration, modifica dati o email.
+  Pubblicazione su main/production richiesta dall’utente.
+
+## Contatori gruppi capogruppo — 2026-10-06
+
+- Su richiesta dell’utente, ogni riquadro gruppo con Inserisci partecipante e
+  Gestisci link mostra il numero di persone assegnate direttamente al gruppo,
+  inclusi i figli accompagnati ed esclusi i sottogruppi. Questa aggiunta supera
+  per questo contatore la precedente esclusione dei riepiloghi numerici.
+- Conteggio sulle assegnazioni correnti già caricate nello scope autorizzato,
+  prima dei filtri della tabella; iscrizioni eliminate escluse dal loader.
+  Etichette nelle sette lingue, zero esplicito per i gruppi vuoti.
+- Modifica locale su main; nessuna nuova query, migration o scrittura dati.
 ## Pubblicazione cerimonie E1/E2/E3 in staging — 2026-10-06
 
 - Nuova autorizzazione esplicita dell’utente: commit/push delle modifiche
@@ -4994,6 +5330,48 @@ Quando il piano verrà cancellato:
 - Le decisioni contenute nel piano sono proposte progettuali finche' la
   Milestone P0 non le conferma. Non creare o applicare migration panel/scuole
   prima di quella verifica.
+
+
+## Presenza comunicata nelle schede admin e manager — 2026-09-14
+
+- La scheda condivisa include `OperationsAttendance`: lettura delle presenze
+  correnti della singola iscrizione, griglia mattina/pomeriggio e stato da
+  confermare, riusando `ManualAttendanceFields` del capogruppo. Caricamento
+  indipendente con stato visibile; un errore non viene mostrato come assenza
+  di presenze. Solo admin globale e manager dell'evento possono modificare;
+  iscritti senza gruppo inclusi, eliminati esclusi. Filtri e scheda conservati.
+- `updateOperationsAttendance` controlla i ruoli della sessione e rilegge le
+  date dell'evento. La RPC `update_operations_attendance` ripete i controlli,
+  blocca l'iscrizione e sostituisce le presenze insieme all'audit in transazione.
+  Attore ricavato dal server, RPC riservata a service_role. Presenze capogruppo,
+  snapshot originali, scelte dei momenti e RLS rimangono separati.
+- Migration `20260914140000_operations_attendance.sql` applicata e registrata
+  in produzione il 2026-09-14 su richiesta esplicita. Privilegi verificati:
+  solo service_role può eseguire la RPC. Prova reale in transazione annullata:
+  hash e conteggio delle 1.376 presenze invariati; 89 policy RLS invariate.
+  Pubblicazione del codice tramite push su main e deployment Git Vercel.
+- Regressioni: `tests/operations-attendance.test.mts` e
+  `tests/sql/operations-attendance.sql`: scope evento, iscrizioni eliminate,
+  errori lettura, date, audit atomico e privilegi RPC. Verificati anche i test
+  SQL preesistenti del capogruppo. In copia pulita dal lockfile: 270 test,
+  typecheck, lint e build superati.
+
+
+## Andamento settimanale iscrizioni — 2026-09-21
+
+- Le statistiche condivise Admin/Manager terminano con un grafico a barre delle
+  schede non eliminate per `registrations.submitted_at`, senza sommare i minori.
+  Il loader esistente conserva scope evento, paginazione ed errori bloccanti.
+- `weekly-registrations.ts` raggruppa lunedì–domenica in Europe/Rome, include
+  settimane a zero fino a quella corrente e segnala date mancanti/non valide.
+  Dal 31 agosto 2026 le colonne sono settimanali; tutte le iscrizioni precedenti
+  sono aggregate in una colonna storica esclusa dal confronto. Barre adiacenti
+  con etichette giorno/mese inclinate di 45 gradi.
+  Settimana corrente distinta e incompleta; confronto assoluto/percentuale
+  limitato alle ultime due settimane concluse, senza percentuale su base zero.
+- Test su confini temporali, ora legale, cambio anno, settimane vuote e loader
+  oltre 1.000 schede. Nessuna migration o modifica dei dati richiesta.
+
 - Decisione aggiornata il 2026-09-12: l'utente conferma il buon esito fino a
   P10 e mantiene P11-P16 sullo stesso branch `codex/panel-p0-p10` e staging.
   Conservare P0-P10 e le correzioni successive; non rinominare o ricreare il
@@ -5358,31 +5736,6 @@ Quando il piano verrà cancellato:
 
 
 
-## Presenza comunicata nelle schede admin e manager — 2026-09-14
-
-- La scheda condivisa include `OperationsAttendance`: lettura delle presenze
-  correnti della singola iscrizione, griglia mattina/pomeriggio e stato da
-  confermare, riusando `ManualAttendanceFields` del capogruppo. Caricamento
-  indipendente con stato visibile; un errore non viene mostrato come assenza
-  di presenze. Solo admin globale e manager dell'evento possono modificare;
-  iscritti senza gruppo inclusi, eliminati esclusi. Filtri e scheda conservati.
-- `updateOperationsAttendance` controlla i ruoli della sessione e rilegge le
-  date dell'evento. La RPC `update_operations_attendance` ripete i controlli,
-  blocca l'iscrizione e sostituisce le presenze insieme all'audit in transazione.
-  Attore ricavato dal server, RPC riservata a service_role. Presenze capogruppo,
-  snapshot originali, scelte dei momenti e RLS rimangono separati.
-- Migration `20260914140000_operations_attendance.sql` applicata e registrata
-  in produzione il 2026-09-14 su richiesta esplicita. Privilegi verificati:
-  solo service_role può eseguire la RPC. Prova reale in transazione annullata:
-  hash e conteggio delle 1.376 presenze invariati; 89 policy RLS invariate.
-  Pubblicazione del codice tramite push su main e deployment Git Vercel.
-- Regressioni: `tests/operations-attendance.test.mts` e
-  `tests/sql/operations-attendance.sql`: scope evento, iscrizioni eliminate,
-  errori lettura, date, audit atomico e privilegi RPC. Verificati anche i test
-  SQL preesistenti del capogruppo. In copia pulita dal lockfile: 270 test,
-  typecheck, lint e build superati.
-
-
 ## Andamento settimanale iscrizioni — 2026-09-21
 
 - Le statistiche condivise Admin/Manager terminano con un grafico a barre delle
@@ -5407,6 +5760,34 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Indicatore email delegata — 2026-09-25
+
+- Colonna Email Capogruppo e Manager/Admin/Viewer: badge nelle sette lingue
+  soltanto per la scelta documentata nello snapshot manuale. Email personale
+  attuale prioritaria; email assente senza scelta resta «—».
+- Loader paginato limitato agli ID già autorizzati, sole proiezioni origine/flag;
+  errori bloccanti. Nessuna modifica dati, schema, permessi, invio o export.
+- Test e fixture browser in `tests/email-delegation-indicator.test.mts` e
+  `tests/browser/email-delegation.mjs`; dettagli in `docs/email-delegation-indicator.md`.
+  Verificati 541 test, lint, TypeScript e build production con npm ci in copia
+  pulita. Browser: tre tabelle, sette lingue e mobile; provata insieme alla
+  nuova animazione dell’export capogruppo. Overlay e correzione conteggi del
+  commit a25fba9 conservati. Commit/push su main autorizzati dall’utente;
+  correzione separata degli errori presenze esclusa dal rilascio.
+
+## Errore presenze fuori dalla griglia — 2026-09-25
+
+- Il fieldset condiviso delle presenze assistite identifica un contenitore per
+  gli errori: ReliableForm appende il messaggio sotto griglia e opzione di
+  conferma successiva, preservando stile comune e dimensioni delle caselle.
+  aria-describedby collega il messaggio sia alle fasce sia all’opzione futura.
+- Nessuna modifica a validazione, dati o invii. Fixture sintetica
+  `tests/browser/attendance-error-placement.mjs` verifica posizione, dimensioni,
+  accessibilità e accettazione di entrambe le scelte per capogruppo/manager,
+  nelle sette lingue e su mobile. Commit/push su main autorizzati dall’utente
+  il 25 settembre insieme all’import servizi. Verificati insieme 559 test,
+  lint, TypeScript e build con npm ci in copia pulita.
 
 ## Iscrizione multipla capogruppo ai panel — 2026-09-09
 
@@ -5490,31 +5871,3 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Su richiesta dell’utente, niente messaggi di successo dopo iscrizione o
   rimozione: stato, pulsante e posti aggiornati confermano l’esito. Restano
   gli errori nella riga interessata.
-
-## Indicatore email delegata — 2026-09-25
-
-- Colonna Email Capogruppo e Manager/Admin/Viewer: badge nelle sette lingue
-  soltanto per la scelta documentata nello snapshot manuale. Email personale
-  attuale prioritaria; email assente senza scelta resta «—».
-- Loader paginato limitato agli ID già autorizzati, sole proiezioni origine/flag;
-  errori bloccanti. Nessuna modifica dati, schema, permessi, invio o export.
-- Test e fixture browser in `tests/email-delegation-indicator.test.mts` e
-  `tests/browser/email-delegation.mjs`; dettagli in `docs/email-delegation-indicator.md`.
-  Verificati 541 test, lint, TypeScript e build production con npm ci in copia
-  pulita. Browser: tre tabelle, sette lingue e mobile; provata insieme alla
-  nuova animazione dell’export capogruppo. Overlay e correzione conteggi del
-  commit a25fba9 conservati. Commit/push su main autorizzati dall’utente;
-  correzione separata degli errori presenze esclusa dal rilascio.
-
-## Errore presenze fuori dalla griglia — 2026-09-25
-
-- Il fieldset condiviso delle presenze assistite identifica un contenitore per
-  gli errori: ReliableForm appende il messaggio sotto griglia e opzione di
-  conferma successiva, preservando stile comune e dimensioni delle caselle.
-  aria-describedby collega il messaggio sia alle fasce sia all’opzione futura.
-- Nessuna modifica a validazione, dati o invii. Fixture sintetica
-  `tests/browser/attendance-error-placement.mjs` verifica posizione, dimensioni,
-  accessibilità e accettazione di entrambe le scelte per capogruppo/manager,
-  nelle sette lingue e su mobile. Commit/push su main autorizzati dall’utente
-  il 25 settembre insieme all’import servizi. Verificati insieme 559 test,
-  lint, TypeScript e build con npm ci in copia pulita.

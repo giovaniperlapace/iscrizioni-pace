@@ -1,4 +1,5 @@
 "use server";
+import { requirePublicPanelBookings } from "@/lib/panels/release.server";
 
 import { revalidatePath } from "next/cache";
 import { getCurrentAuthContext } from "@/lib/auth/session";
@@ -7,6 +8,7 @@ import { groupBookingError, validGroupBookingSelection, type GroupBookingResult 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function setGroupPanelBooking(sectionId: string, registrationId: string, booked: boolean): Promise<GroupBookingResult> {
+  await requirePublicPanelBookings();
   if (!validGroupBookingSelection(sectionId, [registrationId]) || typeof booked !== "boolean") return {error: "failure"};
   const db = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(db, "capogruppo");

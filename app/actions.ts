@@ -1,4 +1,5 @@
 "use server";
+import { requirePanelManager, requirePublicPanelBookings } from "@/lib/panels/release.server";
 
 import { resolveRoleParticipant } from "@/lib/operational-users/role-participant";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
@@ -96,6 +97,7 @@ import {
   PANEL_DESCRIPTION_MAX_LENGTH,
   PANEL_MAX_SECTIONS,
   PANEL_TITLE_MAX_LENGTH,
+  isValidPanelDayRange,
   normalizePanelDescription,
   normalizePanelTitle,
   parsePanelCapacity,
@@ -608,6 +610,7 @@ export async function updateParticipantDashboard(formData: FormData) {
 }
 
 export async function setParticipantPanelBooking(formData: FormData) {
+  await requirePublicPanelBookings();
   const registrationId = optionalText(formData.get("registrationId"));
   const panelId = optionalText(formData.get("panelId"));
   const sectionId = optionalText(formData.get("sectionId"));
@@ -1509,6 +1512,7 @@ export async function saveEventService(formData: FormData) {
 }
 
 export async function saveEventLocation(formData: FormData) {
+  await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
   const dashboardPath = getPanelLocationsDashboardPath(sourceDashboard, nav);
@@ -1631,6 +1635,7 @@ export async function saveEventLocation(formData: FormData) {
 }
 
 export async function deleteEventLocation(formData: FormData) {
+  await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
   const dashboardPath = getPanelLocationsDashboardPath(sourceDashboard, nav);
@@ -1714,6 +1719,7 @@ export async function deleteEventLocation(formData: FormData) {
 }
 
 export async function savePanelDraft(formData: FormData) {
+  await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
   const dashboardPath = getPanelDraftsDashboardPath(sourceDashboard, nav);
@@ -1743,7 +1749,7 @@ export async function savePanelDraft(formData: FormData) {
     !locationId ||
     !startsAt ||
     !endsAt ||
-    endsAt <= startsAt ||
+    !isValidPanelDayRange(startsAt, endsAt) ||
     audienceTypeIds.length !== sectionCapacities.length ||
     audienceTypeIds.length > PANEL_MAX_SECTIONS ||
     audienceTypeIds.some((value) => !value) ||
@@ -1852,6 +1858,7 @@ export async function savePanelDraft(formData: FormData) {
 }
 
 export async function publishPanels(formData: FormData) {
+  await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
   const dashboardPath = getPanelDraftsDashboardPath(sourceDashboard, nav);
@@ -1927,6 +1934,7 @@ export async function publishPanels(formData: FormData) {
 }
 
 export async function saveSchoolBooking(formData: FormData) {
+  await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
   const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav, optionalText(formData.get("schoolSourceSection")));
@@ -2010,6 +2018,7 @@ export async function saveSchoolBooking(formData: FormData) {
 }
 
 export async function submitPublicSchoolBooking(formData: FormData) {
+  await requirePublicPanelBookings();
   const parsed = parsePublicSchoolBookingForm(formData);
   const locale = normalizeLocale(String(formData.get("locale") ?? "")) ?? DEFAULT_LOCALE;
   const errorPath = (code: string) => `/scuole?error=${encodeURIComponent(code)}`;
@@ -2058,6 +2067,7 @@ function getUnknownErrorMessage(error: unknown): string {
 }
 
 export async function requestSchoolBookingAccess(formData: FormData) {
+  await requirePublicPanelBookings();
   const email = normalizeEmail(formData.get("email"));
   const ipAddress = await getIpAddress();
   const sentPath = `/scuole/accesso?sent=1`;
@@ -2079,6 +2089,7 @@ export async function requestSchoolBookingAccess(formData: FormData) {
 }
 
 export async function updateTeacherSchoolBooking(formData: FormData) {
+  await requirePublicPanelBookings();
   const bookingId = optionalText(formData.get("bookingId"));
   const eventId = optionalText(formData.get("eventId"));
   const teacherEmail = optionalText(formData.get("teacherEmail"));
@@ -2122,6 +2133,7 @@ export async function updateTeacherSchoolBooking(formData: FormData) {
 }
 
 export async function cancelTeacherSchoolBooking(formData: FormData) {
+  await requirePublicPanelBookings();
   const bookingId = optionalText(formData.get("bookingId"));
   if (!bookingId) redirect("/dashboard/docente?error=invalid");
   const supabase = await createSupabaseServerClient();
@@ -2134,6 +2146,7 @@ export async function cancelTeacherSchoolBooking(formData: FormData) {
 }
 
 export async function cancelSchoolBooking(formData: FormData) {
+  await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
   const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav, optionalText(formData.get("schoolSourceSection")));
@@ -4144,7 +4157,7 @@ function getPanelLocationsDashboardPath(
 ): string {
   const basePath =
     sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
-  const params = new URLSearchParams({ section: "panel" });
+  const params = new URLSearchParams({ section: "panel", panelView: "locations" });
 
   if (navMode === "mini" || navMode === "full") {
     params.set("nav", navMode);

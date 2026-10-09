@@ -44,6 +44,7 @@ try {
     assert (select child_id is null and school_booking_id is null from check_ins);
     end $$; drop table public.p11_legacy_before;`);
   console.log('PASS canonical migrations applied to disposable PostgreSQL; legacy check-in preserved');
+  console.log(file(join(root,'tests/sql/manager-panel-access.sql')).trim());
   console.log(file(join(root,'tests/sql/reception-check-ins.sql')).trim());
   console.log(file(join(root,'tests/sql/reception-event-duty.sql')).trim());
   console.log(file(join(root,'tests/sql/event-attendance.sql')).trim());

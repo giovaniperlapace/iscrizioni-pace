@@ -1,3 +1,4 @@
+import { canAccessPanelManagement, isPanelCampaign } from "@/lib/panels/management-access";
 import { loadAllRows, writeRowsForIds } from "@/lib/supabase/all-rows";
 import { getEmailConfig } from "@/lib/email/config";
 import { randomUUID } from "node:crypto";
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
       : "preview"
   ) as CampaignAction;
   try {
+    if (!canAccessPanelManagement(auth.eventRoles!) && isPanelCampaign(body)) return error("Accesso panel non consentito per questo evento.", 403);
     if (action === "recipients") return await previewRecipients(auth.eventRoles!, body);
     if (action === "preview") {
       return await previewCampaign(auth.userId!, auth.userEmail!, auth.eventRoles!, body, attachments);
@@ -130,7 +132,8 @@ async function previewRecipients(eventRoles: EventUserRole[], body: Record<strin
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
     selectedIds,
-    event.id
+    event.id,
+    canAccessPanelManagement(eventRoles, event.id)
   );
   return NextResponse.json({
     ...recipientSelectionSummary(recipientPreviews),
@@ -213,12 +216,14 @@ async function previewCampaign(
     service,
     event.id,
     event.title,
-    selectedSample
+    selectedSample,
+    canAccessPanelManagement(eventRoles, event.id)
   );
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
     selectedIds,
-    event.id
+    event.id,
+    canAccessPanelManagement(eventRoles, event.id)
   );
   await service.from("audit_logs").insert({ event_id: event.id, actor_user_id: userId, action: "email_campaign.preview_created", entity_table: "email_campaigns", entity_id: campaign.id, metadata: { recipient_count: selectedIds.size, filters, attachment_count: attachments.length } });
   return NextResponse.json({
@@ -256,13 +261,15 @@ async function updateCampaignRecipients(
   assertCanManageCampaignEvent(eventRoles, event.id);
   const { data: campaign } = await service
     .from("email_campaigns")
-    .select("id,event_id,status,subject_template,body_template")
+    .select("id,event_id,status,subject_template,body_template,filters_snapshot")
     .eq("id", campaignId)
     .eq("event_id", event.id)
     .maybeSingle();
   if (!campaign || !["draft", "ready"].includes(campaign.status)) {
     throw new Error("La lista destinatari non è più modificabile.");
   }
+
+  if (!canAccessPanelManagement(eventRoles, event.id) && isPanelCampaign({ ...campaign.filters_snapshot, subject_template: campaign.subject_template, body_template: campaign.body_template })) return error("Accesso panel non consentito per questo evento.", 403);
 
   const { data: rows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
@@ -279,6 +286,7 @@ async function updateCampaignRecipients(
     delegateUserId: row.delegate_user_id,
     schoolTeacherId: row.school_teacher_id,
   }));
+  if (!canAccessPanelManagement(eventRoles, event.id) && recipients.some(recipient => recipient.recipientType === "teacher")) return error("Accesso panel non consentito per questo evento.", 403);
   const availableIds = new Set(recipients.map((recipient) => recipient.recipientKey));
   const selectedIds = new Set(selectedRecipientKeys.filter((id) => availableIds.has(id)));
   if (!selectedIds.size) throw new Error("Seleziona almeno un destinatario valido.");
@@ -316,7 +324,8 @@ async function updateCampaignRecipients(
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
     selectedIds,
-    event.id
+    event.id,
+    canAccessPanelManagement(eventRoles, event.id)
   );
   const selectedSample = recipients.find((recipient) =>
     selectedIds.has(recipient.recipientKey)
@@ -326,7 +335,8 @@ async function updateCampaignRecipients(
     service,
     event.id,
     event.title,
-    selectedSample
+    selectedSample,
+    canAccessPanelManagement(eventRoles, event.id)
   );
   await audit(service, event.id, userId, campaignId, "email_campaign.recipients_updated", {
     recipient_count: selectedIds.size,
@@ -350,6 +360,13 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     throw new Error("Campagna non disponibile o già inviata.");
   }
   assertCanManageCampaignEvent(eventRoles, campaign.event_id);
+  const panelCampaign = isPanelCampaign({ ...campaign.filters_snapshot, subject_template: campaign.subject_template, body_template: campaign.body_template });
+  const globalAdmin = eventRoles.some(role => role.role === "admin" && role.eventId === null);
+  if (!canAccessPanelManagement(eventRoles, campaign.event_id) && panelCampaign) return error("Accesso panel non consentito per questo evento.", 403);
+  if (panelCampaign && !globalAdmin) {
+    const currentEvent = await getCurrentOperationalEvent(service, "id");
+    if (currentEvent?.id !== campaign.event_id) return error("Accesso panel non consentito per questo evento.", 403);
+  }
   const { data: recipientRows } = await loadAllRows((from, to) => service
     .from("email_campaign_recipients")
     .select(
@@ -357,6 +374,11 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     )
     .eq("campaign_id", campaignId)
     .eq("status", "pending").order("id").range(from, to));
+  if (!canAccessPanelManagement(eventRoles, campaign.event_id) && (recipientRows ?? []).some(row => row.recipient_type === "teacher")) return error("Accesso panel non consentito per questo evento.", 403);
+  if (!panelCampaign && (recipientRows ?? []).some(row => row.recipient_type === "teacher") && !globalAdmin) {
+    const currentEvent = await getCurrentOperationalEvent(service, "id");
+    if (currentEvent?.id !== campaign.event_id) return error("Accesso panel non consentito per questo evento.", 403);
+  }
   const recipients = (recipientRows ?? []).map((row) =>
     campaignRecipientFromDatabaseRow({
       ...row,

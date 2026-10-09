@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   filterPanelDrafts,
   findPanelScheduleConflict,
+  isValidPanelDayRange,
   normalizePanelDescription,
   normalizePanelTitle,
   panelCapacityDifference,
@@ -21,6 +22,16 @@ const migration = readFileSync(
   "utf8"
 );
 const actions = readFileSync(join(process.cwd(), "app/actions.ts"), "utf8");
+
+test("panel interval stays on one Rome day and ends after its start", () => {
+  assert.equal(isValidPanelDayRange(new Date("2026-10-26T09:30:00+01:00"), new Date("2026-10-26T18:01:00+01:00")), true);
+  assert.equal(isValidPanelDayRange(new Date("2026-10-25T00:30:00+02:00"), new Date("2026-10-25T03:30:00+01:00")), true);
+  assert.equal(isValidPanelDayRange(new Date("2026-10-26T00:30:00+01:00"), new Date("2026-10-26T10:00:00+01:00")), true);
+  assert.equal(isValidPanelDayRange(new Date("2026-10-26T23:30:00+01:00"), new Date("2026-10-27T00:30:00+01:00")), false);
+  assert.equal(isValidPanelDayRange(new Date("2026-10-26T10:00:00+01:00"), new Date("2026-10-26T10:00:00+01:00")), false);
+  assert.equal(isValidPanelDayRange(new Date("2026-10-26T10:00:00+01:00"), new Date("2026-10-26T09:00:00+01:00")), false);
+  assert.equal(isValidPanelDayRange(new Date("invalid"), new Date()), false);
+});
 const section = readFileSync(
   join(process.cwd(), "app/dashboard/panel-drafts-section.tsx"),
   "utf8"

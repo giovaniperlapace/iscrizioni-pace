@@ -1,3 +1,4 @@
+import { requirePublicPanelBookings } from "@/lib/panels/release.server";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -13,6 +14,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type Props = { searchParams: Promise<{ error?: string; saved?: string; cancelled?: string }> };
 
 export default async function TeacherDashboardPage({ searchParams }: Props) {
+  await requirePublicPanelBookings();
   const [locale, params, supabase] = await Promise.all([getRequestLocale(), searchParams, createSupabaseServerClient()]);
   const copy = getSchoolBookingCopy(locale);
   const teacherCopy = getTeacherFlowCopy(locale);

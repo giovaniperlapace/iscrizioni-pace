@@ -35,7 +35,7 @@ test("P9 panel filters use current canonical confirmed choices", async () => {
   assert.match(composer, /recipient\.panelIds\.some/);
   assert.match(emailSection, /\.eq\("publication_status", "published"\)/);
   assert.match(emailSection, /locationNameById/);
-  assert.match(emailSection, /initialPanelId=\{initialPanelId\}/);
+  assert.match(emailSection, /initialPanelId=\{allowPanelManagement \? initialPanelId : null\}/);
   assert.match(panelSection, /campaignPanel=\$\{encodeURIComponent\(panel\.id\)\}/);
 });
 

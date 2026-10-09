@@ -1,3 +1,5 @@
+import { DeskMicrophoneIcon } from "@/components/desk-microphone-icon";
+import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
 import { loadAssociations } from "@/lib/registrations/association.server";
 import { ExportsSection } from "@/app/dashboard/exports-section";
 import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
@@ -30,10 +32,10 @@ import { ReliableForm } from "@/components/reliable-form";
 import { permanentRedirect, redirect } from "next/navigation";
 import Link from "@/components/pending-link";
 import {
+  type LucideProps,
   BarChart3,
   FileDown,
   Mail,
-  MapPin,
   Network,
   Pencil,
   ShieldCheck,
@@ -73,6 +75,9 @@ import {
 import { ParticipantSearchField } from "@/app/dashboard/participant-search-field";
 import { PanelDraftsSection } from "@/app/dashboard/panel-drafts-section";
 import { PanelLocationsSection } from "@/app/dashboard/panel-locations-section";
+import { PanelRosterOverlay } from "@/app/dashboard/panel-roster-overlay";
+import { LocalOverlay } from "@/app/dashboard/local-overlay";
+import { loadPanelRoster, type PanelRoster } from "@/lib/panels/panel-roster.server";
 import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
 import { PreserveDashboardScroll } from "@/app/dashboard/preserve-dashboard-scroll";
 import { StatisticsSection } from "@/app/dashboard/statistics-section";
@@ -183,12 +188,14 @@ type AdminPageProps = {
     panelDate?: string;
     panelError?: string;
     panelId?: string;
+    panelRoster?: string;
     panelLocation?: string;
     panelQ?: string;
     panelSaved?: string;
     panelStatus?: string;
     panelTool?: string;
     panelView?: string;
+    campaignPanel?: string;
     schoolError?: string;
     schoolId?: string;
     schoolPanel?: string;
@@ -496,12 +503,12 @@ export default async function AdminDashboardPage({
       ? getEventLocations(serviceSupabase, currentEventId)
       : Promise.resolve([]),
     activeSection === "panel" && currentEventId
-      ? getPanelDraftCatalog(serviceSupabase, currentEventId)
+      ? getPanelDraftCatalog(supabase, currentEventId)
       : Promise.resolve({ panels: [], audienceTypes: [] }),
     (activeSection === "panel" || participantSchoolsView) && currentEventId
       ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
       : Promise.resolve({ bookings: [], panelOptions: [] }),
-    activeSection === "dashboard" && currentEventId
+    activeSection === "dashboard" && statisticsReport === "panels" && currentEventId
       ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
       : Promise.resolve(emptyPanelStatisticsSnapshot()),
   ]);
@@ -512,7 +519,7 @@ export default async function AdminDashboardPage({
     ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
     : undefined;
   const statistics =
-    (activeSection === "dashboard" && statisticsReport !== "disability") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
+    (activeSection === "dashboard" && statisticsReport !== "disability" && statisticsReport !== "panels") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getAdminStatisticsSnapshot(
           currentEventId,
           currentEvent?.starts_on ?? null,
@@ -556,10 +563,25 @@ export default async function AdminDashboardPage({
     schoolCatalog.bookings.find((booking) => booking.id === params.schoolId) ?? null;
   const panelView = params.panelView === "locations" || params.panelView === "schools" ? params.panelView : "panels";
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
+  let panelRoster: PanelRoster | null = null;
+  let panelRosterError: string | null = null;
+  const rosterId = activeSection === "panel" && typeof params.panelRoster === "string" ? params.panelRoster : null;
+  const rosterCloseParams = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[0] !== "panelRoster"));
+  if (rosterId) {
+    try {
+      panelRoster = await loadPanelRoster(serviceSupabase, rosterId, auth.eventRoles);
+      if (!panelRoster) panelRosterError = "Il panel non è disponibile nell’evento corrente.";
+    } catch {
+      panelRosterError = "Impossibile caricare l’elenco completo. Riprova.";
+    }
+  }
 
   return (
     <main className="app-page text-[var(--peace-ink)]">
       <PreserveDashboardScroll />
+      {rosterId ? <LocalOverlay parameter="panelRoster" value={rosterId}>
+        <PanelRosterOverlay key={rosterId} roster={panelRoster} error={panelRosterError} closePath={`/dashboard/admin?${rosterCloseParams}`} />
+      </LocalOverlay> : null}
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard admin</h1>
@@ -605,16 +627,18 @@ export default async function AdminDashboardPage({
               <StatisticsSection
                 eventId={currentEventId}
                 statistics={statistics}
-                panelStatistics={panelStatistics}
                 report={statisticsReport}
                 canViewDisability={true}
                 disabilityStatistics={disabilityStatistics}
                 associationStatistics={associationStatistics}
+                panelStatistics={panelStatistics}
                 dashboard="admin"
                 navMode={navMode}
                 canManage
               />
             ) : null}
+
+            {activeSection === "email" ? <ManagerEmailSection eventId={currentEventId} canManage={true} allowPanelManagement={true} initialPanelId={params.campaignPanel} /> : null}
 
             {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
@@ -1223,7 +1247,7 @@ function AdminSidebar({
   const items: Array<{
     key: AdminSection;
     href: string;
-    Icon: typeof BarChart3;
+    Icon: React.ComponentType<LucideProps>;
     label: string;
     help: string;
   }> = [
@@ -1251,13 +1275,13 @@ function AdminSidebar({
     {
       key: "panel",
       href: adminPath("panel", navMode),
-      Icon: MapPin,
+      Icon: DeskMicrophoneIcon,
       label: "Panel",
       help: "Location e programma",
     },
     {
       key: "email",
-      href: "/dashboard/manager?section=email",
+      href: adminPath("email", navMode),
       Icon: Mail,
       label: "Comunicazioni",
       help: "Template e campagne email",
@@ -2615,6 +2639,7 @@ function resolveAdminSection(input: { section?: string; openingSaved?: string; o
     input.section === "dashboard" ||
     input.section === "iscritti" ||
     input.section === "panel" ||
+    input.section === "email" ||
     input.section === "ruoli" ||
     input.section === "gruppi"
   ) {

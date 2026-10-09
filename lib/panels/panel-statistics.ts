@@ -1,3 +1,4 @@
+import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { loadPanelAttendanceTotals } from "../reception/panel-attendance.server.ts";
@@ -205,26 +206,26 @@ export async function getPanelStatisticsSnapshot(
 ): Promise<PanelStatisticsSnapshot> {
   const [panelsResult, locationsResult, audiencesResult, sectionsResult] =
     await Promise.all([
-      supabase
+      loadAllRows((from, to) => supabase
         .from("event_moments")
         .select("id,title,starts_at,ends_at,location_id,publication_status")
         .eq("event_id", eventId)
         .eq("moment_type", "panel")
-        .order("starts_at", { ascending: true }),
-      supabase
+        .order("starts_at", { ascending: true }).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("event_locations")
         .select("id,name,max_capacity")
-        .eq("event_id", eventId),
-      supabase
+        .eq("event_id", eventId).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("panel_audience_types")
         .select("id,name,booking_channel,sort_order")
         .eq("event_id", eventId)
         .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
-      supabase
+        .order("name", { ascending: true }).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("panel_seat_sections")
         .select("id,panel_id,audience_type_id,capacity")
-        .eq("event_id", eventId),
+        .eq("event_id", eventId).order("id").range(from, to)),
     ]);
 
   for (const result of [
@@ -641,30 +642,11 @@ async function getAllIndividualChoices(
     return [];
   }
 
-  const rows: IndividualChoiceDbRow[] = [];
-
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const result = await supabase
+  const { data: rows } = await loadRowsForIds<IndividualChoiceDbRow>(panelIds, (ids, from, to) => supabase
       .from("moment_attendance_choices")
-      .select(
-        "registration_id,moment_id,seat_section_id,choice,registrations!inner(status,registration_children(id))"
-      )
-      .in("moment_id", panelIds)
-      .eq("choice", "yes")
-      .order("id", { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    const page = (result.data ?? []) as IndividualChoiceDbRow[];
-    rows.push(...page);
-
-    if (page.length < PAGE_SIZE) {
-      break;
-    }
-  }
+      .select("registration_id,moment_id,seat_section_id,choice,registrations!inner(status,registration_children(id))")
+      .in("moment_id", ids).eq("choice", "yes").not("seat_section_id", "is", null)
+      .order("id").range(from, to));
 
   return rows.map((row) => {
     const registration = relatedOne(row.registrations);

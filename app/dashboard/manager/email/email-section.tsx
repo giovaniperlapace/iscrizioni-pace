@@ -1,3 +1,4 @@
+import { isPanelCampaign } from "@/lib/panels/management-access";
 import { loadAllRows } from "@/lib/supabase/all-rows";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
@@ -10,10 +11,12 @@ export async function ManagerEmailSection({
   eventId,
   canManage,
   initialPanelId,
+  allowPanelManagement = false,
 }: {
   eventId: string | null;
   canManage: boolean;
   initialPanelId?: string | null;
+  allowPanelManagement?: boolean;
 }) {
   if (!eventId) {
     return <section className="surface-card p-5">Nessun evento corrente.</section>;
@@ -60,17 +63,17 @@ export async function ManagerEmailSection({
       .eq("is_active", true)
       .order("public_order")
       .order("label").order("id").range(from, to)),
-    loadAllRows((from, to) => service
+    allowPanelManagement ? loadAllRows((from, to) => service
       .from("event_moments")
       .select("id,title,starts_at,location_id")
       .eq("event_id", eventId)
       .eq("moment_type", "panel")
       .eq("publication_status", "published")
-      .order("starts_at").order("id").range(from, to)),
-    loadAllRows((from, to) => service
+      .order("starts_at").order("id").range(from, to)) : Promise.resolve({ data: [] }),
+    allowPanelManagement ? loadAllRows((from, to) => service
       .from("event_locations")
       .select("id,name")
-      .eq("event_id", eventId).order("id").range(from, to)),
+      .eq("event_id", eventId).order("id").range(from, to)) : Promise.resolve({ data: [] }),
     loadAllRows((from, to) => service
       .from("email_templates")
       .select("id,name,subject,body_text,current_version")
@@ -79,7 +82,7 @@ export async function ManagerEmailSection({
       .order("updated_at", { ascending: false }).order("id").range(from, to)),
     service
       .from("email_campaigns")
-      .select("id,name,status,recipient_count,sent_at,created_at")
+      .select("id,name,status,recipient_count,sent_at,created_at,filters_snapshot,subject_template,body_template")
       .eq("event_id", eventId)
       .not("sent_at", "is", null)
       .order("sent_at", { ascending: false })
@@ -101,18 +104,19 @@ export async function ManagerEmailSection({
       serviceId: null,
       status: "active",
     }),
-    resolveCampaignRecipients(eventId, {
+    allowPanelManagement ? resolveCampaignRecipients(eventId, {
       audience: "teachers",
       groupId: null,
       tagId: null,
       serviceId: null,
       status: "active",
-    }),
+    }) : Promise.resolve([]),
   ]);
   const initialRecipients = await loadCampaignRecipientPreviews(
     [...participantCandidates, ...groupLeaderCandidates, ...teacherCandidates],
     new Set(),
-    eventId
+    eventId,
+    allowPanelManagement
   );
   const locationNameById = new Map(
     (locations ?? []).map((location) => [location.id, location.name])
@@ -128,6 +132,7 @@ export async function ManagerEmailSection({
       <p role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">Il servizio email è temporaneamente in pausa. L’invio dei messaggi in attesa riprenderà automaticamente. Gli esiti da verificare non saranno reinviati.</p>
     ) : null}
     <EmailCampaignComposer
+      allowPanelManagement={allowPanelManagement}
       groups={(groups ?? []).map((row) => ({ id: row.id, label: row.name }))}
       tags={(tags ?? []).map((row) => ({ id: row.id, label: row.label }))}
       services={(eventServices ?? []).map((row) => ({ id: row.id, label: row.label }))}
@@ -139,16 +144,16 @@ export async function ManagerEmailSection({
           row.location_id ? locationNameById.get(row.location_id) : null,
         ].filter(Boolean).join(" · "),
       }))}
-      initialPanelId={initialPanelId}
+      initialPanelId={allowPanelManagement ? initialPanelId : null}
       initialRecipients={initialRecipients}
-      templates={(templates ?? []).map((row) => ({
+      templates={(templates ?? []).filter(row => allowPanelManagement || !isPanelCampaign({ subject: row.subject, message: row.body_text })).map((row) => ({
         id: row.id,
         name: row.name,
         subject: row.subject,
         bodyText: row.body_text,
         version: row.current_version,
       }))}
-      campaigns={(campaigns ?? []).map((row) => ({
+      campaigns={(campaigns ?? []).filter(row => allowPanelManagement || !isPanelCampaign({ ...row.filters_snapshot, subject_template: row.subject_template, body_template: row.body_template })).map((row) => ({
         id: row.id,
         name: row.name,
         status: row.status,

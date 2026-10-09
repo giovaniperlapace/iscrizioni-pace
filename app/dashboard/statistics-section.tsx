@@ -61,12 +61,12 @@ const AGE_BANDS: StatisticsAgeBand[] = [
 export function StatisticsSection({
   eventId = null,
   statistics,
-  panelStatistics,
-  canManage = false,
   report = "territory",
   canViewDisability = false,
   disabilityStatistics,
   associationStatistics,
+  panelStatistics,
+  canManage = false,
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
@@ -86,17 +86,8 @@ export function StatisticsSection({
         </p>
       </div>
 
-      {panelStatistics ? <ReportBlock name="panels" title="Panel">
-        <PanelStatisticsReport
-          statistics={panelStatistics}
-          dashboard={dashboard}
-          navMode={navMode}
-          canManage={canManage}
-        />
-      </ReportBlock> : null}
-
       <nav aria-label="Categorie di statistiche" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
-        {STATISTICS_REPORTS.filter(item => item.key !== "disability" || canViewDisability).map(({ key, label }) => (
+        {STATISTICS_REPORTS.filter(item => (item.key !== "disability" || canViewDisability) && (item.key !== "panels" || dashboard === "admin" || canManage)).map(({ key, label }) => (
           <Link
             key={key}
             href={`/dashboard/${dashboard}?${new URLSearchParams({ section: "dashboard", nav: navMode, report: key })}`}
@@ -109,6 +100,15 @@ export function StatisticsSection({
           </Link>
         ))}
       </nav>
+
+      {(dashboard === "admin" || canManage) && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Panel">
+        <PanelStatisticsReport
+          statistics={panelStatistics}
+          dashboard={dashboard}
+          navMode={navMode}
+          canManage={canManage}
+        />
+      </ReportBlock> : null}
 
       {report === "territory" ? <ReportBlock name="territory" title="Partecipanti per gruppo o nodo">
         <TerritoryStatisticsSummary

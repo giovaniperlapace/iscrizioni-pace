@@ -227,6 +227,8 @@ test("P10 report exposes all requested filters and safe operational links", () =
   assert.match(reportSource, /Ingressi ai panel non disponibili/);
   assert.match(reportSource, /Non misurano permanenza, uscite o assenze/);
   assert.match(reportSource, /ingressi ai singoli panel/);
+  assert.doesNotMatch(reportSource, /Presenze effettive e no-show/);
+  assert.doesNotMatch(reportSource, /Milestone\s+P11/);
   assert.match(statisticsSource, /moment_attendance_choices/);
   assert.match(statisticsSource, /school_panel_reservations/);
   assert.match(statisticsSource, /choice\.registrationStatus === "cancelled"/);

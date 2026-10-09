@@ -35,10 +35,11 @@ test("one report at a time, default/fallback to first, role and menu preserved i
   for (const dashboard of ["admin", "manager"]) for (const navMode of ["full", "mini"]) {
     for (const value of [undefined, "invalid", ...reports.STATISTICS_REPORTS.map(r => r.key)]) {
       const report = reports.resolveStatisticsReport(value);
-      const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, dashboard, navMode, report, canViewDisability: true, disabilityStatistics: { people: [] } }));
+      if (dashboard === "manager" && report === "panels") continue;
+      const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, panelStatistics: {}, dashboard, navMode, report, canViewDisability: true, disabilityStatistics: { people: [] } }));
       assert.deepEqual([...html.matchAll(/data-statistics-report="([^"]+)"/g)].map(m => m[1]), [report]);
       assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-      for (const category of reports.STATISTICS_REPORTS) {
+      for (const category of reports.STATISTICS_REPORTS.filter(r => dashboard === "admin" || r.key !== "panels")) {
         assert.ok(html.includes(`/dashboard/${dashboard}?section=dashboard&amp;nav=${navMode}&amp;report=${category.key}`));
       }
     }
@@ -54,15 +55,23 @@ test("unscoped users do not render disability category or report, even with inje
   assert.doesNotMatch(html, /report=disability|Protected report|data-statistics-report="disability"/);
 });
 
-test("panel report coexists with every main statistics category after integration", () => {
+test("viewer cannot render panel statistics even with injected data", () => {
+  const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
+  const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, dashboard: "manager", navMode: "mini", report: "panels", panelStatistics: {} }));
+  assert.doesNotMatch(html, /report=panels|Panel report|data-statistics-report="panels"/);
+});
+
+
+test("current-event manager selects panel report without hiding event attendance or duplicating other reports", () => {
   const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
   for (const report of reports.STATISTICS_REPORTS.map(item => item.key)) {
     const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, {
-      statistics: snapshot, dashboard: "manager", navMode: "mini", report,
-      canViewDisability: true, disabilityStatistics: { people: [] }, panelStatistics: {}, canManage: false,
+      eventId: "event", statistics: snapshot, dashboard: "manager", navMode: "mini", report,
+      canViewDisability: true, disabilityStatistics: { people: [] }, panelStatistics: {}, canManage: true,
     }));
-    assert.deepEqual([...html.matchAll(/data-statistics-report="([^"]+)"/g)].map(m => m[1]), ["panels", report]);
-    assert.ok(html.includes("Panel report"));
+    assert.deepEqual([...html.matchAll(/data-statistics-report="([^"]+)"/g)].map(m => m[1]), [report]);
+    assert.equal(html.includes("Panel report"), report === "panels");
+    assert.ok(html.includes("report=panels"));
     assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
   }
 });

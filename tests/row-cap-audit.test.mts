@@ -1,3 +1,4 @@
+import { canAccessPanelManagement, isPanelCampaign } from "../lib/panels/management-access.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -79,6 +80,7 @@ function campaignFixture(fail?: (url: URL, method: string) => boolean) {
     ...loaders, createSupabaseServiceClient: () => db, getCurrentOperationalEvent: async () => ({ id: "event" }),
     loadCampaignRecipientPreviews: async (rows: unknown[]) => rows,
     loadCampaignDeliveryData: async () => ({ templateData: { firstName: "A", lastName: "B" } }),
+    canAccessPanelManagement, isPanelCampaign,
     assertCanManageCampaignEvent: (roles: Array<{ role: string; eventId: string }>, eventId: string) => { assert.ok(roles.some(role => role.role === "manager" && role.eventId === eventId)); },
     audit: async () => {}, recipientSelectionSummary: () => ({}), renderCampaignTemplate: () => "", renderSafeCampaignHtml: () => "",
     NextResponse: { json: (value: unknown) => value },

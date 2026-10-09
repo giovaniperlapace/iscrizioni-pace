@@ -1,4 +1,5 @@
 export const STATISTICS_REPORTS = [
+  { key: "panels", label: "Panel" },
   { key: "territory", label: "Gruppi e partecipanti" },
   { key: "attendance", label: "Presenze" },
   { key: "age", label: "Fasce di età" },

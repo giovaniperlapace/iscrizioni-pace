@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { usePanelDraftFormState } from "@/app/dashboard/panel-draft-form-state";
 import type { EventLocationOption } from "@/lib/panels/event-locations";
@@ -50,8 +50,12 @@ export function PanelDraftFields({
 }: PanelDraftFieldsProps) {
   const { setCapacityExceeded, setScheduleConflict } = usePanelDraftFormState();
   const [locationId, setLocationId] = useState(panel?.locationId ?? "");
-  const [startsAt, setStartsAt] = useState(initialStartsAt);
-  const [endsAt, setEndsAt] = useState(initialEndsAt);
+  const [day, setDay] = useState(initialStartsAt.slice(0, 10) || initialEndsAt.slice(0, 10));
+  const [startTime, setStartTime] = useState(initialStartsAt.slice(11, 16));
+  const [endTime, setEndTime] = useState(initialEndsAt.slice(11, 16));
+  const endTimeRef = useRef<HTMLInputElement>(null);
+  const startsAt = day && startTime ? `${day}T${startTime}` : "";
+  const endsAt = day && endTime ? `${day}T${endTime}` : "";
   const [sections, setSections] = useState<EditableSection[]>(() =>
     (panel?.sections ?? []).map((section) => ({
       key: section.id,
@@ -99,6 +103,11 @@ export function PanelDraftFields({
     setScheduleConflict(hasScheduleConflict);
   }, [hasScheduleConflict, setScheduleConflict]);
 
+  useEffect(() => {
+    endTimeRef.current?.setCustomValidity(startTime && endTime && endTime <= startTime
+      ? "L’orario di fine deve essere successivo all’orario di inizio." : "");
+  }, [startTime, endTime]);
+
   return (
     <div className="grid gap-5">
       <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
@@ -131,28 +140,38 @@ export function PanelDraftFields({
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-          Inizio
+        <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] sm:col-span-2">
+          Giorno
           <input
-            type="datetime-local"
-            value={startsAt}
-            min={`${eventStartsOn}T00:00`}
-            max={`${eventEndsOn}T23:59`}
-            onChange={(event) => setStartsAt(event.target.value)}
-            className="field font-normal"
+            type="date"
+            value={day}
+            min={eventStartsOn}
+            max={eventEndsOn}
+            onChange={(event) => setDay(event.target.value)}
+            className="field min-w-0 font-normal"
+            required
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
+          Orario di inizio
+          <input
+            type="time"
+            value={startTime}
+            onChange={(event) => setStartTime(event.target.value)}
+            className="field min-w-0 font-normal"
             required
           />
           <input type="hidden" name="startsAt" value={toIsoString(startsAt)} />
         </label>
         <label className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">
-          Fine
+          Orario di fine
           <input
-            type="datetime-local"
-            value={endsAt}
-            min={`${eventStartsOn}T00:00`}
-            max={`${eventEndsOn}T23:59`}
-            onChange={(event) => setEndsAt(event.target.value)}
-            className="field font-normal"
+            ref={endTimeRef}
+            type="time"
+            value={endTime}
+            min={startTime || undefined}
+            onChange={(event) => setEndTime(event.target.value)}
+            className="field min-w-0 font-normal"
             required
           />
           <input type="hidden" name="endsAt" value={toIsoString(endsAt)} />

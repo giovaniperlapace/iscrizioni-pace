@@ -229,21 +229,19 @@ async function resolveGroupLeaderRecipients(eventId: string) {
 
 async function resolveTeacherRecipients(eventId: string) {
   const service = createSupabaseServiceClient();
-  const { data: bookings, error: bookingsError } = await service
+  const { data: bookings } = await loadAllRows((from, to) => service
     .from("school_bookings")
     .select("id,teacher_id")
     .eq("event_id", eventId)
-    .in("status", ["submitted", "confirmed"]);
-  if (bookingsError) throw new Error(bookingsError.message);
+    .in("status", ["submitted", "confirmed"]).order("id").range(from, to));
   const bookingIds = (bookings ?? []).map((row) => row.id);
   if (!bookingIds.length) return [];
   const reservations = await loadInChunks(bookingIds, async (ids) => {
-    const { data, error } = await service
+    const { data } = await loadAllRows((from, to) => service
       .from("school_panel_reservations")
       .select("booking_id")
       .eq("status", "reserved")
-      .in("booking_id", ids);
-    if (error) throw new Error(error.message);
+      .in("booking_id", ids).order("id").range(from, to));
     return data ?? [];
   });
   const reservedBookings = new Set(reservations.map((row) => row.booking_id));
@@ -252,12 +250,11 @@ async function resolveTeacherRecipients(eventId: string) {
     .map((row) => row.teacher_id))];
   if (!teacherIds.length) return [];
   const teachers = await loadInChunks(teacherIds, async (ids) => {
-    const { data, error } = await service
+    const { data } = await loadAllRows((from, to) => service
       .from("school_booking_teachers")
       .select("id,email")
       .eq("event_id", eventId)
-      .in("id", ids);
-    if (error) throw new Error(error.message);
+      .in("id", ids).order("id").range(from, to));
     return data ?? [];
   });
   return teachers.flatMap<CampaignRecipient>((teacher) =>
@@ -277,8 +274,10 @@ async function resolveTeacherRecipients(eventId: string) {
 export async function loadCampaignRecipientPreviews(
   recipients: CampaignRecipient[],
   selectedKeys: Set<string>,
-  eventId: string
+  eventId: string,
+  includePanels = true
 ) {
+  if (!includePanels && recipients.some(recipient => recipient.recipientType === "teacher")) throw new Error("Accesso panel riservato all’amministratore.");
   if (!recipients.length) return [];
   const service = createSupabaseServiceClient();
   const participantIds = [
@@ -370,34 +369,31 @@ export async function loadCampaignRecipientPreviews(
         .in("participant_id", ids).order("id").range(from, to));
       return data ?? [];
     }),
-    loadInChunks(registrationIds, async (ids) => {
-      const { data, error } = await service
+    loadInChunks(includePanels ? registrationIds : [], async (ids) => {
+      const { data } = await loadAllRows((from, to) => service
         .from("moment_attendance_choices")
         .select("registration_id,moment_id")
         .eq("choice", "yes")
         .not("seat_section_id", "is", null)
-        .in("registration_id", ids);
-      if (error) throw new Error(error.message);
-      return data ?? [];
+        .in("registration_id", ids).order("id").range(from, to));
+        return data ?? [];
     }),
     loadInChunks(schoolTeacherIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("school_booking_teachers")
         .select("id,email,first_name,last_name")
         .eq("event_id", eventId)
-        .in("id", ids);
-      if (error) throw new Error(error.message);
-      return data ?? [];
+        .in("id", ids).order("id").range(from, to));
+        return data ?? [];
     }),
     loadInChunks(schoolTeacherIds, async (ids) => {
-      const { data, error } = await service
+      const { data } = await loadAllRows((from, to) => service
         .from("school_bookings")
         .select("id,teacher_id,school_name,status,school_panel_reservations(panel_id,status)")
         .eq("event_id", eventId)
         .in("status", ["submitted", "confirmed"])
-        .in("teacher_id", ids);
-      if (error) throw new Error(error.message);
-      return data ?? [];
+        .in("teacher_id", ids).order("id").range(from, to));
+        return data ?? [];
     }),
   ]);
 

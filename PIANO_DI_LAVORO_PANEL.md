@@ -1,5 +1,115 @@
 # Piano di lavoro Panel
 
+### Attivazione Capogruppo rinviata — 2026-10-09
+
+Su indicazione dell’utente, attivare la funzione panel del Capogruppo nella
+futura tranche di pubblicazione dei panel sulla home del sito. Il rilascio
+Manager attuale non la apre; menu, pagina, action e RPC restano protetti dalla
+modalità pubblica esistente. Non attivarla con la sola pubblicazione gestionale
+dei singoli panel.
+
+### Tranche di rilascio P0–P10: apertura Manager — 2026-10-09
+
+L’utente autorizza l’integrazione locale delle funzioni Admin già collaudate
+nella dashboard Manager dell’evento corrente, conservando le correzioni e
+usando gli stessi componenti. Viewer e pubblico restano esclusi. Migration
+revisionabile `20261009170000_manager_panel_access.sql` per helper e policy
+SQL; test su ruoli cumulativi, scope evento, RPC/RLS, roster/export e campagne.
+Nessuna nuova funzione P11–P13 o sviluppo del branch panel in questa tranche.
+Pubblicazione e migration production autorizzate dall’utente. Applicata e
+registrata `20261009170000` con dati invariati; codice `b0e8355` pubblicato e
+deployment production READY verificato sul dominio reale. Capogruppo chiuso
+fino alla futura pubblicazione sulla home.
+Dettagli e verifiche in `docs/panel-reserved-release.md`.
+
+## Riallineamento gestionale e funzioni future — 2026-10-09
+
+Main a858340 integrato nel branch panel tramite merge, conservando P11–P13,
+scanner, QR gruppo/coda badge e cerimonie E1/E2/E3. Correzioni del gestionale
+condivise Admin/Manager preservate; Capogruppo panel resta rinviato alla
+pubblicazione sulla home, con catalogo e prenotazioni pubbliche ancora chiusi.
+Gli stash del collaudo restano intatti. Le cinque migration 20261009 importate
+sono da applicare nello staging prima del rilascio della versione integrata;
+nessuna migration remota o pubblicazione in questo riallineamento. Dettagli e
+verifiche in `docs/panel-main-integration-2026-10-09.md`.
+
+## Rilascio admin autorizzato — aggiornamento 2026-10-09
+
+- Esito: main pubblicato (`eab1293`), deployment Vercel production READY sul
+  dominio reale. Home confrontata prima/dopo: testo identico, email presente,
+  sezione panel assente. Admin ammesso e manager negato nelle verifiche DB in
+  sola lettura; accettazione funzionale dell’utente e apertura manager rinviate.
+- Nella verifica finale aggiunta e applicata `20261009160000`: protezione delle
+  scritture REST di campagne/destinatari panel e scuola. Totale 17 migration
+  registrate (lotto di 16 più una transazione finale), senza nuove email o
+  modifiche a persone reali. Dettagli e backup nel documento di rilascio.
+- Panel a `42bfcca` e stash preservati. Il merge preventivo segnala 12 conflitti:
+  riconciliare prima di riprendere lo sviluppo, conservando scanner e cerimonie.
+  Nessuna pubblicazione staging eseguita in questo rilascio production.
+
+
+- Nuova indicazione esplicita: pubblicare in production e applicare le migration,
+  ma rendere le nuove funzioni panel disponibili solo nella dashboard admin.
+  Manager e viewer attendono il via libera dell’utente dopo il suo collaudo.
+  Questa decisione supera l’accesso manager/viewer descritto nella preparazione.
+- La home rimane pubblica e invariata, con le iscrizioni all’evento operative;
+  non mostra la nuova sezione panel. Restano chiuse solo catalogo e iscrizioni
+  pubbliche dei panel, compreso il flusso scuole pubblico.
+- Controlli prima dei loader e delle azioni, RPC/RLS limitate all’admin,
+  statistiche e campagne panel/scuole protette anche da richieste dirette.
+  Comunicazioni condivisa disponibile direttamente nella dashboard admin.
+- Migration aggiuntive `20261009140000_admin_panel_acceptance.sql` e
+  `20261009150000_panel_default_audiences.sql`: restrizione ruoli e catalogo
+  Iscritti/Scuole/Ospiti; nessuna location o capienza di esempio in production.
+- Inventario production: lotto di 16 migration panel; esclusa la correzione dati
+  storica non dipendente `20260726120000`, assente nel registro remoto.
+  Backup server verificato; procedure ed esiti in `docs/panel-reserved-release.md`.
+- Lotto applicato e registrato in production in un’unica transazione; verificati
+  conteggi e hash delle 39 tabelle preesistenti. Conservati 3.350 iscrizioni,
+  3.457 partecipanti, 125 gruppi e zero check-in. Nessun nuovo destinatario email.
+  Verifiche finali: 719 test, lint, TypeScript, build e browser desktop/mobile.
+- Preservare branch panel e stash del collaudo. Il riallineamento autorizzato
+  deve mantenere le funzioni future e le decisioni più recenti, non sovrascriverle.
+
+
+## Aggiornamento prioritario — rilascio riservato, 2026-10-09
+
+L'utente richiede di preparare su main il gestionale panel P0–P10 per
+production: location, panel, ripartizione quote, scuole interne, destinatari
+email e statistiche. Home attuale senza annunci, catalogo e iscrizioni
+pubbliche chiusi. Questa decisione supera il rinvio storico del rilascio
+P0–P10 fino al completamento delle milestone successive; non autorizza
+automaticamente commit/push, deployment o migration remote.
+
+Preparazione locale completata sulla base main `79897d7` integrando `32e7d41`
+senza commit. Nuova modalità DB `internal` (default), `catalog`, `open`, con
+protezione server/RPC/RLS. La convalida dei panel non cambia tale modalità.
+La home production è conservata separatamente, così la home futura resta
+disponibile. Catalogo gestionale con posti prenotati/rimanenti per quota,
+letture complete oltre 1.000 righe e viewer in sola lettura.
+
+Il branch panel `42bfcca` conserva P11–P13 e le successive decisioni di
+accoglienza e cerimonie; il suo piano più recente non viene sostituito con
+questa copia per il rilascio P0–P10. L'utente autorizza la sincronizzazione
+delle nuove correzioni verso panel, da effettuare con merge dopo il commit
+autorizzato, conservando le funzioni future. Il collaudo etichette è sospeso;
+prossimo passo: pulsante stampa singolo QR esistente, senza rigenerazione o
+registrazione di presenza. Annotazioni e strumenti non tracciati preservati
+nello stash `fa1ec7fa339a2b944045bf67e90cc2a1e9efec85`, da ripristinare sul panel.
+
+Nuovo requisito prima dell'apertura pubblica: posti rimanenti nel catalogo e
+lista d'attesa quando esauriti, con gestione dei posti liberati dalle disdette.
+Superata l'esclusione storica della coda. Una milestone dedicata deve definire
+quote, priorità, nuclei familiari, assegnazione e notifiche; nessuna regola di
+promozione automatica o scadenza è già concordata. Non blocca il primo rilascio
+riservato e non è dichiarata implementata da questa tranche.
+
+Verifiche locali: 711 test, lint, TypeScript, build, SQL PostgreSQL 17 con ruoli
+e concorrenza, browser sintetico desktop/mobile e home sette lingue. Mancano
+inventario DB/email production, applicazione autorizzata delle migration,
+pubblicazione e collaudo autenticato. Stato, conservazione Git, dipendenze e
+procedura in `docs/panel-reserved-release.md`.
+
 ## 1. Scopo del documento
 
 Questo documento organizza lo sviluppo delle funzioni relative a:
@@ -305,9 +415,11 @@ estendere il modulo.
   contemporanee.
 - Il partecipante vede solo sezioni abilitate all'iscrizione individuale. Le
   quote ospiti o scuola non sono selezionabili dal flusso ordinario.
-- Nella prima versione non c'e' lista d'attesa: quando la quota e' esaurita il
-  panel risulta completo. Una lista d'attesa potra' essere aggiunta solo con
-  una milestone separata.
+- Decisione aggiornata il 2026-10-09: la lista d'attesa è richiesta prima
+  dell'apertura pubblica delle iscrizioni, insieme ai posti rimanenti nel
+  catalogo. Prevedere una milestone dedicata; il gestionale riservato può
+  essere rilasciato prima. Le regole di assegnazione dei posti liberati restano
+  da definire esplicitamente.
 - Panel sovrapposti per la stessa persona vanno bloccati, mostrando chiaramente
   il conflitto.
 - Come regola iniziale coerente con il modello attuale, i minori collegati
@@ -1260,7 +1372,8 @@ Queste funzioni non vanno aggiunte incidentalmente:
 - estensione delle piantine ai panel ordinari (quelle delle due cerimonie sono
   invece incluse da P13-E3);
 - trasferimento automatico di posti inutilizzati da una sezione a un'altra;
-- lista d'attesa e promozione automatica;
+- promozione automatica dalla lista d'attesa senza regole concordate (la coda
+  è invece richiesta dalla decisione del 2026-10-09);
 - algoritmi di assegnazione automatica dei panel;
 - pagamenti per scuole o partecipanti;
 - raccolta dei nomi degli studenti;

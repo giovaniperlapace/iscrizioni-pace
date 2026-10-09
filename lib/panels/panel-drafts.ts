@@ -1,3 +1,4 @@
+import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const PANEL_TITLE_MAX_LENGTH = 160;
@@ -20,6 +21,7 @@ export type PanelSeatSection = {
   audienceName: string;
   bookingChannel: PanelAudienceTypeOption["bookingChannel"];
   capacity: number;
+  occupied?: number;
 };
 
 export type PanelDraftRow = {
@@ -88,28 +90,28 @@ export async function getPanelDraftCatalog(
 ): Promise<{ panels: PanelDraftRow[]; audienceTypes: PanelAudienceTypeOption[] }> {
   const [panelsResult, sectionsResult, audienceResult, locationsResult] =
     await Promise.all([
-      supabase
+      loadAllRows((from, to) => supabase
         .from("event_moments")
         .select(
           "id,event_id,title,description,starts_at,ends_at,location_id,publication_status,published_at,updated_at"
         )
         .eq("event_id", eventId)
         .eq("moment_type", "panel")
-        .order("starts_at", { ascending: true }),
-      supabase
+        .order("starts_at", { ascending: true }).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("panel_seat_sections")
         .select("id,panel_id,audience_type_id,capacity")
-        .eq("event_id", eventId),
-      supabase
+        .eq("event_id", eventId).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("panel_audience_types")
         .select("id,name,code,booking_channel,is_active,sort_order")
         .eq("event_id", eventId)
         .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
-      supabase
+        .order("name", { ascending: true }).order("id").range(from, to)),
+      loadAllRows((from, to) => supabase
         .from("event_locations")
         .select("id,name,max_capacity")
-        .eq("event_id", eventId),
+        .eq("event_id", eventId).order("id").range(from, to)),
     ]);
 
   for (const result of [panelsResult, sectionsResult, audienceResult, locationsResult]) {
@@ -121,12 +123,12 @@ export async function getPanelDraftCatalog(
   const panelRows = (panelsResult.data ?? []) as PanelRow[];
   const panelIds = panelRows.map((row) => row.id);
   const choicesResult = panelIds.length
-    ? await supabase
+    ? await loadRowsForIds(panelIds, (ids, from, to) => supabase
         .from("moment_attendance_choices")
         .select("moment_id,registration_id,registrations!inner(status)")
-        .in("moment_id", panelIds)
+        .in("moment_id", ids)
         .eq("choice", "yes")
-        .neq("registrations.status", "cancelled")
+        .neq("registrations.status", "cancelled").order("id").range(from, to))
     : { data: [], error: null };
 
   if (choicesResult.error) {
@@ -144,8 +146,14 @@ export async function getPanelDraftCatalog(
     confirmedRegistrationsByPanel.set(choice.moment_id, registrations);
   }
 
+  const { data: occupancyRows } = await loadAllRows<{ section_id: string; occupied: number }>((from, to) =>
+    supabase.rpc("get_panel_seat_availability", { p_event_id: eventId }).order("section_id").range(from, to)
+  );
+  const occupancy = new Map(occupancyRows.map(row => [row.section_id, row.occupied]));
+
   const audienceRows = (audienceResult.data ?? []) as AudienceRow[];
   const audienceById = new Map(audienceRows.map((row) => [row.id, row]));
+  const audienceOrder = new Map(audienceRows.map((row, index) => [row.id, index]));
   const locationsById = new Map(
     ((locationsResult.data ?? []) as LocationRow[]).map((row) => [row.id, row])
   );
@@ -154,24 +162,28 @@ export async function getPanelDraftCatalog(
   for (const row of (sectionsResult.data ?? []) as SectionRow[]) {
     const audience = audienceById.get(row.audience_type_id);
 
-    if (!audience) {
-      continue;
-    }
+    if (!audience) throw new Error("Categoria di posti non caricata.");
 
     const sections = sectionsByPanel.get(row.panel_id) ?? [];
+    const occupied = occupancy.get(row.id);
+    if (!Number.isInteger(occupied) || occupied! < 0) throw new Error("Disponibilità panel non caricata.");
     sections.push({
       id: row.id,
       audienceTypeId: row.audience_type_id,
       audienceName: audience.name,
       bookingChannel: audience.booking_channel,
       capacity: row.capacity,
+      occupied,
     });
     sectionsByPanel.set(row.panel_id, sections);
   }
 
   const panels = panelRows.map((row) => {
     const location = row.location_id ? locationsById.get(row.location_id) : null;
-    const sections = sectionsByPanel.get(row.id) ?? [];
+    if (row.location_id && !location) throw new Error("Location panel non caricata.");
+    const sections = (sectionsByPanel.get(row.id) ?? []).sort((left, right) =>
+      audienceOrder.get(left.audienceTypeId)! - audienceOrder.get(right.audienceTypeId)!
+    );
 
     return {
       id: row.id,
@@ -324,7 +336,15 @@ export function filterPanelDrafts(
     }
 
     return true;
-  });
+  }).sort((left, right) =>
+    left.title.localeCompare(right.title, "it", { sensitivity: "base", numeric: true }) ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+export function isValidPanelDayRange(start: Date, end: Date): boolean {
+  return Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) &&
+    end > start && panelDateKey(start.toISOString()) === panelDateKey(end.toISOString());
 }
 
 export function panelDateKey(value: string | null): string {

@@ -255,8 +255,10 @@ export async function loadCampaignDeliveryData(
   service: ServiceClient,
   eventId: string,
   eventTitle: string,
-  recipient: CampaignRecipient
+  recipient: CampaignRecipient,
+  includePanels = true
 ) {
+  if (!includePanels && recipient.recipientType === "teacher") throw new Error("Accesso panel riservato all’amministratore.");
   if (recipient.recipientType === "teacher" && recipient.schoolTeacherId) {
     const { data: teacher, error: teacherError } = await service
       .from("school_booking_teachers")
@@ -369,13 +371,13 @@ export async function loadCampaignDeliveryData(
       .eq("registration_id", recipient.registrationId)
       .eq("is_current", true)
       .maybeSingle(),
-    service
+    includePanels ? service
       .from("moment_attendance_choices")
       .select("event_moments!inner(title,event_id)")
       .eq("registration_id", recipient.registrationId)
       .eq("choice", "yes")
       .not("seat_section_id", "is", null)
-      .eq("event_moments.event_id", eventId),
+      .eq("event_moments.event_id", eventId) : Promise.resolve({ data: [] }),
     loadDeliveryEmail(service, recipient),
   ]);
   const group = relatedOne(assignment?.groups);
