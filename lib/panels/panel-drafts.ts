@@ -336,6 +336,11 @@ export function filterPanelDrafts(
   });
 }
 
+export function isValidPanelDayRange(start: Date, end: Date): boolean {
+  return Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) &&
+    end > start && panelDateKey(start.toISOString()) === panelDateKey(end.toISOString());
+}
+
 export function panelDateKey(value: string | null): string {
   if (!value) {
     return "";

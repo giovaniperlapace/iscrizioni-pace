@@ -97,6 +97,7 @@ import {
   PANEL_DESCRIPTION_MAX_LENGTH,
   PANEL_MAX_SECTIONS,
   PANEL_TITLE_MAX_LENGTH,
+  isValidPanelDayRange,
   normalizePanelDescription,
   normalizePanelTitle,
   parsePanelCapacity,
@@ -1748,7 +1749,7 @@ export async function savePanelDraft(formData: FormData) {
     !locationId ||
     !startsAt ||
     !endsAt ||
-    endsAt <= startsAt ||
+    !isValidPanelDayRange(startsAt, endsAt) ||
     audienceTypeIds.length !== sectionCapacities.length ||
     audienceTypeIds.length > PANEL_MAX_SECTIONS ||
     audienceTypeIds.some((value) => !value) ||

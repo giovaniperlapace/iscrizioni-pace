@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Collaudo panel: giorno unico e orari separati — 2026-10-09
+
+- Il form creazione/modifica panel seleziona un solo Giorno e due orari,
+  Inizio/Fine. Entrambi i timestamp derivano dal giorno comune in Europe/Rome;
+  limiti date evento, controlli quote e sovrapposizioni conservati.
+- Fine deve essere successiva a Inizio; controllo browser e action server
+  del medesimo giorno, anche per payload diretti. Nessuna migration o modifica
+  dei dati storici. Collaudo visivo affidato all’utente. Commit/push e normale
+  rilascio autorizzati dall’utente; 17 test mirati, ESLint e TypeScript superati.
+
 ## Collaudo panel: stile scheda Iscritti — 2026-10-09
 
 - Uniformata la scheda Iscritti alle modali operative: intestazione e footer
