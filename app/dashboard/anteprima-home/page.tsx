@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { getCurrentAuthContext } from "@/lib/auth/session";
 import type { Metadata } from "next";
 import { requirePanelManager } from "@/lib/panels/release.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -19,15 +17,12 @@ export default async function HomePreview() {
   const db = await createSupabaseServerClient();
   const { data: event, error } = await db.from("events").select("id").eq("is_current", true).maybeSingle();
   if (error) throw error;
-  const auth = await getCurrentAuthContext(db);
-  const isAdmin = auth?.eventRoles.some(role => role.role === "admin" && role.eventId === null);
   const locale = await getRequestLocale();
   const [catalog, locations] = event ? await Promise.all([
     getPanelDraftCatalog(db, event.id), getEventLocations(db, event.id),
   ]) : [{ panels: [] }, []];
   const preview = buildHomePreview(catalog.panels, locations);
   return <>
-    {isAdmin ? <div className="app-container pt-4"><Link href="/dashboard/anteprima-home/condivisione" className="btn-secondary inline-flex px-5 py-3">Condividi anteprima</Link></div> : null}
     <ProgramHome locale={locale} panels={preview.panels} bookingsOpen={false} preview />
     {preview.incomplete.length ? <section className="app-container pb-12"><div className="surface-card mx-auto max-w-5xl p-6"><h2 className="text-xl font-bold">{getEventProgramCopy(locale).incomplete}</h2><ul className="mt-4 list-inside list-disc space-y-2">{preview.incomplete.map(panel => <li key={panel.id}>{panel.title}</li>)}</ul></div></section> : null}
   </>;

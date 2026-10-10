@@ -4,7 +4,7 @@ import { ProgramHome } from "@/app/program-home";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { hashHomePreviewToken } from "@/lib/panels/home-preview-share";
+import { isHomeApprovalTokenValid } from "@/lib/panels/home-preview-share";
 import type { PublicPanelProgramItem } from "@/lib/panels/public-program";
 
 export const dynamic = "force-dynamic";
@@ -14,11 +14,9 @@ export const metadata: Metadata = {
 
 export default async function SharedHomePreview({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const hash = hashHomePreviewToken(token);
-  if (!hash) notFound();
-  // The service-only RPC checks revocation, expiry and event before returning
-  // exclusively programme fields and aggregate availability, never identities.
-  const { data, error } = await createSupabaseServiceClient().rpc("get_shared_home_preview", { p_token_hash: hash });
+  if (!isHomeApprovalTokenValid(token, process.env.HOME_APPROVAL_LINK, new Date().getTime())) notFound();
+  // Validate the single expiring link before reading any programme data.
+  const { data, error } = await createSupabaseServiceClient().rpc("get_home_approval_preview");
   if (error) throw new Error("Anteprima temporaneamente non disponibile.");
   if (!data) notFound();
   const preview = data as { panels: PublicPanelProgramItem[]; incomplete: Array<{ id: string; title: string }> };

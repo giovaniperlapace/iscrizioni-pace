@@ -1,16 +1,14 @@
 # AGENTS.md
 
-## Link riservati per approvazione home — 2026-10-10
+## Link temporaneo di approvazione — 2026-10-10
 
-- L’utente autorizza un link condivisibile senza login, revocabile, lasciando
-  invariata la home pubblica. Percorso `/anteprima-home/[token]`, token casuale
-  di 32 byte e solo digest nel DB, scadenza 30 giorni e revoca live.
-- Admin globale crea/revoca dalla condivisione dell’anteprima. Nessun ruolo
-  gestionale conferito dal link. RPC solo service_role: verifica link/evento
-  corrente, restituisce solo programma e disponibilità aggregate canoniche.
-- Migration additiva `20261010120000_home_preview_shares`, nessun cambiamento
-  delle policy preesistenti o apertura dei Forum. No cache/referrer/indexing;
-  form iscrizione disabilitato. Test token, confini e SQL sintetico.
+- L’utente richiede di rimuovere il sistema di condivisione e lasciare un solo
+  link con scadenza a 3 giorni. Rimossi gestione Admin, creazione/revoca,
+  tabella e RPC dei link. Questa indicazione supera la soluzione precedente.
+- Token casuale, digest e scadenza server in HOME_APPROVAL_LINK, controllo
+  prima di leggere il programma. RPC minima service-only senza nominativi.
+  Home pubblica invariata e form anteprima disabilitato. Migration additive
+  20261010122000/20261010123000; quelle già applicate restano versionate.
 
 ## Forum e collegamenti alle fasce — 2026-10-10
 
