@@ -87,5 +87,5 @@ test("home renders the localized semantic programme and access CTA", () => {
   assert.match(component, /<ol/);
   assert.match(component, /<time dateTime=/);
   assert.match(component, /<address/);
-  assert.match(component, /href="#forum-access-form"/);
+  assert.match(component, /href="#panel-access-instructions"/);
 });

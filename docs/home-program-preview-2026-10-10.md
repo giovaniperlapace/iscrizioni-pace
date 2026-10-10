@@ -102,7 +102,8 @@ Home pubblica internal e pulsante preview riservato al catalogo Admin invariati.
 
 A fine elenco panel, pulsante “Iscriviti o accedi per prenotare il tuo posto”
 e istruzione per chi deve ancora iscriversi e per chi deve accedere tramite
-link email. Il collegamento `#email` riporta al campo, con scorrimento fluido,
+link email. Il collegamento `#panel-access-instructions` riporta alle istruzioni
+sopra il modulo, rendendo visibile anche il riquadro sull’area personale, con scorrimento fluido,
 freccia e stile del richiamo iniziale e margine per la testata fissa.
 L’anteprima mostra questo elemento senza abilitare il form o le prenotazioni.
 Il catalogo pubblico conserva il vincolo delle prenotazioni aperte; home

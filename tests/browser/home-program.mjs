@@ -37,7 +37,7 @@ try {
     assert.match(await preview.locator("#panel-program").innerText(), /50/);
     assert.equal(await preview.locator('input[type="email"]').isDisabled(), true);
     assert.equal(await preview.locator("#schools").count(), 0);
-    assert.equal(await preview.locator('a.panel-access-cue[href="#forum-access-form"]').count(), 1);
+    assert.equal(await preview.locator('a.panel-access-cue[href="#panel-access-instructions"]').count(), 1);
     assert.match(await preview.locator('meta[name="robots"]').getAttribute("content"), /noindex/);
   }
   for (const width of [1440, 390]) {

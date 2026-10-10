@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Futura home: destinazione pulsante finale — 2026-10-10
+
+- Corretto il richiamo finale: raggiunge le istruzioni sopra il modulo email,
+  con margine per la testata, mostrando anche il messaggio bianco sull’area
+  personale. Il solo modulo lasciava fuori vista il contesto su desktop/mobile.
+  I pulsanti dei singoli Forum conservano la destinazione e le istruzioni scelte.
+- Aggiornamento sul link di preview esistente nel rilascio autorizzato.
+
 ## Futura home: riduzione dei richiami — 2026-10-10
 
 - Su correzione dell’utente, rimosso il grande riquadro promozionale iniziale.
