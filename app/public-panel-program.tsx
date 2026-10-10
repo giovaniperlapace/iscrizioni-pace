@@ -112,7 +112,6 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
         )}
 
         {showAccessCta ? <div className="mt-12 border-t border-[var(--peace-border)] pt-8 text-center sm:mt-16 sm:pt-10">
-          <p id="panel-access-instructions" className="mx-auto mb-6 max-w-2xl text-base leading-7 text-[var(--peace-muted)]">{programCopy.accessInstruction}</p>
           <a
             aria-describedby="panel-access-instructions"
             className="panel-access-cue group relative inline-flex min-h-14 max-w-full items-center gap-3 overflow-hidden rounded-full border border-[var(--peace-blue-700)] bg-[var(--peace-blue-900)] py-2 pl-5 pr-2 text-left text-sm font-bold text-white shadow-[0_12px_30px_rgba(8,47,95,0.18)] sm:text-base"
@@ -124,6 +123,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
               <ArrowUp aria-hidden="true" className="h-5 w-5" strokeWidth={2.5} />
             </span>
           </a>
+          <p id="panel-access-instructions" className="mx-auto mt-6 max-w-2xl text-base leading-7 text-[var(--peace-muted)]">{programCopy.accessInstruction}</p>
         </div> : null}
       </div>
     </section>
