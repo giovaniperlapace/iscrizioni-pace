@@ -41,6 +41,7 @@ import {
 type RegistrationFormProps = {
   email: string;
   error?: string;
+  forum?: string;
   groupRegistrationLinkToken: string | null;
   identitySuggestion: { firstName: string; lastName: string } | null;
   locale: SupportedLocale;
@@ -657,6 +658,7 @@ export function RegistrationForm({
   email,
   error,
   groupRegistrationLinkToken,
+  forum,
   identitySuggestion,
   locale,
   options,
@@ -983,6 +985,7 @@ export function RegistrationForm({
         setIsSubmitting(true);
       }}
     >
+      {forum ? <input type="hidden" name="forum" value={forum} /> : null}
       {groupRegistrationLinkToken ? (
         <input
           name="groupRegistrationLinkToken"

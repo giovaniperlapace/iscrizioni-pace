@@ -11,7 +11,7 @@ import { ProgramHome } from "@/app/program-home";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Anteprima home", robots: { index: false, follow: false } };
 
-export default async function HomePreview() {
+export default async function HomePreview({ searchParams }: { searchParams: Promise<{ forum?: string }> }) {
   // Authorize role AND current-event scope before any programme reads.
   await requirePanelManager();
   const db = await createSupabaseServerClient();
@@ -23,7 +23,7 @@ export default async function HomePreview() {
   ]) : [{ panels: [] }, []];
   const preview = buildHomePreview(catalog.panels, locations);
   return <>
-    <ProgramHome locale={locale} panels={preview.panels} bookingsOpen={false} preview />
+    <ProgramHome forum={(await searchParams).forum} locale={locale} panels={preview.panels} bookingsOpen={false} preview />
     {preview.incomplete.length ? <section className="app-container pb-12"><div className="surface-card mx-auto max-w-5xl p-6"><h2 className="text-xl font-bold">{getEventProgramCopy(locale).incomplete}</h2><ul className="mt-4 list-inside list-disc space-y-2">{preview.incomplete.map(panel => <li key={panel.id}>{panel.title}</li>)}</ul></div></section> : null}
   </>;
 }

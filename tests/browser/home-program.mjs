@@ -2,7 +2,7 @@
 // Supabase URLs pointing to http://127.0.0.1:55441. No real data or email.
 import assert from "node:assert/strict";
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
-const base = process.argv[2] ?? "http://127.0.0.1:3125";
+const base = process.argv[2] ?? "http://localhost:3125";
 assert.match(base, /^http:\/\/(localhost|127\.0\.0\.1):\d+$/);
 const control = async params => fetch(`http://127.0.0.1:55441/control?${new URLSearchParams(params)}`);
 const requests = async () => (await fetch("http://127.0.0.1:55441/requests")).json();
@@ -37,7 +37,7 @@ try {
     assert.match(await preview.locator("#panel-program").innerText(), /50/);
     assert.equal(await preview.locator('input[type="email"]').isDisabled(), true);
     assert.equal(await preview.locator("#schools").count(), 0);
-    assert.equal(await preview.locator('a.panel-access-cue[href="#top"]').count(), 1);
+    assert.equal(await preview.locator('a.panel-access-cue[href="#forum-access-form"]').count(), 1);
     assert.match(await preview.locator('meta[name="robots"]').getAttribute("content"), /noindex/);
   }
   for (const width of [1440, 390]) {
@@ -47,13 +47,49 @@ try {
     await preview.evaluate(() => window.scrollTo(0, 0));
     await preview.screenshot({ path: `/tmp/pace-home-program-${width}.png`, fullPage: true });
   }
+  await context.addCookies([{ name: "iscrizioni_locale", value: "it", url: base }]);
+  const nine = "99999999-9999-4999-8999-999999999999";
+  const afternoon = preview.locator("#panel-program section[id^='panels-']").filter({ hasText: "Forum 9" });
+  assert.deepEqual(await afternoon.locator("h5").allTextContents(), ["Forum 9 – Test alle 17", "Forum 10 – Test completo", "Forum 11 – Test pomeriggio"]);
+  assert.match(await afternoon.locator("li").first().innerText(), /17:00/);
+  assert.match(await afternoon.innerText(), /Lista d’attesa prevista/);
+  for (const width of [1440, 390]) {
+    await preview.setViewportSize({ width, height: 900 });
+    await preview.getByRole("link", { name: "Prenota questo Forum: Forum 9 – Test alle 17", exact: true }).click();
+    await preview.waitForFunction(() => document.getElementById("forum-access-form").textContent.includes("Forum 9"));
+    await preview.waitForFunction(() => { const rect = document.getElementById("forum-access-form").getBoundingClientRect(); return rect.top >= 0 && rect.top < innerHeight; });
+    assert.match(await preview.locator("#forum-access-form").innerText(), /Forum 9 – Test alle 17/);
+    assert.equal(await preview.locator('input[name="forum"]').inputValue(), nine);
+    assert.equal(await preview.locator('input[type="email"]').isDisabled(), true);
+    assert.equal(await preview.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await preview.screenshot({ path: `/tmp/pace-home-forum-access-${width}.png` });
+  }
+  await control({ mode: "open", role: "partecipante" });
+  const anonEntry = await anonymous.request.get(`${base}/forum/${nine}`, { maxRedirects: 0 });
+  assert.equal(anonEntry.status(), 307);
+  assert.match(anonEntry.headers().location, new RegExp(`forum=${nine}#forum-access-form`));
+  await page.goto(base);
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("link", { name: "Prenota questo Forum: Forum 9 – Test alle 17", exact: true }).click();
+  assert.equal(await page.locator('input[name="forum"]').inputValue(), nine);
+  await page.waitForFunction(() => document.getElementById("email") === document.activeElement);
+  assert.match(page.url(), new RegExp(`forum=${nine}`));
+  await page.reload();
+  assert.match(await page.locator("#forum-access-form").innerText(), /Forum 9 – Test alle 17/);
+  const direct = await context.request.get(`${base}/forum/${nine}`, { maxRedirects: 0 });
+  assert.equal(direct.status(), 307);
+  assert.match(direct.headers().location, new RegExp(`/dashboard/partecipante\\?forum=${nine}#forum-${nine}`));
+  await control({ mode: "internal", role: "admin" });
+  const closedEntry = await anonymous.request.get(`${base}/forum/${nine}`, { maxRedirects: 0 });
+  assert.equal(closedEntry.status(), 404);
+  await preview.goto(`${base}/dashboard/anteprima-home`);
   await control({ changed: "true" });
   await preview.reload();
   const updated = await preview.locator("#panel-program").innerText();
   assert.match(updated, /Titolo modificato/);
   assert.match(updated, /Nuova location/);
   assert.match(updated, /10:00/);
-  assert.match(updated, /Posti disponibili per gli iscritti: 0/);
+  assert.match(updated, /Posti disponibili: 0/);
   for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"]) {
     await context.addCookies([{ name: "iscrizioni_locale", value: locale, url: base }]);
     await preview.reload();

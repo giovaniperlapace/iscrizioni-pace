@@ -13,6 +13,7 @@ type HomeProps = {
     error?: string;
     email?: string;
     sent?: string;
+    forum?: string;
   }>;
 };
 
@@ -37,5 +38,6 @@ export default async function Home({ searchParams }: HomeProps) {
   if (releaseMode === "internal") return <RegistrationHome searchParams={Promise.resolve(params)} />;
   const panels = await getPublicPanelProgram(supabase);
 
-  return <ProgramHome locale={locale} panels={panels} bookingsOpen={releaseMode === "open"} email={params.email} error={params.error} sent={params.sent} />;
+  const { data: { user } } = releaseMode === "open" ? await supabase.auth.getUser() : { data: { user: null } };
+  return <ProgramHome forum={params.forum} authenticated={Boolean(user)} locale={locale} panels={panels} bookingsOpen={releaseMode === "open"} email={params.email} error={params.error} sent={params.sent} />;
 }

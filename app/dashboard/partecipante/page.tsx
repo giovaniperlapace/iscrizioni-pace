@@ -1,3 +1,4 @@
+import { withForumIntent } from "@/lib/panels/booking-intent";
 import { getPanelReleaseMode } from "@/lib/panels/release";
 import { nationalityName } from "@/lib/registrations/nationality-names";
 import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
@@ -1189,7 +1190,7 @@ export default async function PartecipanteDashboardPage({
               {copy.noRegistrationBody}
             </p>
             <Link
-              href={`/registrazione${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`}
+              href={withForumIntent(`/registrazione${auth.user.email ? `?email=${encodeURIComponent(auth.user.email)}` : ""}`, panelBookingsOpen ? firstParam(params.forum) : null)}
               className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold text-[var(--peace-blue-800)] transition hover:bg-[var(--peace-sky-100)]"
             >
               {copy.startRegistration}
@@ -1235,6 +1236,7 @@ export default async function PartecipanteDashboardPage({
               locale={locale}
               registrationId={registrationId}
               rows={panelCatalog}
+              requestedForum={firstParam(params.forum)}
               saved={firstParam(params.panelSaved)}
               error={firstParam(params.panelError)}
             /> : null}

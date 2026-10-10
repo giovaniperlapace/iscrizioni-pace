@@ -1,3 +1,4 @@
+import { parseForumIntent, withForumIntent } from "../lib/panels/booking-intent.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -14,6 +15,7 @@ for (const role of ["manager", "manager_viewer"]) {
       const linked: unknown[] = [];
       const deps = {
         parseRegistrationForm: () => ({ ok: true, value: { email } }),
+        parseForumIntent, withForumIntent, resolvePublicForumIntent: async () => null,
         normalizeEmail: () => email, getIpAddress: async () => "local",
         checkRateLimit: () => true, REGISTRATION_RATE_LIMIT: {},
         headers: async () => ({ get: () => null }),
@@ -39,6 +41,7 @@ for (const token of ["gruppo_roma", "", "//external.test"]) {
       const dependencies = {
         ...links,
         parseRegistrationForm: () => failure === "validation" ? { ok: false, errors: ["Invalid data"] } : { ok: true, value: { email } },
+        parseForumIntent, withForumIntent, resolvePublicForumIntent: async () => null,
         normalizeEmail: () => email,
         getRequestLocale: async () => "fr",
         getIpAddress: async () => "local",

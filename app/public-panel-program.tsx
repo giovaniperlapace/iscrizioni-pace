@@ -1,5 +1,6 @@
 import { ArrowUp, CalendarDays, CheckCircle2, Clock3, LockKeyhole, MapPin, XCircle } from "lucide-react";
 
+import { forumBookingPath } from "@/lib/panels/booking-intent";
 import { getHomePanelSlots } from "@/lib/events/home-program";
 import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { PeaceLineMark } from "@/components/event-identity";
@@ -14,6 +15,9 @@ import {
 } from "@/lib/panels/public-program";
 
 type PublicPanelProgramProps = {
+  preview?: boolean;
+  authenticated?: boolean;
+  onSelectPanel?: (id: string) => void;
   bookingsOpen?: boolean;
   showAccessCta?: boolean;
   locale: SupportedLocale;
@@ -39,7 +43,7 @@ function AvailabilityIcon({ availability }: { availability: PublicPanelAvailabil
   return <LockKeyhole aria-hidden="true" className="h-4 w-4" />;
 }
 
-export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, showAccessCta = bookingsOpen }: PublicPanelProgramProps) {
+export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, showAccessCta = bookingsOpen, preview = false, authenticated = false, onSelectPanel }: PublicPanelProgramProps) {
   const slots = getHomePanelSlots(panels);
   const days = [...new Set(slots.map(slot => getPanelProgramDayKey(slot.startsAt)))];
   const programCopy = getEventProgramCopy(locale);
@@ -80,7 +84,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                     </h4>
                     <ol className="mt-4 grid gap-4 lg:grid-cols-2">
                       {slot.panels.map((panel) => (
-                        <li className="surface-card flex h-full flex-col p-5 sm:p-6" key={panel.id}>
+                        <li className="surface-card flex h-full flex-col p-5 sm:p-6" id={`public-forum-${panel.id}`} key={panel.id}>
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <p className="flex items-center gap-2 text-sm font-bold text-[var(--peace-blue-800)]">
                               <Clock3 aria-hidden="true" className="h-4 w-4" />
@@ -111,6 +115,18 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                               {panel.locationAddress ? <span className="block text-[var(--peace-muted)]">{panel.locationAddress}</span> : null}
                             </span>
                           </address>
+                          {panel.availability === "full" ? <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                            <p className="font-bold">{programCopy.waitlistStatus}</p>
+                            <p className="mt-1">{programCopy.waitlistInstruction}</p>
+                          </div> : null}
+                          {showAccessCta && panel.availability === "available" ? <div className="mt-5 border-t border-[var(--peace-border)] pt-5">
+                            <a className="btn-primary flex min-h-12 w-full items-center justify-center gap-2 px-4 text-center" aria-label={`${programCopy.bookForum}: ${panel.title}`}
+                              href={authenticated && !preview ? forumBookingPath(panel.id) : preview ? `?forum=${encodeURIComponent(panel.id)}#forum-access-form` : `/forum/${encodeURIComponent(panel.id)}`}
+                              onClick={onSelectPanel && (!authenticated || preview) ? event => { event.preventDefault(); onSelectPanel(panel.id); } : undefined}>
+                              {programCopy.bookForum}<ArrowUp aria-hidden="true" className="size-4 shrink-0" />
+                            </a>
+                            <p className="mt-2 text-center text-xs leading-5 text-[var(--peace-muted)]">{authenticated && !preview ? programCopy.goToForum : programCopy.cardAccessHint}</p>
+                          </div> : null}
                         </li>
                       ))}
                     </ol>
@@ -125,7 +141,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
           <a
             aria-describedby="panel-access-instructions"
             className="panel-access-cue group relative inline-flex min-h-14 max-w-full items-center gap-3 overflow-hidden rounded-full border border-[var(--peace-blue-700)] bg-[var(--peace-blue-900)] py-2 pl-5 pr-2 text-left text-sm font-bold text-white shadow-[0_12px_30px_rgba(8,47,95,0.18)] sm:text-base"
-            href="#top"
+            href="#forum-access-form"
           >
             <PeaceLineMark className="absolute -left-20 top-1/2 h-20 w-64 -translate-y-1/2 text-white opacity-[0.08] transition-opacity duration-200 group-hover:opacity-[0.16]" />
             <span className="relative">{programCopy.accessCta}</span>

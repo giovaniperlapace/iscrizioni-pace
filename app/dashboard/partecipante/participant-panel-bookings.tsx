@@ -1,3 +1,4 @@
+import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { CalendarDays, CheckCircle2, Clock3, MapPin, Users } from "lucide-react";
 
 import { setParticipantPanelBooking } from "@/app/actions";
@@ -252,9 +253,10 @@ type Props = {
   rows: ParticipantPanelCatalogRow[];
   saved?: string | null;
   error?: string | null;
+  requestedForum?: string | null;
 };
 
-export function ParticipantPanelBookings({ locale, registrationId, rows, saved, error }: Props) {
+export function ParticipantPanelBookings({ locale, registrationId, rows, saved, error, requestedForum }: Props) {
   const copy = COPY[locale] ?? COPY.en;
   const selected = rows.filter((row) => row.booking_status === "selected");
   const remaining = rows.filter((row) => row.booking_status !== "selected");
@@ -296,7 +298,7 @@ export function ParticipantPanelBookings({ locale, registrationId, rows, saved, 
               </h3>
               <div className="grid gap-4 lg:grid-cols-2">
                 {group.rows.map((row) => (
-                  <PanelBookingCard copy={copy} locale={locale} registrationId={registrationId} row={row} key={row.section_id} showAudience={rows.filter((candidate) => candidate.panel_id === row.panel_id).length > 1} />
+                  <PanelBookingCard requested={row.panel_id === requestedForum} anchor={row.panel_id === requestedForum && rows.find(candidate => candidate.panel_id === row.panel_id)?.section_id === row.section_id} copy={copy} locale={locale} registrationId={registrationId} row={row} key={row.section_id} showAudience={rows.filter((candidate) => candidate.panel_id === row.panel_id).length > 1} />
                 ))}
               </div>
             </section>
@@ -309,7 +311,9 @@ export function ParticipantPanelBookings({ locale, registrationId, rows, saved, 
   );
 }
 
-function PanelBookingCard({ copy, locale, registrationId, row, showAudience }: {
+function PanelBookingCard({ copy, locale, registrationId, row, showAudience, requested, anchor }: {
+  anchor: boolean;
+  requested: boolean;
   copy: Copy;
   locale: SupportedLocale;
   registrationId: string;
@@ -327,7 +331,8 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience }: {
         : copy.available;
 
   return (
-    <article className={`grid gap-4 rounded-xl border bg-white p-5 ${isSelected ? "border-[#8fc99a] shadow-[0_10px_30px_rgba(41,104,61,0.08)]" : "border-[var(--peace-border)]"}`}>
+    <article id={anchor ? `forum-${row.panel_id}` : `forum-${row.panel_id}-${row.section_id}`} className={`scroll-mt-24 grid gap-4 rounded-xl border bg-white p-5 ${requested ? "ring-2 ring-[var(--peace-blue-700)] ring-offset-2 " : ""}${isSelected ? "border-[#8fc99a] shadow-[0_10px_30px_rgba(41,104,61,0.08)]" : "border-[var(--peace-border)]"}`}>
+      {requested ? <p className="text-sm font-bold text-[var(--peace-blue-800)]">{getEventProgramCopy(locale).selectedForum}</p> : null}
       <div className="flex items-start justify-between gap-3">
         <h4 className="text-lg font-bold text-[var(--peace-blue-950)]">{row.title}</h4>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${isSelected ? "bg-[#e8f6e8] text-[#27613a]" : row.booking_status === "available" ? "bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]" : "bg-[#fff0eb] text-[#8a3323]"}`}>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ArrowDown } from "lucide-react";
 
 import { startPublicEmailFlow } from "@/app/actions";
@@ -20,9 +23,29 @@ type ProgramHomeProps = {
   email?: string;
   error?: string;
   sent?: string;
+  forum?: string;
+  authenticated?: boolean;
 };
 
-export function ProgramHome({ locale, panels, bookingsOpen, preview = false, email = "", error, sent }: ProgramHomeProps) {
+export function ProgramHome({ locale, panels, bookingsOpen, preview = false, email = "", error, sent, forum, authenticated = false }: ProgramHomeProps) {
+  const [selectedId, setSelectedId] = useState(forum);
+  const selectedPanel = panels.find(panel => panel.id === selectedId);
+  useEffect(() => {
+    if (forum && selectedPanel && !preview && bookingsOpen) document.getElementById("email")?.focus({ preventScroll: true });
+  }, [forum, selectedPanel, preview, bookingsOpen]);
+  const selectPanel = (id: string) => {
+    setSelectedId(id);
+    if (!preview) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("forum", id);
+      url.hash = "forum-access-form";
+      window.history.replaceState(window.history.state, "", url);
+    }
+    requestAnimationFrame(() => {
+      document.getElementById("forum-access-form")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+      if (!preview) document.getElementById("email")?.focus({ preventScroll: true });
+    });
+  };
   const copy = getMessages(locale);
   const schoolCopy = getSchoolBookingCopy(locale);
   const programCopy = getEventProgramCopy(locale);
@@ -36,15 +59,26 @@ export function ProgramHome({ locale, panels, bookingsOpen, preview = false, ema
           <div className="grid flex-1 content-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
               <EventIdentity inverted />
+              {preview || bookingsOpen ? <a href="#panel-program" className="mt-7 block rounded-2xl border border-white/40 bg-white p-5 text-[var(--peace-blue-950)] shadow-xl sm:p-6">
+                <span className="block text-2xl font-extrabold leading-tight sm:text-3xl">{programCopy.bookingAnnouncement}</span>
+                <span className="mt-3 block text-sm leading-6 sm:text-base">{programCopy.bookingIntro}</span>
+                <span className="mt-4 inline-flex items-center gap-2 font-bold">{programCopy.panels}<ArrowDown aria-hidden="true" className="size-5" /></span>
+              </a> : null}
               <p id="panel-access-instructions" className="mt-7 max-w-2xl text-base leading-8 text-white/84 sm:text-lg">
                 {programCopy.accessInstruction}
               </p>
             </div>
-            <div className="grid gap-5">
+            <div id="forum-access-form" className="grid scroll-mt-24 gap-5">
+              {selectedPanel ? <div role="status" className="rounded-xl border border-white/40 bg-white/15 p-5 text-white">
+                <p className="text-sm font-semibold">{programCopy.selectedForum}</p>
+                <p className="mt-2 text-xl font-extrabold">{selectedPanel.title}</p>
+                <p className="mt-3 text-sm leading-6">{programCopy.selectedInstruction}</p>
+              </div> : null}
               <fieldset disabled={preview} aria-label={preview ? programCopy.preview : undefined}>
                 <EmailAccessForm
                   action={startPublicEmailFlow}
                   defaultEmail={email}
+                  forum={selectedPanel?.id}
                   error={error}
                   sent={sent}
                   copy={copy.emailAccess}
@@ -65,7 +99,7 @@ export function ProgramHome({ locale, panels, bookingsOpen, preview = false, ema
         </div>
       </section>
       <PublicEventProgram locale={locale} panels={panels} />
-      <PublicPanelProgram showAccessCta={preview || bookingsOpen} bookingsOpen={bookingsOpen} copy={copy.panelProgram} locale={locale} panels={panels} />
+      <PublicPanelProgram preview={preview} authenticated={authenticated} onSelectPanel={selectPanel} showAccessCta={preview || bookingsOpen} bookingsOpen={bookingsOpen} copy={copy.panelProgram} locale={locale} panels={panels} />
       {bookingsOpen ? <section className="app-container py-8" id="schools"><div className="rounded-xl border border-[var(--peace-border)] bg-white p-6 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--peace-blue-700)]">{schoolCopy.homeTitle}</p><h2 className="mt-2 text-2xl font-semibold">{schoolCopy.title}</h2><p className="mt-2 max-w-2xl leading-7 text-[var(--peace-muted)]">{schoolCopy.homeBody}</p></div><Link href="/scuole" className="mt-5 inline-flex min-h-12 shrink-0 items-center rounded-md bg-[var(--peace-blue-800)] px-5 font-semibold text-white sm:mt-0">{schoolCopy.homeCta}</Link></div></section> : null}
       <section className="app-container py-8">
         <div className="h-px bg-gradient-to-r from-transparent via-[var(--peace-sky-400)] to-transparent opacity-70" />

@@ -7,6 +7,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 type EmailAccessFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   defaultEmail: string;
+  forum?: string;
   error?: string;
   sent?: string;
   copy: {
@@ -21,6 +22,7 @@ type EmailAccessFormProps = {
 export function EmailAccessForm({
   action,
   defaultEmail,
+  forum,
   error,
   sent,
   copy,
@@ -40,6 +42,7 @@ export function EmailAccessForm({
         submittedRef.current = true;
       }}
     >
+      {forum ? <input type="hidden" name="forum" value={forum} /> : null}
       <label htmlFor="email" className="text-sm font-bold text-[var(--peace-ink)]">
         Email
       </label>

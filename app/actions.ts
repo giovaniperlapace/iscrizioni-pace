@@ -1,4 +1,6 @@
 "use server";
+import { parseForumIntent, forumBookingPath, withForumIntent } from "@/lib/panels/booking-intent";
+import { resolvePublicForumIntent } from "@/lib/panels/booking-intent.server";
 import { requirePanelManager, requirePublicPanelBookings } from "@/lib/panels/release.server";
 
 import { resolveRoleParticipant } from "@/lib/operational-users/role-participant";
@@ -184,41 +186,44 @@ function normalizeInternalReturnTo(value: FormDataEntryValue | null): string {
 
 export async function startPublicEmailFlow(formData: FormData) {
   const email = normalizeEmail(formData.get("email"));
+  const intent = parseForumIntent(formData.get("forum"));
+  const homePath = (query: string) => `${withForumIntent(`/?${query}`, intent)}${intent ? "#personal-access" : ""}`;
   const appUrl = getAppUrl();
   const ipAddress = await getIpAddress();
 
   if (!email) {
-    redirect("/?error=email");
+    redirect(homePath("error=email"));
   }
 
   if (!checkRateLimit(`email:${ipAddress}:${email}`, EMAIL_RATE_LIMIT)) {
-    redirect("/?error=rate-limit");
+    redirect(homePath("error=rate-limit"));
   }
 
   const supabase = createSupabaseServiceClient();
+  const forum = await resolvePublicForumIntent(supabase, intent);
   const { event } = await getPublicRegistrationOptions(supabase);
 
   if (!event) {
-    redirect("/?error=no-event");
+    redirect(homePath("error=no-event"));
   }
 
   const exists = await hasExistingAppAccessForEmail(supabase, email, event.id);
 
   if (!exists) {
-    redirect(`/registrazione?email=${encodeURIComponent(email)}`);
+    redirect(withForumIntent(`/registrazione?email=${encodeURIComponent(email)}`, forum));
   }
 
   const emailHash = hashEmailForAudit(email);
 
   if (await hasRecentMagicLinkSend(supabase, event.id, emailHash)) {
-    redirect("/?sent=magic-link");
+    redirect(homePath(forum ? "error=rate-limit" : "sent=magic-link"));
   }
 
   try {
     await sendMagicLinkEmail(
       supabase,
       email,
-      `${appUrl}/auth/callback?redirect_to=/dashboard/partecipante`
+      `${appUrl}/auth/callback?redirect_to=${encodeURIComponent(forumBookingPath(forum))}`
     );
     await logMagicLinkSent(supabase, event.id, emailHash);
   } catch (error) {
@@ -230,34 +235,36 @@ export async function startPublicEmailFlow(formData: FormData) {
     });
 
     redirect(
-      `/?error=${encodeURIComponent(getPublicEmailErrorMessage(error))}`
+      homePath(`error=${encodeURIComponent(getPublicEmailErrorMessage(error))}`)
     );
   }
 
-  redirect("/?sent=magic-link");
+  redirect(homePath("sent=magic-link"));
 }
 
 export async function submitPublicRegistration(formData: FormData) {
   const parsed = parseRegistrationForm(formData);
   const email = normalizeEmail(formData.get("email"));
+  const intent = parseForumIntent(formData.get("forum"));
   const rawGroupToken = formData.get("groupRegistrationLinkToken");
   const groupToken = typeof rawGroupToken === "string" ? rawGroupToken.trim() || null : null;
   const ipAddress = await getIpAddress();
 
   if (!parsed.ok) {
     redirect(
-      buildRegistrationRetryPath({ token: groupToken, email, error: parsed.errors[0] ?? "invalid" })
+      withForumIntent(buildRegistrationRetryPath({ token: groupToken, email, error: parsed.errors[0] ?? "invalid" }), intent)
     );
   }
 
   if (!checkRateLimit(`registration:${ipAddress}:${parsed.value.email}`, REGISTRATION_RATE_LIMIT)) {
     redirect(
-      buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: "rate-limit" })
+      withForumIntent(buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: "rate-limit" }), intent)
     );
   }
 
   const headerStore = await headers();
   const supabase = createSupabaseServiceClient();
+  const forum = await resolvePublicForumIntent(supabase, intent);
   const sessionSupabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -275,19 +282,19 @@ export async function submitPublicRegistration(formData: FormData) {
         ipAddress: ipAddress === "local" ? null : ipAddress,
         userAgent: headerStore.get("user-agent"),
       },
-      getPublicSiteUrl(),
+      forum ? new URL(`/forum/${forum}`, getPublicSiteUrl()).toString() : getPublicSiteUrl(),
       authUserId
     );
   } catch (error) {
     const message = getPublicRegistrationErrorMessage(error);
 
     redirect(
-      buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: message })
+      withForumIntent(buildRegistrationRetryPath({ token: groupToken, email: parsed.value.email, error: message }), intent)
     );
   }
 
   redirect(
-    `/registrazione/conferma?email=${encodeURIComponent(parsed.value.email)}`
+    withForumIntent(`/registrazione/conferma?email=${encodeURIComponent(parsed.value.email)}`, forum)
   );
 }
 

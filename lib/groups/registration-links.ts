@@ -11,6 +11,7 @@ export const GROUP_REGISTRATION_LINK_RESERVED_TOKENS = new Set([
   "dashboard",
   "dev-email-preview",
   "scuole",
+  "forum",
   "login",
   "registrazione",
 ]);

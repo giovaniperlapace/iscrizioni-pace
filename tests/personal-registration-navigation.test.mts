@@ -1,3 +1,4 @@
+import { withForumIntent } from "../lib/panels/booking-intent.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -24,7 +25,7 @@ function hrefExpression(path: string, label: string) {
 for (const email of ["leader@example.org", "leader+test&name@example.org", undefined]) {
   test(`personal registration opens the public form with email ${email}`, () => {
     const expression = hrefExpression("../app/dashboard/partecipante/page.tsx", "copy.startRegistration");
-    const href = new Function("auth", `return (${expression})`)({ user: { email } });
+    const href = new Function("auth", "withForumIntent", "panelBookingsOpen", "params", `return (${expression})`)({ user: { email } }, withForumIntent, false, {});
     const destination = new URL(href, "https://example.test");
     assert.equal(destination.pathname, "/registrazione");
     assert.equal(destination.searchParams.get("email"), email ?? null);

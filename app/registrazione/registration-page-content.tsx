@@ -12,6 +12,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export type RegistrationSearchParams = {
   email?: string;
   error?: string;
+  forum?: string;
 };
 
 export async function RegistrationPageContent({
@@ -76,6 +77,7 @@ export async function RegistrationPageContent({
     <main className="app-page text-[var(--peace-ink)]">
       <RegistrationForm
         email={email}
+        forum={searchParams.forum}
         error={searchParams.error}
         groupRegistrationLinkToken={groupRegistrationLinkToken}
         identitySuggestion={

@@ -1,3 +1,4 @@
+import { parseForumIntent, withForumIntent } from "../lib/panels/booking-intent.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -40,6 +41,7 @@ function actionHarness(mode: "validation" | "rate-limit" | "save-error" | "succe
   const saved: Array<{ groupRegistrationLinkToken: string | null; preferredLocale: SupportedLocale }> = [];
   const action = loadFunction("../app/actions.ts", "submitPublicRegistration", {
     parseRegistrationForm, normalizeEmail, buildRegistrationRetryPath,
+    parseForumIntent, withForumIntent, resolvePublicForumIntent: async () => null,
     getRequestLocale: async () => locale,
     getIpAddress: async () => "local", REGISTRATION_RATE_LIMIT: {},
     checkRateLimit: () => mode !== "rate-limit",

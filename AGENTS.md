@@ -1,5 +1,36 @@
 # AGENTS.md
 
+## Aggiornamento link anteprima autorizzato — 2026-10-10
+
+- L’utente richiede di portare le modifiche della futura home sul link della
+  preview esistente. Autorizzato il normale rilascio del codice su main/Vercel,
+  conservando la home pubblica internal e il singolo link temporaneo con
+  scadenza originale. Nessuna apertura prenotazioni, migration remota o email.
+- Confermata la sola preparazione del messaggio per la lista d’attesa;
+  nessuna funzione di iscrizione in coda richiesta in questa tranche.
+
+
+## Futura home: invito e destinazione Forum — 2026-10-10
+
+- Disponibilità semplificata in “Posti disponibili”; richiamo evidente nel
+  riquadro blu e pulsante “Prenota questo Forum” su ogni scheda disponibile.
+  Scelta e istruzioni accanto all’email, scorrimento con margine per la testata,
+  sette lingue e rispetto della preferenza di movimento ridotto.
+- L’intento Forum (solo UUID) attraversa accesso email, nuova iscrizione,
+  conferma e retry. Ingresso `/forum/[id]`: solo Forum pubblicati dell’evento
+  corrente in modalità open; sessione già aperta → scheda personale, altrimenti
+  email. Dopo il login il Forum è evidenziato con ancora univoca anche con più
+  quote; nessuna prenotazione automatica. Il link di conferma iscrizione mantiene
+  la scelta. Il token `forum` è riservato rispetto agli slug di gruppo.
+- Ordine numerico dei Forum all’interno delle fasce condivise; Forum 9 alle
+  17 precede gli altri della fascia dalle 16, conservando il suo orario reale.
+- Forum completi: messaggio “Posti esauriti · Lista d’attesa prevista”, con
+  indicazione esplicita che la funzione non è ancora attiva. Nessuna regola
+  di coda o assegnazione introdotta; realizzazione necessaria prima dell’apertura.
+- Home internal e form anteprima disabilitato conservati. Modifica locale
+  su main: nessun commit/push, rilascio, migration remota o email.
+
+
 ## Link temporaneo di approvazione — 2026-10-10
 
 - L’utente richiede di rimuovere il sistema di condivisione e lasciare un solo

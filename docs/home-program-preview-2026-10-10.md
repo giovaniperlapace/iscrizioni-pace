@@ -128,3 +128,42 @@ delle 17 resta nella fascia dalle 16. Rinominata la terminologia visibile
 nel sito, nelle dashboard, nelle prenotazioni, negli export e nei testi
 email in sette lingue; identificatori e contratti tecnici conservati.
 Nessuna modifica dati, apertura pubblica o invio email.
+
+
+## Invito ai Forum e percorso di accesso
+
+La futura home mostra il richiamo “Ora puoi prenotare il tuo posto ai Forum”
+nel riquadro blu e un pulsante su ciascun Forum disponibile. Il click conserva
+il Forum scelto, mostra il titolo e le istruzioni accanto all’email e porta
+al modulo. Nelle anteprime il percorso è consultabile, ma il form è disabilitato.
+Anche prima del caricamento JavaScript il link mantiene la scelta.
+
+L’ingresso `/forum/[id]` controlla UUID, modalità open e catalogo pubblicato
+dell’evento corrente prima di indirizzare alla scheda personale (sessione
+esistente) o al modulo email. La scelta attraversa magic link, nuova iscrizione,
+conferma e retry; la scheda personale evidenzia il Forum e richiede comunque
+la conferma di prenotazione, conservando quote, capienza e controlli già presenti.
+Il link nell’email di conferma della nuova iscrizione mantiene la destinazione.
+Una richiesta bloccata dal cooldown email mostra il limite, conservando la scelta,
+anziché promettere un nuovo link con una destinazione non aggiornata.
+
+Le schede sono ordinate per numero entro ogni fascia; il Forum 9 delle 17 è
+primo nella fascia pomeridiana dalle 16, con orario individuale invariato.
+I Forum completi mostrano che la lista d’attesa è prevista e non ancora attiva:
+questa modifica prepara il messaggio, non introduce iscrizioni in coda o
+regole di promozione. La lista operativa resta requisito prima dell’apertura.
+
+Verificati 754 test, ESLint, TypeScript e build production; browser sintetico desktop/mobile nelle
+sette lingue, CTA e selezione, ingresso anonimo/autenticato, chiusura internal,
+bozze, ruoli e form anteprima disabilitato. Nessun invio email o dato reale
+modificato. Cambiamenti locali su main, senza pubblicazione.
+
+
+## Aggiornamento del link temporaneo autorizzato
+
+L’utente richiede di aggiornare il link della preview già condiviso con le
+modifiche della futura home. Rilascio tramite commit/push su main e normale
+deployment Vercel; home pubblica internal conservata. Il token e la scadenza
+originale del 13 ottobre 2026 alle 11:46 (Europe/Rome) restano invariati.
+Confermata la sola preparazione del messaggio della lista d’attesa. Nessuna
+migration remota, modifica dei dati o email autorizzata da questo rilascio.

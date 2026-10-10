@@ -147,3 +147,12 @@ test("scans, failed OTP/PKCE and invalid types never renew an existing session",
     }
   }
 });
+
+
+test("confirmed email login lands on the chosen forum, including its anchor", async () => {
+  const destination = "/dashboard/partecipante?forum=99999999-9999-4999-8999-999999999999#forum-99999999-9999-4999-8999-999999999999";
+  const h = harness(null);
+  const response = await h.callback.POST(h.request("/auth/callback", new URLSearchParams({ token_hash: "synthetic", type: "email", redirect_to: destination }).toString()));
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get("location"), `https://app.example.test${destination}`);
+});

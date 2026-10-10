@@ -1,3 +1,5 @@
+import { parseForumIntent } from "@/lib/panels/booking-intent";
+import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { getMessages } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { EventIdentity } from "@/components/event-identity";
@@ -5,6 +7,7 @@ import { EventIdentity } from "@/components/event-identity";
 type ConfirmationProps = {
   searchParams: Promise<{
     email?: string;
+    forum?: string;
   }>;
 };
 
@@ -14,9 +17,9 @@ export default async function ConfirmationPage({
   const params = await searchParams;
   const locale = await getRequestLocale();
   const copy = getMessages(locale).confirmation;
-  const homeHref = params.email
-    ? `/?email=${encodeURIComponent(params.email)}`
-    : "/";
+  const forum = parseForumIntent(params.forum);
+  const emailQuery = params.email ? `?email=${encodeURIComponent(params.email)}` : "";
+  const homeHref = forum ? `/forum/${forum}${emailQuery}` : `/${emailQuery}`;
 
   return (
     <main className="app-page px-5 py-10 text-[var(--peace-ink)]">
@@ -38,7 +41,7 @@ export default async function ConfirmationPage({
           href={homeHref}
           className="btn-primary mt-6 inline-flex items-center justify-center px-5"
         >
-          {copy.backHome}
+          {forum ? getEventProgramCopy(locale).accessCta : copy.backHome}
         </a>
         </div>
       </section>
