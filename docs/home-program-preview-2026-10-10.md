@@ -86,3 +86,14 @@ identità di un Manager esistente, in transazione con rollback: 24 panel e
 né modifica al DB. Configurazione Vercel production censita senza leggere i
 segreti: Postmark, stream distinti e variabili Supabase cifrate presenti;
 nessuna modifica alla configurazione email o invio di collaudo.
+
+## Panel nel riepilogo generale
+
+Su successiva richiesta del 10 ottobre, il programma generale mostra anche
+le fasce dei panel, con “Panel in vari luoghi”, inizio/fine effettivi e link
+all’elenco dettagliato. Deduplicazione per coppia di istanti, non per titolo,
+location o sola ora del giorno. Il riepilogo è cronologico insieme agli altri
+appuntamenti, conserva i giorni distinti e gli orari eccezionali (per esempio
+un panel alle 17:00 rimane separato da quelli alle 16:00). Le fasce seguono i
+record già caricati: bozze nell’anteprima, solo pubblicati nella futura home.
+Home pubblica internal e pulsante preview riservato al catalogo Admin invariati.

@@ -1,5 +1,15 @@
 # Piano di lavoro Panel
 
+## Panel nel riepilogo del programma — 2026-10-10
+
+- Su richiesta dell’utente, anche il programma generale della home futura e
+  dell’anteprima contiene i panel, raggruppati per inizio/fine effettivi e
+  ordinati insieme agli appuntamenti generali. Dicitura “Panel in vari luoghi”,
+  fascia senza zero iniziale e collegamento all’elenco dettagliato.
+- Fasce derivate dai medesimi record del gestionale, senza orari duplicati:
+  giorni distinti e orari eccezionali restano separati. Sette lingue conservate.
+  Home pubblica in modalità `internal` invariata; pulsante preview solo Admin.
+
 ## Prima home con programma e panel nascosta — 2026-10-10
 
 - Su richiesta dell’utente preparata localmente su main la home futura,

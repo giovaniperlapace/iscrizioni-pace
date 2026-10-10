@@ -64,7 +64,7 @@ export function ProgramHome({ locale, panels, bookingsOpen, preview = false, ema
           </a>
         </div>
       </section>
-      <PublicEventProgram locale={locale} />
+      <PublicEventProgram locale={locale} panels={panels} />
       <PublicPanelProgram bookingsOpen={bookingsOpen} copy={copy.panelProgram} locale={locale} panels={panels} />
       {bookingsOpen ? <section className="app-container py-8" id="schools"><div className="rounded-xl border border-[var(--peace-border)] bg-white p-6 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--peace-blue-700)]">{schoolCopy.homeTitle}</p><h2 className="mt-2 text-2xl font-semibold">{schoolCopy.title}</h2><p className="mt-2 max-w-2xl leading-7 text-[var(--peace-muted)]">{schoolCopy.homeBody}</p></div><Link href="/scuole" className="mt-5 inline-flex min-h-12 shrink-0 items-center rounded-md bg-[var(--peace-blue-800)] px-5 font-semibold text-white sm:mt-0">{schoolCopy.homeCta}</Link></div></section> : null}
       <section className="app-container py-8">

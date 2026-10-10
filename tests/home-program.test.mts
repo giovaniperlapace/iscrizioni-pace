@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { buildHomePreview } from "../lib/panels/home-preview.ts";
-import { getGeneralHomeProgram } from "../lib/events/home-program.ts";
+import { getGeneralHomeProgram, getHomeProgram } from "../lib/events/home-program.ts";
 import { formatPanelProgramDay } from "../lib/panels/public-program.ts";
 import type { PanelDraftRow } from "../lib/panels/panel-drafts.ts";
 import type { EventLocationOption } from "../lib/panels/event-locations.ts";
@@ -57,4 +57,25 @@ test("private route uses the established role/scope guard before all loaders; pu
 test("preview button is available in Admin only, removed from Manager as requested", () => {
   const catalog = readFileSync(new URL("../app/dashboard/panel-drafts-section.tsx", import.meta.url), "utf8");
   assert.match(catalog, /canManage && dashboard === "admin" \? <Link href="\/dashboard\/anteprima-home"/);
+});
+
+test("programme merges actual panel slots chronologically, deduplicating only identical start/end instants", () => {
+  const base = buildHomePreview([panel], [location]).panels[0];
+  const panels = [
+    { ...base, id: "morning", startsAt: "2026-10-26T09:30:00+01:00", endsAt: "2026-10-26T12:30:00+01:00" },
+    { ...base, id: "same-slot", startsAt: "2026-10-26T08:30:00Z", endsAt: "2026-10-26T11:30:00Z" },
+    { ...base, id: "afternoon", startsAt: "2026-10-26T16:00:00+01:00", endsAt: "2026-10-26T18:00:00+01:00" },
+    { ...base, id: "exception", startsAt: "2026-10-26T17:00:00+01:00", endsAt: "2026-10-26T18:00:00+01:00" },
+    { ...base, id: "next-day", startsAt: "2026-10-27T09:30:00+01:00", endsAt: "2026-10-27T12:30:00+01:00" },
+  ];
+  const result = getHomeProgram("it", panels);
+  assert.equal(result.length, 7);
+  assert.equal(result.filter(item => item.isPanelSlot).length, 4);
+  assert.equal(result[0].id, "opening");
+  assert.equal(result[1].title, "Panel in vari luoghi");
+  assert.equal(result[1].endsAt, panels[0].endsAt);
+  assert.equal(result.at(-1)?.id, "closing");
+  assert.equal(panels[0].id, "morning");
+  assert.equal(getHomeProgram("it", []).length, 3);
+  for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"] as const) assert.ok(getHomeProgram(locale, [base]).find(item => item.isPanelSlot)?.title);
 });
