@@ -120,12 +120,11 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                             <p className="mt-1">{programCopy.waitlistInstruction}</p>
                           </div> : null}
                           {showAccessCta && panel.availability === "available" ? <div className="mt-5 border-t border-[var(--peace-border)] pt-5">
-                            <a className="btn-primary flex min-h-12 w-full items-center justify-center gap-2 px-4 text-center" aria-label={`${programCopy.bookForum}: ${panel.title}`}
+                            <a className="btn-primary flex min-h-12 w-full items-center justify-center px-4 text-center" aria-label={`${programCopy.bookForum}: ${panel.title}`}
                               href={authenticated && !preview ? forumBookingPath(panel.id) : preview ? `?forum=${encodeURIComponent(panel.id)}#forum-access-form` : `/forum/${encodeURIComponent(panel.id)}`}
                               onClick={onSelectPanel && (!authenticated || preview) ? event => { event.preventDefault(); onSelectPanel(panel.id); } : undefined}>
-                              {programCopy.bookForum}<ArrowUp aria-hidden="true" className="size-4 shrink-0" />
+                              {programCopy.bookForum}
                             </a>
-                            <p className="mt-2 text-center text-xs leading-5 text-[var(--peace-muted)]">{authenticated && !preview ? programCopy.goToForum : programCopy.cardAccessHint}</p>
                           </div> : null}
                         </li>
                       ))}

@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Futura home: riduzione dei richiami — 2026-10-10
+
+- Su correzione dell’utente, rimosso il grande riquadro promozionale iniziale.
+  La frase “Dalla tua area personale potrai scegliere i forum e prenotare
+  il tuo posto” compare una sola volta, evidenziata in un riquadro bianco.
+- “Prenota questo Forum” conserva il percorso e le istruzioni dopo il click,
+  senza freccia né frase ripetuta sotto ogni scheda. Sette lingue aggiornate.
+- Aggiornamento del medesimo link di preview nel rilascio già autorizzato;
+  home pubblica internal, scadenza e form anteprima disabilitato conservati.
+- Superati 23 test mirati, ESLint, TypeScript e build production.
+
 ## Aggiornamento link anteprima autorizzato — 2026-10-10
 
 - L’utente richiede di portare le modifiche della futura home sul link della

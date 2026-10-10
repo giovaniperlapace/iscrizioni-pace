@@ -132,8 +132,10 @@ Nessuna modifica dati, apertura pubblica o invio email.
 
 ## Invito ai Forum e percorso di accesso
 
-La futura home mostra il richiamo “Ora puoi prenotare il tuo posto ai Forum”
-nel riquadro blu e un pulsante su ciascun Forum disponibile. Il click conserva
+La futura home evidenzia nel riquadro blu la frase “Dalla tua area personale
+potrai scegliere i forum e prenotare il tuo posto” in un riquadro bianco compatto
+e mostra un pulsante su ciascun Forum disponibile, senza freccia o frase
+di accesso ripetuta sotto ogni scheda. Il click conserva
 il Forum scelto, mostra il titolo e le istruzioni accanto all’email e porta
 al modulo. Nelle anteprime il percorso è consultabile, ma il form è disabilitato.
 Anche prima del caricamento JavaScript il link mantiene la scelta.

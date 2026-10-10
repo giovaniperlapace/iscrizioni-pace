@@ -59,13 +59,11 @@ export function ProgramHome({ locale, panels, bookingsOpen, preview = false, ema
           <div className="grid flex-1 content-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
               <EventIdentity inverted />
-              {preview || bookingsOpen ? <a href="#panel-program" className="mt-7 block rounded-2xl border border-white/40 bg-white p-5 text-[var(--peace-blue-950)] shadow-xl sm:p-6">
-                <span className="block text-2xl font-extrabold leading-tight sm:text-3xl">{programCopy.bookingAnnouncement}</span>
-                <span className="mt-3 block text-sm leading-6 sm:text-base">{programCopy.bookingIntro}</span>
-                <span className="mt-4 inline-flex items-center gap-2 font-bold">{programCopy.panels}<ArrowDown aria-hidden="true" className="size-5" /></span>
-              </a> : null}
               <p id="panel-access-instructions" className="mt-7 max-w-2xl text-base leading-8 text-white/84 sm:text-lg">
                 {programCopy.accessInstruction}
+              </p>
+              <p className="mt-5 max-w-2xl rounded-xl bg-white p-4 text-base font-bold leading-7 text-[var(--peace-blue-950)] shadow-sm sm:text-lg">
+                {programCopy.bookingInstruction}
               </p>
             </div>
             <div id="forum-access-form" className="grid scroll-mt-24 gap-5">

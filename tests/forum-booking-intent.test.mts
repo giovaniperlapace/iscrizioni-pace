@@ -112,7 +112,7 @@ test("forum numbers determine ordering within the time envelope, including forum
   assert.equal(items[0].id, "base");
   for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"] as const) {
     const copy = getEventProgramCopy(locale);
-    assert.ok(copy.bookForum && copy.bookingAnnouncement && copy.selectedInstruction && copy.waitlistInstruction);
+    assert.ok(copy.bookForum && copy.bookingInstruction && copy.selectedInstruction && copy.waitlistInstruction);
   }
   assert.equal(getEventProgramCopy("it").seats, "Posti disponibili");
 });
