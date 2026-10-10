@@ -19,7 +19,7 @@ try {
   assert.match(denied.headers().location, /\/login/);
   await control({ mode: "catalog" });
   await page.goto(base);
-  assert.equal(await page.locator("#event-program ol > li").count(), 4);
+  assert.equal(await page.locator("#event-program > div > ol > li").count(), 3);
   assert.equal(await page.locator("#schools, a.panel-access-cue").count(), 0);
   assert.match(await page.locator("#panel-program").innerText(), /Panel pubblico sintetico/);
   await control({ mode: "internal", role: "admin" });
@@ -58,7 +58,7 @@ try {
     await context.addCookies([{ name: "iscrizioni_locale", value: locale, url: base }]);
     await preview.reload();
     assert.equal(await preview.locator("html").getAttribute("lang"), locale);
-    assert.equal(await preview.locator("#event-program ol > li").count(), 4);
+    assert.equal(await preview.locator("#event-program > div > ol > li").count(), 3);
     assert.equal(await preview.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, locale);
   }
   for (const role of ["manager_viewer", "foreign", "capogruppo", "partecipante"]) {

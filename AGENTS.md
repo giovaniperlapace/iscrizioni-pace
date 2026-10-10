@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Programma in tre riquadri giornalieri — 2026-10-10
+
+- Correzione esplicita dell’utente: sempre tre riquadri, uno per ciascun
+  giorno 25/26/27 ottobre, con gli appuntamenti cronologici e fasce orarie.
+  Più spazio verticale tra orari, titoli, luoghi e singoli appuntamenti.
+- Nel riepilogo il panel delle 17 confluisce nel cappello pomeridiano dalle
+  16; fasce sovrapposte dello stesso giorno riassunte dall’inizio più precoce
+  alla fine più tarda. Il dettaglio conserva tutti gli orari individuali.
+  Superata la precedente separazione delle fasce 16/17 nel riepilogo.
+- Home pubblica internal e anteprima riservata conservate; nessuna modifica
+  a panel, prenotazioni, capienze o permessi.
+
 ## Richiamo email dopo i panel — 2026-10-10
 
 - Aggiunto in fondo ai panel il richiamo “Iscriviti o accedi per prenotare

@@ -107,3 +107,14 @@ freccia e stile del richiamo iniziale e margine per la testata fissa.
 L’anteprima mostra questo elemento senza abilitare il form o le prenotazioni.
 Il catalogo pubblico conserva il vincolo delle prenotazioni aperte; home
 internal e rimozione del pulsante di preview Manager rimangono invariate.
+
+## Correzione: tre riquadri giornalieri
+
+L’utente sostituisce il riepilogo per singolo appuntamento con tre riquadri,
+uno per il 25, 26 e 27 ottobre. In ciascuno gli eventi compaiono in ordine
+cronologico, con fascia oraria, titolo e luogo oppure collegamento ai panel.
+Il panel delle 17 non ha un richiamo separato: confluisce nel cappello dei
+panel dalle 16. Fasce panel sovrapposte dello stesso giorno sono riassunte
+tra inizio minimo e fine massima, mantenendo intatto l’elenco dettagliato.
+Più padding e spazio verticale per separare gli appuntamenti, senza fissare
+un’altezza massima ai riquadri. Home pubblica e controlli di apertura invariati.
