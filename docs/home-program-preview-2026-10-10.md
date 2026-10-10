@@ -97,3 +97,13 @@ appuntamenti, conserva i giorni distinti e gli orari eccezionali (per esempio
 un panel alle 17:00 rimane separato da quelli alle 16:00). Le fasce seguono i
 record già caricati: bozze nell’anteprima, solo pubblicati nella futura home.
 Home pubblica internal e pulsante preview riservato al catalogo Admin invariati.
+
+## Richiamo all’iscrizione e accesso email
+
+A fine elenco panel, pulsante “Iscriviti o accedi per prenotare il tuo posto”
+e istruzione per chi deve ancora iscriversi e per chi deve accedere tramite
+link email. Il collegamento `#email` riporta al campo, con scorrimento fluido,
+freccia e stile del richiamo iniziale e margine per la testata fissa.
+L’anteprima mostra questo elemento senza abilitare il form o le prenotazioni.
+Il catalogo pubblico conserva il vincolo delle prenotazioni aperte; home
+internal e rimozione del pulsante di preview Manager rimangono invariate.

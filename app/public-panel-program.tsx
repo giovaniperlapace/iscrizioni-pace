@@ -14,6 +14,7 @@ import {
 
 type PublicPanelProgramProps = {
   bookingsOpen?: boolean;
+  showAccessCta?: boolean;
   locale: SupportedLocale;
   panels: PublicPanelProgramItem[];
   copy: ReturnType<typeof getMessages>["panelProgram"];
@@ -37,7 +38,7 @@ function AvailabilityIcon({ availability }: { availability: PublicPanelAvailabil
   return <LockKeyhole aria-hidden="true" className="h-4 w-4" />;
 }
 
-export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true }: PublicPanelProgramProps) {
+export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, showAccessCta = bookingsOpen }: PublicPanelProgramProps) {
   const groups = groupPublicPanelsByDay(panels);
   const programCopy = getEventProgramCopy(locale);
 
@@ -110,13 +111,15 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true }
           </div>
         )}
 
-        {bookingsOpen ? <div className="mt-12 border-t border-[var(--peace-border)] pt-8 text-center sm:mt-16 sm:pt-10">
+        {showAccessCta ? <div className="mt-12 border-t border-[var(--peace-border)] pt-8 text-center sm:mt-16 sm:pt-10">
+          <p id="panel-access-instructions" className="mx-auto mb-6 max-w-2xl text-base leading-7 text-[var(--peace-muted)]">{programCopy.accessInstruction}</p>
           <a
+            aria-describedby="panel-access-instructions"
             className="panel-access-cue group relative inline-flex min-h-14 max-w-full items-center gap-3 overflow-hidden rounded-full border border-[var(--peace-blue-700)] bg-[var(--peace-blue-900)] py-2 pl-5 pr-2 text-left text-sm font-bold text-white shadow-[0_12px_30px_rgba(8,47,95,0.18)] sm:text-base"
-            href="#personal-access"
+            href="#email"
           >
             <PeaceLineMark className="absolute -left-20 top-1/2 h-20 w-64 -translate-y-1/2 text-white opacity-[0.08] transition-opacity duration-200 group-hover:opacity-[0.16]" />
-            <span className="relative">{copy.accessCta}</span>
+            <span className="relative">{programCopy.accessCta}</span>
             <span className="panel-access-cue__arrow relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[var(--peace-blue-900)] shadow-sm">
               <ArrowUp aria-hidden="true" className="h-5 w-5" strokeWidth={2.5} />
             </span>

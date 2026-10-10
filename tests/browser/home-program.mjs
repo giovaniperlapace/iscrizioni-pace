@@ -36,7 +36,8 @@ try {
     assert.match(await preview.locator("#panel-program").innerText(), /Panel sintetico in bozza/);
     assert.match(await preview.locator("#panel-program").innerText(), /50/);
     assert.equal(await preview.locator('input[type="email"]').isDisabled(), true);
-    assert.equal(await preview.locator("#schools, a.panel-access-cue").count(), 0);
+    assert.equal(await preview.locator("#schools").count(), 0);
+    assert.equal(await preview.locator('a.panel-access-cue[href="#email"]').count(), 1);
     assert.match(await preview.locator('meta[name="robots"]').getAttribute("content"), /noindex/);
   }
   for (const width of [1440, 390]) {

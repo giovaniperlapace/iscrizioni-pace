@@ -51,7 +51,7 @@ export function EmailAccessForm({
           required
           autoComplete="email"
           defaultValue={defaultEmail}
-          className="field flex-1"
+          className="field flex-1 scroll-mt-32"
           placeholder="nome@example.org"
         />
         <SubmitButton submitLabel={copy.submit} pendingLabel={copy.pending} />

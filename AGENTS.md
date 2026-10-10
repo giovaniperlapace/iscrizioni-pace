@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Richiamo email dopo i panel — 2026-10-10
+
+- Aggiunto in fondo ai panel il richiamo “Iscriviti o accedi per prenotare
+  il tuo posto”, con istruzione che distingue nuova iscrizione e accesso
+  tramite link email. Sette lingue; stile, freccia e scorrimento condivisi.
+- Il collegamento punta al campo email con margine per la testata. Visibile
+  anche nell’anteprima, dove il form rimane disabilitato; nel catalogo pubblico
+  resta subordinato all’apertura delle prenotazioni. Home internal invariata.
+
 ## Panel nel riepilogo del programma — 2026-10-10
 
 - Su richiesta dell’utente, anche il programma generale della home futura e
