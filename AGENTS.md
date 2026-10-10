@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Prima home con programma e panel nascosta — 2026-10-10
+
+- Su richiesta dell’utente preparata localmente su main la home futura,
+  conforme allo stile dell’app. Programma generale dalla pagina ufficiale
+  fornita: inaugurazione, preghiere per la pace e cerimonia conclusiva;
+  orari senza fine inventata e contenuti nelle sette lingue.
+- Anteprima `/dashboard/anteprima-home` dal catalogo Panel, solo Admin globale
+  e Manager dell’evento corrente. Su correzione dell’utente il pulsante è
+  visibile solo nel catalogo Admin, rimosso dalla dashboard Manager.
+  Include le bozze richieste dall’utente e
+  rilegge i record del gestionale: titoli, orari, location e posti individuali.
+  Panel incompleti segnalati, nessuna copia dei forum dal sito esterno.
+- Modalità `internal` e home attuale conservate; pubblico e ruoli non ammessi
+  esclusi dall’anteprima, form email e prenotazioni disabilitati nella preview.
+  La futura home pubblica continua a mostrare solo panel pubblicati.
+- Test mirati, lint, TypeScript, build e browser sintetico desktop/mobile
+  verificati. L’utente autorizza commit/push e rilascio in production del
+  codice, mantenendo la home pubblica attuale. Nessuna apertura pubblica,
+  migration remota o email autorizzata da questa tranche.
+  Branch panel e stash preservati. Dettagli in
+  `docs/home-program-preview-2026-10-10.md`.
+
 ## Pubblicazione Manager autorizzata — 2026-10-09
 
 - L’utente richiede migration production, commit e push. Applicata e registrata

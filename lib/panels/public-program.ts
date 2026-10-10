@@ -15,6 +15,9 @@ export type PublicPanelProgramItem = {
   locationName: string;
   locationAddress: string | null;
   availability: PublicPanelAvailability;
+  // Present only in the authenticated home preview.
+  remainingSeats?: number;
+  publicationStatus?: "draft" | "published";
 };
 
 type PublicPanelProgramRow = {

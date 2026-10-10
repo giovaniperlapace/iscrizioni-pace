@@ -1,5 +1,6 @@
 import { ArrowUp, CalendarDays, CheckCircle2, Clock3, LockKeyhole, MapPin, XCircle } from "lucide-react";
 
+import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { PeaceLineMark } from "@/components/event-identity";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import type { getMessages } from "@/lib/i18n/messages";
@@ -38,6 +39,7 @@ function AvailabilityIcon({ availability }: { availability: PublicPanelAvailabil
 
 export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true }: PublicPanelProgramProps) {
   const groups = groupPublicPanelsByDay(panels);
+  const programCopy = getEventProgramCopy(locale);
 
   return (
     <section aria-labelledby="panel-program-title" className="app-container scroll-mt-20 py-12 sm:py-16 lg:py-20" id="panel-program">
@@ -82,6 +84,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true }
                           {copy.availability[panel.availability]}
                         </span>
                       </div>
+                      {panel.publicationStatus === "draft" ? <span className="mt-3 w-fit rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900">{programCopy.draft}</span> : null}
                       <h4 className="mt-4 break-words text-xl font-extrabold leading-tight text-[var(--peace-ink)]">
                         {panel.title}
                       </h4>
@@ -90,6 +93,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true }
                           {panel.description}
                         </p>
                       ) : null}
+                      {panel.remainingSeats !== undefined ? <p className="mt-3 text-sm font-semibold text-[var(--peace-blue-800)]">{programCopy.seats}: {panel.remainingSeats}</p> : null}
                       <address className="mt-auto flex min-w-0 gap-2 break-words pt-5 text-sm not-italic leading-6 text-[var(--peace-ink)]">
                         <MapPin aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-[var(--peace-blue-700)]" />
                         <span>

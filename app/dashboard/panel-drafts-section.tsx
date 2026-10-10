@@ -71,16 +71,19 @@ export function PanelDraftsSection({
               singoli panel o una selezione completa.
             </p>
           </div>
-          {canManage && event ? (
-            <Link
-              href={`${closePath}&panelTool=new`}
-              scroll={false}
-              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              Nuovo panel
-            </Link>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            {canManage && dashboard === "admin" ? <Link href="/dashboard/anteprima-home" className="inline-flex min-h-11 items-center rounded-md border border-[var(--peace-border)] px-4 text-sm font-semibold text-[var(--peace-blue-800)]">Anteprima home</Link> : null}
+            {canManage && event ? (
+              <Link
+                href={`${closePath}&panelTool=new`}
+                scroll={false}
+                className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                Nuovo panel
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <PanelTabs dashboard={dashboard} navMode={navMode} active="panels" />

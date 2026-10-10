@@ -81,7 +81,8 @@ test("public RPC exposes only published panels and an aggregate availability sta
 test("home renders the localized semantic programme and access CTA", () => {
   assert.match(home, /generateMetadata/);
   assert.match(home, /getPublicPanelProgram/);
-  assert.match(home, /<PublicPanelProgram/);
+  assert.match(home, /<ProgramHome/);
+  assert.match(readFileSync(join(process.cwd(), "app/program-home.tsx"), "utf8"), /<PublicPanelProgram/);
   assert.match(component, /aria-labelledby="panel-program-title"/);
   assert.match(component, /<ol/);
   assert.match(component, /<time dateTime=/);
