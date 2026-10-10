@@ -1,6 +1,6 @@
 import { ArrowDown, CalendarDays, Clock3, MapPin } from "lucide-react";
 import type { SupportedLocale } from "@/lib/i18n/config";
-import { EVENT_PROGRAM_SOURCE, getHomeProgramDays } from "@/lib/events/home-program";
+import { getHomeProgramDays } from "@/lib/events/home-program";
 import { getMessages } from "@/lib/i18n/messages";
 import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { formatPanelProgramDay, type PublicPanelProgramItem } from "@/lib/panels/public-program";
@@ -32,9 +32,6 @@ export function PublicEventProgram({ locale, panels }: { locale: SupportedLocale
             </li>
           ))}
         </ol>
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-sm font-bold text-[var(--peace-blue-800)]">
-          <a href={EVENT_PROGRAM_SOURCE} className="underline underline-offset-4">{copy.source}</a>
-        </div>
       </div>
     </section>
   );
