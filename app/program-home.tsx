@@ -36,8 +36,8 @@ export function ProgramHome({ locale, panels, bookingsOpen, preview = false, ema
           <div className="grid flex-1 content-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
               <EventIdentity inverted />
-              <p className="mt-7 max-w-2xl text-base leading-8 text-white/84 sm:text-lg">
-                {copy.home.intro}
+              <p id="panel-access-instructions" className="mt-7 max-w-2xl text-base leading-8 text-white/84 sm:text-lg">
+                {programCopy.accessInstruction}
               </p>
             </div>
             <div className="grid gap-5">

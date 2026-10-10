@@ -133,7 +133,6 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
               <ArrowUp aria-hidden="true" className="h-5 w-5" strokeWidth={2.5} />
             </span>
           </a>
-          <p id="panel-access-instructions" className="mx-auto mt-6 max-w-2xl text-base leading-7 text-[var(--peace-muted)]">{programCopy.accessInstruction}</p>
         </div> : null}
       </div>
     </section>
