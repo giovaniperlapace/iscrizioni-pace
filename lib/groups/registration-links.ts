@@ -5,6 +5,7 @@ export const GROUP_REGISTRATION_LINK_TOKEN_MAX_LENGTH = 96;
 export const GROUP_REGISTRATION_LINK_TOKEN_PATTERN =
   /^[A-Za-z0-9][A-Za-z0-9_-]{2,95}$/;
 export const GROUP_REGISTRATION_LINK_RESERVED_TOKENS = new Set([
+  "anteprima-home",
   "api",
   "auth",
   "dashboard",
