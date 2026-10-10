@@ -140,7 +140,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
           <a
             aria-describedby="panel-access-instructions"
             className="panel-access-cue group relative inline-flex min-h-14 max-w-full items-center gap-3 overflow-hidden rounded-full border border-[var(--peace-blue-700)] bg-[var(--peace-blue-900)] py-2 pl-5 pr-2 text-left text-sm font-bold text-white shadow-[0_12px_30px_rgba(8,47,95,0.18)] sm:text-base"
-            href="#panel-access-instructions"
+            href="#personal-access"
           >
             <PeaceLineMark className="absolute -left-20 top-1/2 h-20 w-64 -translate-y-1/2 text-white opacity-[0.08] transition-opacity duration-200 group-hover:opacity-[0.16]" />
             <span className="relative">{programCopy.accessCta}</span>

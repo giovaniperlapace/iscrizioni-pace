@@ -2,9 +2,10 @@
 
 ## Futura home: destinazione pulsante finale — 2026-10-10
 
-- Corretto il richiamo finale: raggiunge le istruzioni sopra il modulo email,
-  con margine per la testata, mostrando anche il messaggio bianco sull’area
-  personale. Il solo modulo lasciava fuori vista il contesto su desktop/mobile.
+- Correzione esplicita con immagine dell’utente: il richiamo finale deve tornare
+  all’inizio dell’intero riquadro blu (`#personal-access`), mostrando titolo,
+  istruzioni, messaggio bianco e modulo email. Superate le precedenti destinazioni
+  al solo modulo o alle istruzioni. Conservato il margine per la testata.
   I pulsanti dei singoli Forum conservano la destinazione e le istruzioni scelte.
 - Aggiornamento sul link di preview esistente nel rilascio autorizzato.
 

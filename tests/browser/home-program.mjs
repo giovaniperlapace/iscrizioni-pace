@@ -37,14 +37,18 @@ try {
     assert.match(await preview.locator("#panel-program").innerText(), /50/);
     assert.equal(await preview.locator('input[type="email"]').isDisabled(), true);
     assert.equal(await preview.locator("#schools").count(), 0);
-    assert.equal(await preview.locator('a.panel-access-cue[href="#panel-access-instructions"]').count(), 1);
+    assert.equal(await preview.locator('a.panel-access-cue[href="#personal-access"]').count(), 1);
     assert.match(await preview.locator('meta[name="robots"]').getAttribute("content"), /noindex/);
   }
   for (const width of [1440, 390]) {
     await preview.setViewportSize({ width, height: 900 });
     assert.equal(await preview.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    await preview.locator("#event-program").scrollIntoViewIfNeeded();
-    await preview.evaluate(() => window.scrollTo(0, 0));
+    await preview.locator("a.panel-access-cue").click();
+    await preview.waitForFunction(() => {
+      const hero = document.getElementById("personal-access").getBoundingClientRect();
+      const title = document.querySelector("#personal-access h1").getBoundingClientRect();
+      return hero.top >= 75 && hero.top <= 78 && title.top >= hero.top && title.bottom < innerHeight;
+    });
     await preview.screenshot({ path: `/tmp/pace-home-program-${width}.png`, fullPage: true });
   }
   await context.addCookies([{ name: "iscrizioni_locale", value: "it", url: base }]);
