@@ -258,7 +258,7 @@ export async function loadCampaignDeliveryData(
   recipient: CampaignRecipient,
   includePanels = true
 ) {
-  if (!includePanels && recipient.recipientType === "teacher") throw new Error("Accesso panel riservato all’amministratore.");
+  if (!includePanels && recipient.recipientType === "teacher") throw new Error("Accesso forum riservato all’amministratore.");
   if (recipient.recipientType === "teacher" && recipient.schoolTeacherId) {
     const { data: teacher, error: teacherError } = await service
       .from("school_booking_teachers")

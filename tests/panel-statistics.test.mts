@@ -217,7 +217,7 @@ test("P10 flags full, nearly full and unconfigured panels while accepting unused
 });
 
 test("P10 report exposes all requested filters and safe operational links", () => {
-  for (const label of ["Giorno", "Location", "Panel", "Tipo pubblico"]) {
+  for (const label of ["Giorno", "Location", "Forum", "Tipo pubblico"]) {
     assert.match(reportSource, new RegExp(`label=\\"${label}\\"`));
   }
 

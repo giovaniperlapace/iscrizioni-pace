@@ -192,7 +192,7 @@ test("responsive overlay exposes live capacity, conflict and accessible section 
 
 test("panel workflow tabs suggest location, panel and school order while Panel stays the default", () => {
   const locationTab = schoolBookingsSection.indexOf('{ key: "locations", label: "Location"');
-  const panelTab = schoolBookingsSection.indexOf('{ key: "panels", label: "Panel"');
+  const panelTab = schoolBookingsSection.indexOf('{ key: "panels", label: "Forum"');
   const schoolTab = schoolBookingsSection.indexOf('{ key: "schools", label: "Scuole"');
 
   assert.ok(locationTab >= 0 && locationTab < panelTab);
@@ -209,8 +209,8 @@ test("panel search fields reserve space for their leading icon", () => {
 });
 
 test("capacity overflow disables saving with an accessible explanation", () => {
-  assert.match(fields, /Il panel non potrà essere salvato/);
-  assert.match(fields, /Il panel può essere salvato/);
+  assert.match(fields, /Il forum non potrà essere salvato/);
+  assert.match(fields, /Il forum può essere salvato/);
   assert.match(section, /initialCapacityExceeded/);
   assert.match(formState, /disabled=\{saveBlocked\}/);
   assert.match(formState, /role="tooltip"/);
@@ -226,7 +226,7 @@ test("schedule overlap disables saving with an accessible explanation", () => {
   assert.match(formState, /disabled=\{saveBlocked\}/);
   assert.match(
     formState,
-    /L'orario si sovrappone a un altro panel nella stessa location/
+    /L'orario si sovrappone a un altro forum nella stessa location/
   );
 });
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { buildHomePreview } from "../lib/panels/home-preview.ts";
-import { getGeneralHomeProgram, getHomeProgram, getHomeProgramDays } from "../lib/events/home-program.ts";
+import { getGeneralHomeProgram, getHomeProgram, getHomeProgramDays, getHomePanelSlots } from "../lib/events/home-program.ts";
 import { formatPanelProgramDay } from "../lib/panels/public-program.ts";
 import type { PanelDraftRow } from "../lib/panels/panel-drafts.ts";
 import type { EventLocationOption } from "../lib/panels/event-locations.ts";
@@ -69,10 +69,14 @@ test("programme has three day cards and includes the 17:00 panel in the 16:00 en
     { ...base, id: "next-day", startsAt: "2026-10-27T09:30:00+01:00", endsAt: "2026-10-27T12:30:00+01:00" },
   ];
   const result = getHomeProgram("it", panels);
+  const slots = getHomePanelSlots(panels);
+  assert.deepEqual(slots.map(slot => slot.panels.map(panel => panel.id)), [["morning", "same-slot"], ["afternoon", "exception"], ["next-day"]]);
+  assert.deepEqual(slots.map(slot => slot.id), result.filter(item => item.isPanelSlot).map(item => item.id));
+  assert.equal(new Set(slots.map(slot => slot.id)).size, 3);
   assert.equal(result.length, 6);
   assert.equal(result.filter(item => item.isPanelSlot).length, 3);
   assert.equal(result[0].id, "opening");
-  assert.equal(result[1].title, "Panel in vari luoghi");
+  assert.equal(result[1].title, "Forum in vari luoghi");
   assert.equal(result[1].endsAt, panels[0].endsAt);
   assert.equal(result.at(-1)?.id, "closing");
   const days = getHomeProgramDays("it", panels);

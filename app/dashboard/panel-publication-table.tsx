@@ -71,8 +71,8 @@ export function PanelPublicationTable({
     return (
       <p className="mt-5 rounded-md border border-dashed border-[var(--peace-border-strong)] px-4 py-6 text-center text-sm text-[var(--peace-muted)]">
         {totalCount === 0
-          ? "Nessun panel configurato per l'evento corrente."
-          : "Nessun panel corrisponde ai filtri."}
+          ? "Nessun forum configurato per l'evento corrente."
+          : "Nessun forum corrisponde ai filtri."}
       </p>
     );
   }
@@ -85,7 +85,7 @@ export function PanelPublicationTable({
     <>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-[var(--peace-muted)]" aria-live="polite">
-          {panels.length} panel
+          {panels.length} forum
           {canManage && selectedDraftIds.length > 0
             ? ` · ${selectedDraftIds.length} selezionati`
             : ""}
@@ -144,7 +144,7 @@ export function PanelPublicationTable({
                       className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
                     >
                       <Send className="size-4" aria-hidden="true" />
-                      Pubblica panel
+                      Pubblica forum
                     </button>
                   ) : null}
                 </div>
@@ -180,7 +180,7 @@ export function PanelPublicationTable({
                   />
                 </th>
               ) : null}
-              <th className="py-3 pr-4 font-semibold">Panel</th>
+              <th className="py-3 pr-4 font-semibold">Forum</th>
               <th className="py-3 pr-4 font-semibold">Quando</th>
               <th className="py-3 pr-4 font-semibold">Location</th>
               <th className="py-3 pr-4 font-semibold">Posti</th>
@@ -220,7 +220,7 @@ export function PanelPublicationTable({
                         className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
                       >
                         <Send className="size-4" aria-hidden="true" />
-                        Pubblica panel
+                        Pubblica forum
                       </button>
                     ) : null}
                   </div>
@@ -243,10 +243,10 @@ export function PanelPublicationTable({
             <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
               <div>
                 <h3 id="publish-panel-dialog-title" className="text-xl font-semibold">
-                  Pubblica {dialogPanels.length === 1 ? "panel" : `${dialogPanels.length} panel`}
+                  Pubblica {dialogPanels.length === 1 ? "panel" : `${dialogPanels.length} forum`}
                 </h3>
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
-                  Il panel sarà visibile al pubblico quando apriremo il catalogo. Le iscrizioni seguiranno la propria apertura. Se un panel non è valido, nessuno viene pubblicato.
+                  Il forum sarà visibile al pubblico quando apriremo il catalogo. Le iscrizioni seguiranno la propria apertura. Se un forum non è valido, nessuno viene pubblicato.
                 </p>
               </div>
               <button

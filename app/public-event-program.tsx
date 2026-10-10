@@ -24,7 +24,7 @@ export function PublicEventProgram({ locale, panels }: { locale: SupportedLocale
                   <li key={item.id} className="py-6 first:pt-0 last:pb-0">
                     <p className="flex items-center gap-2 text-sm font-bold text-[var(--peace-blue-800)]"><Clock3 className="size-4 shrink-0" aria-hidden="true" /><span><time dateTime={item.startsAt}>{time(item.startsAt)}</time>{item.endsAt ? <>–<time dateTime={item.endsAt}>{time(item.endsAt)}</time></> : null}</span></p>
                     <h4 className="mt-4 text-lg font-extrabold leading-snug text-[var(--peace-ink)]">{item.title}</h4>
-                    {item.isPanelSlot ? <a href="#panel-program" className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--peace-blue-800)]">{copy.panels}<ArrowDown className="size-4" aria-hidden="true" /></a> : <p className="mt-4 flex items-start gap-2.5 text-sm leading-7 text-[var(--peace-muted)]"><MapPin className="mt-1 size-4 shrink-0 text-[var(--peace-blue-700)]" aria-hidden="true" />{item.location}</p>}
+                    {item.isPanelSlot ? <a href={`#${item.id}`} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--peace-blue-800)]">{copy.panels}<ArrowDown className="size-4" aria-hidden="true" /></a> : <p className="mt-4 flex items-start gap-2.5 text-sm leading-7 text-[var(--peace-muted)]"><MapPin className="mt-1 size-4 shrink-0 text-[var(--peace-blue-700)]" aria-hidden="true" />{item.location}</p>}
                   </li>
                 ))}
               </ol>
@@ -34,7 +34,6 @@ export function PublicEventProgram({ locale, panels }: { locale: SupportedLocale
         </ol>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-sm font-bold text-[var(--peace-blue-800)]">
           <a href={EVENT_PROGRAM_SOURCE} className="underline underline-offset-4">{copy.source}</a>
-          <a href="#panel-program" className="inline-flex min-h-11 items-center gap-2">{copy.panels}<ArrowDown className="size-4" aria-hidden="true" /></a>
         </div>
       </div>
     </section>

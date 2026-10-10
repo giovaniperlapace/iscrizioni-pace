@@ -202,7 +202,7 @@ export function PanelDraftFields({
           className="flex gap-2 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]"
         >
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          L&apos;orario si sovrappone al panel “{conflictingPanel.title}” nella stessa
+          L&apos;orario si sovrappone al forum “{conflictingPanel.title}” nella stessa
           location. Modifica orario o location prima di salvare.
         </p>
       ) : null}
@@ -324,10 +324,10 @@ export function PanelDraftFields({
         {difference !== null ? (
           <p className="text-sm text-[var(--peace-muted)]">
             {difference === 0
-              ? "La distribuzione coincide con la capienza e il panel può essere salvato."
+              ? "La distribuzione coincide con la capienza e il forum può essere salvato."
               : difference > 0
-                ? `Restano ${difference} ${difference === 1 ? "posto non distribuito" : "posti non distribuiti"}. Il panel può essere salvato.`
-                : `La distribuzione supera la capienza di ${Math.abs(difference)} ${Math.abs(difference) === 1 ? "posto" : "posti"}. Il panel non potrà essere salvato.`}
+                ? `Restano ${difference} ${difference === 1 ? "posto non distribuito" : "posti non distribuiti"}. Il forum può essere salvato.`
+                : `La distribuzione supera la capienza di ${Math.abs(difference)} ${Math.abs(difference) === 1 ? "posto" : "posti"}. Il forum non potrà essere salvato.`}
           </p>
         ) : null}
       </fieldset>

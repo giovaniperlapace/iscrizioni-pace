@@ -51,3 +51,13 @@ export function getHomeProgramDays(locale: SupportedLocale, panels: PublicPanelP
     items: items.filter(item => getPanelProgramDayKey(item.startsAt) === key),
   }));
 }
+
+/** Shared summary slots and detail anchors, including later starts within a slot. */
+export function getHomePanelSlots(panels: PublicPanelProgramItem[]) {
+  return getHomeProgram("it", panels).filter(item => item.isPanelSlot).map(slot => ({
+    ...slot,
+    panels: panels.filter(panel => getPanelProgramDayKey(panel.startsAt) === getPanelProgramDayKey(slot.startsAt)
+      && Date.parse(panel.startsAt) >= Date.parse(slot.startsAt)
+      && Date.parse(panel.startsAt) < Date.parse(slot.endsAt!)),
+  }));
+}

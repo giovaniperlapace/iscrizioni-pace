@@ -455,7 +455,7 @@ export function buildPanelStatisticsSnapshot({
         orphanIndividualPanelIds.has(panel.id) || orphanSchoolPanelIds.has(panel.id);
 
       if (hasOrphanBookings) {
-        issues.push("Prenotazioni non riconciliate con una sezione del panel");
+        issues.push("Prenotazioni non riconciliate con una sezione del forum");
       }
 
       const isNotConfigured =

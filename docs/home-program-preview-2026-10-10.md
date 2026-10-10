@@ -118,3 +118,13 @@ panel dalle 16. Fasce panel sovrapposte dello stesso giorno sono riassunte
 tra inizio minimo e fine massima, mantenendo intatto l’elenco dettagliato.
 Più padding e spazio verticale per separare gli appuntamenti, senza fissare
 un’altezza massima ai riquadri. Home pubblica e controlli di apertura invariati.
+
+## Forum e navigazione per fascia
+
+Rimosso il pulsante generale sotto i tre riquadri del programma. I richiami
+nei momenti conducono al gruppo del giorno e della fascia corrispondenti,
+con ancore derivate dagli stessi record e intervalli del riepilogo. Il Forum
+delle 17 resta nella fascia dalle 16. Rinominata la terminologia visibile
+nel sito, nelle dashboard, nelle prenotazioni, negli export e nei testi
+email in sette lingue; identificatori e contratti tecnici conservati.
+Nessuna modifica dati, apertura pubblica o invio email.

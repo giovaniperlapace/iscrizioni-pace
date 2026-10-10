@@ -654,7 +654,7 @@ export function EmailCampaignComposer({
               ? "Questa tabella contiene gli iscritti raggiungibili, comprese le persone senza gruppo."
               : audience === "group_leaders"
                 ? "Questa tabella contiene solo i capigruppo dell’evento. Ogni capogruppo compare una sola volta anche se segue più gruppi."
-                : "Questa tabella contiene i professori con prenotazioni scuola attive. Ogni docente compare una sola volta anche se segue più classi o panel."}
+                : "Questa tabella contiene i professori con prenotazioni scuola attive. Ogni docente compare una sola volta anche se segue più classi o forum."}
           </p>
           <div className={[
             "grid gap-4 md:grid-cols-2",
@@ -719,9 +719,9 @@ export function EmailCampaignComposer({
               />
               {allowPanelManagement ? <RecipientPanelFilter
                 id="campaign-recipient-panel"
-                label="Panel"
+                label="Forum"
                 options={panels}
-                placeholder="Tutti i panel"
+                placeholder="Tutti i forum"
                 value={panelFilter}
                 onChange={setPanelFilter}
               /> : null}
@@ -740,9 +740,9 @@ export function EmailCampaignComposer({
             </label>
             <RecipientPanelFilter
               id="campaign-teacher-panel"
-              label="Panel"
+              label="Forum"
               options={panels}
-              placeholder="Tutti i panel"
+              placeholder="Tutti i forum"
               value={panelFilter}
               onChange={setPanelFilter}
             />
@@ -803,7 +803,7 @@ export function EmailCampaignComposer({
                       <th className="px-3 py-3">Persona</th>
                       <th className="px-3 py-3">Email</th>
                       <th className="px-3 py-3">
-                        {audience === "participants" ? "Recapito" : audience === "group_leaders" ? "Gruppi" : "Scuole e panel"}
+                        {audience === "participants" ? "Recapito" : audience === "group_leaders" ? "Gruppi" : "Scuole e forum"}
                       </th>
                     </tr>
                   </thead>
@@ -1452,7 +1452,7 @@ function RecipientPanelFilter({ id, label, options, placeholder, value, onChange
             if (target instanceof HTMLElement) { event.preventDefault(); target.focus(); }
             else if (event.key === "ArrowUp") { event.preventDefault(); document.getElementById(id)?.focus(); }
           }}>{option.label}</button>)}
-        {results.length === 0 ? <p className="px-3 py-2 font-normal text-[var(--peace-muted)]">Nessun panel trovato.</p> : null}
+        {results.length === 0 ? <p className="px-3 py-2 font-normal text-[var(--peace-muted)]">Nessun forum trovato.</p> : null}
       </div> : null}
     </div>
   </div>;

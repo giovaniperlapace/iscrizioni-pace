@@ -5,7 +5,7 @@ export const CAMPAIGN_TEMPLATE_FIELDS = [
   { token: "{{codice_partecipante}}", label: "Codice partecipante" },
   { token: "{{gruppo}}", label: "Gruppo" },
   { token: "{{scuola}}", label: "Scuola" },
-  { token: "{{panel}}", label: "Panel prenotati" },
+  { token: "{{panel}}", label: "Forum prenotati" },
   { token: "{{evento}}", label: "Evento" },
 ] as const;
 

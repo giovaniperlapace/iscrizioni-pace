@@ -9,7 +9,7 @@ export async function getPanelReleaseMode(db: SupabaseClient): Promise<PanelRele
   if (error?.code === "PGRST202") return "internal";
   if (error) throw error;
   if (data !== "internal" && data !== "catalog" && data !== "open") {
-    throw new Error("Stato di apertura panel non disponibile.");
+    throw new Error("Stato di apertura forum non disponibile.");
   }
   return data;
 }

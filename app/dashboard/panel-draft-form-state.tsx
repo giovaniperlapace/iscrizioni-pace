@@ -75,9 +75,9 @@ export function PanelDraftFormActions({
   const saveBlocked = capacityExceeded || scheduleConflict;
   const blockerMessage = capacityExceeded
     ? scheduleConflict
-      ? "La somma dei posti supera la capienza e l'orario si sovrappone a un altro panel. Correggi entrambi i problemi per salvare il panel."
-      : "La somma dei posti delle sezioni supera la capienza della location. Riduci i posti assegnati per salvare il panel."
-    : "L'orario si sovrappone a un altro panel nella stessa location. Modifica orario o location per salvare il panel.";
+      ? "La somma dei posti supera la capienza e l'orario si sovrappone a un altro forum. Correggi entrambi i problemi per salvare il forum."
+      : "La somma dei posti delle sezioni supera la capienza della location. Riduci i posti assegnati per salvare il forum."
+    : "L'orario si sovrappone a un altro forum nella stessa location. Modifica orario o location per salvare il forum.";
 
   return (
     <div className="flex flex-wrap justify-end gap-3 border-t border-[var(--peace-border)] px-5 py-4">

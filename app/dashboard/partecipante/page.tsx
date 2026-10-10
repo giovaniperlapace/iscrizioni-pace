@@ -217,11 +217,11 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     startRegistration: "Avvia la mia iscrizione",
     qrTitle: "Il tuo QR code personale",
     qrBody:
-      "Tienilo a portata di mano per l'accesso all'evento e ai panel. Se il QR non fosse disponibile, comunica il tuo codice partecipante all'accoglienza.",
+      "Tienilo a portata di mano per l'accesso all'evento e ai forum. Se il QR non fosse disponibile, comunica il tuo codice partecipante all'accoglienza.",
     openRegistration: "Visualizza e modifica la tua iscrizione",
-    panelsTitle: "Panel a cui sei iscritto",
+    panelsTitle: "Forum a cui sei iscritto",
     panelsEmpty:
-      "I panel non sono ancora disponibili per l'iscrizione dalla dashboard. Quando ti iscriverai a un panel, qui compariranno titolo, data, ora e informazioni operative.",
+      "I forum non sono ancora disponibili per l'iscrizione dalla dashboard. Quando ti iscriverai a un forum, qui compariranno titolo, data, ora e informazioni operative.",
     qrEyebrow: "QR code evento",
     qrOverlayBody:
       "Usa questo QR code per l'accesso all'evento quando l'accoglienza abiliterà la scansione. Il codice partecipante resta il riferimento operativo da comunicare se il QR non fosse disponibile.",
@@ -282,11 +282,11 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     startRegistration: "Start my registration",
     qrTitle: "Your personal QR code",
     qrBody:
-      "Keep it handy for access to the event and panels. If the QR code is not available, give your participant code to the welcome desk.",
+      "Keep it handy for access to the event and forums. If the QR code is not available, give your participant code to the welcome desk.",
     openRegistration: "View and edit your registration",
-    panelsTitle: "Panels you are registered for",
+    panelsTitle: "Forums you are registered for",
     panelsEmpty:
-      "Panels are not yet available for registration from the dashboard. When you register for a panel, its title, date, time and operational information will appear here.",
+      "Forums are not yet available for registration from the dashboard. When you register for a forum, its title, date, time and operational information will appear here.",
     qrEyebrow: "Event QR code",
     qrOverlayBody:
       "Use this QR code to access the event when scanning is enabled at the welcome desk. Your participant code remains the operational reference to share if the QR code is not available.",
@@ -347,11 +347,11 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     startRegistration: "Commencer mon inscription",
     qrTitle: "Ton QR code personnel",
     qrBody:
-      "Garde-le à portée de main pour l'accès à l'événement et aux panels. Si le QR n'est pas disponible, communique ton code participant à l'accueil.",
+      "Garde-le à portée de main pour l'accès à l'événement et aux forums. Si le QR n'est pas disponible, communique ton code participant à l'accueil.",
     openRegistration: "Voir et modifier ton inscription",
-    panelsTitle: "Panels auxquels tu es inscrit",
+    panelsTitle: "Forums auxquels tu es inscrit",
     panelsEmpty:
-      "Les panels ne sont pas encore disponibles pour l'inscription depuis le dashboard. Quand tu t'inscriras à un panel, le titre, la date, l'heure et les informations pratiques apparaîtront ici.",
+      "Les forums ne sont pas encore disponibles pour l'inscription depuis le dashboard. Quand tu t'inscriras à un forum, le titre, la date, l'heure et les informations pratiques apparaîtront ici.",
     qrEyebrow: "QR code événement",
     qrOverlayBody:
       "Utilise ce QR code pour accéder à l'événement lorsque l'accueil activera le scan. Ton code participant reste la référence à communiquer si le QR n'est pas disponible.",
@@ -412,11 +412,11 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     startRegistration: "Meine Anmeldung starten",
     qrTitle: "Dein persönlicher QR-Code",
     qrBody:
-      "Halte ihn für den Zugang zur Veranstaltung und zu den Panels bereit. Wenn der QR-Code nicht verfügbar ist, teile dem Empfang deinen Teilnehmendencode mit.",
+      "Halte ihn für den Zugang zur Veranstaltung und zu den Foren bereit. Wenn der QR-Code nicht verfügbar ist, teile dem Empfang deinen Teilnehmendencode mit.",
     openRegistration: "Deine Anmeldung anzeigen und bearbeiten",
-    panelsTitle: "Panels, für die du angemeldet bist",
+    panelsTitle: "Foren, für die du angemeldet bist",
     panelsEmpty:
-      "Panels sind im Dashboard noch nicht zur Anmeldung verfügbar. Wenn du dich für ein Panel anmeldest, erscheinen hier Titel, Datum, Uhrzeit und praktische Informationen.",
+      "Foren sind im Dashboard noch nicht zur Anmeldung verfügbar. Wenn du dich für ein Forum anmeldest, erscheinen hier Titel, Datum, Uhrzeit und praktische Informationen.",
     qrEyebrow: "Veranstaltungs-QR-Code",
     qrOverlayBody:
       "Nutze diesen QR-Code für den Zugang zur Veranstaltung, sobald der Empfang das Scannen aktiviert. Dein Teilnehmendencode bleibt die Referenz, falls der QR-Code nicht verfügbar ist.",
@@ -468,7 +468,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
   },
   es: {
     area: "Área participante",
-    fallbackTitle: "Panel participante",
+    fallbackTitle: "Foro participante",
     verifiedAccess: (email) => `Acceso verificado para ${email}.`,
     saved: "Cambios guardados.",
     noRegistrationTitle: "No hay inscripción vinculada",
@@ -477,11 +477,11 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     startRegistration: "Iniciar mi inscripción",
     qrTitle: "Tu código QR personal",
     qrBody:
-      "Tenlo a mano para el acceso al evento y a los paneles. Si el QR no estuviera disponible, comunica tu código de participante en la acogida.",
+      "Tenlo a mano para el acceso al evento y a los foros. Si el QR no estuviera disponible, comunica tu código de participante en la acogida.",
     openRegistration: "Ver y modificar tu inscripción",
-    panelsTitle: "Paneles a los que estás inscrito",
+    panelsTitle: "Foros a los que estás inscrito",
     panelsEmpty:
-      "Los paneles todavía no están disponibles para inscripción desde el panel. Cuando te inscribas a un panel, aquí aparecerán título, fecha, hora e información operativa.",
+      "Los foros todavía no están disponibles para inscripción desde el panel de gestión. Cuando te inscribas a un foro, aquí aparecerán título, fecha, hora e información operativa.",
     qrEyebrow: "Código QR del evento",
     qrOverlayBody:
       "Usa este código QR para acceder al evento cuando la acogida active el escaneo. Tu código de participante sigue siendo la referencia operativa si el QR no está disponible.",
@@ -542,11 +542,11 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     startRegistration: "Mijn inschrijving starten",
     qrTitle: "Je persoonlijke QR-code",
     qrBody:
-      "Houd deze bij de hand voor toegang tot het evenement en de panels. Als de QR-code niet beschikbaar is, geef je deelnemerscode door aan de ontvangst.",
+      "Houd deze bij de hand voor toegang tot het evenement en de forums. Als de QR-code niet beschikbaar is, geef je deelnemerscode door aan de ontvangst.",
     openRegistration: "Je inschrijving bekijken en wijzigen",
-    panelsTitle: "Panels waarvoor je bent ingeschreven",
+    panelsTitle: "Forums waarvoor je bent ingeschreven",
     panelsEmpty:
-      "Panels zijn nog niet beschikbaar voor inschrijving vanuit het dashboard. Wanneer je je inschrijft voor een panel, verschijnen hier titel, datum, tijd en praktische informatie.",
+      "Forums zijn nog niet beschikbaar voor inschrijving vanuit het dashboard. Wanneer je je inschrijft voor een forum, verschijnen hier titel, datum, tijd en praktische informatie.",
     qrEyebrow: "QR-code evenement",
     qrOverlayBody:
       "Gebruik deze QR-code voor toegang tot het evenement wanneer de ontvangst het scannen inschakelt. Je deelnemerscode blijft de operationele referentie als de QR-code niet beschikbaar is.",
@@ -598,7 +598,7 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
   },
   uk: {
     area: "Зона учасника",
-    fallbackTitle: "Панель учасника",
+    fallbackTitle: "Форум учасника",
     verifiedAccess: (email) => `Доступ підтверджено для ${email}.`,
     saved: "Зміни збережено.",
     noRegistrationTitle: "Немає пов'язаної реєстрації",
@@ -607,11 +607,11 @@ const PARTICIPANT_DASHBOARD_COPY: Record<SupportedLocale, ParticipantDashboardCo
     startRegistration: "Почати мою реєстрацію",
     qrTitle: "Ваш персональний QR-код",
     qrBody:
-      "Тримайте його під рукою для доступу до події та панелей. Якщо QR-код недоступний, повідомте свій код учасника на прийомі.",
+      "Тримайте його під рукою для доступу до події та форумів. Якщо QR-код недоступний, повідомте свій код учасника на прийомі.",
     openRegistration: "Переглянути і змінити вашу реєстрацію",
-    panelsTitle: "Панелі, на які ви зареєстровані",
+    panelsTitle: "Форуми, на які ви зареєстровані",
     panelsEmpty:
-      "Панелі ще недоступні для реєстрації з панелі учасника. Коли ви зареєструєтеся на панель, тут з'являться назва, дата, час і практична інформація.",
+      "Форуми ще недоступні для реєстрації з форуми учасника. Коли ви зареєструєтеся на форум, тут з'являться назва, дата, час і практична інформація.",
     qrEyebrow: "QR-код події",
     qrOverlayBody:
       "Використовуйте цей QR-код для доступу до події, коли на прийомі буде увімкнено сканування. Ваш код учасника залишається робочим посиланням, якщо QR-код недоступний.",

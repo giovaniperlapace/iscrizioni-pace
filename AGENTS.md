@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Forum e collegamenti alle fasce — 2026-10-10
+
+- Su richiesta dell’utente, rinominati i testi visibili Panel → Forum nel
+  sito, home, dashboard, prenotazioni, export e comunicazioni nelle sette lingue.
+  Identificatori, URL e contratti database conservati.
+- Rimosso il richiamo generale sotto il programma; ogni richiamo nei momenti
+  conduce al gruppo del giorno e della fascia corrispondenti. Il Forum delle
+  17 resta nel gruppo dalle 16. Home pubblica internal invariata.
+
 ## Programma in tre riquadri giornalieri — 2026-10-10
 
 - Correzione esplicita dell’utente: sempre tre riquadri, uno per ciascun

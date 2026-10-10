@@ -277,7 +277,7 @@ export async function loadCampaignRecipientPreviews(
   eventId: string,
   includePanels = true
 ) {
-  if (!includePanels && recipients.some(recipient => recipient.recipientType === "teacher")) throw new Error("Accesso panel riservato all’amministratore.");
+  if (!includePanels && recipients.some(recipient => recipient.recipientType === "teacher")) throw new Error("Accesso forum riservato all’amministratore.");
   if (!recipients.length) return [];
   const service = createSupabaseServiceClient();
   const participantIds = [

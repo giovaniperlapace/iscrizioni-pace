@@ -49,12 +49,12 @@ export function PanelLocationsSection({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--peace-blue-700)]">
-              Panel
+              Forum
             </p>
             <h2 className="mt-1 text-xl font-semibold">Location</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
               Configura gli spazi fisici dell&apos;evento e la loro capienza massima.
-              Ogni sala può ospitare un solo panel nella stessa fascia oraria.
+              Ogni sala può ospitare un solo forum nella stessa fascia oraria.
             </p>
           </div>
           {canManage && event ? (
@@ -76,7 +76,7 @@ export function PanelLocationsSection({
         {!canManage && event ? (
           <p className="mt-5 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-4 py-3 text-sm text-[var(--peace-muted)]">
             Vista in sola lettura. Il ruolo manager viewer può consultare location,
-            capienze e panel associati, ma non modificarli.
+            capienze e forum associati, ma non modificarli.
           </p>
         ) : null}
 
@@ -98,7 +98,7 @@ export function PanelLocationsSection({
                   defaultValue={query}
                   className="field field-with-leading-icon w-full font-normal"
                   maxLength={EVENT_LOCATION_SEARCH_MAX_LENGTH}
-                  placeholder="Nome, indirizzo o panel"
+                  placeholder="Nome, indirizzo o forum"
                 />
               </span>
             </label>
@@ -215,7 +215,7 @@ function LocationResults({
               <th className="py-3 pr-4 font-semibold">Location</th>
               <th className="py-3 pr-4 font-semibold">Indirizzo</th>
               <th className="py-3 pr-4 font-semibold">Capienza</th>
-              <th className="py-3 pr-4 font-semibold">Panel associati</th>
+              <th className="py-3 pr-4 font-semibold">Forum associati</th>
               <th className="py-3 pl-4 text-right font-semibold">Azioni</th>
             </tr>
           </thead>
@@ -265,7 +265,7 @@ function LocationPanelList({
   compact?: boolean;
 }) {
   if (panels.length === 0) {
-    return <p className={compact ? "text-sm text-[var(--peace-muted)]" : "mt-3 text-sm text-[var(--peace-muted)]"}>Nessun panel associato</p>;
+    return <p className={compact ? "text-sm text-[var(--peace-muted)]" : "mt-3 text-sm text-[var(--peace-muted)]"}>Nessun forum associato</p>;
   }
 
   return (
@@ -388,10 +388,10 @@ function LocationOverlay({
 
               {publishedPanels.length > 0 ? (
                 <div className="rounded-md border border-[#e5cf95] bg-[#fff9e9] px-4 py-3 text-sm leading-6 text-[#6f5414]">
-                  <p className="font-semibold">Capienza collegata a panel pubblicati</p>
+                  <p className="font-semibold">Capienza collegata a forum pubblicati</p>
                   <p className="mt-1">
                     La capienza può essere salvata solo se resta coerente con le sezioni
-                    dei panel pubblicati: {publishedPanels.map((panel) => panel.title).join(", ")}.
+                    dei forum pubblicati: {publishedPanels.map((panel) => panel.title).join(", ")}.
                   </p>
                 </div>
               ) : null}
@@ -462,9 +462,9 @@ function LocationStatus({ error, saved }: { error?: string; saved?: string }) {
     "address-too-long": `L'indirizzo non può superare ${EVENT_LOCATION_ADDRESS_MAX_LENGTH} caratteri.`,
     forbidden: "Non hai permessi di modifica sulle location di questo evento.",
     "not-found": "La location non è stata trovata nell'evento corrente.",
-    "location-in-use": "La location non può essere eliminata perché è associata a uno o più panel.",
-    "published-capacity": "La nuova capienza è inferiore alla somma dei posti delle sezioni di un panel pubblicato. Riduci prima i posti assegnati nel panel.",
-    conflict: "La modifica renderebbe incoerente un panel pubblicato e non è stata salvata.",
+    "location-in-use": "La location non può essere eliminata perché è associata a uno o più forum.",
+    "published-capacity": "La nuova capienza è inferiore alla somma dei posti delle sezioni di un forum pubblicato. Riduci prima i posti assegnati nel forum.",
+    conflict: "La modifica renderebbe incoerente un forum pubblicato e non è stata salvata.",
   };
 
   return (

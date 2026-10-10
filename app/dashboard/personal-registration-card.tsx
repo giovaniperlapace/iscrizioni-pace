@@ -20,10 +20,10 @@ export function PersonalRegistrationCard({
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--peace-muted)]">
             {summary.hasRegistration
-              ? `Puoi consultare QR, dati personali, giorni di presenza e panel${
+              ? `Puoi consultare QR, dati personali, giorni di presenza e forum${
                   summary.eventTitle ? ` per ${summary.eventTitle}` : ""
                 }.`
-              : "Questo ruolo abilita funzioni operative, ma presenza, QR e panel richiedono anche la tua iscrizione personale all'evento."}
+              : "Questo ruolo abilita funzioni operative, ma presenza, QR e forum richiedono anche la tua iscrizione personale all'evento."}
           </p>
         </div>
         <Link

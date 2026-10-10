@@ -16,7 +16,7 @@ export async function writePanelRosterWorkbook(roster: PanelRoster): Promise<Buf
     sheet.pageSetup = { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: "1:1" };
   };
   add("Riepilogo", ["Voce", "Valore"], [
-    ["Panel", roster.title], ["Data export (Roma)", new Date().toLocaleString("it-IT", { timeZone: "Europe/Rome" })],
+    ["Forum", roster.title], ["Data export (Roma)", new Date().toLocaleString("it-IT", { timeZone: "Europe/Rome" })],
     ["Iscritti e minori accompagnati", roster.individualSeats], ["Studenti e accompagnatori scuole", roster.schoolSeats],
     ["Totale posti prenotati", roster.individualSeats + roster.schoolSeats], ["Posti ospiti riservati", roster.reservedGuestSeats],
     ["Prenotati e riservati", roster.individualSeats + roster.schoolSeats + roster.reservedGuestSeats],

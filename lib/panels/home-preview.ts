@@ -15,7 +15,7 @@ export function buildHomePreview(panels: PanelDraftRow[], locations: EventLocati
     }
     const sections = panel.sections.filter(section => section.bookingChannel === "individual");
     for (const section of sections) {
-      if (!Number.isInteger(section.occupied) || section.occupied! < 0) throw new Error("Disponibilità panel non caricata.");
+      if (!Number.isInteger(section.occupied) || section.occupied! < 0) throw new Error("Disponibilità forum non caricata.");
     }
     const remainingSeats = sections.reduce((sum, section) => sum + Math.max(0, section.capacity - section.occupied!), 0);
     complete.push({

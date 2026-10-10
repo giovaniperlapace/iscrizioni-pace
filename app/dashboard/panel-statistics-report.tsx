@@ -85,9 +85,9 @@ export function PanelStatisticsReport({
     <article className="rounded-lg border border-[var(--peace-border)] bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 className="text-base font-semibold">Capienza e prenotazioni panel</h3>
+          <h3 className="text-base font-semibold">Capienza e prenotazioni forum</h3>
           <p className="mt-1 max-w-4xl text-sm leading-6 text-[var(--peace-muted)]">
-            I conteggi usano le scelte panel confermate e le prenotazioni scuola
+            I conteggi usano le scelte forum confermate e le prenotazioni scuola
             attive. Le iscrizioni annullate e le riserve cancellate non occupano
             posti.
           </p>
@@ -100,7 +100,7 @@ export function PanelStatisticsReport({
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <PanelSummaryCard
           icon={CalendarDays}
-          label="Panel filtrati"
+          label="Forum filtrati"
           value={filteredSummary.panelCount}
         />
         <PanelSummaryCard
@@ -178,10 +178,10 @@ export function PanelStatisticsReport({
           }))}
         />
         <PanelFilter
-          label="Panel"
+          label="Forum"
           value={panelFilter}
           onChange={setPanelFilter}
-          allLabel="Tutti i panel"
+          allLabel="Tutti i forum"
           options={statistics.panels.map((panel) => ({
             value: panel.id,
             label: panel.title,
@@ -201,8 +201,8 @@ export function PanelStatisticsReport({
 
       <p className="mt-4 text-sm text-[var(--peace-muted)]" aria-live="polite">
         {filteredPanels.length === statistics.panels.length
-          ? `${filteredPanels.length} ${filteredPanels.length === 1 ? "panel" : "panel"}`
-          : `${filteredPanels.length} di ${statistics.panels.length} panel`}
+          ? `${filteredPanels.length} ${filteredPanels.length === 1 ? "forum" : "forum"}`
+          : `${filteredPanels.length} di ${statistics.panels.length} forum`}
       </p>
 
       <div className="mt-3 grid gap-4">
@@ -220,11 +220,11 @@ export function PanelStatisticsReport({
 
       {statistics.panels.length === 0 ? (
         <p className="mt-4 rounded-md border border-dashed border-[var(--peace-border-strong)] px-4 py-5 text-sm text-[var(--peace-muted)]">
-          Nessun panel configurato per l’evento corrente.
+          Nessun forum configurato per l’evento corrente.
         </p>
       ) : filteredPanels.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--peace-muted)]">
-          Nessun panel corrisponde ai filtri impostati.
+          Nessun forum corrisponde ai filtri impostati.
         </p>
       ) : null}
 
@@ -285,7 +285,7 @@ function PanelStatisticsCard({
             href={panelHref}
             className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)]"
           >
-            {canManage ? "Gestisci panel" : "Apri panel"}
+            {canManage ? "Gestisci forum" : "Apri forum"}
             <ArrowUpRight aria-hidden="true" size={16} />
           </Link>
           {canManage && panel.publicationStatus === "published" ? (

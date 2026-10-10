@@ -97,7 +97,7 @@ export function StatisticsSection({
         ))}
       </nav>
 
-      {(dashboard === "admin" || canManage) && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Panel">
+      {(dashboard === "admin" || canManage) && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Forum">
         <PanelStatisticsReport
           statistics={panelStatistics}
           dashboard={dashboard}

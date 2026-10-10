@@ -1606,7 +1606,7 @@ export async function saveEventLocation(formData: FormData) {
     const errorCode =
       errorMessage.includes("section capacity total") ||
       errorMessage.includes("capacity limit") ||
-      errorMessage.includes("published panels require")
+      errorMessage.includes("published forums require")
         ? "published-capacity"
         : "conflict";
     redirect(`${dashboardPath}&locationError=${errorCode}`);

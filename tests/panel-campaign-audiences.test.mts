@@ -31,7 +31,7 @@ test("P9 panel filters use current canonical confirmed choices", async () => {
   assert.match(recipients, /from\("moment_attendance_choices"\)/);
   assert.match(recipients, /\.eq\("choice", "yes"\)/);
   assert.match(recipients, /\.not\("seat_section_id", "is", null\)/);
-  assert.match(composer, /label="Panel"/);
+  assert.match(composer, /label="Forum"/);
   assert.match(composer, /recipient\.panelIds\.some/);
   assert.match(emailSection, /\.eq\("publication_status", "published"\)/);
   assert.match(emailSection, /locationNameById/);

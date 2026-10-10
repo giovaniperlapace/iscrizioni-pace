@@ -1,5 +1,6 @@
 import { ArrowUp, CalendarDays, CheckCircle2, Clock3, LockKeyhole, MapPin, XCircle } from "lucide-react";
 
+import { getHomePanelSlots } from "@/lib/events/home-program";
 import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { PeaceLineMark } from "@/components/event-identity";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -7,7 +8,7 @@ import type { getMessages } from "@/lib/i18n/messages";
 import {
   formatPanelProgramDay,
   formatPanelProgramTimeRange,
-  groupPublicPanelsByDay,
+  getPanelProgramDayKey,
   type PublicPanelAvailability,
   type PublicPanelProgramItem,
 } from "@/lib/panels/public-program";
@@ -39,7 +40,8 @@ function AvailabilityIcon({ availability }: { availability: PublicPanelAvailabil
 }
 
 export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, showAccessCta = bookingsOpen }: PublicPanelProgramProps) {
-  const groups = groupPublicPanelsByDay(panels);
+  const slots = getHomePanelSlots(panels);
+  const days = [...new Set(slots.map(slot => getPanelProgramDayKey(slot.startsAt)))];
   const programCopy = getEventProgramCopy(locale);
 
   return (
@@ -55,57 +57,65 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
           </p>
         </div>
 
-        {groups.length === 0 ? (
+        {days.length === 0 ? (
           <div className="surface-card mt-8 flex items-start gap-3 p-5 sm:p-6">
             <CalendarDays aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-[var(--peace-blue-700)]" />
             <p className="leading-7 text-[var(--peace-muted)]">{copy.empty}</p>
           </div>
         ) : (
           <div className="mt-10 space-y-10">
-            {groups.map((group) => (
-              <section aria-labelledby={`panel-day-${group.key}`} key={group.key}>
-                <h3 id={`panel-day-${group.key}`} className="flex items-center gap-3 text-xl font-extrabold text-[var(--peace-blue-900)] sm:text-2xl">
+            {days.map((day) => (
+              <section aria-labelledby={`panel-day-${day}`} key={day}>
+                <h3 id={`panel-day-${day}`} className="flex items-center gap-3 text-xl font-extrabold text-[var(--peace-blue-900)] sm:text-2xl">
                   <CalendarDays aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--peace-sky-400)]" />
                   <span className="first-letter:uppercase">
-                    {formatPanelProgramDay(group.startsAt, locale)}
+                    {formatPanelProgramDay(slots.find(slot => getPanelProgramDayKey(slot.startsAt) === day)!.startsAt, locale)}
                   </span>
                 </h3>
-                <ol className="mt-4 grid gap-4 lg:grid-cols-2">
-                  {group.panels.map((panel) => (
-                    <li className="surface-card flex h-full flex-col p-5 sm:p-6" key={panel.id}>
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <p className="flex items-center gap-2 text-sm font-bold text-[var(--peace-blue-800)]">
-                          <Clock3 aria-hidden="true" className="h-4 w-4" />
-                          <time dateTime={panel.startsAt}>
-                            {formatPanelProgramTimeRange(panel.startsAt, panel.endsAt, locale)}
-                          </time>
-                        </p>
-                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${availabilityStyles[panel.availability]}`}>
-                          <AvailabilityIcon availability={panel.availability} />
-                          {copy.availability[panel.availability]}
-                        </span>
-                      </div>
-                      {panel.publicationStatus === "draft" ? <span className="mt-3 w-fit rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900">{programCopy.draft}</span> : null}
-                      <h4 className="mt-4 break-words text-xl font-extrabold leading-tight text-[var(--peace-ink)]">
-                        {panel.title}
-                      </h4>
-                      {panel.description ? (
-                        <p className="mt-3 whitespace-pre-line break-words text-sm leading-6 text-[var(--peace-muted)]">
-                          {panel.description}
-                        </p>
-                      ) : null}
-                      {panel.remainingSeats !== undefined ? <p className="mt-3 text-sm font-semibold text-[var(--peace-blue-800)]">{programCopy.seats}: {panel.remainingSeats}</p> : null}
-                      <address className="mt-auto flex min-w-0 gap-2 break-words pt-5 text-sm not-italic leading-6 text-[var(--peace-ink)]">
-                        <MapPin aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-[var(--peace-blue-700)]" />
-                        <span>
-                          <span className="sr-only">{copy.locationLabel}: </span>
-                          <strong>{panel.locationName}</strong>
-                          {panel.locationAddress ? <span className="block text-[var(--peace-muted)]">{panel.locationAddress}</span> : null}
-                        </span>
-                      </address>
-                    </li>
-                  ))}
-                </ol>
+                {slots.filter(slot => getPanelProgramDayKey(slot.startsAt) === day).map(slot => (
+                  <section id={slot.id} key={slot.id} aria-labelledby={`${slot.id}-title`} className="mt-6 scroll-mt-24">
+                    <h4 id={`${slot.id}-title`} className="flex items-center gap-2 text-lg font-bold text-[var(--peace-blue-800)]">
+                      <Clock3 aria-hidden="true" className="size-4" />
+                      {formatPanelProgramTimeRange(slot.startsAt, slot.endsAt!, locale)}
+                    </h4>
+                    <ol className="mt-4 grid gap-4 lg:grid-cols-2">
+                      {slot.panels.map((panel) => (
+                        <li className="surface-card flex h-full flex-col p-5 sm:p-6" key={panel.id}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <p className="flex items-center gap-2 text-sm font-bold text-[var(--peace-blue-800)]">
+                              <Clock3 aria-hidden="true" className="h-4 w-4" />
+                              <time dateTime={panel.startsAt}>
+                                {formatPanelProgramTimeRange(panel.startsAt, panel.endsAt, locale)}
+                              </time>
+                            </p>
+                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${availabilityStyles[panel.availability]}`}>
+                              <AvailabilityIcon availability={panel.availability} />
+                              {copy.availability[panel.availability]}
+                            </span>
+                          </div>
+                          {panel.publicationStatus === "draft" ? <span className="mt-3 w-fit rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900">{programCopy.draft}</span> : null}
+                          <h5 className="mt-4 break-words text-xl font-extrabold leading-tight text-[var(--peace-ink)]">
+                            {panel.title}
+                          </h5>
+                          {panel.description ? (
+                            <p className="mt-3 whitespace-pre-line break-words text-sm leading-6 text-[var(--peace-muted)]">
+                              {panel.description}
+                            </p>
+                          ) : null}
+                          {panel.remainingSeats !== undefined ? <p className="mt-3 text-sm font-semibold text-[var(--peace-blue-800)]">{programCopy.seats}: {panel.remainingSeats}</p> : null}
+                          <address className="mt-auto flex min-w-0 gap-2 break-words pt-5 text-sm not-italic leading-6 text-[var(--peace-ink)]">
+                            <MapPin aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-[var(--peace-blue-700)]" />
+                            <span>
+                              <span className="sr-only">{copy.locationLabel}: </span>
+                              <strong>{panel.locationName}</strong>
+                              {panel.locationAddress ? <span className="block text-[var(--peace-muted)]">{panel.locationAddress}</span> : null}
+                            </span>
+                          </address>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                ))}
               </section>
             ))}
           </div>

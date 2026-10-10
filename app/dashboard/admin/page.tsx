@@ -569,7 +569,7 @@ export default async function AdminDashboardPage({
   if (rosterId) {
     try {
       panelRoster = await loadPanelRoster(serviceSupabase, rosterId, auth.eventRoles);
-      if (!panelRoster) panelRosterError = "Il panel non è disponibile nell’evento corrente.";
+      if (!panelRoster) panelRosterError = "Il forum non è disponibile nell’evento corrente.";
     } catch {
       panelRosterError = "Impossibile caricare l’elenco completo. Riprova.";
     }
@@ -1273,7 +1273,7 @@ function AdminSidebar({
       key: "panel",
       href: adminPath("panel", navMode),
       Icon: DeskMicrophoneIcon,
-      label: "Panel",
+      label: "Forum",
       help: "Location e programma",
     },
     {

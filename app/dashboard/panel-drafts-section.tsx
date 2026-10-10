@@ -63,12 +63,12 @@ export function PanelDraftsSection({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--peace-blue-700)]">
-              Panel
+              Forum
             </p>
-            <h2 className="mt-1 text-xl font-semibold">Catalogo panel</h2>
+            <h2 className="mt-1 text-xl font-semibold">Catalogo forum</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">
               Prepara contenuti, orari, location e quote di posti, poi pubblica
-              singoli panel o una selezione completa.
+              singoli forum o una selezione completa.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -80,7 +80,7 @@ export function PanelDraftsSection({
                 className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
               >
                 <Plus className="size-4" aria-hidden="true" />
-                Nuovo panel
+                Nuovo forum
               </Link>
             ) : null}
           </div>
@@ -92,7 +92,7 @@ export function PanelDraftsSection({
 
         {!canManage && event ? (
           <p className="mt-5 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] px-4 py-3 text-sm text-[var(--peace-muted)]">
-            Vista in sola lettura. Il ruolo manager viewer può consultare panel e
+            Vista in sola lettura. Il ruolo manager viewer può consultare forum e
             distribuzione dei posti, ma non modificarli.
           </p>
         ) : null}
@@ -197,10 +197,10 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
       <div role="dialog" aria-modal="true" aria-labelledby="panel-dialog-title" className="grid max-h-[94vh] w-full max-w-3xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
           <div>
-            <h3 id="panel-dialog-title" className="text-xl font-semibold">{panel ? (canEdit ? "Modifica panel" : "Dettaglio panel") : "Nuovo panel"}</h3>
+            <h3 id="panel-dialog-title" className="text-xl font-semibold">{panel ? (canEdit ? "Modifica forum" : "Dettaglio forum") : "Nuovo forum"}</h3>
             <p className="mt-1 text-sm text-[var(--peace-muted)]">{event.title} · orari Europe/Rome</p>
           </div>
-          <Link href={closePath} scroll={false} className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)]" aria-label="Chiudi modale panel">
+          <Link href={closePath} scroll={false} className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)]" aria-label="Chiudi modale forum">
             <X className="size-5" aria-hidden="true" />
           </Link>
         </div>
@@ -221,19 +221,19 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
               <div className="px-5 py-5">
                 {panel?.publicationStatus === "published" ? (
                   <div className="mb-5 grid gap-2 rounded-md border border-[#c9d9e7] bg-[#f2f8fc] px-4 py-3 text-sm">
-                    <p className="font-semibold">Modifica di un panel già pubblicato</p>
+                    <p className="font-semibold">Modifica di un forum già pubblicato</p>
                     <p className="text-[var(--peace-muted)]">
-                      Le modifiche aggiornano il panel mantenendo le prenotazioni esistenti. Saranno visibili al pubblico quando il catalogo sarà aperto.
+                      Le modifiche aggiornano il forum mantenendo le prenotazioni esistenti. Saranno visibili al pubblico quando il catalogo sarà aperto.
                       {panel.confirmedRegistrationCount > 0
                         ? ` Le persone già iscritte coinvolte sono ${panel.confirmedRegistrationCount}.`
-                        : " Non risultano ancora persone iscritte a questo panel."}
+                        : " Non risultano ancora persone iscritte a questo forum."}
                     </p>
                     {panel.confirmedRegistrationCount > 0 ? (
                       <Link
                         href={`/dashboard/${dashboard}?section=email&nav=${navMode}&campaignPanel=${encodeURIComponent(panel.id)}`}
                         className="w-fit text-xs font-semibold text-[var(--peace-blue-800)] underline decoration-1 underline-offset-4"
                       >
-                        Prepara una comunicazione per le persone iscritte a questo panel
+                        Prepara una comunicazione per le persone iscritte a questo forum
                       </Link>
                     ) : null}
                   </div>
@@ -254,7 +254,7 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
           </form>
         ) : (
           <div className="grid gap-4 overflow-y-auto px-5 py-5 text-sm">
-            <p>Il panel è disponibile in sola lettura per il tuo ruolo.</p>
+            <p>Il forum è disponibile in sola lettura per il tuo ruolo.</p>
             {panel?.description ? <p className="whitespace-pre-wrap leading-6 text-[var(--peace-muted)]">{panel.description}</p> : null}
             <dl className="grid gap-3 rounded-md border border-[var(--peace-border)] p-4 sm:grid-cols-2">
               <Detail label="Orario" value={formatSchedule(panel!)} />
@@ -288,28 +288,28 @@ function PanelOverlay({ dashboard, navMode, event, panel, panels, locations, aud
 function PanelStatus({ error, saved }: { error?: string; saved?: string }) {
   if (saved) {
     const messages: Record<string, string> = {
-      created: "Bozza panel creata.",
-      updated: "Bozza panel aggiornata.",
-      published: "Panel pubblicato.",
-      "batch-published": "I panel selezionati sono stati pubblicati.",
-      "already-published": "I panel selezionati risultano già pubblicati.",
-      "published-updated": "Panel pubblicato aggiornato.",
+      created: "Bozza forum creata.",
+      updated: "Bozza forum aggiornata.",
+      published: "Forum pubblicato.",
+      "batch-published": "I forum selezionati sono stati pubblicati.",
+      "already-published": "I forum selezionati risultano già pubblicati.",
+      "published-updated": "Forum pubblicato aggiornato.",
     };
-    return <SuccessMessage key={randomUUID()} clearQuery className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">{messages[saved] ?? "Operazione panel completata."}</SuccessMessage>;
+    return <SuccessMessage key={randomUUID()} clearQuery className="mt-5 rounded-md border border-[#bbd7bd] bg-[#eef8ef] px-3 py-2 text-sm text-[#255532]">{messages[saved] ?? "Operazione forum completata."}</SuccessMessage>;
   }
   if (!error) return null;
   const messages: Record<string, string> = {
     invalid: "Controlla titolo, descrizione, orari, location e sezioni.",
-    forbidden: "Non hai permessi di modifica sui panel di questo evento.",
-    "not-found": "Il panel non è stato trovato o non è più modificabile.",
+    forbidden: "Non hai permessi di modifica sui forum di questo evento.",
+    "not-found": "Il forum non è stato trovato o non è più modificabile.",
     "duplicate-audience": "Ogni tipo di pubblico può comparire una sola volta.",
-    overlap: "La location è già occupata da un altro panel in questa fascia oraria.",
+    overlap: "La location è già occupata da un altro forum in questa fascia oraria.",
     "outside-event": "Gli orari devono rientrare nelle date dell'evento.",
     "booked-capacity": "La quota per gli iscritti non può scendere sotto le prenotazioni già confermate.",
     "capacity-total": "La somma dei posti delle sezioni non può superare la capienza della location.",
     "publish-selection": "Seleziona almeno una bozza da pubblicare.",
-    "publish-invalid": "La selezione contiene un panel incompleto: nessun panel è stato pubblicato.",
-    "publish-failed": "Non è stato possibile pubblicare i panel selezionati. Nessun panel è stato modificato.",
+    "publish-invalid": "La selezione contiene un forum incompleto: nessun forum è stato pubblicato.",
+    "publish-failed": "Non è stato possibile pubblicare i forum selezionati. Nessun forum è stato modificato.",
   };
   return <p className="mt-5 rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">{messages[error] ?? "Non è stato possibile salvare la bozza."}</p>;
 }

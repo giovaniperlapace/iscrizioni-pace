@@ -166,7 +166,7 @@ export async function getPanelDraftCatalog(
 
     const sections = sectionsByPanel.get(row.panel_id) ?? [];
     const occupied = occupancy.get(row.id);
-    if (!Number.isInteger(occupied) || occupied! < 0) throw new Error("Disponibilità panel non caricata.");
+    if (!Number.isInteger(occupied) || occupied! < 0) throw new Error("Disponibilità forum non caricata.");
     sections.push({
       id: row.id,
       audienceTypeId: row.audience_type_id,
@@ -180,7 +180,7 @@ export async function getPanelDraftCatalog(
 
   const panels = panelRows.map((row) => {
     const location = row.location_id ? locationsById.get(row.location_id) : null;
-    if (row.location_id && !location) throw new Error("Location panel non caricata.");
+    if (row.location_id && !location) throw new Error("Location forum non caricata.");
     const sections = (sectionsByPanel.get(row.id) ?? []).sort((left, right) =>
       audienceOrder.get(left.audienceTypeId)! - audienceOrder.get(right.audienceTypeId)!
     );
