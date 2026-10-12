@@ -6,7 +6,7 @@ import { ParticipantBirthDateField } from "@/components/participant-birth-date-f
 import { publicChildBirthDateBounds } from "@/lib/registrations/public-child-age";
 
 import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
-import { OTHER_PHONE_PREFIX, PHONE_PREFIX_OPTIONS } from "@/lib/registrations/phone-prefixes";
+import { OTHER_PHONE_PREFIX, PHONE_NUMBER_PATTERN, PHONE_PREFIX_OPTIONS, PHONE_PREFIX_PATTERN } from "@/lib/registrations/phone-prefixes";
 
 import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { migratePublicRegistrationDrafts } from "@/lib/forms/public-draft";
@@ -1336,7 +1336,7 @@ export function RegistrationForm({
               className="field"
               autoComplete="tel-national"
               inputMode="tel"
-              pattern="[0-9 .()\\-]{4,14}"
+              pattern={PHONE_NUMBER_PATTERN}
               title={copy.phoneTitle}
               placeholder={copy.phoneNumberPlaceholder}
               value={phoneNumber}
@@ -1349,7 +1349,7 @@ export function RegistrationForm({
               <input
                 className="field"
                 inputMode="tel"
-                pattern="\\+[1-9][0-9]{0,3}"
+                pattern={PHONE_PREFIX_PATTERN}
                 placeholder={copy.phonePrefixPlaceholder}
                 required={phoneNumber.length > 0}
                 title={copy.phonePrefixLabel}

@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Prefissi telefonici personalizzati — 2026-10-12
+
+- Richiesta di correzione in production per il prefisso Mongolia +976.
+  Riprodotto sul dominio reale: il pattern JSX del campo Altro interpretava
+  male il segno + e rifiutava anche prefissi a due cifre. Nessun limite a due
+  cifre nel server, che accetta e normalizza già il numero mongolo.
+- Pattern HTML condivisi per iscrizione pubblica e inserimento gestionale;
+  corretti anche i caratteri del numero nazionale per la validazione moderna
+  del browser. Conservati formati ammessi, lunghezze, lingue e telefono opzionale.
+- Verificati 757 test, ESLint, TypeScript, build production e browser locale
+  con dati sintetici, senza inviare form. Rilascio production richiesto
+  dall’utente; nessuna migration, modifica di iscrizioni o email.
+
 ## Futura home: destinazione pulsante finale — 2026-10-10
 
 - Correzione esplicita con immagine dell’utente: il richiamo finale deve tornare

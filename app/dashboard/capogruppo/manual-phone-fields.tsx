@@ -4,7 +4,7 @@ import { RequiredIndicator } from "@/components/required-indicator";
 import { useId, useState } from "react";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { PHONE_INPUT_COPY } from "@/lib/i18n/phone-input";
-import { OTHER_PHONE_PREFIX, PHONE_PREFIX_OPTIONS } from "@/lib/registrations/phone-prefixes";
+import { OTHER_PHONE_PREFIX, PHONE_NUMBER_PATTERN, PHONE_PREFIX_OPTIONS, PHONE_PREFIX_PATTERN } from "@/lib/registrations/phone-prefixes";
 
 export function ManualPhoneFields({ locale, label }: { locale: SupportedLocale; label: string }) {
   const [prefix, setPrefix] = useState("+39");
@@ -34,14 +34,14 @@ export function ManualPhoneFields({ locale, label }: { locale: SupportedLocale; 
           <option value={OTHER_PHONE_PREFIX}>{copy.phoneOther}</option>
         </select>
         <input id={numberId} type="tel" className="field min-w-0" autoComplete="tel-national"
-          inputMode="tel" pattern="[0-9 .()\-]{4,14}" title={copy.phoneTitle}
+          inputMode="tel" pattern={PHONE_NUMBER_PATTERN} title={copy.phoneTitle}
           placeholder={copy.phoneNumberPlaceholder} value={number} data-field="phone"
           onChange={event => setNumber(event.target.value)} />
       </div>
       {prefix === OTHER_PHONE_PREFIX ? (
         <label className="grid gap-1">
           <span>{copy.phonePrefixLabel}{number.length > 0 ? <RequiredIndicator /> : null}</span>
-          <input type="tel" className="field" inputMode="tel" pattern="\+[1-9][0-9]{0,3}"
+          <input type="tel" className="field" inputMode="tel" pattern={PHONE_PREFIX_PATTERN}
             aria-label={copy.phonePrefixLabel} placeholder={copy.phonePrefixPlaceholder}
             required={number.length > 0} value={customPrefix} data-field="phone"
             onChange={event => setCustomPrefix(event.target.value)} />

@@ -1,5 +1,9 @@
 export const OTHER_PHONE_PREFIX = "other";
 
+// Share HTML patterns as JavaScript strings to avoid JSX backslash escaping errors.
+export const PHONE_PREFIX_PATTERN = "[+][1-9][0-9]{0,3}";
+export const PHONE_NUMBER_PATTERN = String.raw`[0-9 .\(\)\-]{4,14}`;
+
 export const PHONE_PREFIX_OPTIONS = [
   { country: "IT", value: "+39", label: "Italia +39" },
   { country: "FR", value: "+33", label: "Francia +33" },
