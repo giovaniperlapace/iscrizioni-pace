@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Download QR personale su Safari iPhone — 2026-10-12
+
+- Segnalazione dell’utente: pulsante Scarica immagine nell’area personale,
+  Safari su iPhone. Il precedente link data: funziona nella prova Safari Mac;
+  il blocco sul dispositivo iPhone non è stato riprodotto direttamente.
+- Preparata localmente una risposta HTTP autenticata PNG attachment in
+  `/dashboard/partecipante/qr/download`, collegata al pulsante esistente.
+  Identità, nome file e iscrizione corrente derivano dalla sessione e dal DB;
+  eventuali ID/nominativi in URL non selezionano altre persone. Anche i ruoli
+  operativi scaricano soltanto il proprio QR da questo percorso personale.
+- Riutilizzato il token esistente e il renderer nominativo. Rilettura dell’ultimo
+  token al download, con revoca/scadenza e cache privata no-store; nessuna
+  generazione, rotazione, migration, modifica dati o email. Altre dashboard
+  conservate. Test mirati coprono accesso, scope, PNG, nomi internazionali,
+  oltre 1.000 righe, stati e errori. Verificati 763 test, lint, TypeScript,
+  build e download Safari Mac con pulsante/handler reali e soli dati sintetici.
+- L’utente autorizza commit/push su main e il normale rilascio automatico
+  Vercel. La prova finale sull’iPhone dell’utente resta da effettuare dopo
+  la pubblicazione. Branch panel e stash conservati.
+
 ## Prefissi telefonici personalizzati — 2026-10-12
 
 - Richiesta di correzione in production per il prefisso Mongolia +976.

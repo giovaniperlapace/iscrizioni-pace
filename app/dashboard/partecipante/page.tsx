@@ -1829,7 +1829,7 @@ function QrActionButtons({
     <div className="grid gap-2">
       {qrDataUrl ? (
         <a
-          href={qrDataUrl}
+          href="/dashboard/partecipante/qr/download"
           download={participantQrFilename(participantName)}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
         >
