@@ -14,10 +14,13 @@
 - Verificati internal, catalogo pubblico vuoto, coda vuota e worker service-only.
   Il Forum già configurato pubblico resta nascosto dal gate, senza cambiare
   configurazioni. Timer email attivo e funzionante; nessuna variabile modificata.
-- Rilascio dal normale push Git su main; verificare READY e alias del dominio,
-  testo home e chiusura Forum. Nessun account, iscrizione, token o presenza
-  modificati dalla migration; nessuna email di collaudo. Dettagli in
-  `docs/forum-waitlist-2026-10-14.md`; esito deployment nella chat del rilascio.
+- Commit funzionale `f11353b` pubblicato su main; deployment production
+  `dpl_rYqV6KZQfEQAswbpTt1zpTWVaBRG` READY, alias del dominio assegnato.
+  Testo visibile home identico; REST anon conferma internal e cataloghi vuoti,
+  scuole chiuse, Forum indisponibili e endpoint personale protetto dal login.
+  Worker già eseguito automaticamente con coda vuota; timer concluso con successo,
+  nessun error/fatal restituito dai log. Nessun account, iscrizione, token,
+  presenza o email di collaudo. Dettagli in `docs/forum-waitlist-2026-10-14.md`.
 
 ## Coda FIFO e vincolo di fascia Forum — 2026-10-14
 

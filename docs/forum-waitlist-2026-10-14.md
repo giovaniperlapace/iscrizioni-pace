@@ -32,11 +32,20 @@ ruolo/account o email di prova modificati/creati. Timer systemd email attivo,
 ultimo servizio concluso con successo; variabili Vercel production richieste
 presenti. Nessuna configurazione del timer o delle variabili modificata.
 
-Il push autorizzato su main avvia il normale deployment Git Vercel del progetto
-`giovaniperlapaces-projects/iscrizioni-pace`. Al termine controllare la revisione
-pubblicata, lo stato READY, l’alias `registrationspeace.santegidio.org`, il testo
-visibile della home, i redirect di Forum/scuole e il gate DB. Il risultato del
-controllo deployment viene riportato nella chat del rilascio.
+Il commit funzionale `f11353b37eab7c526a5d984f31046e70906bc044` è stato
+pubblicato su main. Deployment production
+`dpl_rYqV6KZQfEQAswbpTt1zpTWVaBRG` READY, alias del dominio assegnato senza
+errori. [Riscontro Vercel](https://vercel.com/giovaniperlapaces-projects/iscrizioni-pace/rYqV6KZQfEQAswbpTt1zpTWVaBRG).
+
+Sul dominio: home HTTP 200 con testo visibile identico al precedente
+(SHA-256 `97223b01137624935e95a5f4daaf97f77019b45e04aed88bd16e0cf6fde98c7d`);
+scuole/accesso scuola reindirizzati alla home, ingresso Forum indisponibile,
+endpoint personale protetto dal login e cron anonimo HTTP 401. REST anon
+conferma `internal`, programma pubblico vuoto e opzioni scuole vuote. Nessun
+record error/fatal restituito dai log del nuovo deployment. Il worker ha già
+aggiornato automaticamente la scadenza del controllo; coda rimasta vuota e
+servizio del timer concluso con successo. Nessun avvio manuale del cron o
+invio email di collaudo eseguito.
 
 Preparazione iniziale locale su `main`, su richiesta dell’utente. Identificatori panel
 conservati; testi operativi Forum. Home pubblica e modalità `internal` invariati.

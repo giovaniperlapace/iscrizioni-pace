@@ -27,7 +27,7 @@ try {
   try {file(join('supabase/migrations',name));}catch(e){throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  console.log('PASS canonical migrations and Forum queue applied to disposable PostgreSQL');
- try { console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);} 
+ try { console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
  if(process.argv.includes('--browser')) {
   psql(`update panel_waitlist set status='cancelled' where registration_id=fw(103) and status='waiting';`);
   const {checkForumServerActions}=await import('../browser/forum-waitlist-actions.mjs');await checkForumServerActions(psql);
