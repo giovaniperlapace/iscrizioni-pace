@@ -39,9 +39,11 @@ richiedono ancora la prova reale.
 3. Confermare accesso Admin, computer, sistema, versione Chrome, modello
    esatto, driver, USB/rete, codice/larghezza del consumabile e rotolo montato.
    Per oggi iniziare preferibilmente dal Mac; Windows rimane prova distinta.
-4. Dopo il rilascio, aprire dall’Admin la dashboard Accoglienza. Il percorso
-   `/dashboard/admin/stampa-qr/collaudo` produce solo campioni sintetici ed è
-   indipendente dalla coda applicativa. Non crea iscrizioni, token o presenze.
+4. Il collaudo operativo passa dai pulsanti reali: Stampa etichetta QR nella
+   scheda Admin e Stampa QR del gruppo nella gestione gruppi. Usare iscrizioni
+   sintetiche/staging con QR già esistenti. La pagina
+   `/dashboard/admin/stampa-qr/collaudo` rimane uno strumento ausiliario per
+   la sola calibrazione della carta, senza passaggio obbligatorio.
 5. Lo scanner operativo è disponibile solo con migration di attivazione
    presente. Registra realmente ingressi: provarlo solo su dati sintetici e
    staging. Non scansionare partecipanti reali o i campioni di calibrazione
@@ -95,26 +97,28 @@ Il launcher è per macOS: non dichiararlo compatibile o collaudato Windows.
 
 ## Ordine delle prove fisiche, una alla volta
 
-1. **Singola Ada / TEST-101**: una sola pressione. Attendere il riscontro
+1. Aprire la scheda Admin di un partecipante sintetico con QR attivo esistente.
+   Scegliere la carta effettivamente caricata e confermare le impostazioni.
+   Una sola pressione di **Stampa etichetta QR**. Attendere il riscontro
    dell’operatore su quantità uscita, separazione, allineamento, nome/QR/codice.
 2. Misurare larghezza e lunghezza dell’etichetta, margini e nero QR atteso
    circa 16,8 mm; sorgente con quiet zone esatta di quattro moduli. Nessun
    ritaglio manuale sul continuo. Leggere con Pixel e iPhone e verificare il
    testo completo, senza utilizzare lo scanner operativo dell’app.
-3. Ripetere singolarmente nome lungo, nome internazionale e cirillico.
-   Ogni campione usa un payload sintetico differente; i codici TEST-101–104
-   non sono il contenuto del QR. Non troncare i nominativi.
-4. Solo dopo conferma della singola, lotto di quattro campioni: un avvio,
-   quattro etichette e quattro tagli. Verificare ciascun abbinamento e QR
-   su entrambi i telefoni. Il checkbox della pagina guida il collaudo e non
-   costituisce un registro condiviso né una certificazione fisica.
-5. Su fixture applicative sintetiche/staging, aprire la scheda Admin o il
-   gruppo: leggere elenco, quantità ed esclusioni. Verificare sottogruppi
-   esclusi e figli sul QR genitore. Non creare/ruotare token per stampare.
-6. Confermare fisicamente solo le etichette realmente prodotte. Interrompere
-   un lotto, riaprire su un’altra sessione/postazione e rileggere la coda:
-   i tentativi incerti rimangono da verificare. Selezionare soltanto le copie
-   mancanti per la ristampa esplicita; non ripetere automaticamente il lotto.
+3. Ripetere dalle schede di prova con nome lungo, internazionale e cirillico,
+   ciascuna con il proprio QR esistente. Non troncare i nominativi né
+   creare/ruotare token per ottenere un’etichetta.
+4. Solo dopo conferma della singola, usare **Stampa QR del gruppo** su un
+   gruppo sintetico: leggere elenco e quantità prima dell’avvio. Iscrizioni
+   eliminate assenti anche dai conteggi; annullate o con QR non valido
+   indicate come non stampabili. Sottogruppi esclusi, figli sul QR genitore.
+   Con quattro persone stampabili verificare un avvio, quattro etichette,
+   quattro tagli e ciascun abbinamento/QR su entrambi i telefoni.
+5. Premere **Conferma etichetta** solo per le copie realmente uscite corrette.
+   Il messaggio dopo la stampa chiede il controllo e non conferma l’uscita.
+6. Interrompere un lotto, riaprire su un’altra sessione/postazione e premere
+   **Aggiorna elenco**: le etichette incerte restano da controllare.
+   Ristampare esplicitamente soltanto le copie mancanti o rovinate.
 7. Prima dell’accettazione P14, provare almeno 30 etichette consecutive;
    il lotto iniziale da quattro non conclude la milestone.
 8. Provare due richieste concorrenti, perdita di risposta, stampante
@@ -125,6 +129,11 @@ I campioni della pagina non sono QR validi di persone nel database: uno
 scanner operativo deve respingerli. Il successo del caso valido nello scanner
 si verifica separatamente sulle fixture staging già predisposte; nessun
 campione viene creato in production da questa tranche.
+
+Le modali operative mostrano scelta della carta, elenco e comandi con testi
+semplici. Le impostazioni complete sono raccolte nella sezione espandibile
+**Come configurare la stampante**. Il registro condiviso conserva tentativi
+e dettagli tecnici; questi non vengono mostrati come istruzioni all’operatore.
 
 ## Coda e badge completo
 

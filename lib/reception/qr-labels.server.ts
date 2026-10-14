@@ -36,6 +36,9 @@ export async function executeLabelCommand(session: SupabaseClient, service: () =
     const safe: LabelItem[] = [];
     for (const item of items) {
       if (typeof item.registrationId !== "string" || typeof item.name !== "string" || !["pending","prepared","verified"].includes(item.state) || !Number.isSafeInteger(item.attempts)) return { status: "unavailable" };
+      // Keep the canonical snapshot for atomic claims, but omit deleted group
+      // members from every response and from the set that can be printed.
+      if (command.groupId && item.reason === "deleted") continue;
       let reason = item.reason;
       if (!reason && (!item.code || !item.code.trim())) reason = "identity";
       if (!reason) {

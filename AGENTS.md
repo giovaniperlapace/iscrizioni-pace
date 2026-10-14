@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Modali stampa semplificate ed eliminati esclusi — 2026-10-14
+
+- L’utente richiede collaudo dai pulsanti operativi reali, senza passaggio
+  obbligatorio dalla pagina ausiliaria /stampa-qr/collaudo. Prove con campioni
+  applicativi sintetici; nessuna prova hardware dichiarata conclusa.
+- Modale individuale/gruppo: testi semplici, stati Da stampare / Controlla
+  l’etichetta / Etichetta confermata, Aggiorna elenco e Conferma etichetta.
+  Istruzioni stampante espandibili; carta e conferma configurazione conservate.
+  Testi Stampa etichetta QR / Ristampa etichetta QR invariati.
+- Iscrizioni eliminate escluse lato server dagli elenchi e conteggi etichette
+  del gruppo, anche se esiste uno storico di stampa. Una richiesta di ristampa
+  col loro ID viene respinta prima di acquisire il tentativo. Annullate e QR
+  non validi restano visibili come non stampabili. Snapshot e registro DB
+  conservati; nessuna migration o modifica di dati applicativi necessaria.
+- Verificati sette test mirati, lint, TypeScript e browser sintetico con
+  stampa simulata, conferma esplicita, ristampa selettiva e layout mobile.
+  Correzione nel rilascio main già autorizzato, sempre solo Admin.
+
 ## Rilascio main e migration Admin autorizzati — 2026-10-14
 
 - L’utente autorizza esplicitamente commit, push e migration necessarie per

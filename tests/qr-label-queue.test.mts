@@ -52,3 +52,31 @@ test("multipage documents retain distinct QR symbols, complete names and separat
   assert.equal(new Set([...html.matchAll(/<path d="([^"]+)" fill="black"/g)].map(m=>m[1])).size,4);
   const legacy=await renderQrLabelsHtml(QR_LABEL_SAMPLES.slice(0,1),"die-cut-29x90");assert.match(legacy,/size:29mm 90mm/);assert.match(legacy,/class="marks"/);
 });
+test("group label responses omit deleted registrations and reject forged reprints without claiming", async(t)=>{
+  const before=process.env.QR_TOKEN_ENCRYPTION_SECRET;
+  process.env.QR_TOKEN_ENCRYPTION_SECRET="synthetic-deleted-label-test";
+  t.after(()=>{if(before===undefined)delete process.env.QR_TOKEN_ENCRYPTION_SECRET;else process.env.QR_TOKEN_ENCRYPTION_SECRET=before;});
+  const token=QR_LABEL_SAMPLES[0].token;
+  const active={registrationId:id,name:"Ada Mori",code:"TEST-101",firstName:"Ada",lastName:"Mori",reason:null,state:"pending",attempts:0,outcome:null,content:"b".repeat(64),printedContent:null,encrypted:encryptQrToken(token),hash:hashQrToken(token)};
+  const cancelledId="33333333-3333-4333-8333-333333333333";
+  const rows=[active,{...active,registrationId:req,name:"Nome eliminato di prova",code:"HIDE",reason:"deleted",state:"verified",attempts:1},
+    {...active,registrationId:cancelledId,reason:"cancelled"}];
+  const calls:string[]=[];
+  const db={rpc:async(_name:string,args:{p_action:string;p_group:string|null;p_registration:string|null})=>{
+    calls.push(args.p_action);
+    return {data:{status:"queue",snapshot,items:args.p_group?rows:rows.filter(i=>i.registrationId===args.p_registration)},error:null};
+  }} as unknown as SupabaseClient;
+  const result=await executeLabelCommand(session("admin"),()=>db,{groupId:id,action:"read"});
+  assert.equal(result.status,"queue");
+  if(result.status!=="queue")return;
+  assert.deepEqual(result.items.map(i=>i.registrationId),[id,cancelledId]);
+  assert.equal(result.items[1].reason,"cancelled");
+  assert.equal(result.snapshot,snapshot);
+  for(const hidden of [req,"Nome eliminato di prova","HIDE"])assert.ok(!JSON.stringify(result).includes(hidden));
+  calls.length=0;
+  const forged=await executeLabelCommand(session("admin"),()=>db,{groupId:id,action:"reprint",ids:[req],snapshot,requestId:req,profile:"continuous-29x45"});
+  assert.equal(forged.status,"conflict");assert.deepEqual(calls,["read"]);
+  const individual=await executeLabelCommand(session("admin"),()=>db,{registrationId:req,action:"read"});
+  assert.equal(individual.status,"queue");
+  if(individual.status==="queue")assert.equal(individual.items[0].reason,"deleted");
+});
