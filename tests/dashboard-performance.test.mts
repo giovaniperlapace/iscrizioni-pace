@@ -38,7 +38,7 @@ test("dashboard sections execute only the queries needed by their visible conten
   for (const role of ["admin", "manager", "manager_viewer", "foreign_manager", "foreign_viewer"]) {
     const foreign = role.startsWith("foreign_");
     const dashboard = role === "admin" ? "admin" : "manager";
-    for (const section of ["dashboard", "attendance", "age", "registrations", "panels", "panel", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])].filter(section => foreign ? section === "dashboard" : role !== "manager_viewer" || ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti"].includes(section))) {
+    for (const section of ["dashboard", "attendance", "arrivals", "age", "registrations", "panels", "panel", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])].filter(section => foreign ? ["dashboard", "arrivals"].includes(section) : role !== "manager_viewer" || ["dashboard", "attendance", "arrivals", "age", "registrations", "disability", "disability-people", "iscritti"].includes(section))) {
       const reads: string[] = [];
       const db = { from(table: string) {
         const query = new Proxy({}, { get: (_, key) => key === "then"
@@ -78,7 +78,7 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/operational-users/identity": { getOperationalUserIdentities: async () => new Map() },
       };
       const page = compile(`app/dashboard/${dashboard}/page.tsx`, modules, true).default;
-      await page({ searchParams: Promise.resolve({ section: ["disability", "attendance", "age", "registrations", "panels"].includes(section) ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(["disability", "attendance", "age", "registrations", "panels"].includes(section) ? { report: section } : {}) }) } as never);
+      await page({ searchParams: Promise.resolve({ section: ["disability", "attendance", "arrivals", "age", "registrations", "panels"].includes(section) ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(["disability", "attendance", "arrivals", "age", "registrations", "panels"].includes(section) ? { report: section } : {}) }) } as never);
       const context = `${role}/${section}`;
       assert.equal(reads.includes("participant-associations"), ["iscritti", "disability-people"].includes(section), context);
       assert.equal(reads.includes("email-delegations"), ["iscritti", "disability-people"].includes(section), context);

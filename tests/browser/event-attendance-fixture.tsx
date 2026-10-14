@@ -24,6 +24,7 @@ export default function Fixture() {
   const [selected, setSelected] = useState(false);
   const [schoolSelected, setSchoolSelected] = useState(false);
   const [version, setVersion] = useState(0);
+  const [reportRead, setReportRead] = useState(0);
   useEffect(() => {
     const original = window.fetch;
     let mode = "absent";
@@ -55,7 +56,8 @@ export default function Fixture() {
     <h1>Collaudo ingressi evento</h1>
     <div className="flex flex-wrap gap-3">{["entered", "absent", "error", "forbidden"].map(mode => <button key={mode} className="btn-secondary p-3" onClick={() => { window.dispatchEvent(new CustomEvent("fixture-attendance", { detail: mode })); setVersion(n => n + 1); }}>{mode}</button>)}<button className="btn-secondary p-3" onClick={() => { window.history.replaceState(null, "", `${window.location.pathname}?edit=registration`); setSelected(true); }}>Apri scheda</button></div>
     <p data-version={version}>Cambio sul server simulato: {version}</p>
-    {ready && <><EventAttendanceReport eventId={eventId} /><div className="min-w-0" data-participant-view><OperationsParticipantsTable
+    <button onClick={() => setReportRead(value => value + 1)}>Aggiorna report ingressi</button>
+    {ready && <><EventAttendanceReport key={reportRead} eventId={eventId} /><div className="min-w-0" data-participant-view><OperationsParticipantsTable
       snapshot={{ participants: [row], allParticipants: [row], groupOptions: [], operationalTags: [], eventServices: [], filters: parseOperationsDashboardFilters({}) }}
       selectedParticipant={selected ? row : null} editableEventIds={[eventId]} dashboard="admin" navMode="full" canDeleteRegistration={false} operatorId="fixture" eventId={eventId} eventStartsOn="2026-10-25"
     /></div>{(["iscritti", "panel"] as const).map(sourceSection => <div key={sourceSection} data-school-view={sourceSection}>

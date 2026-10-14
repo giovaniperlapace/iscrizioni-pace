@@ -20,7 +20,7 @@ export function EventAttendanceProvider({ eventId, summaryOnly = false, children
     let blocked = false;
     let controller: AbortController | null = null;
     async function refresh() {
-      if (document.hidden || busy || blocked) return;
+      if ((!summaryOnly && document.hidden) || busy || blocked) return;
       busy = true;
       controller = new AbortController();
       const timeout = setTimeout(() => controller?.abort(), 15000);
@@ -37,6 +37,7 @@ export function EventAttendanceProvider({ eventId, summaryOnly = false, children
       } finally { clearTimeout(timeout); busy = false; }
     }
     void refresh();
+    if (summaryOnly) return () => { disposed = true; controller?.abort(); };
     const timer = setInterval(() => void refresh(), 10000);
     const visible = () => void refresh();
     document.addEventListener("visibilitychange", visible);
@@ -46,7 +47,7 @@ export function EventAttendanceProvider({ eventId, summaryOnly = false, children
   const current = state.data?.eventId === eventId ? state : { data: null, error: state.error };
   return <AttendanceContext.Provider value={current}>
     <div className="my-3 flex flex-wrap items-center gap-3 text-sm text-[var(--peace-muted)]">
-      <p role="status">{!eventId ? "Nessun evento disponibile." : current.error ? "Presenze non disponibili. Verifica la connessione e l’accesso." : current.data ? `Ingressi evento aggiornati il ${date(current.data.updatedAt)} · aggiornamento automatico ogni 10 secondi.` : "Caricamento ingressi evento…"}</p>
+      <p role="status">{!eventId ? "Nessun evento disponibile." : current.error ? "Presenze non disponibili. Verifica la connessione e l’accesso." : current.data ? `Ingressi evento aggiornati il ${date(current.data.updatedAt)}${summaryOnly ? "." : " · aggiornamento automatico ogni 10 secondi."}` : "Caricamento ingressi evento…"}</p>
       {current.error && <button type="button" className="btn-secondary min-h-11 px-3" onClick={() => setAttempt(n => n + 1)}>Riprova</button>}
     </div>
     {children}
@@ -87,8 +88,8 @@ function AttendanceTotals() {
   </div>;
 }
 export function EventAttendanceReport({ eventId }: { eventId: string | null }) {
-  return <article className="surface-card min-w-0 p-5"><h2 className="text-xl font-semibold">Ingressi effettivi all’evento</h2>
-    <p className="mt-2 text-sm text-[var(--peace-muted)]">Totali dell’intero evento: persone con ingresso registrato all’accoglienza, al netto degli annullamenti. I giorni previsti e le prenotazioni ai panel restano separati. Non indica quante persone sono ancora sul posto.</p>
+  return <article className="surface-card min-w-0 p-5">
+    <p className="text-sm text-[var(--peace-muted)]">Totali dell’intero evento: persone con ingresso registrato all’accoglienza, al netto degli annullamenti. I giorni previsti e le prenotazioni ai panel restano separati. Non indica quante persone sono ancora sul posto.</p>
     <EventAttendanceProvider key={eventId} eventId={eventId} summaryOnly><AttendanceTotals /></EventAttendanceProvider>
     <ReceptionOperationalReport eventId={eventId} />
   </article>;

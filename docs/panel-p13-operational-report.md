@@ -1,5 +1,13 @@
 # P13 — report operativo dell’accoglienza
 
+Aggiornamento 14 ottobre 2026: report e totali sono nella categoria
+**Statistiche → Ingressi effettivi all’evento**, caricata su selezione.
+Un nuovo clic sulla stessa voce aggiorna entrambi; il cambio giorno/fascia
+aggiorna il report. Rimossi timer ogni 10 secondi e refresh automatici su
+visibilità/connessione. Le letture vengono annullate quando si chiude la vista;
+errori e accesso revocato rimuovono i valori anziché mostrare falsi zeri.
+Nessuna modifica alla RPC o ai conteggi. Le note sotto conservano lo storico.
+
 Aggiornamento 6 ottobre 2026: migration report applicata e registrata in staging
 con verifica di installazione/privilegi, senza collaudo su richiesta dell’utente.
 Accessi panel/sala implementati localmente; nuova migration non applicata in

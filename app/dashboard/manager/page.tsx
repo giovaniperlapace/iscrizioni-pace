@@ -481,7 +481,7 @@ export default async function ManagerDashboardPage({
     : undefined;
   const panelStatistics = await panelStatisticsPromise;
   const statistics =
-    (activeSection === "dashboard" && statisticsReport !== "disability" && statisticsReport !== "panels") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
+    (activeSection === "dashboard" && statisticsReport !== "disability" && statisticsReport !== "panels" && statisticsReport !== "arrivals") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getManagerStatisticsSnapshot(
           serviceSupabase,
           scope,

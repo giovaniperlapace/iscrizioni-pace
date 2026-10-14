@@ -10,30 +10,22 @@ export function ReceptionOperationalReport({ eventId }: { eventId: string | null
   const key = `${eventId}:${day}:${part}:${attempt}`;
   useEffect(() => {
     if (!eventId) return;
-    let disposed = false, busy = false, blocked = false;
-    let controller: AbortController | null = null;
+    let disposed = false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     async function refresh() {
-      if (busy || blocked || document.hidden) return;
-      busy = true;
-      controller = new AbortController();
-      const timeout = setTimeout(() => controller?.abort(), 15000);
       try {
         const params = new URLSearchParams({ eventId:eventId!, day, part });
         const response = await fetch(`/dashboard/attendance/report?${params}`, { cache:'no-store', signal:controller.signal });
-        if (response.redirected || response.status === 401 || response.status === 403) blocked = true;
         if (response.redirected || !response.ok) throw Error('unavailable');
         const data = projectReceptionReport(await response.json());
         if (!data || data.eventId !== eventId || data.day !== (day || null) || data.part !== part) throw Error('invalid');
         if (!disposed) setState({ key, data, error:false });
       } catch { if (!disposed) setState({ key, data:null, error:true }); }
-      finally { clearTimeout(timeout); busy = false; }
+      finally { clearTimeout(timeout); }
     }
     void refresh();
-    const timer = setInterval(() => void refresh(), 10000);
-    const visible = () => void refresh();
-    document.addEventListener('visibilitychange',visible);
-    window.addEventListener('online',visible);
-    return () => { disposed=true; controller?.abort(); clearInterval(timer); document.removeEventListener('visibilitychange',visible); window.removeEventListener('online',visible); };
+    return () => { disposed=true; controller.abort(); clearTimeout(timeout); };
   }, [eventId, day, part, attempt, key]);
   const current = state?.key === key ? state : null;
   const data = current?.data;
@@ -45,7 +37,7 @@ export function ReceptionOperationalReport({ eventId }: { eventId: string | null
       <button className="btn-secondary min-h-11 px-3" type="button" disabled={!day} onClick={() => { setDay(''); setPart('all'); }}>Intero evento</button>
     </div>
     <p className="text-sm text-[var(--peace-muted)]">{day ? 'Previsti: iscritti che hanno indicato Sì nella fascia scelta, con i minori collegati; scuole con almeno un panel prenotato nella fascia. Ogni nucleo o scuola è contato una sola volta.' : 'Previsti: tutte le iscrizioni operative, inclusi minori e quantità prenotate dalle scuole.'} Gli ingressi sono quelli registrati nella fascia scelta e tuttora validi. Non misurano permanenza o assenze; una persona entrata prima della fascia non è un nuovo ingresso.</p>
-    <p className="text-sm" role="status">{!eventId ? 'Nessun evento disponibile.' : current?.error ? 'Report non disponibile. Verifica la connessione e l’accesso.' : data ? `Aggiornato alle ${new Date(data.updatedAt).toLocaleTimeString('it-IT', { timeZone:'Europe/Rome' })} · ogni 10 secondi.` : 'Caricamento report…'}</p>
+    <p className="text-sm" role="status">{!eventId ? 'Nessun evento disponibile.' : current?.error ? 'Report non disponibile. Verifica la connessione e l’accesso.' : data ? `Aggiornato alle ${new Date(data.updatedAt).toLocaleTimeString('it-IT', { timeZone:'Europe/Rome' })}.` : 'Caricamento report…'}</p>
     {current?.error && <button type="button" className="btn-secondary min-h-11 justify-self-start px-3" onClick={() => setAttempt(n=>n+1)}>Riprova report</button>}
     <div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="sr-only">Previsti e ingressi effettivi nella selezione</caption><thead><tr><th className="p-2">Persone</th><th className="p-2">Previsti</th><th className="p-2">Ingressi</th></tr></thead><tbody>
       {([['adults','Adulti iscritti'],['children','Minori accompagnati'],['students','Studenti'],['companions','Accompagnatori scuole'],['schoolBookings','Classi / gruppi scuola']] as const).map(([field,label])=><tr key={field} className="border-t border-[var(--peace-border)]"><th className="p-2 font-normal" scope="row">{label}</th><td className="p-2">{data?.expected[field] ?? '—'}</td><td className="p-2">{data?.arrivals[field] ?? '—'}</td></tr>)}

@@ -520,7 +520,7 @@ export default async function AdminDashboardPage({
     ? currentEventId ? await loadDisabilityStatistics(serviceSupabase, currentEventId) : { people: [] }
     : undefined;
   const statistics =
-    (activeSection === "dashboard" && statisticsReport !== "disability" && statisticsReport !== "panels") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
+    (activeSection === "dashboard" && statisticsReport !== "disability" && statisticsReport !== "panels" && statisticsReport !== "arrivals") || (statisticsDrilldown && !statisticsDrilldown.difficulty)
       ? await getAdminStatisticsSnapshot(
           currentEventId,
           currentEvent?.starts_on ?? null,

@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## Ingressi evento nella categoria Statistiche, senza polling — 2026-10-14
+
+- Su richiesta dell’utente, Ingressi effettivi all’evento è una categoria
+  dedicata di Statistiche, con URL report=arrivals. Rimossi riepilogo e report
+  permanenti sopra tutte le altre statistiche; ruoli e menu full/mini conservati.
+- Totali e report dettagliato letti solo all’apertura o al nuovo clic sulla
+  stessa categoria; filtri e Riprova producono letture esplicite. Nessun polling
+  ogni 10 secondi, refresh su focus/visibilità o ritorno online in questa vista.
+  Le altre statistiche non avviano le letture ingressi; arrivals non carica
+  inutilmente le anagrafiche delle statistiche generali. Il contesto presenze
+  delle liste operative mantiene il comportamento preesistente.
+- Quattordici test mirati e browser con dati sintetici/orologio virtuale:
+  assenza di richieste periodiche, nuovo clic, cambio categoria e riapertura,
+  filtri, mobile e revoca accesso. Nessuna migration, dato applicativo o email.
+  Correzione nel rilascio main già autorizzato.
+
 ## Modali stampa semplificate ed eliminati esclusi — 2026-10-14
 
 - L’utente richiede collaudo dai pulsanti operativi reali, senza passaggio

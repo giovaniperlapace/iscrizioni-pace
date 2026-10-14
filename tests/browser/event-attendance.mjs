@@ -15,6 +15,7 @@ try {
   wait('document.body.innerText.includes("Ingresso non registrato")');
   check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Minore Prova")', 'accompanying children are always visible');
   ab('find', 'role', 'button', 'click', '--name', 'entered', '--exact'); ab('snapshot', '-i');
+  ab('find', 'role', 'button', 'click', '--name', 'Aggiorna report ingressi', '--exact');
   wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")');
   check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Ingresso non registrato")', 'adult entry does not imply child entry');
   check('document.querySelector("article").innerText.includes("13")', 'school quantities included in total people');
@@ -54,6 +55,7 @@ try {
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"entered"}))');
   wait('document.querySelector("dialog").innerText.includes("Ingresso registrato")');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"forbidden"}))');
+  ab('find', 'role', 'button', 'click', '--name', 'Aggiorna report ingressi', '--exact');
   wait('document.querySelector("dialog").innerText.includes("Presenza non disponibile")');
   check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")', 'revoked access clears previous presence data');
   check(`document.querySelector('${report}').innerText.includes("Report non disponibile") && !document.querySelector('${report}').innerText.includes("26")`, 'report revocation clears aggregates');

@@ -2,6 +2,7 @@ export const STATISTICS_REPORTS = [
   { key: "panels", label: "Forum" },
   { key: "territory", label: "Gruppi e partecipanti" },
   { key: "attendance", label: "Presenze" },
+  { key: "arrivals", label: "Ingressi effettivi all’evento" },
   { key: "age", label: "Fasce di età" },
   { key: "registrations", label: "Iscrizioni per settimana" },
   { key: "disability", label: "Disabilità e difficoltà" },

@@ -1,0 +1,51 @@
+// Synthetic transport and a virtual clock; no account, database or printer access.
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const base=process.argv[2]??'http://127.0.0.1:3161';
+assert.match(base,/^http:\/\/(127\.0\.0\.1|localhost):\d+$/);
+const route='app/statistics-arrivals-check';assert.ok(!existsSync(route));mkdirSync(route);
+writeFileSync(`${route}/page.tsx`,`export {default} from '@/tests/browser/statistics-arrivals-fixture';`);
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');let browser;
+try {
+ browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+ const page=await browser.newPage({viewport:{width:1280,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.clock.install();await page.goto(base+'/statistics-arrivals-check');
+ const arrivals=page.getByRole('link',{name:'Ingressi effettivi all’evento',exact:true});
+ await arrivals.waitFor();
+ const reads=()=>page.evaluate(()=>window.__arrivalReads.slice());
+ assert.deepEqual(await reads(),[]);
+ assert.equal(await page.locator('[data-statistics-report="arrivals"]').count(),0);
+ await page.clock.fastForward(30000);assert.deepEqual(await reads(),[]);
+ await arrivals.click();
+ await page.getByText('Ingressi evento aggiornati il',{exact:false}).waitFor();
+ await page.getByText('Aggiornato alle',{exact:false}).waitFor();
+ const openingReads=(await reads()).length;
+ assert.ok(openingReads===2 || openingReads===4); // Development StrictMode also runs the cancelled mount effects.
+ let total=openingReads;
+ await page.clock.fastForward(60000);
+ await page.evaluate(()=>{window.dispatchEvent(new Event('online'));document.dispatchEvent(new Event('visibilitychange'));});
+ await page.clock.fastForward(30000);assert.equal((await reads()).length,total);
+ await page.getByRole('button',{name:'Simula nuovi ingressi',exact:true}).click();
+ await arrivals.click();await page.getByText('Aggiornato alle',{exact:false}).waitFor();
+ total+=openingReads;assert.equal((await reads()).length,total);
+ const report=page.getByRole('region',{name:'Report operativo accoglienza',exact:true});
+ assert.match(await report.getByRole('row',{name:'Adulti iscritti 5 2',exact:true}).innerText(),/2/);
+ await page.getByRole('link',{name:'Gruppi e partecipanti',exact:true}).click();
+ assert.equal(await page.locator('[data-statistics-report="arrivals"]').count(),0);
+ await page.clock.fastForward(60000);assert.equal((await reads()).length,total);
+ await arrivals.click();await page.getByText('Aggiornato alle',{exact:false}).waitFor();
+ total+=openingReads;assert.equal((await reads()).length,total);
+ await page.getByLabel('Giorno (Europe/Rome)',{exact:true}).fill('2026-10-25');
+ await page.getByText('Aggiornato alle',{exact:false}).waitFor();
+ total++;assert.equal((await reads()).length,total);
+ await page.setViewportSize({width:390,height:844});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.getByRole('button',{name:'Simula accesso revocato',exact:true}).click();
+ await arrivals.click();await page.getByText('Report non disponibile.',{exact:false}).waitFor();
+ await page.getByText('Presenze non disponibili.',{exact:false}).waitFor();
+ total+=openingReads;assert.equal((await reads()).length,total);
+ assert.equal(await report.getByRole('row',{name:'Adulti iscritti 5 2',exact:true}).count(),0);
+ await page.clock.fastForward(60000);assert.equal((await reads()).length,total);
+ assert.deepEqual(errors,[]);
+ console.log('PASS arrivals category: lazy requests, no polling/focus/online refresh, repeated-click reload, reopen, filters, mobile and revoked access');
+}finally {if(browser)await browser.close();rmSync(route,{recursive:true,force:true});rmSync('.next/dev/types/app/statistics-arrivals-check',{recursive:true,force:true});}

@@ -13,7 +13,7 @@ const js = ts.transpileModule(readFileSync(new URL("../app/dashboard/statistics-
 }).outputText;
 const exports: { StatisticsSection?: React.ComponentType<Record<string, unknown>> } = {};
 new Function("require", "exports", js)((name: string) => {
-  if (name.endsWith("event-attendance")) return { EventAttendanceReport: () => null };
+  if (name.endsWith("event-attendance")) return { EventAttendanceReport: () => React.createElement("div", null, "Actual arrivals report") };
   if (name.endsWith("panel-statistics-report")) return { PanelStatisticsReport: () => React.createElement("div", null, "Panel report") };
   if (name === "react") return React;
   if (name === "react/jsx-runtime") return runtime;
@@ -39,6 +39,7 @@ test("one report at a time, default/fallback to first, role and menu preserved i
       const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, panelStatistics: {}, dashboard, navMode, report, canViewDisability: true, disabilityStatistics: { people: [] } }));
       assert.deepEqual([...html.matchAll(/data-statistics-report="([^"]+)"/g)].map(m => m[1]), [report]);
       assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
+      assert.equal(html.includes("Actual arrivals report"), report === "arrivals");
       for (const category of reports.STATISTICS_REPORTS.filter(r => dashboard === "admin" || r.key !== "panels")) {
         assert.ok(html.includes(`/dashboard/${dashboard}?section=dashboard&amp;nav=${navMode}&amp;report=${category.key}`));
       }
@@ -62,7 +63,7 @@ test("viewer cannot render panel statistics even with injected data", () => {
 });
 
 
-test("current-event manager selects panel report without hiding event attendance or duplicating other reports", () => {
+test("current-event manager selects one report and loads actual arrivals only in their category", () => {
   const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
   for (const report of reports.STATISTICS_REPORTS.map(item => item.key)) {
     const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, {
@@ -71,6 +72,7 @@ test("current-event manager selects panel report without hiding event attendance
     }));
     assert.deepEqual([...html.matchAll(/data-statistics-report="([^"]+)"/g)].map(m => m[1]), [report]);
     assert.equal(html.includes("Panel report"), report === "panels");
+    assert.equal(html.includes("Actual arrivals report"), report === "arrivals");
     assert.ok(html.includes("report=panels"));
     assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
   }

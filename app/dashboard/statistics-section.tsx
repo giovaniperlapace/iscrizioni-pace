@@ -70,16 +70,16 @@ export function StatisticsSection({
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
+  const [arrivalRead, setArrivalRead] = useState(0);
   const participantHref = (filter: StatisticsDrilldownFilter) =>
     buildParticipantsHref(dashboard, navMode, filter);
 
   return (
     <section className="grid w-full min-w-0 gap-8">
-      <EventAttendanceReport eventId={eventId} />
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">
-          {report === "disability" ? "Seleziona un totale per difficoltà per aprire Gestione iscritti con le persone interessate. I conteggi per gruppo e il pulsante Mostra tutte le persone aprono l’elenco qui sotto." : <>Seleziona i conteggi del riepilogo per aprire la gestione iscritti già
+          {report === "arrivals" ? "Dati aggiornati all’apertura. Seleziona di nuovo Ingressi effettivi all’evento per aggiornarli." : report === "disability" ? "Seleziona un totale per difficoltà per aprire Gestione iscritti con le persone interessate. I conteggi per gruppo e il pulsante Mostra tutte le persone aprono l’elenco qui sotto." : <>Seleziona i conteggi del riepilogo per aprire la gestione iscritti già
           filtrata sulle persone che compongono quel dato.
           Persone complessive, totali per gruppo, presenze e fasce di età includono
           i figli accompagnati. Partecipanti iscritti e iscrizioni per settimana li escludono.</>}
@@ -93,6 +93,11 @@ export function StatisticsSection({
             href={`/dashboard/${dashboard}?${new URLSearchParams({ section: "dashboard", nav: navMode, report: key })}`}
             prefetch={false}
             scroll={false}
+            onClick={key === "arrivals" && report === "arrivals" ? event => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              setArrivalRead(value => value + 1);
+            } : undefined}
             aria-current={report === key ? "page" : undefined}
             className={`inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] ${report === key ? "bg-[var(--peace-blue-800)] text-white shadow-sm" : "text-[var(--peace-blue-900)] hover:bg-[var(--peace-sky-100)]"}`}
           >
@@ -100,6 +105,10 @@ export function StatisticsSection({
           </Link>
         ))}
       </nav>
+
+      {report === "arrivals" ? <ReportBlock name="arrivals" title="Ingressi effettivi all’evento">
+        <EventAttendanceReport key={`${eventId}:${arrivalRead}`} eventId={eventId} />
+      </ReportBlock> : null}
 
       {(dashboard === "admin" || canManage) && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Forum">
         <PanelStatisticsReport

@@ -1,5 +1,15 @@
 # P13 — prima parte: visualizzazione degli ingressi evento
 
+Aggiornamento 14 ottobre 2026: i totali e il report operativo sono nella
+categoria dedicata **Statistiche → Ingressi effettivi all’evento**
+(`report=arrivals`). La vista legge i dati all’apertura e a un nuovo clic
+sulla stessa voce, senza aggiornamenti ogni 10 secondi o al ritorno alla
+finestra/connessione. Le altre categorie non avviano queste letture. Restano
+i controlli di ruolo/evento, gli errori espliciti e il nuovo tentativo manuale.
+Il contesto presenze nelle liste/schede operative descritto sotto mantiene
+il suo comportamento; le indicazioni storiche di polling non si applicano
+più alla categoria Statistiche degli ingressi.
+
 Implementazione locale del 30 settembre 2026 sul branch `codex/panel-p0-p10`.
 
 ## Comportamento
