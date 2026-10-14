@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { printQrLabel } from "@/lib/qrcode/print-client";
 import { LeaderParticipantQr } from "./capogruppo/participant-qr";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -20,6 +21,23 @@ export function OperationsParticipantQr({ registrationId, participantName, parti
 }) {
   const [result, setResult] = useState<{ registrationId: string; qr: RegistrationQrPreview | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const printing = useRef<AbortController | null>(null);
+  const [printState, setPrintState] = useState<"idle" | "busy" | "requested" | "error">("idle");
+  useEffect(() => () => printing.current?.abort(), [registrationId]);
+  async function print() {
+    if (printing.current) return;
+    const controller = new AbortController();
+    printing.current = controller;
+    setPrintState("busy");
+    try {
+      await printQrLabel(`/dashboard/participants/qr/print?registrationId=${encodeURIComponent(registrationId)}`, controller.signal);
+      if (!controller.signal.aborted) setPrintState("requested");
+    } catch {
+      if (!controller.signal.aborted) setPrintState("error");
+    } finally {
+      if (printing.current === controller) printing.current = null;
+    }
+  }
   useEffect(() => {
     const controller = new AbortController();
     fetch(`/dashboard/participants/qr?registrationId=${encodeURIComponent(registrationId)}`, {
@@ -41,5 +59,13 @@ export function OperationsParticipantQr({ registrationId, participantName, parti
     <button type="button" className="min-h-11 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold"
       onClick={() => { setResult(null); setAttempt(value => value + 1); }}>{copy[2]}</button>
   </div>;
-  return <LeaderParticipantQr qr={result.qr} participantName={participantName} participantCode={participantCode} locale={locale} />;
+  return <div className="grid justify-items-start gap-3">
+    <LeaderParticipantQr qr={result.qr} participantName={participantName} participantCode={participantCode} locale={locale} />
+    {result.qr.state === "active" && <button type="button"
+      onClick={() => void print()} disabled={printState === "busy"} aria-busy={printState === "busy"}
+      className="min-h-11 rounded-md border border-[var(--peace-border-strong)] px-4 py-3 text-sm font-semibold"
+    >{printState === "busy" ? "Avvio stampa…" : printState === "requested" ? "Ristampa etichetta QR" : "Stampa etichetta QR"}</button>}
+    {printState === "requested" && <p role="status" className="text-sm">Comando di stampa avviato. Verifica l’etichetta fisica.</p>}
+    {printState === "error" && <p role="alert" className="text-sm">Impossibile avviare la stampa. Riapri la scheda per rileggere il QR.</p>}
+  </div>;
 }

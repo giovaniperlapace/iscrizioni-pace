@@ -1,5 +1,252 @@
 # Piano di lavoro Panel
 
+## Prove stampa sospese, tre metodi aperti — 2026-10-12
+
+- L’utente ferma esplicitamente le prove: non è deciso che verrà adottato
+  il metodo Chrome silenzioso. Nessuna scelta definitiva del canale di stampa.
+- Conservare aperte tutte e tre le alternative discusse: browser con
+  stampa silenziosa configurata, dialogo di stampa ordinario e componente
+  locale di collegamento (QZ Tray o altra soluzione da valutare).
+- Conservare implementazione locale, template, campioni e risultati fisici
+  acquisiti, compresa la corretta stampa delle due identità Manager staging.
+  Il successo su questo Mac non autorizza scelta o distribuzione del metodo.
+- Sospendere ulteriori prove, integrazione nell’accoglienza, installazioni
+  e configurazioni aggiuntive fino alla ripresa esplicita dell’utente.
+  Nessun commit/push, deployment o migration autorizzati da questa richiesta.
+
+## Stampa dalla dashboard Manager reale riuscita — 2026-10-12
+
+- L’utente preme `Stampa etichetta QR` nella scheda reale Manager di Alba
+  Test Accoglienza / P0LE, sull’app locale collegata al solo staging.
+- Conferma una sola etichetta, allineata e separata, nome/QR/P0LE integri,
+  senza altre conferme. Dopo il ritaglio riferisce decodifica del QR;
+  telefono e misura del ritaglio non acquisiti separatamente in questa prova.
+- Verifica DB in sola lettura: testo scansionato coincidente con l’ultimo
+  QR attivo già esistente del campione. Non copiare il payload nei verbali.
+  Rispetto allo snapshot iniziale, stato/updated_at dell’iscrizione e
+  impronte di tutti i record QR e delle presenze dello stesso campione invariati.
+- Acquisito il percorso reale scheda Manager → handler autenticato → QR
+  esistente → stampa silenziosa → etichetta fisica leggibile dopo ritaglio.
+  Sola prova individuale su questo Mac/Chrome/Brother; coda badge, storico
+  condiviso, lotti e postazioni future restano separati e non collaudati qui.
+- Dimensioni rimosse dai testi dei pulsanti come richiesto: `Stampa etichetta QR`
+  e `Ristampa etichetta QR`. Download PNG esistente preservato.
+- Lavoro locale sul branch panel, staging sintetico. Nessuna modifica a
+  iscrizioni/QR/presenze, nuova email, migration, commit/push o deployment.
+  La sessione di autenticazione Manager di test rimane quella predisposta.
+
+## Collaudo pulsante nella dashboard Manager reale — preparazione, 2026-10-12
+
+- Richiesta dell’utente: test direttamente nella dashboard Manager. Avviata
+  l’app locale su http://127.0.0.1:3161 con Next webpack e variabili staging
+  verificate; solo gli URL applicativi del processo adattati a localhost.
+  Launcher `tools/brother-browser-test/run-manager-staging.mjs`.
+- Account esistente `manager.panel.staging@example.invalid`, ruolo Manager
+  dell’evento sintetico corrente `assisi-2026-test`, sessione Auth verificata
+  nel Chrome dedicato già configurato. Nessun nuovo account/ruolo o invio email;
+  aperta una sessione di test, senza callback che aggiorni profili/iscrizioni.
+- Scheda reale `/dashboard/manager?section=iscritti&edit=8765cda1-1345-4ccd-b2bd-11909202b46e`
+  di Alba Test Accoglienza / P0LE. QR staging preesistente attivo e impaginabile,
+  senza creazione o rotazione. Il pulsante Stampa etichetta QR è in vista;
+  distinto dal comando Scarica immagine esistente.
+- Verifica end-to-end automatizzata con stampa simulata nel browser separato:
+  dashboard reale, pulsante reale, GET autenticato HTTP 200 private no-store,
+  CSP same-origin, identità e codice del DB, QR decodificato coincidente con
+  l’ultimo token esistente, una sola chiamata print, nessuna scheda aggiuntiva,
+  pulizia iframe e nessun errore pagina. Nessun lavoro fisico inviato dal test.
+- Confronto DB prima/dopo: stato/updated_at dell’iscrizione, impronta dei record
+  QR e delle presenze del solo campione invariati. La sessione Auth è l’unico
+  accesso preparato. Nessuna migration, deployment, commit/push o email.
+- Prossimo passo: clic dell’utente nella scheda Manager e controllo fisico
+  di un’etichetta Alba Test Accoglienza / P0LE. Questi QR sono dello staging;
+  la scansione successiva con fotocamera serve alla lettura, non usare lo
+  scanner accoglienza dell’app per collaudare la stampa (registrerebbe ingressi).
+
+## Prima prova singola silenziosa riuscita sul Mac — 2026-10-12
+
+- Dopo calibrazione del formato reale 29 × 90 mm nel profilo Chrome dedicato,
+  l’utente conferma una sola etichetta TEST-003, allineata, taglio corretto e
+  nome/QR/codice integri. Stampa con un solo clic, senza altre conferme;
+  breve finestra Chrome visibile e chiusa automaticamente, durata non misurata.
+- Pixel 7 e iPhone leggono il payload corretto prima del ritaglio. Dopo
+  ritaglio manuale a 45 mm, entrambi leggono ancora il QR e nome/TEST-003
+  restano integri, confermati dall’utente.
+- Esito acquisito per questa singola stampa sul Mac con Chrome 154 e Brother
+  QL-810W, profilo dedicato configurato. Non equivale al collaudo di Windows,
+  QL-800, continuo da 29 mm, lotti applicativi o tutte le postazioni future.
+  Ripetibilità della stampa silenziosa e raccordo con coda/storico restano aperti.
+- Conservare calibrazione tramite opzione reale del driver e controllo del
+  profilo prima di avviare --kiosk-printing: il solo seed delle dimensioni
+  aveva causato fallback 12 × 12 mm e quattro etichette inutilizzabili riferite.
+- Template/loader/handler e client di stampa individuale preparati localmente
+  sul branch panel. Prova fisica con soli dati sintetici; download PNG
+  esistente conservato. Nessuna creazione/rotazione QR, presenza, dato remoto,
+  migration, email, commit/push o deployment. Stash originale preservato.
+
+## Stampa silenziosa: formato errato e calibrazione — 2026-10-12
+
+- Prova fisica silenziosa fallita: l’utente riferisce quattro etichette
+  inutilizzabili, stampa molto piccola/suddivisa e tagli disallineati.
+  Ritiene successivamente di aver riallineato il rotolo; non trattarlo come
+  conferma di una nuova uscita corretta. Ulteriori invii automatici sospesi.
+- Evidenza: profilo Chrome e attributi IPP del lavoro 7 riportano media
+  `12x12mm`, copies=1. Le opzioni lpoptions 29x90mm non hanno impedito a Chrome
+  di usare il formato da 12 mm. Il seed iniziale della carta non conteneva
+  l’identificativo reale del driver; non era sufficiente scrivere dimensioni
+  e nome del supporto nelle preferenze.
+- Nessun lavoro pendente rilevato. Chiusa soltanto la sessione di collaudo;
+  aperta calibrazione senza `--kiosk-printing`, selezionata nell’anteprima
+  l’opzione reale 29 × 90 mm con vendor_id `om_29000x90000um_29x90mm`.
+- Verificati nel modello effettivo dell’anteprima: carta 29000 × 90000 µm,
+  copies=1, pages=[1], margini Nessuno, scala 100%, verticale e nessuna
+  intestazione. Anteprima visivamente integra. Annullata senza stampare;
+  salvata la carta reale nel profilo, controllata nuovamente dopo la chiusura.
+- Launcher con modalità `--calibrate` e blocco della modalità silenziosa
+  se carta/identificativo/scala/margini/intestazioni non sono validi. Non
+  considerare questo controllo del profilo prova dell’esito fisico.
+- Riaperta la sessione silenziosa corretta; prossimo passo una sola nuova
+  pressione dell’utente e verifica fisica. Nessuna copia di correzione
+  inviata dall’agente. Validità della stampa silenziosa ancora aperta.
+
+## Prova stampa silenziosa sul Mac — preparazione, 2026-10-12
+
+- L’utente autorizza una prova di implementazione sul Mac attuale. Conservata
+  la scelta futura delle postazioni; nessun QZ Tray o componente aggiuntivo.
+- Pulsante Manager/Admin ora usa `lib/qrcode/print-client.ts`: una richiesta
+  fresca al medesimo GET autenticato, iframe dello stesso sito e print dopo
+  decodifica delle immagini. Nessuna seconda pressione nell’anteprima.
+  Documento marcato, errori/login esclusi; una sola stampa concorrente nella
+  pagina, annullamento in chiusura/cambio scheda e pulizia risorse. Il messaggio
+  di comando avviato non conferma uscita fisica né aggiorna presenze/coda.
+  Download PNG esistente conservato; ristampa sempre esplicita e rilegge il QR.
+- CSP del documento consente iframe solo dello stesso sito (`frame-ancestors
+  self`), senza estendere i permessi del loader/handler. Un browser normale
+  continua ad aprire il dialogo; la stampa silenziosa richiede la postazione
+  configurata e non è attivabile dal sito.
+- Chrome 154 sul Mac: finestra/profile separati avviati con `--kiosk-printing`,
+  senza policy globali né modifiche al profilo ordinario. Impostazioni di prova
+  una copia, margini Nessuno, scala 100%, intestazioni disattivate; Brother
+  predefinita e opzioni utente PageSize=29x90mm / CutMedia=EndOfPage.
+  Valori precedenti di queste due opzioni conservati nello snapshot locale.
+  Ripristino: `node tools/brother-browser-test/launch-silent-chrome.mjs --restore-printer`.
+- Pagina `silent-label-test.html`, José María García López / TEST-003, stesso
+  QR sintetico dei campioni precedenti, stesso renderer e client applicativi.
+  Generatore `generate-silent-sample.mjs`; avvio `launch-silent-chrome.mjs`.
+  Solo server loopback, senza credenziali o accesso a DB. Debug della sessione
+  di prova solo locale sulla porta 3169. Pagina reale aperta, pulsante pronto,
+  presenza della flag verificata. Nessun lavoro fisico inviato dall’agente:
+  prossimo passo clic dell’utente e verifica uscita/assenza dialogo.
+- Sette test mirati, ESLint, TypeScript superati. Test browser del client reale
+  con print simulata: singolo invio, nessuna nuova scheda, ristampa fresca,
+  errori 401/403/404/500, concorrenza, annullamento, URL estranei e pulizia.
+  Questo test non dichiara collaudata la stampa silenziosa fisica.
+- Lavoro locale sul branch panel; nessun commit/push, deployment, migration,
+  modifica a persone o presenze reali, email. Stash preservato.
+
+## Scelta postazioni rinviata e alternativa Chrome — 2026-10-12
+
+- L’utente non conosce ancora i PC dell’accoglienza e rinvia la scelta del
+  canale di stampa finché saranno note le macchine e la tollerabilità del
+  dialogo per gli operatori. Non installare né configurare implicitamente
+  QZ Tray o altri componenti; proposte e test del template conservati.
+- Correzione della precedente valutazione: un componente di collegamento
+  locale non è obbligatorio. Chrome da versione 144 su Mac/Windows/Linux
+  supporta la policy `SilentPrintingEnabled`, che chiude automaticamente
+  l’anteprima e stampa sulla destinazione predefinita con opzioni predefinite.
+  Richiede configurazione della postazione/browser, non una modifica che
+  il sito possa abilitare da solo. Stampante, pagina, scala e taglio vanno
+  predisposti e collaudati sulle macchine effettive.
+- Il requisito utente riguarda l’assenza di dialogo operativo, non il divieto
+  tecnico di usare `window.print()` su un browser predisposto alla stampa
+  silenziosa. Possibili percorsi ancora da scegliere: Chrome configurato,
+  componente locale o dialogo se accettato esplicitamente dall’utente.
+- Fonte primaria verificata: documentazione policy Chrome Enterprise e
+  definizione Chromium `SilentPrintingEnabled.yaml`.
+  https://chromeenterprise.google/intl/es-419_ALL/policies/silent-printing-enabled/
+  https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/policy/resources/templates/policy_definitions/Miscellaneous/SilentPrintingEnabled.yaml
+- Nessuna configurazione di Chrome, driver o stampante modificata; nessuna
+  ulteriore implementazione o prova fisica in questa valutazione.
+
+## Stampa diretta senza dialogo — requisito utente, 2026-10-12
+
+- L’utente richiede che il pulsante operativo stampi direttamente sulla
+  stampante della postazione, senza dialogo di stampa. Questa indicazione
+  supera il percorso operativo precedente basato su `window.print()`;
+  i campioni con dialogo restano strumenti di collaudo del template.
+- La prima implementazione locale individuale con anteprima/dialogo va
+  adattata a un collegamento locale alla stampante. Nessuna soluzione scelta
+  o installata implicitamente. Valutato QZ Tray per Mac/Windows: richieste
+  firmate e certificato attendibile necessari per sopprimere anche i popup.
+- Configurare stampante, supporto fisico, scala e taglio per postazione;
+  mantenere QR esistente, stampa separata da presenze, deduplicazione e
+  stato inviato distinto dalla conferma fisica. Formato finale 29 × 45 mm;
+  sul DK-11201 attuale si conserva pagina fisica 29 × 90 mm.
+- Confermata dall’utente la lettura su Pixel 7 e iPhone di tutte le tre
+  copie TEST-002 consecutive. Cinque etichette confermate nella sessione:
+  due campioni singoli letti anche dopo ritaglio e tre copie lette prima
+  del ritaglio. Prova iniziale positiva, nessuna certificazione generale
+  di lotti applicativi, continuo da 29 mm, QL-800 o Windows.
+
+## Stampa individuale QR locale — 2026-10-12
+
+- Confermato dall’utente DK-11201 pretagliato 29 × 90 mm caricato; Brother
+  QL-810W rilevata via USB e coda pronta. Sagoma approvata 29 × 45 mm,
+  ritaglio manuale: il formato fisico resta 29 × 90 mm.
+- Implementato sul branch panel il pulsante Stampa etichetta QR nella scheda
+  Manager/Admin, con anteprima GET autenticata in finestra separata. Scope
+  evento corrente, identità dal DB, ultimo token attivo riletto; esclusi Viewer,
+  altri eventi, iscrizioni eliminate/annullate e QR revocati/scaduti/mancanti.
+  Cache privata no-store, CSP e nessun token in testo/metadati del documento.
+- Template condiviso `lib/qrcode/print-label.ts`: nominativo completo con font
+  incluso, minimo 7 pt e blocco se non entra; codice a 8 pt misurato, QR ECC M
+  con quattro moduli bianchi e dimensioni del campione già collaudato. Pagina
+  fisica 29 × 90 mm e riferimenti di ritaglio a 45 mm. Dialogo volontario;
+  nessuna creazione/rotazione QR, presenza, scrittura di coda o conferma fisica.
+- Campione sintetico del medesimo renderer generato con
+  `tools/brother-browser-test/generate-application-sample.mjs`, aperto in Chrome
+  a `http://127.0.0.1:3159/app-label-test.html`. Prova fisica ancora da effettuare.
+  Sette test mirati verdi (handler reale, permessi, stati, identità, decodifica,
+  nomi e limiti), ESLint e TypeScript; anteprima desktop verificata.
+- Solo lavoro locale. Stash originale preservato; nessun commit/push,
+  deployment, migration, dato remoto o email. Lotti gruppo e raccordo con
+  postazioni/coda restano tranche successive; badge cerimonie esistente conservato.
+
+## Ripresa stampa etichette — 2026-10-12
+
+- L’utente riprende lo sviluppo e il collaudo sul branch panel e conferma
+  come formato finale approvato **29 × 45 mm**. Questa scelta supera le
+  precedenti indicazioni di formato ancora da scegliere o candidato.
+- Ripristinati sul branch `codex/panel-p0-p10` annotazioni e materiali del
+  collaudo dallo stash `fa1ec7fa339a2b944045bf67e90cc2a1e9efec85`, conservato.
+  Riconciliate le sole aggiunte documentali con il riallineamento del 9 ottobre.
+- Punto di ripresa: pulsante per stampare un singolo QR esistente, senza
+  rigenerazione e senza registrazione automatica di presenze. Prima prova
+  browser riuscita su Mac/QL-810Wc, DK-11201 29 × 90 mm ritagliato a 45 mm;
+  quel campione letto dal Pixel 7. Campione P-touch letto anche dall’iPhone;
+  lettura iPhone del campione browser e continuo da 29 mm ancora da collaudare.
+- La scelta della sagoma non certifica il taglio a 45 mm sul rotolo continuo.
+  Riprendere le prove dopo verifica del supporto realmente caricato.
+
+## Priorità rilascio gestionale panel e pausa stampa — 2026-10-09
+
+- L’utente mette in pausa il collaudo browser e dà priorità alla preparazione
+  del rilascio gestionale riservato dei panel in production. Nessuna novità
+  nella home e nessuna apertura delle iscrizioni pubbliche; verificare anche
+  accessi diretti e azioni pubbliche durante la preparazione del rilascio.
+- Conservare risultati e file sintetici della prova Brother: prima etichetta
+  browser 29 × 90 mm ritagliata a 29 × 45 mm riuscita su Pixel 7, misure e
+  taglio confermati, circa 2 secondi. iPhone/browser, ripetibilità e altri
+  supporti/sistemi restano aperti. Registro in docs/collaudo-brother-ql.md.
+- Alla ripresa, primo passo: implementare il pulsante per stampare un singolo
+  QR esistente, senza rigenerazione e senza registrare automaticamente presenze.
+  Questo supera il precedente suggerimento di iniziare dal lotto sintetico
+  di tre etichette. Il requisito lotto gruppo su etichette separate resta valido.
+- La nuova priorità riguarda la preparazione del rilascio; non costituisce
+  autorizzazione a commit, push, deployment o migration remote. Conservare
+  tutte le modifiche locali. Nessuna implementazione stampa avviata.
+
+
+
 ### Attivazione Capogruppo rinviata — 2026-10-09
 
 Su indicazione dell’utente, attivare la funzione panel del Capogruppo nella
