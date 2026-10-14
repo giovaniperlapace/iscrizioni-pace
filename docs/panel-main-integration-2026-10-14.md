@@ -34,9 +34,24 @@ service-only non eseguibili da anon/authenticated. Modalità `internal`,
 catalogo pubblico vuoto. Nessuna scansione o stampa applicativa su dati reali,
 nessuna email, account, incarico o sessione creati.
 
-Build production e 21 regressioni mirate superate sul diff da pubblicare;
-restano valide le verifiche complete sotto. Rilascio tramite push del merge
-su main, con verifica successiva del deployment e del dominio reale.
+Build production e 21 regressioni mirate superate sul diff pubblicato;
+restano valide le verifiche complete sotto. Merge `384f58a` su main,
+con genitori `fced870` e `095af93`, pubblicato senza modificare branch panel
+o quattro stash. Deployment Git production
+`dpl_3DWzozwyFNcXhc2kZwhEnXxmfyN1` READY, alias del dominio reale assegnato
+senza errori. Riscontro Vercel:
+https://vercel.com/giovaniperlapaces-projects/iscrizioni-pace/3DWzozwyFNcXhc2kZwhEnXxmfyN1.
+
+Verifiche sul dominio dopo il rilascio: home HTTP 200 con testo visibile
+identico al precedente (esclusi script, stili e titolo HTML trasferito tramite
+streaming); scuole pubbliche reindirizzate alla home. Percorsi Accoglienza,
+collaudo Admin, stampa individuale, presenze e report reindirizzati al login
+senza sessione. Sessione browser Manager esistente esclusa dalla pagina di
+collaudo Admin, con ritorno alla propria dashboard. Nessun login creato o
+ruolo assegnato per ottenere un controllo positivo. Il primo accesso Admin
+alla pagina reale e il riscontro hardware restano affidati al collaudatore.
+Ricerca runtime error/fatal sul nuovo deployment: nessun record restituito.
+
 In caso di problema del codice, riportare il dominio al deployment precedente
 `fced870`, lasciando inizialmente lo schema additivo. Il backup non va
 ripristinato automaticamente sopra eventuali nuovi dati: ogni ripristino DB

@@ -16,8 +16,12 @@
   zero panel pubblici; controllo dei ruoli senza scritture applicative:
   4 Admin pronti, 12 account non Admin esclusi dal gate.
 - Build production e 21 regressioni mirate superate, oltre alle verifiche
-  complete della preparazione. Push main autorizzato; deployment da verificare
-  sul commit risultante. Branch panel e quattro stash conservati.
+  complete della preparazione. Merge `384f58a` pubblicato su main, deployment
+  `dpl_3DWzozwyFNcXhc2kZwhEnXxmfyN1` production READY verificato sul dominio.
+  Testo visibile della home invariato, scuole pubbliche chiuse e percorsi
+  operativi protetti dal login. Sessione Manager esclusa dalla pagina di
+  collaudo Admin; nessun errore/fatal restituito dai log del deployment.
+  Branch panel e quattro stash conservati.
 - Primo collaudo remoto dalla pagina Admin con campioni sintetici, senza
   modificare iscrizioni, token o presenze. Scanner applicativo su staging
   separato; hardware e accettazione fisica restano aperti. Nessun account,

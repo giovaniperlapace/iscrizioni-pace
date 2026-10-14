@@ -12,7 +12,8 @@ collaudo Admin; nessuna apertura pubblica implicita.
 
 Rilascio su main e migration successivamente autorizzati dall’utente il
 14 ottobre. Le dieci migration necessarie sono applicate in production;
-il deployment del codice va verificato sul commit pubblicato. Nessuna
+merge `384f58a` pubblicato, deployment production READY verificato sul dominio
+`https://registrationspeace.santegidio.org`, senza apertura pubblica. Nessuna
 email, account o ruolo creati. Il collaudatore disporrà di un account Admin;
 macOS e probabilmente Windows disponibili. Stampante indicata dall’utente
 come «Brother Wc810»: controllare la targhetta QL-810Wc prima del setup.

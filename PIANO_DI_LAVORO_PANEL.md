@@ -17,8 +17,9 @@ Successiva autorizzazione esplicita del 14 ottobre: commit, push e migration
 necessarie per il rilascio su main e il collaudo a distanza. Applicate in
 production le dieci migration della tranche, conservando tutte le 83.960
 righe preesistenti e la modalità internal; esclusa la correzione dati storica.
-Dettagli in `docs/panel-main-integration-2026-10-14.md`. Il deployment va
-verificato sul commit pubblicato; non equivale ad accettazione fisica.
+Dettagli in `docs/panel-main-integration-2026-10-14.md`. Merge `384f58a`
+pubblicato su main e deployment production READY verificato sul dominio;
+home invariata e iscrizioni pubbliche chiuse. Accettazione fisica ancora aperta.
 
 Collaudatore remoto con accesso Admin, Mac e forse Windows. DK-22210
 acquistato; stampante, collegamento e rotolo montato ancora da verificare.
