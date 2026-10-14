@@ -1,5 +1,48 @@
 # AGENTS.md
 
+## Rilascio coda Forum autorizzato e migration production — 2026-10-14
+
+- L’utente autorizza migration, commit e push su main, mantenendo home attuale
+  e iscrizioni ai Forum chiuse. Superati i limiti della preparazione locale;
+  staging escluso, nessuna email o prova su dati reali autorizzata.
+- Applicata/registrata atomicamente `20261014150000_forum_waitlist`, con reload
+  PostgREST. Backup custom verificato sul server, 600; percorso/hash nel verbale.
+  Tutti i valori delle 61 tabelle preesistenti invariati (84.410 righe), 132
+  policy conservate, 155 funzioni e 337 grant confrontati; soltanto modifiche
+  dichiarate. Revoca anon del catalogo personale prevista, grant service_role
+  preesistenti conservati. Primo confronto della revoca concluso in rollback.
+- Verificati internal, catalogo pubblico vuoto, coda vuota e worker service-only.
+  Il Forum già configurato pubblico resta nascosto dal gate, senza cambiare
+  configurazioni. Timer email attivo e funzionante; nessuna variabile modificata.
+- Rilascio dal normale push Git su main; verificare READY e alias del dominio,
+  testo home e chiusura Forum. Nessun account, iscrizione, token o presenza
+  modificati dalla migration; nessuna email di collaudo. Dettagli in
+  `docs/forum-waitlist-2026-10-14.md`; esito deployment nella chat del rilascio.
+
+## Coda FIFO e vincolo di fascia Forum — 2026-10-14
+
+- Richiesta dell’utente implementata localmente su main: un Forum per giorno e
+  mattina/pomeriggio Europe/Rome, incluso il Forum delle 17 nella stessa fascia
+  di quelli delle 16. Controlli server/DB e capogruppo; testo prima della conferma.
+- Forum pieno: Mettiti in coda per questo Forum, FIFO e uscita esplicita. La coda
+  permette un’altra iscrizione nella stessa fascia. Accettazione del posto
+  offerto sostituisce atomicamente la scelta incompatibile; nessun cambio se
+  l’offerta non viene confermata. Minori conservati e posti del nucleo indivisibili.
+- Correzioni esplicite dell’utente: controllo ogni cinque minuti; riserva reale
+  di 30 minuti, poi passaggio al nuovo primo o restituzione alla disponibilità
+  quando la coda è vuota. I posti eccedenti restano prenotabili. Anche il catalogo
+  individuale si aggiorna ogni cinque minuti, senza polling negli ingressi.
+- Worker sul cron email esistente, cadenza DB persistente, Postmark transazionale
+  multilingue e claim senza reinvio cieco degli esiti incerti. Nessun account Auth
+  o magic link creato; collegamento al Forum e conferma POST autenticata.
+- Migration additive `20261014150000_forum_waitlist`, solo locale. Modalità internal
+  e quote separate conservate; sala più grande consente di aumentare la quota
+  individuale dal gestionale. Preflight blocca conflitti storici senza correggere dati.
+- SQL locale/concorrenza, browser con clock sintetico e azioni reali su PostgreSQL
+  temporaneo, sette lingue/mobile, 874 test, lint, TypeScript e build production
+  verificati. Nessun dato remoto/email reale, commit/push o deployment eseguito.
+  Dettagli e rilascio in `docs/forum-waitlist-2026-10-14.md`.
+
 ## Ingressi evento nella categoria Statistiche, senza polling — 2026-10-14
 
 - Su richiesta dell’utente, Ingressi effettivi all’evento è una categoria

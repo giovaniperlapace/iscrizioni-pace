@@ -3,6 +3,7 @@ import { ArrowUp, CalendarDays, CheckCircle2, Clock3, LockKeyhole, MapPin, XCirc
 import { forumBookingPath } from "@/lib/panels/booking-intent";
 import { getHomePanelSlots } from "@/lib/events/home-program";
 import { getEventProgramCopy } from "@/lib/events/program-copy";
+import { FORUM_WAITLIST_COPY } from "@/lib/panels/waitlist-copy";
 import { PeaceLineMark } from "@/components/event-identity";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import type { getMessages } from "@/lib/i18n/messages";
@@ -47,6 +48,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
   const slots = getHomePanelSlots(panels);
   const days = [...new Set(slots.map(slot => getPanelProgramDayKey(slot.startsAt)))];
   const programCopy = getEventProgramCopy(locale);
+  const queueCopy = FORUM_WAITLIST_COPY[locale];
 
   return (
     <section aria-labelledby="panel-program-title" className="app-container scroll-mt-20 py-12 sm:py-16 lg:py-20" id="panel-program">
@@ -116,14 +118,14 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                             </span>
                           </address>
                           {panel.availability === "full" ? <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-                            <p className="font-bold">{programCopy.waitlistStatus}</p>
-                            <p className="mt-1">{programCopy.waitlistInstruction}</p>
+                            <p className="font-bold">{queueCopy.fullStatus}</p>
+                            <p className="mt-1">{queueCopy.queueHelp}</p>
                           </div> : null}
-                          {showAccessCta && panel.availability === "available" ? <div className="mt-5 border-t border-[var(--peace-border)] pt-5">
-                            <a className="btn-primary flex min-h-12 w-full items-center justify-center px-4 text-center" aria-label={`${programCopy.bookForum}: ${panel.title}`}
+                          {showAccessCta && panel.availability !== "unavailable" ? <div className="mt-5 border-t border-[var(--peace-border)] pt-5">
+                            <a className="btn-primary flex min-h-12 w-full items-center justify-center px-4 text-center" aria-label={`${panel.availability === "full" ? queueCopy.join : programCopy.bookForum}: ${panel.title}`}
                               href={authenticated && !preview ? forumBookingPath(panel.id) : preview ? `?forum=${encodeURIComponent(panel.id)}#forum-access-form` : `/forum/${encodeURIComponent(panel.id)}`}
                               onClick={onSelectPanel && (!authenticated || preview) ? event => { event.preventDefault(); onSelectPanel(panel.id); } : undefined}>
-                              {programCopy.bookForum}
+                              {panel.availability === "full" ? queueCopy.join : programCopy.bookForum}
                             </a>
                           </div> : null}
                         </li>

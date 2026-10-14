@@ -1,5 +1,17 @@
 # Piano di lavoro Panel
 
+## Coda e fasce Forum — 14 ottobre 2026
+
+Su richiesta dell’utente implementazione locale su main della coda FIFO e del
+vincolo di un Forum per giorno/mattina/pomeriggio, comprese le 17 nella fascia
+pomeridiana. Controllo ogni cinque minuti, email e riserva di 30 minuti,
+accettazione con sostituzione atomica della scelta incompatibile e restituzione
+dei posti scaduti al nuovo primo o alla disponibilità. I posti residui restano
+prenotabili. Successiva autorizzazione: migration `20261014150000_forum_waitlist` applicata
+e registrata in production con backup/confronto, commit e push su main richiesti.
+Home in internal e iscrizioni ai Forum chiuse; nessuna email di prova.
+Verifiche e procedura in `docs/forum-waitlist-2026-10-14.md`.
+
 ## Tranche corrente: main, Chrome silenzioso e collaudo Admin — 14 ottobre 2026
 
 L’utente richiede l’integrazione completa del panel in main, conservando il

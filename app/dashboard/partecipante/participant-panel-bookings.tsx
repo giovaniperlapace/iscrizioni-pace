@@ -1,3 +1,7 @@
+"use client";
+
+import { useForumAvailability } from "@/lib/panels/use-forum-availability";
+import { FORUM_WAITLIST_COPY } from "@/lib/panels/waitlist-copy";
 import { getEventProgramCopy } from "@/lib/events/program-copy";
 import { CalendarDays, CheckCircle2, Clock3, MapPin, Users } from "lucide-react";
 
@@ -15,8 +19,11 @@ export type ParticipantPanelCatalogRow = {
   ends_at: string;
   location_name: string;
   location_address: string | null;
-  booking_status: "available" | "selected" | "full" | "conflict";
+  booking_status: "available" | "selected" | "full" | "conflict" | "queued" | "offered";
   party_size: number;
+  waitlist_status?: string | null;
+  offer_expires_at?: string | null;
+  queue_position?: number | null;
 };
 
 type Copy = {
@@ -53,7 +60,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     available: "Disponibile",
     full: "Completo",
     conflict: "Si sovrappone a un forum già scelto",
-    book: "Iscriviti",
+    book: "Iscriviti al Forum",
     booking: "Iscrizione in corso…",
     cancel: "Cancella iscrizione",
     cancelling: "Cancellazione…",
@@ -256,8 +263,17 @@ type Props = {
   requestedForum?: string | null;
 };
 
-export function ParticipantPanelBookings({ locale, registrationId, rows, saved, error, requestedForum }: Props) {
-  const copy = COPY[locale] ?? COPY.en;
+export function ParticipantPanelBookings({ locale, registrationId, rows: initialRows, saved, error, requestedForum }: Props) {
+  const { rows, error: refreshError } = useForumAvailability(registrationId, initialRows);
+  const waitlistCopy = FORUM_WAITLIST_COPY[locale] ?? FORUM_WAITLIST_COPY.en;
+  const baseCopy = COPY[locale] ?? COPY.en;
+  const copy: Copy = { ...baseCopy, conflict: waitlistCopy.conflict, errors: { ...baseCopy.errors, overlap: waitlistCopy.overlap, expired: waitlistCopy.expired, available: waitlistCopy.available } };
+  const sectionsByPanel = new Map<string, { first: string; count: number }>();
+  for (const row of rows) {
+    const entry = sectionsByPanel.get(row.panel_id);
+    if (entry) entry.count++;
+    else sectionsByPanel.set(row.panel_id, { first: row.section_id, count: 1 });
+  }
   const selected = rows.filter((row) => row.booking_status === "selected");
   const remaining = rows.filter((row) => row.booking_status !== "selected");
   const groups = [
@@ -272,16 +288,18 @@ export function ParticipantPanelBookings({ locale, registrationId, rows, saved, 
           {copy.title}
         </h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">{copy.intro}</p>
+        <p className="mt-3 rounded-lg border border-[var(--peace-border)] bg-[var(--peace-sky-100)] p-4 text-sm leading-6 text-[var(--peace-blue-950)]">{waitlistCopy.rule}</p>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">{waitlistCopy.queueHelp}</p>
       </div>
 
       {saved ? (
         <p role="status" className="rounded-md border border-[#b9d5bd] bg-[#f0f8ed] px-3 py-2 text-sm text-[#315e3b]">
-          {saved === "booked" ? copy.savedBooked : copy.savedCancelled}
+          {saved === "booked" ? copy.savedBooked : saved === "queued" ? waitlistCopy.savedQueued : saved === "left" ? waitlistCopy.savedLeft : copy.savedCancelled}
         </p>
       ) : null}
-      {error ? (
+      {error || refreshError ? (
         <p role="alert" className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
-          {copy.errors[error] ?? copy.errors.failed}
+          {copy.errors[error ?? refreshError ?? "failed"] ?? copy.errors.failed}
         </p>
       ) : null}
 
@@ -298,7 +316,7 @@ export function ParticipantPanelBookings({ locale, registrationId, rows, saved, 
               </h3>
               <div className="grid gap-4 lg:grid-cols-2">
                 {group.rows.map((row) => (
-                  <PanelBookingCard requested={row.panel_id === requestedForum} anchor={row.panel_id === requestedForum && rows.find(candidate => candidate.panel_id === row.panel_id)?.section_id === row.section_id} copy={copy} locale={locale} registrationId={registrationId} row={row} key={row.section_id} showAudience={rows.filter((candidate) => candidate.panel_id === row.panel_id).length > 1} />
+                  <PanelBookingCard requested={row.panel_id === requestedForum} anchor={row.panel_id === requestedForum && sectionsByPanel.get(row.panel_id)?.first === row.section_id} copy={copy} locale={locale} registrationId={registrationId} row={row} key={row.section_id} showAudience={(sectionsByPanel.get(row.panel_id)?.count ?? 0) > 1} />
                 ))}
               </div>
             </section>
@@ -321,9 +339,17 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
   showAudience: boolean;
 }) {
   const isSelected = row.booking_status === "selected";
-  const disabled = row.booking_status === "full" || row.booking_status === "conflict";
+  const queueCopy = FORUM_WAITLIST_COPY[locale];
+  const isQueued = row.booking_status === "queued";
+  const isOffered = row.booking_status === "offered";
+  const isFull = row.booking_status === "full";
+  const disabled = row.booking_status === "conflict";
+  const intent = isSelected ? "cancel" : isQueued ? "leave" : isOffered ? "accept" : isFull ? "join" : "book";
+  const buttonLabel = isSelected ? copy.cancel : isQueued ? queueCopy.leave : isOffered ? queueCopy.accept : isFull ? queueCopy.join : copy.book;
   const statusLabel = isSelected
     ? copy.selected
+    : isQueued ? queueCopy.queued
+    : isOffered ? queueCopy.offered
     : row.booking_status === "full"
       ? copy.full
       : row.booking_status === "conflict"
@@ -333,7 +359,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
   return (
     <article id={anchor ? `forum-${row.panel_id}` : `forum-${row.panel_id}-${row.section_id}`} className={`scroll-mt-24 grid gap-4 rounded-xl border bg-white p-5 ${requested ? "ring-2 ring-[var(--peace-blue-700)] ring-offset-2 " : ""}${isSelected ? "border-[#8fc99a] shadow-[0_10px_30px_rgba(41,104,61,0.08)]" : "border-[var(--peace-border)]"}`}>
       {requested ? <p className="text-sm font-bold text-[var(--peace-blue-800)]">{getEventProgramCopy(locale).selectedForum}</p> : null}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <h4 className="text-lg font-bold text-[var(--peace-blue-950)]">{row.title}</h4>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${isSelected ? "bg-[#e8f6e8] text-[#27613a]" : row.booking_status === "available" ? "bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]" : "bg-[#fff0eb] text-[#8a3323]"}`}>
           {isSelected ? <CheckCircle2 aria-hidden="true" className="mr-1 inline size-3.5" /> : null}
@@ -348,15 +374,29 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <div className="flex items-start gap-2"><Users aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{copy.familySeats(row.party_size)}</span></div>
         {showAudience ? <div><dt className="inline font-semibold">{copy.section}: </dt><dd className="inline">{row.audience_name}</dd></div> : null}
       </dl>
+      {isQueued && row.queue_position ? <p className="text-sm font-semibold">{queueCopy.position}: {row.queue_position}</p> : null}
+      {isOffered && row.offer_expires_at ? <div className="grid gap-2 rounded-lg border border-[#b9d5bd] bg-[#f0f8ed] p-3 text-sm leading-6">
+        <p className="font-bold">{queueCopy.deadline}: {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" }).format(new Date(row.offer_expires_at))} (Europe/Rome)</p>
+        <p>{queueCopy.swap}</p>
+      </div> : null}
+      {row.booking_status === "available" ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{queueCopy.bookingRule}</p> : null}
+      {isFull ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{queueCopy.queueHelp}</p> : null}
       <form action={setParticipantPanelBooking}>
         <input type="hidden" name="registrationId" value={registrationId} />
         <input type="hidden" name="panelId" value={row.panel_id} />
         <input type="hidden" name="sectionId" value={row.section_id} />
-        <input type="hidden" name="intent" value={isSelected ? "cancel" : "book"} />
+        <input type="hidden" name="intent" value={intent} />
         <PendingSubmitButton disabled={disabled} pendingLabel={isSelected ? copy.cancelling : copy.booking} className={`min-h-11 w-full rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-[#d9e0e6] disabled:text-[#637181] ${isSelected ? "border border-[#cf9b8e] text-[#8a3323] hover:bg-[#fff3ef]" : "bg-[var(--peace-blue-800)] text-white hover:bg-[var(--peace-blue-900)]"}`}>
-          {isSelected ? copy.cancel : copy.book}
+          {buttonLabel}
         </PendingSubmitButton>
       </form>
+      {isOffered ? <form action={setParticipantPanelBooking}>
+        <input type="hidden" name="registrationId" value={registrationId} />
+        <input type="hidden" name="panelId" value={row.panel_id} />
+        <input type="hidden" name="sectionId" value={row.section_id} />
+        <input type="hidden" name="intent" value="leave" />
+        <PendingSubmitButton pendingLabel={copy.cancelling} className="btn-secondary min-h-11 w-full">{queueCopy.leave}</PendingSubmitButton>
+      </form> : null}
     </article>
   );
 }

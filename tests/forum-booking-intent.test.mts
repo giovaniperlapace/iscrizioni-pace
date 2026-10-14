@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { FORUM_WAITLIST_COPY } from "../lib/panels/waitlist-copy.ts";
 import { parseForumIntent, forumBookingPath, withForumIntent } from "../lib/panels/booking-intent.ts";
 import { getHomePanelSlots } from "../lib/events/home-program.ts";
 import { getEventProgramCopy } from "../lib/events/program-copy.ts";
@@ -125,7 +126,9 @@ test("participant booking screen highlights the requested forum with one anchor 
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const dependencies: Record<string, unknown> = {
     "react/jsx-runtime": runtime,
+    "@/lib/panels/use-forum-availability": { useForumAvailability: (_id: string, rows: unknown) => ({ rows, error: null }) },
     "@/lib/events/program-copy": { getEventProgramCopy },
+    "@/lib/panels/waitlist-copy": { FORUM_WAITLIST_COPY },
     "lucide-react": Object.fromEntries(["CalendarDays", "CheckCircle2", "Clock3", "MapPin", "Users"].map(name => [name, () => null])),
     "@/app/actions": { setParticipantPanelBooking: async () => { writes++; } },
     "@/components/pending-submit-button": { PendingSubmitButton: (props: Record<string, unknown>) => { const { pendingLabel, ...buttonProps } = props; void pendingLabel; return runtime.jsx("button", buttonProps); } },
@@ -137,6 +140,7 @@ test("participant booking screen highlights the requested forum with one anchor 
   assert.equal((html.match(new RegExp(`id="forum-${forum}"`, "g")) ?? []).length, 1);
   assert.match(html, /Forum scelto/);
   assert.match(html, /ring-offset-2/);
-  assert.match(html, /disabled=""/);
+  assert.match(html, /Mettiti in coda per questo Forum/);
+  assert.doesNotMatch(html, /disabled=""/);
   assert.equal(writes, 0, "following an intent never automatically reserves a seat");
 });

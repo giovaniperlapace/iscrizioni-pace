@@ -56,7 +56,7 @@ try {
   const afternoon = preview.locator("#panel-program section[id^='panels-']").filter({ hasText: "Forum 9" });
   assert.deepEqual(await afternoon.locator("h5").allTextContents(), ["Forum 9 – Test alle 17", "Forum 10 – Test completo", "Forum 11 – Test pomeriggio"]);
   assert.match(await afternoon.locator("li").first().innerText(), /17:00/);
-  assert.match(await afternoon.innerText(), /Lista d’attesa prevista/);
+  assert.match(await afternoon.innerText(), /Lista d’attesa/);
   for (const width of [1440, 390]) {
     await preview.setViewportSize({ width, height: 900 });
     await preview.getByRole("link", { name: "Prenota questo Forum: Forum 9 – Test alle 17", exact: true }).click();

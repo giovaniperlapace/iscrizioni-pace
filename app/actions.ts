@@ -627,7 +627,7 @@ export async function setParticipantPanelBooking(formData: FormData) {
     !registrationId ||
     !panelId ||
     !sectionId ||
-    (intent !== "book" && intent !== "cancel")
+    !(["book", "cancel", "join", "leave", "accept"].includes(intent ?? ""))
   ) {
     redirect("/dashboard/partecipante?panelError=invalid");
   }
@@ -639,7 +639,13 @@ export async function setParticipantPanelBooking(formData: FormData) {
     redirect("/login");
   }
 
-  const { error } = await supabase.rpc("set_individual_panel_booking", {
+  const queueIntent = intent === "join" || intent === "leave" || intent === "accept";
+  const { data, error } = queueIntent ? await supabase.rpc("set_individual_panel_waitlist", {
+    p_registration_id: registrationId,
+    p_panel_id: panelId,
+    p_section_id: sectionId,
+    p_intent: intent,
+  }) : await supabase.rpc("set_individual_panel_booking", {
     p_registration_id: registrationId,
     p_panel_id: panelId,
     p_section_id: sectionId,
@@ -663,11 +669,14 @@ export async function setParticipantPanelBooking(formData: FormData) {
     redirect(`/dashboard/partecipante?panelError=${errorCode}`);
   }
 
+  if (data?.status === "expired" || data?.status === "available") {
+    redirect(`/dashboard/partecipante?panelError=${data.status}`);
+  }
+
   revalidatePath("/");
   revalidatePath("/dashboard/partecipante");
-  redirect(
-    `/dashboard/partecipante?panelSaved=${intent === "book" ? "booked" : "cancelled"}`
-  );
+  const saved = queueIntent ? data?.status : intent === "book" ? "booked" : "cancelled";
+  redirect(`/dashboard/partecipante?panelSaved=${saved}&forum=${encodeURIComponent(panelId)}#forum-${encodeURIComponent(panelId)}`);
 }
 
 export async function updateEventOpeningState(formData: FormData) {

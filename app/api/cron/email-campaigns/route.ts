@@ -1,3 +1,4 @@
+import { processForumWaitlistNotifications } from "@/lib/panels/waitlist-delivery.server";
 import { NextResponse } from "next/server";
 
 import { processDueCampaignDeliveries } from "@/lib/email/campaign-delivery.server";
@@ -13,10 +14,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await processDueCampaignDeliveries({
-      actorUserId: null,
-    });
-    return NextResponse.json(result);
+    const [campaigns, forums] = await Promise.allSettled([
+      processDueCampaignDeliveries({ actorUserId: null }),
+      processForumWaitlistNotifications(),
+    ]);
+    if (campaigns.status === "rejected" || forums.status === "rejected") {
+      return NextResponse.json({ error: "Elaborazione delle code non riuscita." }, { status: 500 });
+    }
+    return NextResponse.json({ ...campaigns.value, forumWaitlist: forums.value });
   } catch (cause) {
     const message =
       cause instanceof Error ? cause.message : "Elaborazione coda non riuscita.";
