@@ -98,3 +98,57 @@ test("real QR GET enforces auth, role, input, scope and private no-store respons
     if (status !== 200) assert.ok(!reads.includes("qr_tokens"));
   }
 });
+
+test("real print GET rereads authorized active QR and database identity; every denied case has no printable image", async (t) => {
+  const previous = process.env.QR_TOKEN_ENCRYPTION_SECRET;
+  process.env.QR_TOKEN_ENCRYPTION_SECRET = "synthetic-print-secret";
+  t.after(() => { if (previous === undefined) delete process.env.QR_TOKEN_ENCRYPTION_SECRET; else process.env.QR_TOKEN_ENCRYPTION_SECRET = previous; });
+  const { loadOperationsQrLabel } = await import("../lib/registrations/operations-qr.server.ts");
+  const { QR_LABEL_CSP } = await import("../lib/qrcode/print-label.ts");
+  const source = ts.transpileModule(readFileSync(new URL("../app/dashboard/participants/qr/print/route.ts", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const active = { registration_id: id, status: "active", expires_at: null, token_encrypted: encryptQrToken("synthetic-print-existing-token") };
+  const identity = { id, event_id: "event", deleted_at: null, status: "submitted", participants: { first_name: "Anna", last_name: "Bianchi", public_code: "FIX1" } };
+  const cases = [
+    { role: null, eventId: null, status: 401 },
+    { role: "manager_viewer", eventId: "event", status: 403 },
+    { role: "capogruppo", eventId: "event", status: 403 },
+    { role: "manager", eventId: "other", status: 403 },
+    { role: "manager", eventId: "event", status: 403 },
+    { role: "admin", eventId: null, requestId: "invalid", status: 400 },
+    { role: "admin", eventId: null, registration: { ...identity, deleted_at: "deleted" }, status: 404 },
+    { role: "admin", eventId: null, registration: { ...identity, status: "cancelled" }, status: 404 },
+    { role: "admin", eventId: null, qr: { ...active, status: "revoked" }, status: 404 },
+    { role: "admin", eventId: null, qr: { ...active, expires_at: "2000-01-01" }, status: 404 },
+    { role: "admin", eventId: null, qr: { ...active, token_encrypted: "broken" }, status: 404 },
+    { role: "admin", eventId: null, fail: "qr_tokens", status: 500 },
+    { role: "admin", eventId: null, status: 200 },
+    { role: "admin", eventId: null, status: 200 },
+  ];
+  for (const c of cases) {
+    const { db, reads } = fixture({ registrations: [c.registration ?? identity], qr_tokens: [c.qr ?? active] }, c.fail);
+    const dependencies: Record<string, unknown> = {
+      "next/server": { NextResponse },
+      "@/lib/auth/session": { getCurrentAuthContext: async () => c.role ? { eventRoles: [{ role: c.role, eventId: c.eventId }] } : null },
+      "@/lib/supabase/server": { createSupabaseServerClient: async () => ({}) },
+      "@/lib/supabase/service": { createSupabaseServiceClient: () => db },
+      "@/lib/registrations/operations-qr.server": { loadOperationsQrLabel },
+      "@/lib/qrcode/print-label": { QR_LABEL_CSP },
+    };
+    const exports: { GET?: (request: NextRequest) => Promise<NextResponse> } = {};
+    new Function("require", "exports", source)((name: string) => { assert.ok(name in dependencies); return dependencies[name]; }, exports);
+    const response = await exports.GET!(new NextRequest(`https://example.test/dashboard/participants/qr/print?registrationId=${c.requestId ?? id}&name=Forged&code=OTHER`));
+    assert.equal(response.status, c.status, JSON.stringify({ role: c.role, status: c.status }));
+    assert.equal(response.headers.get("cache-control"), "private, no-store");
+    const body = await response.text();
+    if (c.status === 200) {
+      assert.match(body, /Anna Bianchi/);
+      assert.ok(!body.includes("Forged") && !body.includes("OTHER"));
+      assert.match(body, /<svg class="qr"/);
+    } else {
+      assert.ok(!body.includes("<svg") && !body.includes("data:image"));
+    }
+    if (c.status === 401 || c.status === 403 || c.status === 400) assert.deepEqual(reads, []);
+  }
+});

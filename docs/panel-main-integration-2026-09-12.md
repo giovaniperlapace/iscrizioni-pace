@@ -86,3 +86,36 @@ finché questa migration non è applicata.
   nasconderla. Fixture e runner diagnostico temporanei rimossi.
 - Il collaudo autenticato del nuovo salvataggio sul database staging resta
   successivo all'applicazione della migration; nessun test su utenti reali.
+
+## Applicazione staging successiva al merge — 2026-09-12
+
+Su richiesta esplicita dell'utente, eseguito il comando staging documentato
+sopra per la sola `20260910120000_leader_attendance.sql`. Registrazione
+`20260910120000:leader_attendance` confermata nel container
+`supabase-db-jiio6ou5wzmma2xwas53cf1d`. Lo stato "da applicare" nelle sezioni
+precedenti descrive il checkpoint del merge ed è ora superato.
+
+- Corpo della funzione identico al file locale (MD5 del corpo SQL verificato).
+- `security invoker`, search_path vuoto, EXECUTE a service_role, negato ad
+  anon/authenticated. Nessuna modifica alle policy RLS.
+- PostgREST riconosce la RPC: una chiamata service_role con assegnazione
+  inesistente riceve il rifiuto applicativo 403/42501; anon riceve il divieto
+  EXECUTE 401/42501. Nessuna scrittura da queste richieste.
+- `tests/sql/leader-attendance-staging-rollback-check.sql` eseguito sullo
+  staging come service_role con il capogruppo e l'iscrizione sintetici già
+  presenti: due fasce salvate e rilette, deduplicazione, passaggio a sconosciuto,
+  rifiuto di attore fuori scope e payload invalido, audit e conservazione di
+  prenotazioni panel/check-in. Rollback finale di tutte le modifiche di test.
+- Confronto prima dell'applicazione e dopo il collaudo: conteggi e hash identici
+  per tutte le 41 tabelle pubbliche, inclusi audit e dati panel; policy RLS
+  identiche. Nessun dato reale modificato, nessuna email inviata.
+- Il wrapper esistente ha emesso avvisi BEGIN/COMMIT annidati perché anche il
+  file SQL delimita la transazione; funzione e registrazione sono state
+  verificate separatamente come completate. Non considerare questi avvisi
+  prova di atomicità tra applicazione e registrazione.
+
+La vecchia migration di rinomina gruppi resta esclusa come già documentato.
+Production, main e deployment applicativi invariati. Il merge `32e7d41` non
+è ancora pubblicato: il collaudo browser autenticato sulla preview aggiornata
+segue il futuro push del branch panel. Documentazione e test SQL aggiornati
+localmente in questa attività; nessun nuovo commit o push eseguito.

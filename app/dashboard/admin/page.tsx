@@ -1,3 +1,4 @@
+import { GroupQrLabelButton } from "@/app/dashboard/group-qr-label-button";
 import { DeskMicrophoneIcon } from "@/components/desk-microphone-icon";
 import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
 import { loadAssociations } from "@/lib/registrations/association.server";
@@ -474,6 +475,7 @@ export default async function AdminDashboardPage({
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveAdminSection(params);
+  const participantSchoolsView = activeSection === "iscritti" && params.view === "schools";
   const statisticsReport = resolveStatisticsReport(params.report);
   const statisticsDrilldown =
     activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
@@ -504,7 +506,7 @@ export default async function AdminDashboardPage({
     activeSection === "panel" && currentEventId
       ? getPanelDraftCatalog(supabase, currentEventId)
       : Promise.resolve({ panels: [], audienceTypes: [] }),
-    activeSection === "panel" && currentEventId
+    (activeSection === "panel" || participantSchoolsView) && currentEventId
       ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
       : Promise.resolve({ bookings: [], panelOptions: [] }),
     activeSection === "dashboard" && statisticsReport === "panels" && currentEventId
@@ -584,7 +586,7 @@ export default async function AdminDashboardPage({
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard admin</h1>
-          <DashboardRoleTabs activeRole="admin" eventRoles={auth.eventRoles} />
+          <DashboardRoleTabs activeRole="admin" eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments} />
           <DashboardAreaDescription>
             In questa area puoi aprire o sospendere le iscrizioni, controllare
             i numeri principali e gestire gruppi e ruoli operativi.
@@ -624,6 +626,7 @@ export default async function AdminDashboardPage({
 
             {activeSection === "dashboard" ? (
               <StatisticsSection
+                eventId={currentEventId}
                 statistics={statistics}
                 report={statisticsReport}
                 canViewDisability={true}
@@ -640,7 +643,7 @@ export default async function AdminDashboardPage({
 
             {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
-            {activeSection === "iscritti" ? (
+            {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
                 searchParams={params}
                 snapshot={participantsSnapshot}
@@ -697,8 +700,9 @@ export default async function AdminDashboardPage({
               />
             ) : null}
 
-            {activeSection === "panel" && panelView === "schools" ? (
+            {(activeSection === "panel" && panelView === "schools") || participantSchoolsView ? (
               <SchoolBookingsSection
+                sourceSection={participantSchoolsView ? "iscritti" : "panel"}
                 dashboard="admin"
                 navMode={navMode}
                 event={currentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}
@@ -2040,6 +2044,7 @@ async function AdminGroupTreeSection({
                       >
                         Capogruppo
                       </Link>
+                      <GroupQrLabelButton groupId={group.id} groupName={group.name} />
                       <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} />
                     </div>
                   </td>

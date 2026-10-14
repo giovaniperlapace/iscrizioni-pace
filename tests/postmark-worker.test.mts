@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { createHash } from "node:crypto";
 
-function harness(failSave = false, exhaustBudget = false, recovery?: { results: object[]; pauseFails?: boolean }) {
+function harness(failSave = false, exhaustBudget = false, recovery?: { results: object[]; pauseFails?: boolean }, audience: "group_leader" | "teacher" = "group_leader") {
   const states = new Map<string, string>();
   let claims = 0, batchCalls = 0;
   const pauses: unknown[] = [];
@@ -15,7 +15,7 @@ function harness(failSave = false, exhaustBudget = false, recovery?: { results: 
       if (name === "pause_email_campaign_delivery") { pauses.push(args); return { error: recovery?.pauseFails ? {message:"pause unavailable"} : null }; }
       claims++;
       if (exhaustBudget) now += 200_000;
-      return { data: claims <= 2 ? [0,1].map(i => ({ id:`${claims}-${i}`, campaign_id:"campaign",recipient_type:"group_leader",recipient_user_id:`${claims}-${i}`})) : [] };
+      return { data: claims <= 2 ? [0,1].map(i => ({ id:`${claims}-${i}`, campaign_id:"campaign",recipient_type:audience,recipient_user_id:audience === "group_leader" ? `${claims}-${i}` : null,school_teacher_id:audience === "teacher" ? `teacher-${i}` : null})) : [] };
     },
     from(table: string) {
       let update: {status?:string} | undefined, id = "", statusFilter = "";
@@ -23,7 +23,7 @@ function harness(failSave = false, exhaustBudget = false, recovery?: { results: 
         select() { return q; }, in() {return q;}, order(){return q;}, insert(){return q;},
         update(value: {status:string}) {update=value;return q;},
         eq(key: string,value:string){if(key==="id")id=value;if(key==="status")statusFilter=value;return q;},
-        async maybeSingle(){return {data:{status:"completed"}};},
+        async maybeSingle(){return {data:table === "school_booking_teachers" ? { email: "teacher@example.invalid", first_name: "Docente", last_name: "Prova", school_bookings: [{ school_name: "Scuola", status: "confirmed", school_panel_reservations: [{ status: "reserved", event_moments: { title: "Panel" } }] }] } : {status:"completed"}};},
         then(resolve: (value: unknown) => unknown) {
           if (update && table === "email_campaign_recipients") {
             if (failSave && id.endsWith("-0")) return Promise.resolve({error:{message:"db down"}}).then(resolve);
@@ -49,7 +49,7 @@ function harness(failSave = false, exhaustBudget = false, recovery?: { results: 
     if(id.includes("campaign-html"))return {renderSafeCampaignHtml:()=>"hello",campaignHtmlToText:()=>"hello"};
     if(id.includes("campaign-templates"))return {renderCampaignTemplate:()=>"test"};
     if(id.includes("operational-users"))return {splitFullName:()=>({firstName:"A",lastName:"B"}),getOperationalUserIdentities:async(_:unknown,ids:string[])=>new Map([[ids[0],{email:"test@example.test",fullName:"A B"}]])};
-    if(id.includes("smtp"))return {EmailDeliveryError:class extends Error{},sendBroadcastBatch:async(inputs:unknown[])=>{batchCalls++;assert.equal(inputs.length,2);return recovery?.results ?? inputs.map((_,i)=>i===1&&!failSave?{errorCode:"postmark_406"}:{messageId:`id-${i}`});}};
+    if(id.includes("smtp"))return {EmailDeliveryError:class extends Error{},sendBroadcastBatch:async(inputs:Array<{to:string}>)=>{if(audience === "teacher") assert.ok(inputs.every(input => input.to === "teacher@example.invalid"));batchCalls++;assert.equal(inputs.length,2);return recovery?.results ?? inputs.map((_,i)=>i===1&&!failSave?{errorCode:"postmark_406"}:{messageId:`id-${i}`});}};
     return {};
   },exports,class extends Date {static now(){return now;}});
   return {run:exports.processDueCampaignDeliveries as (options:object)=>Promise<{sent:number;failed:number}>,states,pauses,campaignStatuses,counts:()=>({claims,batchCalls})};
@@ -104,4 +104,13 @@ test("failure to persist the shared pause preserves successes and never releases
   assert.equal(h.states.get("1-0"), "sent");
   assert.equal(h.states.has("1-1"), false);
   assert.deepEqual(h.counts(), {claims:1,batchCalls:1});
+});
+
+
+test("panel teachers use the Postmark queue with their school identity and individual delivery outcomes", async () => {
+  const h = harness(false, false, undefined, "teacher");
+  const result = await h.run({campaignId:"campaign"});
+  assert.equal(result.sent, 2); assert.equal(result.failed, 2);
+  assert.deepEqual(h.counts(), {claims:3,batchCalls:2});
+  assert.deepEqual([...h.states.values()], ["sent","failed","sent","failed"]);
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { EventAttendanceProvider, EventPresence } from "@/app/dashboard/event-attendance";
 import { nationalityName } from "@/lib/registrations/nationality-names";
 import { OperationalAssociationEditor } from "@/app/dashboard/operational-association-editor";
 import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
@@ -504,7 +505,7 @@ export function OperationsParticipantsTable({
   exportParams.set("columns", columns.join(","));
   exportParams.delete("status");
   return (
-    <>
+    <EventAttendanceProvider key={eventId} eventId={eventId}>
     {!dialogOnly && <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
         <div className="min-w-0">
@@ -866,7 +867,8 @@ export function OperationsParticipantsTable({
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
-                        <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} />
+                        <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} />
+                        <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} renderChildDetails={(child) => child.id ? <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} childId={child.id} /> : null} />
                         {pending[row.registrationId] && (
                           <p role="status">Salvataggio…</p>
                         )}
@@ -910,11 +912,12 @@ export function OperationsParticipantsTable({
         <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath}>
           {!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsParticipantQr key={`qr:${selected.registrationId}`} registrationId={selected.registrationId}
-              participantName={selected.name} participantCode={selected.publicCode} locale={locale} />
+              participantName={selected.name} participantCode={selected.publicCode} locale={locale} adminLabels={dashboard === "admin"} />
           ) : null}
           {attendancePanel ?? (!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsAttendance key={`${selected.registrationId}:${dataVersion}`} registrationId={selected.registrationId} dashboard={dashboard} returnTo={returnTo} />
           ) : null)}
+          <section className="rounded-md border border-[var(--peace-border)] p-3"><h4 className="font-semibold">Ingresso all’evento</h4><EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} /></section>
           {selected.deletedAt ? (
             <div className="grid gap-2 rounded-md bg-red-50 p-4 text-sm">
               <p>Eliminata il {formatDate(selected.deletedAt)}.</p>
@@ -1009,7 +1012,7 @@ export function OperationsParticipantsTable({
             <h4 className="font-semibold">
               Figli partecipanti ({selected.childrenCount})
             </h4>
-            <OperationalChildrenEditor registrationId={selected.registrationId} records={selected.children} editable={editableEventIds.includes(selected.eventId) && !selected.deletedAt} />
+            <OperationalChildrenEditor registrationId={selected.registrationId} records={selected.children} renderChildDetails={(child) => child.id ? <EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} childId={child.id} /> : null} editable={editableEventIds.includes(selected.eventId) && !selected.deletedAt} />
           </section>
           {(selected.deletedAt
             ? dashboard === "admin"
@@ -1067,7 +1070,7 @@ export function OperationsParticipantsTable({
           )}
         </ParticipantDialog>
       )}
-    </>
+    </EventAttendanceProvider>
   );
 }
 

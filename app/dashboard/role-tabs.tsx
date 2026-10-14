@@ -10,6 +10,7 @@ import { getRequestLocale } from "@/lib/i18n/server";
 
 type DashboardRoleTabsProps = {
   activeRole: DashboardRole;
+  hasReceptionAssignments?: boolean;
   eventRoles: Array<{ role: EventRole; eventId: string | null }>;
 };
 
@@ -20,10 +21,11 @@ type DashboardAreaDescriptionProps = {
 export async function DashboardRoleTabs({
   activeRole,
   eventRoles,
+  hasReceptionAssignments = false,
 }: DashboardRoleTabsProps) {
   const locale = await getRequestLocale();
   const copy = getMessages(locale);
-  const tabs = getDashboardRoleTabs(eventRoles, locale);
+  const tabs = getDashboardRoleTabs(eventRoles, locale, hasReceptionAssignments);
 
   if (tabs.length <= 1) {
     return null;

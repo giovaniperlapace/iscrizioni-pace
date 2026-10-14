@@ -1944,7 +1944,7 @@ export async function saveSchoolBooking(formData: FormData) {
   await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
-  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav);
+  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav, optionalText(formData.get("schoolSourceSection")));
   const eventId = optionalText(formData.get("eventId"));
   const bookingId = optionalText(formData.get("bookingId"));
   const teacherEmailValue = optionalText(formData.get("teacherEmail"));
@@ -2156,7 +2156,7 @@ export async function cancelSchoolBooking(formData: FormData) {
   await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));
   const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
-  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav);
+  const dashboardPath = getSchoolBookingsDashboardPath(sourceDashboard, nav, optionalText(formData.get("schoolSourceSection")));
   const bookingId = optionalText(formData.get("bookingId"));
   if (!bookingId) redirect(`${dashboardPath}&schoolError=invalid`);
   const supabase = await createSupabaseServerClient();
@@ -4193,10 +4193,13 @@ function getPanelDraftsDashboardPath(
 
 function getSchoolBookingsDashboardPath(
   sourceDashboard: string | null,
-  navMode?: string | null
+  navMode?: string | null,
+  sourceSection?: string | null
 ): string {
   const basePath = sourceDashboard === "admin" ? "/dashboard/admin" : "/dashboard/manager";
-  const params = new URLSearchParams({ section: "panel", panelView: "schools" });
+  const params = new URLSearchParams(sourceSection === "iscritti"
+    ? { section: "iscritti", view: "schools" }
+    : { section: "panel", panelView: "schools" });
   if (navMode === "mini" || navMode === "full") params.set("nav", navMode);
   return `${basePath}?${params.toString()}`;
 }

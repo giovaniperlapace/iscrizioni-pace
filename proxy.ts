@@ -1,3 +1,4 @@
+import { hasPanelReceptionDuty } from "@/lib/reception/duties.server";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -103,9 +104,10 @@ export async function proxy(request: NextRequest) {
     return loginResponse;
   }
 
-  const [{ data: eventRoles }, { data: groupMemberships }] = await Promise.all([
+  const [{ data: eventRoles }, { data: groupMemberships }, hasReceptionAssignments] = await Promise.all([
     supabase.from("event_user_roles").select("role").eq("user_id", user.id),
     supabase.from("group_memberships").select("role").eq("user_id", user.id),
+    hasPanelReceptionDuty(supabase),
   ]);
   const availableRoles = new Set<DashboardRole>(["partecipante"]);
 
@@ -127,9 +129,9 @@ export async function proxy(request: NextRequest) {
     ? requestedRoleCookie
     : null;
   const defaultRole =
-    requestedRole && isRoleAllowedForDashboard(requestedRole, availableRoles)
+    requestedRole && isRoleAllowedForDashboard(requestedRole, availableRoles, hasReceptionAssignments)
       ? requestedRole
-      : pickFirstAllowedDashboard(availableRoles);
+      : pickFirstAllowedDashboard(availableRoles, hasReceptionAssignments);
 
   if (
     request.nextUrl.pathname === "/" ||
@@ -144,7 +146,7 @@ export async function proxy(request: NextRequest) {
     const destination =
       rememberedPath &&
       rememberedRole &&
-      isRoleAllowedForDashboard(rememberedRole, availableRoles)
+      isRoleAllowedForDashboard(rememberedRole, availableRoles, hasReceptionAssignments)
         ? rememberedPath
         : ROLE_ROUTES[defaultRole];
     const redirectResponse = redirectPreservingCookies(
@@ -167,7 +169,7 @@ export async function proxy(request: NextRequest) {
 
   const requiredRole = dashboardRoleFromPath(request.nextUrl.pathname);
 
-  if (requiredRole && !isRoleAllowedForDashboard(requiredRole, availableRoles)) {
+  if (requiredRole && !isRoleAllowedForDashboard(requiredRole, availableRoles, hasReceptionAssignments)) {
     const destination = ROLE_ROUTES[defaultRole];
     const redirectResponse = redirectPreservingCookies(
       new URL(destination, request.url),
@@ -212,7 +214,8 @@ function rememberActivity(response: NextResponse, rawPath: string) {
 }
 
 function pickFirstAllowedDashboard(
-  availableRoles: ReadonlySet<DashboardRole>
+  availableRoles: ReadonlySet<DashboardRole>,
+  hasReceptionAssignments = false
 ): DashboardRole {
   const priority: DashboardRole[] = [
     "admin",
@@ -224,7 +227,7 @@ function pickFirstAllowedDashboard(
   ];
 
   return (
-    priority.find((role) => isRoleAllowedForDashboard(role, availableRoles)) ??
+    priority.find((role) => isRoleAllowedForDashboard(role, availableRoles, hasReceptionAssignments)) ??
     "partecipante"
   );
 }

@@ -54,7 +54,8 @@ export function isDashboardRole(
 
 export function pickDashboardRole(
   roles: readonly string[],
-  requestedRole?: string | null
+  requestedRole?: string | null,
+  hasReceptionAssignments = false
 ): DashboardRole {
   const availableRoles = new Set(
     roles.filter((role): role is DashboardRole => isDashboardRole(role))
@@ -63,24 +64,27 @@ export function pickDashboardRole(
 
   if (
     isDashboardRole(requestedRole) &&
-    isRoleAllowedForDashboard(requestedRole, availableRoles)
+    isRoleAllowedForDashboard(requestedRole, availableRoles, hasReceptionAssignments)
   ) {
     return requestedRole;
   }
 
   return (
-    ROLE_PRIORITY.find((role) => isRoleAllowedForDashboard(role, availableRoles)) ??
+    ROLE_PRIORITY.find((role) => isRoleAllowedForDashboard(role, availableRoles, hasReceptionAssignments)) ??
     "partecipante"
   );
 }
 
 export function isRoleAllowedForDashboard(
   requiredRole: DashboardRole,
-  availableRoles: ReadonlySet<DashboardRole>
+  availableRoles: ReadonlySet<DashboardRole>,
+  hasReceptionAssignments = false
 ): boolean {
   if (availableRoles.has("admin")) {
     return true;
   }
+
+  if (requiredRole === "accoglienza" && hasReceptionAssignments) return true;
 
   if (requiredRole === "partecipante") {
     return true;

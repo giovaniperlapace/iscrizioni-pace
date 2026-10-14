@@ -1,5 +1,6 @@
 "use client";
 
+import { EventAttendanceReport } from "@/app/dashboard/event-attendance";
 import { AssociationStatisticsReport } from "@/app/dashboard/association-statistics-report";
 import type { AssociationStatisticsSnapshot } from "@/lib/registrations/association-statistics";
 
@@ -35,6 +36,7 @@ type StatisticsDashboard = "admin" | "manager";
 type StatisticsNavMode = "full" | "mini";
 
 type StatisticsSectionProps = {
+  eventId?: string | null;
   statistics: EventStatisticsSnapshot;
   report?: StatisticsReport;
   canViewDisability?: boolean;
@@ -57,6 +59,7 @@ const AGE_BANDS: StatisticsAgeBand[] = [
 ];
 
 export function StatisticsSection({
+  eventId = null,
   statistics,
   report = "territory",
   canViewDisability = false,
@@ -72,6 +75,7 @@ export function StatisticsSection({
 
   return (
     <section className="grid w-full min-w-0 gap-8">
+      <EventAttendanceReport eventId={eventId} />
       <div className="surface-panel p-5">
         <h2 className="text-lg font-semibold">Statistiche evento</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--peace-muted)]">

@@ -1,4 +1,5 @@
 import { withForumIntent } from "@/lib/panels/booking-intent";
+import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { getPanelReleaseMode } from "@/lib/panels/release";
 import { nationalityName } from "@/lib/registrations/nationality-names";
 import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
@@ -1149,7 +1150,7 @@ export default async function PartecipanteDashboardPage({
         <header className="grid gap-4">
           <DashboardRoleTabs
             activeRole="partecipante"
-            eventRoles={auth.eventRoles}
+            eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments}
           />
           <div className="grid gap-2">
             <p className="text-sm font-semibold uppercase tracking-wide text-[var(--peace-blue-800)]">
@@ -1231,6 +1232,8 @@ export default async function PartecipanteDashboardPage({
                 />
               </div>
             </section>
+
+            {auth.eventRoles.some(role => role.role === "admin" && role.eventId === null) ? <Link href="/dashboard/partecipante/cerimonie" className="btn-secondary min-h-11 justify-self-start px-4">{DISTRIBUTION_COPY[locale].title}</Link> : null}
 
             {panelBookingsOpen ? <ParticipantPanelBookings
               locale={locale}

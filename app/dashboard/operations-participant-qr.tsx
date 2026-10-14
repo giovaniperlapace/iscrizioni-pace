@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { QrLabelPanel } from "./qr-label-panel";
 import { LeaderParticipantQr } from "./capogruppo/participant-qr";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -15,8 +16,8 @@ const COPY = {
   uk: ["Завантаження QR-коду…", "Не вдалося завантажити QR-код.", "Спробувати ще раз"],
 } satisfies Record<SupportedLocale, string[]>;
 
-export function OperationsParticipantQr({ registrationId, participantName, participantCode, locale }: {
-  registrationId: string; participantName: string; participantCode: string | null; locale: SupportedLocale;
+export function OperationsParticipantQr({ registrationId, participantName, participantCode, locale, adminLabels = false }: {
+  registrationId: string; participantName: string; participantCode: string | null; locale: SupportedLocale; adminLabels?: boolean;
 }) {
   const [result, setResult] = useState<{ registrationId: string; qr: RegistrationQrPreview | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -41,5 +42,8 @@ export function OperationsParticipantQr({ registrationId, participantName, parti
     <button type="button" className="min-h-11 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold"
       onClick={() => { setResult(null); setAttempt(value => value + 1); }}>{copy[2]}</button>
   </div>;
-  return <LeaderParticipantQr qr={result.qr} participantName={participantName} participantCode={participantCode} locale={locale} />;
+  return <div className="grid justify-items-start gap-3">
+    <LeaderParticipantQr qr={result.qr} participantName={participantName} participantCode={participantCode} locale={locale} />
+    {adminLabels ? <QrLabelPanel key={registrationId} scope={{ registrationId }} /> : null}
+  </div>;
 }

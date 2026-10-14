@@ -14,8 +14,8 @@ function previewLoader(failAt = 0) {
         select() { return query; },
         eq() { return query; },
         order() { return query; },
-        range() { return query; },
         not() { return query; },
+        range() { return query; },
         in(_column: string, values: string[]) { ids = values; return query; },
         then(resolve: (value: unknown) => unknown) {
           const tooLong = new URLSearchParams({ select: "id,first_name,last_name", id: `in.(${ids.join(",")})` }).toString().length > 8000;

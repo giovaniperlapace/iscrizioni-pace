@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Fragment, type ReactNode, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateOperationalChild } from "@/app/actions";
 import { ReliableForm } from "@/components/reliable-form";
@@ -23,15 +23,15 @@ const COPY: Record<SupportedLocale, readonly string[]> = {
   uk: ["Ім’я", "Прізвище", "Дата народження", "Зберегти дитину", "Видалити дитину", "Видалити цю дитину з реєстрації? Реєстрація одного з батьків залишиться без змін.", "Дані дитини збережено.", "Дитину видалено з реєстрації.", "Немає пов’язаних дітей.", "Змініть дані або видаліть дитину, зареєстровану помилково чи двічі."],
 };
 
-export function OperationalChildrenEditor({ records, locale = "it", editable, registrationId }: {
-  records: RegistrationChildRow[]; locale?: SupportedLocale; editable: boolean; registrationId?: string;
+export function OperationalChildrenEditor({ records, locale = "it", editable, registrationId, renderChildDetails }: {
+  records: RegistrationChildRow[]; locale?: SupportedLocale; editable: boolean; registrationId?: string; renderChildDetails?: (child: RegistrationChildRow) => ReactNode;
 }) {
   const copy = COPY[locale];
   return <div className="grid gap-3">
     {editable && records.length > 0 ? <p className="text-sm text-[var(--peace-muted)]">{copy[9]}</p> : null}
-    {records.map(child => editable && child.id ?
+    {records.map(child => <Fragment key={child.id ?? child.position}>{editable && child.id ?
       <ChildEditor key={child.id} child={child} locale={locale} /> :
-      <p key={child.id ?? child.position}>{child.first_name} {child.last_name} · {child.birth_date}</p>)}
+      <p key={child.id ?? child.position}>{child.first_name} {child.last_name} · {child.birth_date}</p>}{renderChildDetails?.(child)}</Fragment>)}
     {!records.length ? <p>{copy[8]}</p> : null}
     {editable && registrationId && records.length < 10 ? <ChildAddition registrationId={registrationId} locale={locale} /> : null}
   </div>;

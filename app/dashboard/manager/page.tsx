@@ -423,6 +423,7 @@ export default async function ManagerDashboardPage({
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
   const activeSection = resolveManagerSection(params);
+  const participantSchoolsView = activeSection === "iscritti" && params.view === "schools";
   const statisticsReport = resolveStatisticsReport(params.report);
   const statisticsDrilldown =
     activeSection === "iscritti" ? parseStatisticsDrilldown(params.stat) : null;
@@ -447,14 +448,17 @@ export default async function ManagerDashboardPage({
   const canSeeCurrentEvent = Boolean(
     currentEventId && (!scope.eventIds || scope.eventIds.has(currentEventId))
   );
-  const [panelLocations, panelCatalog, schoolCatalog] =
+  const [panelLocations, panelCatalog, schoolCatalog] = await Promise.all([
     activeSection === "panel" && currentEventId && canSeeCurrentEvent
-      ? await Promise.all([
-          getEventLocations(serviceSupabase, currentEventId),
-          getPanelDraftCatalog(supabase, currentEventId),
-          getSchoolBookingCatalog(serviceSupabase, currentEventId),
-        ])
-      : [[], { panels: [], audienceTypes: [] }, { bookings: [], panelOptions: [] }];
+      ? getEventLocations(serviceSupabase, currentEventId)
+      : Promise.resolve([]),
+    activeSection === "panel" && currentEventId && canSeeCurrentEvent
+      ? getPanelDraftCatalog(supabase, currentEventId)
+      : Promise.resolve({ panels: [], audienceTypes: [] }),
+    (activeSection === "panel" || participantSchoolsView) && currentEventId && canSeeCurrentEvent
+      ? getSchoolBookingCatalog(serviceSupabase, currentEventId)
+      : Promise.resolve({ bookings: [], panelOptions: [] }),
+  ]);
   const panelStatisticsPromise =
     activeSection === "dashboard" && statisticsReport === "panels" && currentEventId && canSeeCurrentEvent
       ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
@@ -546,7 +550,7 @@ export default async function ManagerDashboardPage({
       <section className="mx-auto grid w-full max-w-[90rem] gap-6 px-5 py-8 sm:px-8">
         <header className="grid gap-3">
           <h1 className="sr-only">Dashboard manager</h1>
-          <DashboardRoleTabs activeRole="manager" eventRoles={auth.eventRoles} />
+          <DashboardRoleTabs activeRole="manager" eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments} />
         </header>
 
         <div
@@ -576,6 +580,7 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "dashboard" ? (
               <StatisticsSection
+                eventId={currentEventId}
                 statistics={statistics}
                 report={statisticsReport}
                 canViewDisability={canViewStatistics}
@@ -592,7 +597,7 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
-            {activeSection === "iscritti" ? (
+            {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
                 searchParams={params}
                 snapshot={participantsSnapshot}
@@ -684,8 +689,9 @@ export default async function ManagerDashboardPage({
               />
             ) : null}
 
-            {activeSection === "panel" && panelView === "schools" ? (
+            {(activeSection === "panel" && panelView === "schools") || participantSchoolsView ? (
               <SchoolBookingsSection
+                sourceSection={participantSchoolsView ? "iscritti" : "panel"}
                 dashboard="manager"
                 navMode={navMode}
                 event={currentEvent && canSeeCurrentEvent ? { id: currentEvent.id, title: currentEvent.title } : null}

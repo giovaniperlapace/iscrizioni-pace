@@ -1,0 +1,221 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { ReceptionStationSession, ScanLatch } from "../lib/reception/station.ts";
+import type { ReceptionCommand, ReceptionResult } from "../lib/reception/contracts.ts";
+
+const adult = "11111111-1111-4111-8111-111111111111";
+const child = "22222222-2222-4222-8222-222222222222";
+const request = "33333333-3333-4333-8333-333333333333";
+const lookup = { kind: "code" as const, value: "TEST" };
+const family = (children = false): Extract<ReceptionResult, {kind:"family"}> => ({
+  status:"valid",kind:"family",code:"TEST",revision:0,outcome:"verified",registrationStatus:"confirmed",
+  persons:[{id:adult,kind:"adult",firstName:"Anna",lastName:"Test",checkedInAt:null},
+    ...(children ? [{id:child,kind:"child" as const,firstName:"Luca",lastName:"Test",checkedInAt:null}] : [])],
+});
+const school: Extract<ReceptionResult,{kind:"school"}> = {status:"valid",kind:"school",schoolName:"Test",classDescription:"1A",revision:0,outcome:"verified",registrationStatus:"submitted",expectedStudents:10,expectedCompanions:2,students:0,companions:0,checkedInAt:null};
+const now = "2026-09-22T12:00:00Z";
+
+test("single entry keeps one duty across consecutive QR/manual reads and needs no action choice", async () => {
+  const calls: ReceptionCommand[] = [];
+  const session = new ReceptionStationSession(async c => { calls.push(c); const r=family(); return c.action === "inspect" ? r : {...r,outcome:"saved",persons:r.persons.map(p=>({...p,checkedInAt:now}))}; },()=>request);
+  await session.inspect(lookup);
+  assert.deepEqual(calls.map(c=>c.action),["inspect","enter"]);
+  assert.deepEqual(calls[1].subjectIds,[adult]);
+  assert.equal(session.snapshot().phase,"result"); assert.equal(session.canScan(),true);
+  await session.inspect({kind:"qr",value:"a".repeat(43)});
+  assert.equal(calls.length,4); assert.ok(calls.every(c=>c.duty==="event_entry"));
+  assert.equal(session.snapshot().mode,"enter");
+});
+test("already present singles and complete families are read without sending entry commands", async () => {
+  for (const children of [false, true]) {
+    const calls: ReceptionCommand[] = [];
+    const result = family(children);
+    result.persons = result.persons.map(person => ({ ...person, checkedInAt: now }));
+    const session = new ReceptionStationSession(async command => { calls.push(command); return result; }, () => request);
+    await session.inspect(lookup);
+    await session.inspect(lookup);
+    assert.deepEqual(calls.map(command => command.action), ["inspect", "inspect"]);
+    assert.deepEqual(session.snapshot().result, result);
+    assert.equal(session.snapshot().phase, "result");
+    assert.equal(session.canScan(), true);
+    session.setMode("correct");
+    await session.inspect(lookup);
+    assert.equal(session.snapshot().phase, "selection");
+  }
+});
+test("family is paused until explicit subset; school requires explicit counts",async()=>{
+  for (const result of [family(true),school]) {
+    const calls:ReceptionCommand[]=[];
+    const session=new ReceptionStationSession(async c=>{calls.push(c);return result;},()=>request);
+    await session.inspect(lookup);
+    assert.equal(session.snapshot().phase,"selection");assert.equal(session.canScan(),false);assert.equal(calls.length,1);
+    await session.inspect({kind:"code",value:"NEXT"});assert.equal(calls.length,1);
+    await session.submit(result.kind==="family"?{subjectIds:[child]}:{students:8,companions:1});
+    assert.equal(calls.length,2);assert.equal(session.snapshot().phase,"result");
+    if (result.kind==="family") assert.deepEqual(calls[1].subjectIds,[child]);
+    else {assert.equal(calls[1].students,8);assert.equal(calls[1].companions,1);}
+  }
+});
+test("repeated school entry shows existing time/count without automatic overwrite",async()=>{
+  const calls:ReceptionCommand[]=[];
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return {...school,checkedInAt:now,students:8,companions:1};},()=>request);
+  await session.inspect(lookup);assert.equal(calls.length,1);assert.equal(session.snapshot().phase,"result");
+  assert.match(session.snapshot().message,/déjà|già/);
+});
+test("synchronous interlock blocks double clicks and new subjects during slow inspect/enter",async()=>{
+  let finish:(r:ReceptionResult)=>void=()=>{};const calls:ReceptionCommand[]=[];
+  const session=new ReceptionStationSession(c=>{calls.push(c);return new Promise(r=>{finish=r;});},()=>request);
+  const first=session.inspect(lookup);
+  await session.inspect({kind:"code",value:"NEXT"});session.setMode("cancel");
+  assert.equal(calls.length,1);assert.equal(session.snapshot().mode,"enter");
+  finish(family());await new Promise(r=>setTimeout(r,0));
+  assert.equal(calls.length,2);assert.equal(session.snapshot().phase,"pending");
+  await session.inspect(lookup);assert.equal(calls.length,2);
+  finish({...family(),outcome:"saved"});await first;
+});
+test("uncertain writes freeze duty/subject and retry the exact original command",async()=>{
+  const calls:ReceptionCommand[]=[];let entries=0;
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return c.action==="inspect"?family():++entries===1?{status:"unavailable"}:{...family(),outcome:"replayed"};},()=>request);
+  await session.inspect(lookup);const original=calls[1];
+  assert.equal(session.snapshot().phase,"uncertain");assert.equal(session.snapshot().result,null);
+  session.next();session.setMode("cancel");await session.inspect({kind:"code",value:"NEXT"});
+  assert.equal(calls.length,2);assert.equal(session.snapshot().mode,"enter");
+  await session.retry();assert.equal(calls[2],original);assert.equal(session.snapshot().phase,"result");
+  assert.match(session.snapshot().message,/presenze correnti/);
+});
+test("timeout ignores late response and never announces an unconfirmed presence",async()=>{
+  let resolve:(r:ReceptionResult)=>void=()=>{};
+  const session=new ReceptionStationSession(c=>c.action==="inspect"?Promise.resolve(family()):new Promise(r=>{resolve=r;}),()=>request,5);
+  await session.inspect(lookup);assert.equal(session.snapshot().phase,"uncertain");
+  resolve({...family(),outcome:"saved"});await new Promise(r=>setTimeout(r,0));
+  assert.equal(session.snapshot().phase,"uncertain");assert.equal(session.snapshot().result,null);
+});
+test("uncertain inspection retries inspection before any entry",async()=>{
+  let count=0;const calls:ReceptionCommand[]=[];
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return count++===0?{status:"unavailable"}:family();},()=>request);
+  await session.inspect(lookup);await session.retry();
+  assert.deepEqual(calls.map(c=>c.action),["inspect","inspect","enter"]);assert.equal(calls[0],calls[1]);
+});
+test("correction is separate, confirmed, versioned; conflict requires fresh lookup",async()=>{
+  const calls:ReceptionCommand[]=[];
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return c.action==="inspect"?{...family(true),revision:7}:{status:"conflict"};},()=>request);
+  session.setMode("correct");await session.inspect(lookup);assert.equal(calls.length,1);
+  await session.submit({subjectIds:[child]});assert.equal(calls.length,1);
+  await session.submit({subjectIds:[child]},true);
+  assert.equal(calls[1].expectedRevision,7);assert.equal(calls[1].reason,"selection_error");
+  assert.equal(session.snapshot().phase,"error");assert.equal(session.canScan(),false);
+  await session.submit({subjectIds:[adult]},true);assert.equal(calls.length,2);
+  await session.inspect(lookup);assert.equal(calls.length,3);
+});
+test("revocation/session expiry blocks scanner and invalid lookups clear prior identity",async()=>{
+  for (const status of ["forbidden","invalid","invalid_request"] as const) {
+    let fail=false;
+    const session=new ReceptionStationSession(async()=>fail?{status}:family(),()=>request);
+    await session.inspect(lookup);fail=true;await session.inspect(lookup);
+    assert.equal(session.snapshot().result,null);assert.equal(session.snapshot().mode,"enter");
+    assert.equal(session.canScan(),status!=="forbidden");
+    if(status==="forbidden"){session.next();session.setMode("cancel");assert.equal(session.snapshot().phase,"blocked");}
+  }
+});
+test("leaving while verification is pending cannot trigger an automatic entry",async()=>{
+  const calls:ReceptionCommand[]=[];let resolve:(r:ReceptionResult)=>void=()=>{};
+  const session=new ReceptionStationSession(c=>{calls.push(c);return new Promise(r=>{resolve=r;});},()=>request);
+  const pending=session.inspect(lookup);session.setActive(false);resolve(family());await pending;assert.equal(calls.length,1);
+});
+test("stable QR and brief gaps stay latched; sustained removal permits rereading",()=>{
+  const latch=new ScanLatch();assert.equal(latch.accept("a"),true);
+  for(let i=0;i<20;i++) assert.equal(latch.accept("a"),false);
+  latch.absent(0);latch.absent(250);assert.equal(latch.accept("a"),false);
+  for(const time of [500,750,1000,1250,1500]) latch.absent(time);
+  assert.equal(latch.accept("a"),true);
+  assert.equal(latch.accept("a"),false);
+  latch.absent(2000);latch.absent(10000);
+  assert.equal(latch.accept("a"),false);
+  latch.absent(11000);latch.absent(11250);latch.clearAbsence();
+  latch.absent(11500);latch.absent(11750);
+  assert.equal(latch.accept("a"),false);
+  assert.equal(latch.accept("b"),true);
+});
+test("rereading a partly present family allows later arrivals without automatic writes",async()=>{
+  const calls:ReceptionCommand[]=[];
+  const result=family(true);result.persons[0].checkedInAt=now;
+  const session=new ReceptionStationSession(async command=>{calls.push(command);return result;},()=>request);
+  await session.inspect(lookup);
+  assert.equal(session.snapshot().phase,"selection");
+  assert.deepEqual(calls.map(c=>c.action),["inspect"]);
+  await session.submit({subjectIds:[child]});
+  assert.deepEqual(calls[1].subjectIds,[child]);
+  assert.equal(session.snapshot().result?.kind,"family");
+  assert.equal(result.persons[0].checkedInAt,now);
+});
+
+test("recent reads are limited to 15, deduplicated across QR/manual and local to session", async () => {
+  let code = "0000";
+  const session = new ReceptionStationSession(async () => ({...family(), code, persons: family().persons.map(p => ({...p, checkedInAt: now}))}), () => request);
+  for (let i = 0; i < 16; i++) { code = String(i).padStart(4, "0"); await session.inspect({kind:"code",value:code}); }
+  assert.equal(session.snapshot().recent.length,15);
+  assert.equal(session.snapshot().recent.at(-1)?.key,"family:0001");
+  code="0005"; await session.inspect({kind:"qr",value:"a".repeat(43)});
+  assert.equal(session.snapshot().recent.length,15);
+  assert.equal(session.snapshot().recent[0].key,"family:0005");
+  assert.equal(session.snapshot().recent.filter(e=>e.key==="family:0005").length,1);
+  assert.equal(new ReceptionStationSession(async()=>family(),()=>request).snapshot().recent.length,0);
+});
+test("editing recent reads refreshes revision without entering; empty selection cancels only current presences", async()=>{
+  const calls:ReceptionCommand[]=[];
+  let revision=1;
+  const present={...family(true),persons:family(true).persons.map((p,i)=>({...p,checkedInAt:i===0?now:null}))};
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return {...present,revision};},()=>request);
+  await session.inspect(lookup);session.next();revision=9;
+  await session.editRecent("family:TEST");
+  assert.deepEqual(calls.map(c=>c.action),["inspect","inspect"]);
+  assert.equal(session.snapshot().result?.revision,9);
+  await session.submit({subjectIds:[]});assert.equal(calls.length,2);
+  await session.submit({subjectIds:[]},true);
+  assert.equal(calls[2].action,"cancel");assert.deepEqual(calls[2].subjectIds,[adult]);
+  assert.equal(calls[2].expectedRevision,9);assert.equal(calls[2].reason,"entry_cancelled");
+  assert.equal(session.snapshot().mode,"enter");
+});
+test("school modification and cancellation share fresh verification and explicit confirmation",async()=>{
+  const calls:ReceptionCommand[]=[];
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return {...school,checkedInAt:now,students:8,companions:1,revision:3};},()=>request);
+  await session.inspect({kind:"qr",value:"s".repeat(43)});await session.editCurrent();
+  await session.submit({students:7,companions:1},true);
+  assert.equal(calls[2].action,"correct");assert.equal(calls[2].students,7);
+  await session.editCurrent();await session.submit({},false,true);assert.equal(calls.length,4);
+  await session.submit({},true,true);
+  assert.equal(calls[4].action,"cancel");assert.equal(calls[4].students,undefined);
+  assert.equal(calls[4].expectedRevision,3);
+});
+test("recent edits keep uncertain retry identity and block other operations; revocation clears history",async()=>{
+  const calls:ReceptionCommand[]=[];let status:"valid"|"unavailable"|"forbidden"="valid";
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return status==="valid"?{...family(),persons:family().persons.map(p=>({...p,checkedInAt:now}))}:{status};},()=>request);
+  await session.inspect(lookup);status="unavailable";await session.editCurrent();
+  await session.editRecent("family:TEST");assert.equal(calls.length,2);
+  status="valid";await session.retry();assert.equal(calls[2],calls[1]);
+  assert.equal(session.snapshot().phase,"selection");assert.equal(calls.every(c=>c.action==="inspect"),true);
+  session.next();status="forbidden";await session.editRecent("family:TEST");
+  assert.equal(session.snapshot().phase,"blocked");assert.equal(session.snapshot().recent.length,0);
+});
+
+test("stale recent entries never auto-enter and conflicts require another inspection",async()=>{
+  const calls:ReceptionCommand[]=[];let revision=1;let present=true;
+  const session=new ReceptionStationSession(async c=>{calls.push(c);return c.action!=="inspect"?{status:"conflict"}:{...family(),revision,persons:family().persons.map(p=>({...p,checkedInAt:present?now:null}))};},()=>request);
+  await session.inspect(lookup);present=false;revision=4;
+  await session.editRecent("family:TEST");
+  assert.deepEqual(calls.map(c=>c.action),["inspect","inspect"]);
+  const refreshed = session.snapshot().result;
+  assert.equal(refreshed?.kind==="family" && refreshed.persons[0].checkedInAt,null);
+  await session.submit({subjectIds:[]},true);assert.equal(calls.length,2);
+  await session.submit({subjectIds:[adult]},true);assert.equal(calls[2].expectedRevision,4);
+  assert.equal(session.snapshot().phase,"error");
+  await session.submit({subjectIds:[adult]},true);assert.equal(calls.length,3);
+  revision=5;await session.editRecent("family:TEST");assert.equal(session.snapshot().result?.revision,5);
+});
+test("invalid recent references are removed instead of showing stale details",async()=>{
+  let invalid=false;
+  const session=new ReceptionStationSession(async()=>invalid?{status:"invalid"}:{...school,checkedInAt:now},()=>request);
+  await session.inspect({kind:"qr",value:"s".repeat(43)});
+  invalid=true;await session.editRecent(session.snapshot().recent[0].key);
+  assert.equal(session.snapshot().recent.length,0);assert.equal(session.snapshot().result,null);
+});

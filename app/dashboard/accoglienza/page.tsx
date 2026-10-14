@@ -1,9 +1,11 @@
+import Link from "@/components/pending-link";
+import { ReceptionWorkstation } from "./reception-workstation";
+import { loadPanelReceptionDuties, type ReceptionDuty } from "@/lib/reception/duties.server";
+import { receptionCheckIn } from "./actions";
+
 import { redirect } from "next/navigation";
 
-import {
-  DashboardAreaDescription,
-  DashboardRoleTabs,
-} from "@/app/dashboard/role-tabs";
+import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -15,6 +17,20 @@ export default async function AccoglienzaDashboardPage() {
     redirect("/login");
   }
 
+  const pilot = auth.eventRoles.some(role => role.role === "admin" && role.eventId === null);
+  if (!pilot) return <main className="app-page"><section className="mx-auto grid max-w-5xl gap-5 px-5 py-8"><DashboardRoleTabs activeRole="accoglienza" eventRoles={auth.eventRoles} /><h1>Dashboard accoglienza</h1><p>Le funzioni di scansione sono in collaudo riservato all’Admin.</p></section></main>;
+
+  const { data: event, error } = await supabase.from("events").select("id").eq("is_current", true).maybeSingle();
+  if (error) throw new Error("Impossibile caricare l’evento dell’accoglienza.");
+  const authorized = event && auth.eventRoles.some(role =>
+    (role.role === "admin" && role.eventId === null) ||
+    (["manager", "accoglienza"].includes(role.role) && role.eventId === event.id));
+
+  const readiness = await supabase.rpc("admin_reception_pilot_ready");
+  const ready = !readiness.error && readiness.data === true;
+  const duties: ReceptionDuty[] = event && ready ? await loadPanelReceptionDuties(supabase) : [];
+  if (authorized && ready) duties.unshift({ key: "event_entry", duty: "event_entry", title: "Accoglienza evento", room: null });
+
   return (
     <main className="app-page text-[var(--peace-ink)]">
       <section className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8 sm:px-8">
@@ -22,13 +38,12 @@ export default async function AccoglienzaDashboardPage() {
           <h1 className="sr-only">Dashboard accoglienza</h1>
           <DashboardRoleTabs
             activeRole="accoglienza"
-            eventRoles={auth.eventRoles}
+            eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments}
           />
-          <DashboardAreaDescription>
-            In questa area potrai scansionare i QR code e verificare
-            l&apos;accesso con i soli dati operativi necessari.
-          </DashboardAreaDescription>
         </header>
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">Collaudo riservato all’Admin. Lo scanner operativo registra ingressi: usa esclusivamente campioni sintetici nell’ambiente di prova. Per leggere un’etichetta senza registrare presenze usa la fotocamera del telefono.</p>
+        <Link className="btn-secondary min-h-11 justify-self-start px-4" href="/dashboard/admin/stampa-qr/collaudo">Collaudo stampante con campioni sintetici</Link>
+        {ready ? <ReceptionWorkstation duties={duties} commandAction={receptionCheckIn.bind(null, event?.id ?? "")} /> : <p role="alert" className="rounded-lg border p-4">Scanner operativo non ancora attivato in questo ambiente. Prima del collaudo applicativo occorre verificare e applicare le migration autorizzate. Il collaudo stampante con campioni sintetici è indipendente.</p>}
       </section>
     </main>
   );

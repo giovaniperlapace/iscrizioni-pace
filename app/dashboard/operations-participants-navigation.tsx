@@ -2,7 +2,7 @@
 
 import Link from "@/components/pending-link";
 import { useSearchParams } from "next/navigation";
-import { Baby, Copy, UserRoundSearch, Users } from "lucide-react";
+import { Baby, Copy, School, UserRoundSearch, Users } from "lucide-react";
 
 export function OperationsParticipantsNavigation({
   dashboard,
@@ -23,10 +23,11 @@ export function OperationsParticipantsNavigation({
         { key: "children", label: "Figli accompagnati", icon: Baby },
         { key: "duplicates", label: "Duplicati", icon: Copy },
         { key: "without-group", label: "Senza gruppo", icon: UserRoundSearch },
+        { key: "schools", label: "Scuole", icon: School },
       ].map(({ key, label, icon: Icon }) => {
         const active =
           key === "all"
-            ? view !== "duplicates" && view !== "without-group" && view !== "children"
+            ? view !== "duplicates" && view !== "without-group" && view !== "children" && view !== "schools"
             : view === key;
         const params = new URLSearchParams(searchParams.toString());
         params.set("section", "iscritti");
@@ -35,6 +36,14 @@ export function OperationsParticipantsNavigation({
         else params.set("view", key);
         // Each queue starts complete, without hidden filters from another view.
         for (const param of [
+          "panelView",
+          "schoolId",
+          "schoolTool",
+          "schoolQ",
+          "schoolStatus",
+          "schoolPanel",
+          "schoolError",
+          "schoolSaved",
           "edit",
           "manual",
           "childrenQuery",

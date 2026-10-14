@@ -45,3 +45,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated QR label test pages and local print-layout artifacts
+/tools/brother-browser-test/*.html
+/tools/brother-browser-test/print-client.js
+/tools/brother-browser-test/sample.json
+/output/pdf/proposta-stampa-etichette-qr.pdf
+/tmp/pdfs/
+
+# Historical local QA/export artifacts retained on disk, excluded from integration.
+/output/

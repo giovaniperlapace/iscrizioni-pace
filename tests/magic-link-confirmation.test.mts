@@ -28,7 +28,7 @@ function harness(failVerification = false) {
     if(id.includes("auth/session")) return {ensureCurrentUserProfile:async()=>{},getCurrentAuthContext:async()=>({dashboardPath:"/dashboard/partecipante"})};
     if(id.includes("supabase/server")) return {createSupabaseServerClient:async()=>{
       clients++;
-      return {auth:{
+      return {rpc: async (name: string) => { assert.equal(name, "link_current_school_teacher_identity"); return { error: null }; }, auth:{
         verifyOtp:async(value:{token_hash:string})=>{assert.equal(value.token_hash,"synthetic");verified++;if(!failVerification)user={id:"synthetic-user",email:"person@example.test"};return {error:failVerification?new Error("expired"):null};},
         exchangeCodeForSession:async()=>{exchanged++;user={id:"synthetic-user"};return {error:null};},
         getUser:async()=>({data:{user}}),

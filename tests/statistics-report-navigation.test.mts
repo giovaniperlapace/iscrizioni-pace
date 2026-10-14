@@ -13,6 +13,7 @@ const js = ts.transpileModule(readFileSync(new URL("../app/dashboard/statistics-
 }).outputText;
 const exports: { StatisticsSection?: React.ComponentType<Record<string, unknown>> } = {};
 new Function("require", "exports", js)((name: string) => {
+  if (name.endsWith("event-attendance")) return { EventAttendanceReport: () => null };
   if (name.endsWith("panel-statistics-report")) return { PanelStatisticsReport: () => React.createElement("div", null, "Panel report") };
   if (name === "react") return React;
   if (name === "react/jsx-runtime") return runtime;
@@ -54,8 +55,23 @@ test("unscoped users do not render disability category or report, even with inje
   assert.doesNotMatch(html, /report=disability|Protected report|data-statistics-report="disability"/);
 });
 
-test("manager cannot render panel statistics even with injected data", () => {
+test("viewer cannot render panel statistics even with injected data", () => {
   const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
   const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, { statistics: snapshot, dashboard: "manager", navMode: "mini", report: "panels", panelStatistics: {} }));
   assert.doesNotMatch(html, /report=panels|Panel report|data-statistics-report="panels"/);
+});
+
+
+test("current-event manager selects panel report without hiding event attendance or duplicating other reports", () => {
+  const snapshot = statistics.buildEventStatisticsSnapshot({ participants: [], groups: [], attendanceChoices: [] });
+  for (const report of reports.STATISTICS_REPORTS.map(item => item.key)) {
+    const html = renderToStaticMarkup(React.createElement(exports.StatisticsSection!, {
+      eventId: "event", statistics: snapshot, dashboard: "manager", navMode: "mini", report,
+      canViewDisability: true, disabilityStatistics: { people: [] }, panelStatistics: {}, canManage: true,
+    }));
+    assert.deepEqual([...html.matchAll(/data-statistics-report="([^"]+)"/g)].map(m => m[1]), [report]);
+    assert.equal(html.includes("Panel report"), report === "panels");
+    assert.ok(html.includes("report=panels"));
+    assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
+  }
 });

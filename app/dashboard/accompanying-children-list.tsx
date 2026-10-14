@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { calculateAgeAtDate } from "@/lib/groups/matching";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import type { RegistrationChildRow } from "@/lib/registrations/registration-children";
@@ -15,8 +16,8 @@ const COPY: Record<SupportedLocale, {
   uk: { one: "дитина в супроводі", many: "дітей у супроводі", of: "Діти в супроводі учасника", atEvent: "Вік на початок події", unknown: "Вік недоступний", infant: "менше 1 року", year: "рік", years: "років" },
 };
 
-export function AccompanyingChildrenList({ records, participantName, startsOn, locale = "it" }: {
-  records: RegistrationChildRow[]; participantName: string; startsOn: string | null; locale?: SupportedLocale;
+export function AccompanyingChildrenList({ records, participantName, startsOn, locale = "it", renderChildDetails }: {
+  records: RegistrationChildRow[]; participantName: string; startsOn: string | null; locale?: SupportedLocale; renderChildDetails?: (child: RegistrationChildRow) => ReactNode;
 }) {
   if (records.length === 0) return null;
   const copy = COPY[locale];
@@ -38,6 +39,7 @@ export function AccompanyingChildrenList({ records, participantName, startsOn, l
       {records.map((child, index) => <li key={child.id ?? index} className="break-words">
         <span className="font-medium text-[var(--peace-ink)]">{child.first_name} {child.last_name}</span>
         {" · "}<span title={copy.atEvent}>{ageLabel(calculateAgeAtDate(child.birth_date, startsOn))}</span>
+        {renderChildDetails?.(child)}
       </li>)}
     </ul>
   </div>;

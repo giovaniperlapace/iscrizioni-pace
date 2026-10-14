@@ -1,5 +1,31 @@
 # Piano di lavoro Panel
 
+## Tranche corrente: main, Chrome silenzioso e collaudo Admin — 14 ottobre 2026
+
+L’utente richiede l’integrazione completa del panel in main, conservando il
+branch panel e le funzioni esistenti. Superata la sospensione stampa: canale
+scelto per questa tranche Chrome configurato silenzioso, individuale/gruppi,
+profili continuo 29 × 45 e pretagliato 29 × 90 distinti. Alternative conservate
+come documentazione, fuori dal lavoro corrente.
+
+Nuovi flussi di stampa e scanner nella dashboard Accoglienza riservati al
+solo Admin, anche lato server e DB. Manager verrà abilitato dopo il collaudo;
+P0–P10 già pubblicate restano disponibili. Le altre nuove superfici importate
+restano riservate al pilot Admin. Nessuna apertura pubblica implicita.
+
+Successiva autorizzazione esplicita del 14 ottobre: commit, push e migration
+necessarie per il rilascio su main e il collaudo a distanza. Applicate in
+production le dieci migration della tranche, conservando tutte le 83.960
+righe preesistenti e la modalità internal; esclusa la correzione dati storica.
+Dettagli in `docs/panel-main-integration-2026-10-14.md`. Il deployment va
+verificato sul commit pubblicato; non equivale ad accettazione fisica.
+
+Collaudatore remoto con accesso Admin, Mac e forse Windows. DK-22210
+acquistato; stampante, collegamento e rotolo montato ancora da verificare.
+Seguire `docs/collaudo-stampa-remoto-admin.md`. P14/P15 e accettazione fisica
+non concluse: attendere riscontri espliciti dell’operatore per ogni prova.
+
+
 ## Programma in tre riquadri giornalieri — 2026-10-10
 
 - Correzione esplicita dell’utente: sempre tre riquadri, uno per ciascun
@@ -52,6 +78,252 @@
   migration remota o email autorizzata da questa tranche.
   Branch panel e stash preservati. Dettagli in
   `docs/home-program-preview-2026-10-10.md`.
+## Prove stampa sospese, tre metodi aperti — 2026-10-12
+
+- L’utente ferma esplicitamente le prove: non è deciso che verrà adottato
+  il metodo Chrome silenzioso. Nessuna scelta definitiva del canale di stampa.
+- Conservare aperte tutte e tre le alternative discusse: browser con
+  stampa silenziosa configurata, dialogo di stampa ordinario e componente
+  locale di collegamento (QZ Tray o altra soluzione da valutare).
+- Conservare implementazione locale, template, campioni e risultati fisici
+  acquisiti, compresa la corretta stampa delle due identità Manager staging.
+  Il successo su questo Mac non autorizza scelta o distribuzione del metodo.
+- Sospendere ulteriori prove, integrazione nell’accoglienza, installazioni
+  e configurazioni aggiuntive fino alla ripresa esplicita dell’utente.
+  Nessun commit/push, deployment o migration autorizzati da questa richiesta.
+
+## Stampa dalla dashboard Manager reale riuscita — 2026-10-12
+
+- L’utente preme `Stampa etichetta QR` nella scheda reale Manager di Alba
+  Test Accoglienza / P0LE, sull’app locale collegata al solo staging.
+- Conferma una sola etichetta, allineata e separata, nome/QR/P0LE integri,
+  senza altre conferme. Dopo il ritaglio riferisce decodifica del QR;
+  telefono e misura del ritaglio non acquisiti separatamente in questa prova.
+- Verifica DB in sola lettura: testo scansionato coincidente con l’ultimo
+  QR attivo già esistente del campione. Non copiare il payload nei verbali.
+  Rispetto allo snapshot iniziale, stato/updated_at dell’iscrizione e
+  impronte di tutti i record QR e delle presenze dello stesso campione invariati.
+- Acquisito il percorso reale scheda Manager → handler autenticato → QR
+  esistente → stampa silenziosa → etichetta fisica leggibile dopo ritaglio.
+  Sola prova individuale su questo Mac/Chrome/Brother; coda badge, storico
+  condiviso, lotti e postazioni future restano separati e non collaudati qui.
+- Dimensioni rimosse dai testi dei pulsanti come richiesto: `Stampa etichetta QR`
+  e `Ristampa etichetta QR`. Download PNG esistente preservato.
+- Lavoro locale sul branch panel, staging sintetico. Nessuna modifica a
+  iscrizioni/QR/presenze, nuova email, migration, commit/push o deployment.
+  La sessione di autenticazione Manager di test rimane quella predisposta.
+
+## Collaudo pulsante nella dashboard Manager reale — preparazione, 2026-10-12
+
+- Richiesta dell’utente: test direttamente nella dashboard Manager. Avviata
+  l’app locale su http://127.0.0.1:3161 con Next webpack e variabili staging
+  verificate; solo gli URL applicativi del processo adattati a localhost.
+  Launcher `tools/brother-browser-test/run-manager-staging.mjs`.
+- Account esistente `manager.panel.staging@example.invalid`, ruolo Manager
+  dell’evento sintetico corrente `assisi-2026-test`, sessione Auth verificata
+  nel Chrome dedicato già configurato. Nessun nuovo account/ruolo o invio email;
+  aperta una sessione di test, senza callback che aggiorni profili/iscrizioni.
+- Scheda reale `/dashboard/manager?section=iscritti&edit=8765cda1-1345-4ccd-b2bd-11909202b46e`
+  di Alba Test Accoglienza / P0LE. QR staging preesistente attivo e impaginabile,
+  senza creazione o rotazione. Il pulsante Stampa etichetta QR è in vista;
+  distinto dal comando Scarica immagine esistente.
+- Verifica end-to-end automatizzata con stampa simulata nel browser separato:
+  dashboard reale, pulsante reale, GET autenticato HTTP 200 private no-store,
+  CSP same-origin, identità e codice del DB, QR decodificato coincidente con
+  l’ultimo token esistente, una sola chiamata print, nessuna scheda aggiuntiva,
+  pulizia iframe e nessun errore pagina. Nessun lavoro fisico inviato dal test.
+- Confronto DB prima/dopo: stato/updated_at dell’iscrizione, impronta dei record
+  QR e delle presenze del solo campione invariati. La sessione Auth è l’unico
+  accesso preparato. Nessuna migration, deployment, commit/push o email.
+- Prossimo passo: clic dell’utente nella scheda Manager e controllo fisico
+  di un’etichetta Alba Test Accoglienza / P0LE. Questi QR sono dello staging;
+  la scansione successiva con fotocamera serve alla lettura, non usare lo
+  scanner accoglienza dell’app per collaudare la stampa (registrerebbe ingressi).
+
+## Prima prova singola silenziosa riuscita sul Mac — 2026-10-12
+
+- Dopo calibrazione del formato reale 29 × 90 mm nel profilo Chrome dedicato,
+  l’utente conferma una sola etichetta TEST-003, allineata, taglio corretto e
+  nome/QR/codice integri. Stampa con un solo clic, senza altre conferme;
+  breve finestra Chrome visibile e chiusa automaticamente, durata non misurata.
+- Pixel 7 e iPhone leggono il payload corretto prima del ritaglio. Dopo
+  ritaglio manuale a 45 mm, entrambi leggono ancora il QR e nome/TEST-003
+  restano integri, confermati dall’utente.
+- Esito acquisito per questa singola stampa sul Mac con Chrome 154 e Brother
+  QL-810W, profilo dedicato configurato. Non equivale al collaudo di Windows,
+  QL-800, continuo da 29 mm, lotti applicativi o tutte le postazioni future.
+  Ripetibilità della stampa silenziosa e raccordo con coda/storico restano aperti.
+- Conservare calibrazione tramite opzione reale del driver e controllo del
+  profilo prima di avviare --kiosk-printing: il solo seed delle dimensioni
+  aveva causato fallback 12 × 12 mm e quattro etichette inutilizzabili riferite.
+- Template/loader/handler e client di stampa individuale preparati localmente
+  sul branch panel. Prova fisica con soli dati sintetici; download PNG
+  esistente conservato. Nessuna creazione/rotazione QR, presenza, dato remoto,
+  migration, email, commit/push o deployment. Stash originale preservato.
+
+## Stampa silenziosa: formato errato e calibrazione — 2026-10-12
+
+- Prova fisica silenziosa fallita: l’utente riferisce quattro etichette
+  inutilizzabili, stampa molto piccola/suddivisa e tagli disallineati.
+  Ritiene successivamente di aver riallineato il rotolo; non trattarlo come
+  conferma di una nuova uscita corretta. Ulteriori invii automatici sospesi.
+- Evidenza: profilo Chrome e attributi IPP del lavoro 7 riportano media
+  `12x12mm`, copies=1. Le opzioni lpoptions 29x90mm non hanno impedito a Chrome
+  di usare il formato da 12 mm. Il seed iniziale della carta non conteneva
+  l’identificativo reale del driver; non era sufficiente scrivere dimensioni
+  e nome del supporto nelle preferenze.
+- Nessun lavoro pendente rilevato. Chiusa soltanto la sessione di collaudo;
+  aperta calibrazione senza `--kiosk-printing`, selezionata nell’anteprima
+  l’opzione reale 29 × 90 mm con vendor_id `om_29000x90000um_29x90mm`.
+- Verificati nel modello effettivo dell’anteprima: carta 29000 × 90000 µm,
+  copies=1, pages=[1], margini Nessuno, scala 100%, verticale e nessuna
+  intestazione. Anteprima visivamente integra. Annullata senza stampare;
+  salvata la carta reale nel profilo, controllata nuovamente dopo la chiusura.
+- Launcher con modalità `--calibrate` e blocco della modalità silenziosa
+  se carta/identificativo/scala/margini/intestazioni non sono validi. Non
+  considerare questo controllo del profilo prova dell’esito fisico.
+- Riaperta la sessione silenziosa corretta; prossimo passo una sola nuova
+  pressione dell’utente e verifica fisica. Nessuna copia di correzione
+  inviata dall’agente. Validità della stampa silenziosa ancora aperta.
+
+## Prova stampa silenziosa sul Mac — preparazione, 2026-10-12
+
+- L’utente autorizza una prova di implementazione sul Mac attuale. Conservata
+  la scelta futura delle postazioni; nessun QZ Tray o componente aggiuntivo.
+- Pulsante Manager/Admin ora usa `lib/qrcode/print-client.ts`: una richiesta
+  fresca al medesimo GET autenticato, iframe dello stesso sito e print dopo
+  decodifica delle immagini. Nessuna seconda pressione nell’anteprima.
+  Documento marcato, errori/login esclusi; una sola stampa concorrente nella
+  pagina, annullamento in chiusura/cambio scheda e pulizia risorse. Il messaggio
+  di comando avviato non conferma uscita fisica né aggiorna presenze/coda.
+  Download PNG esistente conservato; ristampa sempre esplicita e rilegge il QR.
+- CSP del documento consente iframe solo dello stesso sito (`frame-ancestors
+  self`), senza estendere i permessi del loader/handler. Un browser normale
+  continua ad aprire il dialogo; la stampa silenziosa richiede la postazione
+  configurata e non è attivabile dal sito.
+- Chrome 154 sul Mac: finestra/profile separati avviati con `--kiosk-printing`,
+  senza policy globali né modifiche al profilo ordinario. Impostazioni di prova
+  una copia, margini Nessuno, scala 100%, intestazioni disattivate; Brother
+  predefinita e opzioni utente PageSize=29x90mm / CutMedia=EndOfPage.
+  Valori precedenti di queste due opzioni conservati nello snapshot locale.
+  Ripristino: `node tools/brother-browser-test/launch-silent-chrome.mjs --restore-printer`.
+- Pagina `silent-label-test.html`, José María García López / TEST-003, stesso
+  QR sintetico dei campioni precedenti, stesso renderer e client applicativi.
+  Generatore `generate-silent-sample.mjs`; avvio `launch-silent-chrome.mjs`.
+  Solo server loopback, senza credenziali o accesso a DB. Debug della sessione
+  di prova solo locale sulla porta 3169. Pagina reale aperta, pulsante pronto,
+  presenza della flag verificata. Nessun lavoro fisico inviato dall’agente:
+  prossimo passo clic dell’utente e verifica uscita/assenza dialogo.
+- Sette test mirati, ESLint, TypeScript superati. Test browser del client reale
+  con print simulata: singolo invio, nessuna nuova scheda, ristampa fresca,
+  errori 401/403/404/500, concorrenza, annullamento, URL estranei e pulizia.
+  Questo test non dichiara collaudata la stampa silenziosa fisica.
+- Lavoro locale sul branch panel; nessun commit/push, deployment, migration,
+  modifica a persone o presenze reali, email. Stash preservato.
+
+## Scelta postazioni rinviata e alternativa Chrome — 2026-10-12
+
+- L’utente non conosce ancora i PC dell’accoglienza e rinvia la scelta del
+  canale di stampa finché saranno note le macchine e la tollerabilità del
+  dialogo per gli operatori. Non installare né configurare implicitamente
+  QZ Tray o altri componenti; proposte e test del template conservati.
+- Correzione della precedente valutazione: un componente di collegamento
+  locale non è obbligatorio. Chrome da versione 144 su Mac/Windows/Linux
+  supporta la policy `SilentPrintingEnabled`, che chiude automaticamente
+  l’anteprima e stampa sulla destinazione predefinita con opzioni predefinite.
+  Richiede configurazione della postazione/browser, non una modifica che
+  il sito possa abilitare da solo. Stampante, pagina, scala e taglio vanno
+  predisposti e collaudati sulle macchine effettive.
+- Il requisito utente riguarda l’assenza di dialogo operativo, non il divieto
+  tecnico di usare `window.print()` su un browser predisposto alla stampa
+  silenziosa. Possibili percorsi ancora da scegliere: Chrome configurato,
+  componente locale o dialogo se accettato esplicitamente dall’utente.
+- Fonte primaria verificata: documentazione policy Chrome Enterprise e
+  definizione Chromium `SilentPrintingEnabled.yaml`.
+  https://chromeenterprise.google/intl/es-419_ALL/policies/silent-printing-enabled/
+  https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/policy/resources/templates/policy_definitions/Miscellaneous/SilentPrintingEnabled.yaml
+- Nessuna configurazione di Chrome, driver o stampante modificata; nessuna
+  ulteriore implementazione o prova fisica in questa valutazione.
+
+## Stampa diretta senza dialogo — requisito utente, 2026-10-12
+
+- L’utente richiede che il pulsante operativo stampi direttamente sulla
+  stampante della postazione, senza dialogo di stampa. Questa indicazione
+  supera il percorso operativo precedente basato su `window.print()`;
+  i campioni con dialogo restano strumenti di collaudo del template.
+- La prima implementazione locale individuale con anteprima/dialogo va
+  adattata a un collegamento locale alla stampante. Nessuna soluzione scelta
+  o installata implicitamente. Valutato QZ Tray per Mac/Windows: richieste
+  firmate e certificato attendibile necessari per sopprimere anche i popup.
+- Configurare stampante, supporto fisico, scala e taglio per postazione;
+  mantenere QR esistente, stampa separata da presenze, deduplicazione e
+  stato inviato distinto dalla conferma fisica. Formato finale 29 × 45 mm;
+  sul DK-11201 attuale si conserva pagina fisica 29 × 90 mm.
+- Confermata dall’utente la lettura su Pixel 7 e iPhone di tutte le tre
+  copie TEST-002 consecutive. Cinque etichette confermate nella sessione:
+  due campioni singoli letti anche dopo ritaglio e tre copie lette prima
+  del ritaglio. Prova iniziale positiva, nessuna certificazione generale
+  di lotti applicativi, continuo da 29 mm, QL-800 o Windows.
+
+## Stampa individuale QR locale — 2026-10-12
+
+- Confermato dall’utente DK-11201 pretagliato 29 × 90 mm caricato; Brother
+  QL-810W rilevata via USB e coda pronta. Sagoma approvata 29 × 45 mm,
+  ritaglio manuale: il formato fisico resta 29 × 90 mm.
+- Implementato sul branch panel il pulsante Stampa etichetta QR nella scheda
+  Manager/Admin, con anteprima GET autenticata in finestra separata. Scope
+  evento corrente, identità dal DB, ultimo token attivo riletto; esclusi Viewer,
+  altri eventi, iscrizioni eliminate/annullate e QR revocati/scaduti/mancanti.
+  Cache privata no-store, CSP e nessun token in testo/metadati del documento.
+- Template condiviso `lib/qrcode/print-label.ts`: nominativo completo con font
+  incluso, minimo 7 pt e blocco se non entra; codice a 8 pt misurato, QR ECC M
+  con quattro moduli bianchi e dimensioni del campione già collaudato. Pagina
+  fisica 29 × 90 mm e riferimenti di ritaglio a 45 mm. Dialogo volontario;
+  nessuna creazione/rotazione QR, presenza, scrittura di coda o conferma fisica.
+- Campione sintetico del medesimo renderer generato con
+  `tools/brother-browser-test/generate-application-sample.mjs`, aperto in Chrome
+  a `http://127.0.0.1:3159/app-label-test.html`. Prova fisica ancora da effettuare.
+  Sette test mirati verdi (handler reale, permessi, stati, identità, decodifica,
+  nomi e limiti), ESLint e TypeScript; anteprima desktop verificata.
+- Solo lavoro locale. Stash originale preservato; nessun commit/push,
+  deployment, migration, dato remoto o email. Lotti gruppo e raccordo con
+  postazioni/coda restano tranche successive; badge cerimonie esistente conservato.
+
+## Ripresa stampa etichette — 2026-10-12
+
+- L’utente riprende lo sviluppo e il collaudo sul branch panel e conferma
+  come formato finale approvato **29 × 45 mm**. Questa scelta supera le
+  precedenti indicazioni di formato ancora da scegliere o candidato.
+- Ripristinati sul branch `codex/panel-p0-p10` annotazioni e materiali del
+  collaudo dallo stash `fa1ec7fa339a2b944045bf67e90cc2a1e9efec85`, conservato.
+  Riconciliate le sole aggiunte documentali con il riallineamento del 9 ottobre.
+- Punto di ripresa: pulsante per stampare un singolo QR esistente, senza
+  rigenerazione e senza registrazione automatica di presenze. Prima prova
+  browser riuscita su Mac/QL-810Wc, DK-11201 29 × 90 mm ritagliato a 45 mm;
+  quel campione letto dal Pixel 7. Campione P-touch letto anche dall’iPhone;
+  lettura iPhone del campione browser e continuo da 29 mm ancora da collaudare.
+- La scelta della sagoma non certifica il taglio a 45 mm sul rotolo continuo.
+  Riprendere le prove dopo verifica del supporto realmente caricato.
+
+## Priorità rilascio gestionale panel e pausa stampa — 2026-10-09
+
+- L’utente mette in pausa il collaudo browser e dà priorità alla preparazione
+  del rilascio gestionale riservato dei panel in production. Nessuna novità
+  nella home e nessuna apertura delle iscrizioni pubbliche; verificare anche
+  accessi diretti e azioni pubbliche durante la preparazione del rilascio.
+- Conservare risultati e file sintetici della prova Brother: prima etichetta
+  browser 29 × 90 mm ritagliata a 29 × 45 mm riuscita su Pixel 7, misure e
+  taglio confermati, circa 2 secondi. iPhone/browser, ripetibilità e altri
+  supporti/sistemi restano aperti. Registro in docs/collaudo-brother-ql.md.
+- Alla ripresa, primo passo: implementare il pulsante per stampare un singolo
+  QR esistente, senza rigenerazione e senza registrare automaticamente presenze.
+  Questo supera il precedente suggerimento di iniziare dal lotto sintetico
+  di tre etichette. Il requisito lotto gruppo su etichette separate resta valido.
+- La nuova priorità riguarda la preparazione del rilascio; non costituisce
+  autorizzazione a commit, push, deployment o migration remote. Conservare
+  tutte le modifiche locali. Nessuna implementazione stampa avviata.
+
+
 
 ### Attivazione Capogruppo rinviata — 2026-10-09
 
@@ -74,6 +346,17 @@ registrata `20261009170000` con dati invariati; codice `b0e8355` pubblicato e
 deployment production READY verificato sul dominio reale. Capogruppo chiuso
 fino alla futura pubblicazione sulla home.
 Dettagli e verifiche in `docs/panel-reserved-release.md`.
+
+## Riallineamento gestionale e funzioni future — 2026-10-09
+
+Main a858340 integrato nel branch panel tramite merge, conservando P11–P13,
+scanner, QR gruppo/coda badge e cerimonie E1/E2/E3. Correzioni del gestionale
+condivise Admin/Manager preservate; Capogruppo panel resta rinviato alla
+pubblicazione sulla home, con catalogo e prenotazioni pubbliche ancora chiusi.
+Gli stash del collaudo restano intatti. Le cinque migration 20261009 importate
+sono da applicare nello staging prima del rilascio della versione integrata;
+nessuna migration remota o pubblicazione in questo riallineamento. Dettagli e
+verifiche in `docs/panel-main-integration-2026-10-09.md`.
 
 ## Rilascio admin autorizzato — aggiornamento 2026-10-09
 
@@ -164,7 +447,10 @@ Questo documento organizza lo sviluppo delle funzioni relative a:
 - destinatari delle campagne email collegati a panel e scuole;
 - statistiche sui panel;
 - accesso all'evento tramite QR e rilevazione delle presenze effettive;
-- stampa del QR su etichette per i badge all'accoglienza.
+- stampa del QR su etichette per i badge all'accoglienza;
+- QR di gruppo, accoglienza collettiva e stampa in sequenza dei badge personali;
+- riconoscimento degli accrediti stampa e relativi badge;
+- inaugurazione e cerimonia finale con quote, assegnazioni e piantine dei posti.
 
 Il lavoro va eseguito in milestone piccole. Ogni milestone deve essere
 implementata, verificata e provata nell'interfaccia prima di iniziare la
@@ -192,6 +478,113 @@ Stato di partenza al 2026-08-04:
   spagnolo, neerlandese e ucraino.
 
 ## 2. Metodo obbligatorio per ogni milestone
+
+### P13-E1 — cerimonie con sedi indipendenti — 2026-10-06
+
+- Su richiesta dell’utente rinviata P13-S finché saranno noti fonte e formato
+  degli accrediti; avviata la prossima milestone suggerita P13-E1. Precisazione
+  esplicita: inaugurazione e cerimonia finale possono avere location e strutture
+  completamente diverse, ancora sconosciute. Nessuna capienza inventata.
+- Tranche software locale: due viste condivise admin/manager/viewer, configurazioni
+  admin indipendenti in bozza/validate, settori quantitativi, quote per categoria,
+  dotazioni manager ai gruppi e assegnazione di un posto alla persona ammissibile.
+  Regola presenza scelta dall’admin (giorno/mattina/pomeriggio), date sconosciute
+  distinte dalle assenze. Nessun check-in o prenotazione volontaria creato.
+- Migration locale `20261006180000_ceremony_allocations.sql`: quattro tabelle RLS,
+  RPC service-only, controllo attore/evento sia server sia DB, revisioni e lock,
+  audit minimale, capienze e duplicati protetti. Vecchi editor location/momenti
+  bloccati per le configurazioni collegate, anche se usano service_role.
+- Cambio gruppo/date o cancellazione segnala posti da rivedere senza liberarli.
+  Dotazione gruppo consuma subito capienza; distribuzione nominale, regole posti
+  minori/accompagnatori e consultazione personale restano E2; mappe numerate E3.
+- Piano e dettaglio in `docs/panel-p13-ceremonies.md`. Nessuna migration remota,
+  commit, push o deployment. P13-E1 resta aperta per staging, collaudo autenticato,
+  sedi reali e revisione dell’utente; P13-S sospesa, non completata.
+
+
+### Migration staging applicate — 2026-10-06
+
+Su richiesta esplicita dell'utente applicate e registrate in un'unica transazione
+le 20 migration mancanti applicabili: le 18 importate da main, gli accessi panel
+`20261006120000` e il QR gruppo/coda badge `20261006150000`. Container verificato:
+`supabase-db-jiio6ou5wzmma2xwas53cf1d`. Production invariata; nessun invio email.
+
+Backup PostgreSQL custom prima dell'aggiornamento, conservato sul server in
+`/tmp/iscrizioni-pace-staging-before-panel-20261006124116.dump`; indice archivio
+verificato con pg_restore. Applicazione con lock e timeout, DDL e registro nella
+stessa transazione, notifica finale di ricarica PostgREST. Nessuna migration
+versionata riscritta; rimosse soltanto le cornici BEGIN/COMMIT nello stream di
+esecuzione per mantenere atomico il lotto completo.
+
+Verifica finale: tutte le 20 versioni presenti; RLS attiva sulle cinque nuove
+tabelle panel/gruppi; RPC operative panel/gruppi riservate a service_role,
+negate ad anon/authenticated; nuove tabelle raggiungibili via PostgREST (HTTP 200).
+Conservati 9 iscrizioni, 9 partecipanti, 85 gruppi e 6 check-in; hash dei check-in
+invariato al netto della nuova colonna nullable. Nessun destinatario email in
+coda e nessuna identità storica da scollegare nel backfill previsto.
+
+Rimane non applicabile `20260813170000_rename_anziani_and_amici_groups.sql`:
+zero gruppi sorgente nello staging, mentre il file richiede esattamente 19.
+Non eseguita e non registrata falsamente come applicata. Non è una dipendenza
+dei nuovi flussi. Il collaudo autenticato, su dispositivi e stampanti resta
+separato; l'aggiornamento DB non certifica il deployment applicativo.
+
+
+### Pubblicazione del branch panel richiesta il 2026-10-06
+
+L'utente richiede commit di tutte le modifiche locali e push del branch panel,
+compresi i 69 commit precedenti non pubblicati e il merge main `296f3e9`.
+Verifiche della versione applicativa: 758 test, lint, TypeScript/build staging,
+SQL temporaneo e browser sintetico già superati nella tranche P13-G.
+Fetch prima del commit: zero commit remoti da incorporare; diff senza errori.
+`staging:verify` superato. Inventario DB staging ricontrollato in sola lettura:
+restano 21 migration assenti (18 importate da main, la storica rinomina gruppi,
+accessi panel e QR gruppo). Il push autorizzato riguarda il codice; nessuna
+migration remota applicata, email inviata o modifica a main/production.
+Il completamento del push non certifica il deployment né l'operatività dei
+nuovi flussi finché il database staging non viene aggiornato separatamente.
+
+
+### Estensione del 2026-10-06 — gruppi, stampa ed eventi speciali
+
+Richiesta recepita nel piano; P13-G ha ora una tranche software locale, come
+documentato nella milestone. Le altre estensioni restano da implementare. Prima nuova priorità:
+QR di gruppo e stampa in sequenza; poi accrediti stampa; quindi inaugurazione
+e cerimonia finale. P13 conserva lo stato aperto e il collaudo rinviato già
+documentati. Questo aggiornamento è di pianificazione e non avvia sviluppo,
+migration o rilascio. Le nuove milestone P13-G, P13-S e P13-E1/E2/E3 si inseriscono
+prima del collaudo finale P16, senza rinumerare le milestone storiche.
+
+È superata l'esclusione generale di piantine e sedute numerate, limitatamente
+ai due eventi speciali. Restano invariati i panel ordinari a prenotazione.
+La preparazione software della coda di stampa di gruppo può precedere P14;
+la stampa operativa e la sua accettazione dipendono ancora da P14/P15.
+
+### Decisione del 2026-10-06 — attivazione report e prosecuzione P13
+
+L'utente richiede l'attivazione del report in staging senza collaudo e il
+completamento dello sviluppo degli accessi panel/sala; il testing completo viene
+rinviato al termine. Per questa tranche la richiesta supera il collaudo
+intermedio prima della prosecuzione. P13 resta aperta fino al testing e alla
+revisione finale, senza avanzamento automatico a P14.
+
+Report: migration `20260930180000_reception_operational_report.sql` applicata e
+registrata atomicamente nel solo staging; verificati installazione e privilegi,
+non eseguite prove funzionali. Accessi panel/sala implementati localmente con
+nuova migration `20261006120000_panel_reception_access.sql`, non applicata in
+remoto. TypeScript, lint e build staging superati; regressioni predisposte, non
+eseguite. Nessun commit, push o deployment. Dettagli, inventario DB e testing
+rinviato in `docs/panel-p13-access.md`.
+
+### Riallineamento del 2026-10-03
+
+Integrato localmente `origin/main` a `0b7e4d1` nella base panel `388d05f`,
+conservando P0–P13 e le correzioni dashboard di main. 14 file in conflitto
+ricomposti; 18 migration di main importate senza modificarle. Nessuna applicazione
+SQL remota o pubblicazione: il registro staging va confrontato prima del rilascio.
+Verificati 743 test, lint, TypeScript, build staging e collaudi SQL/browser.
+Dettagli in `docs/panel-main-integration-2026-10-03.md`.
+P13 resta aperta per accessi panel/sala e collaudo autenticato/hardware.
 
 ### Strategia di integrazione P0-P16 — aggiornata il 2026-09-12
 
@@ -231,16 +624,26 @@ Stato di partenza al 2026-08-04:
   completa iscrizioni/iscritti/gruppi/servizi/campagne/QR e P11-P16 realizzate,
   verifica RLS e concorrenza, inventario migration rispetto alla production,
   backup e piano di rollback. Restano le verifiche hardware P14-P16 e
-  l'approvazione separata dell'estensione opzionale P13.
+  la revisione del modello di incarichi P12/P13 descritto sotto.
+
+Verifica iniziale P12 del 2026-09-22: fetch eseguito, panel e upstream
+allineati a `e13d95a`. `origin/main` a `9bdd098` ha 25 commit e 11 migration
+non incorporati. Cancellazione PPTX e cartella `output/` preesistenti non
+modificate. Nessun pull da applicare; il merge di main resta da effettuare
+in un’integrazione dedicata prima del rilascio, con inventario migration e
+regressioni delle aree condivise. Non mescolare o pubblicare il lavoro locale
+estraneo alla milestone. Dettagli in `docs/panel-p12-reception.md`.
 
 Sincronizzazione del 2026-09-12: incorporato `origin/main` a `0bc2997` nella
 base panel `39deb81`; esaminati tutti i 10 commit. Conflitti risolti conservando
 le evoluzioni di entrambi i branch. Dettagli, adattamento del test campagne e
 verifiche in `docs/panel-main-integration-2026-09-12.md`.
-La nuova migration `20260910120000_leader_attendance.sql` resta da applicare
-allo staging su richiesta prima del collaudo del relativo salvataggio; nessun
-push, deploy o SQL remoto eseguito durante la sincronizzazione. Il prossimo
-sviluppo resta P11, dopo il completamento del riallineamento dello staging.
+La migration `20260910120000_leader_attendance.sql` è stata poi applicata
+allo staging il 2026-09-12 su richiesta esplicita: registrazione, privilegi,
+PostgREST e salvataggio/rilettura SQL sulla fixture con rollback verificati.
+Conteggi/hash invariati su 41 tabelle e policy RLS invariate. Il codice del
+merge resta locale, da pubblicare e collaudare nella preview; nessun push o
+deploy eseguito. Il prossimo sviluppo resta P11.
 
 Stato integrazione al 2026-08-07: le migration P2-P9 sono applicate e
 registrate soltanto nel database staging. Home panel e modulo pubblico scuole
@@ -372,6 +775,29 @@ estendere il modulo.
 
 ### 3.4 QR, presenze e badge
 
+- Requisito precisato nella revisione P11 del 2026-09-12: l'operatore svolge
+  un'azione già impostata e poi scansiona in sequenza. Non sceglie cosa fare
+  dopo aver identificato ogni persona. Fotocamera del cellulare come percorso
+  predefinito; codice manuale come alternativa, con identica azione e scope.
+- L'intestazione deve rendere sempre evidente l'incarico attivo, per esempio
+  `Registra ingresso evento` oppure `Registra ingresso · Panel X`. Un solo
+  incarico disponibile viene impostato automaticamente; più incarichi si
+  scelgono prima della scansione e si cambiano con un comando esplicito.
+  La scelta resta attiva tra scansioni, errori e fallback manuale.
+- Ingresso evento e ingresso panel sono operazioni distinte. L'addetto al
+  panel non può registrare implicitamente l'arrivo all'evento: in assenza
+  di accoglienza evento, il flusso deve indirizzare alla postazione competente.
+  La scansione al panel non genera né stampa automaticamente il badge evento.
+- Proposta di modello per P12/P13: incarichi operativi assegnati da admin/manager
+  nell'evento, distinti in accoglienza evento, accoglienza di panel assegnati e
+  assistenza in sala (maschere). Non moltiplicare automaticamente i ruoli
+  globali; definire schema e migrazione degli incarichi esistenti nella relativa
+  milestone. La UI propone solo incarichi autorizzati; server e DB verificano
+  nuovamente azione, evento e panel a ogni operazione, anche dopo una revoca.
+- Le maschere consultano soltanto le indicazioni disponibili per sala/settore
+  del panel assegnato, senza scrivere presenze o vedere recapiti/questionari.
+  Nessuna assegnazione di sedute numerate o piantina viene introdotta da questa
+  richiesta. Il dettaglio di questo incarico resta una proposta da revisionare.
 - Il QR personale continua a contenere soltanto un token opaco. Nome, email,
   ruolo e dati sensibili non devono comparire nel contenuto del codice.
 - Una scansione valida all'ingresso registra automaticamente la presenza
@@ -389,12 +815,104 @@ estendere il modulo.
 - Deve esistere un fallback manuale tramite codice partecipante o ricerca
   controllata per chi non ha il QR disponibile.
 - Correzione o annullamento di un check-in richiedono un'azione esplicita e
-  auditata.
+  auditata, in un percorso separato dalla scansione ordinaria. Non diventano
+  azioni distruttive ripetute automaticamente a ogni QR inquadrato.
 - Il QR stampato sull'etichetta e' lo stesso QR attivo della persona, non un
   nuovo identificativo. La stampa non deve revocare o rigenerare il token.
 - L'etichetta iniziale contiene QR ad alto contrasto, codice partecipante e il
   minimo testo approvato. Dimensioni, densita' e contenuti finali dipendono
   dalla stampante e vanno verificati con badge reali.
+
+### 3.5 QR di gruppo e stampa collettiva
+
+- Un QR opaco e revocabile identifica un gruppo nell'evento corrente; è distinto
+  dal QR personale e dalla prenotazione scuola. Non incorpora l'elenco persone.
+- Nell'incarico accoglienza evento, la scansione carica i membri autorizzati
+  correnti e un riepilogo nominale: comando unico per confermare tutto il gruppo,
+  con possibilità di escludere assenti e gestire arrivi parziali. Scansionare il
+  codice non deve dichiarare automaticamente presenti persone non arrivate.
+- L'operazione registra presenze individuali, comprese quelle dei minori
+  esplicitamente confermati. Non sostituisce i conteggi scuola con nomi fittizi.
+  Già presenti riconosciuti senza duplicati; retry con lo stesso identificativo,
+  controllo dei cambi di composizione e correzioni auditabili.
+- Dallo stesso flusso si prepara un lotto ordinato di badge personali, uno dopo
+  l'altro, con anteprima e quantità. Deve essere possibile stampare l'intero
+  elenco del gruppo; per arrivi parziali si propone il sottoinsieme confermato.
+  Stampare badge non equivale a registrare ingressi.
+- Ogni badge riusa il QR personale attivo. Verificare prima dello sviluppo come
+  rappresentare i minori privi di QR autonomo, senza inventare token o duplicare
+  quello del genitore come se identificasse persone diverse.
+- Coda riprendibile, errori per elemento e ristampa esplicita: un'interruzione
+  non ripete automaticamente tutto il lotto. Senza conferma dal dispositivo,
+  mostrare «inviato alla stampa / da verificare», non «stampato».
+- Decisioni P13-G del 6 ottobre: solo gruppo selezionato, senza sottogruppi;
+  minori selezionabili per la presenza tramite QR del genitore. Il capogruppo
+  recupera/revoca il QR dalla gestione link. Le date dichiarate non impediscono
+  all'operatore di confermare un arrivo reale; non vengono riscritte.
+
+### 3.6 Accrediti stampa
+
+- L'accoglienza generale riconosce il QR collegato all'accredito e ne verifica
+  lato server identità, evento, validità e revoca, quindi consente di preparare
+  il badge stampa. Accredito, consegna/stampa badge e ingresso sono stati distinti.
+- Se la persona è anche iscritta, collegare le identità con associazione certa,
+  evitando presenze e badge duplicati. La fonte degli accrediti, il formato QR
+  esistente e l'eventuale assenza di iscrizione vanno verificati prima di P13-S.
+- I diritti di accesso sono configurabili per luogo/momento e separati dalla
+  validità dell'accredito. City Panel e posti stampa alle due cerimonie sono
+  possibilità indicate dall'utente, non autorizzazioni già definite.
+- Un accredito valido non assegna da solo una seduta: eventuali riserve stampa
+  consumano le quote dei settori e passano dal flusso manager degli eventi speciali.
+- Riutilizzare scanner, incarichi, token sicuri e coda badge; mostrare agli
+  operatori soltanto dati e indicazioni necessari all'incarico.
+
+### 3.7 Inaugurazione e cerimonia finale
+
+- Due momenti con vista gestionale dedicata e assegnazione manager.
+  Decisione esplicita del 2026-10-06: location, caratteristiche, capienze e
+  settori indipendenti per inaugurazione e cerimonia finale; entrambi possono
+  restare sconosciuti. Nessuna dipendenza da una sede o piantina condivisa. L'iscrizione
+  alla Preghiera per la pace comporta partecipazione prevista quando le presenze
+  dichiarate coprono il giorno del momento. Non serve prenotazione del partecipante.
+  Date non comunicate restano «da verificare»; la regola per le fasce orarie è
+  da precisare. Partecipazione prevista, posto assegnato e ingresso effettivo
+  devono essere tre stati distinti, anche nei report.
+- Solo admin crea e modifica la piantina: aree/settori, capienze, file, sedute,
+  etichette, geometria e posti non utilizzabili. Manager assegna posti e quote;
+  capogruppo distribuisce solo la dotazione ricevuta ai membri autorizzati e
+  ammissibili del proprio gruppo; partecipante consulta la propria assegnazione.
+- Catena di allocazione: capienza del settore → quota categoria → dotazione
+  gruppo o assegnazione diretta alla persona → distribuzione nominale del gruppo.
+  Le categorie devono essere esplicite; non dedurle da dati sensibili o tag.
+  Il catalogo e le eventuali sovrapposizioni fra categorie restano da definire.
+- Il manager vede disponibilità e residui per settore/categoria/gruppo e può
+  assegnare quantità oppure, quando disponibili, sedute specifiche singole o
+  multiple, anche contigue. Il capogruppo non può superare dotazione o settore
+  ricevuti né scegliere posti assegnati ad altri gruppi.
+- La dotazione di gruppo occupa capienza subito: attribuirla ai membri non la
+  consuma una seconda volta. Una persona non può ricevere due posti nello stesso
+  momento tramite assegnazione diretta e gruppo; definire il fabbisogno dei minori
+  e degli accompagnatori prima dell'assegnazione operativa.
+- Prima fase senza sedi definitive: configurazioni in bozza, settori e quote
+  quantitative. Capienza sconosciuta diversa da zero e da illimitata; dati demo
+  esplicitamente tali. Nessuna assegnazione operativa oltre capienze validate.
+- Seconda fase: mappa tipo cinema/stadio con zoom, legenda, selezione singola e
+  multipla, filtri e alternativa tabellare accessibile. I posti hanno ID stabili;
+  le coordinate servono alla vista, non definiscono l'identità della seduta.
+- Piantine versionate: con assegnazioni esistenti, vietato eliminare posti o
+  ridurre quote sotto gli impegni senza un flusso esplicito di riallocazione.
+  Il passaggio da quantità a sedute conserva le dotazioni e segnala i membri
+  ancora senza seduta, senza annullamenti o riassegnazioni silenziosi.
+- Quote e sedute protette da transazioni/lock, controlli server e DB, audit e
+  gestione dei conflitti fra manager. Revoche, cambio gruppo o cambio date
+  segnalano assegnazioni da rivedere; nessuna liberazione automatica non concordata.
+- Riusare evento, persone, gruppi, momenti e check-in canonici. Le nuove entità
+  logiche sono piantina/versione, settore/seduta, quota, dotazione e assegnazione;
+  la scelta tra estensione delle tabelle esistenti e nuove tabelle richiede
+  verifica dello schema. Non simulare una prenotazione volontaria del partecipante.
+- Accesso alle cerimonie tramite identità QR e assegnazione valida, con incarichi
+  dedicati; stampa e consultazione devono mostrare settore ed eventuale posto.
+  I diritti stampa seguono le configurazioni approvate, senza bypass di capienza.
 
 ## 4. Modello dati da verificare nella prima fase
 
@@ -427,7 +945,9 @@ Questa e' una direzione architetturale, non una migration gia' approvata.
 - Tutte le nuove tabelle devono avere RLS. Manager e admin gestiscono il
   catalogo; `manager_viewer` legge; partecipante legge e modifica soltanto le
   proprie scelte; docente legge e modifica soltanto la propria prenotazione;
-  accoglienza opera soltanto sui check-in dell'evento in scope.
+  accoglienza opera soltanto sui check-in dell'evento in scope. P12/P13 devono
+  restringere ulteriormente l'operatività agli incarichi evento/panel assegnati;
+  la P11 attuale non implementa ancora questa distinzione.
 
 Vincoli che devono vivere anche nel database o in funzioni transazionali, non
 solo nel browser:
@@ -781,6 +1301,26 @@ serve a un'azione operativa concreta.
 
 ### Milestone P11 - verifica QR e modello delle presenze effettive
 
+Stato: implementata e verificata localmente il 2026-09-12 sul branch panel.
+Comprende console manuale per codice/QR, risposta minima, check-in distinti
+adulto/minori/scuole, correzioni e annullamenti espliciti, idempotenza, audit e
+RLS. Verifiche: 330 test, lint/typecheck, build staging, PostgreSQL temporaneo
+con schema canonico e concorrenza reale, browser desktop/mobile sintetico.
+Migration `20260912150000_reception_check_ins.sql` applicata e registrata solo
+allo staging il 2026-09-12 su richiesta successiva, insieme all'autorizzazione
+al commit/push panel. Cinque funzioni confrontate con il file locale,
+privilegi/PostgREST e prova SQL famiglia/scuola con rollback verificati;
+conteggi/hash dei dati preesistenti invariati su 41 tabelle. Resta la revisione
+funzionale autenticata della preview prima della chiusura. Il 2026-09-22
+l’utente ha autorizzato P12 rinviando questa revisione al flusso completo mobile.
+Production invariata.
+Revisione funzionale del 2026-09-12: la console manuale attuale è uno strumento
+di collaudo del backend, non il flusso operativo definitivo. Recepito il
+requisito azione prima della scansione, con fotocamera predefinita e incarichi
+distinti; implementazione e verifiche previste in P12/P13. Questa annotazione
+non dichiara chiusa P11 né già disponibili scanner o nuovi permessi.
+Dettagli e limiti: `docs/panel-p11-reception.md`.
+
 Scopo: rendere sicura e corretta la registrazione della presenza prima di
 costruire lo scanner.
 
@@ -803,31 +1343,98 @@ minimi, anche prima dell'integrazione con la fotocamera.
 
 ### Milestone P12 - scanner e dashboard accoglienza
 
-Scopo: completare il flusso operativo di ingresso.
+Stato al 2026-09-22: implementata localmente sul branch panel, con incarico
+`event_entry`, scanner mobile, fallback manuale, ingresso automatico del
+singolo, selezione famiglie/quantità scuole, correzioni separate e retry della
+stessa richiesta. Migration evento applicata e registrata soltanto allo staging
+il 2026-09-22, su successiva richiesta di preparazione preview. Corpo funzione,
+privilegi/PostgREST, prova SQL con rollback e dati invariati su 42 tabelle verificati. Superati 345 test, lint/typecheck, build staging, SQL/RLS e
+concorrenza su PostgreSQL temporaneo, browser desktop/mobile sintetico e
+decoder su QR reale generato. Pubblicazione del branch panel autorizzata dalla
+richiesta di preparazione preview; nessun rilascio production. Procedura:
+`docs/panel-p12-reception.md`.
+
+Su richiesta esplicita del 2026-09-22 si procede a P12 rinviando la revisione
+funzionale P11 al flusso completo sul cellulare. P11 non è dichiarata chiusa.
+Le prove locali non sostituiscono il collaudo autenticato su Preview e almeno
+due dispositivi reali; anche P12 resta da accettare sul campo.
+
+Decisione di implementazione: l’attuale ruolo `accoglienza` autorizza l’evento;
+nessuna migrazione automatica in incarichi panel. Il contratto e la nuova RPC
+rifiutano duty panel/sala. In P13 gli incarichi panel/sala vanno modellati come
+assegnazioni separate, senza concedere il ruolo di ingresso evento. In P12
+esiste un solo incarico autorizzato e viene impostato automaticamente.
+
+Scopo: completare il flusso operativo di ingresso evento, principalmente
+dal cellulare, con azione e incarico stabiliti prima della scansione.
 
 Deliverable:
 
-- scanner fotocamera nella dashboard accoglienza su HTTPS;
-- stato chiaro di autorizzazione fotocamera e fallback manuale;
+- scanner fotocamera nella dashboard accoglienza su HTTPS, percorso predefinito
+  con preferenza per la fotocamera posteriore;
+- stato chiaro di autorizzazione fotocamera e codice manuale come alternativa;
+- incarico evento autorizzato impostato prima della scansione, titolo sempre
+  visibile e invariato fra persone successive; selezione iniziale solo quando
+  esistono più incarichi, senza selettore di azione dopo ogni codice;
+- definizione degli incarichi operativi e dei controlli server/DB per impedire
+  che un futuro incarico panel abiliti l'ingresso evento; nessun pannello
+  selezionabile deve abilitare operazioni non ancora implementate;
 - check-in automatico per persona singola;
 - conferma componenti presenti per nuclei con minori;
 - conferma quantita' effettive per scuole;
 - esito immediato valido, gia' presente, non valido o da verificare;
-- prevenzione di scansioni ripetute mentre la richiesta e' in corso;
-- ultima operazione visibile e possibilita' di correzione auditata;
+- prevenzione di scansioni ripetute mentre la richiesta e' in corso e finché
+  lo stesso QR rimane nell'inquadratura; ripresa per il codice successivo dopo
+  l'esito, conservando azione e incarico;
+- esito incerto: scansione sospesa e retry della stessa richiesta senza
+  cambiare azione o soggetto; nessuna presenza presentata come confermata
+  prima della risposta server;
+- ultima operazione visibile e correzione auditata in percorso separato;
 - interfaccia ad alto contrasto, grandi target touch e dati minimi.
 
 Verifiche: almeno due modelli reali di smartphone/tablet, fotocamera
 anteriore/posteriore, luce scarsa, QR su schermo, QR stampato, rete lenta,
 doppia scansione e sessione scaduta.
+Aggiungere prove su sequenze di persone singole senza scelta di azione,
+azione conservata dopo errore/fallback, famiglie parziali e quantità scuola,
+cambio incarico esplicito, revoca e tentativi di alterare lo scope dal client.
 
 Accettazione: un operatore registra rapidamente un ingresso senza poter
 accedere alla scheda completa del partecipante.
 
 ### Milestone P13 - presenza panel e quadro operativo dell'evento
 
-Scopo: collegare le presenze effettive a statistiche e, se approvato, agli
-accessi dei singoli panel.
+Aggiornamento 6 ottobre: report attivato nel database staging; accessi panel/sala
+implementati localmente. Le note seguenti conservano lo storico. I vincoli di
+prenotazione, ingresso evento, incarico e capienza sono implementati nella nuova
+tranche; collaudo complessivo rinviato su richiesta dell'utente. Stato e limiti
+in `docs/panel-p13-access.md`; P13 non è ancora accettata.
+
+Prima tranche implementata localmente il 2026-09-30 su richiesta dell’utente:
+stato/orario di ingresso in elenco e scheda operativa admin/manager/viewer,
+minori distinti, conteggi evento per persone e scuole, aggiornamento ogni 10
+secondi senza perdita dei form aperti. Usa P11/P12 e RLS esistenti; nessuna
+migration. Dettagli in `docs/panel-p13-event-attendance.md`.
+Non chiude P13: restano collaudo autenticato tra scanner e seconda postazione,
+report operativo avanzato e accessi panel/incarichi sala descritti sotto.
+
+
+Seconda tranche locale del 2026-09-30: report operativo con previsti e ingressi,
+filtri giorno/mattina/pomeriggio Europe/Rome, distribuzione oraria e contatori
+aggregati di duplicati nelle richieste, retry, correzioni e annullamenti.
+I limiti dell’audit storico e l’assenza del dato postazione sono espliciti.
+Nuova RPC aggregata autenticata nella migration locale
+`20260930180000_reception_operational_report.sql`, non applicata in remoto.
+Contratto e proposta concreta degli incarichi ancora da confermare in
+`docs/panel-p13-operational-report.md`. Restano accessi panel/sala e collaudo
+funzionale; P13 non è dichiarata conclusa. Il 2 ottobre l’utente ha richiesto
+commit/push del codice e aggiornamento AGENTS; la migration staging resta
+da applicare su richiesta esplicita prima di attivare il report.
+
+Scopo: collegare le presenze effettive a statistiche e agli accessi dei singoli
+panel. Il requisito di separazione degli accessi è stato espresso nella
+revisione del 2026-09-12; il dettaglio degli incarichi va revisionato nella
+milestone, senza anticiparne qui l'implementazione.
 
 Deliverable minimo:
 
@@ -836,15 +1443,128 @@ Deliverable minimo:
   correzioni;
 - filtro per fascia oraria e punto di accoglienza quando disponibile.
 
-Estensione opzionale da approvare dopo il test ingresso:
+Accessi panel, da implementare dopo il test dell'ingresso evento:
 
-- scansione dello stesso QR all'accesso dei panel;
+- incarico e panel autorizzato stabiliti prima della scansione dello stesso QR;
+- azione ripetuta automaticamente a ogni codice, con lo stesso fallback manuale
+  e le stesse eccezioni per famiglie/scuole del flusso evento;
 - verifica che la persona o la scuola sia prenotata;
 - check-in specifico al panel e confronto con capienza/settore pubblico;
-- messaggio operativo per non prenotato senza esporre informazioni ulteriori.
+- messaggio operativo per non prenotato senza esporre informazioni ulteriori;
+- assenza di check-in evento: invio all'accoglienza evento, nessuna registrazione
+  implicita dell'arrivo o del panel; l'operatore panel non ottiene privilegi evento;
+- proposta assistenza in sala: consultazione minima del settore/sala pertinente
+  senza scritture su presenze, prenotazioni o assegnazioni di posti.
+
+Verifiche aggiuntive: operatore panel X rifiutato su panel Y e ingresso evento,
+maschera rifiutata su tutte le scritture, tentativi via API oltre la UI, revoca
+dell'incarico durante la scansione e nessun cambiamento dei conteggi evento
+come effetto collaterale di una scansione panel o di assistenza.
 
 Accettazione: il numero dei presenti effettivi e' disponibile ai manager e
 non deriva soltanto dalle intenzioni dichiarate nell'iscrizione.
+
+### Milestone P13-G - QR gruppo, accoglienza e preparazione stampa (prima priorità)
+
+Aggiornamento 6 ottobre 2026: tranche software implementata localmente.
+Confermate dall'utente esclusione dei sottogruppi e permanenza dei minori sul QR
+del genitore. Credenziale gruppo revocabile dal capogruppo, ingresso collettivo
+o parziale, correzioni, coda persistente e anteprima sequenziale disponibili
+nel codice. Migration `20261006150000_group_reception.sql` soltanto locale.
+Verifiche tecniche e limiti in `docs/panel-p13-groups.md`; collaudo autenticato,
+attivazione staging e prova hardware ancora aperti. Non è accettazione finale.
+
+Deliverable: risoluzione sicura del QR gruppo, riepilogo e conferma collettiva o
+parziale, presenze nominali idempotenti, lotto badge e anteprima, coda riprendibile.
+Prima tranche: modello, accoglienza e preparazione software; completamento stampa
+fisica insieme a P14/P15, senza dichiarare il flusso completo prima di tale prova.
+
+Accettazione: gruppo intero e arrivo parziale, minori, membri già presenti,
+cambio composizione, due operatori, retry dopo rete interrotta, QR revocato o
+altro evento, autorizzazioni e ristampa selettiva. Un errore stampa non annulla
+presenze confermate e non crea nuovi ingressi. La composizione confermata deve
+essere verificata atomicamente, senza conferme parziali nascoste.
+
+### Milestone P13-S - riconoscimento accrediti stampa e badge
+
+**Rinviata il 2026-10-06 su indicazione dell’utente:** fonte e formato degli
+accrediti non ancora noti. Si prosegue con P13-E1; P14/P15 richiedono l’hardware.
+
+Deliverable: verifica della fonte e formato accrediti, riconoscimento scanner,
+collegamento certo all'eventuale iscritto, stato accredito e badge dedicato,
+struttura configurabile dei diritti di accesso senza abilitarne di presunti.
+Dipende dalla coda badge condivisa P13-G/P15 per la stampa; l'assegnazione di
+posti riservati dipende da P13-E1/E2.
+
+Accettazione: accredito valido/revocato/altro evento, persona già iscritta,
+ristampa, permessi, dati minimi e rifiuto di accesso a luogo non autorizzato.
+Il collaudo degli accessi specifici segue la definizione dei luoghi ammessi.
+
+### Milestone P13-E1 - eventi speciali, settori e quote
+
+Tranche software implementata localmente il 2026-10-06. Due configurazioni
+indipendenti, una per sede/cerimonia; stato, controlli e limiti in
+`docs/panel-p13-ceremonies.md`. Migration remota, collaudo autenticato e
+validazione delle sedi reali ancora aperti. Verificati 763 test, lint, TypeScript,
+build staging, SQL temporaneo con concorrenza e browser sintetico desktop/mobile.
+Nessun avanzamento automatico a E2.
+
+Deliverable: due viste dedicate, ammissibilità dalle date dichiarate, modello
+admin delle sedi in bozza, settori e quote categoria, assegnazioni manager a
+persone e gruppi. Nessun acquisto o prenotazione a scelta del partecipante.
+
+Accettazione: date ignote/assenti, capienze sconosciute, quote insufficienti,
+dotazioni concorrenti e impossibilità di allocare oltre il settore. Schema e
+permessi verificati anche per URL/API diretti; piantina modificabile solo admin.
+
+### Milestone P13-E2 - distribuzione nominale ai gruppi
+
+Stato 2026-10-06: tranche software locale implementata su richiesta dell’utente. Manager e
+capogruppo possono assegnare alle singole persone; il manager opera dalla vista
+evento su tutti i gruppi, oltre al percorso di assegnazione diretta E1. Per i
+minori decisione esplicita caso per caso: posto oppure nessun posto, senza
+regole automatiche di età o eredità dal genitore. Registro nominale unico,
+consultazione personale, revoca/trasferimento, retry e conflitti condivisi.
+Dettagli e verifiche in `docs/panel-p13-ceremonies.md`. Migration E2 solo locale;
+collaudo autenticato e accettazione ancora aperti. E3 avviata successivamente
+su nuova richiesta esplicita dell’utente, come descritto sotto.
+
+Deliverable: vista capogruppo delle dotazioni per cerimonia/settore/categoria,
+assegnazione ai propri membri, residui, consultazione personale e flussi espliciti
+di revoca/riallocazione. Testi capogruppo e partecipante nelle sette lingue.
+
+Accettazione: nessun doppio conteggio della dotazione, nessuna doppia assegnazione
+alla persona, rispetto scope e settore, cambio gruppo/date e conflitti manager–
+capogruppo. Posti stampa integrabili solo secondo diritti e quote configurati.
+
+### Milestone P13-E3 - piantina interattiva e posti numerati
+
+Aggiornamento pubblicazione 2026-10-06: su nuova autorizzazione dell’utente,
+applicate atomicamente in staging le tre migration E1/E2/E3 con backup e verifica
+di conservazione dei dati. Autorizzati commit/push sul branch panel. Questo
+supera lo stato «solo locale» del database nelle note di sviluppo sottostanti;
+non certifica il collaudo autenticato o la validazione delle sedi.
+
+Stato 2026-10-06: tranche software locale implementata su richiesta dell’utente.
+Editor admin a file/sedute con coordinate, bozze e versioni immutabili; mappa con
+zoom, selezione multipla/consecutiva, filtri e alternativa tabellare. Manager
+riserva sedute alle dotazioni o assegnazioni dirette, manager/capogruppo le
+attribuiscono ai nominativi E2. Conversione quantitativa senza doppio conteggio,
+revoche esplicite, protezione delle versioni occupate, retry e revisioni comuni.
+Consultazione personale sette lingue, elenco stampabile e raccordo informativo
+con scanner evento/gruppo e anteprima badge; nessun nuovo diritto d’ingresso.
+Migration E3 solo locale; dettagli, verifiche e limiti in
+`docs/panel-p13-ceremonies.md`. Staging autenticato, sedi e stampanti reali restano
+aperti. P13 non conclusa; P14/P15 non avviate.
+
+Deliverable: editor admin generico, mappe versionate, scelta manager di sedute
+singole/multiple, assegnazione a gruppi o persone e distribuzione delle sedute
+ricevute dal capogruppo; alternativa tabellare e raccordo a badge/accessi/report.
+
+Accettazione: prototipo su sedi sintetiche, selezione accessibile desktop/mobile,
+concorrenza sull'ultimo posto, conversione delle dotazioni quantitative, modifica
+piantina con assegnazioni e nessuna perdita silenziosa. La validazione delle
+sedi reali resta aperta fino alla consegna di capienze e piantine definitive.
 
 ### Milestone P14 - prova tecnica delle stampanti per etichette
 
@@ -900,7 +1620,8 @@ Scopo: preparare il sistema all'uso reale con carico, operatori e hardware.
 Deliverable:
 
 - test end-to-end dei flussi manager, partecipante, docente, campagne,
-  statistiche, QR, accoglienza e stampa;
+  statistiche, QR, accoglienza e stampa, inclusi gruppi, accrediti stampa,
+  quote cerimonie, distribuzione nominale e piantine;
 - prova concorrente sulle ultime disponibilita' di un panel;
 - prova operativa con piu' postazioni di accoglienza;
 - verifica RLS completa e revisione dei dati minimi mostrati;
@@ -928,15 +1649,20 @@ Ordine raccomandato:
 2. P5-P6: programma pubblico e iscrizioni individuali.
 3. P7-P8: prenotazioni scuole.
 4. P9-P10: campagne e statistiche basate su dati ormai stabili.
-5. P11-P13: accesso QR, presenza effettiva e possibile controllo panel.
-6. P14-P15: prova hardware e stampa integrata.
-7. P16: hardening e prova generale.
+5. P11-P13: accesso QR, presenza effettiva e accesso panel con incarichi distinti.
+6. P13-G: prima nuova priorità, QR gruppo e preparazione dei lotti badge.
+7. P14-P15: prova hardware e stampa integrata, inclusi i lotti gruppo.
+8. P13-S: accrediti stampa e badge.
+9. P13-E1/E2/E3: quote eventi speciali, distribuzione nominale e piantine.
+10. P16: hardening e prova generale estesa a tutti i nuovi flussi.
 
 P9 dipende da P6 per il filtro partecipanti e da P7-P8 per l'audience
 professori. P10 puo' iniziare dopo P6, ma il report completo richiede scuole e
 check-in. P14 puo' essere anticipata in parallelo come attivita' organizzativa,
-ma P15 non deve iniziare finche' stampante e postazione non sono state scelte e
-provate.
+ma l’integrazione hardware P15 richiede stampante e postazione scelte e
+provate. La preparazione software P13-G non dipende dalla scelta hardware;
+se questa tarda, le altre nuove milestone possono proseguire conservando
+aperta l’accettazione della stampa fisica.
 
 ## 7. Rischi principali e contromisure
 
@@ -967,8 +1693,9 @@ provate.
 
 Queste funzioni non vanno aggiunte incidentalmente:
 
-- scelta di sedute numerate;
-- piantina grafica della sala;
+- scelta autonoma di sedute numerate da parte del partecipante;
+- estensione delle piantine ai panel ordinari (quelle delle due cerimonie sono
+  invece incluse da P13-E3);
 - trasferimento automatico di posti inutilizzati da una sezione a un'altra;
 - promozione automatica dalla lista d'attesa senza regole concordate (la coda
   è invece richiesta dalla decisione del 2026-10-09);
@@ -993,5 +1720,10 @@ Il piano e' completato quando:
   manuale;
 - il badge puo' ricevere un'etichetta con lo stesso QR personale tramite la
   postazione scelta;
+- il QR gruppo consente accoglienza collettiva o parziale e stampa sequenziale
+  riprendibile dei badge personali;
+- gli accrediti stampa sono riconosciuti e i badge rispettano i diritti definiti;
+- inaugurazione e cerimonia finale hanno quote e posti assegnati dai manager,
+  distribuzione ai membri da parte dei capigruppo e piantine configurate dagli admin;
 - permessi, privacy, audit, test, runbook e prova hardware sono verificati in
   condizioni realistiche.

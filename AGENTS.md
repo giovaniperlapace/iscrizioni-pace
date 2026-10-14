@@ -1,5 +1,72 @@
 # AGENTS.md
 
+## Rilascio main e migration Admin autorizzati — 2026-10-14
+
+- L’utente autorizza esplicitamente commit, push e migration necessarie per
+  pubblicare su main e consentire il collaudo a distanza. Questa richiesta
+  supera i precedenti divieti della tranche, mantenendo nuove funzioni solo
+  Admin, iscrizioni pubbliche chiuse e nessuna prova su dati reali o email.
+- Applicate e registrate atomicamente in production le otto migration panel
+  mancanti e le due del 14 ottobre. Backup custom verificato sul server,
+  permessi 600; percorso e riscontri nel documento di integrazione.
+  Correzione dati storica `20260726120000` esclusa e non registrata.
+- Invariati valori e conteggi delle 45 tabelle preesistenti: 83.960 righe.
+  Confrontate 155 funzioni, 132 policy e 155 insiemi di privilegi, preservando
+  permessi preesistenti e default service_role del server. Modalità internal,
+  zero panel pubblici; controllo dei ruoli senza scritture applicative:
+  4 Admin pronti, 12 account non Admin esclusi dal gate.
+- Build production e 21 regressioni mirate superate, oltre alle verifiche
+  complete della preparazione. Push main autorizzato; deployment da verificare
+  sul commit risultante. Branch panel e quattro stash conservati.
+- Primo collaudo remoto dalla pagina Admin con campioni sintetici, senza
+  modificare iscrizioni, token o presenze. Scanner applicativo su staging
+  separato; hardware e accettazione fisica restano aperti. Nessun account,
+  incarico o sessione creato; nessuna configurazione stampante modificata.
+
+## Integrazione completa in main e collaudo Admin — 2026-10-14
+
+- L’utente supera la sospensione della stampa, sceglie per questa tranche
+  Chrome configurato silenzioso e chiede individuale/gruppi con coda canonica.
+  Poi sposta lo sviluppo su main e richiede l’integrazione completa del panel:
+  nuove funzioni di stampa/scanner nella dashboard Accoglienza solo Admin.
+  Manager sarà abilitato in una tranche successiva; P0–P10 già pubblicate
+  rimangono disponibili. Nessuna apertura pubblica implicita.
+- Merge locale da panel `095af93` a main `fced870`, senza commit: preservati
+  cronologie, branch panel e i due stash originari; due nuovi stash nominati
+  conservano le bozze prima dei cambi di direzione. Conflitti riconciliati
+  mantenendo home/Forum, download PNG autenticato e funzioni panel/cerimonie.
+  Artefatti storici conservati sul disco ed esclusi dal diff da pubblicare.
+- Nuove superfici protette da Admin lato server; gate DB versionato sulle basi
+  scanner/gruppi, senza riscrivere migration storiche. Scanner non disponibile
+  finché manca la migration di attivazione. Nuove pagine cerimonie/QR gruppo
+  riservate al collaudo Admin, modello futuro conservato.
+- Profili distinti continuo 29 × 45 e pretagliato 29 × 90, stesso nome completo,
+  QR con quattro moduli liberi e codice. Testi operativi Stampa etichetta QR /
+  Ristampa etichetta QR invariati, download PNG conservato. Etichetta piccola
+  distinta dal badge completo, che mantiene le sedute delle cerimonie.
+- Elenco gruppo con quantità ed esclusioni, senza sottogruppi o QR autonomi
+  dei figli. Coda esistente estesa per tipo etichetta: deduplicazione globale
+  per iscrizione/evento tra individuo/gruppo, tentativi e manifesti persistenti,
+  ristampa selettiva, conferma fisica esplicita. print/afterprint non confermano
+  uscita, preparazione o consegna; nessuna presenza o token personale scritto.
+- DK-22210 confermato acquistato; specifica Brother 29 mm verificata. Stampante
+  non presso lo sviluppatore. Collaudatore con accesso Admin, Mac e forse
+  Windows, modello riferito «Brother Wc810»: targhetta, collegamento e rotolo
+  montato da confermare prima del setup. Nessuna nuova prova fisica acquisita.
+- Due migration locali: `20261014110000_admin_reception_pilot` e
+  `20261014120000_qr_label_queue`. Nessuna applicazione remota autorizzata.
+  Inventario registro read-only: production 11 versioni locali assenti
+  (una pregressa da riconciliare, otto panel e due nuove); staging 12 assenti.
+  Backup/confronto schema e autorizzazione necessari prima del rilascio.
+- Restano esclusi commit/push, deployment, migration remote, email e modifiche
+  a dati reali. Il passaggio a main non revoca questi limiti della richiesta.
+  Collaudo tecnico con fixture sintetiche, PostgreSQL temporaneo e stampa
+  browser simulata. Nessun account/ruolo creato o stampante configurata.
+- Dettagli in `docs/panel-main-integration-2026-10-14.md`; procedura per il
+  collaudatore in `docs/collaudo-stampa-remoto-admin.md`. Accettazione fisica
+  aperta; Windows, QL-800 e postazioni evento non certificati.
+
+
 ## Download QR personale su Safari iPhone — 2026-10-12
 
 - Segnalazione dell’utente: pulsante Scarica immagine nell’area personale,
@@ -155,6 +222,317 @@
   migration remota o email autorizzata da questa tranche.
   Branch panel e stash preservati. Dettagli in
   `docs/home-program-preview-2026-10-10.md`.
+
+## Salvataggio e push stampa individuale autorizzati — 2026-10-14
+
+- L’utente richiede commit e push delle modifiche alla stampa del singolo
+  QR sul branch panel. Questa autorizzazione supera il precedente divieto
+  di pubblicare questa tranche; non riprende le prove hardware sospese.
+- Diff locale pertinente: pulsante Manager/Admin, loader/handler autenticati,
+  renderer e client di stampa, test, documentazione e strumenti sintetici.
+  Campioni generati e materiali PDF/immagini temporanei conservati localmente
+  e ignorati con regole mirate; nessun profilo Chrome o credenziale versionati.
+- Il branch a 476c214 contiene inoltre il merge di riallineamento del 9 ottobre
+  non ancora pubblicato sul remoto panel: 17 commit di differenza, dei quali
+  16 già presenti su origin/main. Il push conserva la cronologia preesistente.
+- Solo branch panel/preview, main e production esclusi da questa pubblicazione.
+  Nessuna migration remota o email. Tre metodi aperti, stampa gruppi/continuo
+  e integrazione accoglienza rinviati alla tranche successiva richiesta.
+
+## Prove stampa sospese, tre metodi aperti — 2026-10-12
+
+- L’utente ferma esplicitamente le prove: non è deciso che verrà adottato
+  il metodo Chrome silenzioso. Nessuna scelta definitiva del canale di stampa.
+- Conservare aperte tutte e tre le alternative discusse: browser con
+  stampa silenziosa configurata, dialogo di stampa ordinario e componente
+  locale di collegamento (QZ Tray o altra soluzione da valutare).
+- Conservare implementazione locale, template, campioni e risultati fisici
+  acquisiti, compresa la corretta stampa delle due identità Manager staging.
+  Il successo su questo Mac non autorizza scelta o distribuzione del metodo.
+- Sospendere ulteriori prove, integrazione nell’accoglienza, installazioni
+  e configurazioni aggiuntive fino alla ripresa esplicita dell’utente.
+  Nessun commit/push, deployment o migration autorizzati da questa richiesta.
+
+## Stampa dalla dashboard Manager reale riuscita — 2026-10-12
+
+- L’utente preme `Stampa etichetta QR` nella scheda reale Manager di Alba
+  Test Accoglienza / P0LE, sull’app locale collegata al solo staging.
+- Conferma una sola etichetta, allineata e separata, nome/QR/P0LE integri,
+  senza altre conferme. Dopo il ritaglio riferisce decodifica del QR;
+  telefono e misura del ritaglio non acquisiti separatamente in questa prova.
+- Verifica DB in sola lettura: testo scansionato coincidente con l’ultimo
+  QR attivo già esistente del campione. Non copiare il payload nei verbali.
+  Rispetto allo snapshot iniziale, stato/updated_at dell’iscrizione e
+  impronte di tutti i record QR e delle presenze dello stesso campione invariati.
+- Acquisito il percorso reale scheda Manager → handler autenticato → QR
+  esistente → stampa silenziosa → etichetta fisica leggibile dopo ritaglio.
+  Sola prova individuale su questo Mac/Chrome/Brother; coda badge, storico
+  condiviso, lotti e postazioni future restano separati e non collaudati qui.
+- Dimensioni rimosse dai testi dei pulsanti come richiesto: `Stampa etichetta QR`
+  e `Ristampa etichetta QR`. Download PNG esistente preservato.
+- Lavoro locale sul branch panel, staging sintetico. Nessuna modifica a
+  iscrizioni/QR/presenze, nuova email, migration, commit/push o deployment.
+  La sessione di autenticazione Manager di test rimane quella predisposta.
+
+## Testo del pulsante stampa — 2026-10-12
+
+- Su richiesta dell’utente rimosse le dimensioni dal testo del pulsante
+  operativo: `Stampa etichetta QR` / `Ristampa etichetta QR`.
+  Formato e comportamento di stampa conservati; correzione solo di testo.
+
+## Collaudo pulsante nella dashboard Manager reale — preparazione, 2026-10-12
+
+- Richiesta dell’utente: test direttamente nella dashboard Manager. Avviata
+  l’app locale su http://127.0.0.1:3161 con Next webpack e variabili staging
+  verificate; solo gli URL applicativi del processo adattati a localhost.
+  Launcher `tools/brother-browser-test/run-manager-staging.mjs`.
+- Account esistente `manager.panel.staging@example.invalid`, ruolo Manager
+  dell’evento sintetico corrente `assisi-2026-test`, sessione Auth verificata
+  nel Chrome dedicato già configurato. Nessun nuovo account/ruolo o invio email;
+  aperta una sessione di test, senza callback che aggiorni profili/iscrizioni.
+- Scheda reale `/dashboard/manager?section=iscritti&edit=8765cda1-1345-4ccd-b2bd-11909202b46e`
+  di Alba Test Accoglienza / P0LE. QR staging preesistente attivo e impaginabile,
+  senza creazione o rotazione. Il pulsante Stampa etichetta QR è in vista;
+  distinto dal comando Scarica immagine esistente.
+- Verifica end-to-end automatizzata con stampa simulata nel browser separato:
+  dashboard reale, pulsante reale, GET autenticato HTTP 200 private no-store,
+  CSP same-origin, identità e codice del DB, QR decodificato coincidente con
+  l’ultimo token esistente, una sola chiamata print, nessuna scheda aggiuntiva,
+  pulizia iframe e nessun errore pagina. Nessun lavoro fisico inviato dal test.
+- Confronto DB prima/dopo: stato/updated_at dell’iscrizione, impronta dei record
+  QR e delle presenze del solo campione invariati. La sessione Auth è l’unico
+  accesso preparato. Nessuna migration, deployment, commit/push o email.
+- Prossimo passo: clic dell’utente nella scheda Manager e controllo fisico
+  di un’etichetta Alba Test Accoglienza / P0LE. Questi QR sono dello staging;
+  la scansione successiva con fotocamera serve alla lettura, non usare lo
+  scanner accoglienza dell’app per collaudare la stampa (registrerebbe ingressi).
+
+## Prima prova singola silenziosa riuscita sul Mac — 2026-10-12
+
+- Dopo calibrazione del formato reale 29 × 90 mm nel profilo Chrome dedicato,
+  l’utente conferma una sola etichetta TEST-003, allineata, taglio corretto e
+  nome/QR/codice integri. Stampa con un solo clic, senza altre conferme;
+  breve finestra Chrome visibile e chiusa automaticamente, durata non misurata.
+- Pixel 7 e iPhone leggono il payload corretto prima del ritaglio. Dopo
+  ritaglio manuale a 45 mm, entrambi leggono ancora il QR e nome/TEST-003
+  restano integri, confermati dall’utente.
+- Esito acquisito per questa singola stampa sul Mac con Chrome 154 e Brother
+  QL-810W, profilo dedicato configurato. Non equivale al collaudo di Windows,
+  QL-800, continuo da 29 mm, lotti applicativi o tutte le postazioni future.
+  Ripetibilità della stampa silenziosa e raccordo con coda/storico restano aperti.
+- Conservare calibrazione tramite opzione reale del driver e controllo del
+  profilo prima di avviare --kiosk-printing: il solo seed delle dimensioni
+  aveva causato fallback 12 × 12 mm e quattro etichette inutilizzabili riferite.
+- Template/loader/handler e client di stampa individuale preparati localmente
+  sul branch panel. Prova fisica con soli dati sintetici; download PNG
+  esistente conservato. Nessuna creazione/rotazione QR, presenza, dato remoto,
+  migration, email, commit/push o deployment. Stash originale preservato.
+
+## Stampa silenziosa: formato errato e calibrazione — 2026-10-12
+
+- Prova fisica silenziosa fallita: l’utente riferisce quattro etichette
+  inutilizzabili, stampa molto piccola/suddivisa e tagli disallineati.
+  Ritiene successivamente di aver riallineato il rotolo; non trattarlo come
+  conferma di una nuova uscita corretta. Ulteriori invii automatici sospesi.
+- Evidenza: profilo Chrome e attributi IPP del lavoro 7 riportano media
+  `12x12mm`, copies=1. Le opzioni lpoptions 29x90mm non hanno impedito a Chrome
+  di usare il formato da 12 mm. Il seed iniziale della carta non conteneva
+  l’identificativo reale del driver; non era sufficiente scrivere dimensioni
+  e nome del supporto nelle preferenze.
+- Nessun lavoro pendente rilevato. Chiusa soltanto la sessione di collaudo;
+  aperta calibrazione senza `--kiosk-printing`, selezionata nell’anteprima
+  l’opzione reale 29 × 90 mm con vendor_id `om_29000x90000um_29x90mm`.
+- Verificati nel modello effettivo dell’anteprima: carta 29000 × 90000 µm,
+  copies=1, pages=[1], margini Nessuno, scala 100%, verticale e nessuna
+  intestazione. Anteprima visivamente integra. Annullata senza stampare;
+  salvata la carta reale nel profilo, controllata nuovamente dopo la chiusura.
+- Launcher con modalità `--calibrate` e blocco della modalità silenziosa
+  se carta/identificativo/scala/margini/intestazioni non sono validi. Non
+  considerare questo controllo del profilo prova dell’esito fisico.
+- Riaperta la sessione silenziosa corretta; prossimo passo una sola nuova
+  pressione dell’utente e verifica fisica. Nessuna copia di correzione
+  inviata dall’agente. Validità della stampa silenziosa ancora aperta.
+
+## Prova stampa silenziosa sul Mac — preparazione, 2026-10-12
+
+- L’utente autorizza una prova di implementazione sul Mac attuale. Conservata
+  la scelta futura delle postazioni; nessun QZ Tray o componente aggiuntivo.
+- Pulsante Manager/Admin ora usa `lib/qrcode/print-client.ts`: una richiesta
+  fresca al medesimo GET autenticato, iframe dello stesso sito e print dopo
+  decodifica delle immagini. Nessuna seconda pressione nell’anteprima.
+  Documento marcato, errori/login esclusi; una sola stampa concorrente nella
+  pagina, annullamento in chiusura/cambio scheda e pulizia risorse. Il messaggio
+  di comando avviato non conferma uscita fisica né aggiorna presenze/coda.
+  Download PNG esistente conservato; ristampa sempre esplicita e rilegge il QR.
+- CSP del documento consente iframe solo dello stesso sito (`frame-ancestors
+  self`), senza estendere i permessi del loader/handler. Un browser normale
+  continua ad aprire il dialogo; la stampa silenziosa richiede la postazione
+  configurata e non è attivabile dal sito.
+- Chrome 154 sul Mac: finestra/profile separati avviati con `--kiosk-printing`,
+  senza policy globali né modifiche al profilo ordinario. Impostazioni di prova
+  una copia, margini Nessuno, scala 100%, intestazioni disattivate; Brother
+  predefinita e opzioni utente PageSize=29x90mm / CutMedia=EndOfPage.
+  Valori precedenti di queste due opzioni conservati nello snapshot locale.
+  Ripristino: `node tools/brother-browser-test/launch-silent-chrome.mjs --restore-printer`.
+- Pagina `silent-label-test.html`, José María García López / TEST-003, stesso
+  QR sintetico dei campioni precedenti, stesso renderer e client applicativi.
+  Generatore `generate-silent-sample.mjs`; avvio `launch-silent-chrome.mjs`.
+  Solo server loopback, senza credenziali o accesso a DB. Debug della sessione
+  di prova solo locale sulla porta 3169. Pagina reale aperta, pulsante pronto,
+  presenza della flag verificata. Nessun lavoro fisico inviato dall’agente:
+  prossimo passo clic dell’utente e verifica uscita/assenza dialogo.
+- Sette test mirati, ESLint, TypeScript superati. Test browser del client reale
+  con print simulata: singolo invio, nessuna nuova scheda, ristampa fresca,
+  errori 401/403/404/500, concorrenza, annullamento, URL estranei e pulizia.
+  Questo test non dichiara collaudata la stampa silenziosa fisica.
+- Lavoro locale sul branch panel; nessun commit/push, deployment, migration,
+  modifica a persone o presenze reali, email. Stash preservato.
+
+## Scelta postazioni rinviata e alternativa Chrome — 2026-10-12
+
+- L’utente non conosce ancora i PC dell’accoglienza e rinvia la scelta del
+  canale di stampa finché saranno note le macchine e la tollerabilità del
+  dialogo per gli operatori. Non installare né configurare implicitamente
+  QZ Tray o altri componenti; proposte e test del template conservati.
+- Correzione della precedente valutazione: un componente di collegamento
+  locale non è obbligatorio. Chrome da versione 144 su Mac/Windows/Linux
+  supporta la policy `SilentPrintingEnabled`, che chiude automaticamente
+  l’anteprima e stampa sulla destinazione predefinita con opzioni predefinite.
+  Richiede configurazione della postazione/browser, non una modifica che
+  il sito possa abilitare da solo. Stampante, pagina, scala e taglio vanno
+  predisposti e collaudati sulle macchine effettive.
+- Il requisito utente riguarda l’assenza di dialogo operativo, non il divieto
+  tecnico di usare `window.print()` su un browser predisposto alla stampa
+  silenziosa. Possibili percorsi ancora da scegliere: Chrome configurato,
+  componente locale o dialogo se accettato esplicitamente dall’utente.
+- Fonte primaria verificata: documentazione policy Chrome Enterprise e
+  definizione Chromium `SilentPrintingEnabled.yaml`.
+  https://chromeenterprise.google/intl/es-419_ALL/policies/silent-printing-enabled/
+  https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/policy/resources/templates/policy_definitions/Miscellaneous/SilentPrintingEnabled.yaml
+- Nessuna configurazione di Chrome, driver o stampante modificata; nessuna
+  ulteriore implementazione o prova fisica in questa valutazione.
+
+## Stampa diretta senza dialogo — requisito utente, 2026-10-12
+
+- L’utente richiede che il pulsante operativo stampi direttamente sulla
+  stampante della postazione, senza dialogo di stampa. Questa indicazione
+  supera il percorso operativo precedente basato su `window.print()`;
+  i campioni con dialogo restano strumenti di collaudo del template.
+- La prima implementazione locale individuale con anteprima/dialogo va
+  adattata a un collegamento locale alla stampante. Nessuna soluzione scelta
+  o installata implicitamente. Valutato QZ Tray per Mac/Windows: richieste
+  firmate e certificato attendibile necessari per sopprimere anche i popup.
+- Configurare stampante, supporto fisico, scala e taglio per postazione;
+  mantenere QR esistente, stampa separata da presenze, deduplicazione e
+  stato inviato distinto dalla conferma fisica. Formato finale 29 × 45 mm;
+  sul DK-11201 attuale si conserva pagina fisica 29 × 90 mm.
+- Confermata dall’utente la lettura su Pixel 7 e iPhone di tutte le tre
+  copie TEST-002 consecutive. Cinque etichette confermate nella sessione:
+  due campioni singoli letti anche dopo ritaglio e tre copie lette prima
+  del ritaglio. Prova iniziale positiva, nessuna certificazione generale
+  di lotti applicativi, continuo da 29 mm, QL-800 o Windows.
+
+## Stampa individuale QR locale — 2026-10-12
+
+- Confermato dall’utente DK-11201 pretagliato 29 × 90 mm caricato; Brother
+  QL-810W rilevata via USB e coda pronta. Sagoma approvata 29 × 45 mm,
+  ritaglio manuale: il formato fisico resta 29 × 90 mm.
+- Implementato sul branch panel il pulsante Stampa etichetta QR nella scheda
+  Manager/Admin, con anteprima GET autenticata in finestra separata. Scope
+  evento corrente, identità dal DB, ultimo token attivo riletto; esclusi Viewer,
+  altri eventi, iscrizioni eliminate/annullate e QR revocati/scaduti/mancanti.
+  Cache privata no-store, CSP e nessun token in testo/metadati del documento.
+- Template condiviso `lib/qrcode/print-label.ts`: nominativo completo con font
+  incluso, minimo 7 pt e blocco se non entra; codice a 8 pt misurato, QR ECC M
+  con quattro moduli bianchi e dimensioni del campione già collaudato. Pagina
+  fisica 29 × 90 mm e riferimenti di ritaglio a 45 mm. Dialogo volontario;
+  nessuna creazione/rotazione QR, presenza, scrittura di coda o conferma fisica.
+- Campione sintetico del medesimo renderer generato con
+  `tools/brother-browser-test/generate-application-sample.mjs`, aperto in Chrome
+  a `http://127.0.0.1:3159/app-label-test.html`. Prova fisica ancora da effettuare.
+  Sette test mirati verdi (handler reale, permessi, stati, identità, decodifica,
+  nomi e limiti), ESLint e TypeScript; anteprima desktop verificata.
+- Solo lavoro locale. Stash originale preservato; nessun commit/push,
+  deployment, migration, dato remoto o email. Lotti gruppo e raccordo con
+  postazioni/coda restano tranche successive; badge cerimonie esistente conservato.
+
+## Ripresa stampa etichette — 2026-10-12
+
+- L’utente riprende lo sviluppo e il collaudo sul branch panel e conferma
+  come formato finale approvato **29 × 45 mm**. Questa scelta supera le
+  precedenti indicazioni di formato ancora da scegliere o candidato.
+- Ripristinati sul branch `codex/panel-p0-p10` annotazioni e materiali del
+  collaudo dallo stash `fa1ec7fa339a2b944045bf67e90cc2a1e9efec85`, conservato.
+  Riconciliate le sole aggiunte documentali con il riallineamento del 9 ottobre.
+- Punto di ripresa: pulsante per stampare un singolo QR esistente, senza
+  rigenerazione e senza registrazione automatica di presenze. Prima prova
+  browser riuscita su Mac/QL-810Wc, DK-11201 29 × 90 mm ritagliato a 45 mm;
+  quel campione letto dal Pixel 7. Campione P-touch letto anche dall’iPhone;
+  lettura iPhone del campione browser e continuo da 29 mm ancora da collaudare.
+- La scelta della sagoma non certifica il taglio a 45 mm sul rotolo continuo.
+  Riprendere le prove dopo verifica del supporto realmente caricato.
+
+## Priorità rilascio gestionale panel e pausa stampa — 2026-10-09
+
+- L’utente mette in pausa il collaudo browser e dà priorità alla preparazione
+  del rilascio gestionale riservato dei panel in production. Nessuna novità
+  nella home e nessuna apertura delle iscrizioni pubbliche; verificare anche
+  accessi diretti e azioni pubbliche durante la preparazione del rilascio.
+- Conservare risultati e file sintetici della prova Brother: prima etichetta
+  browser 29 × 90 mm ritagliata a 29 × 45 mm riuscita su Pixel 7, misure e
+  taglio confermati, circa 2 secondi. iPhone/browser, ripetibilità e altri
+  supporti/sistemi restano aperti. Registro in docs/collaudo-brother-ql.md.
+- Alla ripresa, primo passo: implementare il pulsante per stampare un singolo
+  QR esistente, senza rigenerazione e senza registrare automaticamente presenze.
+  Questo supera il precedente suggerimento di iniziare dal lotto sintetico
+  di tre etichette. Il requisito lotto gruppo su etichette separate resta valido.
+- La nuova priorità riguarda la preparazione del rilascio; non costituisce
+  autorizzazione a commit, push, deployment o migration remote. Conservare
+  tutte le modifiche locali. Nessuna implementazione stampa avviata.
+
+## Progetto accoglienza e prove stampanti — 2026-10-08
+
+- Linee guida quasi definitive concordate, non implementazione completata:
+  riferimento in `docs/accoglienza-postazioni-stampa.md`.
+- Unico registro generale delle presenze, modificabile da telefono e PC con
+  autorizzazioni coerenti; postazioni come viste operative, non archivi separati.
+  QR/link di postazione associa più telefoni autorizzati alla coda del banco;
+  QR partecipante identifica la persona. Presenze, scansioni e stampe distinte.
+- PC con arrivi recenti, ricerca, scheda, correzione/annullamento presenze e
+  stampa/ristampa del QR esistente. Annullare presenza non elimina iscrizione;
+  audit, deduplicazione e conflitti da progettare. Nessuna stampa automatica
+  implicita a ogni scansione, soprattutto ai panel.
+- Stampa anticipata Manager individuale/multipla/per gruppo prima dell'arrivo,
+  senza registrare presenze. Stato per persona condiviso con telefono e PC di
+  ogni banco: segnalare badge già preparato o stampa anticipata da verificare,
+  distinguendo richiesta, invio, conferma fisica ed errori. Ristampa esplicita,
+  esiti parziali dei lotti e deduplicazione con le richieste dell'accoglienza.
+- Prima collaudo hardware/template su Mac con Brother QL-810Wc, poi QL-800;
+  progettare anche per Windows. Disponibili 2 DK-11201 e 2 DK-22251; formato
+  finale ancora da scegliere. Prove con dati sintetici prima dell'integrazione.
+- Questa attività salva solo decisioni e piano: nessuna modifica applicativa,
+  installazione driver, collegamento fisico, migration, commit o push eseguiti.
+
+
+## Riallineamento panel con main — 2026-10-09
+
+- Richiesta esplicita: merge di main a858340 nel panel 42bfcca, conservando le
+  correzioni del gestionale e P11–P13, scanner, QR gruppo, badge e cerimonie.
+  Risolti 16 file in conflitto combinando le decisioni compatibili; nessuna
+  scelta in blocco di un branch. Gestione Admin/Manager conservata; Viewer
+  escluso dai panel e Capogruppo rinviato all’apertura pubblica sulla home.
+- Catalogo con client autenticato per disponibilità; statistiche Panel nella
+  categoria dedicata con presenze reali P13, separate dagli ingressi evento.
+  Conferme SuccessMessage, ordine, Quando, pubblicazione, Iscritti ed Excel
+  mantengono le correzioni del collaudo. Flussi futuri conservati e protetti.
+- Stash fa1ec7f e 2ad9881 identici e non ripristinati; main, produzione e
+  worktree delegato invariati. Merge locale; nessun push o SQL remoto.
+- Verificati 807 test, lint, TypeScript, npm ci, build staging e PostgreSQL
+  temporaneo con tutti i confini permessi, scanner/gruppi/cerimonie e concorrenza.
+  Le cinque migration 20261009 importate da main sono ancora assenti nello
+  staging (inventario read-only); applicarle prima del relativo rilascio.
+  Dettagli in docs/panel-main-integration-2026-10-09.md. Hardware ancora da collaudare.
+
 
 ## Pubblicazione Manager autorizzata — 2026-10-09
 
@@ -472,6 +850,378 @@
   prima dei filtri della tabella; iscrizioni eliminate escluse dal loader.
   Etichette nelle sette lingue, zero esplicito per i gruppi vuoti.
 - Modifica locale su main; nessuna nuova query, migration o scrittura dati.
+## Pubblicazione cerimonie E1/E2/E3 in staging — 2026-10-06
+
+- Nuova autorizzazione esplicita dell’utente: commit/push delle modifiche
+  cerimonie e migration necessarie per lo staging. Nessun rilascio production.
+- Applicate e registrate insieme, in una transazione, le migration
+  `20261006180000`, `20261006200000`, `20261006220000` nel container verificato
+  `supabase-db-jiio6ou5wzmma2xwas53cf1d` (PostgreSQL 15.8). Backup custom sul
+  server: `/tmp/iscrizioni-pace-staging-before-ceremonies-20261006151320.dump`,
+  indice verificato con pg_restore prima dell’applicazione.
+- Conteggi e hash delle 51 tabelle pubbliche preesistenti invariati: conservati
+  9 iscrizioni, 9 partecipanti, 85 gruppi e 6 check-in. Zero destinatari email;
+  nessun invio. Dieci tabelle cerimonie con RLS; RPC solo service_role.
+- Resta esclusa la rinomina storica `20260813170000`, non applicabile per
+  mancanza dei gruppi sorgente e non dipendenza delle cerimonie.
+- Codice verificato: 775 test, lint senza warning, TypeScript, build staging,
+  PostgreSQL temporaneo e browser sintetico desktop/mobile sette lingue.
+  Pubblicazione del branch distinta dal collaudo autenticato e dalle sedi reali.
+
+
+## P13-E3 — piantine e sedute numerate locali — 2026-10-06
+
+- Su richiesta dell’utente implementata E3 sul branch panel, conservando E1/E2.
+  Fetch/pull: zero divergenze; origin/main già incluso. Sedi indipendenti e
+  nessuna capienza reale inventata.
+- Editor admin con file, sedute stabili, coordinate, etichette, posti bloccati,
+  bozza e pubblicazione esplicita/versioni immutabili. Mappa con zoom, filtri,
+  selezione multipla/consecutiva e alternativa tabellare desktop/mobile.
+- Manager riserva le sedute entro le dotazioni E1 o le assegnazioni dirette;
+  manager/capogruppo attribuiscono quelle ricevute ai nominativi E2. Viewer
+  sola lettura. Scelte individuali dei minori conservate; senza posto esclude
+  una seduta. Nessun secondo consumo di quota o riempimento automatico.
+- Nuove versioni non eliminano/bloccano/rinominano sedute impegnate. Revoche e
+  trasferimenti E1/E2 richiedono prima rilascio esplicito delle sedute collegate.
+  Cambi gruppo/date/minori continuano a segnalare revisione senza liberare posti.
+- Migration E3 aggiuntiva solo locale, RLS e RPC service-only, attore dalla
+  sessione, lock/revisioni comuni, UUID retry stabile e audit minimizzato.
+- Posto personale nelle sette lingue, elenco stampabile e indicazione dei posti
+  nello scanner evento/gruppo e anteprima badge con QR attivo. Raccordo solo
+  informativo: nessun incarico/accesso cerimonia o check-in creato. Badge già
+  preparati sono snapshot; una riallocazione richiede ristampa esplicita.
+- Verificati 775 test, lint senza warning, TypeScript e build staging.
+  Verifiche SQL temporanee incluse 1.501 sedute, ruoli, versioni, conversione,
+  ultimo posto concorrente e retry; browser sintetico desktop/mobile sette
+  lingue. Esiti finali in `docs/panel-p13-ceremonies.md`.
+- Nessuna migration remota, commit, push, deployment o email. Collaudo
+  autenticato, sedi reali e accettazione aperti; P13 non conclusa, P14/P15 ferme.
+
+
+## P13-E2 — manager, capigruppo e scelte individuali minori — 2026-10-06
+
+- Richiesta esplicita dell’utente di procedere con E2. Precisazioni vincolanti:
+  anche i manager assegnano posti alle singole persone dalla vista dell’evento;
+  per i minori si decide caso per caso, senza regole automatiche di età/famiglia.
+- Distribuzione nominale gestibile da manager/admin per tutti i gruppi evento,
+  da capogruppo per gruppi e discendenti autorizzati. Assegnazione diretta E1
+  della persona mantenuta. Viewer sola lettura, ruoli cumulativi.
+- Registro comune per dirette e dotazioni, scelta esplicita senza posto per
+  ciascun minore, consultazione personale sette lingue, revoca e trasferimento.
+  Nessuna doppia occupazione; cambi gruppo/date/minori segnalati, non liberati.
+- Migration E2 aggiuntiva solo locale, RPC service-only, attore dalla sessione,
+  UUID retry stabile, lock/revisioni comuni e storico minori conservato.
+- Verificati 768 test, lint, TypeScript, build staging, SQL temporaneo e browser
+  sintetico desktop/mobile sette lingue; ultimo posto nominale concorrente
+  manager/capogruppo, retry e snapshot oltre 1.000. Dettagli nel documento
+  `docs/panel-p13-ceremonies.md`; collaudo autenticato e sedi reali ancora aperti.
+- Nessuna migration remota, commit, push o deployment. P13-E3 non avviata.
+
+
+## P13-E1 — cerimonie con sedi indipendenti — 2026-10-06
+
+- Su richiesta dell’utente rinviata P13-S finché saranno noti fonte e formato
+  degli accrediti; avviata la prossima milestone suggerita P13-E1. Precisazione
+  esplicita: inaugurazione e cerimonia finale possono avere location e strutture
+  completamente diverse, ancora sconosciute. Nessuna capienza inventata.
+- Tranche software locale: due viste condivise admin/manager/viewer, configurazioni
+  admin indipendenti in bozza/validate, settori quantitativi, quote per categoria,
+  dotazioni manager ai gruppi e assegnazione di un posto alla persona ammissibile.
+  Regola presenza scelta dall’admin (giorno/mattina/pomeriggio), date sconosciute
+  distinte dalle assenze. Nessun check-in o prenotazione volontaria creato.
+- Migration locale `20261006180000_ceremony_allocations.sql`: quattro tabelle RLS,
+  RPC service-only, controllo attore/evento sia server sia DB, revisioni e lock,
+  audit minimale, capienze e duplicati protetti. Vecchi editor location/momenti
+  bloccati per le configurazioni collegate, anche se usano service_role.
+- Cambio gruppo/date o cancellazione segnala posti da rivedere senza liberarli.
+  Dotazione gruppo consuma subito capienza; distribuzione nominale, regole posti
+  minori/accompagnatori e consultazione personale restano E2; mappe numerate E3.
+- Verificati npm ci, 763 test, lint, TypeScript, build staging, PostgreSQL 17
+  temporaneo (permessi, oltre 1.000 iscrizioni, ultimo posto concorrente) e browser
+  sintetico desktop/mobile. Accesso diretto senza sessione rimanda al login.
+- Piano e dettaglio in `docs/panel-p13-ceremonies.md`. Nessuna migration remota,
+  commit, push o deployment. P13-E1 resta aperta per staging, collaudo autenticato,
+  sedi reali e revisione dell’utente; P13-S sospesa, non completata.
+
+
+## Migration staging applicate — 2026-10-06
+
+Su richiesta esplicita dell'utente applicate e registrate in un'unica transazione
+le 20 migration mancanti applicabili: le 18 importate da main, gli accessi panel
+`20261006120000` e il QR gruppo/coda badge `20261006150000`. Container verificato:
+`supabase-db-jiio6ou5wzmma2xwas53cf1d`. Production invariata; nessun invio email.
+
+Backup PostgreSQL custom prima dell'aggiornamento, conservato sul server in
+`/tmp/iscrizioni-pace-staging-before-panel-20261006124116.dump`; indice archivio
+verificato con pg_restore. Applicazione con lock e timeout, DDL e registro nella
+stessa transazione, notifica finale di ricarica PostgREST. Nessuna migration
+versionata riscritta; rimosse soltanto le cornici BEGIN/COMMIT nello stream di
+esecuzione per mantenere atomico il lotto completo.
+
+Verifica finale: tutte le 20 versioni presenti; RLS attiva sulle cinque nuove
+tabelle panel/gruppi; RPC operative panel/gruppi riservate a service_role,
+negate ad anon/authenticated; nuove tabelle raggiungibili via PostgREST (HTTP 200).
+Conservati 9 iscrizioni, 9 partecipanti, 85 gruppi e 6 check-in; hash dei check-in
+invariato al netto della nuova colonna nullable. Nessun destinatario email in
+coda e nessuna identità storica da scollegare nel backfill previsto.
+
+Rimane non applicabile `20260813170000_rename_anziani_and_amici_groups.sql`:
+zero gruppi sorgente nello staging, mentre il file richiede esattamente 19.
+Non eseguita e non registrata falsamente come applicata. Non è una dipendenza
+dei nuovi flussi. Il collaudo autenticato, su dispositivi e stampanti resta
+separato; l'aggiornamento DB non certifica il deployment applicativo.
+
+
+## Pubblicazione del branch panel richiesta il 2026-10-06
+
+L'utente richiede commit di tutte le modifiche locali e push del branch panel,
+compresi i 69 commit precedenti non pubblicati e il merge main `296f3e9`.
+Verifiche della versione applicativa: 758 test, lint, TypeScript/build staging,
+SQL temporaneo e browser sintetico già superati nella tranche P13-G.
+Fetch prima del commit: zero commit remoti da incorporare; diff senza errori.
+`staging:verify` superato. Inventario DB staging ricontrollato in sola lettura:
+restano 21 migration assenti (18 importate da main, la storica rinomina gruppi,
+accessi panel e QR gruppo). Il push autorizzato riguarda il codice; nessuna
+migration remota applicata, email inviata o modifica a main/production.
+Il completamento del push non certifica il deployment né l'operatività dei
+nuovi flussi finché il database staging non viene aggiornato separatamente.
+
+
+## P13-G — QR gruppo e coda badge locali — 2026-10-06
+
+- Su richiesta dell'utente implementata P13-G sul panel, preservando tutte le
+  modifiche P13 locali. Fetch: branch avanti 69, zero commit da incorporare.
+  Nessun commit/push/deploy o migration remota.
+- Decisioni esplicite: QR per solo gruppo selezionato, sottogruppi esclusi;
+  minori ancora sul QR genitore, selezionabili individualmente per la presenza.
+  Accoglienza reale non filtrata dalle date dichiarate; queste restano invariate.
+- QR gruppo `G:` + token opaco cifrato/hashato, gestibile dal capogruppo nella
+  sezione link nelle sette lingue; revoca e rinnovo espliciti. Scanner unico,
+  riconoscimento solo incarico evento, conferma elenco senza ingressi automatici.
+- Presenze canoniche atomiche con snapshot di composizione/revisioni, retry UUID
+  stabile e correzione esplicita. Audit compatibile col report evento. Nessun
+  check-in panel o scuola creato dal QR gruppo; niente QR autonomi ai minori.
+- Coda badge persistente e riprendibile: un lotto aperto per gruppo, ordine,
+  preparati da verificare, conferma operatore e ristampa singola con controllo
+  tentativi. QR personali attivi riusati; niente rigenerazione durante stampa.
+  Preparazione/stampa non registra presenze, errore stampa non le annulla.
+- Migration locale `20261006150000_group_reception.sql`: tre tabelle RLS e RPC
+  service-only con verifica DB di ruolo, evento, gruppo e credenziale ad ogni
+  chiamata. Elenco completo oltre 1.000, limite difensivo 10.000, nessun parziale.
+  Lock conservativi di tabelle gruppi/assegnazioni/minori da misurare sotto carico.
+- Verificati 758 test applicativi, lint, TypeScript/build staging, PostgreSQL 17
+  temporaneo e browser sintetico desktop/mobile. Collaudo autenticato completo,
+  dispositivi e hardware restano da collaudare; P14/P15 non avviate. Stato, limiti
+  e ripresa della coda in `docs/panel-p13-groups.md`. P13-G non accettata sul campo.
+
+## Nuove necessità panel — pianificazione del 2026-10-06
+
+- Aggiornato solo il piano: P13-G (prima priorità, QR gruppo e lotti badge),
+  P13-S (accrediti stampa), P13-E1/E2/E3 (cerimonie, quote, assegnazioni e mappe).
+  Nessuna di queste funzioni è dichiarata implementata; P13 resta da collaudare.
+- Inaugurazione e cerimonia finale: partecipazione prevista dall'iscrizione e
+  dai giorni dichiarati, distinta da posto assegnato e ingresso reale. Niente
+  prenotazione volontaria. Manager ripartisce settore → categoria → gruppo/persona;
+  capogruppo distribuisce soltanto i posti ricevuti ai propri membri.
+- Solo admin modella la piantina; partire da settori/quantità in bozza e poi
+  sedute stabili/versionate. Superata l'esclusione storica di piantine e posti
+  numerati per questi due momenti, non per i panel ordinari. Dotazione gruppo
+  e distribuzione nominale non devono consumare due volte la stessa capienza.
+- QR gruppo distinto da QR persona/scuola; conferma intero gruppo o sottoinsieme
+  realmente arrivato, ingressi nominali idempotenti e stampa in sequenza dei QR
+  personali attivi. Coda preparabile prima di P14; stampa fisica accettata solo
+  dopo hardware P14/P15. Strategia QR minori e scope sottogruppi da definire.
+- Accredito stampa verificato/revocabile e badge dedicato; City Panel e riserve
+  alle cerimonie sono diritti possibili ancora da definire, non accessi automatici.
+- Dettagli, dipendenze, decisioni aperte e accettazione in
+  `PIANO_DI_LAVORO_PANEL.md`, sezioni 3.5–3.7 e nuove milestone. Conservate tutte
+  le modifiche locali precedenti; fetch iniziale: 69 commit avanti, zero indietro
+  rispetto all'upstream panel, nessun riallineamento necessario.
+
+## Regole non negoziabili di main anche sul branch panel — 2026-10-06
+
+Su richiesta dell'utente, i vincoli di `main` valgono anche per lo sviluppo su
+`codex/panel-p0-p10`. Fonte verificata: `main` e `origin/main` a `0b7e4d1`, già
+integrati nel merge panel `296f3e9`. Questa sezione rende espliciti i vincoli
+trasversali; non sostituisce le specifiche dettagliate e lo storico sottostanti.
+
+### Precedenza delle decisioni e protezione nei merge
+
+- Una nuova funzionalità panel non autorizza a rimuovere comportamenti,
+  controlli o correzioni già approvati su main. Restano altrettanto vincolanti
+  le decisioni consolidate del branch panel su scuole, prenotazioni e scanner.
+- Non risolvere conflitti scegliendo in blocco l'AGENTS o il codice di un solo
+  branch (`ours` / `theirs`). Confrontare le decisioni di entrambi e conservare
+  quelle compatibili; documentare puntualmente ogni requisito superato.
+- Tra note storiche incompatibili vale la decisione esplicita più recente
+  dell'utente sul medesimo comportamento, non il branch di provenienza né
+  l'ordine dei paragrafi. Se il conflitto non è risolvibile dalle decisioni
+  documentate, chiedere chiarimento prima di cambiare quel comportamento.
+- Esempi di regole superate da non ripristinare: tag ai capigruppo, ruoli
+  esclusivi che nascondono altre dashboard, figli nascosti dietro un pulsante,
+  blocco dell'area personale per manager/viewer, avanzamento fermo al 90%.
+- A ogni riallineamento confrontare anche `AGENTS.md` di main e panel, riportare
+  qui eventuali nuovi vincoli trasversali e conservare le specifiche panel.
+  Date, test e autorizzazioni di un rilascio passato sono fatti storici, non
+  autorizzazioni permanenti per pubblicare, applicare SQL o inviare email.
+
+### Git, ambienti e dati
+
+- Seguire «Workflow Git e postazioni multiple» e «Strategia Git»: main è il
+  default; panel si usa su indicazione esplicita. Conservare il branch panel
+  anche dopo un merge, finché l'utente non ne richiede la rimozione.
+- Verificare percorso, branch e stato, eseguire fetch e riallineamento
+  fast-forward sicuro all'upstream prima di modificare. Preservare lavoro
+  locale, commit non integrati e stash; non forzare sincronizzazioni divergenti.
+  Usare clone locale fuori dalle cartelle cloud e GitHub per sincronizzarlo.
+- Integrare periodicamente `origin/main` nel panel tramite merge, senza rebase
+  del branch condiviso. Non creare branch, worktree o PR, né fare commit/push
+  senza richiesta esplicita. Nessun reset distruttivo o sovrascrittura di
+  lavoro altrui per semplificare un conflitto.
+- Merge e pubblicazione del codice non applicano né autorizzano migration
+  remote. SQL versionato, milestone dedicata e diff revisionabile; prima di
+  una preview/rilascio confrontare il registro DB dell'ambiente interessato
+  con le migration richieste e verificare la configurazione email.
+- Non alterare dati reali né inviare email di collaudo come effetto collaterale
+  delle verifiche. Usare fixture sintetiche e database temporanei per i test.
+  Nessun segreto, token, dump o documento con dati personali in Git o nei log.
+
+### Autorizzazioni e dati canonici
+
+- L'evento operativo è quello unico con `events.is_current`; il multievento è
+  archivio storico. Admin globale, manager/viewer limitati all'evento corrente,
+  capogruppo alla gerarchia autorizzata. Controllare i permessi sul server
+  prima dei loader, anche per URL diretti, export e parametri memorizzati.
+- I ruoli si sommano e tutte le dashboard assegnate restano accessibili,
+  compresa l'area personale. Anche la membership capogruppo secondaria abilita
+  l'accesso. Manager e viewer sono alternativi nello stesso evento: cambio
+  tramite rimozione esplicita, senza cancellare altri incarichi. Vietata la
+  rimozione del proprio account; elenchi ruoli deduplicati per ID Auth.
+- Viewer in sola lettura per le sezioni autorizzate, comprese le esportazioni
+  presenze; niente azioni di gestione o dati interni esclusi dal suo ruolo.
+  Solo admin gestisce il ciclo evento e assegna il ruolo manager.
+- Tag: gestione solo admin/manager, lettura viewer; capogruppo escluso da
+  catalogo, filtri, colonne, export e accesso DB, anche con vecchie preferenze.
+  Servizi modificabili da admin/manager, in sola lettura per capogruppo.
+- Service role solo lato server, attore ricavato dalla sessione e scope
+  verificato; non sostituire RLS con soli controlli UI. Conservare controlli
+  DB, snapshot/conflitti, lock e audit atomico delle operazioni che li usano.
+- Letture paginate e per ID autorizzati anche oltre 1.000 record. Errori
+  bloccanti: nessun totale/export parziale e nessun dato non caricato mostrato
+  come zero, assenza o risposta negativa. Matching per ID o corrispondenze
+  esplicite, senza associazioni approssimative tra persone o gruppi.
+- Associazione dichiarata: `answers.externalGroupAssociation` del questionario
+  più recente, anche quando vuota; non recuperare valori precedenti. Modifica
+  admin/manager fino a 200 caratteri, preservando le altre risposte e senza
+  testo dell'associazione nell'audit.
+- Sesso interno separato e protetto: niente questionario, loader ordinari,
+  audit, email, statistiche, QR o preferenze salvate; viewer escluso anche
+  dall'export. Accessibilità limitata alle opzioni dichiarate, senza inferenze
+  né reintroduzione del testo libero ritirato; colonna/export disabilità
+  esclusi al viewer secondo i permessi specifici documentati.
+- Non inventare o completare dati storici: nascita reale/non futura e città
+  richieste nei nuovi inserimenti previsti, ma schede storiche incomplete e
+  relativi figli restano visibili. Residenza mai dedotta dal gruppo.
+  Localizzare i paesi riconosciuti preservando valori sconosciuti e dati salvati.
+
+### Comportamenti applicativi da preservare
+
+- Viste operative condivise tra admin/manager, evitando duplicazioni per ruolo.
+  Figli sempre visibili; numero e nomi inclusi negli export operativi previsti.
+  Statistiche da gerarchia e assegnazioni reali, figli inclusi nei conteggi
+  previsti; negli export presenze per gruppo i figli restano nel gruppo
+  d'iscrizione anche se il genitore ha servizi o tag.
+- Presenze previste «Da comunicare» distinte dalle assenze, calendario completo
+  e fasce conservati. Le presenze effettive/check-in individuali restano
+  separate dalle dichiarazioni e dalle presenze del genitore.
+- Form operativi con `ReliableForm`: valori conservati in caso di errore,
+  messaggi accessibili accanto ai campi, focus al primo errore, invio esplicito
+  e protezione dai doppi invii. Nessun redirect su errore nei nuovi overlay,
+  né bozze operative in localStorage, sessionStorage o URL.
+- Modali con scroll interno utilizzabile desktop/mobile, sfondo bloccato,
+  chiusura X/Escape e ripristino di focus, filtri e scroll della dashboard.
+  Preservare `dashboard-modal` e il pattern `preserve-dashboard-scroll`;
+  non introdurre `overflow-hidden` senza un contenitore interno scrollabile.
+- `ButtonProgress` condiviso in tutto il sito, overlay al 25%, partenza rapida
+  e avanzamento continuo rallentato nelle attese lunghe. Completamento solo
+  alla risposta reale, mai al 100% per errore; accessibilità e movimento
+  ridotto conservati. Conferma email «in coda» distinta dalla consegna.
+- Partecipante e capogruppo nelle sette lingue fin dall'inizio: it, en, fr, de,
+  es, nl, uk, inclusi stati, errori, overlay ed export. Niente testi tecnici
+  nelle interfacce operative; traduzioni legali definitive con revisione umana.
+- Magic link: GET/HEAD non consumano il token; rinnovo dell'inattività solo
+  dopo nuova verifica OTP/PKCE e accesso riusciti. Timeout di 24 ore e cookie
+  protetto conservati, senza rinnovo per il solo riuso della sessione.
+- Email: preservare coda Postmark, destinatari espliciti, anteprima/test e
+  conferma previsti prima delle campagne; nessun reinvio cieco con esito
+  incerto. Consegna al referente distinta dall'email personale; non copiare
+  quella del referente nel contatto del partecipante. Conservare le indicazioni
+  multilingue su spam e mittente sicuro, anche cambiando provider.
+- QR con token opaco/revocabile, check-in idempotente e auditabile, dati minimi
+  all'accoglienza. Conservare il flusso scanner consolidato del panel, i retry
+  con lo stesso UUID e la gestione dell'esito incerto. Arrivo all'evento e
+  accesso a panel/sala sono operazioni distinte.
+
+### Verifica e avanzamento
+
+- Diff piccoli e controlli proporzionati: test pertinenti, lint, TypeScript e
+  build per modifiche applicative; dipendenze riproducibili dal lockfile con
+  `npm ci`. UI significativa verificata nel browser desktop/mobile; modifiche
+  a permessi e SQL verificate anche per ruoli diversi e casi di conflitto.
+- Leggere `PIANO_DI_LAVORO_PANEL.md` prima della milestone; rispettarne i punti
+  di revisione. Non dichiarare conclusa una milestone per il solo merge:
+  Il report SQL è attivato in staging dal 6 ottobre; P13 resta da collaudare
+  integralmente, secondo la nota dedicata a questa tranche.
+- Aggiornare piano e documenti quando cambiano decisioni o flussi. Distinguere
+  verifiche locali, stato del database e rilascio effettivo: il solo push non
+  dimostra che il deployment sia riuscito.
+
+## P13 — report attivato in staging e accessi panel locali — 2026-10-06
+
+- Su richiesta dell'utente attivato il report senza collaudo: migration
+  `20260930180000_reception_operational_report.sql` applicata e registrata
+  atomicamente nel solo staging; funzione e privilegi verificati. Nessuna
+  prova di ingressi, invio email o modifica production. Superate le precedenti
+  note «report da attivare»; resta da verificarlo nel collaudo completo.
+- L'utente rinvia il testing completo al termine dello sviluppo e autorizza
+  a proseguire con gli accessi panel/sala senza il precedente collaudo intermedio.
+  Non dichiarare P13 conclusa né avviare automaticamente P14 o un rilascio.
+- Incarichi separati per account/evento/panel: `panel_entry` e `room_assistance`,
+  senza concedere il ruolo evento accoglienza. Gestione admin/manager dal catalogo
+  panel su account esistenti, senza inviti; viewer escluso dalla gestione.
+  La capability di navigazione non autorizza alcuna scrittura: server e DB
+  rileggono l'incarico esatto a ogni comando, anche durante i retry.
+- Scelta incarico prima dello scanner; nessun cambio durante richieste/esito
+  incerto. QR, codice personale, famiglie, scuole e feedback riusano la console
+  consolidata. Ingresso al panel richiede prenotazione e ingresso evento reale;
+  quantità scuola limitate anche agli arrivi evento. Sala in sola consultazione.
+- Nuova migration locale `20261006120000_panel_reception_access.sql`, non
+  applicata in remoto: check-in con moment_id/settore, revisioni separate,
+  capienza serializzata, audit e retry distinti. Le letture scuola della RPC
+  evento sono ristrette esplicitamente a moment_id nullo. Statistiche panel
+  mostrano gli ingressi validi al caricamento, senza inventare permanenza/no-show.
+- TypeScript, lint e build staging superati; predisposte regressioni ma non
+  eseguite. SQL, browser, autenticazione e hardware rinviati al testing completo.
+  Prima della pubblicazione va risolto l'inventario delle migration main ancora
+  assenti nello staging, senza applicazioni indiscriminate. Nessun commit/push.
+  Dettagli e verifiche future in `docs/panel-p13-access.md`.
+
+## Riallineamento main nel branch panel — 2026-10-03
+
+- Su richiesta dell’utente integrato `origin/main` a `0b7e4d1` nella base panel
+  `388d05f`, con merge sul branch esistente `codex/panel-p0-p10`. Conservati
+  scanner consolidato, scuole/panel e tutte le correzioni recenti di main.
+- Risolti 14 file in conflitto, mantenendo figli sempre visibili/editor e ingressi
+  individuali, ruoli prima dei loader, statistiche, export e Postmark con docenti.
+  Lockfile allineato a main con il decoder jsqr; fixture adattate ai flussi riuniti.
+- 18 migration importate da main, invariate; nessuna applicazione remota, push o
+  deployment. Prima della preview confrontare registro DB e configurazione email.
+  P13/report SQL resta da attivare in staging; P13 non è dichiarata conclusa.
+- Verificati 743 test, lint, TypeScript, build staging, PostgreSQL 17 temporaneo
+  e browser presenze/scanner desktop/mobile con dati sintetici.
+- Nota locale main sulle migration production del 3 ottobre preservata in stash
+  separato, non inclusa nel merge. Inventario e collaudi nel documento
+  `docs/panel-main-integration-2026-10-03.md` e nel piano panel.
 
 ## Pubblicazione correzioni dashboard e associazione — 2026-10-02
 
@@ -1643,6 +2393,406 @@ Questo file e' la memoria operativa stabile per Codex e per futuri agenti che la
 
 Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere cancellato. A quel punto questo file dovra' contenere tutto il contesto necessario per implementare funzioni accessorie, correggere bug e fare manutenzione senza dover ricostruire la storia del progetto.
 
+## Flusso QR consolidato — da preservare, 2026-09-30
+
+Questa sezione è il riferimento funzionale corrente e prevale sulle descrizioni
+storiche dello scanner riportate sotto. L’utente ha confermato che il flusso
+sembra funzionare, con alcune rifiniture ancora da individuare. Preservare queste
+scelte durante bugfix, refactoring, merge da main e sviluppo delle prossime
+milestone; non sostituirle con versioni precedenti né riprogettare il flusso senza
+una nuova richiesta esplicita dell’utente. Aggiornare questa sezione se l’utente
+approva successive variazioni, mantenendo chiaro ciò che viene superato.
+
+- Uso principale da telefono. Fotocamera predefinita con avvio esplicito e
+  posteriore preferita; alternativa tramite codice partecipante di quattro
+  caratteri. Anteprima verticale 3:4, immagine intera e guida soltanto visiva.
+- Incarico ingresso evento stabilito prima della scansione e conservato tra
+  letture. Singolo assente: ingresso automatico. Famiglie: confermare i componenti
+  realmente presenti; scuole: confermare le quantità effettive. Mai presumere
+  presenti tutti i componenti o tutti i prenotati.
+- QR già presente: nessuna nuova scrittura automatica. Famiglie parzialmente
+  presenti: possibilità di registrare nuovi arrivi senza alterare gli ingressi
+  precedenti. Stesso QR riabilitato solo dopo almeno un secondo continuativo
+  senza QR; fotogrammi illeggibili isolati e riavvio camera non bastano.
+- Attesa sul video senza dialog durante la richiesta; stream mantenuto attivo,
+  nuove operazioni bloccate. Esito sul video per 7 secondi, con azzurro per attesa,
+  verde per successo/già presente, rosso per errore e ambra per conflitto.
+  Riepilogo persistente sotto il video, senza duplicare il messaggio altrove.
+- Dialog persistente per selezione, modifica, esito incerto e sessione bloccata.
+  Nessuna scadenza automatica delle decisioni. Esiti incerti: stesso comando e
+  UUID per retry, nessuna scansione successiva; nessun successo anticipato.
+- Unica scheda **Modifica presenze**, dal riepilogo con ingresso presente o dalle
+  **Ultime 15 letture**. Non ripristinare il percorso separato Correzioni e
+  annullamenti, il selettore di operazione o l’obbligo di nuova scansione/codice.
+- Cronologia delle ultime 15 iscrizioni valide distinta per iscrizione, solo
+  nella memoria della pagina sul dispositivo: nessuna lista condivisa o
+  persistenza dopo reload. Apertura modifica: rilettura server automatica, senza
+  ingresso automatico. Non usare i dati storici della lista come stato corrente.
+- Modifica famiglia: presenti preselezionati, deselezione annulla i relativi
+  ingressi; tutti deselezionati annulla tutti gli ingressi correnti. Scuole:
+  quantità precompilate e annullamento totale esplicito. Conferma obbligatoria;
+  salvataggio o chiusura riportano agli ingressi conservando la modalità di lettura.
+- Preservare controlli server/DB, revisioni concorrenti, idempotenza, revoche,
+  scope evento e storia delle presenze dei minori. Gli incarichi panel/sala
+  futuri restano separati: una scansione panel non registra l’ingresso evento.
+
+Il riscontro positivo dell’utente non certifica il completamento di P11/P12/P13
+né un collaudo hardware formalizzato. Restano da registrare le rifiniture emerse
+e verificare il flusso autenticato su dispositivi reali, inclusa la seconda
+postazione che osserva presenze e statistiche. Base implementata: commit
+`387825a` sul branch `codex/panel-p0-p10`; dettagli e test nella sezione seguente.
+
+## Modifica presenze e ultime letture — 2026-09-30
+
+- Sostituito il percorso separato Correzioni e annullamenti con una scheda
+  unica Modifica presenze, disponibile dal riepilogo di un ingresso presente
+  (anche appena registrato) e dalle ultime 15 iscrizioni valide lette.
+  Le famiglie parzialmente presenti conservano sia l’ingresso dei nuovi arrivati
+  sia l’accesso alla modifica dalla selezione.
+- Cronologia solo in memoria nella pagina/dispositivo: nominativo o scuola,
+  ora della lettura, nessuna persistenza browser. Deduplica famiglie per codice
+  pubblico anche tra QR e manuale; scuole per token QR attivo. Riletture spostano
+  la voce in cima; modifiche aggiornano la voce senza cambiare l’ora di lettura.
+  La revoca della sessione svuota la lista; un riferimento non più valido viene rimosso.
+- Apertura modifica = nuova inspect server usando il riferimento conservato,
+  mai ingresso automatico. Famiglie precompilate: deselezionare annulla i relativi
+  ingressi; selezione vuota usa cancel dei soli presenti riletti. Scuole: quantità
+  precompilate e opzione esplicita per annullare tutto. Conferma obbligatoria;
+  salvataggio/chiusura riportano al normale ingresso senza cambiare fotocamera.
+- Revisioni, UUID di retry, interblocchi e autorizzazioni esistenti invariati;
+  nessuna migration. La precedente modalità di sola verifica tramite Correzioni
+  non esiste più: scansione normale di singoli assenti registra subito l’ingresso.
+- Test sessione e browser coprono cronologia, rilettura aggiornata, annullamento
+  totale, scuole, ritorno al flusso normale, retry e cancellazione della lista.
+  Verificati 358 test, lint, typecheck, build staging e browser sintetico
+  desktop/mobile (inclusi overlay, timer 7 secondi e stream continuo).
+
+## Presenze scuole nelle schede operative — 2026-09-30
+
+- Entrambi gli accessi Scuole (Partecipanti e Panel) mostrano ingresso evento,
+  ora e quantità effettive studenti/accompagnatori in tabella e nella scheda.
+  Il provider condiviso aggiorna solo le presenze ogni 10 secondi, senza
+  perdere modifiche nei form; errori e revoche non diventano assenze.
+- `/dashboard/attendance` aggiunge `schoolEntries` per prenotazione operativa;
+  `summary=1` restituisce la mappa vuota. Stessi controlli ruolo/evento e RLS,
+  nessuna migration. Quantità prenotate e ingressi panel restano distinti.
+
+## Colori dei messaggi scanner — 2026-09-30
+
+- Overlay camera: azzurro per attesa, verde per operazione riuscita/presenza già
+  registrata, rosso per codice o richiesta non validi, ambra per conflitto da
+  verificare. Testo sempre esplicito, contrasto elevato e sfondo opaco.
+- Colore derivato dallo stato e dal codice di errore, mai dal testo tradotto.
+  Durata di 7 secondi, riepilogo persistente, stream e interblocchi invariati.
+
+## Messaggio scanner temporaneo e riepilogo persistente — 2026-09-30
+
+- In modalità fotocamera, al termine dell’operazione il messaggio di stato
+  (ingresso registrato, già presente, codice non valido o conflitto) sostituisce
+  l’attesa nel riquadro video. Scompare dopo 7 secondi; ogni nuova risposta
+  avvia il proprio timer e annulla quello precedente.
+- Il riepilogo nominativo/scuola rimane direttamente sotto il video e non
+  scade. Il messaggio non è duplicato sotto il video o nella testata.
+  Il timer non cambia sessione, stream, latch, presenza o dati salvati.
+- Selezioni da confermare, esiti incerti con retry e sessione bloccata restano
+  nel dialog persistente. In modalità manuale restano i messaggi inline.
+- Test browser `tests/browser/reception-feedback.mjs`: posizione attesa/stato,
+  scadenza a 7 secondi di conferma ed errore, riepilogo persistente, rilettura,
+  selezione successiva e stream continuo.
+
+## Attesa sul video ed esito persistente — 2026-09-30
+
+- Revisione successiva: durante `pending` nessun dialog modale. In modalità
+  camera il messaggio “Operazione in corso. Attendi l’esito prima della prossima
+  persona…” è sovrapposto soltanto al video; lo stream rimane attivo e
+  l’interblocco continua a impedire altri ingressi. Manuale: attesa inline.
+- Conferma e riepilogo compaiono subito sotto il riquadro video e restano
+  visibili fino alla successiva operazione o al cambio di modalità. Il timer
+  di 2,5 secondi è stato rimosso su richiesta successiva dell’utente.
+  Restano rimossi l’esito duplicato nella testata/sul video e le istruzioni
+  per rileggere lo stesso QR. Nessun cambiamento a sessione, latch o dati.
+- Selezione famiglia/scuola, correzioni, esiti incerti e blocco di sessione
+  mantengono il dialog e non scadono. Gli errori restano persistenti.
+- Verifica dedicata: `tests/browser/reception-feedback.mjs` (video continuo,
+  posizione, persistenza oltre 2,5 secondi, rilettura e selezione successiva).
+
+## Conferma QR in overlay — 2026-09-30
+
+- La console accoglienza apre un dialog modale sopra la fotocamera per la
+  verifica in corso, la selezione famiglia/scuola, correzioni, esiti incerti
+  e sessione bloccata. Dopo la verifica mostra “QR letto correttamente”
+  (manuale: “Codice verificato”) e l’azione necessaria, senza anticipare
+  il successo della scrittura. I singoli conservano l’ingresso automatico.
+- Dialog nativo con focus iniziale, sfondo non interattivo, scroll interno
+  entro 90dvh e azioni di conferma in fondo. Escape equivale a chiudere senza
+  modifiche soltanto durante la selezione; durante richieste/esiti incerti
+  resta bloccato. Retry e interblocchi della sessione restano invariati.
+- Al successo il dialog si chiude e il riquadro camera mostra l’esito e
+  l’invito al QR successivo. Eliminato “Scansione sospesa · completa
+  l’operazione”. Nessuna modifica a salvataggi, permessi o database.
+- Verifica browser estesa in `tests/browser/reception.mjs` per focus, overlay
+  mobile e impossibilità di chiudere l’esito incerto con Escape.
+
+## Scuole nel menu Partecipanti — 2026-09-30
+
+- Nel branch panel, admin e manager (inclusi viewer in sola lettura) hanno
+  la scheda Scuole accanto a Senza gruppo: `section=iscritti&view=schools`.
+  Riusa catalogo, filtri, scheda e azioni delle prenotazioni scuola già
+  disponibili in Panel; apertura/chiusura, filtri e ritorno dalle azioni
+  conservano il menu di provenienza. I due accessi condividono gli stessi dati.
+- Permessi e scope evento invariati; nessuna migration o modifica RLS.
+
+## Pubblicazione codice report P13 — 2026-10-02
+
+- L’utente ha richiesto commit/push del lavoro P13 su `codex/panel-p0-p10`
+  e aggiornamento di questa memoria. Inclusi report, migration versionata,
+  test, piano e nota del flusso QR consolidato; conservati i requisiti scanner.
+- La richiesta riguarda il codice: `20260930180000_reception_operational_report.sql`
+  resta da applicare al database staging con richiesta esplicita. Il push
+  attiva la preview applicativa; fino all’applicazione SQL il nuovo report
+  mostra indisponibilità. I totali presenze preesistenti restano indipendenti.
+- Nessun merge main, modifica production, invio email o incarico panel/sala
+  implementato. La proposta degli incarichi resta da confermare e P13 resta
+  aperta per quella tranche e per il collaudo autenticato/hardware.
+- Fetch del 2 ottobre: panel/upstream allineati a `387825a`; `origin/main`
+  a `01e0a82`, senza integrazione in questa pubblicazione del codice.
+
+## P13 — report operativo accoglienza — 2026-09-30
+
+- Seconda tranche locale sul branch panel: Statistiche mostra previsti/ingressi,
+  filtro giorno e mattina/pomeriggio Europe/Rome, ingressi validi per ora e
+  contatori audit per richieste duplicate, retry, correzioni e annullamenti.
+  Non dedurre permanenza/no-show; le semplici riletture `inspect` e il punto
+  fisico di accoglienza non sono misurabili con lo storico attuale.
+- Nuova RPC aggregata `reception_operational_report`, SECURITY DEFINER con
+  `search_path` vuoto e controllo reale `auth.uid()`/ruolo/evento, invocabile
+  da authenticated: solo admin globale e manager/viewer dell’evento. Nessuna
+  esposizione di audit grezzo o dati nominali, nessun ampliamento delle RLS.
+- Endpoint `/dashboard/attendance/report`, client autenticato senza service
+  role, risposta private/no-store e validazione stretta. Polling 10 secondi,
+  timeout 15, stop a pagina nascosta/revoca e dati rimossi su errore o cambio
+  filtro; nessun refresh dei form. Scanner P11/P12 invariato.
+- Migration `20260930180000_reception_operational_report.sql` solo locale,
+  da applicare allo staging prima della pubblicazione, su richiesta esplicita.
+  Commit/push richiesti successivamente il 2 ottobre; database remoto invariato.
+  Piano e proposta
+  incarichi da revisionare in `docs/panel-p13-operational-report.md`; gli
+  accessi panel/sala e il collaudo hardware restano aperti.
+- Verificati 361 test, lint, typecheck, build staging, PostgreSQL 17 temporaneo
+  (inclusi revoca, fascia oraria e deduplica scuole fra panel) e browser
+  sintetico desktop/mobile; nessun errore runtime.
+- Fetch iniziale: panel/upstream a `387825a`, main a `dff2159`; nessun
+  fast-forward necessario. Modifica preesistente al flusso QR consolidato
+  conservata. Merge main ancora destinato all’integrazione dedicata.
+
+## P13 — visualizzazione ingressi evento — 2026-09-30
+
+- Prima tranche implementata localmente sul branch panel: Gestione iscritti e
+  scheda admin/manager/viewer mostrano ingresso e ora per adulto e ciascun
+  minore. Le statistiche aggiungono totali evento distinti per adulti, minori,
+  studenti, accompagnatori e classi/gruppi scuola. Giorni previsti e accessi
+  panel restano separati; nessuna deduzione di uscita o no-show.
+- Endpoint `/dashboard/attendance`: sessione autenticata, ruolo reale per utente
+  ed evento, client con RLS (mai service role), paginazione da 500 e proiezione
+  minima. Solo check-in evento attivi di iscrizioni/scuole operative;
+  `summary=1` omette le chiavi nominali. Risposte private/no-store.
+- Aggiornamento del solo contesto presenze ogni 10 secondi, sospeso a scheda
+  nascosta; timeout 15 secondi, richieste non sovrapposte. Nessun refresh dei
+  form. Errore = indisponibilità, non assenza; 401/403 cancella i dati e ferma
+  il polling fino a Riprova. Nessuna persistenza client delle presenze.
+- Nessuna migration/RLS modificata. Accessi panel/incarichi sala e collaudo
+  hardware restano separati. Contratto, limiti e verifiche in
+  `docs/panel-p13-event-attendance.md`. Commit/push e verifica della preview
+  staging autorizzati dall’utente nella richiesta successiva del 30 settembre.
+
+## Pubblicazione staging panel — 2026-09-30
+
+- La richiesta di pubblicare sullo staging comprende commit e push sul branch
+  `codex/panel-p0-p10`, quindi verifica della preview Vercel generata dal push.
+  Non implica pubblicazione su main/production né nuove migration.
+
+## Sezioni accoglienza e codice manuale — 2026-09-30
+
+- Revisione successiva al rilascio `1ac8393`, pubblicazione staging autorizzata:
+  incarico fuori dalla
+  card operativa, sotto il menu dashboard, senza sticky durante lo scroll.
+- Revisione successiva richiesta: eliminate le schede superiori Ingressi /
+  Correzioni e annullamenti. Ripristinato il pulsante in fondo alla card, separato
+  da un bordo; in correzione diventa Torna agli ingressi. Conservati i blocchi
+  durante selezioni/richieste/esiti incerti.
+- Manuale: solo codice partecipante di quattro caratteri; rimossi Tipo di codice
+  e inserimento del token QR. Correzioni conserva la scansione camera anche per
+  scuole, come sola verifica; scritture ancora esplicite e confermate.
+
+## Anteprima scanner verticale — 2026-09-30
+
+- Modalità rinominate “Inquadra QR code” e “Inserisci il codice manualmente”,
+  con pulsanti a capo su schermi stretti. Eliminato il selettore anteriore:
+  avvio/stop soltanto, richiesta camera `environment` a ogni avvio.
+- Correzioni e annullamenti sono in fondo alla console. Rimosso il pulsante di
+  rilettura: una sequenza di fotogrammi senza QR per almeno un secondo riabilita
+  lo stesso codice; singoli frame illeggibili e interruzioni camera non bastano.
+  Questo requisito sostituisce il blocco persistente fino a conferma descritto
+  nella P12 originaria. Durante selezione, richieste ed esiti incerti non si riabilita.
+- La famiglia parzialmente presente torna alla selezione con la nuova scansione;
+  membri già presenti indicati e disabilitati. Singoli e famiglie interamente
+  presenti terminano dopo inspect senza enter, conservando ora e stato.
+- Dashboard Accoglienza: rimosso il vecchio riquadro Area protetta con
+  descrizione e il titolo evento duplicato; resta il titolo nella testata globale.
+- `ReceptionCamera` usa un riquadro verticale 3:4, centrato e largo al massimo
+  24rem, con guida quadrata centrale larga due terzi del riquadro.
+- Il video conserva l’intera immagine (`object-contain`); la guida è soltanto
+  visiva e non intercetta tocchi. Decoder invariato: analizza tutto il fotogramma,
+  anche fuori dal quadrato. Rilascio staging autorizzato il 30 settembre; 347 test, lint e build staging superati.
+
+## Campioni accoglienza staging — 2026-09-30
+
+- Preparati su richiesta account `accoglienza.staging@example.invalid` e
+  `accoglienza2.staging@example.invalid`, solo Accoglienza evento corrente;
+  `admin.accoglienza.staging@example.invalid`, Admin globale solo nello staging.
+- Lotto fittizio A/B/F/S/X: due singoli, famiglia con due minori, scuola 10+2,
+  QR revocato. Verifica RPC senza ingressi; zero check-in iniziali.
+- Procedura e codici in `docs/collaudi/2026-09-30-preparazione-accoglienza.md`.
+  Script `prepare-reception-staging.mjs` conserva le presenze; script
+  `reception-staging-access.mjs` genera link monouso senza SMTP. Connessione
+  vincolata al container staging noto e modalità log.
+- Token, link e QR locali in `.env.collaudo-accoglienza/`, esclusa da Git;
+  non pubblicarli nel repository. Preservare il manifest per riusare il lotto.
+  Nessuna prova hardware certificata, migration, deployment o modifica production.
+
+## Guida riutilizzabile al collaudo su telefono — 2026-09-24
+
+- Procedura pratica in `docs/guida-collaudo-telefono-qr.md`: preparazione
+  accesso/campioni staging, prove T01–T18 con azioni ed esiti attesi, scheda
+  verbale e casi futuri ST01–ST08 per stampa P14/P15. Conservare i verbali in
+  `docs/collaudi/AAAA-MM-GG-descrizione.md` dalla prima sessione effettiva.
+- La guida non attesta prove hardware eseguite. La scansione del singolo
+  scrive subito; per verificare senza scrivere usare il percorso Correzioni
+  e chiudere senza modifiche. Preparare dati fittizi e registrare stati iniziali
+  e finali; preservare la storia dei check-in, inclusa quella dei minori.
+
+## P12 — scanner e ingresso evento — 2026-09-22
+
+- Implementata localmente sul branch panel. Su richiesta dell’utente, revisione
+  funzionale P11 rinviata al collaudo del flusso completo su telefono; non è una
+  certificazione di chiusura P11/P12. Il 2026-09-22 l’utente ha poi richiesto
+  la preparazione della preview, autorizzando migration staging e pubblicazione panel.
+- `ReceptionConsole` usa `ReceptionStationSession`: incarico `event_entry`
+  impostato prima del QR e titolo persistente durante lo scroll; fotocamera
+  predefinita, avvio esplicito, posteriore preferita, cambio camera e codice
+  manuale. Il singolo entra automaticamente, famiglie/scuole richiedono solo
+  selezione dei presenti/quantità. Correzioni e annullamenti hanno percorso
+  manuale separato, nuova verifica e conferma esplicita.
+- `jsqr@1.4.0` caricato dinamicamente per decodifica locale, nessun fotogramma
+  trasmesso/salvato. Stream chiuso su uscita, cambio modalità/camera, background
+  ed errore; permesso tardivo rilasciato. Nessun audio. Un QR già letto resta
+  bloccato anche attraverso frame illeggibili e riavvii della camera, fino a
+  un codice diverso o nuova lettura esplicita confermata.
+- Interblocco sincrono tra verifica e ingresso; timeout 20 secondi/esito incerto
+  sospendono la scansione e conservano lo stesso comando/UUID per retry. Nessun
+  successo prima della risposta e nessun aggiornamento da risposte tardive.
+  La richiesta resta solo in memoria: non promettere recupero dopo chiusura
+  della scheda. Sessione scaduta/revoca fermano il flusso; conflitto richiede
+  nuova lettura. Uscire durante la verifica non avvia l’ingresso automatico.
+- Migration `20260922220000_reception_event_duty.sql`, applicata e registrata
+  **solo allo staging il 2026-09-22**: RPC `reception_event_check_in`, SECURITY INVOKER, solo
+  service_role, duty esclusivamente evento. Delega alle protezioni atomiche
+  P11, che rileggono ruoli e evento a ogni operazione, inclusi retry. Nessuna
+  riscrittura delle migration precedenti, ruoli, presenze o policy esistenti.
+- Il ruolo attuale `accoglienza` resta esplicitamente un incarico EVENTO.
+  P13 deve assegnare panel/sala separatamente senza concedere questo ruolo;
+  nessun selettore panel inattivo nella P12. La pagina filtra gli incarichi per
+  evento corrente e lega l’action all’evento visualizzato: un cambio di evento
+  richiede nuova apertura. Rimane la regola dashboard manager solo manager;
+  per collaudo della console usare admin globale o accoglienza.
+- Fetch: panel/upstream a `e13d95a`; `origin/main` a `9bdd098`, 25 commit/11
+  migration non incorporati. Cancellazione PPTX e `output/` preesistenti lasciati
+  intatti. Nessun pull necessario per l’allineamento; merge di main rinviato a
+  integrazione dedicata prima del rilascio, preservando la tutela P11 dei minori.
+- Verifiche: 345 test, lint/typecheck e build staging; PostgreSQL 17 temporaneo
+  con RLS, revoche, scope duty e concorrenza; browser desktop/mobile sintetico,
+  decoder QR reale su PNG. Procedura in `docs/panel-p12-reception.md`. Fixture
+  browser temporanea rimossa prima della build; nessun accesso di test pubblico
+  distribuito. SQL staging verificato: corpo funzione identico, privilegi solo
+  service_role, RPC PostgREST risolta e richieste non autorizzate rifiutate;
+  prova famiglia/scuola/retry/correzione/audit interamente annullata. Conteggi e
+  hash invariati su 42 tabelle. Script `tests/sql/reception-p12-staging-rollback-check.sql`.
+  Restano collaudo autenticato e almeno due dispositivi reali con QR a schermo/stampati.
+
+## Revisione accoglienza: azione prima della scansione — 2026-09-12
+
+- Requisito dell'utente: uso principale dal cellulare, QR tramite fotocamera
+  predefinito e codice manuale come alternativa. Azione e incarico definiti
+  prima della scansione e conservati tra persone, errori e fallback. Nessuna
+  scelta dell'operazione dopo ogni QR. Scanner previsto in P12, non ancora
+  disponibile nella console manuale P11 della preview.
+- Separare ingresso evento e ingresso panel: l'operatore panel non registra
+  l'arrivo all'evento, neppure implicitamente. In assenza di accoglienza evento
+  indirizzare alla relativa postazione. Il codice identifica il soggetto;
+  l'incarico autorizzato determina l'operazione, verificata anche da server/DB.
+- Proposta da dettagliare in P12/P13: incarichi per accoglienza evento, panel
+  assegnati e assistenza in sala (maschere), gestiti da admin/manager. Le
+  maschere consultano indicazioni sala/settore senza scritture sulle presenze;
+  nessuna nuova gestione di sedute numerate. Questi incarichi non sono ancora
+  ruoli o permessi implementati: la P11 conserva il modello autorizzativo esistente.
+- Singoli: scansione esegue l'ingresso. QR condivisi: si confermano soltanto
+  componenti realmente presenti o quantità scuola, senza cambiare l'azione.
+  Correzioni/annullamenti restano espliciti e separati dalla scansione continua;
+  esito incerto sospende lo scanner e conserva la stessa richiesta per il retry.
+- Aggiornate sezioni 3.4 e P11-P13 di `PIANO_DI_LAVORO_PANEL.md`. La revisione
+  non equivale alla chiusura P11 né al rilascio dello scanner. Nessuna modifica
+  a schema, ruoli, dati o deployment per questo aggiornamento dei requisiti.
+
+## P11 — verifica QR e presenze effettive, 2026-09-12
+
+- Implementata localmente sul branch panel, con console manuale nella dashboard
+  accoglienza: codice partecipante esatto oppure contenuto opaco del QR,
+  selezione dei componenti presenti e quantità esplicite studenti/accompagnatori.
+  Fotocamera P12 e collegamento delle statistiche effettive P13 restano separati.
+- Migration `20260912150000_reception_check_ins.sql` applicata e registrata
+  **solo allo staging il 2026-09-12**, su richiesta esplicita. Estende `check_ins` con minore/FK composta,
+  prenotazione scuola, conteggi, annullamento e ultima modifica; unicità per
+  persona/evento e scuola/evento. Le righe legacy indicano solo l'adulto.
+  Nessuna modifica alle intenzioni giornaliere o alle prenotazioni panel.
+- `reception_check_in` è una RPC atomica SECURITY INVOKER, EXECUTE solo
+  service_role: attore autenticato dal server, evento corrente e ruoli reali
+  ricontrollati nel DB (admin globale, manager o accoglienza dell'evento).
+  Token hash SHA-256, ultimo token attivo/non revocato/non scaduto, iscrizione
+  operativa; stato invalido uniforme senza dati personali. Codice pubblico come
+  fallback autorizzato, senza obbligo di QR. Risposte proiettate esplicitamente:
+  solo nomi/codice/presenza o scuola/classe/quantità, nessun recapito/questionario.
+- Scritture dirette authenticated su `check_ins` rimosse; accoglienza non legge
+  più direttamente QR o check-in, usa la risposta minima. Le letture operative
+  manager/viewer e gli scope personali restano distinti. Audit `reception.*`
+  con attore/evento/fonte/timestamp e stati tecnici prima/dopo; niente token,
+  contatti o motivazioni libere. Fallimento audit = rollback integrale.
+- `check_in_revision` e `check_in_requests` proteggono correzioni concorrenti e
+  retry tardivi: nessun doppio ingresso e nessuna vecchia richiesta che riattivi
+  una presenza annullata. Non eliminare il registro mentre l'evento è operativo.
+  La console blocca doppi invii, conserva in memoria lo stesso comando su esito
+  incerto e richiede nuova verifica su conflitto. Correzione/annullamento hanno
+  conferma esplicita; `correct` sostituisce i presenti della famiglia, `cancel`
+  riguarda soltanto i selezionati. Scuole: quantità effettive entro il prenotato.
+- Un minore con check-in storico (anche annullato) non può essere eliminato o
+  riassegnato. `replace_owned_registration_children` conserva gli ID se il
+  nucleo è identico e rifiuta sostituzioni con storia: richiedono revisione
+  operativa. Le famiglie senza storia minori conservano il flusso precedente.
+- Verifiche locali: 330 test, lint/typecheck, build staging; PostgreSQL 17 con
+  schema canonico, RLS per tutti i ruoli, audit/rollback e concorrenza reale
+  (8 ingressi, 8 retry identici, 2 correzioni concorrenti); browser desktop/mobile
+  con componente reale e backend simulato. Script `tests/sql/run-reception-checks.mjs`
+  e `tests/browser/reception.mjs`. Applicazione SQL staging verificata:
+  cinque corpi funzione uguali al file locale, EXECUTE solo service_role,
+  PostgREST raggiungibile, conteggi/hash dei dati preesistenti invariati su 41
+  tabelle. Prova famiglia/scuola/retry/conflitto/audit con rollback completo in
+  `tests/sql/reception-staging-rollback-check.sql`; QR e ruolo di accoglienza
+  della prova esistono soltanto nella transazione annullata. Applicazione e
+  registrazione nella stessa transazione del runner, rimuovendo esclusivamente
+  BEGIN/COMMIT esterni da una copia temporanea della migration. Commit/push
+  del branch panel autorizzati. Restano revisione funzionale autenticata sulla
+  preview prima della chiusura P11; nessuna modifica production o invio email.
+  Contratto, limiti e procedura: `docs/panel-p11-reception.md`.
+
 ## Sincronizzazione main nel panel — 2026-09-12
 
 - Integrato `origin/main` a `0bc2997` sulla base panel `39deb81`; analisi dei
@@ -1652,11 +2802,15 @@ Quando lo sviluppo principale sarà concluso, `PIANO_DI_LAVORO.md` potrà essere
   panel mantiene il proprio lockfile Next 16.3.0/React 19.2.8; usare `npm ci`
   dopo il cambio branch. La nota storica Next 16.2.9 riguarda main: la fixture
   panel richiede ancora `bfcacheId`, come verificato dal typecheck.
-- La migration `20260910120000_leader_attendance.sql` è presente nel codice
-  ma non ancora registrata nello staging (RPC assente al controllo read-only).
-  Applicarla su richiesta prima del collaudo del salvataggio disponibilità.
-  Queste sono intenzioni dichiarate, distinte da prenotazioni panel e dalle
-  presenze effettive P11. Nessuna modifica SQL remota durante il merge.
+- La migration `20260910120000_leader_attendance.sql`, inizialmente assente,
+  è stata applicata e registrata sullo staging il 2026-09-12 su richiesta
+  successiva al merge. Corpo RPC verificato contro il file locale, EXECUTE
+  riservato a service_role e PostgREST verificato. Conteggi/hash invariati su
+  41 tabelle pubbliche e policy RLS invariate. Test della fixture sintetica
+  con rollback in `tests/sql/leader-attendance-staging-rollback-check.sql`:
+  salvataggio/rilettura, scope, validazione, audit e conservazione panel/check-in.
+  Queste sono intenzioni dichiarate, distinte dalle presenze effettive P11.
+  Nessun push o deployment applicativo in questa applicazione SQL.
 - L'assenza della migration dati `20260813170000` è preesistente e legata alla
   fixture; non applicarla automaticamente. Le migration panel risultano
   registrate. Nessun push/deploy incluso in questa sincronizzazione locale.
@@ -5093,6 +6247,23 @@ Quando il piano verrà cancellato:
   accetta callback dall'alias e da localhost. Production e `main` non sono
   stati modificati. Restano da completare collaudo autenticato dei ruoli,
   test SQL/RLS e concorrenza e verifica dei conteggi P10.
+
+
+
+## Andamento settimanale iscrizioni — 2026-09-21
+
+- Le statistiche condivise Admin/Manager terminano con un grafico a barre delle
+  schede non eliminate per `registrations.submitted_at`, senza sommare i minori.
+  Il loader esistente conserva scope evento, paginazione ed errori bloccanti.
+- `weekly-registrations.ts` raggruppa lunedì–domenica in Europe/Rome, include
+  settimane a zero fino a quella corrente e segnala date mancanti/non valide.
+  Dal 31 agosto 2026 le colonne sono settimanali; tutte le iscrizioni precedenti
+  sono aggregate in una colonna storica esclusa dal confronto. Barre adiacenti
+  con etichette giorno/mese inclinate di 45 gradi.
+  Settimana corrente distinta e incompleta; confronto assoluto/percentuale
+  limitato alle ultime due settimane concluse, senza percentuale su base zero.
+- Test su confini temporali, ora legale, cambio anno, settimane vuote e loader
+  oltre 1.000 schede. Nessuna migration o modifica dei dati richiesta.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

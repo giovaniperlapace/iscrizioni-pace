@@ -1,3 +1,6 @@
+import * as panelDrafts from "../lib/panels/panel-drafts.ts";
+import * as panelLocations from "../lib/panels/event-locations.ts";
+import * as schoolBookings from "../lib/panels/school-bookings.ts";
 import { loadAssociations } from "../lib/registrations/association.server.ts";
 import { loadNationalities } from "../lib/registrations/assisted-demographics.server.ts";
 import * as reports from "../lib/registrations/statistics-reports.ts";
@@ -35,7 +38,7 @@ test("dashboard sections execute only the queries needed by their visible conten
   for (const role of ["admin", "manager", "manager_viewer", "foreign_manager", "foreign_viewer"]) {
     const foreign = role.startsWith("foreign_");
     const dashboard = role === "admin" ? "admin" : "manager";
-    for (const section of ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])].filter(section => foreign ? section === "dashboard" : role !== "manager_viewer" || ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti"].includes(section))) {
+    for (const section of ["dashboard", "attendance", "age", "registrations", "panels", "panel", "disability", "disability-people", "iscritti", "gruppi", "ruoli", ...(dashboard === "manager" ? ["impostazioni", "email"] : [])].filter(section => foreign ? section === "dashboard" : role !== "manager_viewer" || ["dashboard", "attendance", "age", "registrations", "disability", "disability-people", "iscritti"].includes(section))) {
       const reads: string[] = [];
       const db = { from(table: string) {
         const query = new Proxy({}, { get: (_, key) => key === "then"
@@ -47,6 +50,12 @@ test("dashboard sections execute only the queries needed by their visible conten
       const modules = {
         "react/jsx-runtime": { jsx, jsxs: jsx },
         "node:crypto": { randomUUID: () => "version" },
+        "@/lib/panels/panel-drafts": { ...panelDrafts, getPanelDraftCatalog: async (client: unknown) => {
+          assert.equal(client, db, "catalogue availability RPC needs the authenticated client");
+          reads.push("panel-catalog"); return {panels: [], audienceTypes: []};
+        } },
+        "@/lib/panels/event-locations": { ...panelLocations, getEventLocations: async () => [] },
+        "@/lib/panels/school-bookings": { ...schoolBookings, getSchoolBookingCatalog: async () => ({bookings: [], panelOptions: []}) },
         "@/lib/panels/panel-statistics": { emptyPanelStatisticsSnapshot: () => ({}), getPanelStatisticsSnapshot: async () => { reads.push("panel-statistics"); return {}; } },
         "@/lib/registrations/dashboard-load-plan": { dashboardLoadPlan },
         "@/lib/supabase/all-rows": { loadAllRows, loadRowsForIds },
@@ -64,12 +73,12 @@ test("dashboard sections execute only the queries needed by their visible conten
         "@/lib/registrations/event-statistics.server": { loadEventStatisticsSnapshot: async () => { reads.push("statistics"); return {}; } },
         "@/lib/auth/session": { getCurrentAuthContext: async () => ({ user: { id: "operator" }, eventRoles: [{ role: foreign ? (role === "foreign_viewer" ? "manager_viewer" : "manager") : role, eventId: role === "admin" ? null : foreign ? "other-event" : "event" }] }) },
         "@/lib/supabase/server": { createSupabaseServerClient: async () => db },
-        "@/lib/supabase/service": { createSupabaseServiceClient: () => db },
+        "@/lib/supabase/service": { createSupabaseServiceClient: () => ({...db}) },
         "@/lib/events/current": { getCurrentOperationalEvent: async () => ({ id: "event", title: "Fixture" }) },
         "@/lib/operational-users/identity": { getOperationalUserIdentities: async () => new Map() },
       };
       const page = compile(`app/dashboard/${dashboard}/page.tsx`, modules, true).default;
-      await page({ searchParams: Promise.resolve({ section: ["disability", "attendance", "age", "registrations"].includes(section) ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(["disability", "attendance", "age", "registrations"].includes(section) ? { report: section } : {}) }) } as never);
+      await page({ searchParams: Promise.resolve({ section: ["disability", "attendance", "age", "registrations", "panels"].includes(section) ? "dashboard" : section === "disability-people" ? "iscritti" : section, ...(section === "disability-people" ? { stat: "difficulty=hearing" } : {}), ...(["disability", "attendance", "age", "registrations", "panels"].includes(section) ? { report: section } : {}) }) } as never);
       const context = `${role}/${section}`;
       assert.equal(reads.includes("participant-associations"), ["iscritti", "disability-people"].includes(section), context);
       assert.equal(reads.includes("email-delegations"), ["iscritti", "disability-people"].includes(section), context);
@@ -77,7 +86,8 @@ test("dashboard sections execute only the queries needed by their visible conten
       assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);
       assert.equal(reads.includes("event_user_roles"), section === "gruppi" || section === "ruoli", context);
       assert.equal(reads.includes("statistics"), !foreign && ["dashboard", "attendance", "age", "registrations"].includes(section), context);
-      assert.equal(reads.includes("panel-statistics"), false, context);
+      assert.equal(reads.includes("panel-statistics"), section === "panels", context);
+      assert.equal(reads.includes("panel-catalog"), section === "panel", context);
       assert.equal(reads.includes("associations"), !foreign && section === "dashboard", context);
       assert.equal(reads.includes("disability"), ["disability", "disability-people"].includes(section), context);
       assert.equal(reads.includes("event_services"), ["iscritti", "disability-people", "gruppi", "impostazioni"].includes(section), context);
