@@ -1873,6 +1873,38 @@ export async function savePanelDraft(formData: FormData) {
   );
 }
 
+export async function unpublishPanel(formData: FormData) {
+  await requirePanelManager();
+  const sourceDashboard = optionalText(formData.get("sourceDashboard"));
+  const nav = optionalText(formData.get("nav")) === "mini" ? "mini" : "full";
+  const dashboardUrl = new URL(getPanelDraftsDashboardPath(sourceDashboard, nav), "https://local.invalid");
+  for (const key of ["panelQ", "panelStatus", "panelDate", "panelLocation"]) {
+    const value = optionalText(formData.get(key));
+    if (value) dashboardUrl.searchParams.set(key, value);
+  }
+  const dashboardPath = `${dashboardUrl.pathname}${dashboardUrl.search}`;
+  const eventId = optionalText(formData.get("eventId"));
+  const panelId = optionalText(formData.get("panelId"));
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!eventId || !panelId || !uuid.test(eventId) || !uuid.test(panelId)) {
+    return formFailureFromRedirect(`${dashboardPath}&panelError=invalid`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase, sourceDashboard === "admin" ? "admin" : "manager");
+  if (!auth) redirect("/login");
+  if (!auth.eventRoles.some(role => role.role === "admin" || role.role === "manager" && role.eventId === eventId)) {
+    return formFailureFromRedirect(`${dashboardPath}&panelError=forbidden`);
+  }
+  const { error } = await supabase.rpc("unpublish_panel", { p_event_id: eventId, p_panel_id: panelId });
+  if (error) {
+    return formFailureFromRedirect(`${dashboardPath}&panelError=${error.code === "42501" ? "forbidden" : "unpublish-failed"}`);
+  }
+  for (const path of ["/", "/dashboard/admin", "/dashboard/manager", "/dashboard/partecipante", "/dashboard/capogruppo"]) {
+    revalidatePath(path);
+  }
+  return { redirect: `${dashboardPath}&panelSaved=unpublished` };
+}
+
 export async function publishPanels(formData: FormData) {
   await requirePanelManager();
   const sourceDashboard = optionalText(formData.get("sourceDashboard"));

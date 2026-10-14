@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "@/components/pending-link";
-import { CalendarCheck, Pencil, Send, Users, X } from "lucide-react";
+import { CalendarCheck, EyeOff, Pencil, Send, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { publishPanels } from "@/app/actions";
+import { publishPanels, unpublishPanel } from "@/app/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { ReliableForm } from "@/components/reliable-form";
 import {
   panelCapacityDifference,
   type PanelDraftRow,
@@ -32,6 +33,8 @@ export function PanelPublicationTable({
 }: PanelPublicationTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dialogIds, setDialogIds] = useState<string[] | null>(null);
+  const [withdrawPanelId, setWithdrawPanelId] = useState<string | null>(null);
+  const withdrawPanel = panels.find(panel => panel.id === withdrawPanelId && panel.publicationStatus === "published") ?? null;
   const dialogRef = useRef<HTMLDivElement>(null);
   const headerCheckbox = useRef<HTMLInputElement>(null);
   const draftIds = useMemo(
@@ -50,13 +53,13 @@ export function PanelPublicationTable({
   }, [allDraftsSelected, selectedDraftIds.length]);
 
   useEffect(() => {
-    if (!dialogIds) return;
+    if (!dialogIds && !withdrawPanel) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); setDialogIds(null); }
+      if (event.key === "Escape") { event.preventDefault(); setDialogIds(null); setWithdrawPanelId(null); }
       if (event.key !== "Tab") return;
       const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not([type="hidden"]):not(:disabled)') ?? []);
       const first = controls[0], last = controls.at(-1);
@@ -65,7 +68,7 @@ export function PanelPublicationTable({
     };
     document.addEventListener("keydown", onKey);
     return () => { document.body.style.overflow = overflow; document.removeEventListener("keydown", onKey); previous?.focus(); };
-  }, [dialogIds]);
+  }, [dialogIds, withdrawPanel]);
 
   if (panels.length === 0) {
     return (
@@ -137,6 +140,7 @@ export function PanelPublicationTable({
                     canManage={canManage}
                   />
                   {canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
+                  {canManage && panel.publicationStatus === "published" ? <UnpublishButton onClick={() => setWithdrawPanelId(panel.id)} /> : null}
                   {canManage && panel.publicationStatus === "draft" ? (
                     <button
                       type="button"
@@ -213,6 +217,7 @@ export function PanelPublicationTable({
                   <div className="flex flex-col items-stretch gap-2">
                     <PanelEditLink panel={panel} panelPath={panelPath} canManage={canManage} />
                     {canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
+                    {canManage && panel.publicationStatus === "published" ? <UnpublishButton onClick={() => setWithdrawPanelId(panel.id)} /> : null}
                     {canManage && panel.publicationStatus === "draft" ? (
                       <button
                         type="button"
@@ -243,7 +248,7 @@ export function PanelPublicationTable({
             <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
               <div>
                 <h3 id="publish-panel-dialog-title" className="text-xl font-semibold">
-                  Pubblica {dialogPanels.length === 1 ? "panel" : `${dialogPanels.length} forum`}
+                  Pubblica {dialogPanels.length === 1 ? "forum" : `${dialogPanels.length} forum`}
                 </h3>
                 <p className="mt-1 text-sm text-[var(--peace-muted)]">
                   Il forum sarà visibile al pubblico quando apriremo il catalogo. Le iscrizioni seguiranno la propria apertura. Se un forum non è valido, nessuno viene pubblicato.
@@ -288,6 +293,36 @@ export function PanelPublicationTable({
           </div>
         </div>
       ) : null}
+      {withdrawPanel ? (
+        <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-black/35 px-4 py-6">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="unpublish-panel-dialog-title"
+            className="grid max-h-[90vh] w-full max-w-xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg bg-white shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
+              <h3 id="unpublish-panel-dialog-title" className="text-xl font-semibold">Rendi il Forum non pubblicato</h3>
+              <button type="button" onClick={() => setWithdrawPanelId(null)} aria-label="Chiudi conferma ritiro pubblicazione"
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-[var(--peace-border-strong)] text-[var(--peace-blue-800)]">
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </div>
+            <ReliableForm action={unpublishPanel} locale="it" data-preserve-dashboard-scroll className="overflow-y-auto px-5 py-5">
+              <p className="font-semibold">{withdrawPanel.title}</p>
+              <p className="mt-3 text-sm">Il Forum torna in bozza e scompare dal catalogo pubblico. Le iscrizioni confermate, comprese quelle delle scuole e dei minori, vengono conservate nell’elenco Iscritti. Potrai ripubblicarlo in seguito.</p>
+              <p className="mt-3 text-sm text-[var(--peace-muted)]">La lista d’attesa viene conservata. Le offerte temporanee di posto vengono annullate e non vengono inviate nuove offerte finché il Forum non torna pubblicato e le iscrizioni sono aperte.</p>
+              <input type="hidden" name="sourceDashboard" value={dashboard} />
+              <input type="hidden" name="nav" value={navMode} />
+              <input type="hidden" name="eventId" value={eventId} />
+              <input type="hidden" name="panelId" value={withdrawPanel.id} />
+              {["panelQ", "panelStatus", "panelDate", "panelLocation"].map(key => (
+                <input key={key} type="hidden" name={key} value={new URL(panelPath, "https://local.invalid").searchParams.get(key) ?? ""} />
+              ))}
+              <div className="mt-5 flex flex-wrap justify-end gap-3 border-t border-[var(--peace-border)] pt-4">
+                <button type="button" onClick={() => setWithdrawPanelId(null)} className="btn-secondary">Annulla</button>
+                <PendingSubmitButton className="min-h-11 rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white">Conferma ritiro pubblicazione</PendingSubmitButton>
+              </div>
+            </ReliableForm>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 
@@ -308,6 +343,12 @@ export function PanelPublicationTable({
       return next;
     });
   }
+}
+
+function UnpublishButton({ onClick }: { onClick: () => void }) {
+  return <button type="button" onClick={onClick} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]">
+    <EyeOff className="size-4 shrink-0" aria-hidden="true" />Rendi non pubblicato
+  </button>;
 }
 
 function PanelEditLink({ panel, panelPath, canManage }: { panel: PanelDraftRow; panelPath: string; canManage: boolean }) {

@@ -1,5 +1,15 @@
 # Piano di lavoro Panel
 
+## Ritiro pubblicazione Forum — 14 ottobre 2026
+
+Aggiunta richiesta dall’utente su main: Rendi non pubblicato nel catalogo
+Admin/Manager, con conferma e mantenimento degli iscritti. Forum riportato in
+bozza, roster e ripubblicazione disponibili, FIFO in attesa conservata e offerte
+temporanee annullate. Migration 20261014160000_forum_unpublication preserva gli
+ID delle quote anche nelle modifiche della bozza. Verifiche sintetiche locali
+complete; home attuale e iscrizioni pubbliche chiuse. Verbale in
+`docs/forum-unpublication-2026-10-14.md`.
+
 ## Coda e fasce Forum — 14 ottobre 2026
 
 Su richiesta dell’utente implementazione locale su main della coda FIFO e del

@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Forum non pubblicati con iscritti conservati — 2026-10-14
+
+- Richiesta aggiuntiva dell’utente al rilascio Forum su main: pulsante Rendi non
+  pubblicato, Admin/Manager, desktop/mobile e conferma esplicita. Home attuale
+  e iscrizioni pubbliche chiuse conservate. Nessun Forum reale ritirato per prova.
+- RPC autenticata e idempotente, evento corrente e lock Forum; cambia soltanto
+  pubblicazione, con audit e visibilità derivati dai trigger esistenti. Iscrizioni
+  individuali, minori, scuole e roster conservati; ripubblicazione disponibile.
+- FIFO in attesa conservata, offerte temporanee annullate come già previsto dal
+  DB. Migration 20261014160000_forum_unpublication mantiene anche gli ID delle
+  quote nel salvataggio bozza, per consentire modifiche successive senza perdere
+  riferimenti alle prenotazioni. Vincoli di capienza e FK conservati.
+- Verificati 884 test, lint, TypeScript, SQL/concorrenza e browser con Server
+  Action reale su PostgreSQL sintetico, Admin/Manager/Viewer, mobile, annulla,
+  focus/Escape, errore/retry e filtri. Dettagli in docs/forum-unpublication-2026-10-14.md.
+- Migration applicata/registrata in production con backup custom verificato e
+  confronto atomico di 63 tabelle, 132 policy, funzioni e privilegi preesistenti:
+  nessun dato applicativo modificato. Gate internal, catalogo pubblico/coda vuoti,
+  timer email sano. Build production in copia pulita superata; staging invariato.
+
 ## Rilascio coda Forum autorizzato e migration production — 2026-10-14
 
 - L’utente autorizza migration, commit e push su main, mantenendo home attuale

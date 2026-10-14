@@ -23,7 +23,7 @@ test("every public mutation checks release state before form processing and side
 
 test("all operational panel actions authorize panel manager before service-role reads or mutations", () => {
   const actions = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
-  for (const name of ["saveEventLocation", "deleteEventLocation", "savePanelDraft", "publishPanels", "saveSchoolBooking", "cancelSchoolBooking"]) {
+  for (const name of ["saveEventLocation", "deleteEventLocation", "savePanelDraft", "publishPanels", "unpublishPanel", "saveSchoolBooking", "cancelSchoolBooking"]) {
     assert.match(actions, new RegExp(`export async function ${name}\\(formData: FormData\\) \\{\\s+await requirePanelManager\\(\\);`));
   }
 });

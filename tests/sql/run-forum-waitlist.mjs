@@ -55,6 +55,8 @@ try {
  select count(*) from moment_attendance_choices where moment_id=fw(406) and choice='yes';`)));
  assert.match(psql(`select count(*)=1 from moment_attendance_choices where moment_id=fw(406) and choice='yes';`),/\bt\b/);
  console.log('PASS competing ordinary bookings cannot both take the last seat');
+ try { console.log(file('tests/sql/forum-unpublication.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
+ if(process.argv.includes('--unpublish-browser')) { const {checkForumUnpublication}=await import('../browser/forum-unpublication.mjs');await checkForumUnpublication(psql); }
 } finally {
  if(started)execFileSync(join(bin,'pg_ctl'),['-D',join(dir,'data'),'-m','immediate','-w','stop'],{stdio:'pipe'});
  rmSync(dir,{recursive:true,force:true});

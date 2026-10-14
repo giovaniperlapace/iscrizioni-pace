@@ -292,6 +292,7 @@ function PanelStatus({ error, saved }: { error?: string; saved?: string }) {
       created: "Bozza forum creata.",
       updated: "Bozza forum aggiornata.",
       published: "Forum pubblicato.",
+      unpublished: "Forum non pubblicato. Le iscrizioni confermate sono state conservate.",
       "batch-published": "I forum selezionati sono stati pubblicati.",
       "already-published": "I forum selezionati risultano già pubblicati.",
       "published-updated": "Forum pubblicato aggiornato.",
