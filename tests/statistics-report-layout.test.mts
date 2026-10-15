@@ -47,7 +47,8 @@ test("every statistics count links to the filtered participant page", () => {
   assert.match(statisticsSection, /function AttendanceCountLink/);
   assert.match(statisticsSection, /function CountLink/);
   assert.match(operationsSection, /Filtro dalle statistiche/);
-  assert.match(operationsSection, /href=\{paramsFor\(\{[^}]*stat: null,[^}]*\}\)\}[\s\S]*?Azzera filtri\s*<\/Link>/);
+  const searchForm = readFileSync(join(process.cwd(), "app/dashboard/operations-participant-filters.tsx"), "utf8");
+  assert.match(searchForm, /if \(reset\) params.delete\("stat"\)/);
   assert.doesNotMatch(operationsSection, /Rimuovi filtro/);
 });
 

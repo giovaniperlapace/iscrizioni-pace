@@ -35,7 +35,7 @@ import {
 } from "react";
 import { ArrowDown, ArrowUp, Columns3, Download, Pencil, UserPlus, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
-import { AutoFilterForm } from "@/app/dashboard/auto-filter-form";
+import { OperationsParticipantFilters } from "@/app/dashboard/operations-participant-filters";
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { applyOperationsDashboardFilters } from "@/lib/registrations/operations-dashboard";
@@ -598,108 +598,15 @@ export function OperationsParticipantsTable({
           motivazione e ripristinarle.
         </p>
       )}
-      <AutoFilterForm
-        className="mb-4"
-        action={`/dashboard/${dashboard}`}
-        debounceMs={900}
-        blockWhilePending={false}
-        defaults={{ group: "all", service: "all", tag: "all" }}
-      >
-        <input type="hidden" name="section" value="iscritti" />
-        <input type="hidden" name="nav" value={navMode} />
-        <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <label className="grid gap-1 text-sm">
-            Partecipante, codice o provenienza
-            <input
-              key={snapshot.filters.q}
-              name="q"
-              className="field"
-              defaultValue={snapshot.filters.q}
-              placeholder="Cerca iscritti"
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            Email o telefono
-            <input
-              key={snapshot.filters.contact}
-              name="contact"
-              className="field"
-              defaultValue={snapshot.filters.contact}
-              placeholder="Cerca contatti"
-            />
-          </label>
-          {view !== "without-group" && (
-            <label className="grid min-w-0 gap-1 text-sm sm:col-span-2 xl:col-span-1">
-              Gruppo
-              <select
-                name="group"
-                className="field"
-                defaultValue={snapshot.filters.group}
-                key={snapshot.filters.group}
-              >
-                <option value="all">Tutti i gruppi</option>
-                <option value="none">Senza gruppo</option>
-                {snapshot.groupOptions.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label className="grid min-w-0 gap-1 text-sm sm:col-start-1">
-            Servizio
-            <select
-              name="service"
-              className="field"
-              defaultValue={snapshot.filters.service}
-            >
-              <option value="all">Tutti i servizi</option>
-              <option value="none">Senza servizio</option>
-              {snapshot.eventServices.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid min-w-0 gap-1 text-sm">
-            Tag
-            <select
-              name="tag"
-              className="field"
-              defaultValue={snapshot.filters.tag}
-            >
-              <option value="all">Tutti i tag</option>
-              <option value="none">Senza tag</option>
-              {snapshot.operationalTags.map((tag) => (
-                <option key={tag.id} value={tag.id}>
-                  {tag.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex flex-wrap items-start gap-2 sm:col-span-2 xl:col-span-1">
-            <Link
-              prefetch={false}
-              className={buttonClass}
-              href={paramsFor({
-                q: null,
-                contact: null,
-                group: null,
-                service: null,
-                tag: null,
-                status: null,
-                stat: null,
-                edit: null,
-              })}
-              scroll={false}
-            >
-              Azzera filtri
-            </Link>
-          </div>
-        </div>
-      </AutoFilterForm>
+      <OperationsParticipantFilters
+        filters={snapshot.filters}
+        groupOptions={snapshot.groupOptions}
+        eventServices={snapshot.eventServices}
+        operationalTags={snapshot.operationalTags}
+        dashboard={dashboard}
+        navMode={navMode}
+        withoutGroup={view === "without-group"}
+      />
       {statisticsLabel && (
         <p className="mb-4 rounded-md bg-[var(--peace-sky-100)] px-3 py-2 text-sm leading-6">
           Filtro dalle statistiche: {statisticsLabel}

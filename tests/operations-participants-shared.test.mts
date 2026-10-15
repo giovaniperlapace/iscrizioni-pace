@@ -16,6 +16,8 @@ const sharedSection = readFileSync(
   "utf8"
 );
 
+const searchForm = readFileSync(join(process.cwd(), "app/dashboard/operations-participant-filters.tsx"), "utf8");
+
 test("admin and manager render the same participant-management component", () => {
   assert.match(adminDashboard, /<OperationsParticipantsSection/);
   assert.match(adminDashboard, /dashboard="admin"/);
@@ -27,13 +29,13 @@ test("admin and manager render the same participant-management component", () =>
 
 test("the shared table exposes manager-level columns and filters", () => {
   assert.match(sharedSection, /PARTICIPANT_COLUMNS/);
-  assert.match(sharedSection, /name="service"/);
-  assert.match(sharedSection, /name="tag"/);
+  assert.match(searchForm, /name="service"/);
+  assert.match(searchForm, /name="tag"/);
 });
 
-test("participant search waits for typing and stays interactive while filtering", () => {
-  assert.match(sharedSection, /debounceMs=\{900\}/);
-  assert.match(sharedSection, /blockWhilePending=\{false\}/);
+test("participant search uses the shared explicit form", () => {
+  assert.match(sharedSection, /<OperationsParticipantFilters/);
+  assert.doesNotMatch(sharedSection, /AutoFilterForm/);
 });
 
 test("the shared participant sheet edits identity, contacts, group, and tags", () => {
