@@ -30,7 +30,7 @@ try {
   const mainNames=new Set(execFileSync('git',['ls-tree','-r','--name-only',mainBase,'supabase/migrations'],{cwd:root,encoding:'utf8'}).trim().split('\n').map(x=>x.split('/').at(-1)));
   const ordered=process.argv.includes('--main-upgrade')?[...names.filter(x=>mainNames.has(x)),...names.filter(x=>!mainNames.has(x))]:names;
   for (const name of ordered) {
-    if (name.startsWith('20261014')) continue; // Apply the Admin rollout after legacy domain-role regressions.
+    if (name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
     if (name==='20260813170000_rename_anziani_and_amici_groups.sql') continue; // known absent fixture-only data prerequisites
     if(name==='20260912150000_reception_check_ins.sql') {
       psql(`insert into events(slug,title,city,country,status) values('p11-legacy','Synthetic legacy','Test','IT','draft');
@@ -143,8 +143,9 @@ try {
   assert.equal(corrections.filter(x=>/valid/.test(x)).length,1);
   assert.equal(corrections.filter(x=>/conflict/.test(x)).length,1);
   console.log('PASS concurrent identical retries (1 saved/7 replayed), concurrent corrections (1 saved/1 conflict)');
-  for (const name of readdirSync(join(root,'supabase/migrations')).filter(x=>x.startsWith('20261014') && x.endsWith('.sql')).sort()) file(join(root,'supabase/migrations',name));
+  for (const name of readdirSync(join(root,'supabase/migrations')).filter(x=>(x.startsWith('20261014') || x==='20261015120000_simple_qr_label_printing.sql') && x.endsWith('.sql')).sort()) file(join(root,'supabase/migrations',name));
   console.log(file(join(root,'tests/sql/qr-label-queue.sql')).trim());
+  console.log(file(join(root,'tests/sql/qr-label-simple-print.sql')).trim());
   psql(`update qr_tokens set token_encrypted='synthetic-only' where registration_id=f(10);`);
   const labelSnap=execFileSync(join(bin,'psql'),[...args,'-tA','-c',"select qr_label_queue(f(1),f(33),'read',null,f(10))->>'snapshot'"],{encoding:'utf8'}).trim();
   const labelClaims=await Promise.all([0,1].map(i=>concurrent(`set role service_role;
@@ -153,6 +154,13 @@ try {
   assert.equal(labelClaims.filter(x=>/conflict/.test(x)).length,1);
   assert.match(psql(`select count(*)=1 and max(attempts)=1 from group_badge_items where artifact='qr_label' and registration_id=f(10);`),/\bt\b/);
   console.log('PASS two concurrent label requests: one claimed, one conflict, one canonical attempt');
+  const repeatSnap=execFileSync(join(bin,'psql'),[...args,'-tA','-c',"select qr_label_queue(f(1),f(33),'read',null,f(10))->>'snapshot'"],{encoding:'utf8'}).trim();
+  const repeatClaims=await Promise.all([0,1].map(i=>concurrent(`set role service_role;
+    select qr_label_queue(f(1),f(33),'request',null,f(10),array[f(10)],'${repeatSnap}',f(${9320+i}),'continuous-29x45')->>'status';`)));
+  assert.equal(repeatClaims.filter(x=>/claimed/.test(x)).length,1);
+  assert.equal(repeatClaims.filter(x=>/conflict/.test(x)).length,1);
+  assert.match(psql(`select count(*)=1 and max(attempts)=2 from group_badge_items where artifact='qr_label' and registration_id=f(10);`),/\bt\b/);
+  console.log('PASS concurrent explicit repeat clicks: one claim, one conflict, same canonical label');
   const schemaFile=process.argv.find(x=>x.startsWith('--schema-snapshot='))?.split('=')[1];
   if(schemaFile)writeFileSync(schemaFile,psql(`select jsonb_object_agg(key,definition) from (
     select n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')' key,pg_get_functiondef(p.oid) definition

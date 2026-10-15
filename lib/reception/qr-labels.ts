@@ -9,7 +9,7 @@ export type LabelQueue = { status: "queue"; items: LabelItem[]; snapshot: string
 export type LabelResult = LabelQueue | { status: "document"; html: string; requestId: string } |
   { status: "invalid" | "forbidden" | "unavailable" | "migration_required" | "conflict" | "replayed" };
 export type LabelCommand = LabelScope & {
-  action: "read" | "print" | "reprint" | "verify" | "outcome";
+  action: "read" | "print" | "reprint" | "request" | "verify" | "outcome";
   ids?: string[]; snapshot?: string; requestId?: string; profile?: QrLabelProfile;
   outcome?: "browser_returned" | "error";
 };
@@ -20,7 +20,7 @@ export function parseLabelCommand(value: unknown): LabelCommand | null {
   if (Object.keys(c).some(k => !["groupId","registrationId","action","ids","snapshot","requestId","profile","outcome"].includes(k))) return null;
   const scopeId = c.groupId ?? c.registrationId;
   if (typeof scopeId !== "string" || (c.groupId === undefined) === (c.registrationId === undefined) || !uuid.test(scopeId)) return null;
-  if (!["read","print","reprint","verify","outcome"].includes(c.action)) return null;
+  if (!["read","print","reprint","request","verify","outcome"].includes(c.action)) return null;
   if (c.action === "read") return Object.keys(c).length === 2 ? c : null;
   if (c.action === "outcome") return typeof c.requestId === "string" && uuid.test(c.requestId) && ["browser_returned","error"].includes(c.outcome ?? "") &&
     c.ids === undefined && c.snapshot === undefined && c.profile === undefined ? c : null;

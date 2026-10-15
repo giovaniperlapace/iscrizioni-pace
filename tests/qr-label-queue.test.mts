@@ -80,3 +80,20 @@ test("group label responses omit deleted registrations and reject forged reprint
   assert.equal(individual.status,"queue");
   if(individual.status==="queue")assert.equal(individual.items[0].reason,"deleted");
 });
+
+test("an explicit simple print renders new and previously requested labels together without verification",async(t)=>{
+  const before=process.env.QR_TOKEN_ENCRYPTION_SECRET;process.env.QR_TOKEN_ENCRYPTION_SECRET="synthetic-simple-label-test";
+  t.after(()=>{if(before===undefined)delete process.env.QR_TOKEN_ENCRYPTION_SECRET;else process.env.QR_TOKEN_ENCRYPTION_SECRET=before;});
+  const other="33333333-3333-4333-8333-333333333333";
+  const rows=QR_LABEL_SAMPLES.slice(0,2).map((sample,index)=>({registrationId:index?other:id,name:sample.participant.first_name+" "+sample.participant.last_name,code:sample.participant.public_code,firstName:sample.participant.first_name,lastName:sample.participant.last_name,reason:null,state:index?"prepared":"pending",attempts:index?1:0,outcome:index?"browser_returned":null,content:"b".repeat(64),printedContent:index?"b".repeat(64):null,encrypted:encryptQrToken(sample.token),hash:hashQrToken(sample.token)}));
+  const calls:string[]=[];
+  const db={rpc:async(_name:string,args:{p_action:string;p_ids:string[];p_request:string})=>{calls.push(args.p_action);if(args.p_action==="request"){assert.deepEqual(args.p_ids,[id,other]);assert.equal(args.p_request,req);}return {data:args.p_action==="read"?{status:"queue",snapshot,items:rows}:{status:"claimed"},error:null};}} as unknown as SupabaseClient;
+  const command={groupId:id,action:"request",ids:[id,other],snapshot,requestId:req,profile:"continuous-29x45"};
+  assert.ok(parseLabelCommand(command));
+  const result=await executeLabelCommand(session("admin"),()=>db,command);
+  assert.equal(result.status,"document");if(result.status==="document")assert.equal((result.html.match(/<article /g)??[]).length,2);
+  assert.deepEqual(calls,["read","request"]);
+  calls.length=0;
+  assert.equal((await executeLabelCommand(session("admin"),()=>db,{...command,snapshot:"c".repeat(64)})).status,"conflict");
+  assert.deepEqual(calls,["read"]);
+});

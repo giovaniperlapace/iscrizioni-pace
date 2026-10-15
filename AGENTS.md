@@ -1,5 +1,89 @@
 # AGENTS.md
 
+## Rilascio stampa semplificata autorizzato — 2026-10-15
+
+- L’utente richiede commit e push su main e migration necessaria in produzione.
+  Pubblicazione con il normale deployment Git Vercel; scanner USB presenti
+  contemporaneamente nel workspace esclusi dal commit e conservati sul disco.
+- Applicata/registrata atomicamente 20261015120000_simple_qr_label_printing,
+  dopo backup custom completo verificato, permessi 600. Dati delle 63 tabelle
+  pubbliche (86.142 righe) invariati; 2.497 voci di catalogo confrontate, con
+  modifica esclusiva della funzione QR prevista. Policy, privilegi e vincoli
+  conservati. RPC service-only, internal, catalogo pubblico e coda vuoti.
+- Codice e migration identici a quelli della build pulita già verificata.
+  Dettagli e hash in docs/qr-label-simple-printing-2026-10-15.md. Staging
+  escluso, nessuna email o nuova prova fisica automatica per il rilascio.
+
+## Stampa semplificata, selezione gruppo conservata — 2026-10-15
+
+- L’utente richiede un solo pulsante operativo, con testi invariati Stampa
+  etichetta QR / Stampa i QR del gruppo. Rimossi scelta rotolo, conferma della
+  stampante, Aggiorna elenco, istruzioni e conferma fisica delle etichette.
+- Su precisazione dell’utente, la modale gruppo conserva nomi/codici e check
+  per scegliere chi stampare, con Seleziona tutte. Il singolo resta diretto.
+  Ogni nuovo clic è esplicito, anche per etichette già richieste; nessun cambio
+  del testo del pulsante durante l’attesa o nelle ristampe.
+- Profilo operativo continuo 29 × 45 mm DK-22210; configurazione fuori dal
+  flusso. Storico/tentativi, stato canonico per iscrizione, audit, scope Admin
+  ed esclusioni conservati. Ritorno browser non verifica l’uscita fisica.
+- Migration locale 20261015120000_simple_qr_label_printing estende la sola RPC
+  per un lotto atomico misto fra etichette nuove e precedenti, senza dati o
+  privilegi modificati. Nessuna migration remota o pubblicazione eseguita.
+- 886 test, lint, TypeScript, build production pulita, SQL/concorrenza e browser sintetico desktop/mobile
+  superati: selezione, testo, ristampa, doppio clic fra pulsanti, errori/revoca,
+  Escape/focus e pulizia iframe. Dettagli in
+  docs/qr-label-simple-printing-2026-10-15.md. Nessuna nuova stampa fisica.
+
+## Collaudo DK-22210 e priorità Windows — 2026-10-15
+
+- L’utente riprende le prove fisiche singolo/gruppo con DK-22210 montato,
+  QL-810Wc pronta sul Mac attuale. Windows è una destinazione principale:
+  non progettare né attestare il funzionamento delle postazioni solo su Mac.
+  Altra stampante e sito da computer mai configurato richiedono prove distinte.
+- Prima calibrazione con dialogo visibile, renderer applicativo e campione
+  sintetico Ada Mori / TEST-101: l’utente conferma una sola etichetta, taglio
+  completo, contenuto integro, dimensione corretta e QR letto dal telefono.
+  Nessuna misura numerica, modello telefono o tempo acquisiti separatamente.
+- Formato macOS realmente creato/selezionato DK-22210 29x45 mm, margini zero,
+  Chrome 100%, nessuna intestazione, una copia e taglio dopo ogni pagina.
+  Preflight esteso alle carte macOS senza vendor_id, verificando definizione
+  OS e conversione reale dei punti; scala Chrome Personalizzati=4 supportata.
+- Prova dei pulsanti in copia locale isolata con PostgreSQL temporaneo,
+  pannello/renderer/RPC originali e adattatore Auth/trasporto sintetico.
+  Non equivale al login e ai dati del sito production. Primo tentativo dal
+  profilo Chrome normale apre il dialogo. Dopo l’avvio tramite LaunchServices
+  e conferma della finestra dedicata, l’utente conferma una sola C101 corretta,
+  taglio completo e nessun dialogo dal pulsante Ristampa etichetta QR; job 13
+  completed, una copia/pagina. L’utente conferma anche tre etichette gruppo
+  C102–C104 corrette, separate e con un solo clic, senza duplicare Ada.
+  CUPS registra due lavori di gruppo da tre pagine; non estendere il riscontro
+  fisico a tutte le copie. Iscrizioni, token e ingressi locali invariati.
+- L’utente richiede poi prova da questo Mac direttamente sul sito pubblicato:
+  aperto il medesimo profilo silenzioso con finestra normale e barra indirizzi,
+  per consentire il login, e sceglie esplicitamente Nicola Mastrorilli e il
+  gruppo Anziani - Torrenova come scelta finale, prima della stampa di gruppo.
+  Autorizza così le prove di stampa su questi
+  record reali; nessun altro uso di dati reali o scanner è implicito.
+  Verifica read-only: account scelto Admin globale, QR singolo attivo e
+  nove etichette gruppo stampabili/pending. Snapshot mirato immutabile acquisito;
+  login Admin e singola reale dal sito confermati dall’utente: una sola
+  etichetta corretta, taglio completo e un clic senza dialoghi. Job 16 completed
+  una copia/pagina e un solo tentativo production; snapshot mirato di iscrizioni,
+  QR e presenze invariato. Poi confermate nove etichette Anziani - Torrenova
+  corrette, tutte separate, un clic senza dialoghi dal sito; job 17 completed,
+  nove pagine e un solo tentativo per persona. Snapshot mirato dopo il lotto
+  invariato. L’utente conferma lettura al telefono del QR reale singolo e
+  della prima/ultima etichetta del gruppo: tre QR letti, senza scanner operativo;
+  conferme nel pannello esplicite, nessuna verifica automatica dalla chat.
+- Procedura Windows in docs/collaudo-dk22210-2026-10-15.md: driver ufficiale
+  per PC/modello, continuo 29 × 45 mm, taglio per pagina, calibrazione visibile,
+  poi Chrome dedicato silenzioso e prove dal sito. Nessun Windows collaudato.
+- Scanner USB e rimozione del flusso telefono+postazione rinviati esplicitamente
+  a un’altra conversazione. Nessuna modifica scanner o migration remota;
+  nessuna modifica a iscrizioni, token o presenze. Solo richieste/conferme di
+  stampa degli ambiti esplicitamente scelti, nessuna email dall’agente,
+  commit/push o deployment per queste prove.
+
 ## Pulsante QR gruppo uniforme — 2026-10-15
 
 - Su richiesta dell’utente, il pulsante nella riga del gruppo usa le stesse

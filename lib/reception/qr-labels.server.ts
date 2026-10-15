@@ -26,7 +26,7 @@ export async function executeLabelCommand(session: SupabaseClient, service: () =
       if (error) return { status: error.code === "42501" ? "forbidden" : ["PGRST202","42883"].includes(error.code) ? "migration_required" : "unavailable" };
       return data;
     }
-    const printing = command.action === "print" || command.action === "reprint";
+    const printing = command.action === "print" || command.action === "reprint" || command.action === "request";
     const result = await rpc(printing ? "read" : command.action);
     if (["conflict","replayed","forbidden","unavailable","migration_required"].includes(result?.status)) return { status: result.status };
     if (result?.status !== "queue" || !Array.isArray(result.items) || !/^[a-f0-9]{64}$/.test(result.snapshot)) return { status: "unavailable" };

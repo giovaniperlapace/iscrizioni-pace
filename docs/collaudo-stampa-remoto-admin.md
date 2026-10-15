@@ -1,5 +1,34 @@
 # Collaudo remoto Admin: scanner ed etichette
 
+## Semplificazione successiva preparata localmente
+
+Il nuovo flusso richiesto il 15 ottobre mantiene i testi dei pulsanti e i
+check del gruppo, eliminando configurazione carta/stampante, Aggiorna elenco
+e conferme fisiche. Le istruzioni delle prove del 14/15 ottobre sotto riportate
+documentano il flusso precedente. Dettagli e stato di pubblicazione in
+[qr-label-simple-printing-2026-10-15.md](qr-label-simple-printing-2026-10-15.md).
+
+## Aggiornamento 15 ottobre: continuo e Windows
+
+Prima etichetta DK-22210 confermata fisicamente sul Mac/QL-810Wc: quantità,
+taglio, integrità, dimensione corretta e lettura con telefono. Dopo la prima
+calibrazione visibile, confermata anche una singola C101 dal pulsante
+applicativo con un solo clic senza dialoghi. Confermate anche tre etichette
+di gruppo separate con un solo clic, escludendo quella singola già verificata.
+L’utente richiede poi la prova dal sito pubblicato, scegliendo esplicitamente
+Nicola Mastrorilli e, come scelta finale, Anziani - Torrenova: login Admin e
+singola reale e lotto reale di nove confermati: un clic, copie corrette e
+taglio dopo ciascuna pagina. Job 16 e 17 completed; un solo tentativo production
+per ciascuna etichetta. Impronte mirate di iscrizioni, QR e presenze invariate
+dopo entrambe le stampe. L’utente conferma tre QR reali letti al telefono:
+singolo e prima/ultima etichetta del gruppo.
+Windows è una destinazione principale e richiede un collaudo distinto, con
+driver/formato/taglio e profilo Chrome del PC effettivo. Il sito e il documento
+sono comuni; non occorrono Node o il repository sui PC operativi.
+Procedura Windows, verbale e limiti in
+[collaudo-dk22210-2026-10-15.md](collaudo-dk22210-2026-10-15.md).
+La modifica per gli scanner USB è rinviata a un’altra conversazione.
+
 ## Stato del 14 ottobre 2026
 
 Sviluppo richiesto su `main`, integrando il panel senza eliminarlo. Nuove

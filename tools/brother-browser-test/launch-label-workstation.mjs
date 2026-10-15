@@ -1,12 +1,12 @@
 // Mac only, operator-driven. Does not change printer defaults or the 12 October profile.
 import { mkdirSync, readFileSync, lstatSync } from 'node:fs';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import os from 'node:os';import path from 'node:path';
 import { chromeLabelProfileErrors } from '../../lib/qrcode/chrome-print-profile.ts';
 const options=new Map();const calibrating=process.argv.includes('--calibrate');
 for(const arg of process.argv.slice(2)){
  if(arg==='--calibrate'||arg==='--hardware-confirmed')continue;
- const match=arg.match(/^--(profile|printer|driver-paper|chrome-paper-id|url|loaded-roll)=(.+)$/);
+ const match=arg.match(/^--(profile|printer|driver-paper|chrome-paper-id|mac-custom-paper|url|loaded-roll)=(.+)$/);
  if(!match)throw Error('Argomento non riconosciuto. Usare il runbook di collaudo.');options.set(match[1],match[2]);
 }
 if(process.platform!=='darwin')throw Error('Launcher per macOS. Windows richiede un collaudo separato.');
@@ -24,13 +24,23 @@ try{lstatSync(path.join(root,'SingletonLock'));throw Error('Chiudere il Chrome d
 if(!calibrating){
  const preferences=JSON.parse(readFileSync(path.join(root,'Default','Preferences'),'utf8'));
  const state=JSON.parse(preferences.printing?.print_preview_sticky_settings?.appState??'{}');
- const problems=chromeLabelProfileErrors(state,profile,printer,options.get('chrome-paper-id'));
+ let customPaper;
+ if(options.has('mac-custom-paper')){
+  if(options.has('chrome-paper-id')||driverPaper!=='Custom.WIDTHxHEIGHT')throw Error('Usare un solo tipo di carta verificata.');
+  const papers=JSON.parse(execFileSync('plutil',['-convert','json','-o','-',path.join(os.homedir(),'Library','Preferences','com.apple.print.custompapers.plist')],{encoding:'utf8'}));
+  const paper=papers[options.get('mac-custom-paper')];
+  if(!paper||paper.custom!==true||paper.name!==options.get('mac-custom-paper')||[paper.top,paper.bottom,paper.left,paper.right].some(x=>x!==0))throw Error('Formato personalizzato macOS o margini non verificati.');
+  customPaper={name:paper.name,widthPoints:paper.width,heightPoints:paper.height};
+ }
+ const problems=chromeLabelProfileErrors(state,profile,printer,options.get('chrome-paper-id')??'',customPaper);
  const defaults=execFileSync('lpoptions',['-p',printer],{encoding:'utf8'});
  if(!/(?:^|\s)CutMedia=EndOfPage(?:\s|$)/.test(defaults))problems.push('Taglio dopo ogni pagina non verificato nelle opzioni Brother');
  if(problems.length)throw Error('Stampa silenziosa bloccata: '+problems.join('; '));
 }
-const child=spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',[
- `--user-data-dir=${root}`,...(calibrating?[]:['--kiosk-printing']),'--no-first-run','--no-default-browser-check',`--app=${url.href}`,
-],{detached:true,stdio:'ignore'});child.on('error',error=>{console.error(error.message);process.exitCode=1;});child.unref();
-console.log(calibrating?'Chrome dedicato aperto per calibrazione, senza invio automatico.':'Chrome dedicato aperto in modalità silenziosa, nessuna stampa inviata.');
+// LaunchServices gives this separate Chrome instance a visible foreground
+// window. Spawning the executable directly can leave it running unseen.
+execFileSync('/usr/bin/open',['-n','-a','/Applications/Google Chrome.app','--args',
+ `--user-data-dir=${root}`,...(calibrating?[]:['--kiosk-printing']),'--no-first-run','--no-default-browser-check','--new-window',url.href,
+],{stdio:['ignore','pipe','pipe']});
+console.log(calibrating?'Avvio del Chrome dedicato per calibrazione richiesto, senza invio automatico.':'Avvio del Chrome dedicato silenzioso richiesto, nessuna stampa inviata.');
 console.log('Il rotolo caricato e il risultato fisico richiedono conferma dell’operatore. Il vecchio profilo pretagliato è conservato.');
