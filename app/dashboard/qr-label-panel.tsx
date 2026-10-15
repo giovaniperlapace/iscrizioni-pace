@@ -101,7 +101,7 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
         </div> : null}
       </li>)}</ul>
       <div className="flex flex-wrap gap-2">
-        <ProgressButton progressError={failed} type="button" disabled={busy || !stationReady || !pending.length} aria-busy={busy} className="btn-primary min-h-11 px-4" onClick={() => void run("print", pending.map(i => i.registrationId))}>{busy ? "Operazione in corso…" : groupId ? "Stampa QR del gruppo" : "Stampa etichetta QR"}</ProgressButton>
+        <ProgressButton progressError={failed} type="button" disabled={busy || !stationReady || !pending.length} aria-busy={busy} className="btn-primary min-h-11 px-4" onClick={() => void run("print", pending.map(i => i.registrationId))}>{busy ? "Operazione in corso…" : groupId ? "Stampa i QR del gruppo" : "Stampa etichetta QR"}</ProgressButton>
         {groupId && repeats.length ? <button type="button" disabled={busy || !stationReady} className="btn-secondary min-h-11 px-3" onClick={() => void run("reprint", repeats.map(i => i.registrationId))}>Ristampa solo le {repeats.length} etichette selezionate</button> : null}
       </div>
       <p className="text-sm">Conferma solo le etichette uscite correttamente. Se la stampa si interrompe, aggiorna l’elenco e ristampa solo quelle mancanti o rovinate.</p>

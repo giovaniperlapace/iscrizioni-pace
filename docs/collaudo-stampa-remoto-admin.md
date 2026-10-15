@@ -40,7 +40,7 @@ richiedono ancora la prova reale.
    esatto, driver, USB/rete, codice/larghezza del consumabile e rotolo montato.
    Per oggi iniziare preferibilmente dal Mac; Windows rimane prova distinta.
 4. Il collaudo operativo passa dai pulsanti reali: Stampa etichetta QR nella
-   scheda Admin e Stampa QR del gruppo nella gestione gruppi. Usare iscrizioni
+   scheda Admin e Stampa i QR del gruppo nella gestione gruppi. Usare iscrizioni
    sintetiche/staging con QR già esistenti. La pagina
    `/dashboard/admin/stampa-qr/collaudo` rimane uno strumento ausiliario per
    la sola calibrazione della carta, senza passaggio obbligatorio.
@@ -108,7 +108,7 @@ Il launcher è per macOS: non dichiararlo compatibile o collaudato Windows.
 3. Ripetere dalle schede di prova con nome lungo, internazionale e cirillico,
    ciascuna con il proprio QR esistente. Non troncare i nominativi né
    creare/ruotare token per ottenere un’etichetta.
-4. Solo dopo conferma della singola, usare **Stampa QR del gruppo** su un
+4. Solo dopo conferma della singola, usare **Stampa i QR del gruppo** su un
    gruppo sintetico: leggere elenco e quantità prima dell’avvio. Iscrizioni
    eliminate assenti anche dai conteggi; annullate o con QR non valido
    indicate come non stampabili. Sottogruppi esclusi, figli sul QR genitore.

@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Pulsante QR gruppo uniforme — 2026-10-15
+
+- Su richiesta dell’utente, il pulsante nella riga del gruppo usa le stesse
+  dimensioni/stile delle azioni vicine: min-h-9, text-xs e font-semibold,
+  senza la classe btn-secondary che imponeva un’altezza maggiore.
+- Testo Stampa i QR del gruppo, coerente anche nel comando dentro la modale.
+  Correzione di presentazione nel rilascio main, senza dati o migration.
+
 ## Forum non pubblicati con iscritti conservati — 2026-10-14
 
 - Richiesta aggiuntiva dell’utente al rilascio Forum su main: pulsante Rendi non

@@ -17,9 +17,9 @@ try{
  await page.getByText('Persone: 5 · Etichette disponibili: 4 · Non stampabili: 1.',{exact:false}).waitFor();
  assert.equal(await page.locator('input[type=checkbox]:checked').count(),2);
  assert.equal(await page.locator('details[open]').count(),0);
- assert.equal(await page.getByRole('button',{name:'Stampa QR del gruppo',exact:true}).isEnabled(),false);
+ assert.equal(await page.getByRole('button',{name:'Stampa i QR del gruppo',exact:true}).isEnabled(),false);
  await page.getByLabel('Ho controllato la stampante, la carta e le impostazioni di stampa.',{exact:true}).check();
- await page.getByRole('button',{name:'Stampa QR del gruppo',exact:true}).click();
+ await page.getByRole('button',{name:'Stampa i QR del gruppo',exact:true}).click();
  await page.waitForFunction(()=>window.__labelPrints===1);
  await page.getByText('Controlla le etichette uscite dalla stampante, poi conferma quelle corrette.',{exact:true}).waitFor();
  assert.equal(await page.getByRole('button',{name:'Conferma etichetta',exact:true}).count(),3);
@@ -30,7 +30,7 @@ try{
  const other=page.locator('li').filter({hasText:'Alessandra Francesca'});
  await other.getByRole('button',{name:'Ristampa etichetta QR',exact:true}).click();
  await page.waitForFunction(()=>window.__labelPrints===2);
- await page.getByRole('button',{name:'Stampa QR del gruppo',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Stampa i QR del gruppo',exact:true}).waitFor();
  await other.getByText('Controlla l’etichetta',{exact:true}).waitFor();
  assert.equal(await row.getByRole('button',{name:'Conferma etichetta',exact:true}).count(),0);
  await page.setViewportSize({width:390,height:844});
