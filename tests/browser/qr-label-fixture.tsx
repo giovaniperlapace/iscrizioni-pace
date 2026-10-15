@@ -1,10 +1,11 @@
 "use client";
 // Shared controls with synthetic queue state; exact atomic SQL claims are tested separately.
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { QrLabelPanel } from "@/app/dashboard/qr-label-panel";
 import type { LabelCommand, LabelQueue, LabelResult } from "@/lib/reception/qr-labels";
 const ids = [1,2,3,4,5].map(n => `00000000-0000-4000-8000-${String(n).padStart(12,"0")}`);
 export default function Fixture({ documents }: { documents: Record<string,string> }) {
+  const [viewVersion, setViewVersion] = useState(0);
   const revision = useRef(1), failRead = useRef(false), invalidate = useRef(false);
   const requests = useRef(new Map<string,string[]>());
   const items = useRef<LabelQueue["items"]>([
@@ -35,8 +36,8 @@ export default function Fixture({ documents }: { documents: Record<string,string
     return {status:"document",html,requestId:command.requestId!};
   },[documents]);
   return <main className="app-page"><div className="mx-auto grid max-w-3xl gap-6 p-4">
-    <section aria-label="Singolo sintetico"><h1 className="mb-2 text-xl">Singolo</h1><QrLabelPanel scope={{registrationId:ids[0]}} commandAction={commandAction}/></section>
-    <section aria-label="Gruppo sintetico"><h2 className="mb-2 text-xl">Gruppo</h2><QrLabelPanel scope={{groupId:ids[0]}} commandAction={commandAction}/></section>
-    <aside className="grid gap-2" aria-label="Controlli sintetici"><button onClick={()=>{failRead.current=true;}}>Simula errore di lettura</button><button onClick={()=>{invalidate.current=true;}}>Simula QR revocato</button></aside>
+    <section aria-label="Singolo sintetico"><h1 className="mb-2 text-xl">Singolo</h1><QrLabelPanel key={viewVersion} scope={{registrationId:ids[0]}} commandAction={commandAction}/></section>
+    <section aria-label="Gruppo sintetico"><h2 className="mb-2 text-xl">Gruppo</h2><QrLabelPanel key={viewVersion} scope={{groupId:ids[0]}} commandAction={commandAction}/></section>
+    <aside className="grid gap-2" aria-label="Controlli sintetici"><button onClick={()=>{failRead.current=true;}}>Simula errore di lettura</button><button onClick={()=>{invalidate.current=true;}}>Simula QR revocato</button><button onClick={()=>setViewVersion(v=>v+1)}>Riapri i pannelli</button></aside>
   </div></main>;
 }

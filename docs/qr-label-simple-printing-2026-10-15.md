@@ -87,3 +87,25 @@ Le modifiche scanner USB presenti contemporaneamente nel workspace sono escluse
 da questo commit; il flusso telefono/postazione pubblicato resta invariato.
 Staging escluso dal rilascio. Nessuna email, stampa fisica automatica o prova
 che scriva dati reali eseguita per questa pubblicazione.
+
+## Indicazione del numero di richieste
+
+Su richiesta successiva dell’utente, accanto al pulsante individuale compare
+**Stampe richieste: N**. La modale gruppo mostra lo stesso valore per ogni
+persona, conservando i check. Il numero proviene da `attempts` del registro
+canonico esistente, comune alla stampa singola e di gruppo. È letto anche
+all’apertura del singolo e aggiornato con la risposta server dell’esito;
+nessun polling e nessuna nuova migration. Durante la lettura compare `—`.
+
+Il conteggio comprende tentativi già preparati anche quando la stampa genera
+un errore: indica richieste, senza attestare uscita fisica o consegna.
+Una lettura fallita non incrementa il numero. Le risposte iniziali tardive
+non sovrascrivono il risultato di una richiesta più recente.
+
+Verificati 893 test, lint mirato, TypeScript e build production pulita. Browser
+sintetico desktop/mobile: storico iniziale, incremento dopo invio, ristampa,
+lettura condivisa singolo/gruppo, riapertura, errori, selezione e assenza di
+verifica automatica. Stampe simulate, nessun dato remoto modificato.
+L’utente autorizza commit e push su main anche di questa aggiunta, con normale
+deployment Git Vercel. Modifiche scanner USB escluse dal commit; nessuna
+migration aggiuntiva necessaria.

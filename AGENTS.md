@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Conteggio richieste di stampa QR — 2026-10-15
+
+- Su richiesta dell’utente, accanto al pulsante individuale compare Stampe
+  richieste: N; nella modale gruppo il conteggio compare per ogni persona.
+  Testi dei pulsanti e selezione tramite check conservati.
+- Valore attempts della coda canonica esistente, condiviso fra singolo/gruppo:
+  letto all’apertura e aggiornato dalla risposta server dell’esito. Nessun
+  polling, contatore locale persistente o migration. Durante la lettura
+  iniziale compare un trattino, senza inventare uno zero.
+- Il numero conta tentativi richiesti, inclusi quelli con errore dopo la
+  preparazione; non certifica uscita fisica o consegna. Una lettura fallita
+  non aggiunge tentativi e nessuna verifica fisica viene registrata.
+- Browser sintetico desktop/mobile: storico iniziale, ristampe, riapertura,
+  stampa gruppo seguita da lettura singola, errori, check, blocco doppio clic
+  e pulizia iframe verificati con stampa simulata. Nessuna nuova stampa
+  hardware o modifica a dati remoti. L’utente autorizza poi commit e push
+  su main del solo conteggio; modifiche scanner USB escluse e conservate.
+  Superati 893 test, lint mirato, TypeScript e build production pulita.
+
 ## Rilascio stampa semplificata autorizzato — 2026-10-15
 
 - L’utente richiede commit e push su main e migration necessaria in produzione.
