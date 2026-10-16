@@ -30,7 +30,7 @@ try {
   const mainNames=new Set(execFileSync('git',['ls-tree','-r','--name-only',mainBase,'supabase/migrations'],{cwd:root,encoding:'utf8'}).trim().split('\n').map(x=>x.split('/').at(-1)));
   const ordered=process.argv.includes('--main-upgrade')?[...names.filter(x=>mainNames.has(x)),...names.filter(x=>!mainNames.has(x))]:names;
   for (const name of ordered) {
-    if (name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
+    if (name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
     if (name==='20260813170000_rename_anziani_and_amici_groups.sql') continue; // known absent fixture-only data prerequisites
     if(name==='20260912150000_reception_check_ins.sql') {
       psql(`insert into events(slug,title,city,country,status) values('p11-legacy','Synthetic legacy','Test','IT','draft');
@@ -161,6 +161,16 @@ try {
   assert.equal(repeatClaims.filter(x=>/conflict/.test(x)).length,1);
   assert.match(psql(`select count(*)=1 and max(attempts)=2 from group_badge_items where artifact='qr_label' and registration_id=f(10);`),/\bt\b/);
   console.log('PASS concurrent explicit repeat clicks: one claim, one conflict, same canonical label');
+  file(join(root,'supabase/migrations/20261016130000_leader_group_qr_access.sql'));
+  console.log(file(join(root,'tests/sql/leader-group-qr-access.sql')).trim());
+  psql(`insert into groups(id,event_id,name,is_active) values(f(9700),f(1),'Concurrent leader QR',true);
+    insert into group_memberships(group_id,user_id,role) values(f(9700),f(36),'capogruppo');`);
+  const credentials=await Promise.all(Array.from({length:8},(_,i)=>concurrent(`set role service_role;
+    select group_reception_credential(f(1),f(36),f(9700),'get',repeat(md5('${99000+i}'),2),'synthetic-concurrent')->>'hash';`)));
+  assert.equal(new Set(credentials.map(value=>value.trim())).size,1);
+  assert.match(psql(`select count(*)=1 from group_reception_tokens where group_id=f(9700);`),/\bt\b/);
+  assert.match(psql(`select count(*)=1 from audit_logs where entity_id=f(9700) and action='group_qr.create';`),/\bt\b/);
+  console.log('PASS 8 concurrent leader QR reads: one stable credential, one creation audit');
   const schemaFile=process.argv.find(x=>x.startsWith('--schema-snapshot='))?.split('=')[1];
   if(schemaFile)writeFileSync(schemaFile,psql(`select jsonb_object_agg(key,definition) from (
     select n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')' key,pg_get_functiondef(p.oid) definition

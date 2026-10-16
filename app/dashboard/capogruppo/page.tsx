@@ -1153,6 +1153,8 @@ export default async function CapogruppoDashboardPage({
         <StatusMessage locale={locale} error={params.manualError} saved={undefined} copy={copy} />
 
         <AssignedScopeSection
+          locale={locale}
+          canManageQr={auth.eventRoles.some(role => role.role === "admin" && role.eventId === null)}
           assignedGroups={assignedGroups}
           peopleByGroup={peopleByGroup}
           assignableGroups={scopedGroups.filter(
@@ -1196,7 +1198,6 @@ export default async function CapogruppoDashboardPage({
           <DashboardToolOverlay title={dashboardToolTitle(activeTool, copy)} copy={copy}>
             {activeTool === "link" ? (
               <GroupLeaderLinksSection
-            showPilot={auth.eventRoles.some(role => role.role === "admin" && role.eventId === null)}
                 groups={scopedGroups}
                 links={groupLinks}
                 selectedGroupId={activeGroupId}
@@ -1315,7 +1316,11 @@ function AssignedScopeSection({
   peopleByGroup,
   assignableGroups,
   copy,
+  locale,
+  canManageQr,
 }: {
+  locale: SupportedLocale;
+  canManageQr: boolean;
   assignedGroups: ScopedGroupView[];
   peopleByGroup: Map<string, number>;
   assignableGroups: ScopedGroupView[];
@@ -1384,6 +1389,7 @@ function AssignedScopeSection({
                   >
                     {copy.manageLinks}
                   </Link>
+                  {group.isActive ? <GroupReceptionQr groupId={group.id} groupName={group.name} locale={locale} canManage={canManageQr} /> : null}
                   <Link
                     href={`/dashboard/capogruppo?tool=manual&groupId=${encodeURIComponent(group.id)}`}
                     className="min-h-9 rounded-md bg-[var(--peace-blue-800)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"
@@ -1445,7 +1451,6 @@ function DashboardToolOverlay({
 
 function GroupLeaderLinksSection({
   groups,
-  showPilot = false,
   links,
   selectedGroupId,
   createdGroupId,
@@ -1454,7 +1459,6 @@ function GroupLeaderLinksSection({
   copy,
 }: {
   groups: ScopedGroupView[];
-  showPilot?: boolean;
   links: GroupLinkView[];
   selectedGroupId: string | null;
   createdGroupId: string | null;
@@ -1510,8 +1514,6 @@ function GroupLeaderLinksSection({
                     {group.eventTitle} - {copy.leader}{" "}
                     {group.primaryLeaderName ?? copy.leaderMissing}
                   </p>
-
-                  {showPilot ? <GroupReceptionQr groupId={group.id} locale={locale} /> : null}
 
                   {createdUrl && createdGroupId === group.id ? (
                     <label className="mt-4 grid gap-2 text-sm font-semibold text-[var(--peace-ink)]">

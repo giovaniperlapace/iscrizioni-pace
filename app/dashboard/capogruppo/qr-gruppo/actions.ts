@@ -1,5 +1,5 @@
 "use server";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { createOpaqueQrToken, hashQrToken } from "@/lib/qrcode/token";
 import { encryptQrToken, decryptQrToken } from "@/lib/qrcode/secure-token";
@@ -16,8 +16,10 @@ export async function groupReceptionQr(groupId: string, action: "get" | "revoke"
     if(error || !event) return {status:"unavailable"};
     const {data:roles,error:roleError}=await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if(roleError)return {status:"unavailable"};
-    const manages=roles?.some(r=>(r.role==="admin" && r.event_id===null) || (r.role==="manager" && r.event_id===event.id));
-    if(!manages && !(await loadLeaderScope(session,user.id,event.id)).scopedGroupIds.has(groupId))return {status:"unavailable"};
+    const isAdmin=roles?.some(r=>r.role==="admin" && r.event_id===null);
+    // Leaders may display/download their own group's QR. Credential management
+    // remains Admin-only; membership and the current event are checked again in SQL.
+    if(!isAdmin && (action!=="get" || !(await loadLeaderScope(session,user.id,event.id)).scopedGroupIds.has(groupId))) return {status:"unavailable"};
     const generated=createOpaqueQrToken();
     const {data,error:rpcError}=await createSupabaseServiceClient().rpc("group_reception_credential",{
       p_event:event.id,p_actor:user.id,p_group:groupId,p_action:action,p_hash:generated.tokenHash,p_encrypted:encryptQrToken(generated.token),

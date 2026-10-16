@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## QR del gruppo diretto per il capogruppo — 2026-10-16
+
+- Su richiesta dell’utente, QR del gruppo è accanto a Gestisci link nella
+  dashboard capogruppo, per il gruppo della riga. Rimosso dalla modale link;
+  apertura diretta con nome gruppo, immagine e download, senza un secondo clic.
+- L’utente abilita esplicitamente i capigruppo ai QR dei propri gruppi.
+  Lettura/creazione iniziale del QR opaco tramite get, scope attivo e controlli
+  server/DB. Revoca/rinnovo, scanner, presenze e stampa restano solo Admin.
+  Nessuna richiesta QR prima del clic e nessuna rotazione sulle letture ripetute.
+- File scaricato qr-gruppo-Nome-del-gruppo.png; caratteri internazionali
+  conservati, separatori del filesystem rimossi. Testi in sette lingue.
+- Migration 20261016130000_leader_group_qr_access applicata e registrata in
+  production dopo backup custom verificato: valori di 63 tabelle (87.791 righe)
+  invariati, catalogo di 2.497 voci confrontato, sola funzione credenziale
+  modificata e privilegi conservati. Staging invariato, nessuna email o stampa.
+- Superati 898 test, lint, TypeScript, build pulita, browser sintetico con
+  download PNG effettivo e SQL/concorrenza; otto get simultanei condividono
+  una credenziale e un solo audit di creazione. Dettagli e backup in
+  docs/qr-gruppo-capogruppo-2026-10-16.md. Commit/push su main autorizzati.
+
 ## Modifica ingresso dalla gestione partecipanti — 2026-10-16
 
 - Su richiesta dell’utente, lo stato sotto nome/codice nella tabella iscritti
