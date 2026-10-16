@@ -1,5 +1,7 @@
 # Accoglienza semplificata — 16 ottobre 2026
 
+> Aggiornamento successivo: [partecipazione e stampa con due comandi separati](partecipazione-e-stampa-separate-2026-10-16.md). Il comando combinato e la modifica sotto il nome sono stati sostituiti dal nuovo flusso.
+
 La richiesta riguarda la scheda dopo la lettura del QR, sia da scanner USB sia
 nella modalità telefono appena pubblicata. La scansione continua a essere una
 lettura: non scrive presenze. L’accesso operativo rimane solo Admin.

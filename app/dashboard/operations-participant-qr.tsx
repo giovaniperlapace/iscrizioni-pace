@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ParticipantReceptionPanel } from "./participant-reception-panel";
 import { QrLabelPanel } from "./qr-label-panel";
 import { LeaderParticipantQr } from "./capogruppo/participant-qr";
 import type { RegistrationQrPreview } from "@/lib/qrcode/registration-qr";
@@ -16,8 +17,8 @@ const COPY = {
   uk: ["Завантаження QR-коду…", "Не вдалося завантажити QR-код.", "Спробувати ще раз"],
 } satisfies Record<SupportedLocale, string[]>;
 
-export function OperationsParticipantQr({ registrationId, participantName, participantCode, locale, adminLabels = false }: {
-  registrationId: string; participantName: string; participantCode: string | null; locale: SupportedLocale; adminLabels?: boolean;
+export function OperationsParticipantQr({ registrationId, participantName, participantCode, locale, adminLabels = false, eventId, receptionEnabled = false, onBusyChange }: {
+  registrationId: string; participantName: string; participantCode: string | null; locale: SupportedLocale; adminLabels?: boolean; eventId?: string; receptionEnabled?: boolean; onBusyChange?: (busy: boolean) => void;
 }) {
   const [result, setResult] = useState<{ registrationId: string; qr: RegistrationQrPreview | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -36,14 +37,15 @@ export function OperationsParticipantQr({ registrationId, participantName, parti
     return () => controller.abort();
   }, [registrationId, attempt]);
   const copy = COPY[locale];
-  if (!result || result.registrationId !== registrationId) return <p role="status">{copy[0]}</p>;
-  if (!result.qr) return <div className="grid justify-items-start gap-2">
+  const preview = !result || result.registrationId !== registrationId ? <p role="status">{copy[0]}</p> : !result.qr ? <div className="grid justify-items-start gap-2">
     <p role="alert">{copy[1]}</p>
     <button type="button" className="min-h-11 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold"
       onClick={() => { setResult(null); setAttempt(value => value + 1); }}>{copy[2]}</button>
-  </div>;
-  return <div className="grid justify-items-start gap-3">
-    <LeaderParticipantQr qr={result.qr} participantName={participantName} participantCode={participantCode} locale={locale} />
-    {adminLabels ? <QrLabelPanel key={registrationId} scope={{ registrationId }} /> : null}
+  </div> : <LeaderParticipantQr qr={result.qr} participantName={participantName} participantCode={participantCode} locale={locale} />;
+  return <div className="grid w-full gap-3">
+    {adminLabels && receptionEnabled && eventId && participantCode ?
+      <ParticipantReceptionPanel key={registrationId} eventId={eventId} registrationId={registrationId} code={participantCode} onBusyChange={onBusyChange} /> :
+      adminLabels ? <QrLabelPanel key={registrationId} scope={{ registrationId }} onBusyChange={onBusyChange} /> : null}
+    {preview}
   </div>;
 }

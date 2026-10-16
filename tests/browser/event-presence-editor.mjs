@@ -1,62 +1,28 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
-const base = process.argv[2] ?? 'http://127.0.0.1:3184';
-assert.match(base, /^http:\/\/(localhost|127\.0\.0\.1):\d+$/);
-const route = 'app/event-presence-check'; assert.ok(!existsSync(route)); mkdirSync(route);
-writeFileSync(`${route}/page.tsx`, 'export {default} from "@/tests/browser/event-presence-editor-fixture";');
-const tableRoute = 'app/presence-table-check'; assert.ok(!existsSync(tableRoute)); mkdirSync(tableRoute);
-writeFileSync(`${tableRoute}/page.tsx`, 'export {default} from "@/tests/browser/participant-operations-fixture";');
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
-let browser, page;
-try {
-  browser = await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
-  page = await browser.newPage({viewport:{width:1280,height:900}});
-  const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/dashboard/attendance?*', async route => {
-    const entries = await page.evaluate(() => window.presenceEntries ?? {});
-    const eventId = new URL(route.request().url()).searchParams.get('eventId');
-    await route.fulfill({json:{eventId,updatedAt:new Date().toISOString(),entries,schoolEntries:{},totals:{adults:0,children:0,people:0,students:0,companions:0,schoolBookings:0}}});
-  });
-  const calls = async () => JSON.parse(await page.locator('[data-calls]').textContent());
-  const trigger = () => page.getByRole('button',{name:/Modifica presenza di Ada Mori/});
-  const open = async () => { await trigger().click(); await page.locator('input[name=presentSubjects]').first().waitFor(); };
-  const save = async () => { await page.locator('input[name=confirmCorrection]').check(); await page.getByRole('button',{name:'Salva presenze',exact:true}).click(); await page.locator('dialog').waitFor({state:'detached'}); };
-  const reset = async () => { await page.goto(base+'/event-presence-check'); await page.getByText('Ingresso non registrato',{exact:true}).first().waitFor(); };
-  await reset(); assert.equal(await page.locator('[data-readonly] button, [data-inactive] button').count(),0);
-  await open(); assert.deepEqual((await calls()).map(c=>c.action),['inspect']);
-  assert.equal(await page.locator('input[name=presentSubjects]:checked').count(),0);
-  await page.keyboard.press('Escape'); await page.locator('dialog').waitFor({state:'detached'}); assert.equal(await trigger().evaluate(el=>el===document.activeElement),true);
-  await open(); await page.locator('input[name=presentSubjects]').first().check(); await save();
-  await page.getByRole('button',{name:/Ingresso registrato.*Modifica presenza/}).waitFor();
-  assert.equal((await calls()).at(-1).action,'correct'); assert.equal((await calls()).at(-1).expectedRevision,0);
-  await open(); assert.equal(await page.locator('input[name=presentSubjects]').first().isChecked(),true);
-  await page.locator('input[name=presentSubjects]').first().uncheck(); await page.locator('input[name=presentSubjects]').nth(1).check(); await save();
-  await page.getByRole('button',{name:/Ingresso non registrato.*Modifica presenza/}).waitFor();
-  assert.deepEqual((await calls()).at(-1).subjectIds,['00000000-0000-4000-8000-000000000002']);
-  await open(); await page.locator('input[name=presentSubjects]').nth(1).uncheck(); await save(); assert.equal((await calls()).at(-1).action,'cancel');
-  console.log('PASS direct status, read-only/inactive, initial entry, selective children, cancel, refresh and Escape/focus');
-  await page.getByLabel('Scenario',{exact:true}).selectOption('conflict'); await open(); await page.locator('input[name=presentSubjects]').first().check(); await page.locator('input[name=confirmCorrection]').check(); await page.getByRole('button',{name:'Salva presenze',exact:true}).dblclick();
-  await page.getByText(/Un altro operatore ha aggiornato/).waitFor();
-  assert.equal((await calls()).filter(c=>c.action!=='inspect').length,4);
-  await page.getByRole('button',{name:'Rileggi le presenze'}).click(); await page.locator('input[name=presentSubjects]').first().waitFor(); assert.equal(await page.locator('input[name=presentSubjects]:checked').count(),0);
-  await page.keyboard.press('Escape');
-  await page.getByLabel('Scenario',{exact:true}).selectOption('uncertain'); await open(); await page.locator('input[name=presentSubjects]').first().check(); await page.locator('input[name=confirmCorrection]').check(); await page.getByRole('button',{name:'Salva presenze',exact:true}).click();
-  await page.getByRole('button',{name:'Riprova la stessa operazione'}).waitFor(); await page.keyboard.press('Escape'); assert.equal(await page.locator('dialog[open]').count(),1);
-  await page.getByRole('button',{name:'Riprova la stessa operazione'}).click(); await page.locator('dialog').waitFor({state:'detached'});
-  const commands=await calls(); assert.deepEqual(commands.at(-1),commands.at(-2));
-  console.log('PASS double click, concurrency conflict, explicit fresh read and exact uncertain retry');
-  await reset(); await page.getByLabel('Scenario',{exact:true}).selectOption('forbidden'); await trigger().click(); await page.getByText(/Sessione scaduta/).waitFor(); assert.equal(await page.locator('input[name=presentSubjects]').count(),0); await page.keyboard.press('Escape');
-  await page.getByLabel('Scenario',{exact:true}).selectOption('wrong-person'); await trigger().click(); await page.getByText(/Codice non valido/).waitFor(); assert.equal(await page.locator('input[name=presentSubjects]').count(),0); await page.keyboard.press('Escape');
-  await reset(); await open(); await page.screenshot({path:'/tmp/pace-presence-desktop.png'}); await page.setViewportSize({width:390,height:844});
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)); await page.screenshot({path:'/tmp/pace-presence-mobile.png'});
-  await page.goto(base+'/presence-table-check?section=iscritti&nav=mini');
-  await page.getByRole('button',{name:/Modifica presenza di Anna Bianchi/}).waitFor();
-  assert.equal(await page.locator('tbody button[aria-haspopup=dialog]').count(),12);
-  await page.getByRole('button',{name:'Modalità sola lettura',exact:true}).click();
-  assert.equal(await page.locator('tbody button[aria-haspopup=dialog]').count(),0);
-  await page.goto(base+'/presence-table-check?section=iscritti&nav=mini&dashboard=manager');
-  await page.getByRole('link',{name:'Anna Bianchi',exact:true}).waitFor();
-  assert.equal(await page.locator('tbody button[aria-haspopup=dialog]').count(),0);
-  console.log('PASS actual participants table: Admin direct action and Manager/viewer read-only');
-  assert.deepEqual(errors,[]); console.log('PASS revocation, identity mismatch, desktop/mobile and no runtime errors');
-} finally { await page?.unrouteAll({behavior:'ignoreErrors'}); await browser?.close(); rmSync(route,{recursive:true,force:true}); rmSync(tableRoute,{recursive:true,force:true}); rmSync('.next/dev/types/app/presence-table-check',{recursive:true,force:true}); rmSync('.next/dev/types/app/event-presence-check',{recursive:true,force:true}); }
+const base=process.argv[2]??'http://localhost:3189';assert.match(base,/^http:\/\/(localhost|127\.0\.0\.1):\d+$/);
+const route='app/event-presence-check',tableRoute='app/presence-table-check';assert.ok(!existsSync(route)&&!existsSync(tableRoute));mkdirSync(route);mkdirSync(tableRoute);
+writeFileSync(`${route}/page.tsx`, `import Fixture from '@/tests/browser/event-presence-editor-fixture';import {renderQrLabelsHtml} from '@/lib/qrcode/print-label';import {QR_LABEL_SAMPLES} from '@/lib/qrcode/print-samples';export default async function Page({searchParams}:{searchParams:Promise<{family?:string}>}){return <Fixture family={(await searchParams).family==='1'} html={await renderQrLabelsHtml([QR_LABEL_SAMPLES[0]],'continuous-29x45')}/>;}`);
+writeFileSync(`${tableRoute}/page.tsx`,'export {default} from "@/tests/browser/participant-operations-fixture";');
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');let browser,page;
+try{
+ browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const context=await browser.newContext();await context.addInitScript(()=>{window.print=()=>{window.top.__prints=(window.top.__prints??0)+1;window.dispatchEvent(new Event('afterprint'));};});page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/dashboard/attendance?*',async route=>{const entries=await page.evaluate(()=>window.presenceEntries??{});const eventId=new URL(route.request().url()).searchParams.get('eventId');await route.fulfill({json:{eventId,updatedAt:new Date().toISOString(),entries,schoolEntries:{},totals:{adults:0,children:0,people:0,students:0,companions:0,schoolBookings:0}}});});
+ const btn=name=>page.getByRole('button',{name,exact:true});const log=async name=>JSON.parse(await page.locator(`[data-${name}]`).textContent());const writes=async()=>(await log('calls')).filter(c=>c.action!=='inspect');const requests=async()=>(await log('prints')).filter(c=>c.action==='request');const open=async(family=false)=>{await page.goto(base+'/event-presence-check'+(family?'?family=1':''));await btn('Conferma partecipazione').waitFor();};const scenario=async name=>page.getByLabel('Scenario',{exact:true}).selectOption(name);const printed=()=>page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();
+ await open();assert.equal(await page.locator('[data-row] button,[data-inactive] button').count(),0);assert.equal(await page.getByText('Ingresso non registrato',{exact:true}).count(),0);assert.equal(await page.locator('dialog[open]').count(),0);assert.equal((await writes()).length,0);
+ await btn('Conferma partecipazione').dblclick();await page.locator('[data-row]').getByText(/Partecipazione confermata/).waitFor();assert.equal((await writes()).length,1);assert.equal((await requests()).length,0);assert.equal(await page.locator('dialog[open]').count(),0);
+ await btn('Stampa etichetta QR').click();await printed();assert.equal((await writes()).length,1);assert.equal((await requests()).length,1);assert.equal(await page.evaluate(()=>window.__prints),1);
+ await btn('Modifica partecipazione').click();await page.locator('input[name=presentSubjects]').uncheck();assert.equal(await btn('Salva presenze').isDisabled(),true);await page.locator('input[name=confirmCorrection]').check();await btn('Salva presenze').click();await page.locator('[data-row]').getByText('Partecipazione non confermata',{exact:true}).waitFor();assert.equal((await writes()).at(-1).action,'cancel');
+ await page.screenshot({path:'/tmp/pace-participant-actions-desktop.png',fullPage:true});
+ await open(true);await page.locator('input[name=receptionSubjects]').nth(1).check();await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione aggiornata.',{exact:true}).waitFor();assert.equal((await requests()).length,0);assert.equal((await writes()).at(-1).subjectIds.length,1);assert.equal((await writes()).at(-1).subjectIds[0].endsWith('2'),true);assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),1);
+ await btn('Stampa etichetta QR').click();await printed();assert.equal((await requests()).at(-1).ids[0].endsWith('1'),true);assert.equal((await writes()).length,1);assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),1);
+ await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'/tmp/pace-participant-actions-mobile.png',fullPage:true});
+ console.log('PASS direct confirmation without modal, read-only row, refreshed wording, separate print, one retained family selection and parent QR');
+ await open();await btn('Stampa etichetta QR').click();await printed();assert.equal((await writes()).length,0);
+ await scenario('uncertain');await btn('Conferma partecipazione').click();await btn('Riprova la stessa operazione').waitFor();assert.equal(await btn('Chiudi riquadro').isDisabled(),true);await btn('Riprova la stessa operazione').click();await page.locator('[data-row]').getByText(/Partecipazione confermata/).waitFor();assert.deepEqual((await writes())[0],(await writes())[1]);assert.equal((await requests()).length,1);
+ await open();await scenario('conflict');await btn('Conferma partecipazione').click();await btn('Rileggi la partecipazione').waitFor();assert.equal((await requests()).length,0);assert.equal(await btn('Stampa etichetta QR').isDisabled(),true);await scenario('normal');await btn('Rileggi la partecipazione').click();await btn('Conferma partecipazione').click();await page.locator('[data-row]').getByText(/Partecipazione confermata/).waitFor();await scenario('print-error');await btn('Stampa etichetta QR').click();await page.getByText(/Non è stato possibile avviare la stampa/).waitFor();assert.equal((await writes()).length,2);await scenario('normal');await btn('Stampa etichetta QR').click();await printed();assert.equal((await writes()).length,2);
+ for(const value of ['forbidden','wrong-person']){await open();await btn('Chiudi riquadro').click();await scenario(value);await btn('Apri riquadro').click();await page.getByRole('alert').waitFor();assert.equal(await btn('Conferma partecipazione').count(),0);assert.equal(await btn('Stampa etichetta QR').count(),0);}
+ console.log('PASS print never confirms, exact uncertain retry, close lock, conflict, print-only retry, revoked access and identity mismatch');
+ for(const role of ['admin','manager']){await page.goto(base+`/presence-table-check?section=iscritti&nav=mini&dashboard=${role}`);await page.getByRole('link',{name:'Anna Bianchi',exact:true}).waitFor();assert.equal(await page.locator('tbody button[aria-haspopup=dialog]').count(),0);await page.getByText('Partecipazione non confermata',{exact:true}).first().waitFor();}
+ assert.deepEqual(errors,[]);console.log('PASS actual participant rows are read-only for Admin and Manager, desktop/mobile and no runtime errors');
+}finally{await page?.unrouteAll({behavior:'ignoreErrors'});await browser?.close();for(const path of [route,tableRoute])rmSync(path,{recursive:true,force:true});}

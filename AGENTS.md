@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Partecipazione e stampa: azioni separate sulla selezione comune — 2026-10-16
+
+- Correzione dell’utente: due pulsanti distinti, mai un comando combinato.
+  Conferma partecipazione e stampa QR utilizzano la stessa persona/selezione,
+  conservata dopo ciascuna azione. Valido in Accoglienza e nei partecipanti.
+- Sotto il nome nella tabella resta solo Partecipazione non confermata /
+  Partecipazione confermata con data. Rimossa la modifica da quel punto.
+  Nella scheda, conferma e stampa stanno insieme all’inizio del riquadro QR;
+  il singolo si conferma con un clic e riscontro verde, senza un’altra modale.
+- Minori selezionabili separatamente e QR genitore deduplicato; nessuna
+  presenza implicita dalla stampa e nessuna stampa dalla conferma. Rilettura,
+  identità della registrazione, Admin, esclusioni, correzioni/revisioni, audit,
+  contatori e retry idempotente conservati. Chiusura bloccata durante richieste
+  e presenza incerta. Le nuove funzioni non estendono i permessi Manager.
+- Verificati test applicativi, lint, TypeScript, browser sintetici partecipanti,
+  USB e telefono; stampa simulata. Nessuna migration, email o scrittura su dati
+  reali. Commit/push production autorizzati; modifiche parallele ai QR gruppo
+  e verbali hardware esclusi. Dettagli in
+  docs/partecipazione-e-stampa-separate-2026-10-16.md.
+
 ## QR del gruppo stabile, visualizzazione e download — 2026-10-16
 
 - Il QR del gruppo resta sempre lo stesso. Rimossi revoca, rinnovo e modifica

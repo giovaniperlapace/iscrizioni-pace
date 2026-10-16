@@ -12,12 +12,12 @@ const check = (code, label) => { assert.match(ab('eval', `Boolean(${code})`), /t
 const wait = code => ab('wait', '--fn', code);
 try {
   ab('open', `${base}/event-attendance-check`); ab('snapshot', '-i');
-  wait('document.body.innerText.includes("Ingresso non registrato")');
+  wait('document.body.innerText.includes("Partecipazione non confermata")');
   check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Minore Prova")', 'accompanying children are always visible');
   ab('find', 'role', 'button', 'click', '--name', 'entered', '--exact'); ab('snapshot', '-i');
   ab('find', 'role', 'button', 'click', '--name', 'Aggiorna report ingressi', '--exact');
-  wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")');
-  check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Ingresso non registrato")', 'adult entry does not imply child entry');
+  wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Partecipazione confermata")');
+  check('document.querySelector("[data-participant-view] tbody li").innerText.includes("Partecipazione non confermata")', 'adult entry does not imply child entry');
   check('document.querySelector("article").innerText.includes("13")', 'school quantities included in total people');
   const report = 'section[aria-label="Report operativo accoglienza"]';
   wait(`document.querySelector('${report}').innerText.includes("Aggiornato alle")`);
@@ -39,25 +39,25 @@ try {
   ab('set', 'viewport', '390', '844'); ab('snapshot', '-i');
   // The browser driver may reload when changing viewport; restore the server fixture.
   ab('find', 'role', 'button', 'click', '--name', 'entered', '--exact');
-  wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")');
+  wait('document.querySelector("[data-participant-view] tbody").innerText.includes("Partecipazione confermata")');
   ab('screenshot', '/tmp/pace-p13-mobile.png', '--full');
   check('document.documentElement.scrollWidth <= innerWidth', 'mobile page has no horizontal overflow');
   ab('find', 'role', 'button', 'click', '--name', 'Apri scheda', '--exact');
   wait('!!document.querySelector("dialog[open]")');
-  check('document.querySelector("dialog").innerText.includes("Ingresso registrato")', 'participant detail displays entry');
+  check('document.querySelector("dialog").innerText.includes("Partecipazione confermata")', 'participant detail displays entry');
   ab('fill', 'dialog input[name="firstName"]', 'Modifica conservata');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"absent"}))');
-  wait('!document.querySelector("dialog").innerText.includes("Ingresso registrato")');
+  wait('!document.querySelector("dialog").innerText.includes("Partecipazione confermata")');
   check('document.querySelector("dialog input[name=firstName]").value === "Modifica conservata"', 'automatic cancellation refresh preserves unsaved form');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"error"}))');
-  wait('document.querySelector("dialog").innerText.includes("Presenza non disponibile")');
-  check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso non registrato")', 'read failure is not displayed as absence');
+  wait('document.querySelector("dialog").innerText.includes("Partecipazione non disponibile")');
+  check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Partecipazione non confermata")', 'read failure is not displayed as absence');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"entered"}))');
-  wait('document.querySelector("dialog").innerText.includes("Ingresso registrato")');
+  wait('document.querySelector("dialog").innerText.includes("Partecipazione confermata")');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"forbidden"}))');
   ab('find', 'role', 'button', 'click', '--name', 'Aggiorna report ingressi', '--exact');
-  wait('document.querySelector("dialog").innerText.includes("Presenza non disponibile")');
-  check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Ingresso registrato")', 'revoked access clears previous presence data');
+  wait('document.querySelector("dialog").innerText.includes("Partecipazione non disponibile")');
+  check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Partecipazione confermata")', 'revoked access clears previous presence data');
   check(`document.querySelector('${report}').innerText.includes("Report non disponibile") && !document.querySelector('${report}').innerText.includes("26")`, 'report revocation clears aggregates');
   for (const view of ['iscritti', 'panel']) {
     check(`document.querySelector('[data-school-view="${view}"] tbody').innerText.includes("Presenza non disponibile")`, `school presence clears on revoked access in ${view}`);

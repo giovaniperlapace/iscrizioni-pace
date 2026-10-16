@@ -59,7 +59,7 @@ export default function Fixture() {
     <button onClick={() => setReportRead(value => value + 1)}>Aggiorna report ingressi</button>
     {ready && <><EventAttendanceReport key={reportRead} eventId={eventId} /><div className="min-w-0" data-participant-view><OperationsParticipantsTable
       snapshot={{ participants: [row], allParticipants: [row], groupOptions: [], operationalTags: [], eventServices: [], filters: parseOperationsDashboardFilters({}) }}
-      selectedParticipant={selected ? row : null} editableEventIds={[eventId]} dashboard="admin" navMode="full" canDeleteRegistration={false} operatorId="fixture" eventId={eventId} eventStartsOn="2026-10-25"
+      selectedParticipant={selected ? row : null} editableEventIds={[eventId]} dashboard="manager" navMode="full" canDeleteRegistration={false} operatorId="fixture" eventId={eventId} eventStartsOn="2026-10-25"
     /></div>{(["iscritti", "panel"] as const).map(sourceSection => <div key={sourceSection} data-school-view={sourceSection}>
       <button className="btn-secondary p-3" onClick={() => { setSelected(false); setSchoolSelected(true); }}>Apri scheda scuola {sourceSection}</button>
       <SchoolBookingsSection sourceSection={sourceSection} dashboard="manager" navMode="full" event={{ id: eventId, title: "Evento di prova" }} bookings={[school]} panelOptions={[]} selectedBooking={schoolSelected && sourceSection === "iscritti" ? school : null} isCreating={false} canManage filters={{ query: "", status: "all", panelId: "all" }} />

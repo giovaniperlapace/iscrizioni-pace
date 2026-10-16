@@ -1,15 +1,11 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import dynamic from "next/dynamic";
-import { Pencil } from "lucide-react";
 import { ReceptionOperationalReport } from "./reception-operational-report";
-import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import type { AttendanceSnapshot } from "@/lib/reception/attendance.server";
 
 type AttendanceState = { data: AttendanceSnapshot | null; error: boolean };
 const AttendanceContext = createContext<AttendanceState & { refresh: () => void }>({ data: null, error: false, refresh: () => {} });
-const EventPresenceEditor = dynamic(() => import("./event-presence-editor"));
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome", dateStyle: "short", timeStyle: "short" });
 
 export function EventAttendanceProvider({ eventId, summaryOnly = false, children }: {
@@ -58,26 +54,17 @@ export function EventAttendanceProvider({ eventId, summaryOnly = false, children
   </AttendanceContext.Provider>;
 }
 
-export function EventPresence({ eventId, registrationId, childId, inactive = false, edit, commandAction }: {
+export function useEventAttendanceRefresh() { return useContext(AttendanceContext).refresh; }
+
+export function EventPresence({ eventId, registrationId, childId, inactive = false }: {
   eventId: string; registrationId: string; childId?: string; inactive?: boolean;
-  edit?: { code: string; name: string };
-  commandAction?: (command: ReceptionCommand) => Promise<ReceptionResult>;
 }) {
-  const { data, error, refresh } = useContext(AttendanceContext);
-  const [open, setOpen] = useState(false);
+  const { data, error } = useContext(AttendanceContext);
   if (inactive) return <span className="block text-xs leading-5 text-[var(--peace-muted)]">Iscrizione non operativa</span>;
   const loaded = data?.eventId === eventId;
   const at = loaded ? data.entries[`${registrationId}:${childId ?? "adult"}`] : null;
-  const text = !loaded ? (error ? "Presenza non disponibile" : "Presenza da verificare…") : at ? `Ingresso registrato · ${date(at)}` : "Ingresso non registrato";
-  const style = `text-xs leading-5 ${at ? "font-semibold text-green-800" : "text-[var(--peace-muted)]"}`;
-  return <>
-    {edit ? <button type="button" className={`${style} flex min-h-9 items-center gap-2 rounded px-1 text-left underline decoration-dotted underline-offset-4 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2`}
-      aria-label={`${text}. Modifica presenza di ${edit.name}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>
-      <span>{text}</span><Pencil className="size-3 shrink-0" aria-hidden="true" />
-    </button> : <span className={`block ${style}`}>{text}</span>}
-    {open && edit && <EventPresenceEditor eventId={eventId} registrationId={registrationId} code={edit.code} name={edit.name} commandAction={commandAction}
-      onClose={() => setOpen(false)} onSaved={() => { refresh(); setOpen(false); }} />}
-  </>;
+  const text = !loaded ? (error ? "Partecipazione non disponibile" : "Partecipazione da verificare…") : at ? `Partecipazione confermata · ${date(at)}` : "Partecipazione non confermata";
+  return <span className={`block text-xs leading-5 ${at ? "font-semibold text-green-800" : "text-[var(--peace-muted)]"}`}>{text}</span>;
 }
 
 export function SchoolEventPresence({ eventId, bookingId, inactive = false }: { eventId: string; bookingId: string; inactive?: boolean }) {

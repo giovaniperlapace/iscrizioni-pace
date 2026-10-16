@@ -1,5 +1,7 @@
 # Presenza all’evento dalla gestione partecipanti — 16 ottobre 2026
 
+> Aggiornamento successivo: [partecipazione e stampa con due comandi separati](partecipazione-e-stampa-separate-2026-10-16.md). Il comando combinato e la modifica sotto il nome sono stati sostituiti dal nuovo flusso.
+
 Lo stato «Ingresso registrato / Ingresso non registrato» sotto il nome e codice
 nella tabella Gestione iscritti apre direttamente la modifica dell’ingresso.
 La matita e la sottolineatura rendono riconoscibile il comando; non occorre

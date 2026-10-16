@@ -151,6 +151,7 @@ export function OperationsParticipantsTable({
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  const [receptionBusy, setReceptionBusy] = useState(false);
   const [quickEditColumns, setQuickEditColumns] = useState({
     group: false,
     service: false,
@@ -164,6 +165,7 @@ export function OperationsParticipantsTable({
   const selectedRow = snapshot.allParticipants.find((row) => row.registrationId === selectedId)
     ?? (selectedParticipant?.registrationId === selectedId ? selectedParticipant : null);
   const selected = selectedRow ? current(selectedRow) : null;
+  const canConfirmSelected = Boolean(selected && dashboard === "admin" && editableEventIds.includes(selected.eventId) && !selected.deletedAt && selected.publicCode && ["submitted", "confirmed"].includes(selected.registrationStatus ?? ""));
   const paramsFor = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", "iscritti");
@@ -774,7 +776,7 @@ export function OperationsParticipantsTable({
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
-                        <EventPresence edit={dashboard === "admin" && editableEventIds.includes(row.eventId) && row.publicCode ? { code: row.publicCode, name: row.name } : undefined} inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} />
+                        <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} />
                         <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} renderChildDetails={(child) => child.id ? <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} childId={child.id} /> : null} />
                         {pending[row.registrationId] && (
                           <p role="status">Salvataggio…</p>
@@ -816,15 +818,15 @@ export function OperationsParticipantsTable({
       </div>
     </section>}
       {selected && (
-        <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath}>
+        <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath} busy={receptionBusy}>
           {!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsParticipantQr key={`qr:${selected.registrationId}`} registrationId={selected.registrationId}
-              participantName={selected.name} participantCode={selected.publicCode} locale={locale} adminLabels={dashboard === "admin"} />
+              participantName={selected.name} participantCode={selected.publicCode} locale={locale} adminLabels={dashboard === "admin"} eventId={selected.eventId} receptionEnabled={canConfirmSelected} onBusyChange={setReceptionBusy} />
           ) : null}
           {attendancePanel ?? (!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsAttendance key={`${selected.registrationId}:${dataVersion}`} registrationId={selected.registrationId} dashboard={dashboard} returnTo={returnTo} />
           ) : null)}
-          <section className="rounded-md border border-[var(--peace-border)] p-3"><h4 className="font-semibold">Ingresso all’evento</h4><EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} /></section>
+          {!canConfirmSelected && <section className="rounded-md border border-[var(--peace-border)] p-3"><h4 className="font-semibold">Partecipazione all’evento</h4><EventPresence inactive={Boolean(selected.deletedAt) || !["submitted", "confirmed"].includes(selected.registrationStatus ?? "")} eventId={selected.eventId} registrationId={selected.registrationId} /></section>}
           {selected.deletedAt ? (
             <div className="grid gap-2 rounded-md bg-red-50 p-4 text-sm">
               <p>Eliminata il {formatDate(selected.deletedAt)}.</p>
@@ -985,10 +987,12 @@ function ParticipantDialog({
   participant,
   closePath,
   children,
+  busy = false,
 }: {
   participant: Row;
   closePath: string;
   children: ReactNode;
+  busy?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -1011,7 +1015,7 @@ function ParticipantDialog({
       className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-lg bg-white p-0 text-[var(--peace-ink)] shadow-xl backdrop:bg-black/40"
       onCancel={(event) => {
         event.preventDefault();
-        window.history.replaceState(null, "", closePath);
+        if (!busy) window.history.replaceState(null, "", closePath);
       }}
     >
       <div className="flex items-start justify-between gap-3 border-b p-5">
@@ -1021,7 +1025,7 @@ function ParticipantDialog({
           </h3>
           <p>{participant.name}</p>
         </div>
-        <LocalQueryLink
+        {busy ? <button type="button" className={buttonClass} disabled aria-label="Chiudi scheda partecipante"><X size={18} /></button> : <LocalQueryLink
           replace
           href={closePath}
           scroll={false}
@@ -1029,7 +1033,7 @@ function ParticipantDialog({
           aria-label="Chiudi scheda partecipante"
         >
           <X size={18} />
-        </LocalQueryLink>
+        </LocalQueryLink>}
       </div>
       <div className="grid max-h-[calc(90dvh-7rem)] gap-6 overflow-y-auto p-5">
         {children}
