@@ -55,8 +55,10 @@ export class ReceptionStationSession {
   private requestId: () => string;
   private timeoutMs: number;
   private active = true;
+  private explicitPresence: boolean;
   private context: Pick<ReceptionCommand, "duty" | "panelId">;
-  constructor(commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>, requestId: () => string, timeoutMs = 20000, context: Pick<ReceptionCommand, "duty" | "panelId"> = { duty: EVENT_RECEPTION_DUTY }) {
+  constructor(commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>, requestId: () => string, timeoutMs = 20000, context: Pick<ReceptionCommand, "duty" | "panelId"> = { duty: EVENT_RECEPTION_DUTY }, explicitPresence = false) {
+    this.explicitPresence = explicitPresence && context.duty === EVENT_RECEPTION_DUTY;
     this.context = context;
     this.commandAction = commandAction; this.requestId = requestId; this.timeoutMs = timeoutMs;
   }
@@ -68,7 +70,7 @@ export class ReceptionStationSession {
     this.listeners.forEach(listener => listener());
   }
   isLocked() { return ["pending", "uncertain", "blocked"].includes(this.state.phase); }
-  canScan() { return this.state.mode === "enter" && ["ready", "result", "error"].includes(this.state.phase); }
+  canScan() { return this.state.mode === "enter" && (this.explicitPresence ? ["ready", "error"] : ["ready", "result", "error"]).includes(this.state.phase); }
   setMode(mode: ReceptionMode) {
     if (this.isLocked() || (this.context.duty === "room_assistance" && mode !== "enter")) return;
     this.update({ mode, phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
@@ -77,12 +79,20 @@ export class ReceptionStationSession {
     if (this.isLocked()) return;
     this.update({ phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
+  selectPresence() {
+    if (!this.explicitPresence || this.state.phase !== "result" || !this.state.result || this.state.result.kind === "room") return;
+    this.update({ phase: "selection", mode: "enter", message: "" });
+  }
+  closeSelection() {
+    if (!this.explicitPresence || this.state.phase !== "selection") return;
+    this.update({ phase: "result", mode: "enter", message: "Nessuna presenza modificata." });
+  }
   finishGroupInspection() {
     if (this.state.phase === "selection" && this.state.mode === "enter" && this.state.result?.kind === "group")
       this.update({ phase: "result", message: "Gruppo verificato. Nessuna presenza modificata." });
   }
   async inspect(lookup: ReceptionLookup) {
-    if (this.isLocked() || this.state.phase === "selection") return;
+    if (this.isLocked() || this.state.phase === "selection" || (this.explicitPresence && this.state.phase === "result" && this.state.mode === "enter")) return;
     const command = parseReceptionCommand({ ...this.context, action: "inspect", lookup });
     this.update({ result: null, lookup: null, message: "", problem: undefined });
     if (!command) { this.update({ phase: "error", problem: "invalid", message: messages.invalid }); return; }
@@ -165,6 +175,10 @@ export class ReceptionStationSession {
       this.update({ result: response });
       if (this.context.duty === "room_assistance") {
         this.update({ phase: "result", message: "Prenotazione verificata. Consulta sala e settore nel riepilogo." });
+        return;
+      }
+      if (this.explicitPresence && this.state.mode === "enter") {
+        this.update({ phase: "result", message: "Codice verificato. Nessuna presenza modificata." });
         return;
       }
       if (this.context.duty === "panel_entry" && this.state.mode === "enter" && response.kind === "family" && response.persons.every(person => !person.eventCheckedIn)) {

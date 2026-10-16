@@ -41,7 +41,7 @@ export default async function AccoglienzaDashboardPage() {
             eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments}
           />
         </header>
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">Collaudo riservato all’Admin. Lo scanner operativo registra ingressi: usa esclusivamente campioni sintetici nell’ambiente di prova. Per leggere un’etichetta senza registrare presenze usa la fotocamera del telefono.</p>
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">Funzioni riservate agli account Admin. Leggi con lo scanner USB il QR mostrato sul telefono della persona o del referente del gruppo, poi stampa le etichette da applicare ai badge. La lettura apre la scheda; presenze e stampa richiedono un comando esplicito.</p>
         <Link className="btn-secondary min-h-11 justify-self-start px-4" href="/dashboard/admin/stampa-qr/collaudo">Collaudo stampante con campioni sintetici</Link>
         {ready ? <ReceptionWorkstation duties={duties} commandAction={receptionCheckIn.bind(null, event?.id ?? "")} /> : <p role="alert" className="rounded-lg border p-4">Scanner operativo non ancora attivato in questo ambiente. Prima del collaudo applicativo occorre verificare e applicare le migration autorizzate. Il collaudo stampante con campioni sintetici è indipendente.</p>}
       </section>

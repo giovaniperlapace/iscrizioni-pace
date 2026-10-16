@@ -6,6 +6,8 @@ import type { BadgeCommand, BadgeResult } from "@/lib/reception/group-badges";
 import { QrLabelPanel } from "../qr-label-panel";
 import { GroupBadgePanel } from "./group-badge-panel";
 import PendingLink from "@/components/pending-link";
+import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
+import { ReceptionUsbScanner } from "./reception-usb-scanner";
 import { ReceptionCamera } from "./reception-camera";
 import type { ReceptionDuty } from "@/lib/reception/duties.server";
 import type { CameraSource } from "@/lib/reception/camera";
@@ -15,7 +17,9 @@ import { ReceptionStationSession, ScanLatch, type ReceptionMode, type VerifiedRe
 const labels = { enter: "Registra ingresso", correct: "Salva presenze", cancel: "Annulla ingresso" };
 const date = (value: string) => new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value));
 
-export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDuty, badgeCommandAction, labelPrinting = false }: {
+export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDuty, badgeCommandAction, labelPrinting = false, eventReception = false, labelCommandAction }: {
+  eventReception?: boolean;
+  labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>;
   labelPrinting?: boolean;
   badgeCommandAction?: (command: BadgeCommand) => Promise<BadgeResult>;
   duty?: ReceptionDuty;
@@ -23,10 +27,10 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
   commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>;
   cameraSource?: CameraSource;
 }) {
-  const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, duty?.duty === "panel_entry" || duty?.duty === "room_assistance" ? { duty: duty.duty, panelId: duty.panelId } : { duty: "event_entry" }));
+  const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, duty?.duty === "panel_entry" || duty?.duty === "room_assistance" ? { duty: duty.duty, panelId: duty.panelId } : { duty: "event_entry" }, eventReception));
   const readOnly = duty?.duty === "room_assistance";
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
-  const [input, setInput] = useState<"camera" | "manual">("camera");
+  const [input, setInput] = useState<"camera" | "manual" | "usb">(eventReception ? "usb" : "camera");
   const [value, setValue] = useState("");
   const latch = useRef(new ScanLatch());
   const [badgeBusy, setBadgeBusy] = useState(false);
@@ -52,28 +56,30 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
     return () => window.removeEventListener("beforeunload", warn);
   }, [state.phase]);
 
-  function dismiss() { if (badgeBusy) return; session.setMode("enter"); session.next(); }
-  function inspect(lookup: ReceptionCommand["lookup"]) { if (badgeBusy || session.isLocked() || session.snapshot().phase === "selection") return; session.setMode("enter"); void session.inspect(lookup); }
+  function dismiss() { if (badgeBusy) return; if (eventReception && selection) session.closeSelection(); else { session.setMode("enter"); session.next(); } }
+  function inspect(lookup: ReceptionCommand["lookup"]) { if (badgeBusy || session.isLocked() || session.snapshot().phase === "selection" || (eventReception && session.snapshot().result)) return; session.setMode("enter"); void session.inspect(lookup); }
   const operationContent = <>
-    {state.phase === "pending" && input === "manual" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
-    {state.message && (input === "manual" || operationOpen) && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
+    {state.phase === "pending" && input !== "camera" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
+    {state.message && (input !== "camera" || operationOpen) && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
       <p className="font-semibold">{state.message}</p>
       {state.phase === "uncertain" && <button type="button" className="btn-primary mt-3 min-h-12 px-4" onClick={() => void session.retry()}>Riprova la stessa operazione</button>}
       {state.phase === "blocked" && <PendingLink className="mt-3 block underline" href="/">Torna all’accesso</PendingLink>}
     </div>}
 
     {state.result && state.phase !== "pending" && <div className="grid gap-3 border-t border-[var(--peace-border)] pt-4">
-      <h3 className="text-lg font-semibold">{selection ? "Conferma le presenze" : "Ultima operazione"}</h3>
+      <h3 className="text-lg font-semibold">{selection ? "Conferma le presenze" : eventReception ? "Scheda accoglienza" : "Ultima operazione"}</h3>
       {selection && state.result.kind === "family" ? <p className="text-sm">Codice {state.result.code}</p> : <PresenceSummary result={state.result} />}
-      {selection && state.result.kind === "group" && !correction && <button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>session.finishGroupInspection()}>Prepara badge senza registrare ingressi</button>}
+      {!eventReception && selection && state.result.kind === "group" && !correction && <button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>session.finishGroupInspection()}>Prepara badge senza registrare ingressi</button>}
       {selection && state.result.kind !== "room" && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
         onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={dismiss} />}
       {state.result.kind === "group" && state.lookup?.kind === "qr" && state.phase === "result" && (labelPrinting ? <details><summary className="min-h-11 cursor-pointer font-semibold">Badge completo e sedute cerimonie · formato distinto</summary><GroupBadgePanel token={state.lookup.value} group={state.result} onBusyChange={setBadgeBusy} commandAction={badgeCommandAction} /></details> : <GroupBadgePanel token={state.lookup.value} group={state.result} onBusyChange={setBadgeBusy} commandAction={badgeCommandAction} />)}
-      {labelPrinting && state.phase === "result" && state.result.kind === "group" ? <QrLabelPanel key={state.result.groupId} scope={{ groupId: state.result.groupId }} onBusyChange={setBadgeBusy} /> : null}
-      {labelPrinting && state.phase === "result" && state.result.kind === "family" && state.result.persons.find(p => p.kind === "adult") ? <QrLabelPanel key={state.result.persons[0].id} scope={{ registrationId: state.result.persons.find(p => p.kind === "adult")!.id }} onBusyChange={setBadgeBusy} /> : null}
-      {groupOpen && state.phase === "result" && <button type="button" className="btn-secondary min-h-12 px-4" disabled={badgeBusy} onClick={dismiss}>Passa al prossimo codice</button>}
-      {!readOnly && !correction && state.result.kind !== "room" && ((state.result.kind === "family" || state.result.kind === "group") ? state.result.persons.some(person => person.checkedInAt) : state.result.checkedInAt) &&
+      {labelPrinting && state.phase === "result" && state.result.kind === "group" ? <QrLabelPanel key={state.result.groupId} scope={{ groupId: state.result.groupId }} onBusyChange={setBadgeBusy} commandAction={labelCommandAction} /> : null}
+      {labelPrinting && state.phase === "result" && state.result.kind === "family" && state.result.persons.find(p => p.kind === "adult") ? <QrLabelPanel key={state.result.persons[0].id} scope={{ registrationId: state.result.persons.find(p => p.kind === "adult")!.id }} onBusyChange={setBadgeBusy} commandAction={labelCommandAction} /> : null}
+      {eventReception && state.phase === "result" && state.result.kind !== "room" && (state.result.kind === "school" ? !state.result.checkedInAt : state.result.persons.some(person => !person.checkedInAt)) &&
+        <button type="button" className="btn-primary min-h-12 px-4" disabled={badgeBusy} onClick={() => session.selectPresence()}>Registra presenze</button>}
+      {!readOnly && state.phase === "result" && !correction && state.result.kind !== "room" && ((state.result.kind === "family" || state.result.kind === "group") ? state.result.persons.some(person => person.checkedInAt) : state.result.checkedInAt) &&
         <button type="button" className="btn-secondary min-h-12 px-4" disabled={badgeBusy} onClick={() => void session.editCurrent()}>Modifica presenze</button>}
+      {(groupOpen || eventReception) && state.phase === "result" && <button type="button" className="btn-secondary min-h-12 px-4" disabled={badgeBusy} onClick={dismiss}>Passa al prossimo codice</button>}
     </div>}
   </>;
   return <section className="grid gap-5" aria-labelledby="reception-title">
@@ -87,17 +93,17 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
       {onChangeDuty && <button type="button" className="min-h-12 justify-self-start underline" disabled={locked || selection} onClick={onChangeDuty}>Cambia incarico</button>}
     </header>
     <div className="surface-card grid gap-5 p-4 sm:p-7">
-      <p className="text-sm">{readOnly ? "Inquadra un QR per consultare la prenotazione e indicare sala e settore. Questa consultazione non registra ingressi." : "Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie, gruppi e scuole conferma chi è presente."}</p>
+      <p className="text-sm">{eventReception ? "Leggi il QR della persona o del gruppo con lo scanner USB. Controlla chi è presente e stampa le etichette necessarie. La stampa non registra presenze." : readOnly ? "Inquadra un QR per consultare la prenotazione e indicare sala e settore. Questa consultazione non registra ingressi." : "Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie, gruppi e scuole conferma chi è presente."}</p>
       {duty?.duty === "panel_entry" && <p className="text-sm">È necessaria una prenotazione per questo panel e il passaggio precedente dall’accoglienza dell’evento.</p>}
 
     <div className="flex flex-wrap gap-2" aria-label="Modalità di lettura">
-      <button type="button" className={input === "camera" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
-        aria-pressed={input === "camera"} disabled={locked || selection} onClick={() => { setInput("camera"); setValue(""); }}>Inquadra QR code</button>
+      {eventReception ? <button type="button" className={input === "usb" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"} aria-pressed={input === "usb"} disabled={locked || selection || !!state.result} onClick={() => { setInput("usb"); setValue(""); }}>Scanner USB</button> : <button type="button" className={input === "camera" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
+        aria-pressed={input === "camera"} disabled={locked || selection} onClick={() => { setInput("camera"); setValue(""); }}>Inquadra QR code</button>}
       <button type="button" className={input === "manual" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
-        aria-pressed={input === "manual"} disabled={locked || selection} onClick={() => { setInput("manual"); setValue(""); }}>Inserisci il codice manualmente</button>
+        aria-pressed={input === "manual"} disabled={locked || selection || (eventReception && !!state.result)} onClick={() => { setInput("manual"); setValue(""); }}>Inserisci il codice manualmente</button>
     </div>
 
-    {input === "camera" ? <>
+    {input === "usb" ? <ReceptionUsbScanner paused={locked || selection || !!state.result} onCode={code => inspect({ kind: "qr", value: code })} /> : input === "camera" ? <>
       <ReceptionCamera source={cameraSource} paused={locked || selection || groupOpen}
         feedback={state.phase === "pending" ? "Operazione in corso. Attendi l’esito prima della prossima persona…" : completedFeedback && expiredFeedback !== state ? state.message : undefined}
         feedbackTone={state.phase === "pending" ? "progress" : state.phase === "result" ? "success" : state.problem === "conflict" ? "warning" : "error"}
@@ -110,14 +116,14 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
         else latch.current.clearAbsence();
       }} />
 
-    </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); inspect({ kind: value.startsWith("G:") ? "qr" : "code", value }); setValue(""); }}>
-      <fieldset disabled={locked || selection} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+    </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); inspect({ kind: value.startsWith("G:") || value.length === 43 ? "qr" : "code", value }); setValue(""); }}>
+      <fieldset disabled={locked || selection || (eventReception && !!state.result)} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <label className="grid min-w-0 gap-1 text-sm">Codice partecipante o QR gruppo
           <input className="field min-h-12 min-w-0" type="text" autoComplete="off" spellCheck={false}
-            autoCapitalize="characters" required maxLength={45}
+            autoCapitalize="none" required maxLength={45}
             value={value} onChange={event => setValue(event.target.value)} />
         </label>
-        <button className="btn-primary min-h-12 px-4" type="submit" aria-busy={state.phase === "pending"}>{readOnly ? "Consulta codice" : "Leggi codice e registra"}</button>
+        <button className="btn-primary min-h-12 px-4" type="submit" aria-busy={state.phase === "pending"}>{eventReception ? "Leggi codice" : readOnly ? "Consulta codice" : "Leggi codice e registra"}</button>
       </fieldset>
     </form>}
 
@@ -127,7 +133,7 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
       </h2>
       {selection && <p className="text-sm">{correction ? "Controlla i dati e conferma la modifica. Non è ancora stata salvata." : state.result?.kind === "school" ? "Indica quanti studenti e accompagnatori sono presenti, poi premi Registra ingresso." : "Seleziona le persone presenti, poi premi Registra ingresso."}</p>}
       {operationContent}
-    </ReceptionOperationDialog> : input === "manual" ? operationContent : null}
+    </ReceptionOperationDialog> : input !== "camera" ? operationContent : null}
     <details className="border-t border-[var(--peace-border)] pt-4">
       <summary className="cursor-pointer py-3 font-semibold">Ultime 15 letture ({state.recent.length})</summary>
       <p className="mb-3 text-sm">Iscrizioni lette su questo dispositivo nella pagina aperta. La lista si svuota ricaricando. Rileggi il codice per ottenere dati aggiornati.</p>
@@ -149,15 +155,17 @@ function ReceptionOperationDialog({ children, onDismiss }: { children: ReactNode
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     element.showModal();
     element.querySelector<HTMLElement>("h2")?.focus();
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { element.close(); document.body.style.overflow = previous; };
+    return () => { element.close(); document.body.style.overflow = previous; if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true }); };
   }, []);
   return <dialog ref={dialog} aria-labelledby="reception-operation-title"
     onCancel={event => { event.preventDefault(); onDismiss?.(); }}
     className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-[var(--peace-border)] bg-white p-5 text-[var(--peace-ink)] shadow-2xl backdrop:bg-slate-950/65 sm:p-6">
+    {onDismiss && <button type="button" className="btn-secondary mb-3 min-h-11 px-3" onClick={onDismiss} aria-label="Chiudi la finestra">Chiudi</button>}
     <div className="grid gap-4">{children}</div>
   </dialog>;
 }

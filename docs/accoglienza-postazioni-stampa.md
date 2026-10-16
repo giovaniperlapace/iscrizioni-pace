@@ -1,5 +1,35 @@
 # Accoglienza con postazioni e stampa QR
 
+## Rilascio production Admin — 16 ottobre 2026
+
+Richiesto il rilascio su main dello scanner USB e della stampa QR individuale
+e di gruppo, sempre riservati agli account Admin. La lettura dal telefono
+apre la scheda; presenza e stampa restano comandi distinti. Le migration
+necessarie sono già presenti in production, senza ulteriori modifiche DB.
+La QL-800 su Windows richiede ancora il completamento del collaudo fisico.
+Dettagli nel verbale `docs/scanner-usb-accoglienza-2026-10-15.md`.
+
+## Scanner USB per accoglienza da PC — 15 ottobre 2026
+
+La richiesta attuale sostituisce il progetto telefono associato a un banco:
+all’accoglienza si usano **due NetumScan NSL5 2D**, collegati via USB ai computer
+delle stampanti. Nessuna associazione telefono/postazione, coda di comandi dal
+telefono o polling di una postazione remota è necessario per questa lettura.
+Le sezioni storiche sottostanti che descrivono quel progetto sono superate.
+
+La lettura apre la scheda senza scrivere presenze, anche per un singolo.
+L’operatore può registrare le persone presenti, correggere/annullare ingressi
+già registrati, oppure stampare senza modificare le presenze. Nella stampa di
+gruppo la selezione delle etichette è indipendente dalla selezione dei presenti.
+Il successivo codice si abilita con **Passa al prossimo codice**. La scansione
+da telefono per accessi/conta presenze a inaugurazione, conclusione e Forum
+rimane nel suo ambito esistente; questa tranche modifica soltanto l’accoglienza
+all’evento, senza estendere funzioni o permessi delle cerimonie.
+
+Sviluppo locale su main, pilot Admin conservato. Preparazione e verifiche in
+[scanner USB NSL5](scanner-usb-accoglienza-2026-10-15.md). Nessun nuovo collaudo
+fisico o Windows attestato; nessuna migration remota o pubblicazione eseguita.
+
 ## Ripresa e collaudo remoto Admin — 14 ottobre 2026
 
 Sospensione superata dalla nuova richiesta: per questa tranche Chrome

@@ -22,6 +22,7 @@ export function ReceptionWorkstation({ duties, commandAction }: {
   // Remounting discards the previous duty's in-memory QR/history. The console
   // permits changing only between completed operations, never on an uncertain result.
   return <ReceptionConsole key={duty.key} duty={duty} commandAction={commandAction}
-    labelPrinting
+    eventReception={duty.duty === "event_entry"}
+    labelPrinting={duty.duty === "event_entry"}
     onChangeDuty={duties.length > 1 ? () => setSelected(null) : undefined} />;
 }

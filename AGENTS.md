@@ -1,5 +1,90 @@
 # AGENTS.md
 
+## Rilascio accoglienza Admin in production — 2026-10-16
+
+- L’utente richiede di portare in production tutte le funzioni di accoglienza,
+  limitate agli account Admin: scanner USB sul QR mostrato dal telefono e
+  stampa etichette QR singole o del gruppo da applicare ai badge. Autorizzato
+  il rilascio su main con il normale deployment Git Vercel.
+- Conservati lettura senza presenza automatica, conferme separate di presenza
+  e stampa, selezione gruppo, contatore richieste e controlli server/DB Admin.
+  Avviso della dashboard aggiornato per l’uso operativo autorizzato.
+- Tutte le undici migration necessarie risultano già registrate in production;
+  nessuna nuova migration necessaria. Controlli senza scritture applicative:
+  4 Admin pronti, 12 non Admin esclusi anche dalla stampa; internal e catalogo
+  pubblico vuoto. Nessuna email o stampa fisica avviata dall’agente.
+- Superati 893 test, lint, TypeScript, SQL/concorrenza, browser sintetico
+  USB/fotocamera/stampa e build production pulita. Nessuna stampa fisica
+  automatica o prova di scrittura su dati reali.
+- Il rilascio software non completa il collaudo della QL-800 su Windows:
+  formato, taglio e stampa silenziosa restano da verificare sulla postazione.
+  Verbale aggiornato in docs/scanner-usb-accoglienza-2026-10-15.md.
+
+## Lettura Windows riuscita, QL-800 riconosciuta e da configurare — 2026-10-15
+
+- PC Ethernet 10.10.5.151 su rete distinta dal Wi-Fi Mac; l’utente aggiunge la
+  connessione Wi-Fi e la pagina LAN poi si apre. Nessun firewall o gateway
+  modificato. Il proxy resta limitato alla fixture sintetica.
+- Pagina inizialmente visibile ma comandi bloccati, confermati dall’utente;
+  errori del canale WebSocket Next dev nella verifica Mac. Sostituita la sola
+  copia di collaudo con build production Webpack separata, stesso URL LAN.
+  Fallback UUID v4 getRandomValues solo nella fixture HTTP locale; codice
+  applicativo e sito pubblicato invariati. Lettura browser → proxy → DB locale
+  verificata senza presenza automatica. Nessuna pubblicazione remota.
+- Dopo Ctrl+F5 l’utente conferma scansione fisica singola su Windows: Ada Mori
+  / NS01 aperta. Richieste Windows HTTP 200 e inspect valid nel registro.
+  Confermato DK-22210 nella QL-800. PC Windows 11 Home x64; Editor Lite spento
+  confermato dall’utente. Dopo le istruzioni per l’installazione ufficiale Brother,
+  l’utente conferma che QL-800 compare nelle stampanti Windows. Formato continuo
+  29 × 45 mm e taglio per etichetta ancora da configurare/verificare.
+  Nessuna stampa/taglio/silenziosa Windows
+  ancora attestati. Richieste applicative non equivalgono a copie fisiche.
+  Snapshot sintetico pre-stampa acquisito; prove e limiti nel verbale NSL5.
+
+
+## Postazione Windows con QL-800, collegamento locale da risolvere — 2026-10-15
+
+- L’utente precisa che il PC Windows accanto è collegato via Ethernet e ha già
+  uno scanner e la Brother QL-800 collegati. Non trasferire implicitamente
+  driver/calibrazione/risultati della QL-810Wc Mac alla QL-800 Windows.
+- Il link LAN alla sola fixture sintetica non si apre sul PC. Mac su Wi-Fi,
+  Ethernet Mac inattiva; servizio locale risponde HTTP 200, nessun blocco del
+  firewall rilevato. Richiesti IPv4/gateway Windows e messaggio Chrome per
+  diagnosticare il percorso. Nessuna configurazione rete/firewall modificata,
+  nessun tunnel pubblico o pubblicazione della fixture. Windows resta aperto.
+
+
+## Primo NSL5 sul Mac, passaggio a Windows — 2026-10-15
+
+- L’utente autorizza il collaudo fisico di un NetumScan NSL5 sul Mac e poi sul
+  PC Windows disponibile accanto. Non avendo due adattatori USB-C, scollega
+  la Brother per collegare il lettore. Stampa simultanea sul Mac non attestata.
+- Lettore enumerato come DM13 USB KBW / Newland Auto-ID; modello commerciale
+  riferito dall’utente NSL5. Mac con layout Italiano Pro. Prima lettura fisica
+  rifiutata: 43 caratteri, ma underscore diventa punto interrogativo e trattino
+  apostrofo. Parser invariato. Dal manuale ufficiale L5/NSL5 mostrato il solo
+  comando originale Italy Keyboard 606010D, senza reset o cambio layout OS.
+- Dopo configurazione l’utente conferma Lettura esatta: payload sintetico di
+  43 caratteri coincidente. Console originale in copia locale isolata, servizi
+  e SQL originali, PostgreSQL temporaneo e adattatore Auth/trasporto sintetico;
+  non equivale al login production. Nuovi campioni NS01–NS03 e gruppo sintetico.
+- Singolo e gruppo G: letti fisicamente da schermo, senza ingressi automatici,
+  confermati dall’utente e dalle RPC inspect. L’utente registra poi il singolo
+  e le tre persone del gruppo. Agente verifica annullamento singolo e correzione
+  selettiva gruppo con la UI: Ada e Bruno presenti, Carla senza ingresso;
+  query read-only e UI concordano, audit/cronologia conservati.
+- Richiesta stampa singola acquisita durante le prove dell’utente, nessun lavoro
+  CUPS in attesa e nessuna etichetta fisica confermata per questa tranche.
+  Nessun dato remoto o email. Nessuna nuova configurazione stampante, migration
+  remota, pubblicazione, commit/push o nuova funzione scanner realizzata qui.
+- Passaggio Windows avviato con URL LAN temporaneo limitato alla sola pagina
+  sintetica/asset/azioni, su PC della stessa rete; nessun codice installato nel
+  PC e nessun accesso ai dati del sito. Attesa apertura sul PC e disponibilità
+  di collegare scanner e Brother insieme. Windows, secondo NSL5 e lettura delle
+  etichette cartacee restano da collaudare. Verbale aggiornato in
+  docs/scanner-usb-accoglienza-2026-10-15.md.
+
+
 ## Conteggio richieste di stampa QR — 2026-10-15
 
 - Su richiesta dell’utente, accanto al pulsante individuale compare Stampe
@@ -18,6 +103,37 @@
   hardware o modifica a dati remoti. L’utente autorizza poi commit e push
   su main del solo conteggio; modifiche scanner USB escluse e conservate.
   Superati 893 test, lint mirato, TypeScript e build production pulita.
+
+## Accoglienza da PC con scanner USB NSL5 — 2026-10-15
+
+- L’utente sostituisce il progetto telefono associato alla postazione con due
+  NetumScan NSL5 2D collegati ai PC delle stampanti. Scansione da telefono
+  conservata per accessi/presenze a inaugurazione, conclusione e Forum;
+  nessuna nuova funzione cerimonie introdotta in questa tranche.
+- Ingresso evento nella dashboard Accoglienza parte da Scanner USB, con
+  fallback manuale. HID/tastiera più Invio: token personale esatto o G: gruppo,
+  senza URL, conversioni di maiuscole o simboli. Configurazione fuori dal
+  flusso; priorità Windows conservata. Nessun rilevamento hardware dichiarato.
+- La lettura apre la scheda e non registra presenze, anche per il singolo.
+  Registra presenze apre la selezione; Modifica presenze rilegge e conserva
+  conferma/annullamento, revisioni, snapshot e audit esistenti. Chiudi/Escape
+  conservano la scheda senza salvare. Passa al prossimo codice riabilita la
+  lettura; scansioni durante scheda, selezione, stampa o esito incerto ignorate.
+- Stampa singolo/gruppo disponibile prima della presenza e indipendente da
+  essa, tramite coda/renderer originali. Testi Stampa etichetta QR / Stampa i QR
+  del gruppo, nomi/codici e selezione gruppo conservati. Minori sul QR genitore.
+  Badge completo con sedute separato e conservato. Nessuna presenza o token
+  scritto dalla stampa; ritorno browser non certifica l’uscita fisica.
+- Pilot solo Admin e controlli server/DB conservati; nessuna nuova migration
+  per lo scanner. Motore telefono Forum/sala conservato. Nessun pairing banco,
+  trasporto telefono-PC o polling di postazione realizzato.
+- Verificati 893 test, lint, TypeScript, build production con npm ci in copia
+  pulita, SQL/concorrenza su PostgreSQL temporaneo, browser USB sintetico e
+  regressioni fotocamera desktop/mobile. Stampa simulata; nessun NSL5 fisico o
+  Windows collaudato. Nessun dato reale, email, configurazione hardware,
+  migration remota, commit/push o deployment eseguito per questa tranche.
+  Dettagli in docs/scanner-usb-accoglienza-2026-10-15.md.
+
 
 ## Rilascio stampa semplificata autorizzato — 2026-10-15
 

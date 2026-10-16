@@ -22,7 +22,8 @@ try{
  const groupCount=(code,n)=>group.locator('li').filter({hasText:code}).getByText(`Stampe richieste: ${n}`,{exact:true});
  await groupCount('TEST-103',1).waitFor();
  assert.equal(await group.locator('input[type=checkbox]:checked').count(),5);
- assert.equal(await page.locator('select, details').count(),0);
+ assert.equal(await group.locator('select, details').count(),0);
+ assert.equal(await single.locator('select, details').count(),0);
  for(const name of ['Aggiorna elenco','Conferma etichetta','Ristampa etichetta QR'])assert.equal(await page.getByRole('button',{name,exact:true}).count(),0);
  await group.getByLabel('Ada Mori · TEST-101',{exact:true}).uncheck();
  await groupButton.dblclick();
