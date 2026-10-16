@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Modifica ingresso dalla gestione partecipanti — 2026-10-16
+
+- Su richiesta dell’utente, lo stato sotto nome/codice nella tabella iscritti
+  è cliccabile per gli Admin e apre direttamente la modifica della presenza,
+  senza entrare nella scheda. Manager/Viewer conservano la sola lettura;
+  iscrizioni non operative escluse.
+- Rilettura dal codice pubblico, selezione adulto/minori e conferma esplicita
+  tramite azione/RPC accoglienza esistenti. Revisioni, audit, annullamento e
+  retry della stessa richiesta conservati. Aggiornamento immediato dell’elenco
+  dopo il salvataggio; nessuna migration, stampa o email.
+- Verificati browser sintetico desktop/mobile, tabella Admin/Manager/Viewer,
+  selezione minori, Escape/focus, doppio clic, conflitti, esiti incerti e revoca;
+  regressioni scanner USB, SQL/concorrenza su PostgreSQL temporaneo, 895 test,
+  lint, TypeScript e build production pulita. Nessuna scrittura su dati reali.
+- Commit/push su main autorizzati per questa conversazione. Dettagli in
+  docs/presenza-gestione-partecipanti-2026-10-16.md.
+
 ## Rilascio accoglienza Admin in production — 2026-10-16
 
 - L’utente richiede di portare in production tutte le funzioni di accoglienza,

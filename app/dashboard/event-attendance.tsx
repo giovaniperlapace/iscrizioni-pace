@@ -1,11 +1,15 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
+import { Pencil } from "lucide-react";
 import { ReceptionOperationalReport } from "./reception-operational-report";
+import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import type { AttendanceSnapshot } from "@/lib/reception/attendance.server";
 
 type AttendanceState = { data: AttendanceSnapshot | null; error: boolean };
-const AttendanceContext = createContext<AttendanceState>({ data: null, error: false });
+const AttendanceContext = createContext<AttendanceState & { refresh: () => void }>({ data: null, error: false, refresh: () => {} });
+const EventPresenceEditor = dynamic(() => import("./event-presence-editor"));
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome", dateStyle: "short", timeStyle: "short" });
 
 export function EventAttendanceProvider({ eventId, summaryOnly = false, children }: {
@@ -45,7 +49,7 @@ export function EventAttendanceProvider({ eventId, summaryOnly = false, children
     return () => { disposed = true; clearInterval(timer); controller?.abort(); document.removeEventListener("visibilitychange", visible); window.removeEventListener("online", visible); };
   }, [eventId, summaryOnly, attempt]);
   const current = state.data?.eventId === eventId ? state : { data: null, error: state.error };
-  return <AttendanceContext.Provider value={current}>
+  return <AttendanceContext.Provider value={{ ...current, refresh: () => { setState({ data: null, error: false }); setAttempt(n => n + 1); } }}>
     <div className="my-3 flex flex-wrap items-center gap-3 text-sm text-[var(--peace-muted)]">
       <p role="status">{!eventId ? "Nessun evento disponibile." : current.error ? "Presenze non disponibili. Verifica la connessione e l’accesso." : current.data ? `Ingressi evento aggiornati il ${date(current.data.updatedAt)}${summaryOnly ? "." : " · aggiornamento automatico ogni 10 secondi."}` : "Caricamento ingressi evento…"}</p>
       {current.error && <button type="button" className="btn-secondary min-h-11 px-3" onClick={() => setAttempt(n => n + 1)}>Riprova</button>}
@@ -54,14 +58,26 @@ export function EventAttendanceProvider({ eventId, summaryOnly = false, children
   </AttendanceContext.Provider>;
 }
 
-export function EventPresence({ eventId, registrationId, childId, inactive = false }: { eventId: string; registrationId: string; childId?: string; inactive?: boolean }) {
-  const { data, error } = useContext(AttendanceContext);
+export function EventPresence({ eventId, registrationId, childId, inactive = false, edit, commandAction }: {
+  eventId: string; registrationId: string; childId?: string; inactive?: boolean;
+  edit?: { code: string; name: string };
+  commandAction?: (command: ReceptionCommand) => Promise<ReceptionResult>;
+}) {
+  const { data, error, refresh } = useContext(AttendanceContext);
+  const [open, setOpen] = useState(false);
   if (inactive) return <span className="block text-xs leading-5 text-[var(--peace-muted)]">Iscrizione non operativa</span>;
   const loaded = data?.eventId === eventId;
   const at = loaded ? data.entries[`${registrationId}:${childId ?? "adult"}`] : null;
-  return <span className={`block text-xs leading-5 ${at ? "font-semibold text-green-800" : "text-[var(--peace-muted)]"}`}>
-    {!loaded ? (error ? "Presenza non disponibile" : "Presenza da verificare…") : at ? `Ingresso registrato · ${date(at)}` : "Ingresso non registrato"}
-  </span>;
+  const text = !loaded ? (error ? "Presenza non disponibile" : "Presenza da verificare…") : at ? `Ingresso registrato · ${date(at)}` : "Ingresso non registrato";
+  const style = `text-xs leading-5 ${at ? "font-semibold text-green-800" : "text-[var(--peace-muted)]"}`;
+  return <>
+    {edit ? <button type="button" className={`${style} flex min-h-9 items-center gap-2 rounded px-1 text-left underline decoration-dotted underline-offset-4 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2`}
+      aria-label={`${text}. Modifica presenza di ${edit.name}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <span>{text}</span><Pencil className="size-3 shrink-0" aria-hidden="true" />
+    </button> : <span className={`block ${style}`}>{text}</span>}
+    {open && edit && <EventPresenceEditor eventId={eventId} registrationId={registrationId} code={edit.code} name={edit.name} commandAction={commandAction}
+      onClose={() => setOpen(false)} onSaved={() => { refresh(); setOpen(false); }} />}
+  </>;
 }
 
 export function SchoolEventPresence({ eventId, bookingId, inactive = false }: { eventId: string; bookingId: string; inactive?: boolean }) {

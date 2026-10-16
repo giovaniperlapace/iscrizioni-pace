@@ -774,7 +774,7 @@ export function OperationsParticipantsTable({
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>
-                        <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} />
+                        <EventPresence edit={dashboard === "admin" && editableEventIds.includes(row.eventId) && row.publicCode ? { code: row.publicCode, name: row.name } : undefined} inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} />
                         <AccompanyingChildrenList records={row.children} participantName={row.name} startsOn={eventStartsOn} renderChildDetails={(child) => child.id ? <EventPresence inactive={Boolean(row.deletedAt) || !["submitted", "confirmed"].includes(row.registrationStatus ?? "")} eventId={row.eventId} registrationId={row.registrationId} childId={child.id} /> : null} />
                         {pending[row.registrationId] && (
                           <p role="status">Salvataggio…</p>

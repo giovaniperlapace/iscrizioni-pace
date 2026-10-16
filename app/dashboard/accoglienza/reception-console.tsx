@@ -150,7 +150,7 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
   </section>;
 }
 
-function ReceptionOperationDialog({ children, onDismiss }: { children: ReactNode; onDismiss?: () => void }) {
+export function ReceptionOperationDialog({ children, onDismiss }: { children: ReactNode; onDismiss?: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current;
@@ -190,7 +190,7 @@ function PresenceSummary({ result }: { result: VerifiedReception }) {
   </div>;
 }
 
-function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
+export function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
   result: Exclude<VerifiedReception, { kind: "room" }>;
   mode: ReceptionMode;
   onSubmit: (values: Pick<ReceptionCommand, "subjectIds" | "students" | "companions">, confirmed: boolean, cancelSchool?: boolean) => void;
@@ -226,7 +226,7 @@ function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
     {mode === "correct" && result.kind === "school" && result.checkedInAt && <label className="flex min-h-14 items-center gap-3 text-sm">
       <input type="checkbox" className="h-6 w-6 shrink-0" checked={cancelSchool} onChange={event => { setCancelSchool(event.target.checked); setConfirmed(false); }} />Annulla tutto l’ingresso della scuola
     </label>}
-    {mode === "correct" && (result.kind === "family" || result.kind === "group") && selected.length === 0 && <p role="status" className="text-sm font-semibold">Salvando annullerai tutti gli ingressi attualmente registrati.</p>}
+    {mode === "correct" && (result.kind === "family" || result.kind === "group") && selected.length === 0 && result.persons.some(person => person.checkedInAt) && <p role="status" className="text-sm font-semibold">Salvando annullerai tutti gli ingressi attualmente registrati.</p>}
     {mode !== "enter" && <label className="flex min-h-14 items-center gap-3 text-sm"><input type="checkbox" name="confirmCorrection" className="h-6 w-6 shrink-0" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Confermo {(mode === "cancel" || cancelSchool || ((result.kind === "family" || result.kind === "group") && selected.length === 0)) ? "l’annullamento degli ingressi indicati" : "la correzione delle presenze indicate"}.</label>}
     <div className={`${result.kind === "group" ? "" : "sticky bottom-0"} flex flex-wrap gap-2 border-t border-[var(--peace-border)] bg-white py-3`}>
       <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || !countsValid || (mode !== "enter" && !confirmed)}>{labels[mode]}</button>
