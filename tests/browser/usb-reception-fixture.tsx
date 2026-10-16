@@ -33,6 +33,7 @@ export default function Fixture({documents, workstation = false}:{documents:Reco
   const key=kind==='family'?(c.lookup.value.startsWith('f')?'family':'single'):kind;
   if(!records.current.has(key)){
    const persons=ids.slice(0,key==='single'?1:key==='family'?2:3).map((id,i)=>({id,kind:i===1&&key==='family'?'child' as const:'adult' as const,firstName:names[i].split(' ')[0],lastName:names[i].split(' ')[1],checkedInAt:null,registrationId:id,code:`T00${i+1}`}));
+   if(kind==='group'&&scenarioRef.current==='group-minor'){persons[2].kind='child';persons[2].registrationId=ids[1];persons[2].code='T002';}
    const base={status:'valid' as const,revision:0,outcome:'verified' as const,registrationStatus:'confirmed' as const};
    records.current.set(key,kind==='group'?{...base,kind,groupId:ids[0],groupName:'Gruppo sintetico',snapshot:'a'.repeat(64),persons}:kind==='school'?{...base,kind,schoolName:'Scuola sintetica',classDescription:'1A',expectedStudents:20,expectedCompanions:2,students:0,companions:0,checkedInAt:null}:{...base,kind,code:'T001',persons});
   }
@@ -51,13 +52,13 @@ export default function Fixture({documents, workstation = false}:{documents:Reco
  },[]);
  const labelAction=useCallback(async(c:LabelCommand):Promise<LabelResult>=>{
   setPrinted(old=>[...old,c]);await new Promise(r=>setTimeout(r,100));
-  if(scenarioRef.current==='print-error')return {status:'unavailable'};
+  if(scenarioRef.current==='print-error'||scenarioRef.current==='print-request-error'&&c.action==='request')return {status:'unavailable'};
   const queue:LabelQueue={status:'queue',snapshot:'b'.repeat(64),items:ids.slice(0,c.groupId?3:1).map((id,i)=>({registrationId:id,name:names[i],code:`T00${i+1}`,reason:null,state:'pending',attempts:0,outcome:null,changed:false}))};
   if(c.action!=='request')return queue;
   return {status:'document',requestId:c.requestId!,html:documents[c.ids!.join(',')]};
  },[documents]);
  return <main className="mx-auto max-w-5xl p-4"><h1>Collaudo USB sintetico</h1>
-  <label>Scenario sintetico<select value={scenario} onChange={e=>{setScenario(e.target.value);scenarioRef.current=e.target.value;lost.current=false;}}>{['normal','slow','forbidden','conflict','inspect-uncertain','write-uncertain','print-error','camera-denied'].map(s=><option key={s}>{s}</option>)}</select></label>
+  <label>Scenario sintetico<select value={scenario} onChange={e=>{setScenario(e.target.value);scenarioRef.current=e.target.value;lost.current=false;}}>{['normal','slow','forbidden','conflict','inspect-uncertain','write-uncertain','print-error','print-request-error','group-minor','camera-denied'].map(s=><option key={s}>{s}</option>)}</select></label>
   {workstation ? <>
    <div aria-label="Fotogramma sintetico" className="flex gap-3">
     <button onClick={()=>{cameraCode.current='a'.repeat(43);}}>QR singolo</button>

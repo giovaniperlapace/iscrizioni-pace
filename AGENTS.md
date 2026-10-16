@@ -1,5 +1,28 @@
 # AGENTS.md
 
+## Accoglienza semplificata: presenza diretta e selezione unica — 2026-10-16
+
+- Su richiesta dell’utente, dopo la scansione singola bastano nome, codice,
+  stato e Registra presenza: un clic, nessuna modale, risposta verde con spunta
+  solo dopo il salvataggio. La scansione resta senza scritture automatiche.
+- Gruppi e famiglie con minori: un solo elenco nella finestra, selezione unica
+  per presenze e stampa, conteggi per persona e selezione conservata alla
+  riapertura. Registra presenze e stampa QR salva prima gli ingressi e poi
+  stampa; comandi separati sempre disponibili. Minori sul QR genitore,
+  deduplicato, senza registrare persone non selezionate.
+- Conflitto o esito incerto delle presenze impediscono la stampa; retry dello
+  stesso comando. Dopo una stampa fallita si riprova solo la stampa sulla
+  selezione conservata. Nessuna conferma fisica implicita. Correzioni,
+  annullamenti, scope Admin, snapshot, revisioni, audit e coda conservati.
+- Vista telefono senza stampa; lettori nascosti durante la scheda. Scuole,
+  Forum e assistenza mantengono le proprie regole. Strumenti stampante e
+  badge completo del gruppo restano in sezioni richiudibili.
+- Superati 898 test, lint completo, TypeScript, build production pulita,
+  SQL/concorrenza e browser sintetici desktop/mobile, inclusi minori, doppi
+  clic, errori e regressioni delle altre superfici. Nessuna migration o prova
+  su dati reali, email o stampa fisica. Commit/push production autorizzati.
+  Dettagli in docs/accoglienza-semplificata-2026-10-16.md.
+
 ## Accoglienza distinta per computer e telefono — 2026-10-16
 
 - All’apertura della dashboard si sceglie esplicitamente Computer (scanner

@@ -42,12 +42,12 @@ export function ReceptionWorkstation({ duties, commandAction, cameraSource, labe
   // Remounting discards the previous duty's in-memory QR/history. The console
   // permits changing only between completed operations, never on an uncertain result.
   return <>
-    {deviceMode === "computer" && <PendingLink className="btn-secondary min-h-11 justify-self-start px-4" href="/dashboard/admin/stampa-qr/collaudo">Collaudo stampante con campioni sintetici</PendingLink>}
     <ReceptionConsole key={`${deviceMode}-${duty.key}`} duty={duty} commandAction={commandAction}
     deviceMode={deviceMode ?? "phone"} cameraSource={cameraSource} labelCommandAction={labelCommandAction}
     onChangeMode={() => setDeviceMode(null)}
     eventReception={duty.duty === "event_entry"}
     labelPrinting={deviceMode === "computer" && duty.duty === "event_entry"}
     onChangeDuty={duties.length > 1 ? () => setSelected(null) : undefined} />
+    {deviceMode === "computer" && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-3">Strumenti stampante</summary><PendingLink className="min-h-11 underline" href="/dashboard/admin/stampa-qr/collaudo">Collaudo stampante con campioni sintetici</PendingLink></details>}
   </>;
 }

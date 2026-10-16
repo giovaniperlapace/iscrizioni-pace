@@ -23,10 +23,11 @@ function getPrinting() { return printing; }
 function getServerPrinting() { return false; }
 function setPrinting(value: boolean) { printing = value; for (const listener of listeners) listener(); }
 
-export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChange }: {
+export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBusyChange, enabled = true }: {
   scope: LabelScope;
-  onBusyChange?: (busy: boolean) => void;
   commandAction?: (input: LabelCommand) => Promise<LabelResult>;
+  onBusyChange?: (busy: boolean) => void;
+  enabled?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState("");
@@ -39,6 +40,7 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
   const readVersion = useRef(0);
   useEffect(() => () => { controller.current?.abort(); }, []);
   useEffect(() => {
+    if (!enabled) return;
     let active = true;
     const version = ++readVersion.current;
     const readScope: LabelScope = groupId ? { groupId } : { registrationId: registrationId! };
@@ -48,10 +50,10 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
       else { setFailed(true); setMessage(errors[result.status] ?? errors.unavailable); }
     }).catch(() => { if (active && version === readVersion.current) { setFailed(true); setMessage(errors.unavailable); } });
     return () => { active = false; };
-  }, [groupId, registrationId, commandAction]);
+  }, [groupId, registrationId, commandAction, enabled]);
 
-  async function print() {
-    if (printing) return;
+  async function print(selectedIds?: string[]) {
+    if (printing || !enabled) return;
     readVersion.current++;
     setPrinting(true); onBusyChange?.(true); setFailed(false); setMessage("");
     const abort = new AbortController(); controller.current = abort;
@@ -62,9 +64,9 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
       if (abort.signal.aborted) return;
       if (fresh.status !== "queue") { setFailed(true); setMessage(errors[fresh.status] ?? errors.unavailable); return; }
       const available = fresh.items.filter(item => !item.reason).map(item => item.registrationId);
-      if (groupId && !queue) { setQueue(fresh); setSelection(available); return; }
+      if (groupId && !queue && !selectedIds) { setQueue(fresh); setSelection(available); return; }
       setQueue(fresh);
-      const ids = groupId ? selection : available;
+      const ids = selectedIds ?? (groupId ? selection : available);
       if (ids.some(id => !available.includes(id))) {
         setQueue(fresh); setSelection(ids.filter(id => available.includes(id)));
         setFailed(true); setMessage("L’elenco è cambiato. Controlla le persone selezionate e premi di nuovo il pulsante."); return;
@@ -97,6 +99,17 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
     }
   }
 
+  return { failed, message, queue, selection, setSelection, busy, print };
+}
+
+export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChange }: {
+  scope: LabelScope;
+  onBusyChange?: (busy: boolean) => void;
+  commandAction?: (input: LabelCommand) => Promise<LabelResult>;
+}) {
+  const { failed, message, queue, selection, setSelection, busy, print } = useQrLabelPrinting({ scope, commandAction, onBusyChange });
+  const groupId = scope.groupId;
+  const registrationId = scope.registrationId;
   const available = queue?.items.filter(item => !item.reason) ?? [];
   const disabled = busy || !!groupId && (queue ? !selection.length : !failed);
   return <section className="grid min-w-0 gap-3" aria-label="Etichette QR">
