@@ -22,14 +22,14 @@ function session(role: string | null) {
       then:(resolve:(v:unknown)=>void)=>resolve({data:table==="event_user_roles"?[{role,event_id:role==="admin"?null:"event"}]:[],error:null}) }; return q;
   } } as unknown as SupabaseClient;
 }
-test("only global Admin reaches label service; missing migration fails visibly", async()=>{
-  for(const role of [null,"manager","manager_viewer","accoglienza","capogruppo"]){
+test("global Admin and current reception reach label service; missing migration fails visibly", async()=>{
+  for(const role of [null,"manager","manager_viewer","capogruppo"]){
     let services=0;
     assert.equal((await executeLabelCommand(session(role),()=>{services++;throw Error();},{registrationId:id,action:"read"})).status,"forbidden");
     assert.equal(services,0);
   }
   const db={rpc:async()=>({data:null,error:{code:"PGRST202"}})} as unknown as SupabaseClient;
-  assert.equal((await executeLabelCommand(session("admin"),()=>db,{registrationId:id,action:"read"})).status,"migration_required");
+  for (const role of ["admin", "accoglienza"]) assert.equal((await executeLabelCommand(session(role),()=>db,{registrationId:id,action:"read"})).status,"migration_required");
 });
 test("queue projection removes credentials; rendering precedes atomic claim, conflicts never print",async(t)=>{
   const before=process.env.QR_TOKEN_ENCRYPTION_SECRET;process.env.QR_TOKEN_ENCRYPTION_SECRET="synthetic-label-test";

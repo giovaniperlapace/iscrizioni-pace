@@ -48,6 +48,6 @@ export function ReceptionWorkstation({ duties, commandAction, cameraSource, labe
     eventReception={duty.duty === "event_entry"}
     labelPrinting={deviceMode === "computer" && duty.duty === "event_entry"}
     onChangeDuty={duties.length > 1 ? () => setSelected(null) : undefined} />
-    {deviceMode === "computer" && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-3">Strumenti stampante</summary><PendingLink className="min-h-11 underline" href="/dashboard/admin/stampa-qr/collaudo">Collaudo stampante con campioni sintetici</PendingLink></details>}
+    {deviceMode === "computer" && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-3">Strumenti stampante</summary><PendingLink className="min-h-11 underline" href="/dashboard/accoglienza/collaudo">Collaudo stampante con campioni sintetici</PendingLink></details>}
   </>;
 }

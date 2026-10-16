@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Funzioni Accoglienza aperte al ruolo operativo — 2026-10-16
+
+- Su richiesta dell’utente, scanner, partecipazione, etichette QR e badge gruppo
+  sono disponibili agli Admin globali e al ruolo Accoglienza dell’evento corrente,
+  anche cumulato con Manager. Manager da solo resta escluso. Nuove assegnazioni
+  e revoche sono rilette a ogni operazione; nessun elenco statico o accesso anonimo.
+- Pagina, azioni server e DB allineati. Forum/sala conservano il requisito del
+  proprio incarico. Gate Admin di cerimonie e gestione incarichi invariati;
+  conferma e stampa separate, selezione, minori, audit e retry conservati.
+- Collaudo sintetico spostato in /dashboard/accoglienza/collaudo; vecchio percorso
+  Admin compatibile. Nessuna estensione alle altre funzioni amministrative.
+- Migration 20261016180000_reception_role_access applicata e registrata in production
+  dopo backup custom verificato: 63 tabelle, 88.029 righe invariate e 2.497 voci di
+  catalogo confrontate. Solo gate operativi e due funzioni nuove; privilegi delle
+  RPC e RLS conservati. Otto account Accoglienza, cinque anche Manager.
+- Superati 900 test, lint, TypeScript, build production pulita, SQL/concorrenza e
+  browser con pagina/azioni originali e PostgreSQL sintetico, inclusa revoca.
+  Nessuna email, dato reale modificato o stampa fisica; staging invariato.
+  Pubblicazione su main richiesta con l’apertura agli operatori; verbali hardware
+  paralleli esclusi. Dettagli in docs/accoglienza-accesso-ruolo-2026-10-16.md.
+
 ## Partecipazione e stampa: azioni separate sulla selezione comune — 2026-10-16
 
 - Correzione dell’utente: due pulsanti distinti, mai un comando combinato.

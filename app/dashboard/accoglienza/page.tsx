@@ -1,6 +1,7 @@
 import { ReceptionWorkstation } from "./reception-workstation";
 import { loadPanelReceptionDuties, type ReceptionDuty } from "@/lib/reception/duties.server";
 import { receptionCheckIn } from "./actions";
+import { canOperateReception } from "@/lib/reception/access";
 
 import { redirect } from "next/navigation";
 
@@ -16,16 +17,12 @@ export default async function AccoglienzaDashboardPage() {
     redirect("/login");
   }
 
-  const pilot = auth.eventRoles.some(role => role.role === "admin" && role.eventId === null);
-  if (!pilot) return <main className="app-page"><section className="mx-auto grid max-w-5xl gap-5 px-5 py-8"><DashboardRoleTabs activeRole="accoglienza" eventRoles={auth.eventRoles} /><h1>Dashboard accoglienza</h1><p>Le funzioni di scansione sono in collaudo riservato all’Admin.</p></section></main>;
-
   const { data: event, error } = await supabase.from("events").select("id").eq("is_current", true).maybeSingle();
   if (error) throw new Error("Impossibile caricare l’evento dell’accoglienza.");
-  const authorized = event && auth.eventRoles.some(role =>
-    (role.role === "admin" && role.eventId === null) ||
-    (["manager", "accoglienza"].includes(role.role) && role.eventId === event.id));
+  const authorized = event && canOperateReception(auth.eventRoles.map(role => ({ role: role.role, event_id: role.eventId })), event.id);
+  if (!authorized) return <main className="app-page"><section className="mx-auto grid max-w-5xl gap-5 px-5 py-8"><DashboardRoleTabs activeRole="accoglienza" eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments} /><h1>Dashboard accoglienza</h1><p>Nessun ruolo Accoglienza assegnato per l’evento corrente. Rivolgiti a un amministratore.</p></section></main>;
 
-  const readiness = await supabase.rpc("admin_reception_pilot_ready");
+  const readiness = await supabase.rpc("reception_ready");
   const ready = !readiness.error && readiness.data === true;
   const duties: ReceptionDuty[] = event && ready ? await loadPanelReceptionDuties(supabase) : [];
   if (authorized && ready) duties.unshift({ key: "event_entry", duty: "event_entry", title: "Accoglienza evento", room: null });
@@ -40,7 +37,7 @@ export default async function AccoglienzaDashboardPage() {
             eventRoles={auth.eventRoles} hasReceptionAssignments={auth.hasReceptionAssignments}
           />
         </header>
-        {ready ? <ReceptionWorkstation duties={duties} commandAction={receptionCheckIn.bind(null, event?.id ?? "")} /> : <p role="alert" className="rounded-lg border p-4">Scanner operativo non ancora attivato in questo ambiente. Prima del collaudo applicativo occorre verificare e applicare le migration autorizzate. Il collaudo stampante con campioni sintetici è indipendente.</p>}
+        {ready ? <ReceptionWorkstation duties={duties} commandAction={receptionCheckIn.bind(null, event.id)} /> : <p role="alert" className="rounded-lg border p-4">Accoglienza momentaneamente non disponibile. Ricarica la pagina o rivolgiti a un amministratore.</p>}
       </section>
     </main>
   );

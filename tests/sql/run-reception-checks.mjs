@@ -30,7 +30,7 @@ try {
   const mainNames=new Set(execFileSync('git',['ls-tree','-r','--name-only',mainBase,'supabase/migrations'],{cwd:root,encoding:'utf8'}).trim().split('\n').map(x=>x.split('/').at(-1)));
   const ordered=process.argv.includes('--main-upgrade')?[...names.filter(x=>mainNames.has(x)),...names.filter(x=>!mainNames.has(x))]:names;
   for (const name of ordered) {
-    if (name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
+    if (name==='20261016180000_reception_role_access.sql' || name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
     if (name==='20260813170000_rename_anziani_and_amici_groups.sql') continue; // known absent fixture-only data prerequisites
     if(name==='20260912150000_reception_check_ins.sql') {
       psql(`insert into events(slug,title,city,country,status) values('p11-legacy','Synthetic legacy','Test','IT','draft');
@@ -172,6 +172,12 @@ try {
   assert.match(psql(`select count(*)=1 from group_reception_tokens where group_id=f(9700);`),/\bt\b/);
   assert.match(psql(`select count(*)=1 from audit_logs where entity_id=f(9700) and action='group_qr.create';`),/\bt\b/);
   console.log('PASS 8 concurrent leader QR reads: one stable credential, one creation audit');
+  file(join(root,'supabase/migrations/20261016180000_reception_role_access.sql'));
+  console.log(file(join(root,'tests/sql/reception-role-access.sql')).trim());
+  if(process.argv.includes('--browser-reception-access')) {
+    const {checkReceptionRoleAccess}=await import('../browser/reception-role-access.mjs');
+    await checkReceptionRoleAccess(sql=>execFileSync(join(bin,'psql'),[...args,'-tA','-c',sql],{encoding:'utf8'}));
+  }
   const schemaFile=process.argv.find(x=>x.startsWith('--schema-snapshot='))?.split('=')[1];
   if(schemaFile)writeFileSync(schemaFile,psql(`select jsonb_object_agg(key,definition) from (
     select n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')' key,pg_get_functiondef(p.oid) definition

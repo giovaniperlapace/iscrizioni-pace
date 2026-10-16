@@ -1,5 +1,6 @@
 import { parseCeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canOperateReception } from "./access.ts";
 import { parseBadgeCommand, type BadgeResult } from "./group-badges.ts";
 import { hashQrToken } from "../qrcode/token.ts";
 import { decryptQrToken } from "../qrcode/secure-token.ts";
@@ -15,7 +16,7 @@ export async function executeBadgeCommand(session: SupabaseClient, service: () =
     if (eventError || !event) return { status: "unavailable" };
     const { data: roles, error: rolesError } = await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if (rolesError) return { status: "unavailable" };
-    if (!roles?.some(r=>(r.role==="admin" && r.event_id===null) || (["manager","accoglienza"].includes(r.role) && r.event_id===event.id))) return { status: "forbidden" };
+    if (!canOperateReception(roles ?? [], event.id)) return { status: "forbidden" };
     const { data, error } = await service().rpc("group_badge_queue", {
       p_event:event.id,p_actor:user.id,p_hash:hashQrToken(command.token.slice(2)),p_action:command.action,
       p_batch:command.batchId??null,p_registrations:command.registrationIds??[],p_snapshot:command.snapshot??null,p_registration:command.registrationId??null,p_expected_attempts:command.expectedAttempts??null,

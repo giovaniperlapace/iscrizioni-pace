@@ -10,11 +10,11 @@ test("reception pilot accepts only global Admin, with cumulative roles and fail-
     assert.equal(await isAdminReceptionPilot(session),role==="admin");
   }
 });
-test("real reception actions reject non-Admin before scanner or badge service, even for forged direct calls",async()=>{
+test("real reception actions reject unauthorized operators before scanner or badge service, even for forged direct calls",async()=>{
   const source=ts.transpileModule(readFileSync(new URL('../app/dashboard/accoglienza/actions.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   let allowed=false,scans=0,services=0;
   const deps:Record<string,unknown>={
-    '@/lib/reception/admin-pilot.server':{isAdminReceptionPilot:async()=>allowed},
+    '@/lib/reception/access.server':{isReceptionOperator:async()=>allowed},
     '@/lib/reception/check-in.server':{executeReceptionCommand:async()=>{scans++;return {status:'invalid'};}},
     '@/lib/supabase/server':{createSupabaseServerClient:async()=>({})},
     '@/lib/supabase/service':{createSupabaseServiceClient:()=>{services++;return {}; }},

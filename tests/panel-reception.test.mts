@@ -33,13 +33,13 @@ test("panel navigation grants neither manager access nor an event role", () => {
   assert.deepEqual(getDashboardRoleTabs([], "it", true).map(tab => tab.key), ["accoglienza", "partecipante"]);
 });
 
-function backend(assigned: boolean, result: ReceptionResult = family()) {
+function backend(assigned: boolean, result: ReceptionResult = family(), reception = true) {
   const calls: { name: string; args: Record<string, unknown> }[] = [];
   const filters: [string, string, unknown][] = [];
   const session = {
     auth: { getUser: async () => ({ data: { user: { id: "actor" } }, error: null }) },
     from(table: string) {
-      const value = () => ({ data: table === "events" ? { id: "current-event" } : table === "panel_reception_assignments" ? assigned ? { id: "assignment" } : null : [], error: null });
+      const value = () => ({ data: table === "events" ? { id: "current-event" } : table === "panel_reception_assignments" ? assigned ? { id: "assignment" } : null : reception ? [{role:"accoglienza",event_id:"current-event"}] : [], error: null });
       return { select() { return this; }, eq(key: string, value: unknown) { filters.push([table, key, value]); return this; },
         maybeSingle: async () => value(), then(resolve: (value: unknown) => unknown) { return Promise.resolve(value()).then(resolve); } };
     },
@@ -62,7 +62,7 @@ test("panel command rereads exact assignment, derives actor/event, and uses its 
 
 test("absent/revoked assignment and event-entry escalation never reach the privileged RPC", async () => {
   for (const command of [inspect, { duty: "event_entry" as const, action: "inspect" as const, lookup: inspect.lookup }]) {
-    const f = backend(false);
+    const f = backend(false, family(), command.duty !== "event_entry");
     assert.equal((await executeReceptionCommand(f.session, f.service, command)).status, "forbidden");
     assert.equal(f.calls.length, 0);
   }

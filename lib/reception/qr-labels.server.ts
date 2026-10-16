@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canOperateReception } from "./access.ts";
 import { parseLabelCommand, type LabelResult, type LabelItem } from "./qr-labels.ts";
 import { decryptQrToken } from "../qrcode/secure-token.ts";
 import { hashQrToken } from "../qrcode/token.ts";
@@ -15,7 +16,7 @@ export async function executeLabelCommand(session: SupabaseClient, service: () =
     if (eventError || !event) return { status: "unavailable" };
     const { data: roles, error: roleError } = await session.from("event_user_roles").select("role,event_id").eq("user_id", user.id);
     if (roleError) return { status: "unavailable" };
-    if (!roles?.some(r => (r.role === "admin" && r.event_id === null))) return { status: "forbidden" };
+    if (!canOperateReception(roles ?? [], event.id)) return { status: "forbidden" };
     const db = service();
     async function rpc(action: string) {
       const { data, error } = await db.rpc("qr_label_queue", {

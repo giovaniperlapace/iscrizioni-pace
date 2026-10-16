@@ -62,9 +62,9 @@ test("reception derives verified actor/current event and hashes token before RPC
   assert.equal(f.rpcCalls[0].p_actor_user_id,"operator");assert.equal(f.rpcCalls[0].p_event_id,"event");
   assert.equal(f.rpcCalls[0].p_lookup,hashQrToken(token));assert.ok(!JSON.stringify(f.rpcCalls).includes(token));
 });
-test("reception permits manager/global admin, denies viewer/leader/participant/foreign and event admin",async()=>{
+test("reception permits reception/global admin, denies viewer/leader/participant/foreign and event admin",async()=>{
   for (const [role,roleEvent,expected] of [
-    ["manager","event","valid"],["admin","global","valid"],["admin","event","forbidden"],
+    ["manager","event","forbidden"],["admin","global","valid"],["admin","event","forbidden"],
     ["manager_viewer","event","forbidden"],["capogruppo","event","forbidden"],["partecipante","event","forbidden"],
     ["accoglienza","foreign","forbidden"],["manager","foreign","forbidden"],
   ]) {

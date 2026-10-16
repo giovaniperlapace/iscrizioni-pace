@@ -1,5 +1,6 @@
 import { parseCeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canOperateReception } from "./access.ts";
 import { hashQrToken } from "../qrcode/token.ts";
 import { parseReceptionCommand, type ReceptionResult } from "./contracts.ts";
 
@@ -21,8 +22,7 @@ export async function executeReceptionCommand(
     if (expectedEventId !== undefined && event.id !== expectedEventId) return { status: "forbidden" };
     const { data: roles, error: rolesError } = await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if (rolesError) return { status: "unavailable" };
-    if (command.duty === "event_entry" && !roles?.some(row => (row.role === "admin" && row.event_id === null) ||
-      (["manager","accoglienza"].includes(row.role) && row.event_id === event.id))) return { status: "forbidden" };
+    if (!canOperateReception(roles ?? [], event.id)) return { status: "forbidden" };
     if (command.duty !== "event_entry") {
       const { data: assignment, error: assignmentError } = await session.from("panel_reception_assignments")
         .select("id").eq("user_id", user.id).eq("event_id", event.id)
