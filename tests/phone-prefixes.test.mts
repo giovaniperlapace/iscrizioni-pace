@@ -50,3 +50,27 @@ test("public registration accepts and normalizes a Mongolian phone number", () =
   assert.ok(parsed.ok, JSON.stringify(parsed));
   if (parsed.ok) assert.equal(parsed.value.phone, "+97699123456");
 });
+
+test("worldwide phone menu localizes unique country choices and preserves calling codes", () => {
+  const expected = { MN: "+976", NG: "+234", US: "+1", CA: "+1", KZ: "+7", RU: "+7", VA: "+39", XK: "+383" };
+  for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"] as const) {
+    const options = phonePrefixes.localizedPhonePrefixes(locale);
+    assert.equal(options.length, 245);
+    assert.equal(new Set(options.map(option => option.selection)).size, options.length);
+    for (const option of options) {
+      assert.ok(option.label.includes(new Intl.DisplayNames([locale], { type: "region" }).of(option.country)!));
+      assert.equal(phonePrefixes.phonePrefixValue(option.selection), option.value);
+      assert.equal(phonePrefixes.phonePrefixSelection(option.selection), option.selection);
+      assert.match(option.value, /^\+[1-9][0-9]{0,2}$/);
+    }
+    for (const [country, prefix] of Object.entries(expected)) {
+      assert.equal(options.find(option => option.country === country)?.value, prefix);
+    }
+  }
+  assert.equal(phonePrefixes.phonePrefixSelection("+39"), "+39:IT");
+  assert.equal(phonePrefixes.phonePrefixSelection("+1"), "+1:US");
+  assert.equal(phonePrefixes.phonePrefixSelection("+44"), "+44:GB");
+  assert.equal(phonePrefixes.phonePrefixSelection("+61"), "+61:AU");
+  assert.equal(phonePrefixes.phonePrefixSelection("other"), "other");
+  assert.equal(phonePrefixes.phonePrefixValue("+976"), "+976");
+});

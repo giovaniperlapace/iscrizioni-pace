@@ -85,3 +85,14 @@ Solo la selezione esplicita con risposta Sì crea un'assegnazione; nessun nodo
 territoriale o nuovi partecipanti viene assegnato automaticamente. Le versioni
 storiche restano immutate. Migrazione e backfill degli stati:
 `docs/operative-group-assignments.md`.
+
+## Prefissi telefonici — 2026-10-16
+
+- Catalogo mondiale di 245 paesi/territori telefonici da Google libphonenumber:
+  https://github.com/google/libphonenumber/blob/master/resources/PhoneNumberMetadata.xml
+- Nomi e ordine alfabetico nelle sette lingue del form, anche nell'inserimento
+  assistito. Paesi con prefisso condiviso selezionabili separatamente; si salva
+  soltanto il numero internazionale. I codici di area restano parte del numero.
+- Italia +39 predefinita, telefono facoltativo e prefisso manuale Altro conservati.
+  Le bozze precedenti con il solo prefisso restano leggibili.
+- I territori senza un piano telefonico nel catalogo non ricevono codici inventati.

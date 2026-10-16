@@ -4,7 +4,7 @@ import { RequiredIndicator } from "@/components/required-indicator";
 import { useId, useState } from "react";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import { PHONE_INPUT_COPY } from "@/lib/i18n/phone-input";
-import { OTHER_PHONE_PREFIX, PHONE_NUMBER_PATTERN, PHONE_PREFIX_OPTIONS, PHONE_PREFIX_PATTERN } from "@/lib/registrations/phone-prefixes";
+import { OTHER_PHONE_PREFIX, PHONE_NUMBER_PATTERN, localizedPhonePrefixes, phonePrefixSelection, phonePrefixValue, PHONE_PREFIX_PATTERN } from "@/lib/registrations/phone-prefixes";
 
 export function ManualPhoneFields({ locale, label }: { locale: SupportedLocale; label: string }) {
   const [prefix, setPrefix] = useState("+39");
@@ -12,23 +12,22 @@ export function ManualPhoneFields({ locale, label }: { locale: SupportedLocale; 
   const [number, setNumber] = useState("");
   const numberId = useId();
   const copy = PHONE_INPUT_COPY[locale];
-  const countries = new Intl.DisplayNames([locale], { type: "region" });
   const digits = number.replace(/[\s().-]/g, "");
-  const selectedPrefix = prefix === OTHER_PHONE_PREFIX ? customPrefix.trim() : prefix;
+  const selectedPrefix = prefix === OTHER_PHONE_PREFIX ? customPrefix.trim() : phonePrefixValue(prefix);
 
   return (
     <div className="grid content-start gap-1 text-sm font-semibold text-[var(--peace-ink)]">
       <label htmlFor={numberId}>{label}</label>
       <input type="hidden" name="phone" value={digits ? `${selectedPrefix}${digits}` : ""} />
       <div className="grid gap-2 sm:grid-cols-[minmax(8rem,12rem)_minmax(0,1fr)]">
-        <select className="field min-w-0" aria-label={copy.phonePrefixLabel} value={prefix}
+        <select className="field min-w-0" aria-label={copy.phonePrefixLabel} value={phonePrefixSelection(prefix)}
           onChange={event => {
             setPrefix(event.target.value);
             if (event.target.value !== OTHER_PHONE_PREFIX) setCustomPrefix("");
           }}>
-          {PHONE_PREFIX_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.value === "+1" ? `${countries.of("US")} / ${countries.of("CA")}` : countries.of(option.country)} {option.value}
+          {localizedPhonePrefixes(locale).map(option => (
+            <option key={option.country} value={option.selection}>
+              {option.label}
             </option>
           ))}
           <option value={OTHER_PHONE_PREFIX}>{copy.phoneOther}</option>

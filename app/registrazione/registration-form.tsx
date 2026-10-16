@@ -6,7 +6,7 @@ import { ParticipantBirthDateField } from "@/components/participant-birth-date-f
 import { publicChildBirthDateBounds } from "@/lib/registrations/public-child-age";
 
 import { RequiredIndicator, RequiredFieldsNote } from "@/components/required-indicator";
-import { OTHER_PHONE_PREFIX, PHONE_NUMBER_PATTERN, PHONE_PREFIX_OPTIONS, PHONE_PREFIX_PATTERN } from "@/lib/registrations/phone-prefixes";
+import { OTHER_PHONE_PREFIX, PHONE_NUMBER_PATTERN, localizedPhonePrefixes, phonePrefixSelection, phonePrefixValue, PHONE_PREFIX_PATTERN } from "@/lib/registrations/phone-prefixes";
 
 import { ACCESSIBILITY_COMMUNICATION_HELP } from "@/lib/i18n/accessibility";
 import { migratePublicRegistrationDrafts } from "@/lib/forms/public-draft";
@@ -766,7 +766,7 @@ export function RegistrationForm({
   ).sort((a, b) => (nationalityName(a, locale) ?? a).localeCompare(nationalityName(b, locale) ?? b, locale));
   const normalizedPhoneNumber = phoneNumber.replace(/[\s().-]/g, "");
   const selectedPhonePrefix =
-    phonePrefix === OTHER_PHONE_PREFIX ? customPhonePrefix.trim() : phonePrefix;
+    phonePrefix === OTHER_PHONE_PREFIX ? customPhonePrefix.trim() : phonePrefixValue(phonePrefix);
   const phoneValue = normalizedPhoneNumber
     ? `${selectedPhonePrefix}${normalizedPhoneNumber}`
     : "";
@@ -1314,8 +1314,8 @@ export function RegistrationForm({
           <input type="hidden" name="phone" value={phoneValue} />
           <div className="grid gap-2 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
             <select
-              className="field"
-              value={phonePrefix}
+              className="field min-w-0"
+              value={phonePrefixSelection(phonePrefix)}
               onChange={(event) => {
                 setPhonePrefix(event.target.value);
                 if (event.target.value !== OTHER_PHONE_PREFIX) {
@@ -1324,8 +1324,8 @@ export function RegistrationForm({
               }}
               aria-label={copy.phonePrefixLabel}
             >
-              {PHONE_PREFIX_OPTIONS.map((prefix) => (
-                <option key={`${prefix.value}-${prefix.label}`} value={prefix.value}>
+              {localizedPhonePrefixes(locale).map((prefix) => (
+                <option key={prefix.country} value={prefix.selection}>
                   {prefix.label}
                 </option>
               ))}
