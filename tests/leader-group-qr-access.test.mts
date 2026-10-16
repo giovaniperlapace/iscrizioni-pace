@@ -28,8 +28,9 @@ test("leader can fetch own group QR; no privileged client for foreign scope, rev
  }
  for(const action of ["renew","revoke","unknown"]){const f=actionFixture();assert.equal((await f.call(groupId,action)).status,"unavailable");assert.equal(f.services(),0);}
 });
-test("Admin keeps credential management; revoked/unavailable credentials return no image",async()=>{
- for(const action of ["get","revoke","renew"]){const f=actionFixture({admin:true,scope:false});assert.equal((await f.call(groupId,action)).status,"active");assert.equal(f.calls.length,1);}
+test("Admin can only read; forged management attempts never reach privileged client",async()=>{
+ const admin=actionFixture({admin:true,scope:false});assert.equal((await admin.call(groupId,"get")).status,"active");assert.equal(admin.calls.length,1);
+ for(const action of ["revoke","renew","unknown",null,undefined]){const f=actionFixture({admin:true,scope:false});assert.equal((await f.call(groupId,action as string)).status,"unavailable");assert.equal(f.services(),0);}
  for(const options of [{active:false},{rpcError:true}]){const f=actionFixture(options);const result=await f.call(groupId,"get");assert.notEqual(result.status,"active");assert.equal(result.image,undefined);}
 });
 test("group download names identify the group and safely preserve international names",()=>{

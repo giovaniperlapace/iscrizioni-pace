@@ -24,15 +24,27 @@ do $$ declare v jsonb; n int; begin
  foreach n in array array[30,31,32,34,35,37] loop
   begin perform group_reception_credential(f(1),f(n),f(9600),'get');raise exception 'Unassigned role accepted';exception when insufficient_privilege then null;end;
  end loop;
- begin perform group_reception_credential(f(1),f(36),f(9600),'revoke');raise exception 'Leader revoked QR';exception when insufficient_privilege then null;end;
- begin perform group_reception_credential(f(1),f(36),f(9600),'renew',repeat('4',64),'replacement');raise exception 'Leader rotated QR';exception when insufficient_privilege then null;end;
- perform group_reception_credential(f(1),f(33),f(9600),'revoke');
- assert group_reception_credential(f(1),f(36),f(9600),'get')->>'active'='false','Leader revived revoked QR';
- assert group_reception_credential(f(1),f(33),f(9600),'renew',repeat('4',64),'admin-renewed')->>'active'='true';
+ -- Even Admins cannot revoke, renew or replace an existing credential.
+ foreach n in array array[33,36] loop
+  begin perform group_reception_credential(f(1),f(n),f(9600),'revoke');raise exception 'QR revocation accepted';exception when invalid_parameter_value then null;end;
+  begin perform group_reception_credential(f(1),f(n),f(9600),'renew',repeat('4',64),'replacement');raise exception 'QR rotation accepted';exception when invalid_parameter_value then null;end;
+  begin perform group_reception_credential(f(1),f(n),f(9600),null);raise exception 'Null action accepted';exception when invalid_parameter_value then null;end;
+  assert group_reception_credential(f(1),f(n),f(9600),'get',repeat('4',64),'replacement')=v,'Existing QR changed';
+ end loop;
+ assert (select count(*)=1 from audit_logs where entity_id=f(9600) and action='group_qr.create');
+ assert not exists(select 1 from audit_logs where entity_id=f(9600) and action in ('group_qr.revoke','group_qr.renew'));
  begin perform reception_group_check_in(f(1),f(36),repeat('4',64));raise exception 'Leader scanner enabled';exception when insufficient_privilege then null;end;
  begin perform qr_label_queue(f(1),f(36),'read',f(9600));raise exception 'Leader printing enabled';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
+-- Historical revoked credentials must never be silently replaced/reactivated.
+insert into group_reception_tokens(group_id,token_hash,token_encrypted,revoked_at)
+ values(f(9602),repeat('5',64),'historical-revoked',now());
+do $$ begin
+ assert group_reception_credential(f(1),f(33),f(9602),'get',repeat('6',64),'replacement')->>'active'='false';
+ assert (select token_hash=repeat('5',64) and token_encrypted='historical-revoked' and revoked_at is not null
+   from group_reception_tokens where group_id=f(9602));
+end $$;
 -- Actual membership removal must immediately revoke access, including descendants.
 delete from group_memberships where group_id=f(9600) and user_id=f(36);
 set local role service_role;
@@ -53,4 +65,4 @@ do $$ begin
   and attendance=(select md5(jsonb_agg(to_jsonb(c) order by id)::text) from check_ins c) from leader_qr_baseline);
 end $$;
 rollback;
-select 'PASS leader group QR: own/descendant scope, stable token, other roles/events denied, revocation, Admin-only operations, immutable participant data';
+select 'PASS leader group QR: own/descendant scope, stable token, other roles/events denied, management denied even to Admins, historical revocation preserved, immutable participant data';

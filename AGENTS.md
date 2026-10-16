@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## QR del gruppo stabile, visualizzazione e download — 2026-10-16
+
+- Il QR del gruppo resta sempre lo stesso. Rimossi revoca, rinnovo e modifica
+  anche per gli Admin; questa richiesta supera le precedenti regole che
+  consentivano la gestione Admin del QR di gruppo.
+- Il pulsante usa ProgressButton e apre direttamente nome gruppo e immagine;
+  visualizzazione e Scarica QR, senza conferme di revoca. Il download conserva
+  esattamente il QR mostrato, come precisato dall’utente. Non esiste un
+  codice pubblico del gruppo da aggiungere. Focus, Escape, errori e sette
+  lingue conservati; nessuna richiesta prima del clic.
+- Server Action limitata a get, comprese le validazioni runtime. Migration
+  locale 20261016160000_stable_group_qr limita anche la RPC a get: prima
+  creazione unica sotto lock, letture successive senza sostituzione, audit di
+  creazione conservato. Nessuna modifica ai token esistenti o ai privilegi;
+  eventuali revoche storiche non vengono riattivate implicitamente.
+- Verifiche sintetiche: 898 test, lint, TypeScript, build production in copia
+  isolata, SQL/concorrenza e browser desktop/mobile. Nessun dato remoto, email
+  o stampa. Commit/push su main richiesti dall’utente; migration production
+  non applicata per questa modifica. Dettagli in
+  docs/qr-gruppo-stabile-2026-10-16.md.
+
 ## Accoglienza semplificata: presenza diretta e selezione unica — 2026-10-16
 
 - Su richiesta dell’utente, dopo la scansione singola bastano nome, codice,

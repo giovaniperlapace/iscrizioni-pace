@@ -1154,7 +1154,6 @@ export default async function CapogruppoDashboardPage({
 
         <AssignedScopeSection
           locale={locale}
-          canManageQr={auth.eventRoles.some(role => role.role === "admin" && role.eventId === null)}
           assignedGroups={assignedGroups}
           peopleByGroup={peopleByGroup}
           assignableGroups={scopedGroups.filter(
@@ -1317,10 +1316,8 @@ function AssignedScopeSection({
   assignableGroups,
   copy,
   locale,
-  canManageQr,
 }: {
   locale: SupportedLocale;
-  canManageQr: boolean;
   assignedGroups: ScopedGroupView[];
   peopleByGroup: Map<string, number>;
   assignableGroups: ScopedGroupView[];
@@ -1389,7 +1386,7 @@ function AssignedScopeSection({
                   >
                     {copy.manageLinks}
                   </Link>
-                  {group.isActive ? <GroupReceptionQr groupId={group.id} groupName={group.name} locale={locale} canManage={canManageQr} /> : null}
+                  {group.isActive ? <GroupReceptionQr groupId={group.id} groupName={group.name} locale={locale} /> : null}
                   <Link
                     href={`/dashboard/capogruppo?tool=manual&groupId=${encodeURIComponent(group.id)}`}
                     className="min-h-9 rounded-md bg-[var(--peace-blue-800)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]"

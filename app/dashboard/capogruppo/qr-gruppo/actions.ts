@@ -6,9 +6,9 @@ import { encryptQrToken, decryptQrToken } from "@/lib/qrcode/secure-token";
 import { loadLeaderScope } from "@/lib/groups/leader-data.server";
 import { renderQrDataUrl } from "@/lib/qrcode/render";
 
-export async function groupReceptionQr(groupId: string, action: "get" | "revoke" | "renew"): Promise<{status:"active";image:string}|{status:"revoked"|"unavailable"}> {
+export async function groupReceptionQr(groupId: string, action: "get"): Promise<{status:"active";image:string}|{status:"revoked"|"unavailable"}> {
   try {
-    if (!/^[0-9a-f-]{36}$/i.test(groupId) || !["get","revoke","renew"].includes(action)) return { status:"unavailable" };
+    if (!/^[0-9a-f-]{36}$/i.test(groupId) || action !== "get") return { status:"unavailable" };
     const session=await createSupabaseServerClient();
     const {data:{user},error:authError}=await session.auth.getUser();
     if(authError || !user) return {status:"unavailable"};
@@ -17,9 +17,9 @@ export async function groupReceptionQr(groupId: string, action: "get" | "revoke"
     const {data:roles,error:roleError}=await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if(roleError)return {status:"unavailable"};
     const isAdmin=roles?.some(r=>r.role==="admin" && r.event_id===null);
-    // Leaders may display/download their own group's QR. Credential management
-    // remains Admin-only; membership and the current event are checked again in SQL.
-    if(!isAdmin && (action!=="get" || !(await loadLeaderScope(session,user.id,event.id)).scopedGroupIds.has(groupId))) return {status:"unavailable"};
+    // Everyone, including Admins, can only read the stable credential.
+    // Membership and the current event are checked again in SQL.
+    if(!isAdmin && !(await loadLeaderScope(session,user.id,event.id)).scopedGroupIds.has(groupId)) return {status:"unavailable"};
     const generated=createOpaqueQrToken();
     const {data,error:rpcError}=await createSupabaseServiceClient().rpc("group_reception_credential",{
       p_event:event.id,p_actor:user.id,p_group:groupId,p_action:action,p_hash:generated.tokenHash,p_encrypted:encryptQrToken(generated.token),
