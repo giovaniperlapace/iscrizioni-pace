@@ -1,6 +1,6 @@
 import { parseCeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { canOperateReception } from "./access.ts";
+import { canOperateReception, canOperateParticipantReception } from "./access.ts";
 import { hashQrToken } from "../qrcode/token.ts";
 import { parseReceptionCommand, type ReceptionResult } from "./contracts.ts";
 
@@ -11,18 +11,20 @@ export async function executeReceptionCommand(
   service: () => SupabaseClient,
   input: unknown,
   expectedEventId?: string,
+  participantRegistrationId?: string,
 ): Promise<ReceptionResult> {
   try {
     const { data: { user }, error: authError } = await session.auth.getUser();
     if (authError || !user) return { status: "forbidden" };
     const command = parseReceptionCommand(input);
+    if (participantRegistrationId !== undefined && (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(participantRegistrationId) || !command || command.duty !== "event_entry" || command.lookup.kind !== "code" || command.students !== undefined || command.companions !== undefined)) return { status: "invalid_request" };
     if (!command) return { status: "invalid_request" };
     const { data: event, error: eventError } = await session.from("events").select("id").eq("is_current",true).maybeSingle();
     if (eventError || !event) return { status: "unavailable" };
     if (expectedEventId !== undefined && event.id !== expectedEventId) return { status: "forbidden" };
     const { data: roles, error: rolesError } = await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if (rolesError) return { status: "unavailable" };
-    if (!canOperateReception(roles ?? [], event.id)) return { status: "forbidden" };
+    if (!(participantRegistrationId ? canOperateParticipantReception : canOperateReception)(roles ?? [], event.id)) return { status: "forbidden" };
     if (command.duty !== "event_entry") {
       const { data: assignment, error: assignmentError } = await session.from("panel_reception_assignments")
         .select("id").eq("user_id", user.id).eq("event_id", event.id)
@@ -31,7 +33,11 @@ export async function executeReceptionCommand(
       if (!assignment) return { status: "forbidden" };
     }
     const group = command.lookup.kind === "qr" && command.lookup.value.startsWith("G:");
-    const { data, error } = group ? await service().rpc("reception_group_check_in", {
+    const { data, error } = participantRegistrationId ? await service().rpc("participant_reception_check_in", {
+      p_event_id: event.id, p_actor_user_id: user.id, p_registration_id: participantRegistrationId,
+      p_code: command.lookup.value, p_action: command.action, p_request_id: command.requestId ?? null,
+      p_subject_ids: command.subjectIds ?? [], p_expected_revision: command.expectedRevision ?? null, p_reason: command.reason ?? null,
+    }) : group ? await service().rpc("reception_group_check_in", {
       p_event: event.id, p_actor: user.id, p_hash: hashQrToken(command.lookup.value.slice(2)),
       p_action: command.action, p_request: command.requestId ?? null,
       p_subjects: command.subjectIds ?? [], p_snapshot: command.groupSnapshot ?? null,
@@ -48,6 +54,7 @@ export async function executeReceptionCommand(
     });
     if (error) return { status: error.code === "42501" ? "forbidden" : error.code === "22023" ? "invalid_request" : "unavailable" };
     const result = projectReceptionResult(data);
+    if (result.status === "valid" && participantRegistrationId && (result.kind !== "family" || !result.persons.some(person => person.kind === "adult" && person.id === participantRegistrationId))) return { status: "unavailable" };
     if (result.status === "valid" && ((result.kind === "group") !== group)) return { status: "unavailable" };
     if (result.status === "valid" && command.duty !== "event_entry" &&
       (result.panel?.id !== command.panelId || (result.kind === "family" && result.persons.some(person => typeof person.eventCheckedIn !== "boolean")))) return { status: "unavailable" };

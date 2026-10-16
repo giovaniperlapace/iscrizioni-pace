@@ -1,14 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { canOperateReception } from "./access.ts";
+import { canOperateReception, canOperateParticipantReception } from "./access.ts";
 import { parseLabelCommand, type LabelResult, type LabelItem } from "./qr-labels.ts";
 import { decryptQrToken } from "../qrcode/secure-token.ts";
 import { hashQrToken } from "../qrcode/token.ts";
 import { renderQrLabelHtml, renderQrLabelsHtml } from "../qrcode/print-label.ts";
 
 type RawItem = LabelItem & { firstName: string; lastName: string; encrypted: string | null; hash: string | null; content: string; printedContent: string | null };
-export async function executeLabelCommand(session: SupabaseClient, service: () => SupabaseClient, input: unknown): Promise<LabelResult> {
+export async function executeLabelCommand(session: SupabaseClient, service: () => SupabaseClient, input: unknown, participantRegistrationId?: string): Promise<LabelResult> {
   try {
     const command = parseLabelCommand(input);
+    if (participantRegistrationId !== undefined && (!command || command.registrationId !== participantRegistrationId || command.groupId !== undefined)) return { status: "invalid" };
     if (!command) return { status: "invalid" };
     const { data: { user }, error: authError } = await session.auth.getUser();
     if (authError || !user) return { status: "forbidden" };
@@ -16,11 +17,11 @@ export async function executeLabelCommand(session: SupabaseClient, service: () =
     if (eventError || !event) return { status: "unavailable" };
     const { data: roles, error: roleError } = await session.from("event_user_roles").select("role,event_id").eq("user_id", user.id);
     if (roleError) return { status: "unavailable" };
-    if (!canOperateReception(roles ?? [], event.id)) return { status: "forbidden" };
+    if (!(participantRegistrationId ? canOperateParticipantReception : canOperateReception)(roles ?? [], event.id)) return { status: "forbidden" };
     const db = service();
     async function rpc(action: string) {
-      const { data, error } = await db.rpc("qr_label_queue", {
-        p_event: event!.id, p_actor: user!.id, p_action: action, p_group: command!.groupId ?? null, p_registration: command!.registrationId ?? null,
+      const { data, error } = await db.rpc(participantRegistrationId ? "participant_qr_label_queue" : "qr_label_queue", {
+        p_event: event!.id, p_actor: user!.id, p_action: action, ...(participantRegistrationId ? {} : { p_group: command!.groupId ?? null }), p_registration: command!.registrationId ?? null,
         p_ids: command!.ids ?? [], p_snapshot: command!.snapshot ?? null, p_request: command!.requestId ?? null,
         p_profile: command!.profile ?? null, p_outcome: command!.outcome ?? null,
       });

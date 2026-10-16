@@ -30,7 +30,7 @@ try {
   const mainNames=new Set(execFileSync('git',['ls-tree','-r','--name-only',mainBase,'supabase/migrations'],{cwd:root,encoding:'utf8'}).trim().split('\n').map(x=>x.split('/').at(-1)));
   const ordered=process.argv.includes('--main-upgrade')?[...names.filter(x=>mainNames.has(x)),...names.filter(x=>!mainNames.has(x))]:names;
   for (const name of ordered) {
-    if (name==='20261016180000_reception_role_access.sql' || name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
+    if (name==='20261016200000_manager_participant_reception.sql' || name==='20261016180000_reception_role_access.sql' || name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
     if (name==='20260813170000_rename_anziani_and_amici_groups.sql') continue; // known absent fixture-only data prerequisites
     if(name==='20260912150000_reception_check_ins.sql') {
       psql(`insert into events(slug,title,city,country,status) values('p11-legacy','Synthetic legacy','Test','IT','draft');
@@ -174,9 +174,37 @@ try {
   console.log('PASS 8 concurrent leader QR reads: one stable credential, one creation audit');
   file(join(root,'supabase/migrations/20261016180000_reception_role_access.sql'));
   console.log(file(join(root,'tests/sql/reception-role-access.sql')).trim());
+  const participantSnapshot=()=>psql(`create function pg_temp.participant_snapshot() returns jsonb language plpgsql as $snapshot$
+    declare t record; digest text; result jsonb:='{}'; begin
+    for t in select tablename from pg_tables where schemaname='public' order by tablename loop
+      execute format($query$select md5(coalesce(jsonb_agg(to_jsonb(r) order by to_jsonb(r)::text),'[]'::jsonb)::text) from public.%I r$query$,t.tablename) into digest;
+      result:=result||jsonb_build_object(t.tablename,digest);
+    end loop;return result;end $snapshot$;
+    select pg_temp.participant_snapshot();`);
+  const participantDataBefore=participantSnapshot();
+  file(join(root,'supabase/migrations/20261016200000_manager_participant_reception.sql'));
+  assert.equal(participantSnapshot(),participantDataBefore,'Participant migration changed stored application values');
+  console.log('PASS participant migration preserves all preexisting public-table values');
+  console.log(file(join(root,'tests/sql/manager-participant-reception.sql')).trim());
+  psql(`insert into participants(id,first_name,last_name,public_code) values(f(99601),'Concurrent','Manager','CM01');
+    insert into registrations(id,event_id,participant_id,status) values(f(99600),f(1),f(99601),'confirmed');
+    set role service_role;select participant_reception_check_in(f(1),f(31),f(99600),'CM01','enter',f(99602),array[f(99600)]);reset role;`);
+  const managerCorrections=await Promise.all([
+    concurrent(`set role service_role;select participant_reception_check_in(f(1),f(31),f(99600),'CM01','cancel',f(99603),array[f(99600)],1,'entry_cancelled')->>'status';`),
+    concurrent(`set role service_role;select reception_event_check_in('event_entry',f(1),f(33),'code','CM01','cancel',f(99604),array[f(99600)],null,null,1,'entry_cancelled')->>'status';`),
+  ]);
+  assert.equal(managerCorrections.filter(value=>/valid/.test(value)).length,1);
+  assert.equal(managerCorrections.filter(value=>/conflict/.test(value)).length,1);
+  assert.match(psql(`select count(*)=0 from check_ins where registration_id=f(99600) and cancelled_at is null;`),/\bt\b/);
+  console.log('PASS concurrent Manager-sheet and Admin-scanner removal: one saved revision, one conflict');
+  console.log(file(join(root,'tests/sql/reception-role-access.sql')).trim());
   if(process.argv.includes('--browser-reception-access')) {
     const {checkReceptionRoleAccess}=await import('../browser/reception-role-access.mjs');
     await checkReceptionRoleAccess(sql=>execFileSync(join(bin,'psql'),[...args,'-tA','-c',sql],{encoding:'utf8'}));
+  }
+  if(process.argv.includes('--browser-manager-participant')) {
+    const {checkManagerParticipantReception}=await import('../browser/manager-participant-reception.mjs');
+    await checkManagerParticipantReception(sql=>execFileSync(join(bin,'psql'),[...args,'-tA','-c',sql],{encoding:'utf8'}));
   }
   const schemaFile=process.argv.find(x=>x.startsWith('--schema-snapshot='))?.split('=')[1];
   if(schemaFile)writeFileSync(schemaFile,psql(`select jsonb_object_agg(key,definition) from (

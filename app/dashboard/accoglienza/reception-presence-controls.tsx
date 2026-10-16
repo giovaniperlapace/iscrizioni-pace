@@ -46,6 +46,23 @@ export function PresenceSummary({ result }: { result: VerifiedReception }) {
   </div>;
 }
 
+export function PresenceRemovalDialog({ result, subjectIds, onConfirm, onDismiss }: {
+  result: Extract<VerifiedReception, { kind: "family" | "group" }>;
+  subjectIds: string[];
+  onConfirm: (ids: string[]) => void;
+  onDismiss: () => void;
+}) {
+  const selected = result.persons.filter(person => subjectIds.includes(person.id));
+  const presentIds = selected.filter(person => person.checkedInAt).map(person => person.id);
+  return <ReceptionOperationDialog onDismiss={onDismiss}>
+    <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-semibold outline-none">Rimuovi presenza</h2>
+    <p>Confermi la rimozione della presenza per queste persone?</p>
+    <ul className="grid gap-2">{selected.map(person => <li key={person.id}><strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}{!person.checkedInAt && " · Presenza già rimossa"}</li>)}</ul>
+    <button className="btn-primary min-h-12 px-4" disabled={!presentIds.length} onClick={() => onConfirm(presentIds)}>Conferma rimozione</button>
+    <button className="btn-secondary min-h-12 px-4" onClick={onDismiss}>Mantieni presenze</button>
+  </ReceptionOperationDialog>;
+}
+
 export function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
   result: Exclude<VerifiedReception, { kind: "room" }>;
   mode: ReceptionMode;

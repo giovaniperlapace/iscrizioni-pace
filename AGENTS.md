@@ -1,5 +1,28 @@
 # AGENTS.md
 
+## Partecipazione nella scheda e accesso Manager circoscritto — 2026-10-16
+
+- Rimozione esplicita anche nella scheda aperta dal nome: selezione delle
+  persone, Rimuovi presenza e conferma con i nomi; deselezionare non annulla.
+  Adulto/minori, selezione comune, stato tabella e stampa separata conservati.
+- Chiarimento dell’utente: abilitare anche il solo ruolo Manager, soltanto
+  nella scheda del partecipante. Conferma/rimozione e stampa QR ora visibili
+  in quella superficie. Viewer esclusi; scanner, gruppi e cerimonie invariati.
+- Nuove azioni/RPC legate all’iscrizione e al codice; ruoli riletti a ogni
+  operazione. Migration 20261016200000_manager_participant_reception:
+  implementazioni canoniche condivise, vecchi gate conservati, nuove RPC
+  service-only. Audit, revisioni, retry e contatori conservati; dati invariati.
+- Superati 906 test, lint, TypeScript, build pulita, SQL/concorrenza e browser
+  sintetici desktop/mobile con tabella e azioni originali su DB temporaneo,
+  inclusa revoca. Nessuna email, stampa fisica o modifica di dati applicativi reali.
+- Al rilascio richiesto dall’utente, migration applicata e registrata in
+  production prima del push, con backup custom verificato: 63 tabelle e 88.248
+  righe invariate, 2.501 voci di catalogo confrontate. Staging invariato.
+  Commit/push su main autorizzati; verbali hardware paralleli esclusi.
+- QR visibile solo dopo un clic ulteriore richiesto come prompt, non ancora
+  implementato. Download e stampa conservati. Dettagli in
+  docs/partecipazione-scheda-manager-2026-10-16.md.
+
 ## Accoglienza: scansione diretta e rimozione esplicita — 2026-10-16
 
 - Stato come unico riscontro della conferma; pulsante invariato e senza

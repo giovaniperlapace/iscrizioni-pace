@@ -9,7 +9,7 @@ import { ReceptionStationSession, ScanLatch, type VerifiedReception } from "@/li
 import { ReceptionParty } from "./reception-party";
 import { ReceptionCamera } from "./reception-camera";
 import { ReceptionUsbScanner } from "./reception-usb-scanner";
-import { PresenceSelection, ReceptionOperationDialog } from "./reception-presence-controls";
+import { PresenceSelection, PresenceRemovalDialog, ReceptionOperationDialog } from "./reception-presence-controls";
 import PendingLink from "@/components/pending-link";
 
 type Props = {
@@ -141,18 +141,16 @@ export function EventReceptionConsole(props: Props) {
       {!partyOpen && <button className="btn-secondary min-h-12 px-4" disabled={locked} onClick={next}>{deviceMode === "computer" ? "Chiudi scheda" : "Scansiona un altro QR"}</button>}
     </div>}
     {result && !partyOpen && scanHint}
-    {(correctionOpen || state.phase === "selection" && result?.kind === "school") && state.result && state.result.kind !== "room" && <ReceptionOperationDialog onDismiss={() => { session.closeSelection(); setPartyOpen(!!multiple); }}>
-      <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-bold outline-none">{state.mode === "cancel" ? "Rimuovi presenza" : correction ? "Modifica presenze" : "Presenze della scuola"}</h2>
-      {state.mode === "cancel" && (state.result.kind === "family" || state.result.kind === "group") ? <>
-        <p>Confermi la rimozione della presenza per queste persone?</p>
-        <ul className="grid gap-2">{state.result.persons.filter(person => removalIds.includes(person.id)).map(person => <li key={person.id}><strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}{!person.checkedInAt && " · Presenza già rimossa"}</li>)}</ul>
-        <button className="btn-primary min-h-12 px-4" disabled={!state.result.persons.some(person => removalIds.includes(person.id) && person.checkedInAt)} onClick={async () => {
-          if (!state.result || (state.result.kind !== "family" && state.result.kind !== "group")) return;
-          await session.submit({ subjectIds: state.result.persons.filter(person => removalIds.includes(person.id) && person.checkedInAt).map(person => person.id) }, true);
-          if (session.snapshot().phase === "result") setPartyOpen(!!multiple);
-        }}>Conferma rimozione</button>
-        <button className="btn-secondary min-h-12 px-4" onClick={() => { session.closeSelection(); setPartyOpen(!!multiple); }}>Mantieni presenze</button>
-      </> : <PresenceSelection key={`${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode} onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={() => session.closeSelection()} />}
+    {state.phase === "selection" && state.result && (state.result.kind === "family" || state.result.kind === "group") && state.mode === "cancel" && <PresenceRemovalDialog
+      result={state.result} subjectIds={removalIds}
+      onDismiss={() => { session.closeSelection(); setPartyOpen(!!multiple); }}
+      onConfirm={async ids => {
+        await session.submit({ subjectIds: ids }, true);
+        if (session.snapshot().phase === "result") setPartyOpen(!!multiple);
+      }} />}
+    {state.phase === "selection" && state.result?.kind === "school" && <ReceptionOperationDialog onDismiss={() => session.closeSelection()}>
+      <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-bold outline-none">{correction ? "Modifica presenze" : "Presenze della scuola"}</h2>
+      <PresenceSelection key={`${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode} onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={() => session.closeSelection()} />
     </ReceptionOperationDialog>}
     <details className="text-sm">
       <summary className="cursor-pointer py-3">Ultime letture ({state.recent.length})</summary>

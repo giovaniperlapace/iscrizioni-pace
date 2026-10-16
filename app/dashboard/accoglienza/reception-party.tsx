@@ -5,10 +5,10 @@ import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception
 import { useQrLabelPrinting } from "../qr-label-panel";
 type Party = Extract<VerifiedReception, { kind: "family" | "group" }>;
 
-export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, onEdit, feedback }: {
+export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, feedback }: {
   result: Party; session: ReceptionStationSession; printing: boolean;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>; disabled: boolean; onBusyChange: (value: boolean) => void;
-  onRemove?: (ids: string[]) => void; onEdit?: () => void; feedback: ReactNode;
+  onRemove: (ids: string[]) => void; feedback: ReactNode;
 }) {
   const single = result.kind === "family" && result.persons.length === 1;
   const [selected, setSelected] = useState<string[]>(() => single ? [result.persons[0].id] : []);
@@ -65,7 +65,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
       {printing && <button className="btn-secondary min-h-12 px-4" disabled={locked || !chosen.length || !!unavailable} onClick={() => void act("print")}>{result.kind === "group" ? "Stampa i QR del gruppo" : "Stampa etichetta QR"}</button>}
       {single && printing && <span className="text-sm text-slate-600">Stampe richieste: {labels.queue?.items.find(item => item.registrationId === adultId)?.attempts ?? "—"}</span>}
       {labels.message && <p role={labels.failed ? "alert" : "status"} className="text-sm">{labels.message}</p>}
-      {result.persons.some(person => person.checkedInAt) && <button className="min-h-11 justify-self-start text-sm underline" disabled={locked || !!onRemove && !presentIds.length} onClick={() => onRemove ? onRemove(presentIds) : onEdit?.()}>{onRemove ? single ? "Rimuovi presenza" : "Rimuovi presenze selezionate" : "Modifica partecipazione"}</button>}
+      {result.persons.some(person => person.checkedInAt) && <button className="min-h-11 justify-self-start text-sm underline" disabled={locked || !presentIds.length} onClick={() => onRemove(presentIds)}>{single ? "Rimuovi presenza" : "Rimuovi presenze selezionate"}</button>}
     </div>
   </div>;
 }

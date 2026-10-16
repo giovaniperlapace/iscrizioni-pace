@@ -19,7 +19,7 @@ export default function Fixture({ html, family = false }: { html: string; family
     if (scenario.current === "conflict" && command.action !== "inspect") return { status: "conflict" };
     if (command.action !== "inspect") {
       if (!state.current.uncertain) {
-        state.current.present = command.action === "cancel" ? [] : command.subjectIds ?? [];
+        state.current.present = command.action === "cancel" ? state.current.present.filter(id => !command.subjectIds?.includes(id)) : command.action === "enter" ? [...new Set([...state.current.present, ...command.subjectIds ?? []])] : command.subjectIds ?? [];
         state.current.revision++;
         (window as unknown as { presenceEntries: Record<string, string> }).presenceEntries = Object.fromEntries(state.current.present.map(subject => [`${id(1)}:${subject === id(1) ? "adult" : subject}`, "2026-10-16T10:00:00Z"]));
       }

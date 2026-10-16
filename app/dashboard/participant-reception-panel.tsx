@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { receptionCheckIn } from "./accoglienza/actions";
-import { PresenceSelection, ReceptionOperationDialog } from "./accoglienza/reception-presence-controls";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { participantReceptionCommand, participantLabelCommand } from "./participants/reception-actions";
+import { PresenceRemovalDialog } from "./accoglienza/reception-presence-controls";
 import { ReceptionParty } from "./accoglienza/reception-party";
 import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception/station";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
@@ -16,12 +16,13 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>;
 }) {
   const [session] = useState(() => new ReceptionStationSession(async command => {
-    const result = await (commandAction ?? (input => receptionCheckIn(eventId, input)))(command);
+    const result = await (commandAction ?? (input => participantReceptionCommand(eventId, registrationId, input)))(command);
     // The public code must still identify the participant whose QR area is open.
     if (result.status === "valid" && (result.kind !== "family" || !result.persons.some(person => person.kind === "adult" && person.id === registrationId))) return { status: "invalid" };
     return result;
   }, () => crypto.randomUUID(), 20000, { duty: "event_entry" }, true));
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
+  const [removalIds, setRemovalIds] = useState<string[]>([]);
   const [printing, setPrinting] = useState(false);
   const [verified, setVerified] = useState<VerifiedReception | null>(null);
   const refresh = useEventAttendanceRefresh();
@@ -53,6 +54,8 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
     return () => window.removeEventListener("beforeunload", warn);
   }, [locked]);
 
+  const printCommand = useCallback((command: LabelCommand) => (labelCommandAction ?? (input => participantLabelCommand(registrationId, input)))(command), [labelCommandAction, registrationId]);
+
   function reload() { session.setMode("enter"); void session.inspect({ kind: "code", value: code }); }
   const feedback = <>
     {state.phase === "pending" && <p role="status">Operazione in corso…</p>}
@@ -63,11 +66,10 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
   </>;
   return <section className="grid w-full gap-3" aria-label="Partecipazione e stampa QR" aria-busy={locked}>
     <h4 className="font-semibold">Partecipazione e stampa QR</h4>
-    {result?.kind === "family" ? <ReceptionParty result={result} session={session} printing labelCommandAction={labelCommandAction}
-      disabled={locked || correcting || state.phase === "error"} onBusyChange={setPrinting} feedback={feedback} onEdit={() => void session.editCurrent()} /> : feedback}
-    {correcting && state.phase === "selection" && state.result?.kind === "family" && <ReceptionOperationDialog onDismiss={() => session.closeSelection()}>
-      <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-semibold outline-none">Modifica partecipazione</h2>
-      <PresenceSelection result={state.result} mode="correct" onSubmit={(values, confirmed) => void session.submit(values, confirmed)} onDismiss={() => session.closeSelection()} />
-    </ReceptionOperationDialog>}
+    {result?.kind === "family" ? <ReceptionParty result={result} session={session} printing labelCommandAction={printCommand}
+      disabled={locked || correcting || state.phase === "error"} onBusyChange={setPrinting} feedback={feedback} onRemove={ids => { setRemovalIds(ids); void session.removeCurrent(); }} /> : feedback}
+    {state.mode === "cancel" && state.phase === "selection" && state.result?.kind === "family" && <PresenceRemovalDialog
+      result={state.result} subjectIds={removalIds} onDismiss={() => session.closeSelection()}
+      onConfirm={ids => void session.submit({ subjectIds: ids }, true)} />}
   </section>;
 }

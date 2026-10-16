@@ -165,7 +165,7 @@ export function OperationsParticipantsTable({
   const selectedRow = snapshot.allParticipants.find((row) => row.registrationId === selectedId)
     ?? (selectedParticipant?.registrationId === selectedId ? selectedParticipant : null);
   const selected = selectedRow ? current(selectedRow) : null;
-  const canConfirmSelected = Boolean(selected && dashboard === "admin" && editableEventIds.includes(selected.eventId) && !selected.deletedAt && selected.publicCode && ["submitted", "confirmed"].includes(selected.registrationStatus ?? ""));
+  const canConfirmSelected = Boolean(selected && selected.eventId === eventId && editableEventIds.includes(selected.eventId) && !selected.deletedAt && selected.publicCode && ["submitted", "confirmed"].includes(selected.registrationStatus ?? ""));
   const paramsFor = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", "iscritti");
@@ -821,7 +821,7 @@ export function OperationsParticipantsTable({
         <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath} busy={receptionBusy}>
           {!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsParticipantQr key={`qr:${selected.registrationId}`} registrationId={selected.registrationId}
-              participantName={selected.name} participantCode={selected.publicCode} locale={locale} adminLabels={dashboard === "admin"} eventId={selected.eventId} receptionEnabled={canConfirmSelected} onBusyChange={setReceptionBusy} />
+              participantName={selected.name} participantCode={selected.publicCode} locale={locale} eventId={selected.eventId} receptionEnabled={canConfirmSelected} onBusyChange={setReceptionBusy} />
           ) : null}
           {attendancePanel ?? (!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsAttendance key={`${selected.registrationId}:${dataVersion}`} registrationId={selected.registrationId} dashboard={dashboard} returnTo={returnTo} />
