@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Accoglienza: scansione diretta e rimozione esplicita — 2026-10-16
+
+- Stato come unico riscontro della conferma; pulsante invariato e senza
+  animazione di successo. Rimuovi presenza / Rimuovi presenze selezionate
+  sulla selezione comune, rilettura e conferma con i nomi; mai deselezione
+  come comando di annullamento. Revisioni, snapshot, audit e retry conservati.
+- Scanner USB apre subito il nuovo QR, anche dall’elenco gruppo; nessun
+  passaggio intermedio obbligatorio. Pausa durante scritture, stampa,
+  conferme/scuole o esito incerto. Telefono conserva ripresa esplicita.
+- Rimosso Badge completo e sedute cerimonie dalla console evento. Ultimo stato
+  verificato conservato durante richieste/esiti incerti; ruoli e Forum invariati.
+- Superati 903 test, lint, TypeScript, build pulita, SQL/concorrenza e browser
+  sintetici, comprese pagina/azioni originali su PostgreSQL temporaneo.
+  Nessuna migration, scrittura reale, email o stampa fisica. Commit/push su main
+  richiesti dall’utente; verbali hardware paralleli esclusi. Dettagli in
+  docs/accoglienza-scansione-diretta-2026-10-16.md.
+
 ## Funzioni Accoglienza aperte al ruolo operativo — 2026-10-16
 
 - Su richiesta dell’utente, scanner, partecipazione, etichette QR e badge gruppo

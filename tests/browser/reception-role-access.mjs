@@ -73,10 +73,22 @@ export async function checkReceptionRoleAccess(psql,base='http://127.0.0.1:3194'
    assert.equal(await page.evaluate(()=>window.__prints),1);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
    await page.screenshot({path:`/tmp/pace-reception-access-${role}.png`,fullPage:true});
+   if(role!==31){
+    await page.getByRole('button',{name:'Rimuovi presenza',exact:true}).click();
+    await page.getByRole('button',{name:'Conferma rimozione',exact:true}).click();
+    await page.getByText('Partecipazione non confermata',{exact:true}).waitFor();
+    assert.equal(psql(`select count(*) from check_ins where registration_id=f(${reg}) and cancelled_at is null;`).trim(),'0');
+    assert.equal(psql(`select count(*) from check_ins where registration_id=f(${reg}) and cancelled_at is not null;`).trim(),'1');
+    const before=rpcCalls.length;
+    await page.keyboard.type(token,{delay:2});await page.keyboard.press('Enter');
+    await page.getByRole('button',{name:'Conferma partecipazione',exact:true}).waitFor();
+    assert.deepEqual(rpcCalls.slice(before).filter(c=>c.name==='reception_event_check_in').map(c=>c.action),['inspect']);
+    assert.equal(psql(`select count(*) from check_ins where registration_id=f(${reg}) and cancelled_at is null;`).trim(),'0');
+   }
    if(role===31){
     psql(`delete from event_user_roles where user_id=f(31) and role='accoglienza';`);
     const before=rpcCalls.length;
-    await page.getByRole('button',{name:'Modifica partecipazione',exact:true}).click();
+    await page.getByRole('button',{name:'Rimuovi presenza',exact:true}).click();
     await page.getByText(/Sessione scaduta o incarico/).first().waitFor();
     assert.equal(rpcCalls.length,before,'Revocation must block before the privileged RPC');
    }
@@ -84,6 +96,6 @@ export async function checkReceptionRoleAccess(psql,base='http://127.0.0.1:3194'
    assert.deepEqual(errors,[]);
    await context.close();
   }
-  console.log('PASS actual reception page/actions -> PostgreSQL: Accoglienza, Manager+Accoglienza, Admin, desktop/mobile, separate print/presence, live revocation and calibration');
+  console.log('PASS actual reception page/actions -> PostgreSQL: Accoglienza, Manager+Accoglienza, Admin, desktop/mobile, separate print/presence, explicit removal, direct rescan, live revocation and calibration');
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 }

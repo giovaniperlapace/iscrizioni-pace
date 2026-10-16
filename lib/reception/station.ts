@@ -99,6 +99,13 @@ export class ReceptionStationSession {
     this.update({ lookup: command.lookup });
     await this.run(command);
   }
+  async inspectNext(lookup: ReceptionLookup) {
+    // USB readers can replace a completed event card, but never a write,
+    // uncertain result or an explicit confirmation still awaiting a decision.
+    if (!this.explicitPresence || this.isLocked() || this.state.phase === "selection" || this.state.mode !== "enter") return;
+    this.next();
+    await this.inspect(lookup);
+  }
   async editRecent(key: string) {
     if (this.isLocked() || this.state.phase === "selection") return;
     const entry = this.state.recent.find(item => item.key === key);
@@ -107,6 +114,12 @@ export class ReceptionStationSession {
   async editCurrent() {
     if (this.isLocked() || !this.state.result || !this.state.lookup) return;
     await this.edit(this.state.lookup);
+  }
+  async removeCurrent() {
+    if (!this.explicitPresence || this.isLocked() || this.state.phase !== "result" || !this.state.lookup) return;
+    const lookup = this.state.lookup;
+    this.setMode("cancel");
+    await this.inspect(lookup);
   }
   private async edit(lookup: ReceptionLookup) {
     if (this.context.duty === "room_assistance") return;

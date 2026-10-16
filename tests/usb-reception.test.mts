@@ -74,3 +74,43 @@ test('USB HID ignores stale partials, clears on blur/reset and rejects oversize 
  assert.equal(buffer.key(' ',5000).consumed,false);
  buffer.key('a',6000);assert.deepEqual(buffer.key('Enter',8000),{consumed:false});
 });
+
+test('USB next scan replaces a completed card and never records presence',async()=>{
+ const {session,calls}=setup(single);
+ await session.inspect(lookup);
+ await session.inspectNext({kind:'qr',value:'G:'+'g'.repeat(43)});
+ assert.deepEqual(calls.map(c=>c.action),['inspect','inspect']);
+ assert.equal(session.snapshot().lookup?.value,'G:'+'g'.repeat(43));
+ session.selectPresence();
+ await session.inspectNext(lookup);
+ assert.equal(calls.length,2);
+ session.closeSelection();
+ await session.removeCurrent();
+ assert.equal(session.snapshot().mode,'cancel');
+ await session.inspectNext(lookup);
+ assert.equal(calls.length,3);
+});
+test('USB removal rereads revision, requires confirmation and cancels only selected people',async()=>{
+ const present={...group,revision:7,persons:[{...group.persons[0],checkedInAt:'2026-10-16T10:00:00Z'}, {...group.persons[0],id:request,checkedInAt:'2026-10-16T10:00:00Z'}]};
+ const {session,calls}=setup(present);
+ await session.inspect({kind:'qr',value:'G:'+'g'.repeat(43)});await session.removeCurrent();
+ assert.deepEqual(calls.map(c=>c.action),['inspect','inspect']);
+ assert.equal(session.snapshot().phase,'selection');
+ await session.submit({subjectIds:[id]});assert.equal(calls.length,2);
+ await session.submit({subjectIds:[id]},true);
+ assert.equal(calls[2].action,'cancel');assert.deepEqual(calls[2].subjectIds,[id]);
+ assert.equal(calls[2].expectedRevision,7);assert.equal(calls[2].groupSnapshot,present.snapshot);
+ assert.equal(calls[2].reason,'entry_cancelled');
+});
+test('USB new scans cannot displace pending, uncertain or revoked operations',async()=>{
+ for(const status of ['unavailable','forbidden'] as const){
+  const calls:ReceptionCommand[]=[];
+  let finish!:(result:ReceptionResult)=>void;
+  const session=new ReceptionStationSession(c=>{calls.push(c);return new Promise(resolve=>{finish=resolve;});},()=>request,20000,{duty:'event_entry'},true);
+  const pending=session.inspectNext(lookup);
+  await session.inspectNext({kind:'qr',value:'b'.repeat(43)});assert.equal(calls.length,1);
+  finish({status});await pending;
+  await session.inspectNext({kind:'qr',value:'b'.repeat(43)});assert.equal(calls.length,1);
+  assert.deepEqual(session.snapshot().lookup,lookup);
+ }
+});

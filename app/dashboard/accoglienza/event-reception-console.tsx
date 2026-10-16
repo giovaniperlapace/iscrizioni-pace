@@ -5,13 +5,11 @@ import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contract
 import type { CameraSource } from "@/lib/reception/camera";
 import type { ReceptionDuty } from "@/lib/reception/duties.server";
 import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
-import type { BadgeCommand, BadgeResult } from "@/lib/reception/group-badges";
 import { ReceptionStationSession, ScanLatch, type VerifiedReception } from "@/lib/reception/station";
 import { ReceptionParty } from "./reception-party";
 import { ReceptionCamera } from "./reception-camera";
 import { ReceptionUsbScanner } from "./reception-usb-scanner";
 import { PresenceSelection, ReceptionOperationDialog } from "./reception-presence-controls";
-import { GroupBadgePanel } from "./group-badge-panel";
 import PendingLink from "@/components/pending-link";
 
 type Props = {
@@ -23,7 +21,6 @@ type Props = {
   duty?: ReceptionDuty;
   labelPrinting?: boolean;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>;
-  badgeCommandAction?: (command: BadgeCommand) => Promise<BadgeResult>;
 };
 
 export function EventReceptionConsole(props: Props) {
@@ -33,6 +30,8 @@ export function EventReceptionConsole(props: Props) {
   const [entry, setEntry] = useState<VerifiedReception | null>(null);
   const [partyOpen, setPartyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [removalIds, setRemovalIds] = useState<string[]>([]);
   const [manual, setManual] = useState(false);
   const [code, setCode] = useState("");
   const latch = useRef(new ScanLatch());
@@ -43,8 +42,16 @@ export function EventReceptionConsole(props: Props) {
   const multiple = result && (result.kind === "group" || result.kind === "family" && result.persons.length > 1);
   const problem = ["error", "uncertain", "blocked"].includes(state.phase);
   const correctionOpen = correction && state.phase === "selection" && state.result && state.result.kind !== "room";
+  const scanHint = deviceMode === "computer" && !manual && <p className="text-sm text-slate-600">{locked || correctionOpen || state.phase === "selection" ? "Lettura sospesa durante l’operazione." : "Scansiona un nuovo QR per aprire la scheda successiva."}</p>;
 
-  useEffect(() => { session.setActive(true); return () => session.setActive(false); }, [session]);
+  useEffect(() => {
+    session.setActive(true);
+    const unsubscribe = session.subscribe(() => {
+      const verified = session.snapshot().result;
+      if (verified) setEntry(verified);
+    });
+    return () => { unsubscribe(); session.setActive(false); };
+  }, [session]);
   useEffect(() => {
     if (!locked) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -53,21 +60,24 @@ export function EventReceptionConsole(props: Props) {
   }, [locked]);
   useEffect(() => { if (entry && !partyOpen) heading.current?.focus(); }, [entry, partyOpen]);
 
-  async function inspect(lookup: ReceptionCommand["lookup"]) {
-    if (busy || !session.canScan() || entry) return;
-    session.setMode("enter");
-    await session.inspect(lookup);
+  function changeBusy(value: boolean) { busyRef.current = value; setBusy(value); }
+  async function inspect(lookup: ReceptionCommand["lookup"], replace = false) {
+    if (busyRef.current || session.isLocked() || session.snapshot().phase === "selection" || session.snapshot().mode !== "enter") return;
+    if (!replace && (!session.canScan() || entry)) return;
+    setEntry(null); setPartyOpen(false);
+    if (replace) await session.inspectNext(lookup);
+    else await session.inspect(lookup);
     const found = session.snapshot().result;
     if (found) { setEntry(found); setPartyOpen(found.kind === "group" || found.kind === "family" && found.persons.length > 1); }
   }
   function next() {
-    if (locked) return;
+    if (busyRef.current || session.isLocked()) return;
     session.setMode("enter"); session.next(); setEntry(null); setPartyOpen(false); latch.current = new ScanLatch();
   }
   async function retry() {
     await session.retry();
     const found = session.snapshot().result;
-    if (found && !entry) { setEntry(found); setPartyOpen(session.snapshot().mode === "enter" && (found.kind === "group" || found.kind === "family" && found.persons.length > 1)); }
+    if (found) { setEntry(found); setPartyOpen(session.snapshot().mode === "enter" && (found.kind === "group" || found.kind === "family" && found.persons.length > 1)); }
   }
   const feedback = <>
     {state.phase === "pending" && <p role="status" className="font-semibold">{entry ? "Operazione in corso…" : "Lettura in corso…"}</p>}
@@ -82,8 +92,8 @@ export function EventReceptionConsole(props: Props) {
   const party = result && (result.kind === "family" || result.kind === "group") ? <ReceptionParty
     key={result.kind === "group" ? result.groupId : result.code} result={result} session={session}
     printing={deviceMode === "computer" && !!props.labelPrinting} labelCommandAction={props.labelCommandAction}
-    disabled={locked || problem || correction} onBusyChange={setBusy} feedback={feedback}
-    onEdit={() => { setPartyOpen(false); void session.editCurrent(); }}
+    disabled={locked || problem || correction} onBusyChange={changeBusy} feedback={feedback}
+    onRemove={ids => { setRemovalIds(ids); setPartyOpen(false); void session.removeCurrent(); }}
   /> : null;
 
   return <section className="mx-auto grid w-full max-w-3xl gap-4" aria-labelledby="reception-title">
@@ -96,7 +106,7 @@ export function EventReceptionConsole(props: Props) {
     </header>
     <div hidden={!!result || problem && state.phase !== "error"}>
       <div className="surface-card grid gap-4 p-4">
-        {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || !!entry} onCode={value => void inspect({ kind: "qr", value })} /> :
+        {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
           <ReceptionCamera source={cameraSource} paused={locked || !!entry} onCode={value => {
             if (!entry && session.canScan() && latch.current.accept(value)) void inspect({ kind: "qr", value });
           }} onNoCode={() => { if (!entry && session.canScan()) latch.current.absent(); }} /> :
@@ -117,7 +127,8 @@ export function EventReceptionConsole(props: Props) {
           <ReceptionOperationDialog open={partyOpen} labelledBy="reception-party-title" onDismiss={locked ? undefined : () => setPartyOpen(false)}>
             <h2 id="reception-party-title" tabIndex={-1} className="text-xl font-bold outline-none">{result.kind === "group" ? result.groupName : "Presenze della famiglia"}</h2>
             {party}
-            <button className="btn-secondary min-h-12 px-4" disabled={locked} onClick={next}>Passa al prossimo codice</button>
+            {scanHint}
+            {deviceMode === "phone" && <button className="btn-secondary min-h-12 px-4" disabled={locked} onClick={next}>Scansiona un altro QR</button>}
           </ReceptionOperationDialog>
         {!partyOpen && feedback}
       </> : party ?? <>
@@ -127,21 +138,27 @@ export function EventReceptionConsole(props: Props) {
           <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt ? void session.editCurrent() : session.selectPresence()}>{result.checkedInAt ? "Modifica presenze" : "Registra presenze"}</button>
         </>}
       </>}
-      {!partyOpen && <button className="btn-secondary min-h-12 px-4" disabled={locked} onClick={next}>Passa al prossimo codice</button>}
-      {deviceMode === "computer" && result.kind === "group" && state.lookup?.kind === "qr" && !partyOpen && !problem && <details>
-        <summary className="min-h-11 cursor-pointer py-2 text-sm">Badge completo e sedute cerimonie</summary>
-        <GroupBadgePanel token={state.lookup.value} group={result} commandAction={props.badgeCommandAction} onBusyChange={setBusy} />
-      </details>}
+      {!partyOpen && <button className="btn-secondary min-h-12 px-4" disabled={locked} onClick={next}>{deviceMode === "computer" ? "Chiudi scheda" : "Scansiona un altro QR"}</button>}
     </div>}
-    {(correctionOpen || state.phase === "selection" && result?.kind === "school") && state.result && state.result.kind !== "room" && <ReceptionOperationDialog onDismiss={() => session.closeSelection()}>
-      <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-bold outline-none">{correction ? "Modifica presenze" : "Presenze della scuola"}</h2>
-      <PresenceSelection key={`${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode} onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={() => session.closeSelection()} />
+    {result && !partyOpen && scanHint}
+    {(correctionOpen || state.phase === "selection" && result?.kind === "school") && state.result && state.result.kind !== "room" && <ReceptionOperationDialog onDismiss={() => { session.closeSelection(); setPartyOpen(!!multiple); }}>
+      <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-bold outline-none">{state.mode === "cancel" ? "Rimuovi presenza" : correction ? "Modifica presenze" : "Presenze della scuola"}</h2>
+      {state.mode === "cancel" && (state.result.kind === "family" || state.result.kind === "group") ? <>
+        <p>Confermi la rimozione della presenza per queste persone?</p>
+        <ul className="grid gap-2">{state.result.persons.filter(person => removalIds.includes(person.id)).map(person => <li key={person.id}><strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}{!person.checkedInAt && " · Presenza già rimossa"}</li>)}</ul>
+        <button className="btn-primary min-h-12 px-4" disabled={!state.result.persons.some(person => removalIds.includes(person.id) && person.checkedInAt)} onClick={async () => {
+          if (!state.result || (state.result.kind !== "family" && state.result.kind !== "group")) return;
+          await session.submit({ subjectIds: state.result.persons.filter(person => removalIds.includes(person.id) && person.checkedInAt).map(person => person.id) }, true);
+          if (session.snapshot().phase === "result") setPartyOpen(!!multiple);
+        }}>Conferma rimozione</button>
+        <button className="btn-secondary min-h-12 px-4" onClick={() => { session.closeSelection(); setPartyOpen(!!multiple); }}>Mantieni presenze</button>
+      </> : <PresenceSelection key={`${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode} onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={() => session.closeSelection()} />}
     </ReceptionOperationDialog>}
     <details className="text-sm">
       <summary className="cursor-pointer py-3">Ultime letture ({state.recent.length})</summary>
       <ul className="grid gap-2">{state.recent.map(item => <li key={item.key} className="flex flex-wrap items-center justify-between gap-2 border-t py-2">
         <span>{item.result.kind === "family" ? `${item.result.persons[0]?.firstName} ${item.result.persons[0]?.lastName} · ${item.result.code}` : item.result.kind === "group" ? item.result.groupName : item.result.kind === "school" ? item.result.schoolName : item.result.label}</span>
-        <button className="min-h-11 underline" disabled={locked || partyOpen || !!entry || !!correctionOpen} onClick={() => void session.editRecent(item.key)}>Modifica presenze</button>
+        <button className="min-h-11 underline" disabled={locked || state.phase === "selection" || correction} onClick={() => void inspect(item.lookup, true)}>Apri scheda</button>
       </li>)}</ul>
     </details>
   </section>;

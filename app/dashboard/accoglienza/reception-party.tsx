@@ -5,10 +5,10 @@ import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception
 import { useQrLabelPrinting } from "../qr-label-panel";
 type Party = Extract<VerifiedReception, { kind: "family" | "group" }>;
 
-export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onEdit, feedback }: {
+export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, onEdit, feedback }: {
   result: Party; session: ReceptionStationSession; printing: boolean;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>; disabled: boolean; onBusyChange: (value: boolean) => void;
-  onEdit: () => void; feedback: ReactNode;
+  onRemove?: (ids: string[]) => void; onEdit?: () => void; feedback: ReactNode;
 }) {
   const single = result.kind === "family" && result.persons.length === 1;
   const [selected, setSelected] = useState<string[]>(() => single ? [result.persons[0].id] : []);
@@ -21,6 +21,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
   const labelItems = new Map(labels.queue?.items.map(item => [item.registrationId, item]));
   const chosen = result.persons.filter(person => selectedSet.has(person.id));
   const labelIds = [...new Set(chosen.map(person => registrations.get(person.id)!))];
+  const presentIds = chosen.filter(person => person.checkedInAt).map(person => person.id);
   const pendingIds = chosen.filter(person => !person.checkedInAt).map(person => person.id);
   const unavailable = labels.queue && labelIds.some(id => !labelItems.has(id) || !!labelItems.get(id)?.reason);
   const locked = disabled || labels.busy;
@@ -38,7 +39,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
     } finally { running.current = false; onBusyChange(false); }
   }
   return <div className="grid gap-4">
-    {single ? <p role="status" className={`rounded-xl p-4 text-lg font-semibold motion-safe:transition-colors motion-safe:duration-300 ${allPresent ? "bg-green-100 text-green-900" : "bg-slate-100 text-slate-700"}`}>{allPresent ? "✓ Partecipazione confermata" : "Partecipazione non confermata"}</p> : <>
+    {single ? <p role="status" className={`rounded-xl p-4 text-lg font-semibold ${allPresent ? "bg-green-100 text-green-900" : "bg-slate-100 text-slate-700"}`}>{allPresent ? "✓ Partecipazione confermata" : "Partecipazione non confermata"}</p> : <>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <strong>{chosen.length} selezionati · {result.persons.filter(p => p.checkedInAt).length} presenti</strong>
         <label className="flex min-h-11 items-center gap-2"><input type="checkbox" disabled={locked} checked={result.persons.length > 0 && result.persons.every(person => selectedSet.has(person.id))} onChange={e => setSelected(e.target.checked ? result.persons.map(p => p.id) : [])} />Seleziona tutti</label>
@@ -60,11 +61,11 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
     {feedback}
     {unavailable && <p className="text-sm text-amber-900">Uno dei QR selezionati non è stampabile. Puoi comunque registrare le presenze.</p>}
     <div className="grid gap-2 border-t border-slate-200 bg-white pt-3">
-      <button className={`${single && allPresent ? "rounded-lg bg-green-100 font-semibold text-green-900" : "btn-primary"} min-h-12 px-4 motion-safe:transition-colors motion-safe:duration-300`} disabled={locked || !pendingIds.length} onClick={() => void act("presence")}>{single && allPresent ? "✓ Partecipazione confermata" : "Conferma partecipazione"}</button>
+      <button className="btn-primary min-h-12 px-4" disabled={locked || !pendingIds.length} onClick={() => void act("presence")}>Conferma partecipazione</button>
       {printing && <button className="btn-secondary min-h-12 px-4" disabled={locked || !chosen.length || !!unavailable} onClick={() => void act("print")}>{result.kind === "group" ? "Stampa i QR del gruppo" : "Stampa etichetta QR"}</button>}
       {single && printing && <span className="text-sm text-slate-600">Stampe richieste: {labels.queue?.items.find(item => item.registrationId === adultId)?.attempts ?? "—"}</span>}
       {labels.message && <p role={labels.failed ? "alert" : "status"} className="text-sm">{labels.message}</p>}
-      {result.persons.some(person => person.checkedInAt) && <button className="min-h-11 justify-self-start text-sm underline" disabled={locked} onClick={onEdit}>Modifica partecipazione</button>}
+      {result.persons.some(person => person.checkedInAt) && <button className="min-h-11 justify-self-start text-sm underline" disabled={locked || !!onRemove && !presentIds.length} onClick={() => onRemove ? onRemove(presentIds) : onEdit?.()}>{onRemove ? single ? "Rimuovi presenza" : "Rimuovi presenze selezionate" : "Modifica partecipazione"}</button>}
     </div>
   </div>;
 }

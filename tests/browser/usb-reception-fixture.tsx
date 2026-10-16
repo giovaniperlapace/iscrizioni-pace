@@ -51,7 +51,7 @@ export default function Fixture({documents, workstation = false}:{documents:Reco
   return structuredClone(result);
  },[]);
  const labelAction=useCallback(async(c:LabelCommand):Promise<LabelResult>=>{
-  setPrinted(old=>[...old,c]);await new Promise(r=>setTimeout(r,100));
+  setPrinted(old=>[...old,c]);await new Promise(r=>setTimeout(r,scenarioRef.current==='slow'?700:100));
   if(scenarioRef.current==='print-error'||scenarioRef.current==='print-request-error'&&c.action==='request')return {status:'unavailable'};
   const queue:LabelQueue={status:'queue',snapshot:'b'.repeat(64),items:ids.slice(0,c.groupId?3:1).map((id,i)=>({registrationId:id,name:names[i],code:`T00${i+1}`,reason:null,state:'pending',attempts:0,outcome:null,changed:false}))};
   if(c.action!=='request')return queue;
