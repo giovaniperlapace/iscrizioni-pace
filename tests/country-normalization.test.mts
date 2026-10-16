@@ -8,7 +8,25 @@ import { participantGeography } from "../lib/registrations/geography.ts";
 import { loadAllRows } from "../lib/supabase/all-rows.ts";
 import { parseRegistrationForm } from "../lib/registrations/validation.ts";
 import { SUPPORTED_LOCALES } from "../lib/i18n/config.ts";
-import { EUROPEAN_COUNTRIES } from "../lib/questionnaire/registration.ts";
+import { EUROPEAN_COUNTRIES, RESIDENCE_COUNTRIES } from "../lib/questionnaire/registration.ts";
+
+test("worldwide residence choices have unique identities and valid names in every form language", () => {
+  assert.equal(RESIDENCE_COUNTRIES.length, 250);
+  const codes = RESIDENCE_COUNTRIES.map(name => countryCode(name));
+  assert.equal(new Set(codes).size, 250);
+  assert.ok(!codes.includes(null));
+  for (const code of ["US", "CN", "IN", "BR", "AU", "MN", "ZA", "PS", "XK"]) {
+    assert.ok(codes.includes(code), code);
+  }
+  for (const name of RESIDENCE_COUNTRIES) {
+    for (const locale of SUPPORTED_LOCALES) {
+      const localized = countryName(name, locale);
+      assert.ok(localized);
+      assert.equal(countryCode(localized), countryCode(name), `${locale}: ${localized}`);
+      assert.equal(countryName(localized), name);
+    }
+  }
+});
 
 const spain = { id: "spain-id", iso2: "ES", name_it: "Spagna", name_en: "Spain" };
 

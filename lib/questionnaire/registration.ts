@@ -1,3 +1,4 @@
+import { COUNTRY_CODES } from "../registrations/country-codes.ts";
 import type { RegistrationInput } from "@/lib/registrations/validation";
 
 export const REGISTRATION_QUESTIONNAIRE_VERSION =
@@ -78,21 +79,15 @@ export const EUROPEAN_COUNTRIES = [
   "Vaticano",
 ] as const;
 
-export const RESIDENCE_COUNTRIES = [
-  ...EUROPEAN_COUNTRIES,
-  "Cuba",
-  "Guatemala",
-  "Colombia",
-  "Nicaragua",
-  "Messico",
-  "Costa d’Avorio",
-  "Nigeria",
-  "Senegal",
-  "Mozambico",
-  "Repubblica Democratica del Congo",
-  "Malawi",
-  "Uganda",
-].sort((a, b) => a.localeCompare(b, "it"));
+// Preserve established labels because city options and saved values use them.
+const residenceCountryLabels: Record<string, string> = {
+  CZ: "Repubblica Ceca", MD: "Moldavia", VA: "Vaticano", KZ: "Kazakhstan",
+  CD: "Repubblica Democratica del Congo",
+};
+const residenceCountryNames = new Intl.DisplayNames(["it"], { type: "region" });
+export const RESIDENCE_COUNTRIES = COUNTRY_CODES.map(code =>
+  residenceCountryLabels[code] ?? residenceCountryNames.of(code)!
+).sort((a, b) => a.localeCompare(b, "it"));
 
 export const PLACEHOLDER_GROUPS = [
   "Gruppo della mia città",

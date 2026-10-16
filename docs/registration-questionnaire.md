@@ -64,9 +64,9 @@ prefisso internazionale e salva un numero normalizzato in formato `+...`.
 
 ## Paesi e città
 
-- Il paese e' cercabile su una lista di paesi dell'Europa geografica.
-- L'opzione `Altro / non in lista` apre un campo libero per persone provenienti
-  da paesi non europei.
+- Il paese è cercabile nel catalogo mondiale di paesi e territori ISO, più Kosovo,
+  con nomi e ordine alfabetico nella lingua del form (it, en, fr, de, es, nl, uk).
+- L'opzione `Altro / non in lista` conserva l'inserimento manuale validato.
 - La città dipende dal paese scelto, e' cercabile e mostra una lista locale di
   città principali. Per l'Italia la lista include i principali capoluoghi di
   provincia; per gli altri paesi europei usa capitali e città di rilievo.

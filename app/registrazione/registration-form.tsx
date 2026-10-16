@@ -722,7 +722,7 @@ export function RegistrationForm({
     [country, countryName(country, locale) ?? country].some(name =>
       normalizeSearchText(name).includes(normalizeSearchText(countrySearch))
     )
-  );
+  ).sort((a, b) => (countryName(a, locale) ?? a).localeCompare(countryName(b, locale) ?? b, locale));
   const countryValue =
     selectedCountry === OTHER_COUNTRY ? customCountry : selectedCountry;
   const cityOptions =
