@@ -1,13 +1,25 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
+import { ReceptionWorkstation } from "@/app/dashboard/accoglienza/reception-workstation";
+import type { CameraSource } from "@/lib/reception/camera";
 import { ReceptionConsole } from "@/app/dashboard/accoglienza/reception-console";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import type { LabelCommand, LabelQueue, LabelResult } from "@/lib/reception/qr-labels";
 const ids=[1,2,3].map(n=>`00000000-0000-4000-8000-${String(n).padStart(12,"0")}`);
 const names=["Ada Mori","Bruno Rossi","Carlo Mori"];
 type Verified=Extract<ReceptionResult,{status:"valid"}>;
-export default function Fixture({documents}:{documents:Record<string,string>}) {
+export default function Fixture({documents, workstation = false}:{documents:Record<string,string>; workstation?: boolean}) {
  const [scenario,setScenario]=useState('normal');const scenarioRef=useRef('normal');
+ const cameraCode=useRef<string|null>(null);
+ const [cameraStats,setCameraStats]=useState({started:0,stopped:0});
+ const [source]=useState<CameraSource>(()=>async({signal,onCode,onNoCode}: Parameters<CameraSource>[0])=>{
+  if(scenarioRef.current==='camera-denied')throw new DOMException('Synthetic denial','NotAllowedError');
+  setCameraStats(s=>({...s,started:s.started+1}));
+  const timer=setInterval(()=>{if(cameraCode.current)onCode(cameraCode.current);else onNoCode?.();},100);
+  let stopped=false;
+  const stop=()=>{if(stopped)return;stopped=true;clearInterval(timer);setCameraStats(s=>({...s,stopped:s.stopped+1}));};
+  signal.addEventListener('abort',stop,{once:true});return stop;
+ });
  const records=useRef(new Map<string,Verified>());
  const [calls,setCalls]=useState<ReceptionCommand[]>([]),[writes,setWrites]=useState<ReceptionCommand[]>([]),[printed,setPrinted]=useState<LabelCommand[]>([]);
  const lost=useRef(false),seen=useRef(new Set<string>());
@@ -45,8 +57,16 @@ export default function Fixture({documents}:{documents:Record<string,string>}) {
   return {status:'document',requestId:c.requestId!,html:documents[c.ids!.join(',')]};
  },[documents]);
  return <main className="mx-auto max-w-5xl p-4"><h1>Collaudo USB sintetico</h1>
-  <label>Scenario sintetico<select value={scenario} onChange={e=>{setScenario(e.target.value);scenarioRef.current=e.target.value;lost.current=false;}}>{['normal','slow','forbidden','conflict','inspect-uncertain','write-uncertain','print-error'].map(s=><option key={s}>{s}</option>)}</select></label>
-  <ReceptionConsole eventReception labelPrinting commandAction={commandAction} labelCommandAction={labelAction}/>
+  <label>Scenario sintetico<select value={scenario} onChange={e=>{setScenario(e.target.value);scenarioRef.current=e.target.value;lost.current=false;}}>{['normal','slow','forbidden','conflict','inspect-uncertain','write-uncertain','print-error','camera-denied'].map(s=><option key={s}>{s}</option>)}</select></label>
+  {workstation ? <>
+   <div aria-label="Fotogramma sintetico" className="flex gap-3">
+    <button onClick={()=>{cameraCode.current='a'.repeat(43);}}>QR singolo</button>
+    <button onClick={()=>{cameraCode.current='G:'+'g'.repeat(43);}}>QR gruppo</button>
+    <button onClick={()=>{cameraCode.current=null;}}>Nessun QR</button>
+   </div>
+   <ReceptionWorkstation duties={[{key:'event_entry',duty:'event_entry',title:'Accoglienza evento',room:null}]} commandAction={commandAction} labelCommandAction={labelAction} cameraSource={source}/>
+  </> : <ReceptionConsole eventReception labelPrinting commandAction={commandAction} labelCommandAction={labelAction}/>}
+  <output data-camera hidden>{JSON.stringify(cameraStats)}</output>
   <output data-calls hidden>{JSON.stringify(calls)}</output><output data-writes hidden>{JSON.stringify(writes)}</output><output data-prints hidden>{JSON.stringify(printed)}</output>
  </main>;
 }

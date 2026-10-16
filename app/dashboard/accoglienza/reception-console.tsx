@@ -17,7 +17,9 @@ import { ReceptionStationSession, ScanLatch, type ReceptionMode, type VerifiedRe
 const labels = { enter: "Registra ingresso", correct: "Salva presenze", cancel: "Annulla ingresso" };
 const date = (value: string) => new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value));
 
-export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDuty, badgeCommandAction, labelPrinting = false, eventReception = false, labelCommandAction }: {
+export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDuty, onChangeMode, deviceMode, badgeCommandAction, labelPrinting = false, eventReception = false, labelCommandAction }: {
+  deviceMode?: "computer" | "phone";
+  onChangeMode?: () => void;
   eventReception?: boolean;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>;
   labelPrinting?: boolean;
@@ -30,7 +32,11 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
   const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, duty?.duty === "panel_entry" || duty?.duty === "room_assistance" ? { duty: duty.duty, panelId: duty.panelId } : { duty: "event_entry" }, eventReception));
   const readOnly = duty?.duty === "room_assistance";
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
-  const [input, setInput] = useState<"camera" | "manual" | "usb">(eventReception ? "usb" : "camera");
+  const usbReading = deviceMode ? deviceMode === "computer" : eventReception;
+  const holdResult = eventReception || usbReading;
+  const printingAllowed = deviceMode !== "phone";
+  const qrPrinting = printingAllowed && labelPrinting;
+  const [input, setInput] = useState<"camera" | "manual" | "usb">(usbReading ? "usb" : "camera");
   const [value, setValue] = useState("");
   const latch = useRef(new ScanLatch());
   const [badgeBusy, setBadgeBusy] = useState(false);
@@ -57,7 +63,7 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
   }, [state.phase]);
 
   function dismiss() { if (badgeBusy) return; if (eventReception && selection) session.closeSelection(); else { session.setMode("enter"); session.next(); } }
-  function inspect(lookup: ReceptionCommand["lookup"]) { if (badgeBusy || session.isLocked() || session.snapshot().phase === "selection" || (eventReception && session.snapshot().result)) return; session.setMode("enter"); void session.inspect(lookup); }
+  function inspect(lookup: ReceptionCommand["lookup"]) { if (badgeBusy || session.isLocked() || session.snapshot().phase === "selection" || (holdResult && session.snapshot().result)) return; session.setMode("enter"); void session.inspect(lookup); }
   const operationContent = <>
     {state.phase === "pending" && input !== "camera" && <p role="status" className="rounded-xl bg-slate-100 p-4 font-semibold" aria-live="polite">Operazione in corso. Attendi l’esito prima della prossima persona…</p>}
     {state.message && (input !== "camera" || operationOpen) && <div role={state.phase === "result" ? "status" : "alert"} className={`rounded-xl border p-4 ${state.phase === "result" ? "border-green-400 bg-green-50 text-green-950" : "border-amber-400 bg-amber-50 text-amber-950"}`}>
@@ -69,17 +75,17 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
     {state.result && state.phase !== "pending" && <div className="grid gap-3 border-t border-[var(--peace-border)] pt-4">
       <h3 className="text-lg font-semibold">{selection ? "Conferma le presenze" : eventReception ? "Scheda accoglienza" : "Ultima operazione"}</h3>
       {selection && state.result.kind === "family" ? <p className="text-sm">Codice {state.result.code}</p> : <PresenceSummary result={state.result} />}
-      {!eventReception && selection && state.result.kind === "group" && !correction && <button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>session.finishGroupInspection()}>Prepara badge senza registrare ingressi</button>}
+      {printingAllowed && !eventReception && selection && state.result.kind === "group" && !correction && <button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>session.finishGroupInspection()}>Prepara badge senza registrare ingressi</button>}
       {selection && state.result.kind !== "room" && <PresenceSelection key={`${state.result.kind}-${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode}
         onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={dismiss} />}
-      {state.result.kind === "group" && state.lookup?.kind === "qr" && state.phase === "result" && (labelPrinting ? <details><summary className="min-h-11 cursor-pointer font-semibold">Badge completo e sedute cerimonie · formato distinto</summary><GroupBadgePanel token={state.lookup.value} group={state.result} onBusyChange={setBadgeBusy} commandAction={badgeCommandAction} /></details> : <GroupBadgePanel token={state.lookup.value} group={state.result} onBusyChange={setBadgeBusy} commandAction={badgeCommandAction} />)}
-      {labelPrinting && state.phase === "result" && state.result.kind === "group" ? <QrLabelPanel key={state.result.groupId} scope={{ groupId: state.result.groupId }} onBusyChange={setBadgeBusy} commandAction={labelCommandAction} /> : null}
-      {labelPrinting && state.phase === "result" && state.result.kind === "family" && state.result.persons.find(p => p.kind === "adult") ? <QrLabelPanel key={state.result.persons[0].id} scope={{ registrationId: state.result.persons.find(p => p.kind === "adult")!.id }} onBusyChange={setBadgeBusy} commandAction={labelCommandAction} /> : null}
+      {printingAllowed && state.result.kind === "group" && state.lookup?.kind === "qr" && state.phase === "result" && (qrPrinting ? <details><summary className="min-h-11 cursor-pointer font-semibold">Badge completo e sedute cerimonie · formato distinto</summary><GroupBadgePanel token={state.lookup.value} group={state.result} onBusyChange={setBadgeBusy} commandAction={badgeCommandAction} /></details> : <GroupBadgePanel token={state.lookup.value} group={state.result} onBusyChange={setBadgeBusy} commandAction={badgeCommandAction} />)}
+      {qrPrinting && state.phase === "result" && state.result.kind === "group" ? <QrLabelPanel key={state.result.groupId} scope={{ groupId: state.result.groupId }} onBusyChange={setBadgeBusy} commandAction={labelCommandAction} /> : null}
+      {qrPrinting && state.phase === "result" && state.result.kind === "family" && state.result.persons.find(p => p.kind === "adult") ? <QrLabelPanel key={state.result.persons[0].id} scope={{ registrationId: state.result.persons.find(p => p.kind === "adult")!.id }} onBusyChange={setBadgeBusy} commandAction={labelCommandAction} /> : null}
       {eventReception && state.phase === "result" && state.result.kind !== "room" && (state.result.kind === "school" ? !state.result.checkedInAt : state.result.persons.some(person => !person.checkedInAt)) &&
         <button type="button" className="btn-primary min-h-12 px-4" disabled={badgeBusy} onClick={() => session.selectPresence()}>Registra presenze</button>}
       {!readOnly && state.phase === "result" && !correction && state.result.kind !== "room" && ((state.result.kind === "family" || state.result.kind === "group") ? state.result.persons.some(person => person.checkedInAt) : state.result.checkedInAt) &&
         <button type="button" className="btn-secondary min-h-12 px-4" disabled={badgeBusy} onClick={() => void session.editCurrent()}>Modifica presenze</button>}
-      {(groupOpen || eventReception) && state.phase === "result" && <button type="button" className="btn-secondary min-h-12 px-4" disabled={badgeBusy} onClick={dismiss}>Passa al prossimo codice</button>}
+      {(groupOpen || holdResult) && state.phase === "result" && <button type="button" className="btn-secondary min-h-12 px-4" disabled={badgeBusy} onClick={dismiss}>Passa al prossimo codice</button>}
     </div>}
   </>;
   return <section className="grid gap-5" aria-labelledby="reception-title">
@@ -90,26 +96,28 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
       {state.phase !== "ready" && state.phase !== "result" && state.phase !== "error" && state.phase !== "pending" && <p aria-hidden="true" className="text-sm font-semibold text-amber-200">
         {state.phase === "selection" ? "Codice verificato · completa la conferma nella finestra aperta" : state.message}
       </p>}
+      {deviceMode && <p className="text-sm">{deviceMode === "computer" ? "Modalità computer · Scanner USB e stampa" : "Modalità telefono · Fotocamera e presenze"}</p>}
+      {onChangeMode && <button type="button" className="min-h-12 justify-self-start underline" disabled={locked || selection} onClick={onChangeMode}>Cambia modalità</button>}
       {onChangeDuty && <button type="button" className="min-h-12 justify-self-start underline" disabled={locked || selection} onClick={onChangeDuty}>Cambia incarico</button>}
     </header>
     <div className="surface-card grid gap-5 p-4 sm:p-7">
-      <p className="text-sm">{eventReception ? "Leggi il QR della persona o del gruppo con lo scanner USB. Controlla chi è presente e stampa le etichette necessarie. La stampa non registra presenze." : readOnly ? "Inquadra un QR per consultare la prenotazione e indicare sala e settore. Questa consultazione non registra ingressi." : "Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie, gruppi e scuole conferma chi è presente."}</p>
+      <p className="text-sm">{eventReception ? deviceMode === "phone" ? "Inquadra il QR della persona o del gruppo. La lettura apre la scheda: registra o modifica le presenze con una conferma esplicita. In questa modalità la stampa non è disponibile." : "Leggi il QR della persona o del gruppo con lo scanner USB. Controlla chi è presente e stampa le etichette necessarie. La stampa non registra presenze." : readOnly ? "Inquadra un QR per consultare la prenotazione e indicare sala e settore. Questa consultazione non registra ingressi." : "Inquadra un QR alla volta. Per una persona singola l’ingresso è automatico; per famiglie, gruppi e scuole conferma chi è presente."}</p>
       {duty?.duty === "panel_entry" && <p className="text-sm">È necessaria una prenotazione per questo panel e il passaggio precedente dall’accoglienza dell’evento.</p>}
 
     <div className="flex flex-wrap gap-2" aria-label="Modalità di lettura">
-      {eventReception ? <button type="button" className={input === "usb" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"} aria-pressed={input === "usb"} disabled={locked || selection || !!state.result} onClick={() => { setInput("usb"); setValue(""); }}>Scanner USB</button> : <button type="button" className={input === "camera" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
-        aria-pressed={input === "camera"} disabled={locked || selection} onClick={() => { setInput("camera"); setValue(""); }}>Inquadra QR code</button>}
+      {usbReading ? <button type="button" className={input === "usb" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"} aria-pressed={input === "usb"} disabled={locked || selection || !!state.result} onClick={() => { setInput("usb"); setValue(""); }}>Scanner USB</button> : <button type="button" className={input === "camera" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
+        aria-pressed={input === "camera"} disabled={locked || selection || (holdResult && !!state.result)} onClick={() => { setInput("camera"); setValue(""); }}>Inquadra QR code</button>}
       <button type="button" className={input === "manual" ? "btn-primary min-h-12 px-4" : "btn-secondary min-h-12 px-4"}
-        aria-pressed={input === "manual"} disabled={locked || selection || (eventReception && !!state.result)} onClick={() => { setInput("manual"); setValue(""); }}>Inserisci il codice manualmente</button>
+        aria-pressed={input === "manual"} disabled={locked || selection || (holdResult && !!state.result)} onClick={() => { setInput("manual"); setValue(""); }}>Inserisci il codice manualmente</button>
     </div>
 
     {input === "usb" ? <ReceptionUsbScanner paused={locked || selection || !!state.result} onCode={code => inspect({ kind: "qr", value: code })} /> : input === "camera" ? <>
-      <ReceptionCamera source={cameraSource} paused={locked || selection || groupOpen}
+      <ReceptionCamera source={cameraSource} paused={locked || selection || groupOpen || (holdResult && !!state.result)}
         feedback={state.phase === "pending" ? "Operazione in corso. Attendi l’esito prima della prossima persona…" : completedFeedback && expiredFeedback !== state ? state.message : undefined}
         feedbackTone={state.phase === "pending" ? "progress" : state.phase === "result" ? "success" : state.problem === "conflict" ? "warning" : "error"}
         belowPreview={!operationOpen ? operationContent : null} onCode={code => {
         latch.current.clearAbsence();
-        if (session.isLocked() || session.snapshot().phase === "selection" || session.snapshot().result?.kind === "group" || !latch.current.accept(code)) return;
+        if (session.isLocked() || session.snapshot().phase === "selection" || session.snapshot().result?.kind === "group" || (holdResult && session.snapshot().result) || !latch.current.accept(code)) return;
         inspect({ kind: "qr", value: code });
       }} onNoCode={() => {
         if (!session.isLocked() && session.snapshot().phase !== "selection") latch.current.absent();
@@ -117,7 +125,7 @@ export function ReceptionConsole({ commandAction, cameraSource, duty, onChangeDu
       }} />
 
     </> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); inspect({ kind: value.startsWith("G:") || value.length === 43 ? "qr" : "code", value }); setValue(""); }}>
-      <fieldset disabled={locked || selection || (eventReception && !!state.result)} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+      <fieldset disabled={locked || selection || (holdResult && !!state.result)} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <label className="grid min-w-0 gap-1 text-sm">Codice partecipante o QR gruppo
           <input className="field min-h-12 min-w-0" type="text" autoComplete="off" spellCheck={false}
             autoCapitalize="none" required maxLength={45}

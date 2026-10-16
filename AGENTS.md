@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Accoglienza distinta per computer e telefono — 2026-10-16
+
+- All’apertura della dashboard si sceglie esplicitamente Computer (scanner
+  USB e stampa) oppure Telefono (fotocamera e sole presenze); la scelta resta
+  nella pagina e si può cambiare a operazione conclusa. Nessun rilevamento
+  hardware implicito e nessuna preferenza persistente del dispositivo.
+- In modalità telefono non vengono montati né la coda etichette QR né il
+  pannello badge completo; assenti anche preparazione badge e link al collaudo
+  stampante. Restano lettura manuale, singoli/gruppi/scuole e conferme presenze.
+- All’ingresso evento la fotocamera apre la scheda senza registrare presenze,
+  con gli stessi comandi espliciti del computer. Nuovi QR ignorati fino a
+  Passa al prossimo codice, senza consumare il codice per la prossima lettura.
+  Cambio modalità bloccato durante selezione, stampa, richieste o esiti incerti;
+  smontaggio della console rilascia la fotocamera e azzera la cronologia locale.
+- Accesso Admin e controlli server/DB conservati. Nessuna migration o modifica
+  di dati remoti. Verifiche browser sintetiche, stampa simulata; prove hardware
+  ancora sospese. Rilascio su main autorizzato dall’utente; nessuna migration necessaria.
+- Superati 895 test, lint, TypeScript, build production in copia isolata e
+  browser sintetico telefono/USB/fotocamera. Dettagli e verifiche in
+  docs/accoglienza-modalita-dispositivo-2026-10-16.md.
+
+
 ## QR del gruppo diretto per il capogruppo — 2026-10-16
 
 - Su richiesta dell’utente, QR del gruppo è accanto a Gestisci link nella
