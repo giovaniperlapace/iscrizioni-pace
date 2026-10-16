@@ -18,7 +18,7 @@ export function ReceptionWorkstation({ duties, commandAction, cameraSource, labe
   const [selected, setSelected] = useState<string | null>(() => duties.length === 1 ? duties[0].key : null);
   const duty = duties.find(item => item.key === selected);
   if (duties.length && !deviceMode) return <section className="surface-card grid gap-4 p-5" aria-labelledby="reception-mode-title">
-    <h2 id="reception-mode-title" className="text-xl font-semibold">Come usi l’accoglienza?</h2>
+    <h2 id="reception-mode-title" className="text-xl font-semibold">Che modalità vuoi usare?</h2>
     <div className="grid gap-3 sm:grid-cols-2">
       <button type="button" className="btn-secondary min-h-24 px-4 py-3 text-left" onClick={() => setDeviceMode("computer")}>
         <span className="block font-semibold">Computer · scanner USB e stampa</span>
