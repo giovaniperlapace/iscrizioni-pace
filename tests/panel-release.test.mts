@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getPanelReleaseMode } from "../lib/panels/release.ts";
+import { getPanelReleaseMode, getSchoolBookingAccess } from "../lib/panels/release.ts";
 import { readFileSync } from "node:fs";
 
 for (const mode of ["internal", "catalog", "open"] as const) {
@@ -17,7 +17,8 @@ test("missing migration closes public access; failed or malformed reads never en
 test("every public mutation checks release state before form processing and side effects", () => {
   const actions = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
   for (const name of ["setParticipantPanelBooking", "submitPublicSchoolBooking", "requestSchoolBookingAccess", "updateTeacherSchoolBooking", "cancelTeacherSchoolBooking"]) {
-    assert.match(actions, new RegExp(`export async function ${name}\\(formData: FormData\\) \\{\\s+await requirePublicPanelBookings\\(\\);`));
+    const gate = name === "setParticipantPanelBooking" ? "requirePublicPanelBookings" : "requireSchoolBookings";
+    assert.match(actions, new RegExp(`export async function ${name}\\(formData: FormData\\) \\{\\s+await ${gate}\\(\\);`));
   }
 });
 
@@ -25,5 +26,13 @@ test("all operational panel actions authorize panel manager before service-role 
   const actions = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
   for (const name of ["saveEventLocation", "deleteEventLocation", "savePanelDraft", "publishPanels", "unpublishPanel", "saveSchoolBooking", "cancelSchoolBooking"]) {
     assert.match(actions, new RegExp(`export async function ${name}\\(formData: FormData\\) \\{\\s+await requirePanelManager\\(\\);`));
+  }
+});
+
+test("school gate is independent and fails closed without its migration", async () => {
+  for (const enabled of [false, true]) assert.equal(await getSchoolBookingAccess({ rpc: async () => ({ data: enabled }) } as never), enabled);
+  assert.equal(await getSchoolBookingAccess({ rpc: async () => ({ error: { code: "PGRST202" } }) } as never), false);
+  for (const result of [{ data: null }, { data: "true" }, { error: { code: "08006" } }]) {
+    await assert.rejects(getSchoolBookingAccess({ rpc: async () => result } as never));
   }
 });

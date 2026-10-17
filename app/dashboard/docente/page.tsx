@@ -1,4 +1,4 @@
-import { requirePublicPanelBookings } from "@/lib/panels/release.server";
+import { requireSchoolBookings } from "@/lib/panels/release.server";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -14,15 +14,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type Props = { searchParams: Promise<{ error?: string; saved?: string; cancelled?: string }> };
 
 export default async function TeacherDashboardPage({ searchParams }: Props) {
-  await requirePublicPanelBookings();
+  await requireSchoolBookings();
   const [locale, params, supabase] = await Promise.all([getRequestLocale(), searchParams, createSupabaseServerClient()]);
   const copy = getSchoolBookingCopy(locale);
   const teacherCopy = getTeacherFlowCopy(locale);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  await supabase.rpc("link_current_school_teacher_identity");
+  const { error: identityError } = await supabase.rpc("link_current_school_teacher_identity");
+  if (identityError) throw identityError;
   const { data: event } = await supabase.from("events").select("id,title").eq("is_current", true).limit(1).maybeSingle();
-  const catalog = event ? await getSchoolBookingCatalog(supabase, event.id) : { bookings: [], panelOptions: [] };
+  const catalog = event ? await getSchoolBookingCatalog(supabase, event.id, "teacher") : { bookings: [], panelOptions: [] };
   const { data: qrRows } = catalog.bookings.length ? await supabase.from("school_booking_qr_tokens").select("booking_id,token_encrypted,status").in("booking_id", catalog.bookings.map((booking) => booking.id)).eq("status", "active") : { data: [] };
   const qrByBooking = new Map(await Promise.all(((qrRows ?? []) as Array<{ booking_id: string; token_encrypted: string }>).map(async (row) => {
     const token = decryptQrToken(row.token_encrypted);

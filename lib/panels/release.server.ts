@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPanelReleaseMode } from "./release";
+import { getPanelReleaseMode, getSchoolBookingAccess } from "./release";
 
 export async function requirePublicPanelBookings() {
   if (await getPanelReleaseMode(await createSupabaseServerClient()) !== "open") redirect("/");
@@ -16,4 +16,8 @@ export async function requirePanelManager() {
   const { getCurrentOperationalEvent } = await import("@/lib/events/current");
   const event = await getCurrentOperationalEvent(createSupabaseServiceClient(), "id");
   if (!canAccessPanelManagement(auth.eventRoles, event?.id ?? null)) redirect(auth.dashboardPath);
+}
+
+export async function requireSchoolBookings() {
+  if (!await getSchoolBookingAccess(await createSupabaseServerClient())) redirect("/");
 }

@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## Scuole tramite link diretto — 2026-10-17
+
+- L’utente richiede l’abilitazione operativa di /scuole, fuori dalla home,
+  con tutti i Forum pubblicati che hanno posti scuola disponibili. Apertura
+  generale e prenotazioni personali/capogruppo restano internal/chiuse.
+- Flag school_link_enabled separato, gate server/DB, noindex/nofollow e nessun
+  link scuole nella home. Capacità e lock canonici; docente limitato ai propri
+  dati con metadati Forum dedicati. Corretti get service-role e payload docente.
+- Quantità Forum seguono i totali classe e restano riducibili. Superati 937 test,
+  lint, TypeScript, build pulita e SQL/concorrenza/browser originali sintetici.
+- Migration 20261017160000_school_direct_link applicata/registrata in production
+  dopo backup verificato: 63 tabelle, 110.398 righe invariate. Attivazione del solo
+  flag scuola separata dal deployment; nessuna apertura Forum generale.
+  Staging, coda capogruppo e verbali hardware paralleli esclusi; nessuna email
+  reale di collaudo. Dettagli in docs/scuole-link-diretto-2026-10-17.md.
+
 ## Mail: filtro giorni di presenza da comunicare — 2026-10-17
 
 - Nella selezione destinatari delle campagne, scheda Partecipanti, nuovo filtro

@@ -13,3 +13,11 @@ export async function getPanelReleaseMode(db: SupabaseClient): Promise<PanelRele
   }
   return data;
 }
+
+export async function getSchoolBookingAccess(db: SupabaseClient): Promise<boolean> {
+  const { data, error } = await db.rpc("get_school_booking_access");
+  if (error?.code === "PGRST202") return false;
+  if (error) throw error;
+  if (typeof data !== "boolean") throw new Error("Stato di apertura scuole non disponibile.");
+  return data;
+}

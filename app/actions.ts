@@ -1,7 +1,7 @@
 "use server";
 import { parseForumIntent, forumBookingPath, withForumIntent } from "@/lib/panels/booking-intent";
 import { resolvePublicForumIntent } from "@/lib/panels/booking-intent.server";
-import { requirePanelManager, requirePublicPanelBookings } from "@/lib/panels/release.server";
+import { requirePanelManager, requirePublicPanelBookings, requireSchoolBookings } from "@/lib/panels/release.server";
 
 import { resolveRoleParticipant } from "@/lib/operational-users/role-participant";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
@@ -2066,7 +2066,7 @@ export async function saveSchoolBooking(formData: FormData) {
 }
 
 export async function submitPublicSchoolBooking(formData: FormData) {
-  await requirePublicPanelBookings();
+  await requireSchoolBookings();
   const parsed = parsePublicSchoolBookingForm(formData);
   const locale = normalizeLocale(String(formData.get("locale") ?? "")) ?? DEFAULT_LOCALE;
   const errorPath = (code: string) => `/scuole?error=${encodeURIComponent(code)}`;
@@ -2115,7 +2115,7 @@ function getUnknownErrorMessage(error: unknown): string {
 }
 
 export async function requestSchoolBookingAccess(formData: FormData) {
-  await requirePublicPanelBookings();
+  await requireSchoolBookings();
   const email = normalizeEmail(formData.get("email"));
   const ipAddress = await getIpAddress();
   const sentPath = `/scuole/accesso?sent=1`;
@@ -2137,7 +2137,7 @@ export async function requestSchoolBookingAccess(formData: FormData) {
 }
 
 export async function updateTeacherSchoolBooking(formData: FormData) {
-  await requirePublicPanelBookings();
+  await requireSchoolBookings();
   const bookingId = optionalText(formData.get("bookingId"));
   const eventId = optionalText(formData.get("eventId"));
   const teacherEmail = optionalText(formData.get("teacherEmail"));
@@ -2154,7 +2154,7 @@ export async function updateTeacherSchoolBooking(formData: FormData) {
     redirect("/dashboard/docente?error=invalid");
   }
   const reservations = sectionIds.map((sectionId) => ({
-    section_id: sectionId,
+    seat_section_id: sectionId,
     panel_id: optionalText(formData.get(`panelId:${sectionId}`)),
     student_count: parsePositiveInteger(formData.get(`students:${sectionId}`), studentCount),
     companion_count: parsePositiveInteger(formData.get(`companions:${sectionId}`), companionCount),
@@ -2181,7 +2181,7 @@ export async function updateTeacherSchoolBooking(formData: FormData) {
 }
 
 export async function cancelTeacherSchoolBooking(formData: FormData) {
-  await requirePublicPanelBookings();
+  await requireSchoolBookings();
   const bookingId = optionalText(formData.get("bookingId"));
   if (!bookingId) redirect("/dashboard/docente?error=invalid");
   const supabase = await createSupabaseServerClient();

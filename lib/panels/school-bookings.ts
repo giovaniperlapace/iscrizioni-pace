@@ -94,8 +94,14 @@ type ReservationDbRow = {
 
 export async function getSchoolBookingCatalog(
   supabase: SupabaseClient,
-  eventId: string
+  eventId: string,
+  audience: "management" | "teacher" = "management"
 ): Promise<{ bookings: SchoolBookingRow[]; panelOptions: SchoolPanelOption[] }> {
+  const teacherOptions = audience === "teacher"
+    ? await supabase.rpc("get_teacher_school_panel_options", { p_event_id: eventId })
+    : null;
+  if (teacherOptions?.error) throw teacherOptions.error;
+  const emptyResult = { data: [], error: null };
   const [bookingsResult, teachersResult, reservationsResult, panelsResult, sectionsResult, audiencesResult, locationsResult, qrResult] =
     await Promise.all([
       loadAllRows((from, to) => supabase
@@ -112,23 +118,23 @@ export async function getSchoolBookingCatalog(
         .from("school_panel_reservations")
         .select("booking_id,panel_id,seat_section_id,student_count,companion_count,status")
         .eq("event_id", eventId).order("id").range(from, to)),
-      loadAllRows((from, to) => supabase
+      audience === "teacher" ? emptyResult : loadAllRows((from, to) => supabase
         .from("event_moments")
         .select("id,title,starts_at,ends_at,location_id")
         .eq("event_id", eventId)
         .eq("moment_type", "panel")
         .eq("publication_status", "published")
         .order("starts_at", { ascending: true }).order("id").range(from, to)),
-      loadAllRows((from, to) => supabase
+      audience === "teacher" ? emptyResult : loadAllRows((from, to) => supabase
         .from("panel_seat_sections")
         .select("id,panel_id,audience_type_id")
         .eq("event_id", eventId).order("id").range(from, to)),
-      loadAllRows((from, to) => supabase
+      audience === "teacher" ? emptyResult : loadAllRows((from, to) => supabase
         .from("panel_audience_types")
         .select("id,name,booking_channel,is_active")
         .eq("event_id", eventId)
         .eq("booking_channel", "school_booking").order("id").range(from, to)),
-      loadAllRows((from, to) => supabase.from("event_locations").select("id,name").eq("event_id", eventId).order("id").range(from, to)),
+      audience === "teacher" ? emptyResult : loadAllRows((from, to) => supabase.from("event_locations").select("id,name").eq("event_id", eventId).order("id").range(from, to)),
       loadAllRows((from, to) => supabase
         .from("school_booking_qr_tokens")
         .select("booking_id,school_bookings!inner(event_id)")
@@ -152,7 +158,12 @@ export async function getSchoolBookingCatalog(
   const audiences = new Map(
     ((audiencesResult.data ?? []) as Array<{ id: string; name: string; is_active: boolean | null }>).map((row) => [row.id, row])
   );
-  const panelOptions = ((sectionsResult.data ?? []) as Array<{ id: string; panel_id: string; audience_type_id: string }>)
+  const panelOptions: SchoolPanelOption[] = teacherOptions ? (teacherOptions.data ?? []).map((row: {
+    panel_id: string; section_id: string; title: string; starts_at: string;
+    ends_at: string; location_name: string; audience_name: string;
+  }) => ({ panelId: row.panel_id, sectionId: row.section_id, title: row.title,
+    startsAt: row.starts_at, endsAt: row.ends_at, locationName: row.location_name,
+    audienceName: row.audience_name })) : ((sectionsResult.data ?? []) as Array<{ id: string; panel_id: string; audience_type_id: string }>)
     .flatMap((section): SchoolPanelOption[] => {
       const panel = panels.get(section.panel_id);
       const audience = audiences.get(section.audience_type_id);
