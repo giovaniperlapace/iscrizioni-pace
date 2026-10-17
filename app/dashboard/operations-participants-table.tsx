@@ -1,13 +1,13 @@
 "use client";
 
 import { EventAttendanceProvider, EventPresence } from "@/app/dashboard/event-attendance";
-import { nationalityName } from "@/lib/registrations/nationality-names";
+import { participantSortValue, sortOperationsParticipants } from "@/lib/registrations/operations-sort";
 import { OperationalAssociationEditor } from "@/app/dashboard/operational-association-editor";
 import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
 import { useInternalSexColumn } from "./use-internal-sex-column";
 import { ParticipantEmailCell } from "@/components/participant-email-cell";
 
-import { attendanceSummary, attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
+import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
 import { MANUAL_REGISTRATION_COPY } from "@/lib/registrations/manual-registration-copy";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -31,6 +31,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  useTransition,
   type ReactNode,
 } from "react";
 import { ArrowDown, ArrowUp, Columns3, Download, Pencil, UserPlus, X } from "lucide-react";
@@ -41,7 +42,6 @@ import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { applyOperationsDashboardFilters } from "@/lib/registrations/operations-dashboard";
 import { parseStatisticsDrilldown } from "@/lib/registrations/event-statistics";
-import { calculateAgeAtDate } from "@/lib/groups/matching";
 import { eventServiceStatusLabel } from "@/lib/registrations/event-services";
 import {
   DEFAULT_TABLE_PREFERENCES,
@@ -160,6 +160,8 @@ export function OperationsParticipantsTable({
   });
   const busy = useRef(new Set<string>());
   const tableRegion = useRef<HTMLDivElement>(null);
+  const focusPage = useRef(false);
+  const [pagePending, startPageTransition] = useTransition();
   const current = (row: Row) =>
     changes[row.registrationId]?.original === row
       ? changes[row.registrationId].next
@@ -190,82 +192,62 @@ export function OperationsParticipantsTable({
     } catch {
       /* URL still preserves state. */
     }
-    window.history.replaceState(
-      null,
-      "",
-      paramsFor({
+    const nextPath = paramsFor({
         columns: normalized.columns.join(","),
         sort: normalized.sort,
         direction: normalized.direction,
         ...(normalized.sort !== preferences.sort || normalized.direction !== preferences.direction
           ? { participantPage: null } : {}),
-      }),
-    );
+      });
+    if (snapshot.serverPage && (normalized.sort !== preferences.sort || normalized.direction !== preferences.direction ||
+      (normalized.sort === "sex" && normalized.columns.includes("sex") !== preferences.columns.includes("sex")))) {
+      startPageTransition(() => router.replace(nextPath, { scroll: false }));
+    } else window.history.replaceState(null, "", nextPath);
   }
   function sortValue(
     row: Row,
     column: ParticipantColumn,
   ): string | number | null {
-    switch (column) {
-      case "sex":
-        return row.deletedAt ? null : sexText(row.registrationId);
-      case "association":
-        return row.association ?? null;
-      case "nationality":
-        return nationalityName(row.nationality, locale);
-      case "accessibility":
-        return row.accessibility ?? "—";
-      case "attendance":
-        return attendanceSummary(row.attendance, locale);
-      case "age":
-        return calculateAgeAtDate(row.birthDate, eventStartsOn);
-      case "group":
-        return row.currentGroupName;
-      case "service":
-        return row.service?.serviceLabel ?? null;
-      case "tags":
-        return row.tags
-          .map((tag) => tag.label)
-          .sort()
-          .join(", ");
-      default:
-        return row[column];
-    }
+    return participantSortValue(row, column, eventStartsOn, locale, sexText);
   }
-  const rows = applyOperationsDashboardFilters(
-    snapshot.participants.map(current),
-    snapshot.filters,
-  )
-    .filter((row) => view !== "without-group" || !row.currentGroupId)
-    .sort((a, b) => {
-      const av = sortValue(a, preferences.sort),
-        bv = sortValue(b, preferences.sort);
-      if (av === null || bv === null)
-        return av === bv
-          ? a.registrationId.localeCompare(b.registrationId)
-          : av === null
-            ? 1
-            : -1;
-      const comparison =
-        typeof av === "number" && typeof bv === "number"
-          ? av - bv
-          : String(av).localeCompare(String(bv), "it", {
-              numeric: true,
-              sensitivity: "base",
-            });
-      return (
-        (preferences.direction === "asc" ? comparison : -comparison) ||
-        a.registrationId.localeCompare(b.registrationId)
-      );
-    });
-
-  const pagination = paginateParticipants(rows, searchParams.get("participantPage"));
+  const localRows = snapshot.participants.map(current);
+  const rows = snapshot.serverPage ? applyOperationsDashboardFilters(localRows, snapshot.filters).filter(row => view !== "without-group" || !row.currentGroupId) : sortOperationsParticipants(
+    applyOperationsDashboardFilters(localRows, snapshot.filters)
+      .filter((row) => view !== "without-group" || !row.currentGroupId),
+    preferences, eventStartsOn, locale, sexText,
+  );
+  const pagination = snapshot.serverPage ? { ...snapshot.serverPage, rows } : paginateParticipants(rows, searchParams.get("participantPage"));
+  const registrationCount = snapshot.serverPage?.total ?? rows.length;
+  const serverSort = snapshot.serverPage?.sort;
+  const serverDirection = snapshot.serverPage?.direction;
+  const serverSexColumn = snapshot.serverPage?.sexColumn;
+  const preferenceColumns = preferences.columns.join(",");
+  // Restore a saved sort on first entry even when it is not yet present in the URL.
+  // The result must be sorted globally on the server, never just within this page.
+  useEffect(() => {
+    if (!serverSort || pagePending || (serverSort === preferences.sort && serverDirection === preferences.direction &&
+      (serverSort !== "sex" || serverSexColumn === preferenceColumns.split(",").includes("sex")))) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("columns", preferenceColumns);
+    params.set("sort", preferences.sort);
+    params.set("direction", preferences.direction);
+    startPageTransition(() => router.replace(`/dashboard/${dashboard}?${params}`, { scroll: false }));
+  }, [serverSort, serverDirection, serverSexColumn, preferences.sort, preferences.direction, preferenceColumns, searchParams, router, dashboard, pagePending]);
+  useEffect(() => {
+    if (!focusPage.current || pagePending) return;
+    focusPage.current = false;
+    tableRegion.current?.focus({ preventScroll: true });
+    tableRegion.current?.scrollIntoView({ block: "start" });
+  }, [dataVersion, pagePending]);
   function changePage(page: number) {
-    if (busy.current.size || receptionBusy || page === pagination.page) return;
-    window.history.pushState(null, "", paramsFor({
-      participantPage: page > 1 ? String(page) : null,
-      edit: null,
-    }));
+    if (busy.current.size || receptionBusy || pagePending || page === pagination.page) return;
+    const path = paramsFor({ participantPage: page > 1 ? String(page) : null, edit: null });
+    if (snapshot.serverPage) {
+      focusPage.current = true;
+      startPageTransition(() => router.push(path, { scroll: false }));
+      return;
+    }
+    window.history.pushState(null, "", path);
     // The same loaded result supplies every page; moving pages does not submit drafts.
     requestAnimationFrame(() => {
       tableRegion.current?.focus({ preventScroll: true });
@@ -279,13 +261,13 @@ export function OperationsParticipantsTable({
     parseStatisticsDrilldown(statisticsKey)?.personKind === "child",
   );
   const statisticsLabel = snapshot.statisticsFilter?.label;
-  const accompanyingChildrenCount = rows.reduce(
+  const accompanyingChildrenCount = snapshot.serverPage?.childrenCount ?? rows.reduce(
     (total, row) => total + row.childrenCount,
     0,
   );
   const registrationsLabel = isChildrenView
-    ? rows.length === 1 ? "iscrizione familiare" : "iscrizioni familiari"
-    : rows.length === 1 ? "iscrizione" : "iscrizioni";
+    ? registrationCount === 1 ? "iscrizione familiare" : "iscrizioni familiari"
+    : registrationCount === 1 ? "iscrizione" : "iscrizioni";
 
   async function quickUpdate(
     row: Row,
@@ -550,7 +532,7 @@ export function OperationsParticipantsTable({
             )}
           </div>
           <p className="mt-1 text-sm text-[var(--peace-muted)]">
-            {rows.length} {registrationsLabel}
+            {registrationCount} {registrationsLabel}
             {(accompanyingChildrenCount > 0 || isChildrenView) && (
               <> · {accompanyingChildrenCount} {accompanyingChildrenCount === 1 ? "figlio accompagnato" : "figli accompagnati"}</>
             )}
@@ -689,7 +671,7 @@ export function OperationsParticipantsTable({
       </div>
       {notice ? <SuccessMessage key={notice} className="my-2 text-sm text-[var(--peace-blue-800)]">{notice}</SuccessMessage> : null}
       <OperationsParticipantsPagination {...pagination} position="inizio"
-        disabled={Object.values(pending).some(Boolean) || receptionBusy} onPageChange={changePage} />
+        disabled={Object.values(pending).some(Boolean) || receptionBusy || pagePending} onPageChange={changePage} />
       <div
         ref={tableRegion}
         className="scroll-mt-24 overflow-x-auto rounded-md border border-[var(--peace-border)]"
@@ -840,7 +822,7 @@ export function OperationsParticipantsTable({
         )}
       </div>
       <OperationsParticipantsPagination {...pagination} position="fine"
-        disabled={Object.values(pending).some(Boolean) || receptionBusy} onPageChange={changePage} />
+        disabled={Object.values(pending).some(Boolean) || receptionBusy || pagePending} onPageChange={changePage} />
     </section>}
       {selected && (
         <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath} busy={receptionBusy}>

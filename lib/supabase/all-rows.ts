@@ -15,6 +15,27 @@ export async function loadAllRows<T>(
   return { data: rows, error: null };
 }
 
+/** Independent offset pages, bounded to three concurrent reads. Suitable for the
+ * global server-only search index; callers still provide deterministic ordering.
+ * Never return a prefix after an error, nor impose a ceiling on total rows. */
+export async function loadAllRowsConcurrently<T>(
+  load: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<{ data: T[]; error: null }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += 1500) {
+    const pages = await Promise.all([0, 500, 1000].map(offset => load(from + offset, from + offset + 499)));
+    for (const page of pages) if (page.error) throw new Error(page.error.message);
+    let finished = false;
+    for (const page of pages) {
+      const data = page.data ?? [];
+      if (finished && data.length) throw new Error("Registration list changed during loading. Retry.");
+      rows.push(...data);
+      if (data.length < 500) finished = true;
+    }
+    if (finished) return { data: rows, error: null };
+  }
+}
+
 export async function loadRowsForIds<T>(
   ids: string[],
   load: (

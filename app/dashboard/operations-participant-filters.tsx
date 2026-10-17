@@ -64,6 +64,8 @@ export function OperationsParticipantFilters({
       }}>
       <input type="hidden" name="section" value="iscritti" />
       <input type="hidden" name="nav" value={navMode} />
+      {["view", "stat", "columns", "sort", "direction"].map(name => searchParams.has(name)
+        ? <input key={name} type="hidden" name={name} value={searchParams.get(name)!} /> : null)}
       <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <label className="grid gap-1 text-sm">
           Partecipante, codice o provenienza

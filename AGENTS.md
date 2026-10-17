@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Caricamento iscritti e paginazione server — 2026-10-17
+
+- Conservata la paginazione a 100 del collega (`b12455c`), testi e aspetto invariati.
+  Indice globale compatto solo sul server; filtri/ordinamento/totali prima della
+  pagina, dettagli solo per le righe visibili e l'eventuale scheda tramite URL.
+  Letture ordinate a 500, al massimo tre parallele, senza tetto al totale.
+- Questionario: una proiezione condivisa per nazionalità/associazione/delega email,
+  anche nelle viste complete; ultimi valori vuoti e deleghe storiche conservati.
+  Sesso interno solo per colonna visibile e autorizzata, mai nel normale snapshot.
+- Export, statistiche/drilldown, figli, duplicati e scuole conservano dati completi
+  e scope evento. Nessuna migration, modifica dati reali o email. 960 test,
+  lint, TypeScript, build dal lockfile e browser sintetico desktop/mobile;
+  5.005 iscrizioni anche nell'Excel riletto. Parità dei dati reali e riduzione
+  del tempo del loader misurate in sola lettura. Dettagli e limiti in
+  `docs/iscritti-caricamento-server-2026-10-17.md`.
+- Commit/push e produzione autorizzati dall'utente dopo test e miglioramento
+  verificato; lavorazione isolata da main locale e modifiche parallele.
+
 ## Iscritti: paginazione da 100 — 2026-10-17
 
 - Tabella condivisa Admin/Manager/Viewer paginata dopo filtri e ordinamento

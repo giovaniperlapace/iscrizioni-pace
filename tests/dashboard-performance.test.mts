@@ -1,3 +1,5 @@
+import { loadQuestionnaireSummaries } from "../lib/registrations/questionnaire-summary.server.ts";
+import { loadOperationsParticipantPage, usesServerParticipantPage } from "../lib/registrations/operations-page.server.ts";
 import * as panelDrafts from "../lib/panels/panel-drafts.ts";
 import * as panelLocations from "../lib/panels/event-locations.ts";
 import * as schoolBookings from "../lib/panels/school-bookings.ts";
@@ -48,6 +50,13 @@ test("dashboard sections execute only the queries needed by their visible conten
       } };
       const jsx = (type: unknown, props: unknown) => ({ type, props });
       const modules = {
+        "@/lib/i18n/server": { getRequestLocale: async () => "it" },
+        "@/lib/registrations/operations-page.server": { usesServerParticipantPage, loadOperationsParticipantPage: async (...args: Parameters<typeof loadOperationsParticipantPage>) => {
+          reads.push("participant-associations", "email-delegations"); return loadOperationsParticipantPage(...args);
+        } },
+        "@/lib/registrations/questionnaire-summary.server": { loadQuestionnaireSummaries: async (...args: Parameters<typeof loadQuestionnaireSummaries>) => {
+          reads.push("participant-associations", "email-delegations"); return loadQuestionnaireSummaries(...args);
+        } },
         "react/jsx-runtime": { jsx, jsxs: jsx },
         "node:crypto": { randomUUID: () => "version" },
         "@/lib/panels/panel-drafts": { ...panelDrafts, getPanelDraftCatalog: async (client: unknown) => {

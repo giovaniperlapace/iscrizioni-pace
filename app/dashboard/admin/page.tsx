@@ -1,14 +1,14 @@
+import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
+import { loadQuestionnaireSummaries } from "@/lib/registrations/questionnaire-summary.server";
+import type { OperationsParticipantsSnapshot } from "@/lib/registrations/operations-types";
 import { GroupQrLabelButton } from "@/app/dashboard/group-qr-label-button";
 import { DeskMicrophoneIcon } from "@/components/desk-microphone-icon";
 import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
-import { loadAssociations } from "@/lib/registrations/association.server";
 import { ExportsSection } from "@/app/dashboard/exports-section";
 import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
-import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
 import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
 import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
 import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
-import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
 import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
 import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -142,6 +142,10 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type AdminPageProps = {
   searchParams: Promise<{
+    participantPage?: string;
+    columns?: string;
+    sort?: string;
+    direction?: string;
     manual?: string;
     manualSaved?: string;
     manualError?: string;
@@ -407,6 +411,7 @@ type GroupTableFilters = {
 type AdminParticipantRow = OperationsParticipantRow;
 
 type AdminOperationsSnapshot = {
+  serverPage?: OperationsParticipantsSnapshot["serverPage"];
   participants: AdminParticipantRow[];
   allParticipants: AdminParticipantRow[];
   groupOptions: AdminGroupOption[];
@@ -789,6 +794,13 @@ export default async function AdminDashboardPage({
       };
     }
 
+    if (activeSection === "iscritti" && currentEvent && usesServerParticipantPage(params)) {
+      return loadOperationsParticipantPage(serviceSupabase, {
+        event: currentEvent, actorId: auth!.user.id, canManage: true,
+        dashboard: "admin", locale: await getRequestLocale(), filters, params,
+      });
+    }
+
     const empty = { data: [], error: null };
     const [
       { data: registrations },
@@ -910,15 +922,14 @@ export default async function AdminDashboardPage({
     );
     const tagsByParticipantId = mapParticipantOperationalTags(participantTags);
     const serviceByParticipantId = mapParticipantEventServices(participantServices);
-    const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities, associations] = activeSection === "iscritti"
+    const [attendanceByRegistration, questionnaire, accessibilityByRegistration] = activeSection === "iscritti"
       ? await Promise.all([
           loadAttendanceSummaries(serviceSupabase, registrationIds),
-          loadEmailDelegations(serviceSupabase, registrationIds),
+          loadQuestionnaireSummaries(serviceSupabase, registrationIds),
           loadAccessibilitySummaries(serviceSupabase, registrationIds),
-          loadNationalities(serviceSupabase, registrationIds),
-          loadAssociations(serviceSupabase, registrationIds),
         ])
-      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>(), new Map<string, string | null>()];
+      : [new Map(), { emailDelegations: new Set<string>(), nationalities: new Map<string, string | null>(), associations: new Map<string, string | null>() }, new Map<string, string>()];
+    const { emailDelegations, nationalities, associations } = questionnaire;
     const participantRows = registrationRows.map((registration) => {
         const participant = relatedOne(registration.participants);
         const geography = participantGeography(participant);

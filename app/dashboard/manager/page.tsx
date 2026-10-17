@@ -1,11 +1,11 @@
-import { loadAssociations } from "@/lib/registrations/association.server";
+import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
+import { loadQuestionnaireSummaries } from "@/lib/registrations/questionnaire-summary.server";
+import type { OperationsParticipantsSnapshot } from "@/lib/registrations/operations-types";
 import { ExportsSection } from "@/app/dashboard/exports-section";
 import { loadAssociationStatistics } from "@/lib/registrations/association-statistics.server";
-import { loadNationalities } from "@/lib/registrations/assisted-demographics.server";
 import { loadDisabilityStatistics } from "@/lib/registrations/disability-statistics.server";
 import { resolveStatisticsReport, type StatisticsReport } from "@/lib/registrations/statistics-reports";
 import { loadAccessibilitySummaries } from "@/lib/registrations/accessibility-summary.server";
-import { loadEmailDelegations } from "@/lib/registrations/email-delegation.server";
 import { loadAttendanceSummaries } from "@/lib/registrations/attendance-summary.server";
 import { loadGroupGeographyCatalog, loadGroupCityLinks } from "@/lib/groups/geography.server";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -132,6 +132,10 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 type ManagerPageProps = {
   searchParams: Promise<{
+    participantPage?: string;
+    columns?: string;
+    sort?: string;
+    direction?: string;
     manual?: string;
     manualSaved?: string;
     manualError?: string;
@@ -333,6 +337,7 @@ type ManagerGroupRegistrationLink = {
 type ManagerParticipantRow = OperationsParticipantRow;
 
 type ManagerOperationsSnapshot = {
+  serverPage?: OperationsParticipantsSnapshot["serverPage"];
   participants: ManagerParticipantRow[];
   allParticipants: ManagerParticipantRow[];
   groupOptions: ManagerGroupOption[];
@@ -463,8 +468,13 @@ export default async function ManagerDashboardPage({
     activeSection === "dashboard" && statisticsReport === "panels" && currentEventId && canSeeCurrentEvent
       ? getPanelStatisticsSnapshot(serviceSupabase, currentEventId)
       : Promise.resolve(emptyPanelStatisticsSnapshot());
-  const managerOperations =
-    !dashboardLoadPlan(activeSection).operations
+  const managerOperations: ManagerOperationsSnapshot =
+    activeSection === "iscritti" && currentEvent && canSeeCurrentEvent && usesServerParticipantPage(params)
+      ? await loadOperationsParticipantPage(serviceSupabase, {
+          event: currentEvent, actorId: auth.user.id, canManage,
+          dashboard: "manager", locale: await getRequestLocale(), filters, params,
+        })
+      : !dashboardLoadPlan(activeSection).operations
       ? await getManagerOperationsSnapshot(serviceSupabase, scope, filters, null)
       : await getManagerOperationsSnapshot(
           serviceSupabase,
@@ -1353,15 +1363,14 @@ async function getManagerOperationsSnapshot(
     scope.eventIds
   );
 
-  const [attendanceByRegistration, emailDelegations, accessibilityByRegistration, nationalities, associations] = section === "iscritti"
+  const [attendanceByRegistration, questionnaire, accessibilityByRegistration] = section === "iscritti"
       ? await Promise.all([
           loadAttendanceSummaries(supabase, registrationIds),
-          loadEmailDelegations(supabase, registrationIds),
+          loadQuestionnaireSummaries(supabase, registrationIds),
           loadAccessibilitySummaries(supabase, registrationIds),
-          loadNationalities(supabase, registrationIds),
-          loadAssociations(supabase, registrationIds),
         ])
-      : [new Map(), new Set<string>(), new Map<string, string>(), new Map<string, string | null>(), new Map<string, string | null>()];
+      : [new Map(), { emailDelegations: new Set<string>(), nationalities: new Map<string, string | null>(), associations: new Map<string, string | null>() }, new Map<string, string>()];
+    const { emailDelegations, nationalities, associations } = questionnaire;
     const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
       const geography = participantGeography(participant);

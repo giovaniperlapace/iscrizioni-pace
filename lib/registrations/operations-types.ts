@@ -65,6 +65,17 @@ export type OperationsParticipantRow = {
 };
 
 export type OperationsParticipantsSnapshot = {
+  serverPage?: {
+    page: number;
+    pageCount: number;
+    first: number;
+    last: number;
+    total: number;
+    childrenCount: number;
+    sort: import("./operations-table.ts").ParticipantColumn;
+    direction: "asc" | "desc";
+    sexColumn: boolean;
+  };
   participants: OperationsParticipantRow[];
   allParticipants: OperationsParticipantRow[];
   groupOptions: OperationsGroupOption[];

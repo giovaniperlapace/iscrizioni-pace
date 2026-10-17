@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { filteredExportPeople } from "../lib/data-quality/data.server.ts";
-const registrations = Array.from({ length: 1205 }, (_, i) => ({
+const registrations = Array.from({ length: 5005 }, (_, i) => ({
   id: `r${i}`,
   event_id: "e",
   participant_id: `p${i}`,
@@ -100,18 +100,22 @@ test("export uses all filtered rows after pagination, including a match beyond 1
   assert.equal(result.people.length, 1);
   assert.equal(result.people[0].id, "r1203");
   assert.ok(calls.includes("registrations:1000"));
+  const far = await filteredExportPeople(database(), { id: "e", title: "Fixture", starts_on: null, ends_on: null },
+    new URLSearchParams("contact=p5004%40example.test&participantPage=51"));
+  assert.deepEqual(far.people.map(person => person.id), ["r5004"]);
+  assert.ok(calls.includes("registrations:5000"));
   const all = await filteredExportPeople(
     database(),
     { id: "e", title: "Fixture", starts_on: null, ends_on: null },
     new URLSearchParams("status=submitted&view=without-group&participantPage=12"),
   );
-  assert.equal(all.people.length, 1205);
+  assert.equal(all.people.length, 5005);
   const cancelled = await filteredExportPeople(
     database(),
     { id: "e", title: "Fixture", starts_on: null, ends_on: null },
     new URLSearchParams("status=cancelled"),
   );
-  assert.equal(cancelled.people.length, 1205);
+  assert.equal(cancelled.people.length, 5005);
   assert.ok(cancelled.people.some((person) => person.id === "r1204"));
   const children = await filteredExportPeople(
     database(),
@@ -128,6 +132,20 @@ test("export uses all filtered rows after pagination, including a match beyond 1
     ["r1203"],
   );
   assert.equal(children.people[0].children.length, 1);
+});
+
+test("Excel contains all 5005 authorized filtered rows even when the screen requests page 51", async () => {
+  const { default: ExcelJS } = await import("exceljs");
+  const { writeVisibleParticipantsWorkbook } = await import("../lib/data-quality/workbook.ts");
+  const { people } = await filteredExportPeople(database(), { id: "e", title: "Fixture", starts_on: null, ends_on: null }, new URLSearchParams("participantPage=51"));
+  const buffer = await writeVisibleParticipantsWorkbook(people, { groups: [], services: [], tags: [] }, ["name"], null);
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(buffer as unknown as Parameters<typeof book.xlsx.load>[0]);
+  const sheet = book.getWorksheet("Iscritti")!;
+  assert.equal(sheet.rowCount, 5006);
+  const names = sheet.getColumn(1).values;
+  assert.ok(names.includes("Person 0 Fixture"));
+  assert.ok(names.includes("Person 5004 Fixture"));
 });
 
 test("visible-column workbook contains only chosen columns, readable values and no extra sheets", async () => {

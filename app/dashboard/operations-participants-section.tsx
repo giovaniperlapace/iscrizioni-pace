@@ -58,6 +58,7 @@ export async function OperationsParticipantsSection({
           eventServices: snapshot.eventServices,
           filters: snapshot.filters,
           statisticsFilter: snapshot.statisticsFilter,
+          serverPage: snapshot.serverPage,
         }}
         selectedParticipant={selectedParticipant}
         editableEventIds={[
