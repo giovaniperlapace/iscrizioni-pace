@@ -38,6 +38,7 @@ type RecipientRow = {
   serviceIds: string[];
   panelIds: string[];
   schoolNames: string[];
+  attendancePending?: boolean;
 };
 type AttachmentDraft = {
   id: string;
@@ -105,6 +106,7 @@ export function EmailCampaignComposer({
   const [panelFilter, setPanelFilter] = useState(
     () => panels.find((panel) => panel.id === initialPanelId)?.id ?? ""
   );
+  const [attendanceFilter, setAttendanceFilter] = useState<"all" | "pending" | "communicated">("all");
   const [schoolFilter, setSchoolFilter] = useState("");
   const [groupMembershipFilter, setGroupMembershipFilter] = useState<
     "all" | "with_group" | "without_group"
@@ -176,11 +178,14 @@ export function EmailCampaignComposer({
         audience === "teachers" ||
         !serviceFilter ||
         recipient.serviceIds.some((id) => serviceIds.has(id))) &&
+      (audience !== "participants" || attendanceFilter === "all" ||
+        (attendanceFilter === "pending" && recipient.attendancePending === true) ||
+        (attendanceFilter === "communicated" && recipient.attendancePending === false)) &&
       (!panelFilter || recipient.panelIds.some((id) => panelIds.has(id))) &&
       (audience !== "teachers" || !schoolFilter || recipient.schoolNames.some((name) => normalizeRecipientSearch(name).includes(schoolSearch))) &&
       (!search || normalizeRecipientSearch(`${recipient.fullName} ${recipient.destinationEmail} ${recipient.schoolNames.join(" ")}`).includes(search))
     );
-  }, [audience, groupFilter, groupMembershipFilter, groups, panelFilter, panels, recipientRows, recipientSearch, schoolFilter, serviceFilter, services, tagFilter, tags]);
+  }, [audience, attendanceFilter, groupFilter, groupMembershipFilter, groups, panelFilter, panels, recipientRows, recipientSearch, schoolFilter, serviceFilter, services, tagFilter, tags]);
   const selectedRecipientRows = useMemo(
     () => recipientRows.filter((recipient) =>
       selectedRecipientIdSet.has(recipient.recipientKey)
@@ -347,6 +352,7 @@ export function EmailCampaignComposer({
     setPanelFilter("");
     setSchoolFilter("");
     setGroupMembershipFilter("all");
+    setAttendanceFilter("all");
     resetPreview();
     setNotice("");
     setNoticeDismissible(false);
@@ -658,7 +664,7 @@ export function EmailCampaignComposer({
           </p>
           <div className={[
             "grid gap-4 md:grid-cols-2",
-            audience === "participants" ? "xl:grid-cols-6" : audience === "teachers" ? "xl:grid-cols-3" : "xl:grid-cols-3",
+            audience === "participants" ? "xl:grid-cols-4" : audience === "teachers" ? "xl:grid-cols-3" : "xl:grid-cols-3",
           ].join(" ")}>
           <label className="grid gap-1 text-sm font-semibold">
             {audience === "participants" ? "Cerca partecipante" : audience === "group_leaders" ? "Cerca capogruppo" : "Cerca professore"}
@@ -681,6 +687,15 @@ export function EmailCampaignComposer({
             /> : null}
           {audience === "participants" ? (
             <>
+              <label className="grid gap-1 text-sm font-semibold" htmlFor="campaign-attendance-filter">
+                Giorni di presenza
+                <select id="campaign-attendance-filter" className="field font-normal" value={attendanceFilter}
+                  onChange={event => setAttendanceFilter(event.target.value as typeof attendanceFilter)}>
+                  <option value="all">Tutti</option>
+                  <option value="pending">Non ancora comunicati</option>
+                  <option value="communicated">Comunicati</option>
+                </select>
+              </label>
               <label
                 className="grid gap-1 text-sm font-semibold"
                 htmlFor="campaign-group-membership"

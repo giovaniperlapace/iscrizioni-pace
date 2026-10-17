@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Mail: filtro giorni di presenza da comunicare — 2026-10-17
+
+- Nella selezione destinatari delle campagne, scheda Partecipanti, nuovo filtro
+  Giorni di presenza: Tutti / Non ancora comunicati / Comunicati. Si combina
+  con ricerca e filtri esistenti; cambio destinatari azzera il filtro.
+- Fonte canonica event_attendance_choices delle iscrizioni raggiungibili:
+  nessuna scelta o choice unknown = da comunicare; scelte yes/no senza unknown
+  = comunicati. Nessun uso dei check-in o delle prenotazioni ai Forum.
+- Lettura paginata per ID già autorizzati; errore blocca il caricamento anziché
+  inventare presenze mancanti. Selezione esplicita e invii delegati conservati.
+- Verificati test caricamento oltre 1.000 destinatari, casi yes/no/unknown,
+  errori, browser desktop/mobile, ricerca, selezione e cambio audience.
+  Nessuna migration, invio email o modifica di dati remoti.
+
 ## Accoglienza: ultime letture con sola apertura — 2026-10-17
 
 - Su nuova indicazione dell’utente, tutte le ultime letture offrono soltanto

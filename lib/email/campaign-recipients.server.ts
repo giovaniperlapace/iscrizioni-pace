@@ -27,6 +27,7 @@ export type CampaignRecipientPreview = CampaignRecipient & {
   serviceIds: string[];
   panelIds: string[];
   schoolNames: string[];
+  attendancePending?: boolean;
 };
 
 export type CampaignRecipientFilters = {
@@ -320,6 +321,7 @@ export async function loadCampaignRecipientPreviews(
     participantPanelChoices,
     schoolTeachers,
     schoolBookings,
+    attendanceChoices,
   ] = await Promise.all([
     loadInChunks(participantIds, async (ids) => {
       const { data } = await loadAllRows((from, to) => service
@@ -395,8 +397,17 @@ export async function loadCampaignRecipientPreviews(
         .in("teacher_id", ids).order("id").range(from, to));
         return data ?? [];
     }),
+    loadInChunks(registrationIds, async (ids) => {
+      const { data } = await loadAllRows((from, to) => service
+        .from("event_attendance_choices")
+        .select("registration_id,choice")
+        .in("registration_id", ids).order("id").range(from, to));
+      return data;
+    }),
   ]);
 
+  const attendanceRecorded = new Set(attendanceChoices.map(row => row.registration_id));
+  const attendanceUnknown = new Set(attendanceChoices.filter(row => row.choice === "unknown").map(row => row.registration_id));
   const participantById = new Map(
     participants.map((participant) => [participant.id, participant])
   );
@@ -497,6 +508,7 @@ export async function loadCampaignRecipientPreviews(
     return [
       {
         ...recipient,
+        attendancePending: !!recipient.registrationId && (!attendanceRecorded.has(recipient.registrationId) || attendanceUnknown.has(recipient.registrationId)),
         fullName: `${participant.first_name} ${participant.last_name}`.trim(),
         destinationEmail: destinationEmail.trim(),
         selected: selectedKeys.has(recipient.recipientKey),

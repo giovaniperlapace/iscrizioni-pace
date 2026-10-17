@@ -4,7 +4,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 
-function previewLoader(failAt = 0) {
+function previewLoader(failAt = 0, attendance: Record<string, string[]> = {}, failAttendance = false) {
   const exports: Record<string, unknown> = {};
   let participantReads = 0;
   const service = {
@@ -19,8 +19,10 @@ function previewLoader(failAt = 0) {
         in(_column: string, values: string[]) { ids = values; return query; },
         then(resolve: (value: unknown) => unknown) {
           const tooLong = new URLSearchParams({ select: "id,first_name,last_name", id: `in.(${ids.join(",")})` }).toString().length > 8000;
-          const failed = table === "participants" && ++participantReads === failAt;
-          const data = table === "participants"
+          const failed = (table === "participants" && ++participantReads === failAt) || (table === "event_attendance_choices" && failAttendance);
+          const data = table === "event_attendance_choices"
+            ? ids.flatMap(id => (attendance[id] ?? []).map(choice => ({ registration_id: id, choice })))
+            : table === "participants"
             ? ids.map(id => ({ id, first_name: "Person", last_name: id }))
             : table === "participant_contacts"
               ? ids.map(id => ({ participant_id: id, email: `${id}@example.test`, is_primary: true }))
@@ -42,7 +44,7 @@ function previewLoader(failAt = 0) {
     if (id.includes("operational-users/identity")) return { getOperationalUserIdentities: async () => new Map() };
     return {};
   }, exports);
-  return exports.loadCampaignRecipientPreviews as (...args: unknown[]) => Promise<Array<{ recipientKey: string; panelIds: string[] }>>;
+  return exports.loadCampaignRecipientPreviews as (...args: unknown[]) => Promise<Array<{ recipientKey: string; panelIds: string[]; attendancePending?: boolean }>>;
 }
 
 const recipients = Array.from({ length: 1268 }, (_, i) => {
@@ -59,4 +61,22 @@ test("campaign preview loads every recipient without exceeding the proxy URI lim
 
 test("campaign preview rejects a failed later batch instead of returning a partial list", async () => {
   await assert.rejects(previewLoader(2)(recipients, new Set(), "event"), /read failed/);
+});
+
+
+test("campaign attendance distinguishes missing/unknown days from communicated yes/no and does not use panel bookings", async () => {
+  const source = recipients.slice(0, 5);
+  const choices = {
+    [source[1].registrationId]: ["unknown"],
+    [source[2].registrationId]: ["yes", "no"],
+    [source[3].registrationId]: ["no"],
+    [source[4].registrationId]: ["yes", "unknown"],
+  };
+  const result = await previewLoader(0, choices)(source, new Set(), "event");
+  const values = new Map(result.map(row => [row.recipientKey, row.attendancePending]));
+  assert.deepEqual(source.map(row => values.get(row.recipientKey)), [true, true, false, false, true]);
+});
+
+test("campaign attendance errors fail the preview rather than treating unread days as missing", async () => {
+  await assert.rejects(previewLoader(0, {}, true)(recipients, new Set(), "event"), /read failed/);
 });
