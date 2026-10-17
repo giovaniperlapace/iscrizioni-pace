@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Accoglienza: scheda gruppo integrata e azioni recenti — 2026-10-17
+
+- Gruppi e famiglie mostrano la selezione direttamente nella scheda risultato,
+  senza modale automatica. Ultime letture: azioni presenza/stampa per singolo;
+  Gestisci Presenze e Scegli i QR code da stampare per gruppi/famiglie.
+- Rilettura prima delle azioni recenti; stato persona coerente fra singolo e
+  gruppo. Conteggi distinti di conferma/rimozione e QR; deselezionare non annulla.
+  Rimozione nominale esplicita con Conferma rimozione e Annulla, senza Chiudi.
+- Telefono senza stampa; selezione, minori, snapshot, revisioni e retry conservati.
+  Nessuna migration o scrittura remota. Dettagli e verifiche in
+  docs/accoglienza-scheda-inline-2026-10-17.md.
+
 ## Dashboard Accoglienza: controlli e ultime letture — 2026-10-17
 
 - Rimossi dalla dashboard Strumenti stampante e il link al collaudo: la

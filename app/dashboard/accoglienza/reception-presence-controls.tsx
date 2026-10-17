@@ -6,7 +6,7 @@ import type { ReceptionMode, VerifiedReception } from "@/lib/reception/station";
 const labels = { enter: "Registra ingresso", correct: "Salva presenze", cancel: "Annulla ingresso" };
 const date = (value: string) => new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value));
 
-export function ReceptionOperationDialog({ children, onDismiss, open = true, labelledBy = "reception-operation-title" }: { children: ReactNode; onDismiss?: () => void; open?: boolean; labelledBy?: string }) {
+export function ReceptionOperationDialog({ children, onDismiss, open = true, labelledBy = "reception-operation-title", showCloseButton = true }: { children: ReactNode; onDismiss?: () => void; open?: boolean; labelledBy?: string; showCloseButton?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current;
@@ -21,7 +21,7 @@ export function ReceptionOperationDialog({ children, onDismiss, open = true, lab
   return <dialog ref={dialog} aria-labelledby={labelledBy}
     onCancel={event => { event.preventDefault(); onDismiss?.(); }}
     className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-[var(--peace-border)] bg-white p-5 text-[var(--peace-ink)] shadow-2xl backdrop:bg-slate-950/65 sm:p-6">
-    {onDismiss && <button type="button" className="btn-secondary mb-3 min-h-11 px-3" onClick={onDismiss} aria-label="Chiudi la finestra">Chiudi</button>}
+    {onDismiss && showCloseButton && <button type="button" className="btn-secondary mb-3 min-h-11 px-3" onClick={onDismiss} aria-label="Chiudi la finestra">Chiudi</button>}
     <div className="grid gap-4">{children}</div>
   </dialog>;
 }
@@ -54,12 +54,12 @@ export function PresenceRemovalDialog({ result, subjectIds, onConfirm, onDismiss
 }) {
   const selected = result.persons.filter(person => subjectIds.includes(person.id));
   const presentIds = selected.filter(person => person.checkedInAt).map(person => person.id);
-  return <ReceptionOperationDialog onDismiss={onDismiss}>
+  return <ReceptionOperationDialog onDismiss={onDismiss} showCloseButton={false}>
     <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-semibold outline-none">Rimuovi presenza</h2>
     <p>Confermi la rimozione della presenza per queste persone?</p>
     <ul className="grid gap-2">{selected.map(person => <li key={person.id}><strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}{!person.checkedInAt && " · Presenza già rimossa"}</li>)}</ul>
     <button className="btn-primary min-h-12 px-4" disabled={!presentIds.length} onClick={() => onConfirm(presentIds)}>Conferma rimozione</button>
-    <button className="btn-secondary min-h-12 px-4" onClick={onDismiss}>Mantieni presenze</button>
+    <button className="btn-secondary min-h-12 px-4" onClick={onDismiss}>Annulla</button>
   </ReceptionOperationDialog>;
 }
 

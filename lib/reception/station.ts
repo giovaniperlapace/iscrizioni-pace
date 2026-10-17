@@ -133,7 +133,18 @@ export class ReceptionStationSession {
     const entry = { key, lookup, result, readAt: reading || !existing ? new Date().toISOString() : existing.readAt };
     const recent = reading || !existing ? [entry, ...this.state.recent.filter(item => item.key !== key)].slice(0, 15)
       : this.state.recent.map(item => item.key === key ? entry : item);
-    this.update({ recent });
+    // A person can occur both in an individual read and in a group. Keep the
+    // displayed attendance consistent; every command still reads its own fresh
+    // revision/snapshot before acting on another history entry.
+    const persons = this.explicitPresence && (result.kind === "family" || result.kind === "group")
+      ? new Map(result.persons.map(person => [person.id, person.checkedInAt])) : null;
+    const refreshPerson = <T extends { id: string; checkedInAt: string | null }>(person: T): T => persons?.has(person.id) ? { ...person, checkedInAt: persons.get(person.id)! } : person;
+    this.update({ recent: persons ? recent.map(item => {
+      if (item.key === key) return item;
+      if (item.result.kind === "group") return { ...item, result: { ...item.result, persons: item.result.persons.map(refreshPerson) } };
+      if (item.result.kind === "family") return { ...item, result: { ...item.result, persons: item.result.persons.map(refreshPerson) } };
+      return item;
+    }) : recent });
   }
   async submit(values: Pick<ReceptionCommand, "subjectIds" | "students" | "companions">, confirmed = false, cancelSchool = false) {
     if (this.context.duty === "room_assistance" || this.state.phase !== "selection" || !this.state.lookup || !this.state.result || this.state.result.kind === "room") return;
@@ -179,7 +190,7 @@ export class ReceptionStationSession {
         phase: response.status === "unavailable" ? "uncertain" : response.status === "forbidden" ? "blocked" : "error",
         result: null,
         recent: response.status === "forbidden" ? [] : response.status === "invalid" ? this.state.recent.filter(item => item.lookup.kind !== command.lookup.kind || item.lookup.value !== command.lookup.value) : this.state.recent,
-        problem: response.status, retry: response.status === "unavailable" ? command : null, message: response.status === "conflict" && this.state.mode !== "enter" ? "Un altro operatore ha aggiornato le presenze. Riapri Modifica presenze dalle ultime letture per verificare i dati aggiornati." : messages[response.status],
+        problem: response.status, retry: response.status === "unavailable" ? command : null, message: response.status === "conflict" && this.state.mode !== "enter" ? this.explicitPresence ? "Un altro operatore ha aggiornato le presenze. Premi Rileggi il codice e controlla lo stato prima di riprovare." : "Un altro operatore ha aggiornato le presenze. Riapri Modifica presenze dalle ultime letture per verificare i dati aggiornati." : messages[response.status],
       });
       return;
     }

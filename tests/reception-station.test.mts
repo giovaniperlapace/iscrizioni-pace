@@ -219,3 +219,30 @@ test("invalid recent references are removed instead of showing stale details",as
   invalid=true;await session.editRecent(session.snapshot().recent[0].key);
   assert.equal(session.snapshot().recent.length,0);assert.equal(session.snapshot().result,null);
 });
+
+test("event history reflects presence changes across a group and its individual without reusing revisions", async () => {
+  const person = family().persons[0];
+  let checkedInAt: string | null = null;
+  const groupLookup = { kind: "qr" as const, value: `G:${"g".repeat(43)}` };
+  const session = new ReceptionStationSession(async command => {
+    if (command.action === "enter") checkedInAt = now;
+    if (command.action === "cancel") checkedInAt = null;
+    return command.lookup.value.startsWith("G:") ? {
+      status: "valid", kind: "group", groupId: child, groupName: "Test", snapshot: "a".repeat(64),
+      revision: 9, outcome: "verified", persons: [{ ...person, checkedInAt, registrationId: adult, code: "TEST" }],
+    } : { ...family(), revision: 3, persons: [{ ...person, checkedInAt }] };
+  }, () => request, 20000, { duty: "event_entry" }, true);
+  await session.inspect(lookup);
+  await session.inspectNext(groupLookup);
+  session.selectPresence();
+  await session.submit({ subjectIds: [adult] });
+  const individual = session.snapshot().recent.find(item => item.result.kind === "family")!;
+  assert.equal(individual.result.kind === "family" && individual.result.persons[0].checkedInAt, now);
+  assert.equal(individual.result.revision, 3);
+  await session.inspectNext(lookup);
+  await session.removeCurrent();
+  await session.submit({ subjectIds: [adult] }, true);
+  const group = session.snapshot().recent.find(item => item.result.kind === "group")!;
+  assert.equal(group.result.kind === "group" && group.result.persons[0].checkedInAt, null);
+  assert.equal(group.result.revision, 9);
+});
