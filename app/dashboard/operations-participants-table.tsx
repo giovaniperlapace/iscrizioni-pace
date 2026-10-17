@@ -36,6 +36,7 @@ import {
 import { ArrowDown, ArrowUp, Columns3, Download, Pencil, UserPlus, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
 import { OperationsParticipantFilters } from "@/app/dashboard/operations-participant-filters";
+import { OperationsParticipantsPagination } from "@/app/dashboard/operations-participants-pagination";
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { applyOperationsDashboardFilters } from "@/lib/registrations/operations-dashboard";
@@ -46,6 +47,7 @@ import {
   DEFAULT_TABLE_PREFERENCES,
   PARTICIPANT_COLUMNS,
   parseTablePreferences,
+  paginateParticipants,
   type ParticipantColumn,
   type TablePreferences,
 } from "@/lib/registrations/operations-table";
@@ -157,6 +159,7 @@ export function OperationsParticipantsTable({
     service: false,
   });
   const busy = useRef(new Set<string>());
+  const tableRegion = useRef<HTMLDivElement>(null);
   const current = (row: Row) =>
     changes[row.registrationId]?.original === row
       ? changes[row.registrationId].next
@@ -194,6 +197,8 @@ export function OperationsParticipantsTable({
         columns: normalized.columns.join(","),
         sort: normalized.sort,
         direction: normalized.direction,
+        ...(normalized.sort !== preferences.sort || normalized.direction !== preferences.direction
+          ? { participantPage: null } : {}),
       }),
     );
   }
@@ -253,6 +258,20 @@ export function OperationsParticipantsTable({
         a.registrationId.localeCompare(b.registrationId)
       );
     });
+
+  const pagination = paginateParticipants(rows, searchParams.get("participantPage"));
+  function changePage(page: number) {
+    if (busy.current.size || receptionBusy || page === pagination.page) return;
+    window.history.pushState(null, "", paramsFor({
+      participantPage: page > 1 ? String(page) : null,
+      edit: null,
+    }));
+    // The same loaded result supplies every page; moving pages does not submit drafts.
+    requestAnimationFrame(() => {
+      tableRegion.current?.focus({ preventScroll: true });
+      tableRegion.current?.scrollIntoView({ block: "start" });
+    });
+  }
 
   const statisticsKey = searchParams.get("stat");
   const isChildrenView = Boolean(
@@ -345,7 +364,7 @@ export function OperationsParticipantsTable({
         values[0] &&
         !selected
       ) {
-        const nextRow = rows.find(
+        const nextRow = pagination.rows.find(
           (item) => item.registrationId !== row.registrationId,
         );
         requestAnimationFrame(() => {
@@ -506,6 +525,7 @@ export function OperationsParticipantsTable({
   exportParams.set("kind", "export");
   exportParams.set("columns", columns.join(","));
   exportParams.delete("status");
+  exportParams.delete("participantPage");
   return (
     <EventAttendanceProvider key={eventId} eventId={eventId}>
     {!dialogOnly && <section className="min-w-0 rounded-lg border border-[var(--peace-border)] bg-white p-4 sm:p-5">
@@ -583,7 +603,7 @@ export function OperationsParticipantsTable({
       {dashboard === "admin" && view !== "without-group" && (
         <div className="my-4">
           <Link className={buttonClass} prefetch={false}
-            href={paramsFor({ view: view === "deleted" ? null : "deleted", edit: null, group: null, stat: null })}>
+            href={paramsFor({ view: view === "deleted" ? null : "deleted", edit: null, group: null, stat: null, participantPage: null })}>
             {view === "deleted" ? "Torna ai partecipanti" : "Iscrizioni eliminate"}
           </Link>
         </div>
@@ -668,8 +688,11 @@ export function OperationsParticipantsTable({
         </p>
       </div>
       {notice ? <SuccessMessage key={notice} className="my-2 text-sm text-[var(--peace-blue-800)]">{notice}</SuccessMessage> : null}
+      <OperationsParticipantsPagination {...pagination} position="inizio"
+        disabled={Object.values(pending).some(Boolean) || receptionBusy} onPageChange={changePage} />
       <div
-        className="overflow-x-auto rounded-md border border-[var(--peace-border)]"
+        ref={tableRegion}
+        className="scroll-mt-24 overflow-x-auto rounded-md border border-[var(--peace-border)]"
         role="region"
         aria-label="Tabella iscritti, scorrimento orizzontale"
         tabIndex={0}
@@ -749,7 +772,7 @@ export function OperationsParticipantsTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {pagination.rows.map((row) => (
               <tr
                 key={row.registrationId}
                 data-registration-id={row.registrationId}
@@ -816,6 +839,8 @@ export function OperationsParticipantsTable({
           </p>
         )}
       </div>
+      <OperationsParticipantsPagination {...pagination} position="fine"
+        disabled={Object.values(pending).some(Boolean) || receptionBusy} onPageChange={changePage} />
     </section>}
       {selected && (
         <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath} busy={receptionBusy}>

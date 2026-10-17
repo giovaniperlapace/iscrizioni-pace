@@ -95,7 +95,7 @@ test("export uses all filtered rows after pagination, including a match beyond 1
       starts_on: "2026-10-25",
       ends_on: "2026-10-27",
     },
-    new URLSearchParams("contact=p1203%40example.test"),
+    new URLSearchParams("contact=p1203%40example.test&participantPage=2"),
   );
   assert.equal(result.people.length, 1);
   assert.equal(result.people[0].id, "r1203");
@@ -103,7 +103,7 @@ test("export uses all filtered rows after pagination, including a match beyond 1
   const all = await filteredExportPeople(
     database(),
     { id: "e", title: "Fixture", starts_on: null, ends_on: null },
-    new URLSearchParams("status=submitted&view=without-group"),
+    new URLSearchParams("status=submitted&view=without-group&participantPage=12"),
   );
   assert.equal(all.people.length, 1205);
   const cancelled = await filteredExportPeople(

@@ -59,6 +59,7 @@ export function OperationsParticipantsNavigation({
           "duplicatePair",
           "duplicateShow",
           "duplicatePage",
+          "participantPage",
           "duplicateAction",
         ])
           params.delete(param);

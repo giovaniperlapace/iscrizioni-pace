@@ -66,14 +66,14 @@ try {
         assert.equal(await page.locator("tbody tr").count(), 11);
         await reset.click(); await idle();
         assert.equal(await q.inputValue(), "");
-        assert.equal(await page.locator("tbody tr").count(), 500);
+        assert.equal(await page.locator("tbody tr").count(), 100);
         for (const [field, value, count] of [[q, "P123", 1], [q, "Roma", 500], [contact, "fixture123@example.test", 1], [contact, "+39 1234567", 500]]) {
           await field.fill(value);
           const before = navigations;
           await page.waitForTimeout(1100);
           assert.equal(navigations, before);
           await field.press("Enter"); await idle();
-          assert.equal(await page.locator("tbody tr").count(), count);
+          assert.equal(await page.locator("tbody tr").count(), Math.min(count, 100));
           await reset.click(); await idle();
         }
         await form.locator('[name="group"]').selectOption("none");

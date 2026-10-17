@@ -16,6 +16,27 @@ export const PARTICIPANT_COLUMNS = {
   accessibility: "Informazioni sulla disabilità",
 } as const;
 export type ParticipantColumn = keyof typeof PARTICIPANT_COLUMNS;
+export const PARTICIPANTS_PAGE_SIZE = 100;
+
+/** Paginate only after filtering and ordering the complete authorized result. */
+export function paginateParticipants<T>(rows: T[], requestedPage: string | null) {
+  const parsed = Number(requestedPage);
+  const pageCount = Math.max(1, Math.ceil(rows.length / PARTICIPANTS_PAGE_SIZE));
+  const page = Math.min(
+    pageCount,
+    Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1,
+  );
+  const offset = (page - 1) * PARTICIPANTS_PAGE_SIZE;
+  return {
+    page,
+    pageCount,
+    total: rows.length,
+    first: rows.length ? offset + 1 : 0,
+    last: Math.min(offset + PARTICIPANTS_PAGE_SIZE, rows.length),
+    rows: rows.slice(offset, offset + PARTICIPANTS_PAGE_SIZE),
+  };
+}
+
 export type TablePreferences = {
   columns: ParticipantColumn[];
   sort: ParticipantColumn;
@@ -73,6 +94,7 @@ export function operationsReturnPath(
       "edit",
       "duplicateShow",
       "duplicatePage",
+      "participantPage",
     ]) {
       if (source.has(key)) params.set(key, source.get(key)!);
     }

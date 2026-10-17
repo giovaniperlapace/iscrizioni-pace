@@ -40,6 +40,7 @@ export function OperationsParticipantFilters({
     const params = new URLSearchParams(searchParams.toString());
     for (const key of OVERLAY_PARAMS) params.delete(key);
     params.delete("status");
+    params.delete("participantPage");
     if (reset) params.delete("stat");
     params.set("section", "iscritti");
     params.set("nav", navMode);

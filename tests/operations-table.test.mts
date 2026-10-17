@@ -4,6 +4,7 @@ import {
   operationsReturnPath,
   parseTablePreferences,
   DEFAULT_TABLE_PREFERENCES,
+  paginateParticipants,
 } from "../lib/registrations/operations-table.ts";
 import { loadAllRows, loadRowsForIds } from "../lib/supabase/all-rows.ts";
 
@@ -24,6 +25,7 @@ test("save return path preserves operational state and never navigates back to s
     edit: "registration",
     view: "duplicates",
     duplicatePage: "3",
+    participantPage: "4",
     duplicateShow: "dismissed",
   });
   const path = operationsReturnPath(`/dashboard/manager?${state}`, "manager");
@@ -43,6 +45,42 @@ test("save return path preserves operational state and never navigates back to s
       "/dashboard/manager?section=iscritti&nav=full",
     );
   }
+});
+
+test("participant pages cover all results once, in the supplied global order", () => {
+  const rows = Array.from({ length: 1203 }, (_, id) => ({ id }));
+  const first = paginateParticipants(rows, null);
+  assert.equal(first.page, 1);
+  assert.equal(first.pageCount, 13);
+  assert.equal(first.total, 1203);
+  assert.equal(first.first, 1);
+  assert.equal(first.last, 100);
+  assert.equal(first.rows.length, 100);
+  const pages = Array.from({ length: first.pageCount }, (_, i) => paginateParticipants(rows, String(i + 1)));
+  assert.deepEqual(pages.flatMap(page => page.rows), rows);
+  assert.deepEqual(pages.at(-1)?.rows, rows.slice(1200));
+  assert.equal(pages.at(-1)?.first, 1201);
+  assert.equal(pages.at(-1)?.last, 1203);
+  // Filtering and ordering the whole result must precede pagination.
+  const filtered = rows.filter(row => row.id >= 900).reverse();
+  assert.deepEqual(paginateParticipants(filtered, "2").rows, filtered.slice(100, 200));
+  assert.equal(paginateParticipants(filtered, "2").total, 303);
+});
+
+test("participant pages handle empty, exact boundaries, invalid URLs and shrinking results", () => {
+  assert.deepEqual(paginateParticipants([], "12"), {
+    page: 1, pageCount: 1, first: 0, last: 0, total: 0, rows: [],
+  });
+  const rows = Array.from({ length: 101 }, (_, i) => i);
+  for (const value of [null, "", "0", "-1", "abc", "1.5", "Infinity", "9007199254740992"]) {
+    assert.equal(paginateParticipants(rows, value).page, 1, String(value));
+  }
+  assert.equal(paginateParticipants(rows, "99").page, 2);
+  assert.deepEqual(paginateParticipants(rows, "99").rows, [100]);
+  const shrunk = paginateParticipants(rows.slice(0, 100), "2");
+  assert.equal(shrunk.page, 1);
+  assert.equal(shrunk.pageCount, 1);
+  assert.equal(shrunk.rows.length, 100);
 });
 
 test("corrupt preferences have safe defaults and name is always visible", () => {

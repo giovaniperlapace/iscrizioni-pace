@@ -30,7 +30,7 @@ try {
     });
     const path=`${base}/dashboard/${dashboard}?section=iscritti&nav=mini&q=Anna&columns=name,country,group&sort=name&direction=asc`;
     await goTo(path);await page.locator("tbody tr").first().waitFor();await page.waitForTimeout(300);
-    assert.equal(await page.locator("tbody tr").count(),500);
+    assert.equal(await page.locator("tbody tr").count(),100);
     const requests=[];page.on("request",request=>{if(request.url().includes("_rsc=")) requests.push(request.url());});
     const first=page.locator("tbody a").first();
     const selectedHref=await first.getAttribute("href");

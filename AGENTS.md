@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Iscritti: paginazione da 100 — 2026-10-17
+
+- Tabella condivisa Admin/Manager/Viewer paginata dopo filtri e ordinamento
+  dell'intero risultato autorizzato. Conteggi ed Excel restano completi;
+  figli sempre sotto il genitore. Filtri applicati conservati a ogni pagina.
+- `participantPage` nell'URL, cronologia locale senza nuove richieste RSC,
+  bozze non applicate conservate. Scheda e percorsi di ritorno mantengono
+  pagina e filtri; ricerca, reset, ordinamento e cambio vista ripartono da 1.
+- Navigazione sopra/sotto la tabella, scelta diretta e intervallo/totalità;
+  vuoti, URL non validi e risultati ridotti gestiti senza pagine vuote spurie.
+- Ottimizzato il rendering di 100 righe; letture DB e snapshot completi
+  conservati. Non equivale a paginazione delle query o a una misura production.
+  Presenze dopo azioni e ogni 15 minuti invariate; nessuna migration.
+- 950 test, lint, TypeScript, build production con npm ci e browser sintetici
+  desktop/mobile Admin/Manager/Viewer superati, incluse ricerca lenta e
+  regressioni presenze. Verifiche senza scritture remote, email o stampa.
+  Commit/push su main richiesti dall'utente; nessuna migration necessaria.
+  Dettagli e limiti in docs/iscritti-paginazione-2026-10-17.md.
+
 ## Rilascio congiunto presenze, scuole e Forum capogruppo — 2026-10-17
 
 - L’utente richiede commit e push su main delle tre modifiche e le migration

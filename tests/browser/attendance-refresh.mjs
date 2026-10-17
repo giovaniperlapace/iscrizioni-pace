@@ -41,7 +41,7 @@ try {
   }
   const settled = page => page.waitForFunction(() => !document.querySelector('button[aria-busy=true]'));
   const page = await open();
-  assert.equal(await page.locator('tbody tr').count(), 500);
+  assert.equal(await page.locator('tbody tr').count(), 100);
   const initial = reads.get(page);
   await page.clock.fastForward(10_000); await settled(page);
   assert.equal(reads.get(page), initial, 'no ten-second polling');
@@ -57,7 +57,7 @@ try {
   await page.locator('[data-table] tbody tr').first().getByText(/Partecipazione confermata/).waitFor();
   assert.equal(reads.get(page), beforeSave + 2);
   assert.equal(await page.locator('[data-render-count]').getAttribute('data-count'), '1', 'one saved person renders just one of 500 indicators');
-  console.log('PASS 500 rows: zero indicator renders for unchanged data, one for a changed person; no ten-second reads');
+  console.log('PASS 500 loaded rows, 100 visible: zero indicator renders for unchanged data, one for a changed person; no ten-second reads');
   await page.evaluate(id => history.replaceState(null, '', `${location.pathname}?edit=${id}`), registrationId);
   await page.locator('dialog[open]').waitFor();
   await page.keyboard.press('Escape'); await page.locator('dialog[open]').waitFor({ state: 'detached' });
@@ -78,12 +78,12 @@ try {
   await second.close();
   status = 503;
   await page.locator('[data-table]').getByRole('button', { name: 'Aggiorna presenze', exact: true }).click(); await settled(page);
-  assert.equal(await page.locator('[data-table]').getByText('Partecipazione non disponibile', { exact: true }).count(), 500);
+  assert.equal(await page.locator('[data-table]').getByText('Partecipazione non disponibile', { exact: true }).count(), 100);
   status = 200;
   await page.locator('[data-table]').getByRole('button', { name: 'Riprova', exact: true }).click(); await settled(page);
   status = 403;
   await page.locator('[data-table]').getByRole('button', { name: 'Aggiorna presenze', exact: true }).click(); await settled(page);
-  assert.equal(await page.locator('[data-table]').getByText('Partecipazione non disponibile', { exact: true }).count(), 500);
+  assert.equal(await page.locator('[data-table]').getByText('Partecipazione non disponibile', { exact: true }).count(), 100);
   const blocked = reads.get(page);
   await page.clock.fastForward(900_100); await settled(page);
   assert.equal(reads.get(page), blocked + 1, 'revoked provider does not poll again; other provider receives revocation once');
