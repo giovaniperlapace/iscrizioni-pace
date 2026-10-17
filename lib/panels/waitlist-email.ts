@@ -1,20 +1,25 @@
 import { normalizeLocale } from "../i18n/config.ts";
 import { EMAIL_DELIVERY_COPY } from "../i18n/email-delivery.ts";
 import { FORUM_WAITLIST_COPY } from "./waitlist-copy.ts";
+import { GROUP_WAITLIST_COPY } from "./group-waitlist-copy.ts";
 import { parseForumIntent } from "./booking-intent.ts";
 
 export type ForumWaitlistOffer = {
   id: string; claim: string; eventId: string; registrationId: string; panelId: string;
+  notificationKind?: "participant" | "leader"; sectionId?: string;
   name: string; email: string; locale: string; title: string; location: string;
   startsAt: string; endsAt: string; expiresAt: string; seats: number;
 };
 
 export function renderForumWaitlistEmail(offer: ForumWaitlistOffer, appUrl: string) {
   const locale = normalizeLocale(offer.locale) ?? "en";
-  const copy = FORUM_WAITLIST_COPY[locale];
+  const copy = { ...FORUM_WAITLIST_COPY[locale], ...(offer.notificationKind === "leader" ? GROUP_WAITLIST_COPY[locale] : {}) };
   const id = parseForumIntent(offer.panelId);
   if (!id) throw new Error("Invalid Forum ID");
-  const link = new URL(`/forum/${id}`, appUrl);
+  const section = parseForumIntent(offer.sectionId);
+  if (offer.notificationKind === "leader" && !section) throw new Error("Invalid Forum section ID");
+  const link = new URL(offer.notificationKind === "leader"
+    ? `/dashboard/capogruppo/panel?section=${section}` : `/forum/${id}`, appUrl);
   if (!["http:", "https:"].includes(link.protocol)) throw new Error("Invalid site URL");
   const format = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" });
   const paragraphs = [offer.name, copy.emailBody, offer.title,

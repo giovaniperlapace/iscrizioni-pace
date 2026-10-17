@@ -6,7 +6,18 @@ const base = process.argv[2] ?? 'http://localhost:3112';
 if (!/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(base)) throw Error('Local server required');
 const route = new URL('../../app/event-attendance-check/', import.meta.url);
 mkdirSync(route, { recursive: true });
-writeFileSync(new URL('page.tsx', route), 'export { default } from "@/tests/browser/event-attendance-fixture";');
+// Keep the original school section on the server side of the RSC boundary.
+writeFileSync(new URL('page.tsx', route), `
+import Fixture from "@/tests/browser/event-attendance-fixture";
+import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
+import { school } from "@/tests/browser/event-attendance-school-fixture";
+export default function Page() {
+  const section = (sourceSection: "iscritti" | "panel", selected = false) => <SchoolBookingsSection
+    sourceSection={sourceSection} dashboard="manager" navMode="full" event={{ id: school.eventId, title: "Evento di prova" }}
+    bookings={[school]} panelOptions={[]} selectedBooking={selected ? school : null} isCreating={false} canManage
+    filters={{ query: "", status: "all", panelId: "all" }} />;
+  return <Fixture schoolLists={[section("iscritti"), section("panel")]} schoolDetail={section("iscritti", true)} />;
+}`);
 const ab = (...args) => execFileSync('npx', ['--yes', 'agent-browser', '--session', 'pace-p13', ...args], { encoding: 'utf8', timeout: 60000 });
 const check = (code, label) => { assert.match(ab('eval', `Boolean(${code})`), /true/, label); console.log(`PASS ${label}`); };
 const wait = code => ab('wait', '--fn', code);
@@ -55,7 +66,8 @@ try {
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"entered"}))');
   wait('document.querySelector("dialog").innerText.includes("Partecipazione confermata")');
   ab('eval', 'window.dispatchEvent(new CustomEvent("fixture-attendance", {detail:"forbidden"}))');
-  ab('find', 'role', 'button', 'click', '--name', 'Aggiorna report ingressi', '--exact');
+  // Fixture control outside the open modal is intentionally inert to user input.
+  ab('eval', 'Array.from(document.querySelectorAll("button")).find(b => b.textContent === "Aggiorna report ingressi").click()');
   wait('document.querySelector("dialog").innerText.includes("Partecipazione non disponibile")');
   check('!document.querySelector("[data-participant-view] tbody").innerText.includes("Partecipazione confermata")', 'revoked access clears previous presence data');
   check(`document.querySelector('${report}').innerText.includes("Report non disponibile") && !document.querySelector('${report}').innerText.includes("26")`, 'report revocation clears aggregates');

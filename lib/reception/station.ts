@@ -1,4 +1,5 @@
 import { parseReceptionCommand, type ReceptionCommand, type ReceptionLookup, type ReceptionResult } from "./contracts.ts";
+import { notifyEventAttendanceChanged } from "./attendance-events.ts";
 
 export type VerifiedReception = Extract<ReceptionResult, { status: "valid" }>;
 export type ReceptionMode = "enter" | "correct" | "cancel";
@@ -224,5 +225,6 @@ export class ReceptionStationSession {
       response.outcome === "unchanged" ? "Presenze già registrate: nessuna modifica." :
       command.action === "enter" ? "Ingresso registrato." : command.action === "cancel" ? "Annullamento registrato." : "Correzione registrata.",
     });
+    if (this.context.duty === EVENT_RECEPTION_DUTY) notifyEventAttendanceChanged();
   }
 }

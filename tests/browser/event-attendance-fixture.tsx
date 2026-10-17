@@ -1,25 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { OperationsParticipantsTable } from "@/app/dashboard/operations-participants-table";
-import { SchoolBookingsSection } from "@/app/dashboard/school-bookings-section";
-import type { SchoolBookingRow } from "@/lib/panels/school-bookings";
 import { EventAttendanceReport } from "@/app/dashboard/event-attendance";
+import { notifyEventAttendanceChanged } from "@/lib/reception/attendance-events";
 import type { OperationsParticipantRow } from "@/lib/registrations/operations-types";
 import { parseOperationsDashboardFilters } from "@/lib/registrations/operations-dashboard";
 const eventId = "11111111-1111-4111-8111-111111111111";
 const row: OperationsParticipantRow = {
   registrationId: "registration", eventId, eventTitle: "Evento di prova", participantId: "person", authUserId: null,
-  firstName: "Anna", lastName: "Prova", name: "Anna Prova", publicCode: "TEST", birthDate: "1980-01-01", country: "IT", city: "Roma", place: "Roma", email: null, phone: null,
+  // This fixture covers the read model and unsaved fields; reception commands
+  // with a public code are exercised separately by attendance-refresh.
+  firstName: "Anna", lastName: "Prova", name: "Anna Prova", publicCode: null, birthDate: "1980-01-01", country: "IT", city: "Roma", place: "Roma", email: null, phone: null,
   registrationStatus: "confirmed", submittedAt: "2026-09-30", currentGroupId: null, currentGroupName: null, currentGroupStatus: null, currentServiceId: null, currentServiceStatus: null, service: null, tagIds: [], tags: [], childrenCount: 1,
   children: [{ id: "child", first_name: "Minore", last_name: "Prova", birth_date: "2018-01-01", position: 1 }],
 };
-const school: SchoolBookingRow = {
-  id: "school", eventId, schoolName: "Scuola di prova", schoolCity: "Roma", classDescription: "3A",
-  studentCount: 20, companionCount: 3, status: "confirmed", privacyVersion: "v1", privacyAcceptedAt: "2026-09-30T10:00:00Z",
-  submittedAt: "2026-09-30T10:00:00Z", updatedAt: "2026-09-30T10:00:00Z", internalNotes: null, reservations: [], hasActiveQr: true,
-  teacher: { id: "teacher", firstName: "Docente", lastName: "Prova", email: "teacher@example.invalid", phone: "123" },
-};
-export default function Fixture() {
+export default function Fixture({ schoolLists, schoolDetail }: { schoolLists: ReactNode[]; schoolDetail: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [selected, setSelected] = useState(false);
   const [schoolSelected, setSchoolSelected] = useState(false);
@@ -28,7 +23,7 @@ export default function Fixture() {
   useEffect(() => {
     const original = window.fetch;
     let mode = "absent";
-    const change = (event: Event) => { mode = (event as CustomEvent).detail; };
+    const change = (event: Event) => { mode = (event as CustomEvent).detail; notifyEventAttendanceChanged(); };
     window.addEventListener("fixture-attendance", change);
     const closeParticipant = () => { window.history.replaceState(null, "", window.location.pathname); setSelected(false); };
     window.addEventListener("fixture-close-participant", closeParticipant);
@@ -62,7 +57,7 @@ export default function Fixture() {
       selectedParticipant={selected ? row : null} editableEventIds={[eventId]} dashboard="manager" navMode="full" canDeleteRegistration={false} operatorId="fixture" eventId={eventId} eventStartsOn="2026-10-25"
     /></div>{(["iscritti", "panel"] as const).map(sourceSection => <div key={sourceSection} data-school-view={sourceSection}>
       <button className="btn-secondary p-3" onClick={() => { setSelected(false); setSchoolSelected(true); }}>Apri scheda scuola {sourceSection}</button>
-      <SchoolBookingsSection sourceSection={sourceSection} dashboard="manager" navMode="full" event={{ id: eventId, title: "Evento di prova" }} bookings={[school]} panelOptions={[]} selectedBooking={schoolSelected && sourceSection === "iscritti" ? school : null} isCreating={false} canManage filters={{ query: "", status: "all", panelId: "all" }} />
+      {schoolSelected && sourceSection === "iscritti" ? schoolDetail : schoolLists[sourceSection === "iscritti" ? 0 : 1]}
     </div>)}</>}
   </main>;
 }

@@ -23,7 +23,7 @@ try {
  alter default privileges in schema public grant all on tables to service_role;
  alter default privileges in schema public grant all on sequences to service_role;`);
  for(const name of readdirSync('supabase/migrations').filter(x=>x.endsWith('.sql')).sort()) {
-  if(name==='20260813170000_rename_anziani_and_amici_groups.sql')continue;
+  if(['20260813170000_rename_anziani_and_amici_groups.sql','20261017180000_school_class_slot_constraints.sql'].includes(name))continue;
   try {file(join('supabase/migrations',name));}catch(e){throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  console.log('PASS canonical migrations applied to disposable PostgreSQL');
@@ -37,6 +37,11 @@ try {
  assert.equal(psql('select app.panel_section_occupancy(sd(502));',true).trim(),'15');
  psql("update school_panel_reservations set status='cancelled' where panel_id=sd(402);update school_bookings set status='cancelled',cancelled_at=now() where school_name='Scuola sintetica' and status='submitted';");
  console.log('PASS simultaneous school requests cannot overbook the last available seats');
+ const {checkSchoolClassMigration}=await import('./school-class-migration.mjs');
+ checkSchoolClassMigration(psql);
+ try {console.log(file('tests/sql/school-class-slots.sql').split('\n').filter(x=>x.startsWith('PASS ')).join('\n'));} catch(e){throw new Error(e.stderr);}
+ const {checkSchoolClassConcurrency}=await import('./school-class-slots-concurrency.mjs');
+ await checkSchoolClassConcurrency({psql,bin,args});
  if(process.argv.includes('--browser')) {const {checkSchoolDirectLink}=await import('../browser/school-direct-link.mjs');await checkSchoolDirectLink(psql);}
 } finally {
  if(started)execFileSync(join(bin,'pg_ctl'),['-D',join(dir,'data'),'-m','immediate','-w','stop'],{stdio:'pipe'});

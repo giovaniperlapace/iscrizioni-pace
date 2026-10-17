@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { participantReceptionCommand, participantLabelCommand } from "./participants/reception-actions";
 import { PresenceRemovalDialog } from "./accoglienza/reception-presence-controls";
 import { ReceptionParty } from "./accoglienza/reception-party";
 import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception/station";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
-import { useEventAttendanceRefresh } from "./event-attendance";
 
 export function ParticipantReceptionPanel({ eventId, registrationId, code, onBusyChange, commandAction, labelCommandAction }: {
   eventId: string; registrationId: string; code: string;
@@ -25,8 +24,6 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
   const [removalIds, setRemovalIds] = useState<string[]>([]);
   const [printing, setPrinting] = useState(false);
   const [verified, setVerified] = useState<VerifiedReception | null>(null);
-  const refresh = useEventAttendanceRefresh();
-  const lastSaved = useRef<VerifiedReception | null>(null);
   const locked = printing || state.phase === "pending" || state.phase === "uncertain";
   const result = state.phase === "blocked" ? null : state.result ?? verified;
   const correcting = state.mode !== "enter";
@@ -40,11 +37,6 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
     void session.inspect({ kind: "code", value: code });
     return () => { unsubscribe(); session.setActive(false); };
   }, [session, code]);
-  useEffect(() => {
-    if (state.phase === "result" && state.result && state.result.outcome !== "verified" && lastSaved.current !== state.result) {
-      lastSaved.current = state.result; refresh();
-    }
-  }, [state.phase, state.result, refresh]);
   useEffect(() => { onBusyChange?.(locked); }, [locked, onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
   useEffect(() => {

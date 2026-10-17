@@ -4,10 +4,13 @@ export type GroupPanel = {
 };
 export type GroupPanelParticipant = {
   registrationId: string; name: string; code: string | null; groupId: string; groupName: string;
-  seats: number; status: "available" | "selected" | "conflict" | "full";
+  seats: number; status: "available" | "selected" | "conflict" | "full" | "queued" | "offered";
+  waitlistSectionId?: string | null; waitlistAudience?: string | null;
+  queuePosition?: number | null; offerExpiresAt?: string | null;
 };
 export type GroupPanelView = { panels: GroupPanel[]; participants: GroupPanelParticipant[] };
-export type GroupBookingResult = { count: number; seats: number } | { error: "failure" | "scopeError" | "fullError" | "conflictError" | "unavailable" };
+export type GroupWaitlistIntent = "join" | "leave" | "accept";
+export type GroupBookingResult = { count: number; seats: number } | { status: "queued" | "left" | "booked" } | { error: "failure" | "scopeError" | "fullError" | "conflictError" | "unavailable" | "expired" | "availableNow" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function isUuid(value: unknown): value is string { return typeof value === "string" && UUID.test(value); }
 export function validGroupBookingSelection(section: unknown, ids: unknown): ids is string[] {

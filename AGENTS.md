@@ -1,5 +1,59 @@
 # AGENTS.md
 
+## Rilascio congiunto presenze, scuole e Forum capogruppo — 2026-10-17
+
+- L’utente richiede commit e push su main delle tre modifiche e le migration
+  necessarie. Forum personali/capogruppo restano nascosti e chiusi fino
+  all’apertura generale; link scuole indipendente conservato attivo.
+- Applicate e registrate in production `20261017120000_group_panel_waitlist`
+  e `20261017180000_school_class_slot_constraints`, atomicamente prima del
+  codice e dopo backup custom verificato. Confrontate 2.422 voci di catalogo;
+  dati canonici di 63 tabelle, 110.587 righe, invariati. Privilegi conservati.
+- Confermati `internal`, catalogo pubblico vuoto e flag scuola attivo.
+  Nessun cambio di apertura, staging, email reale o prova hardware.
+- Superati 948 test, lint, TypeScript, build production con npm ci e browser
+  originali sintetici delle tre superfici, SQL e concorrenza. Presenze a
+  15 minuti verificate anche nel browser. Verbali hardware paralleli esclusi.
+  Dettagli in docs/rilascio-presenze-scuole-forum-2026-10-17.md.
+
+## Iscritti: presenze dopo le azioni e rendering selettivo — 2026-10-17
+
+- Eliminato il controllo ogni 10 secondi. Le liste rileggono dopo comandi
+  Accoglienza riusciti, anche da un’altra scheda dello stesso browser;
+  BroadcastChannel trasporta solo invalidazioni, mai dati personali o QR.
+- Per altre postazioni: riconciliazione ogni 15 minuti su richiesta dell’utente, sospesa a tab nascosta;
+  ripresa dopo almeno un minuto o avvisi pendenti, recupero connessione e
+  pulsante Aggiorna presenze. Statistiche ingressi sempre su richiesta.
+- Store per provider e sottoscrizione per persona/scuola: nessun render degli
+  indicatori invariati. Richieste accorpate, risposte anteriori a un salvataggio
+  scartate; errori/revoca cancellano il dato e non inventano assenze.
+- Superati 948 test, lint, TypeScript, build production pulita e browser
+  sintetici desktop/mobile: 500 persone, zero render se nulla cambia e uno
+  per una persona modificata; salvataggi, altra scheda e campi non salvati.
+  Nessuna migration, scrittura remota, email, stampa fisica o pubblicazione.
+  Dettagli in docs/iscritti-aggiornamento-presenze-2026-10-17.md.
+
+## Scuole: vincolo per docente e classe — 2026-10-17
+
+- Su richiesta dell’utente, classi diverse dello stesso docente possono
+  prenotare Forum contemporanei. Una classe con i suoi accompagnatori occupa
+  un solo Forum per fascia/giorno, anche tra prenotazioni separate.
+- Identità evento/docente/scuola/città/classe normalizzata; quantità escluse
+  dalla chiave. Fasce Rome mattina/pomeriggio e sovrapposizioni effettive;
+  sostituzione atomica, annullamento e altre classi indipendenti.
+- Migration locale 20261017180000_school_class_slot_constraints: proiezione
+  privata con vincoli univoci/esclusione differiti, trigger su riserve,
+  classe/stato e orari. Concorrenza protetta anche senza RPC; nessun dato
+  canonico modificato. Backfill con conflitti abortisce senza cancellazioni.
+- Selettore condiviso pubblico/docente, blocco delle opzioni incompatibili,
+  istruzioni/errori in sette lingue e link alla gestione. Home e accesso
+  personale invariati; nessuna raccolta di nomi studenti/accompagnatori.
+- Superati 913 test nella copia pulita, lint, TypeScript, build production,
+  SQL/concorrenza/migrazione e browser originali sintetici desktop/mobile.
+  Nessun invio reale, commit/push o migration remota. Applicare la migration
+  prima del codice al rilascio autorizzato. Dettagli e limiti dichiarativi in
+  docs/scuole-vincolo-classe-2026-10-17.md. Lavori paralleli conservati.
+
 ## Scuole tramite link diretto — 2026-10-17
 
 - L’utente richiede l’abilitazione operativa di /scuole, fuori dalla home,
@@ -49,6 +103,30 @@
 - Telefono senza stampa; selezione, minori, snapshot, revisioni e retry conservati.
   Nessuna migration o scrittura remota. Dettagli e verifiche in
   docs/accoglienza-scheda-inline-2026-10-17.md.
+
+## Forum capogruppo e lista d’attesa — 2026-10-17
+
+- Verificato dopo fetch: branch panel `095af93` interamente integrato in main
+  `2c6261b`, tramite merge `384f58a`. Prenotazioni capogruppo già presenti e
+  nascoste fino a modalità `open`; solo `catalog` non apre le prenotazioni.
+- Completata localmente la coda capogruppo: inserimento/rimozione per persona,
+  posizione, offerta e conferma esplicita entro 30 minuti, con avviso del cambio
+  del Forum nella stessa fascia. Minori inclusi; partecipanti senza account
+  supportati. FIFO, deduplicazione e riserve condivise con il flusso personale.
+- Notifica al capogruppo che inserisce la richiesta, nella lingua scelta nella
+  sua interfaccia; link alla dashboard senza conferma automatica. Richieste già
+  esistenti conservano destinatario e priorità. Revoca o uscita del partecipante
+  dallo scope bloccano operazioni e claim e cancellano le richieste non più valide.
+- Migration locale `20261017120000_group_panel_waitlist`: helper privati condivisi,
+  nuova RPC autenticata, metadati destinatario e catalogo esteso. Scope e RLS
+  conservati; nessuna apertura pubblica. Polling della sola vista ogni 5 minuti,
+  filtri conservati, errori/recupero e scadenza espliciti; testi in sette lingue.
+- Superati 933 test, lint, TypeScript, build production con npm ci in copia
+  pulita, SQL/concorrenza e browser desktop/mobile con pagina/azioni originali
+  e PostgreSQL temporaneo. Nessun invio reale, migration remota o commit/push.
+  Dettagli in docs/group-panel-waitlist-2026-10-17.md. Lavori Accoglienza
+  paralleli conservati. Applicare la migration prima del futuro rilascio codice.
+
 
 ## Dashboard Accoglienza: controlli e ultime letture — 2026-10-17
 

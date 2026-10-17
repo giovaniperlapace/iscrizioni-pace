@@ -1,5 +1,21 @@
 # Piano di lavoro Panel
 
+## Forum capogruppo e lista d’attesa — 17 ottobre 2026
+
+Verificata l’integrazione completa del branch panel in main: le prenotazioni
+capogruppo esistono già e restano protette dalla modalità `open`. Completata
+localmente la gestione della coda nella stessa dashboard, incluse notifiche al
+capogruppo richiedente, minori, riserve di 30 minuti, sostituzione esplicita del
+Forum della stessa fascia e revoca. Coda canonica condivisa con il partecipante.
+
+Su successiva richiesta dell’utente, migration `20261017120000_group_panel_waitlist`
+applicata e registrata in production prima del rilascio codice, con backup e
+dati canonici invariati. Superati 948 test congiunti, lint, TypeScript, build
+pulita, SQL/concorrenza e browser sintetici desktop/mobile. Gate generale
+ancora `internal`: Forum capogruppo nascosti fino all’apertura generale.
+Dettagli in `docs/rilascio-presenze-scuole-forum-2026-10-17.md`.
+
+
 ## Rilascio production Admin — 16 ottobre 2026
 
 Richiesto il rilascio su main dello scanner USB e della stampa QR individuale

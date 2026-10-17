@@ -1,5 +1,11 @@
 # P13 — prima parte: visualizzazione degli ingressi evento
 
+Aggiornamento 17 ottobre 2026: nelle liste/schede operative il controllo ogni
+dieci secondi è sostituito da avvisi dopo i salvataggi, aggiornamento manuale
+e riconciliazione ogni quindici minuti. Gli indicatori si aggiornano soltanto
+quando cambia il proprio dato. Le statistiche restano su richiesta.
+Dettagli: [aggiornamento presenze e fluidità](iscritti-aggiornamento-presenze-2026-10-17.md).
+
 Aggiornamento 14 ottobre 2026: i totali e il report operativo sono nella
 categoria dedicata **Statistiche → Ingressi effettivi all’evento**
 (`report=arrivals`). La vista legge i dati all’apertura e a un nuovo clic

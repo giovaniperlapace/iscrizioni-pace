@@ -28,6 +28,8 @@ try {
  }
  console.log('PASS canonical migrations and Forum queue applied to disposable PostgreSQL');
  try { console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
+ try { console.log(file('tests/sql/group-panel-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
+ if(process.argv.includes('--group-browser')) { const {checkGroupForumServerActions}=await import('../browser/group-forum-waitlist-actions.mjs');await checkGroupForumServerActions(psql,process.env.GROUP_FORUM_BROWSER_URL); }
  if(process.argv.includes('--browser')) {
   psql(`update panel_waitlist set status='cancelled' where registration_id=fw(103) and status='waiting';`);
   const {checkForumServerActions}=await import('../browser/forum-waitlist-actions.mjs');await checkForumServerActions(psql);
@@ -57,6 +59,7 @@ try {
  console.log('PASS competing ordinary bookings cannot both take the last seat');
  try { console.log(file('tests/sql/forum-unpublication.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
  if(process.argv.includes('--unpublish-browser')) { const {checkForumUnpublication}=await import('../browser/forum-unpublication.mjs');await checkForumUnpublication(psql); }
+ const {checkGroupWaitlistConcurrency}=await import('./group-panel-waitlist-concurrency.mjs');await checkGroupWaitlistConcurrency(psql,concurrent);
 } finally {
  if(started)execFileSync(join(bin,'pg_ctl'),['-D',join(dir,'data'),'-m','immediate','-w','stop'],{stdio:'pipe'});
  rmSync(dir,{recursive:true,force:true});
