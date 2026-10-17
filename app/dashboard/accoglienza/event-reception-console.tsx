@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, History, Keyboard, ScanLine } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import type { CameraSource } from "@/lib/reception/camera";
@@ -114,7 +115,10 @@ export function EventReceptionConsole(props: Props) {
             <label className="grid gap-1">Codice partecipante o QR gruppo<input className="field min-h-12" disabled={locked || !!entry} value={code} onChange={event => setCode(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={45} /></label>
             <button className="btn-primary min-h-12" disabled={locked || !!entry}>Leggi codice</button>
           </form>}
-        <button className="min-h-11 justify-self-start text-sm underline" disabled={locked || !!entry} onClick={() => setManual(!manual)}>{manual ? deviceMode === "computer" ? "Scanner USB" : "Inquadra QR code" : "Inserisci il codice manualmente"}</button>
+        <button type="button" className="btn-secondary min-h-11 justify-self-start gap-2 px-4 text-sm" disabled={locked || !!entry} onClick={() => setManual(!manual)}>
+          {manual ? <ScanLine size={18} aria-hidden="true" /> : <Keyboard size={18} aria-hidden="true" />}
+          {manual ? deviceMode === "computer" ? "Scanner USB" : "Inquadra QR code" : "Inserisci il codice manualmente"}
+        </button>
       </div>
     </div>
     {!result && feedback}
@@ -152,12 +156,16 @@ export function EventReceptionConsole(props: Props) {
       <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-bold outline-none">{correction ? "Modifica presenze" : "Presenze della scuola"}</h2>
       <PresenceSelection key={`${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode} onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={() => session.closeSelection()} />
     </ReceptionOperationDialog>}
-    <details className="text-sm">
-      <summary className="cursor-pointer py-3">Ultime letture ({state.recent.length})</summary>
-      <ul className="grid gap-2">{state.recent.map(item => <li key={item.key} className="flex flex-wrap items-center justify-between gap-2 border-t py-2">
-        <span>{item.result.kind === "family" ? `${item.result.persons[0]?.firstName} ${item.result.persons[0]?.lastName} · ${item.result.code}` : item.result.kind === "group" ? item.result.groupName : item.result.kind === "school" ? item.result.schoolName : item.result.label}</span>
-        <button className="min-h-11 underline" disabled={locked || state.phase === "selection" || correction} onClick={() => void inspect(item.lookup, true)}>Apri scheda</button>
-      </li>)}</ul>
+    <details open className="surface-card group text-sm">
+      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-xl p-4 font-semibold transition hover:bg-[var(--peace-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] [&::-webkit-details-marker]:hidden">
+        <History size={20} aria-hidden="true" className="shrink-0 text-[var(--peace-blue-800)]" />
+        <span className="flex-1">Ultime letture ({state.recent.length})</span>
+        <ChevronDown size={18} aria-hidden="true" className="shrink-0 transition-transform group-open:rotate-180" />
+      </summary>
+      {state.recent.length === 0 ? <p className="border-t border-[var(--peace-border)] p-4 text-[var(--peace-muted)]">Nessuna lettura recente.</p> : <ul className="divide-y divide-[var(--peace-border)] border-t border-[var(--peace-border)] px-4">{state.recent.map(item => <li key={item.key} className="flex flex-wrap items-center justify-between gap-3 py-3">
+        <span className="min-w-0 break-words font-medium">{item.result.kind === "family" ? `${item.result.persons[0]?.firstName} ${item.result.persons[0]?.lastName} · ${item.result.code}` : item.result.kind === "group" ? item.result.groupName : item.result.kind === "school" ? item.result.schoolName : item.result.label}</span>
+        <button type="button" className="btn-secondary min-h-11 shrink-0 px-4 text-sm" disabled={locked || state.phase === "selection" || correction} onClick={() => void inspect(item.lookup, true)}>Apri scheda</button>
+      </li>)}</ul>}
     </details>
   </section>;
 }

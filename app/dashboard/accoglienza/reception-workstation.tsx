@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { ReceptionDuty } from "@/lib/reception/duties.server";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import { ReceptionConsole } from "./reception-console";
-import PendingLink from "@/components/pending-link";
 import type { CameraSource } from "@/lib/reception/camera";
 import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
 
@@ -48,6 +47,5 @@ export function ReceptionWorkstation({ duties, commandAction, cameraSource, labe
     eventReception={duty.duty === "event_entry"}
     labelPrinting={deviceMode === "computer" && duty.duty === "event_entry"}
     onChangeDuty={duties.length > 1 ? () => setSelected(null) : undefined} />
-    {deviceMode === "computer" && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-3">Strumenti stampante</summary><PendingLink className="min-h-11 underline" href="/dashboard/accoglienza/collaudo">Collaudo stampante con campioni sintetici</PendingLink></details>}
   </>;
 }

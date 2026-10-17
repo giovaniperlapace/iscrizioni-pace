@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Dashboard Accoglienza: controlli e ultime letture — 2026-10-17
+
+- Rimossi dalla dashboard Strumenti stampante e il link al collaudo: la
+  postazione viene preparata e provata prima dell’uso operativo.
+- Passaggio al codice manuale e ritorno allo scanner con pulsante secondario
+  e icona, coerenti con il sito. Ultime letture in un riquadro aperto di default,
+  richiudibile anche da tastiera; apertura scheda con pulsante secondario.
+- Verificati browser desktop/mobile su fixture sintetica: stato vuoto,
+  inserimento manuale, apertura/chiusura conservata durante le letture,
+  riapertura scheda e assenza di scritture delle presenze.
+
 ## Partecipazione nella scheda e accesso Manager circoscritto — 2026-10-16
 
 - Rimozione esplicita anche nella scheda aperta dal nome: selezione delle
