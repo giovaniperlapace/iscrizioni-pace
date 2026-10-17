@@ -6,12 +6,11 @@ import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contract
 import type { CameraSource } from "@/lib/reception/camera";
 import type { ReceptionDuty } from "@/lib/reception/duties.server";
 import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
-import { ReceptionStationSession, ScanLatch, type VerifiedReception, type RecentReception } from "@/lib/reception/station";
+import { ReceptionStationSession, ScanLatch, type VerifiedReception } from "@/lib/reception/station";
 import { ReceptionParty } from "./reception-party";
 import { ReceptionCamera } from "./reception-camera";
 import { ReceptionUsbScanner } from "./reception-usb-scanner";
 import { PresenceSelection, PresenceRemovalDialog, ReceptionOperationDialog } from "./reception-presence-controls";
-import { RecentPersonActions } from "./reception-recent-person-actions";
 import PendingLink from "@/components/pending-link";
 
 type Props = {
@@ -30,8 +29,6 @@ export function EventReceptionConsole(props: Props) {
   const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, { duty: "event_entry" }, true));
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
   const [entry, setEntry] = useState<VerifiedReception | null>(null);
-  const [partyFocus, setPartyFocus] = useState<{ target: "presence" | "print"; sequence: number } | null>(null);
-  const [labelRefresh, setLabelRefresh] = useState(0);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [removalIds, setRemovalIds] = useState<string[]>([]);
@@ -61,14 +58,13 @@ export function EventReceptionConsole(props: Props) {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [locked]);
-  useEffect(() => { if (entry && !partyFocus) heading.current?.focus(); }, [entry, partyFocus]);
+  useEffect(() => { if (entry) heading.current?.focus(); }, [entry]);
 
   function changeBusy(value: boolean) { busyRef.current = value; setBusy(value); }
   async function inspect(lookup: ReceptionCommand["lookup"], replace = false) {
     if (busyRef.current || session.isLocked() || session.snapshot().phase === "selection" || session.snapshot().mode !== "enter") return;
     if (!replace && (!session.canScan() || entry)) return;
     if (session.snapshot().lookup?.value !== lookup.value) setEntry(null);
-    setPartyFocus(null);
     if (replace) await session.inspectNext(lookup);
     else await session.inspect(lookup);
     const found = session.snapshot().result;
@@ -77,39 +73,12 @@ export function EventReceptionConsole(props: Props) {
   }
   function next() {
     if (busyRef.current || session.isLocked()) return;
-    session.setMode("enter"); session.next(); setEntry(null); setPartyFocus(null); latch.current = new ScanLatch();
+    session.setMode("enter"); session.next(); setEntry(null); latch.current = new ScanLatch();
   }
   async function retry() {
     await session.retry();
     const found = session.snapshot().result;
     if (found) setEntry(found);
-  }
-  async function recentAction(item: RecentReception, action: "presence" | "remove" | "print") {
-    if (busyRef.current || session.isLocked() || session.snapshot().phase === "selection" || session.snapshot().mode !== "enter") return false;
-    changeBusy(true);
-    if (session.snapshot().lookup?.value !== item.lookup.value) setEntry(null);
-    try {
-      // Hold the interlock across the fresh read and the requested action.
-      await session.inspectNext(item.lookup);
-      const fresh = session.snapshot().result;
-      if (session.snapshot().phase !== "result" || !fresh) return false;
-      setEntry(fresh);
-      if (fresh.kind === "family" && fresh.persons.length === 1 && item.result.kind === "family" && item.result.persons.length === 1) {
-        const person = fresh.persons[0];
-        if (person.id !== item.result.persons[0].id) return false;
-        if (action === "presence" && !person.checkedInAt) {
-          session.selectPresence();
-          await session.submit({ subjectIds: [person.id] });
-        } else if (action === "remove" && person.checkedInAt) {
-          setRemovalIds([person.id]);
-          await session.removeCurrent();
-        }
-        return action === "print";
-      }
-      if (fresh.kind === "family" || fresh.kind === "group") setPartyFocus(previous => ({ target: action === "print" ? "print" : "presence", sequence: (previous?.sequence ?? 0) + 1 }));
-      else setPartyFocus(null);
-      return false;
-    } finally { changeBusy(false); }
   }
   const feedback = <>
     {state.phase === "pending" && <p role="status" className="font-semibold">{entry ? "Operazione in corso…" : "Lettura in corso…"}</p>}
@@ -124,7 +93,7 @@ export function EventReceptionConsole(props: Props) {
   const party = result && (result.kind === "family" || result.kind === "group") ? <ReceptionParty
     key={result.kind === "group" ? result.groupId : result.code} result={result} session={session}
     printing={deviceMode === "computer" && !!props.labelPrinting} labelCommandAction={props.labelCommandAction}
-    disabled={locked || problem || correction} onBusyChange={changeBusy} feedback={feedback} focusRequest={partyFocus} labelRefresh={labelRefresh}
+    disabled={locked || problem || correction} onBusyChange={changeBusy} feedback={feedback}
     onRemove={ids => { setRemovalIds(ids); void session.removeCurrent(); }}
   /> : null;
 
@@ -184,14 +153,7 @@ export function EventReceptionConsole(props: Props) {
       </summary>
       {state.recent.length === 0 ? <p className="border-t border-[var(--peace-border)] p-4 text-[var(--peace-muted)]">Nessuna lettura recente.</p> : <ul className="divide-y divide-[var(--peace-border)] border-t border-[var(--peace-border)] px-4">{state.recent.map(item => <li key={item.key} className="flex flex-wrap items-center justify-between gap-3 py-3">
         <span className="min-w-0 break-words font-medium">{item.result.kind === "family" ? `${item.result.persons[0]?.firstName} ${item.result.persons[0]?.lastName} · ${item.result.code}` : item.result.kind === "group" ? item.result.groupName : item.result.kind === "school" ? item.result.schoolName : item.result.label}</span>
-        {item.result.kind === "family" && item.result.persons.length === 1 ? <RecentPersonActions
-          item={item} printing={deviceMode === "computer" && !!props.labelPrinting} labelCommandAction={props.labelCommandAction}
-          disabled={locked || state.phase === "selection" || correction} onBusyChange={changeBusy}
-          onAction={action => recentAction(item, action)} onPrinted={() => setLabelRefresh(value => value + 1)}
-        /> : <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-secondary min-h-11 px-4 text-sm" disabled={locked || state.phase === "selection" || correction} onClick={() => void recentAction(item, "presence")}>Gestisci Presenze</button>
-          {deviceMode === "computer" && props.labelPrinting && (item.result.kind === "group" || item.result.kind === "family") && <button type="button" className="btn-secondary min-h-11 px-4 text-sm" disabled={locked || state.phase === "selection" || correction} onClick={() => void recentAction(item, "print")}>Scegli i QR code da stampare</button>}
-        </div>}
+        <button type="button" className="btn-secondary min-h-11 shrink-0 px-4 text-sm" disabled={locked || state.phase === "selection" || correction} onClick={() => void inspect(item.lookup, true)}>Apri Scheda</button>
       </li>)}</ul>}
     </details>
   </section>;

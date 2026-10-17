@@ -32,13 +32,13 @@ export async function runReceptionChecks({ phone = false, base = process.argv[2]
   if(phone)await btn('Nessun QR').click();await btn(phone?'Scansiona un altro QR':'Chiudi scheda').click();await scan(true);await group();
   assert.equal(await page.locator('input[name=receptionSubjects]').count(),3);assert.equal(await page.locator('fieldset').getByText('Ada Mori',{exact:true}).count(),1);
   assert.equal((await log('writes')).length,2);await choose([0,2]);
-  await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);if(!phone)await btn('Stampa i QR del gruppo').click();
+  await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);if(!phone)await btn('Stampa i QR delle persone selezionate').click();
   if(phone){await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();await noPrint();}else{await page.getByText('Comando di stampa inviato per 2 etichette.',{exact:true}).waitFor();assert.deepEqual((await log('prints')).find(c=>c.action==='request').ids,(await log('writes')).at(-1).subjectIds);assert.equal(await page.evaluate(()=>window.__prints),1);}
   assert.equal((await log('writes')).length,3);assert.equal((await log('writes')).at(-1).subjectIds.length,2);
   assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),2);
   await page.screenshot({path:`/tmp/pace-simple-${phone?'phone':'usb'}-group.png`,fullPage:true});
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await page.keyboard.press('Escape');assert.equal(await page.locator('dialog[open]').count(),0);await page.locator('details').getByRole('button',{name:'Gestisci Presenze',exact:true}).click();await group();assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),2);
+  await page.keyboard.press('Escape');assert.equal(await page.locator('dialog[open]').count(),0);await page.locator('details').getByRole('button',{name:'Apri Scheda',exact:true}).first().click();await group();assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),2);
   await btn('Rimuovi presenze selezionate').click();await btn('Conferma rimozione').waitFor();assert.equal(await page.getByRole('dialog').getByRole('listitem').count(),2);await page.keyboard.press('Escape');await group();assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),2);
   console.log('PASS single direct registration, double click, correction, one group roster, shared selection, retained selection and layout');
   await open();await scenario('write-uncertain');await scan();await single();await btn('Conferma partecipazione').click();await btn('Riprova la stessa operazione').waitFor();
@@ -48,12 +48,12 @@ export async function runReceptionChecks({ phone = false, base = process.argv[2]
   console.log('PASS uncertain exact-request retry and revoked access');
   if(!phone){
    await open();await scan(true);await group();await choose([1]);await scenario('conflict');await btn('Conferma partecipazione').click();await page.getByText(/Il gruppo o le presenze sono cambiati/).waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);
-   await open();await scan(true);await group();await choose([0,1]);await scenario('write-uncertain');await btn('Conferma partecipazione').click();await btn('Riprova la stessa operazione').waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);await btn('Riprova la stessa operazione').click();await page.getByText(/✓ Richiesta già elaborata/).waitFor();await btn('Stampa i QR del gruppo').click();await page.getByText('Comando di stampa inviato per 2 etichette.',{exact:true}).waitFor();assert.deepEqual((await log('writes'))[0],(await log('writes'))[1]);
-   await open();await scan(true);await group();await choose([0,2]);await scenario('print-request-error');await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();await btn('Stampa i QR del gruppo').dblclick();await page.getByText(/Non è stato possibile avviare la stampa/).waitFor();assert.equal((await log('writes')).length,1);assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),2);await scenario('normal');await btn('Stampa i QR del gruppo').click();await page.getByText('Comando di stampa inviato per 2 etichette.',{exact:true}).waitFor();assert.equal((await log('writes')).length,1);
+   await open();await scan(true);await group();await choose([0,1]);await scenario('write-uncertain');await btn('Conferma partecipazione').click();await btn('Riprova la stessa operazione').waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);await btn('Riprova la stessa operazione').click();await page.getByText(/✓ Richiesta già elaborata/).waitFor();await btn('Stampa i QR delle persone selezionate').click();await page.getByText('Comando di stampa inviato per 2 etichette.',{exact:true}).waitFor();assert.deepEqual((await log('writes'))[0],(await log('writes'))[1]);
+   await open();await scan(true);await group();await choose([0,2]);await scenario('print-request-error');await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();await btn('Stampa i QR delle persone selezionate').dblclick();await page.getByText(/Non è stato possibile avviare la stampa/).waitFor();assert.equal((await log('writes')).length,1);assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),2);await scenario('normal');await btn('Stampa i QR delle persone selezionate').click();await page.getByText('Comando di stampa inviato per 2 etichette.',{exact:true}).waitFor();assert.equal((await log('writes')).length,1);
    await open();await scan();await single();await btn('Stampa etichetta QR').click();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('writes')).length,0);
    await page.keyboard.type('f'.repeat(43));await page.keyboard.press('Enter');await page.locator('input[name=receptionSubjects]').nth(1).waitFor();await choose([1]);await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,1);await btn('Stampa etichetta QR').click();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('writes')).at(-1).subjectIds[0].endsWith('2'),true);assert.equal((await log('prints')).filter(c=>c.action==='request').at(-1).ids[0].endsWith('1'),true);
-   await open();await scenario('print-error');await scan(true);await group();await page.getByText(/Non è stato possibile avviare la stampa/).waitFor();await choose([0]);await scenario('normal');await btn('Stampa i QR del gruppo').click();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('writes')).length,0);
-   await open();await scenario('group-minor');await scan(true);await group();await choose([1,2]);await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);await btn('Stampa i QR del gruppo').click();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('writes')).at(-1).subjectIds.length,2);assert.equal((await log('prints')).find(c=>c.action==='request').ids.length,1);
+   await open();await scenario('print-error');await scan(true);await group();await page.getByText(/Non è stato possibile avviare la stampa/).waitFor();await choose([0]);await scenario('normal');await btn('Stampa i QR delle persone selezionate').click();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('writes')).length,0);
+   await open();await scenario('group-minor');await scan(true);await group();await choose([1,2]);await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);await btn('Stampa i QR delle persone selezionate').click();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('writes')).at(-1).subjectIds.length,2);assert.equal((await log('prints')).find(c=>c.action==='request').ids.length,1);
    await open();await page.keyboard.type('s'.repeat(43));await page.keyboard.press('Enter');await btn('Registra presenze').click();await page.locator('input[name=students]').fill('18');await page.locator('input[name=companions]').fill('2');await scan();assert.equal((await log('writes')).length,0);await btn('Registra ingresso').click();await page.getByText('Presenti: 18 studenti e 2 accompagnatori',{exact:true}).waitFor();assert.equal((await log('writes')).length,1);
    // New reads replace open group and single cards without an intermediate click.
    await open();await scan(true);await group();await choose([0,2]);await btn('Conferma partecipazione').click();await page.getByText('✓ Partecipazione confermata.',{exact:true}).waitFor();
@@ -69,7 +69,7 @@ export async function runReceptionChecks({ phone = false, base = process.argv[2]
    await scan(true);await group();await page.keyboard.press('Escape');assert.equal(await page.getByText(/Badge completo|sedute cerimonie/).count(),0);
    // An in-flight write cannot be replaced; after completion the same scan is accepted.
    await open();await scan();await single();await scenario('slow');await btn('Conferma partecipazione').click();await scan(true);await saved();assert.equal((await log('calls')).length,2);await scan(true);await group();assert.equal((await log('calls')).length,3);
-   await choose([0]);await btn('Stampa i QR del gruppo').click();await scan();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('calls')).length,3);await scan();await single();assert.equal((await log('calls')).length,4);
+   await choose([0]);await btn('Stampa i QR delle persone selezionate').click();await scan();await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();assert.equal((await log('calls')).length,3);await scan();await single();assert.equal((await log('calls')).length,4);
    // Removal retries preserve the exact versioned request and do not affect other people.
    await open();await scan();await single();await btn('Conferma partecipazione').click();await saved();await btn('Rimuovi presenza').click();await btn('Conferma rimozione').waitFor();await scenario('write-uncertain');await btn('Conferma rimozione').click();await btn('Riprova la stessa operazione').waitFor();await scan(true);assert.equal((await log('calls')).length,4);assert.equal(await page.getByText('✓ Partecipazione confermata',{exact:true}).count(),1);await btn('Riprova la stessa operazione').click();await page.getByText('Partecipazione non confermata',{exact:true}).first().waitFor();assert.deepEqual((await log('writes')).slice(-2)[0],(await log('writes')).at(-1));
    console.log('PASS direct scans, selected removal, unchanged other presences, duplicate clicks, confirmation interlock, exact removal retry, no ceremony badge');
@@ -79,44 +79,14 @@ export async function runReceptionChecks({ phone = false, base = process.argv[2]
    await open();await btn('Ferma fotocamera').click();await scenario('camera-denied');await btn('Avvia fotocamera').click();await page.getByText(/Fotocamera non autorizzata/).waitFor();await btn('Inserisci il codice manualmente').click();await page.getByRole('textbox').fill('T001');await btn('Leggi codice').click();await single();await noPrint();
    console.log('PASS phone has no print requests, releases camera on mode change, manual fallback after denied camera');
   }
-  // Recent individual actions read again, preserve intent and never print on confirmation.
   await open();await scan();await single();
   const recent=page.locator('details').filter({hasText:'Ultime letture'});
-  assert.equal(await recent.getByRole('button',{name:'Apri scheda',exact:true}).count(),0);
-  await recent.getByRole('button',{name:'Conferma partecipazione',exact:true}).dblclick();
-  await recent.getByRole('button',{name:'Rimuovi presenza',exact:true}).waitFor();
-  assert.equal((await log('writes')).length,1);
-  assert.deepEqual((await log('calls')).map(c=>c.action),['inspect','inspect','enter']);
+  assert.equal(await recent.getByRole('button').count(),1);
+  await recent.getByRole('button',{name:'Apri Scheda',exact:true}).click();await single();
+  assert.equal((await log('writes')).length,0);
   assert.equal((await log('prints')).filter(c=>c.action==='request').length,0);
-  await recent.getByRole('button',{name:'Rimuovi presenza',exact:true}).click();
-  await btn('Conferma rimozione').waitFor();
-  assert.equal(await page.getByRole('dialog').getByRole('button',{name:'Chiudi la finestra',exact:true}).count(),0);
-  assert.match(await page.getByRole('dialog').innerText(),/Ada Mori/);
-  await btn('Annulla').click();assert.equal((await log('writes')).length,1);
-  await recent.getByRole('button',{name:'Rimuovi presenza',exact:true}).click();await btn('Conferma rimozione').click();
-  await recent.getByRole('button',{name:'Conferma partecipazione',exact:true}).waitFor();assert.equal((await log('writes')).length,2);
-  if(!phone){
-    await recent.getByRole('button',{name:'Stampa QR',exact:true}).dblclick();
-    await recent.getByText('Comando di stampa inviato.',{exact:true}).waitFor();
-    assert.equal((await log('prints')).filter(c=>c.action==='request').length,1);assert.equal((await log('writes')).length,2);
-    await scan(true);await group();
-    await recent.getByRole('button',{name:'Scegli i QR code da stampare',exact:true}).click();
-    await page.waitForFunction(()=>document.activeElement?.textContent==='Scegli i QR code da stampare');
-    assert.equal(await page.locator('dialog[open]').count(),0);assert.equal((await log('prints')).filter(c=>c.action==='request').length,1);
-    await recent.getByRole('button',{name:'Gestisci Presenze',exact:true}).click();
-    await page.waitForFunction(()=>document.activeElement?.textContent==='Gestisci Presenze');
-    // A fresh read can reveal a changed state: confirmation must not become removal.
-    await recent.getByRole('button',{name:'Conferma partecipazione',exact:true}).click();
-    await recent.getByRole('button',{name:'Rimuovi presenza',exact:true}).waitFor();
-    await scenario('inspect-uncertain');await recent.getByRole('button',{name:'Stampa QR',exact:true}).click();
-    await btn('Riprova la stessa operazione').waitFor();assert.equal((await log('prints')).filter(c=>c.action==='request').length,1);
-    await btn('Riprova la stessa operazione').click();await page.waitForFunction(()=>Array.from(document.querySelectorAll('details button')).some(button=>button.textContent==='Stampa QR'&&!button.disabled));
-    assert.equal((await log('prints')).filter(c=>c.action==='request').length,1);
-    await scenario('forbidden');await recent.getByRole('button',{name:'Stampa QR',exact:true}).click();
-    await page.getByText(/Sessione scaduta o incarico/).waitFor();assert.equal(await recent.getByRole('button').count(),0);
-    assert.equal((await log('prints')).filter(c=>c.action==='request').length,1);
-  }else await noPrint();
-  console.log('PASS recent direct actions, named cancellation, duplicate clicks, group shortcuts, print isolation and fresh authorization');
+  assert.equal(await page.getByText('Scegli i QR code da stampare',{exact:true}).count(),0);
+  console.log('PASS history only opens the card without writing or printing');
   assert.equal(await page.locator('iframe').count(),0);assert.deepEqual(errors,[]);
  }finally{await browser?.close();rmSync(route,{recursive:true,force:true});rmSync('.next/dev/types/app/reception-simple-check',{recursive:true,force:true});}
 }

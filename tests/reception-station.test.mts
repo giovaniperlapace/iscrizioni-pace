@@ -229,7 +229,7 @@ test("event history reflects presence changes across a group and its individual 
     if (command.action === "cancel") checkedInAt = null;
     return command.lookup.value.startsWith("G:") ? {
       status: "valid", kind: "group", groupId: child, groupName: "Test", snapshot: "a".repeat(64),
-      revision: 9, outcome: "verified", persons: [{ ...person, checkedInAt, registrationId: adult, code: "TEST" }],
+      revision: 9, outcome: "verified", registrationStatus: "confirmed", persons: [{ ...person, checkedInAt, registrationId: adult, code: "TEST" }],
     } : { ...family(), revision: 3, persons: [{ ...person, checkedInAt }] };
   }, () => request, 20000, { duty: "event_entry" }, true);
   await session.inspect(lookup);

@@ -1,6 +1,14 @@
 # Accoglienza: scheda gruppo integrata e azioni nelle ultime letture
 
-## Comportamento
+## Revisione successiva richiesta dall’utente
+
+Le ultime letture tornano ad avere soltanto **Apri Scheda**, per singoli e gruppi.
+Le azioni si eseguono nella scheda risultato, con elenco gruppo ancora integrato.
+Il pulsante gruppo diventa **Stampa i QR delle persone selezionate**; rimossi
+il titolo **Scegli i QR code da stampare** e il relativo testo esplicativo.
+Questa revisione sostituisce le azioni dirette nella cronologia descritte sotto.
+
+## Comportamento iniziale
 
 - La lettura di gruppi e famiglie mostra direttamente l’elenco nella scheda
   risultato, senza aprire una modale. La scansione non registra presenze.

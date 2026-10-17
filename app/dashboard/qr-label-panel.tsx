@@ -23,12 +23,11 @@ function getPrinting() { return printing; }
 function getServerPrinting() { return false; }
 function setPrinting(value: boolean) { printing = value; for (const listener of listeners) listener(); }
 
-export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBusyChange, enabled = true, refreshKey }: {
+export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBusyChange, enabled = true }: {
   scope: LabelScope;
   commandAction?: (input: LabelCommand) => Promise<LabelResult>;
   onBusyChange?: (busy: boolean) => void;
   enabled?: boolean;
-  refreshKey?: number;
 }) {
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState("");
@@ -51,7 +50,7 @@ export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBu
       else { setFailed(true); setMessage(errors[result.status] ?? errors.unavailable); }
     }).catch(() => { if (active && version === readVersion.current) { setFailed(true); setMessage(errors.unavailable); } });
     return () => { active = false; };
-  }, [groupId, registrationId, commandAction, enabled, refreshKey]);
+  }, [groupId, registrationId, commandAction, enabled]);
 
   async function print(selectedIds?: string[]) {
     if (printing || !enabled) return;

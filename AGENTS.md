@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Accoglienza: ultime letture con sola apertura — 2026-10-17
+
+- Su nuova indicazione dell’utente, tutte le ultime letture offrono soltanto
+  Apri Scheda: nessuna azione diretta di presenza o stampa nella cronologia.
+- Gruppi e famiglie restano integrati nella scheda risultato. Per i gruppi,
+  pulsante Stampa i QR delle persone selezionate; rimossi titolo Scegli i QR
+  code da stampare e relativo testo esplicativo. Selezione e rimozione conservate.
+
 ## Accoglienza: scheda gruppo integrata e azioni recenti — 2026-10-17
 
 - Gruppi e famiglie mostrano la selezione direttamente nella scheda risultato,

@@ -1,30 +1,20 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
 import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception/station";
 import { useQrLabelPrinting } from "../qr-label-panel";
 type Party = Extract<VerifiedReception, { kind: "family" | "group" }>;
 
-export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, feedback, focusRequest, labelRefresh }: {
+export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, feedback }: {
   result: Party; session: ReceptionStationSession; printing: boolean;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>; disabled: boolean; onBusyChange: (value: boolean) => void;
   onRemove: (ids: string[]) => void; feedback: ReactNode;
-  labelRefresh?: number;
-  focusRequest?: { target: "presence" | "print"; sequence: number } | null;
 }) {
-  const presenceHeading = useRef<HTMLHeadingElement>(null);
-  const printHeading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    if (!focusRequest) return;
-    const target = focusRequest.target === "print" ? printHeading.current : presenceHeading.current;
-    target?.focus();
-    target?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [focusRequest]);
   const single = result.kind === "family" && result.persons.length === 1;
   const [selected, setSelected] = useState<string[]>(() => single ? [result.persons[0].id] : []);
   const running = useRef(false);
   const adultId = result.persons.find(person => person.kind === "adult")?.id;
-  const labels = useQrLabelPrinting({ scope: result.kind === "group" ? { groupId: result.groupId } : { registrationId: adultId! }, commandAction: labelCommandAction, refreshKey: labelRefresh, enabled: printing && !!(result.kind === "group" || adultId) });
+  const labels = useQrLabelPrinting({ scope: result.kind === "group" ? { groupId: result.groupId } : { registrationId: adultId! }, commandAction: labelCommandAction, enabled: printing && !!(result.kind === "group" || adultId) });
   const selectedSet = new Set(selected);
   const registrations = new Map(result.kind === "group" ? result.persons.map(person => [person.id, person.registrationId]) : result.persons.map(person => [person.id, adultId!]));
   const codes = new Map(result.kind === "group" ? result.persons.map(person => [person.id, person.code]) : []);
@@ -50,7 +40,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
   }
   return <div className="grid gap-4">
     {single ? <p role="status" className={`rounded-xl p-4 text-lg font-semibold ${allPresent ? "bg-green-100 text-green-900" : "bg-slate-100 text-slate-700"}`}>{allPresent ? "✓ Partecipazione confermata" : "Partecipazione non confermata"}</p> : <>
-      <h4 ref={presenceHeading} tabIndex={-1} className="font-semibold outline-none">Gestisci Presenze</h4>
+      <h4 className="font-semibold outline-none">Gestisci Presenze</h4>
       <p className="text-sm text-[var(--peace-muted)]">Seleziona le persone su cui agire. Conferma e rimozione sono due azioni distinte. Deselezionare una persona non rimuove la sua presenza.</p>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <strong>{chosen.length} selezionati · {result.persons.filter(p => p.checkedInAt).length} presenti</strong>
@@ -76,11 +66,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
       {!single && <p className="text-sm">Selezione: {pendingIds.length} da confermare · {presentIds.length} già presenti.</p>}
       <button className="btn-primary min-h-12 px-4" disabled={locked || !pendingIds.length} onClick={() => void act("presence")}>{single ? "Conferma partecipazione" : `Conferma partecipazione (${pendingIds.length})`}</button>
       {result.persons.some(person => person.checkedInAt) && <button className="btn-secondary min-h-12 px-4" disabled={locked || !presentIds.length} onClick={() => onRemove(presentIds)}>{single ? "Rimuovi presenza" : `Rimuovi presenze selezionate (${presentIds.length})`}</button>}
-      {!single && printing && <>
-        <h4 ref={printHeading} tabIndex={-1} className="mt-2 font-semibold outline-none">Scegli i QR code da stampare</h4>
-        <p className="text-sm text-[var(--peace-muted)]">Usa le caselle nell’elenco qui sopra. QR selezionati: {labelIds.length}. La stampa non modifica le presenze.</p>
-      </>}
-      {printing && <button className="btn-secondary min-h-12 px-4" disabled={locked || !chosen.length || !!unavailable} onClick={() => void act("print")}>{result.kind === "group" ? "Stampa i QR del gruppo" : "Stampa etichetta QR"}</button>}
+      {printing && <button className="btn-secondary min-h-12 px-4" disabled={locked || !chosen.length || !!unavailable} onClick={() => void act("print")}>{result.kind === "group" ? "Stampa i QR delle persone selezionate" : "Stampa etichetta QR"}</button>}
       {single && printing && <span className="text-sm text-slate-600">Stampe richieste: {labels.queue?.items.find(item => item.registrationId === adultId)?.attempts ?? "—"}</span>}
       {labels.message && <p role={labels.failed ? "alert" : "status"} className="text-sm">{labels.message}</p>}
     </div>
