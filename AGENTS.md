@@ -9,6 +9,9 @@
 - Questionario: una proiezione condivisa per nazionalità/associazione/delega email,
   anche nelle viste complete; ultimi valori vuoti e deleghe storiche conservati.
   Sesso interno solo per colonna visibile e autorizzata, mai nel normale snapshot.
+- Menu Admin/Manager, tab ruoli e importazioni non precaricano le altre sezioni:
+  il collaudo online aveva rilevato richieste concorrenti non necessarie. Link,
+  testi e aspetto invariati, destinazione caricata al clic.
 - Export, statistiche/drilldown, figli, duplicati e scuole conservano dati completi
   e scope evento. Nessuna migration, modifica dati reali o email. 960 test,
   lint, TypeScript, build dal lockfile e browser sintetico desktop/mobile;

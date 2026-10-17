@@ -63,6 +63,14 @@ Baseline browser di produzione, dopo la paginazione del collega: 3,72–4,71 s
 di caricamento, circa 8,19 MB di documento decompresso, 100 righe renderizzate.
 La verifica browser del nuovo rilascio viene registrata separatamente.
 
+Il primo controllo online ha inoltre rilevato richieste anticipate delle altre
+sezioni del menu, dei ruoli e delle importazioni, anche senza aprirle. Sono stati
+disabilitati questi prefetch: i link restano identici e caricano la destinazione
+al clic. Evita lavoro concorrente non richiesto mentre si usa la pagina corrente.
+Nel controllo iniziale il documento nuovo è di 1.020.986 byte decompressi
+(circa 52 KB compressi); i tempi sono variabili e il primo avvio del rilascio è
+stato più lento. Non usare il solo miglior tempo come garanzia di latenza.
+
 ## Collaudo
 
 - Installazione pulita dal lockfile; 960 test automatici, ESLint, TypeScript e

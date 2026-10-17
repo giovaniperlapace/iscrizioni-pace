@@ -522,10 +522,10 @@ export function OperationsParticipantsTable({
                   prefetch={false} scroll={false}>
                   <UserPlus size={18} aria-hidden />{MANUAL_REGISTRATION_COPY[locale].addParticipant}
                 </Link>
-                <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null, manual: null, manualSaved: null, manualError: null })} scroll={false}>
+                <Link id="import-participants-trigger" className={buttonClass} href={paramsFor({ import: "excel", edit: null, manual: null, manualSaved: null, manualError: null })} prefetch={false} scroll={false}>
                   Importa iscritti da Excel
                 </Link>
-                <Link id="import-services-trigger" className={buttonClass} href={paramsFor({ import: "services", edit: null, manual: null, manualSaved: null, manualError: null })} scroll={false}>
+                <Link id="import-services-trigger" className={buttonClass} href={paramsFor({ import: "services", edit: null, manual: null, manualSaved: null, manualError: null })} prefetch={false} scroll={false}>
                   Importa servizi da Excel
                 </Link>
               </div>

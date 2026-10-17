@@ -47,6 +47,7 @@ export async function DashboardRoleTabs({
             <Link
               key={tab.key}
               href={tab.href}
+              prefetch={false}
               role="tab"
               aria-selected={isActive}
               className={[

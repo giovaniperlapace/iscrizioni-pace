@@ -1329,6 +1329,7 @@ function AdminSidebar({
         </span>
         <Link
           href={`${adminPath(activeSection, nextMode)}${activeSection === "dashboard" ? `&report=${report}` : ""}`}
+          prefetch={false}
           aria-label={toggleLabel}
           title={toggleLabel}
           className="btn-secondary grid min-h-9 min-w-9 place-items-center px-2 text-sm"
@@ -1345,6 +1346,7 @@ function AdminSidebar({
             <Link
               key={item.key}
               href={item.href}
+              prefetch={false}
               aria-current={isActive ? "page" : undefined}
               title={isMini ? item.label : undefined}
               className={[
