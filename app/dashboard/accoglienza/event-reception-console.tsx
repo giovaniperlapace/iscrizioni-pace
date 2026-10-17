@@ -115,9 +115,9 @@ export function EventReceptionConsole(props: Props) {
             <label className="grid gap-1">Codice partecipante o QR gruppo<input className="field min-h-12" disabled={locked || !!entry} value={code} onChange={event => setCode(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={45} /></label>
             <button className="btn-primary min-h-12" disabled={locked || !!entry}>Leggi codice</button>
           </form>}
-        <button type="button" className="btn-secondary min-h-11 justify-self-start gap-2 px-4 text-sm" disabled={locked || !!entry} onClick={() => setManual(!manual)}>
-          {manual ? <ScanLine size={18} aria-hidden="true" /> : <Keyboard size={18} aria-hidden="true" />}
-          {manual ? deviceMode === "computer" ? "Scanner USB" : "Inquadra QR code" : "Inserisci il codice manualmente"}
+        <button type="button" className="btn-secondary inline-flex min-h-11 items-center justify-self-start gap-2 px-4 text-left text-sm" disabled={locked || !!entry} onClick={() => setManual(!manual)}>
+          {manual ? <ScanLine size={18} aria-hidden="true" className="shrink-0" /> : <Keyboard size={18} aria-hidden="true" className="shrink-0" />}
+          <span>{manual ? deviceMode === "computer" ? "Scanner USB" : "Inquadra QR code" : "Inserisci il codice manualmente"}</span>
         </button>
       </div>
     </div>
