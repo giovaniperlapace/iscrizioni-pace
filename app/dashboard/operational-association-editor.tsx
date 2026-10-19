@@ -1,10 +1,12 @@
 "use client";
 
+import { readOperationalAssociation } from "./participant-sheet-reads";
+
 import { useParticipantSheetSection } from "./participant-sheet-loading";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getOperationalAssociation, updateOperationalAssociation } from "./operational-registration-actions";
+import { updateOperationalAssociation } from "./operational-registration-actions";
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { SuccessMessage } from "@/components/success-message";
@@ -18,7 +20,7 @@ export function OperationalAssociationEditor({ registrationId }: { registrationI
   const router = useRouter();
   useEffect(() => {
     let cancelled = false;
-    getOperationalAssociation(registrationId).then(result => {
+    readOperationalAssociation(registrationId).then(result => {
       if (cancelled) return;
       if (result.status === "success") setSnapshot(result.snapshot);
       else setFailed(true);

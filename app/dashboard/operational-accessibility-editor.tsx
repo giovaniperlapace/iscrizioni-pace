@@ -1,10 +1,12 @@
 "use client";
 
+import { readOperationalAccessibility } from "./participant-sheet-reads";
+
 import { useParticipantSheetSection } from "./participant-sheet-loading";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getOperationalAccessibility, updateOperationalAccessibility } from "./operational-registration-actions";
+import { updateOperationalAccessibility } from "./operational-registration-actions";
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { SuccessMessage } from "@/components/success-message";
@@ -23,7 +25,7 @@ export function OperationalAccessibilityEditor({ registrationId, locale = "it" }
   const copy = OPERATIONAL_ADDITIONS_COPY[locale];
   useEffect(() => {
     let cancelled = false;
-    getOperationalAccessibility(registrationId).then(result => {
+    readOperationalAccessibility(registrationId).then(result => {
       if (cancelled) return;
       if (result.status === "success") setLoaded({ snapshot: result.snapshot });
       else setFailed(true);

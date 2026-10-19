@@ -132,3 +132,39 @@ test("lazy attendance authenticates, checks event scope and never caches private
     if (expected !== 200) assert.deepEqual(await response.json(), {});
   }
 });
+
+test("sheet HTTP reads delegate authorization and cannot accept mutation commands", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const eventId = "00000000-0000-4000-8000-000000000002";
+  for (const kind of ["demographics", "association", "accessibility", "reception", "labels", "confirm", "invalid-id", "invalid-event", "throw", "denied"]) {
+    const calls: unknown[][] = [];
+    const delegate = (name: string) => async (...args: unknown[]) => {
+      calls.push([name, ...args]);
+      if (kind === "throw") throw new Error("failure");
+      return kind === "denied" ? { status: "forbidden" } : { status: "success" };
+    };
+    const route = compile("app/dashboard/participants/sheet/route.ts", {
+      "next/server": { NextResponse },
+      "../../operational-registration-actions": {
+        getOperationalDemographics: delegate("demographics"),
+        getOperationalAssociation: delegate("association"),
+        getOperationalAccessibility: delegate("accessibility"),
+      },
+      "../reception-actions": { participantReceptionCommand: delegate("reception"), participantLabelCommand: delegate("labels") },
+    });
+    const query = new URLSearchParams({ kind: ["throw", "denied", "invalid-id"].includes(kind) ? "demographics" : kind === "invalid-event" ? "reception" : kind,
+      registrationId: kind === "invalid-id" ? "invalid" : id, eventId: kind === "invalid-event" ? "invalid" : eventId,
+      code: "AT01", action: "confirm", subjectIds: id });
+    const response = await route.GET(new NextRequest(`http://localhost/dashboard/participants/sheet?${query}`) as never) as Response;
+    assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+    if (["confirm", "invalid-id", "invalid-event"].includes(kind)) {
+      assert.equal(response.status, 400); assert.deepEqual(calls, []);
+    } else {
+      assert.equal(calls.length, 1);
+      assert.equal(response.status, kind === "throw" ? 500 : 200);
+      if (kind === "denied") assert.deepEqual(await response.json(), { status: "forbidden" });
+      if (kind === "reception") assert.deepEqual(calls[0], [kind, eventId, id, { action: "inspect", duty: "event_entry", lookup: { kind: "code", value: "AT01" } }]);
+      if (kind === "labels") assert.deepEqual(calls[0], [kind, id, { action: "read", registrationId: id }]);
+    }
+  }
+});

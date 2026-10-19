@@ -1,10 +1,12 @@
 "use client";
 
+import { readOperationalDemographics } from "./participant-sheet-reads";
+
 import { useParticipantSheetSection } from "./participant-sheet-loading";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getOperationalDemographics, updateOperationalDemographics } from "./operational-registration-actions";
+import { updateOperationalDemographics } from "./operational-registration-actions";
 import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { SuccessMessage } from "@/components/success-message";
@@ -22,7 +24,7 @@ export function OperationalDemographicsEditor({ registrationId, locale = "it" }:
   const copy = DEMOGRAPHICS_STATUS_COPY[locale];
   useEffect(() => {
     let cancelled = false;
-    getOperationalDemographics(registrationId).then(result => {
+    readOperationalDemographics(registrationId).then(result => {
       if (cancelled) return;
       if (result.status === "success") setLoaded({ snapshot: result.snapshot });
       else setFailed(true);

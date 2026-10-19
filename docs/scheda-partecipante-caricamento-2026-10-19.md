@@ -74,3 +74,32 @@ Pubblicata con commit `7251f7d`; deployment production READY e dominio ufficiale
 allineato, senza errori runtime rilevati nel controllo. Il browser disponibile
 non era autenticato: verifica online limitata alle superfici pubbliche e alla
 protezione delle dashboard; nuove interazioni verificate con i test sopra.
+
+## Correzione del movimento residuo — 19 ottobre
+
+Dopo il primo rilascio l’utente segnala contenuti mobili e dashboard che risale
+verso il menu partecipanti. Riprodotto con pagina scorsa e rinnovo cookie di
+sessione durante una lettura: scroll da 1.418 a 77 pixel. Le letture effettuate
+tramite Server Action possono provocare una nuova risposta della pagina dopo
+il rinnovo dei cookie; il nuovo `dataVersion` rimonta anche i giorni comunicati.
+Il primo test, senza rinnovo sessione e versione server variabile, non lo copriva.
+
+Le letture di anagrafica, associazione, accessibilità, partecipazione e contatori
+QR passano ora da un endpoint HTTP privato/no-store. Riusa le stesse funzioni
+autenticate e RPC con controllo dello scope; espone soltanto letture prefissate.
+Conferme, rimozioni e comandi stampa mantengono le Server Action esistenti.
+Il rinnovo della sessione nella risposta HTTP non naviga né ricostruisce la
+pagina, e non provoca il secondo caricamento della scheda. Nessuna migration.
+
+Fixture estesa con pagina lunga/scorsa, `dataVersion` variabile come in produzione
+e cookie aggiornato nella lettura dei contatori. Controlla posizione dello
+sfondo all’apertura, dopo le risposte e alla chiusura, geometria dei controlli,
+assenza di nuove letture dei giorni dopo la comparsa e assenza di Server Action
+per il caricamento iniziale. Conservati errori, retry, timeout, cambio persona,
+bozze e casi Viewer/eliminati, desktop Manager e mobile Admin.
+
+Correzione verificata: 962 test, lint, TypeScript, browser con rinnovo cookie
+Manager desktop/Admin mobile e flusso originale su PostgreSQL temporaneo
+(conferma/rimozione, download, stampa simulata, esclusione Viewer e revoca).
+Build production Webpack in copia isolata senza ambienti reali. Nessuna scrittura
+operativa production, invio email o stampa fisica di collaudo.

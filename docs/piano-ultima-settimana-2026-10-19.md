@@ -55,6 +55,8 @@ Su nuova richiesta, completata anche la visualizzazione congiunta della scheda
 partecipante Manager/Admin dopo il caricamento iniziale, senza pulsante Mostra QR
 aggiuntivo. Inclusa nel rilascio congiunto autorizzato; vedere il
 [verbale scheda partecipante](scheda-partecipante-caricamento-2026-10-19.md).
+Corretto anche il salto residuo segnalato dopo il rilascio: le letture iniziali
+non navigano la dashboard in caso di rinnovo della sessione; nessuna migration.
 
 ## Apertura Forum al via libera
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { readParticipantLabels, readParticipantReception } from "./participant-sheet-reads";
+
 import { useParticipantSheetSection } from "./participant-sheet-loading";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -17,7 +19,9 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>;
 }) {
   const [session] = useState(() => new ReceptionStationSession(async command => {
-    const result = await (commandAction ?? (input => participantReceptionCommand(eventId, registrationId, input)))(command);
+    const result = await (commandAction ?? (input => input.action === "inspect" && input.lookup.kind === "code"
+      ? readParticipantReception(eventId, registrationId, input.lookup.value)
+      : participantReceptionCommand(eventId, registrationId, input)))(command);
     // The public code must still identify the participant whose QR area is open.
     if (result.status === "valid" && (result.kind !== "family" || !result.persons.some(person => person.kind === "adult" && person.id === registrationId))) return { status: "invalid" };
     return result;
@@ -49,7 +53,7 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
   }, [locked]);
 
   useParticipantSheetSection("reception", !["ready", "pending"].includes(state.phase) && result?.kind !== "family");
-  const printCommand = useCallback((command: LabelCommand) => (labelCommandAction ?? (input => participantLabelCommand(registrationId, input)))(command), [labelCommandAction, registrationId]);
+  const printCommand = useCallback((command: LabelCommand) => (labelCommandAction ?? (input => input.action === "read" ? readParticipantLabels(registrationId) : participantLabelCommand(registrationId, input)))(command), [labelCommandAction, registrationId]);
 
   function reload() { session.setMode("enter"); void session.inspect({ kind: "code", value: code }); }
   const feedback = <>

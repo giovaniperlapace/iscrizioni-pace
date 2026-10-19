@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Scheda partecipante: movimento residuo — 2026-10-19
+
+- Riprodotto salto dello sfondo dopo rinnovo cookie durante una lettura via
+  Server Action: il framework ricostruiva la pagina e rimontava i giorni.
+- Letture iniziali tramite endpoint HTTP private/no-store, con funzioni e scope
+  canonici; soli inspect/read ammessi. Salvataggi, presenze e stampa conservati.
+  Nessuna migration. Test esteso con pagina scorsa e rinnovo cookie; verbale in
+  `docs/scheda-partecipante-caricamento-2026-10-19.md`.
+
 ## Scheda partecipante: visualizzazione dopo caricamento — 2026-10-19
 
 - Su richiesta dell’utente, scheda Manager/Admin con unico caricamento iniziale:
