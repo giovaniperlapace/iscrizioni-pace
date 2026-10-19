@@ -7,6 +7,28 @@ esplicitamente superati dalle decisioni riportate qui.
 
 ## Priorità di lavoro
 
+Chiarimento del 19 ottobre, dopo la verifica delle cerimonie: rinviare soltanto
+la definizione delle sedi reali e della loro disposizione, ancora sconosciute.
+Proseguire il punto 2 per le altre funzioni, rendendole disponibili in production
+per la revisione dell’utente. Nessuna capienza o piantina reale va inventata;
+configurazioni definitive e assegnazioni operative attendono i dati delle sedi.
+L’utente conferma accesso solo Admin per la revisione iniziale.
+
+Su successiva richiesta, rivisti menù e workflow: navigazione comune alle tre
+fasi, cerimonia conservata, istruzioni e prossimo passaggio espliciti, stati
+vuoti con collegamenti alla preparazione. Verificati test, lint, TypeScript,
+build pulita e browser sintetico desktop/mobile; regole e permessi invariati.
+Dettagli in [cerimonie](panel-p13-ceremonies.md).
+
+E1/E2/E3 sono già disponibili nel deployment production READY `a42994a`,
+raggiungibili da Forum → Cerimonie. Verificati deployment e migration; rieseguite
+le suite SQL locali, comprese assegnazioni, minori, piantine e concorrenza.
+Production non contiene ancora configurazioni delle cerimonie. La revisione
+autenticata Admin resta da svolgere: il browser disponibile è senza sessione.
+Non serve un nuovo deployment per questa prima revisione. Il raccordo QR degli
+operatori con incarichi cerimonia e gli eventuali ingressi dedicati restano da
+completare e non sono inclusi nelle funzioni E1/E2/E3 già pubblicate.
+
 1. **QR del gruppo, da affrontare subito.** Garantire stabilità anche nel
    database: il QR non deve poter essere revocato, cambiato o annullato.
    Verificare lo stato della migration `20261016160000_stable_group_qr` e la

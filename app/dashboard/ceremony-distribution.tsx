@@ -11,6 +11,7 @@ import {
   type NomineeCommand,
 } from "@/lib/ceremonies/distribution";
 type Props = {
+  kind?: "opening" | "closing";
   mode?: "manager" | "leader";
   initialView: DistributionView;
   locale: SupportedLocale;
@@ -20,6 +21,7 @@ type Props = {
 };
 export function CeremonyDistribution({
   initialView,
+  kind,
   mode = "leader",
   locale,
   canManage,
@@ -37,7 +39,8 @@ export function CeremonyDistribution({
     [pending, startTransition] = useTransition();
   const inFlight = useRef(false),
     [reloadRequired, setReloadRequired] = useState(false);
-  const a = view.allocations.find((a) => a.id === selected);
+  const allocations = view.allocations.filter(a => !kind || a.kind === kind);
+  const a = allocations.find((a) => a.id === selected);
   const rows = a
     ? eligibleSubjects(view, a).filter((p) =>
         `${p.name} ${p.code} ${p.parent ?? ""}`
@@ -121,14 +124,14 @@ export function CeremonyDistribution({
   return (
     <section className="grid min-w-0 gap-5">
       <div className="surface-card grid gap-4 p-5">
-        <h1 className="text-xl font-semibold">{c.title}</h1>
-        <p className="text-sm leading-6 text-[var(--peace-muted)]">{c.intro}</p>
+        {kind ? <h2 className="text-xl font-semibold">Dotazioni e persone</h2> : <h1 className="text-xl font-semibold">{c.title}</h1>}
+        {!kind && <p className="text-sm leading-6 text-[var(--peace-muted)]">{c.intro}</p>}
         <label className="grid min-w-0 gap-2 font-semibold">
           {c.allocation}
           <select
             className="field w-full min-w-0 font-normal"
             value={a?.id ?? ""}
-            disabled={blocked}
+            disabled={blocked || !allocations.length}
             onChange={(e) => {
               setSelected(e.target.value);
               setPage(0);
@@ -136,14 +139,20 @@ export function CeremonyDistribution({
             }}
           >
             <option value="">{c.choose}</option>
-            {view.allocations.map((a) => (
+            {allocations.map((a) => (
               <option key={a.id} value={a.id}>
                 {label(a)}
               </option>
             ))}
           </select>
         </label>
-        {!view.allocations.length && <p>{c.empty}</p>}
+        {!allocations.length && <div className="grid justify-items-start gap-3">
+          <p>{c.empty}</p>
+          {mode === "manager" && kind && <>
+            <p className="text-sm leading-6 text-[var(--peace-muted)]">In Preparazione e quote, valida la configurazione e riserva una quantità di posti a un gruppo oppure un posto a una persona. Le dotazioni di questa cerimonia appariranno qui.</p>
+            <Link prefetch={false} href={`/dashboard/manager/cerimonie?kind=${kind}#sede`} className="btn-secondary inline-flex min-h-11 items-center justify-center px-4">Vai alla preparazione</Link>
+          </>}
+        </div>}
         {a && (
           <>
             <Link className="underline" href={mode === "manager" ? `/dashboard/manager/cerimonie/mappa?kind=${a.kind}` : `/dashboard/capogruppo/cerimonie/mappa?plan=${a.planId}`}>{SEAT_MAP_COPY[locale].title}</Link>

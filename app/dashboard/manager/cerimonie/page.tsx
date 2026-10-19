@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "@/components/pending-link";
+import { CeremonyNavigation } from "./navigation";
 import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { ceremonyContext, loadCeremony } from "@/lib/ceremonies/service";
@@ -21,31 +21,7 @@ export default async function CeremoniesPage({
   return (
     <main className="app-page text-[var(--peace-ink)]">
       <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-8">
-        <Link
-          className="underline"
-          href={`/dashboard/${context.dashboard}?section=panel`}
-        >
-          Torna ai panel
-        </Link>
-        <header>
-          <p className="text-sm text-[var(--peace-muted)]">
-            {context.event.title}
-          </p>
-          <h1 className="text-2xl font-semibold">
-            Eventi speciali · gestione posti
-          </h1>
-          <p className="mt-2">
-            Inaugurazione e cerimonia finale hanno sedi e configurazioni
-            indipendenti.
-          </p>
-        </header>
-        <Link
-          href="/dashboard/manager/cerimonie/distribuzione"
-          className="btn-secondary min-h-11 justify-self-start px-4"
-        >
-          Distribuzione nominale e scelte dei minori
-        </Link>
-        <Link href={`/dashboard/manager/cerimonie/mappa?kind=${kind}`} className="btn-secondary min-h-11 justify-self-start px-4">Piantina e posti numerati</Link>
+        <CeremonyNavigation eventTitle={context.event.title} dashboard={context.dashboard} kind={kind} active="preparation" />
         <CeremonyWorkspace
           key={kind}
           kind={kind}

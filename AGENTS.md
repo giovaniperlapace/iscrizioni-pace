@@ -1,5 +1,38 @@
 # AGENTS.md
 
+## Cerimonie: navigazione e percorso guidato — 2026-10-19
+
+- Su richiesta dell’utente, navigazione comune nelle tre pagine, con selettore
+  inaugurazione/finale e schede nello stile Forum: Preparazione e quote,
+  Assegnazioni alle persone, Posti numerati. Tutte le voci visibili su telefono.
+- Cerimonia conservata nei passaggi e filtro coerente delle dotazioni nominali;
+  istruzioni per fase, prossimo passaggio in base allo stato e collegamenti
+  di recupero per viste vuote. Chiariti quote, dotazioni e numerazione facoltativa.
+- Solo Admin; sedi reali ancora da definire. Nessuna migration, apertura ruoli,
+  scrittura operativa remota o modifica alle regole di assegnazione.
+- 962 test, lint, TypeScript e build production pulita da npm ci superati.
+  Browser sintetico su pagine/componenti originali in copia senza credenziali:
+  desktop/mobile, navigazione, filtro cerimonia, viste vuote e dati conservati
+  su errore. Verifica autenticata online rimane alla revisione Admin.
+
+## Cerimonie: rinviata solo la definizione delle sedi — 2026-10-19
+
+- Chiarimento dell’utente: saltare soltanto la definizione delle sedi reali e
+  della loro disposizione, ancora sconosciute; proseguire con le altre funzioni
+  delle cerimonie e renderle disponibili in production per la revisione.
+- Non sospendere l’intera tranche e non passare automaticamente agli accessi
+  Forum. Nessuna capienza o piantina reale va inventata; configurazioni definitive
+  e assegnazioni operative attendono i dati delle sedi.
+- L’utente conferma solo Admin per la revisione iniziale. Funzioni E1/E2/E3 già
+  nel deployment production READY `a42994a`, migration presenti; nessun nuovo
+  deployment necessario per accedere alla sezione da Forum → Cerimonie.
+- Rieseguite con successo le suite SQL su PostgreSQL temporaneo, comprese
+  cerimonie e concorrenza. Browser production senza sessione: redirect al login;
+  revisione autenticata Admin ancora da svolgere. Nessun dato reale modificato.
+- Consultazione QR con incarichi cerimonia e ingressi dedicati restano lavoro
+  distinto da completare; non considerarli implementati dalla presenza di E1/E2/E3.
+  Apertura generale Forum sempre subordinata al via libera.
+
 ## Scheda partecipante: movimento residuo — 2026-10-19
 
 - Riprodotto salto dello sfondo dopo rinnovo cookie durante una lettura via

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "@/components/pending-link";
+import { CeremonyNavigation } from "../navigation";
 import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { ceremonyContext } from "@/lib/ceremonies/service";
@@ -9,7 +9,10 @@ import {
   saveManagerNominee,
   refreshManagerDistribution,
 } from "@/app/dashboard/ceremony-distribution-actions";
-export default async function Page() {
+export default async function Page({ searchParams }: {
+  searchParams: Promise<{ kind?: string }>;
+}) {
+  const kind = (await searchParams).kind === "closing" ? "closing" : "opening";
   const db = await createSupabaseServerClient(),
     context = await ceremonyContext(db);
   if (!context) redirect("/dashboard");
@@ -21,16 +24,14 @@ export default async function Page() {
   return (
     <main className="app-page">
       <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-8">
-        <Link className="underline" href="/dashboard/manager/cerimonie">
-          Torna alle cerimonie
-        </Link>
-        <p>
-          Come manager puoi assegnare posti ai singoli membri delle dotazioni di
-          tutti i gruppi dell’evento e gestire le scelte per ciascun minore. Per
-          assegnare direttamente un posto dalla quota a una persona, usa la
-          gestione cerimonie.
-        </p>
+        <CeremonyNavigation eventTitle={context.event.title} dashboard={context.dashboard} kind={kind} active="people" />
+        <section className="surface-card grid gap-2 p-5">
+          <h2 className="text-lg font-semibold">Scegli chi utilizzerà i posti del gruppo</h2>
+          <p className="text-sm leading-6 text-[var(--peace-muted)]">Seleziona una dotazione, cioè i posti già riservati a un gruppo, e assegnali ai suoi membri. Per ogni minore indica separatamente se serve un posto. Le assegnazioni dirette a una persona si creano in Preparazione e quote e sono consultabili anche qui.</p>
+        </section>
         <CeremonyDistribution
+          key={kind}
+          kind={kind}
           mode="manager"
           initialView={view}
           locale="it"

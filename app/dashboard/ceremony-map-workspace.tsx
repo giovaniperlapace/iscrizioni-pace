@@ -16,6 +16,7 @@ import { CeremonyMapEditor } from "./ceremony-map-editor";
 const EMPTY_MAP_SEATS: MapSeat[] = [];
 export function CeremonyMapWorkspace({
   initialView,
+  embedded = false,
   locale,
   admin = false,
   manager = false,
@@ -24,6 +25,7 @@ export function CeremonyMapWorkspace({
   refresh,
 }: {
   initialView: SeatMapView;
+  embedded?: boolean;
   locale: SupportedLocale;
   admin?: boolean;
   manager?: boolean;
@@ -180,9 +182,7 @@ export function CeremonyMapWorkspace({
     <section className="ceremony-map-workspace grid min-w-0 gap-5">
       <style>{`@media print { body * { visibility: hidden; } .ceremony-seat-print, .ceremony-seat-print * { visibility: visible; } .ceremony-seat-print { position:absolute;left:0;top:0;width:100%;background:white; } .ceremony-seat-print tr { break-inside:avoid; } }`}</style>
       <header>
-        <h1 className="text-2xl font-semibold">
-          {c.title} · {dc[view.kind]}
-        </h1>
+        {embedded ? <h2 className="text-xl font-semibold">{c.title} · {dc[view.kind]}</h2> : <h1 className="text-2xl font-semibold">{c.title} · {dc[view.kind]}</h1>}
         <p className="mt-2">{c.intro}</p>
       </header>
       <div className="surface-card grid min-w-0 gap-3 p-5">

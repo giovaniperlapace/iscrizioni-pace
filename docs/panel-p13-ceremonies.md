@@ -1,5 +1,64 @@
 # P13-E1 / P13-E2 / P13-E3 — inaugurazione e cerimonia finale
 
+## Stato corrente — 19 ottobre 2026
+
+### Revisione della navigazione e del workflow
+
+Su richiesta dell’utente, un’intestazione comune sostituisce i collegamenti
+isolati e i selettori diversi fra preparazione, distribuzione e piantina.
+Le schede riprendono icone, colori e sottolineatura del menù Forum; su telefono
+sono disposte su righe separate per rendere visibile anche la fase selezionata.
+Inaugurazione/finale restano selezionate attraversando tutte le pagine e la
+distribuzione mostra soltanto le dotazioni della cerimonia scelta.
+
+Il percorso distingue tre fasi: Preparazione e quote, Assegnazioni alle persone,
+Posti numerati (facoltativi). La preparazione indica il prossimo passaggio a
+seconda di bozza, settori, validazione, quote e dotazioni presenti. Le viste
+vuote spiegano il prerequisito e offrono un collegamento alla preparazione.
+Il contatore «Posti impegnati» chiarisce che include le dotazioni ancora da
+distribuire; i minori restano decisioni individuali e la numerazione completa
+un posto già assegnato. Capienze ignote e bozza sono esplicitamente consentite.
+
+Verifiche: 962 test applicativi, lint, TypeScript e build production Webpack
+in copia temporanea con npm ci, senza ambienti reali e con adattatori originali
+ripristinati dopo il browser. Pagine e componenti originali provati con dati e
+trasporti sintetici in copia isolata: desktop/390px, selezione della cerimonia
+e della fase, dotazioni filtrate, minori, stati vuoti, piantina e conservazione
+dei dati su errore. Un solo h1 per pagina e nessun overflow della pagina mobile.
+Il rinnovo sessione della fixture senza credenziali non è stato collaudato;
+nessuna modifica all’autenticazione. Nessun test di scrittura su production.
+
+Accesso solo Admin e regole server/DB invariate; nessuna migration necessaria.
+
+### Verifica della disponibilità precedente alla revisione
+
+E1/E2/E3 sono integrate in main e disponibili in production, con pagine e
+azioni riservate agli Admin. Il dominio ufficiale serve il commit `a42994a`,
+deployment `dpl_DXzed2m9mMS9rAeGCJghY2fkkRvd` READY. Le tre migration
+`20261006180000`, `20261006200000` e `20261006220000` risultano applicate.
+Controllo remoto in sola lettura: nessuna configurazione, settore, quota,
+assegnazione, nominativo, versione di piantina o riserva di seduta presente.
+RLS attiva sulle dieci tabelle e RPC service-only confermate.
+
+L’utente rinvia soltanto la definizione delle sedi reali e della disposizione,
+ancora sconosciute. Il resto della tranche prosegue, con prima revisione solo
+Admin da Forum → Cerimonie (`/dashboard/manager/cerimonie`). Non inventare
+capienze o piantine; bozze con dati da definire già supportate, assegnazioni
+operative subordinate alla configurazione validata. Nessun nuovo deployment
+necessario per rendere accessibili agli Admin le funzioni esistenti.
+
+Rieseguiti i 17 test applicativi specifici e `node tests/sql/run-reception-checks.mjs`
+su PostgreSQL temporaneo: superati, inclusi settori/quote, distribuzione, minori,
+mappe, permessi, revoche, retry e concorrenza sull’ultimo posto. Il browser
+production disponibile è senza sessione e viene reindirizzato al login:
+non è ancora un collaudo autenticato Admin dell’interfaccia reale.
+Nessuna scrittura operativa remota o modifica dei permessi.
+
+Consultazione QR con incarichi dedicati alle cerimonie ed eventuali ingressi
+specifici restano da completare: il raccordo informativo E3 non li implementa.
+Le note sullo staging e sulle migration solo locali nelle sezioni successive
+descrivono le fasi storiche, superate dallo stato corrente.
+
 ## Stato del 6 ottobre 2026
 
 P13-S rinviata su indicazione dell’utente: mancano fonte e formato degli accrediti

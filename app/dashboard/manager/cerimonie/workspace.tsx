@@ -172,24 +172,19 @@ export function CeremonyWorkspace({
     const q = quotaById.get(id);
     return `${sectorById.get(q?.sectorId ?? "")?.name ?? ""} · ${q?.category ?? ""}`;
   };
+  const next = !plan
+    ? { title: "Inizia da una bozza", text: "Inserisci i dati che conosci nella sezione Sede e settori e salva in bozza. Puoi lasciare capienza e orari vuoti; se la sede non è nota, conserva ‘Sede da definire’.", href: "#sede", label: "Prepara la sede" }
+    : !s.sectors.length
+      ? { title: "Prepara i settori", text: "Aggiungi le aree della sede che conosci. Se la disposizione non è ancora definita, puoi lasciare la configurazione in bozza e riprendere più avanti.", href: "#sede", label: "Vai a sede e settori" }
+      : !ready
+        ? { title: "Completa e valida la configurazione quando avrai i dati reali", text: "Conferma sede, orari e capienza totale e dei settori. Poi scegli ‘Validata’ e salva la configurazione per consentire le assegnazioni. Fino ad allora puoi lavorare in bozza.", href: "#sede", label: "Rivedi la configurazione" }
+        : !s.quotas.length
+          ? { title: "Ripartisci i posti in quote", text: "Per ogni settore crea le categorie necessarie e indica quanti posti riservare a ciascuna. La somma deve rientrare nella capienza del settore.", href: "#quote", label: "Prepara le quote" }
+          : !s.allocations.length
+            ? { title: "Riserva i posti a gruppi o persone", text: "Scegli una quota e il destinatario: assegna una quantità al gruppo oppure un singolo posto direttamente a una persona.", href: "#dotazioni", label: "Assegna dalla quota" }
+            : { title: "Controlla le assegnazioni alle persone", text: "Le dotazioni dei gruppi riservano quantità di posti: nella seconda fase scegli i membri che li utilizzeranno, inclusi i minori. Le assegnazioni dirette sono già nominali.", href: `/dashboard/manager/cerimonie/distribuzione?kind=${kind}`, label: "Vai alle persone" };
   return (
     <div className="grid min-w-0 gap-6">
-      <nav aria-label="Cerimonia" className="flex flex-wrap gap-2">
-        {(["opening", "closing"] as const).map((k) => (
-          <Link
-            key={k}
-            href={`/dashboard/manager/cerimonie?kind=${k}`}
-            aria-current={kind === k ? "page" : undefined}
-            className={
-              kind === k
-                ? "btn-primary min-h-11 px-5"
-                : "btn-secondary min-h-11 px-5"
-            }
-          >
-            {ceremonyTitles[k]}
-          </Link>
-        ))}
-      </nav>
       <section className={box}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">{ceremonyTitles[kind]}</h2>
@@ -209,7 +204,7 @@ export function CeremonyWorkspace({
           {[
             ["Capienza", plan?.capacity ?? "Da definire"],
             ["Quote ripartite", quotaTotal],
-            ["Posti assegnati", allocated],
+            ["Posti impegnati", allocated],
             [
               "Posti non assegnati",
               plan?.capacity == null
@@ -228,7 +223,8 @@ export function CeremonyWorkspace({
         </div>
         <p className={help}>
           Presenza prevista, posto assegnato e ingresso effettivo sono distinti.
-          Questa vista assegna posti e non registra ingressi.
+          I posti impegnati includono le dotazioni dei gruppi ancora da distribuire
+          alle persone. Questa vista non registra ingressi.
         </p>
         {!canManage && (
           <p className={help}>
@@ -236,13 +232,19 @@ export function CeremonyWorkspace({
           </p>
         )}
       </section>
-      <section className={box}>
-        <h2 className="text-lg font-semibold">1. Sede e capienza</h2>
+      {canManage && <section className="surface-panel grid justify-items-start gap-3 p-5" aria-labelledby="ceremony-next-step">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--peace-blue-800)]">Prossimo passaggio</p>
+        <h2 id="ceremony-next-step" className="text-lg font-semibold">{next.title}</h2>
+        <p className={help}>{next.text}</p>
+        <Link prefetch={false} href={next.href} className="btn-secondary inline-flex min-h-11 items-center justify-center px-4">{next.label}</Link>
+      </section>}
+      <section id="sede" className={`${box} scroll-mt-6`}>
+        <h2 className="text-lg font-semibold">Sede e settori</h2>
         <p className={help}>
           Configurazione riservata all’admin, indipendente dall’altra cerimonia.
-          Campo capienza vuoto = da definire; zero = nessun posto. I settori
-          quantitativi potranno essere completati con file e sedute nella fase
-          delle piantine.
+          Lascia vuote le capienze ancora sconosciute; zero significa nessun posto.
+          Salva prima la bozza della sede, poi aggiungi i settori qui sotto.
+          File e numeri delle sedute si preparano nella fase Posti numerati, solo se previsti.
         </p>
         {admin ? (
           <details open={!plan}>
@@ -396,12 +398,13 @@ export function CeremonyWorkspace({
       </section>
       {plan && (
         <>
-          <section className={box}>
-            <h2 className="text-lg font-semibold">2. Quote per categoria</h2>
+          <section id="quote" className={`${box} scroll-mt-6`}>
+            <h2 className="text-lg font-semibold">Quote per categoria</h2>
             <p className={help}>
-              Ogni categoria è definita esplicitamente per il settore. La somma
-              delle quote non può superarne la capienza. Le categorie non
-              attribuiscono automaticamente diritti di accesso.
+              Una quota riserva una quantità di posti di un settore a una categoria
+              scelta da te. Crea prima il settore con capienza nota, poi aggiungi
+              le quote: la loro somma non può superarla. Nessuna persona viene
+              assegnata automaticamente.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {s.quotas.map((q) => {
@@ -450,6 +453,7 @@ export function CeremonyWorkspace({
                 );
               })}
             </div>
+            {!s.quotas.length && <p className={help}>{s.sectors.length ? "Nessuna quota creata. Usa Aggiungi quota per ripartire i posti dei settori con capienza nota." : "Aggiungi prima un settore nella sezione Sede e settori."}</p>}
             {canManage && s.sectors.length > 0 && (
               <details>
                 <summary className="cursor-pointer py-2 font-semibold">
@@ -500,12 +504,11 @@ export function CeremonyWorkspace({
               </details>
             )}
           </section>
-          <section className={box}>
-            <h2 className="text-lg font-semibold">3. Assegna posti</h2>
+          <section id="dotazioni" className={`${box} scroll-mt-6`}>
+            <h2 className="text-lg font-semibold">Dotazioni ai gruppi e posti individuali</h2>
             <p className={help}>
               La dotazione a un gruppo occupa subito i posti. La distribuzione
-              ai suoi membri è gestibile da manager e capogruppo nella vista di
-              distribuzione nominale. I conteggi qui riguardano le iscrizioni
+              ai suoi membri si completa nella fase Assegnazioni alle persone. I conteggi qui riguardano le iscrizioni
               principali del solo gruppo selezionato; non includono sottogruppi
               o figli accompagnati. L’assegnazione diretta attribuisce un posto
               alla persona indicata, senza posti automatici ai figli.
