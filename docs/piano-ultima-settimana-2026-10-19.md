@@ -1,0 +1,86 @@
+# Piano operativo ultima settimana prima dell’evento
+
+Decisioni concordate il 19 ottobre 2026. Obiettivo: rendere pronti entro
+l’inizio dell’evento QR gruppo, cerimonie, accessi Forum e statistiche.
+Questo piano prevale sulle precedenti priorità e sui vecchi stati di collaudo
+esplicitamente superati dalle decisioni riportate qui.
+
+## Priorità di lavoro
+
+1. **QR del gruppo, da affrontare subito.** Garantire stabilità anche nel
+   database: il QR non deve poter essere revocato, cambiato o annullato.
+   Verificare lo stato della migration `20261016160000_stable_group_qr` e la
+   compatibilità con le funzioni successive prima del completamento DB.
+   Aggiungere nella gestione gruppi della dashboard Manager un pulsante per
+   visualizzare e scaricare il QR del gruppo, entro lo scope autorizzato.
+   Accettazione: stesso QR alle letture successive, nessuna azione di gestione
+   della credenziale e accesso Manager limitato ai gruppi consentiti.
+
+2. **Inaugurazione e cerimonia finale.** Completare e rendere operative le
+   funzioni sviluppate sul branch Panel e già integrate in main: settori,
+   quote, assegnazioni nominali e piantine/posti numerati dove necessari.
+   Configurare le due sedi indipendentemente con i dati reali disponibili,
+   senza inventare capienze. Verificare consultazione di settore/posto tramite
+   QR, permessi degli operatori e flussi Admin/Manager/capogruppo previsti.
+   Accettazione: configurazioni e assegnazioni coerenti, indicazioni leggibili
+   e accessi circoscritti, con revisione dell’utente prima dell’uso operativo.
+
+3. **Accessi Forum e ruolo dedicato.** Completare e verificare scansione QR,
+   controllo della prenotazione ed esito di ammissione o rifiuto. Il ruolo è
+   dedicato esclusivamente all’accesso al Forum assegnato e alla consultazione
+   delle indicazioni pertinenti, senza accesso alla gestione generale.
+   Verificare anche la consultazione di settore/posto, quando previsto, per
+   Forum e cerimonie con i rispettivi incarichi. Conservare la distinzione
+   fra ingresso evento e ingresso Forum e verificare i permessi lato server/DB.
+   Accettazione: operatore autorizzato sul proprio incarico, escluso dagli
+   altri, con scansione ed esiti verificati prima dell’inizio dell’evento.
+
+4. **Statistiche.** Verificare correttezza dei conteggi e leggibilità delle
+   schermate, distinguendo iscritti, prenotati e presenze effettive. Rendere
+   filtri, descrizioni e riepiloghi comprensibili e controllare la coerenza
+   con le fonti canoniche e il perimetro autorizzato.
+
+## Apertura Forum al via libera
+
+L’apertura non è subordinata alla conclusione delle priorità sopra: si procede
+appena l’organizzazione comunica che i Forum sono pronti. Pubblicare catalogo
+e funzioni collegate, incluse prenotazioni personali, capogruppo e lista
+d’attesa, verificando i relativi percorsi. Conservare operativo il flusso
+scuole già pubblicato. Fino al via libera non anticipare l’apertura generale.
+
+## Metodo di lavoro e rilascio
+
+- Da ora il lavoro procede direttamente su `main`, con rilascio e verifiche
+  direttamente in production; non pianificare passaggi ordinari su branch
+  Panel o staging.
+- L’utente specificherà per ciascuna tranche se renderla disponibile soltanto
+  agli Admin per il collaudo oppure ai Manager/operatori previsti, anche con
+  l’aiuto di un piccolo gruppo di collaudatori. Non estendere implicitamente
+  i permessi né confondere un rilascio riservato con l’apertura pubblica.
+- Conservare controlli tecnici pertinenti, dati e modifiche locali preesistenti.
+  Concordare nel caso concreto le prove che registrano ingressi, occupano
+  posti o inviano comunicazioni; nessun invio reale implicito nel collaudo.
+- Alla conclusione di ogni tranche aggiornare il relativo verbale e AGENTS.md
+  con esito, destinatari del rilascio ed eventuali punti ancora aperti.
+
+## Attività accettate ed escluse
+
+- **Stampanti e stampa QR:** l’utente conferma che il test è andato bene.
+  Considerate collaudate ai fini di questo piano; non riaprire automaticamente
+  le vecchie liste di prove hardware ancora pendenti nei verbali storici.
+- **Dashboard Accoglienza:** accettata dall’utente; intervenire su problemi
+  concreti se emergeranno, senza una nuova revisione generale preventiva.
+- **Accrediti stampa:** esclusi dal lavoro per questo evento, eventualmente
+  da riprendere l’anno prossimo. Non avviare P13-S.
+- Le altre voci dell’inventario precedente restano fuori da questa settimana
+  salvo nuova richiesta, compreso il caricamento QR individuale su clic.
+  Resta valida la decisione di non estendere ora il controllo di revisione
+  alla conferma individuale delle presenze.
+
+## Riferimenti
+
+- [QR gruppo stabile](qr-gruppo-stabile-2026-10-16.md)
+- [Cerimonie e assegnazioni](panel-p13-ceremonies.md)
+- [Accessi Forum](panel-p13-access.md)
+- [Lista d’attesa capogruppo](group-panel-waitlist-2026-10-17.md)
+- [Rilascio del 17 ottobre e stato migration](rilascio-presenze-scuole-forum-2026-10-17.md)

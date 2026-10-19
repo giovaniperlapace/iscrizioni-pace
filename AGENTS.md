@@ -1,5 +1,40 @@
 # AGENTS.md
 
+## Ultima settimana prima dell’evento — decisioni del 2026-10-19
+
+- Piano corrente: `docs/piano-ultima-settimana-2026-10-19.md`. Prevale sulle
+  precedenti priorità e sulle note storiche superate da queste decisioni.
+- Ordine richiesto: **1) QR gruppo subito; 2) inaugurazione e cerimonia finale;
+  3) accessi Forum e ruolo dedicato; 4) statistiche**. L’apertura Forum è
+  indipendente dalla sequenza: procedere appena arriva il via libera, senza
+  aspettare la conclusione degli altri punti. Scuole già aperte da conservare.
+- QR gruppo stabile anche lato DB, senza revoca, cambio o annullamento.
+  Verificare stato/compatibilità della migration `20261016160000` prima di
+  completare il vincolo. Aggiungere il pulsante visualizzazione/download nella
+  gestione gruppi Manager, entro il suo scope autorizzato.
+- Cerimonie: completare e attivare le funzioni già sviluppate sul branch Panel
+  e integrate in main; sedi indipendenti, settori, quote, assegnazioni e posti
+  numerati dove necessari. Servono configurazioni reali e revisione dell’utente.
+- Accessi: scansione QR, prenotazione ed esito ammissione/rifiuto con ruolo
+  esclusivamente dedicato al Forum assegnato, senza gestione generale.
+  Consultazione settore/posto per Forum e cerimonie con incarichi pertinenti;
+  permessi server/DB e distinzione ingresso evento/Forum da conservare.
+  Funzioni pronte e verificate entro l’inizio dell’evento.
+- Statistiche: controllare conteggi e leggibilità, distinguendo iscritti,
+  prenotati e presenze effettive, con filtri e riepiloghi comprensibili.
+- Da ora sviluppo direttamente su **main** e rilascio/test in **production**.
+  L’utente specificherà per tranche il pubblico: solo Admin oppure Manager e
+  operatori previsti, eventualmente con collaudatori selezionati. Nessuna
+  estensione implicita dei permessi o apertura Forum prima del via libera.
+  Prove con scritture operative/invii reali da concordare nel caso concreto.
+- L’utente conferma riusciti i test stampanti/stampa QR e accetta la dashboard
+  Accoglienza: non riprendere automaticamente i collaudi hardware storicamente
+  sospesi; correggere problemi concreti se emergeranno.
+- Accrediti stampa/P13-S esclusi per questo evento, eventualmente l’anno
+  prossimo. Altre voci dell’inventario fuori da questa settimana salvo nuova
+  richiesta; confermato il rinvio del controllo revisione sulla conferma
+  individuale presenze. Aggiornare piano/verbali al completamento delle tranche.
+
 ## Caricamento iscritti e paginazione server — 2026-10-17
 
 - Conservata la paginazione a 100 del collega (`b12455c`), testi e aspetto invariati.
@@ -40,6 +75,21 @@
   Commit/push su main richiesti dall'utente; nessuna migration necessaria.
   Dettagli e limiti in docs/iscritti-paginazione-2026-10-17.md.
 
+## Presenze: comportamento attuale confermato — 2026-10-17
+
+- Dopo il chiarimento sui conflitti fra dispositivi, l’utente considera il
+  caso limite molto improbabile e chiede di lasciare per ora tutto invariato.
+  Conservare aggiornamento dopo i salvataggi e riconciliazione ogni 15 minuti.
+- All’apertura della scheda la presenza viene riletta; correzioni e rimozioni
+  controllano la revisione e bloccano modifiche basate su una versione superata.
+  Confermare due volte una presenza già attiva non crea duplicati.
+- Limite noto della conferma individuale: non verifica la revisione. Una scheda
+  rimasta aperta con stato assente può riconfermare una presenza che un’altra
+  postazione ha nel frattempo confermato e poi annullato. L’estensione del
+  controllo di revisione anche alle conferme è rinviata per scelta esplicita
+  dell’utente; non implementarla come seguito automatico di questa discussione.
+- Nessuna modifica applicativa o migration aggiuntiva per questo chiarimento.
+
 ## Rilascio congiunto presenze, scuole e Forum capogruppo — 2026-10-17
 
 - L’utente richiede commit e push su main delle tre modifiche e le migration
@@ -55,6 +105,11 @@
   originali sintetici delle tre superfici, SQL e concorrenza. Presenze a
   15 minuti verificate anche nel browser. Verbali hardware paralleli esclusi.
   Dettagli in docs/rilascio-presenze-scuole-forum-2026-10-17.md.
+- Commit `26d1ad0` pubblicato su main; deployment Vercel production READY e
+  dominio operativo verificati. Browser pubblico: scuole disponibili con
+  16 opzioni e noindex/nofollow, nessun link scuole nella home, accesso Forum
+  capogruppo protetto. Confermati DB internal e nessun errore runtime rilevato
+  nei controlli del rilascio; nessun modulo reale inviato.
 
 ## Iscritti: presenze dopo le azioni e rendering selettivo — 2026-10-17
 
@@ -304,6 +359,26 @@
   su dati reali, email o stampa fisica. Commit/push production autorizzati.
   Dettagli in docs/accoglienza-semplificata-2026-10-16.md.
 
+## QR del gruppo diretto per il capogruppo — 2026-10-16
+
+- Su richiesta dell’utente, QR del gruppo è accanto a Gestisci link nella
+  dashboard capogruppo, per il gruppo della riga. Rimosso dalla modale link;
+  apertura diretta con nome gruppo, immagine e download, senza un secondo clic.
+- L’utente abilita esplicitamente i capigruppo ai QR dei propri gruppi.
+  Lettura/creazione iniziale del QR opaco tramite get, scope attivo e controlli
+  server/DB. Revoca/rinnovo, scanner, presenze e stampa restano solo Admin.
+  Nessuna richiesta QR prima del clic e nessuna rotazione sulle letture ripetute.
+- File scaricato qr-gruppo-Nome-del-gruppo.png; caratteri internazionali
+  conservati, separatori del filesystem rimossi. Testi in sette lingue.
+- Migration 20261016130000_leader_group_qr_access applicata e registrata in
+  production dopo backup custom verificato: valori di 63 tabelle (87.791 righe)
+  invariati, catalogo di 2.497 voci confrontato, sola funzione credenziale
+  modificata e privilegi conservati. Staging invariato, nessuna email o stampa.
+- Superati 898 test, lint, TypeScript, build pulita, browser sintetico con
+  download PNG effettivo e SQL/concorrenza; otto get simultanei condividono
+  una credenziale e un solo audit di creazione. Dettagli e backup in
+  docs/qr-gruppo-capogruppo-2026-10-16.md. Commit/push su main autorizzati.
+
 ## Accoglienza distinta per computer e telefono — 2026-10-16
 
 - All’apertura della dashboard si sceglie esplicitamente Computer (scanner
@@ -326,26 +401,6 @@
   docs/accoglienza-modalita-dispositivo-2026-10-16.md.
 
 
-## QR del gruppo diretto per il capogruppo — 2026-10-16
-
-- Su richiesta dell’utente, QR del gruppo è accanto a Gestisci link nella
-  dashboard capogruppo, per il gruppo della riga. Rimosso dalla modale link;
-  apertura diretta con nome gruppo, immagine e download, senza un secondo clic.
-- L’utente abilita esplicitamente i capigruppo ai QR dei propri gruppi.
-  Lettura/creazione iniziale del QR opaco tramite get, scope attivo e controlli
-  server/DB. Revoca/rinnovo, scanner, presenze e stampa restano solo Admin.
-  Nessuna richiesta QR prima del clic e nessuna rotazione sulle letture ripetute.
-- File scaricato qr-gruppo-Nome-del-gruppo.png; caratteri internazionali
-  conservati, separatori del filesystem rimossi. Testi in sette lingue.
-- Migration 20261016130000_leader_group_qr_access applicata e registrata in
-  production dopo backup custom verificato: valori di 63 tabelle (87.791 righe)
-  invariati, catalogo di 2.497 voci confrontato, sola funzione credenziale
-  modificata e privilegi conservati. Staging invariato, nessuna email o stampa.
-- Superati 898 test, lint, TypeScript, build pulita, browser sintetico con
-  download PNG effettivo e SQL/concorrenza; otto get simultanei condividono
-  una credenziale e un solo audit di creazione. Dettagli e backup in
-  docs/qr-gruppo-capogruppo-2026-10-16.md. Commit/push su main autorizzati.
-
 ## Modifica ingresso dalla gestione partecipanti — 2026-10-16
 
 - Su richiesta dell’utente, lo stato sotto nome/codice nella tabella iscritti
@@ -362,6 +417,57 @@
   lint, TypeScript e build production pulita. Nessuna scrittura su dati reali.
 - Commit/push su main autorizzati per questa conversazione. Dettagli in
   docs/presenza-gestione-partecipanti-2026-10-16.md.
+
+## Manuale per consegnare postazioni Windows già pronte — 2026-10-16
+
+- L’utente precisa che gli operatori devono stampare con un clic dalle normali
+  schede Chrome, nel formato corretto, senza accorgersi del setup. Tutta la
+  preparazione e il collaudo competono a chi consegna la postazione.
+- Manuale esterno Word/PDF aggiornato in Documents/Iscrizioni Pace/Manuali:
+  driver distinti QL-800/QL-810Wc, continuo DK-22210 29 × 45, taglio ogni pagina,
+  default Windows e utente/profilo operativo. Aggiunte policy Chrome per pagina
+  custom 29000 × 45000 micrometri e intestazioni disattivate, oltre alle due
+  policy già previste. Comandi solo documentati, non applicati su dispositivi.
+- Formato Windows e disponibilità in Chrome richiedono verifica effettiva:
+  tentativo di modulo personalizzato descritto senza garantirne l’accettazione
+  da parte del driver; la policy pagina viene ignorata se il formato non è
+  disponibile. Non consegnare con carta errata o dialoghi ancora necessari.
+- Collaudo richiesto singolo, gruppo, nuova scheda e riavvio del PC; prova
+  separata per ciascun modello e per eventuale cambio del predefinito.
+  Manuale renderizzato e verificato in tre pagine; Windows fisico resta
+  da collaudare. Prove hardware ancora sospese come richiesto dall’utente.
+
+## QL-800 sul Mac con stampa silenziosa nel Chrome normale — 2026-10-16
+
+- QL-800 collegata al Mac attuale: USB rilevata, ma inizialmente presente solo
+  la coda QL-810W. L’utente installa il driver ufficiale Brother 4.0.4a per
+  macOS 26. Aggiunta coda Brother_QL_800 USB con driver QL-800 CUPS, predefinita
+  per l’utente; carta Custom.29x45mm, BrTapeLength=45, taglio automatico ogni
+  etichetta, una copia. Rosetta già presente. Coda QL-810W e suo lavoro pendente
+  conservati, nessun trasferimento di lavori alla nuova stampante.
+- Collaudo dal renderer/pulsante originali nella fixture sintetica NSL5 locale:
+  l’utente seleziona QL-800 e DK-22210 29x45 mm nel dialogo Chrome normale;
+  controllati una copia, margini nessuno, scala 100%. Job 24 completato e
+  utente conferma una sola Ada Mori / NS01 corretta e completamente separata.
+  Lettura del QR cartaceo e lotto QL-800 ancora da verificare.
+- Sessione Chrome dedicata ancora con kiosk-printing e destinazione QL-810W;
+  Chrome normale senza flag, usato per il successivo collaudo del profilo.
+  L’utente preferisce qualsiasi scheda Chrome senza collegamento speciale.
+  Preparato file locale Documents/Iscrizioni Pace/Manuali/Abilita stampa QR
+  Chrome Mac.mobileconfig: ambito utente, solo SilentPrintingEnabled e
+  PrintPreviewUseSystemDefaultPrinter, nessun account/certificato/MDM.
+  Prima importazione manuale con Apri disabilitato; poi l’utente apre il file
+  dal Finder e conferma l’installazione. Verificati entrambi i valori true in
+  /Library/Managed Preferences/giovaniperlapace/com.google.Chrome.plist.
+  Prova nel Chrome normale, campione NS01 e pulsante originale: utente conferma
+  etichette uscite senza dialogo; conferma anche propri clic durante la prova.
+  Job QL-800 25 e 26 completati, nessun lavoro QL-800 pendente. Esito positivo
+  silenzioso su questa combinazione; non prova isolata di un solo clic, né
+  certificazione di altre schede/profili, riavvio browser, gruppi o Windows.
+- Manuale esterno Word/PDF aggiornato per Windows 11 x64 e QL-800/QL-810Wc,
+  con policy Chrome >=144 per tutte le schede e default Windows. Nessuna
+  impostazione Windows applicata dall’agente; stampa fisica Windows aperta.
+  Nessun dato remoto, email, rilascio o modifica del codice applicativo qui.
 
 ## Rilascio accoglienza Admin in production — 2026-10-16
 

@@ -174,6 +174,35 @@ Il manuale
 è reperito dalla fonte ufficiale già collegata sopra; il PDF e i ritagli sono
 materiale temporaneo locale, non inclusi nel codice da pubblicare.
 
+## QL-800 sul Mac e stampa silenziosa del 16 ottobre
+
+L’utente sposta la QL-800 sul Mac attuale. La periferica è rilevata via USB,
+ma inizialmente esiste solo la coda della QL-810W. Dopo l’installazione del
+driver ufficiale Brother 4.0.4a da parte dell’utente, aggiunta Brother_QL_800
+con driver QL-800 CUPS, formato Custom.29x45mm, BrTapeLength=45, una copia,
+BrAutoTapeCut=ON e BrCutLabel=1. Impostata come destinazione predefinita
+dell’utente. Coda QL-810W e suo precedente lavoro pendente conservati.
+
+Prova dal campione sintetico Ada Mori / NS01, console e renderer originali:
+l’utente seleziona QL-800 e carta DK-22210 29x45 mm nel dialogo Chrome normale.
+Controllati una copia, scala 100% e margini nessuno. Job 24 completato;
+l’utente conferma una sola etichetta corretta e completamente separata.
+
+Su richiesta di usare le normali schede Chrome senza collegamento speciale,
+preparato un profilo locale per l’utente, contenente soltanto
+SilentPrintingEnabled e PrintPreviewUseSystemDefaultPrinter, entrambi true.
+L’utente lo installa; valori verificati nella preferenza gestita dell’utente.
+Un nuovo clic sul pulsante originale nella scheda sintetica del Chrome normale
+raggiunge la QL-800. L’utente conferma uscita senza dialogo e precisa di avere
+premuto anch’egli il pulsante durante la prova. Job 25 e 26 completati, nessun
+lavoro QL-800 pendente al controllo. Non attribuire quindi tutta la sequenza a
+un unico clic isolato. Nessun’altra stampa avviata dopo la conferma.
+
+Esito silenzioso positivo per questo Mac/Chrome/QL-800/DK-22210. Restano da
+verificare lettura del QR cartaceo, lotto QL-800, riapertura del browser e
+altre schede/profili. Questo esito non completa il collaudo Windows. Nessun
+comando su dati production, email o modifica del codice applicativo.
+
 ## Verifiche e limiti
 
 - Test di sessione: nessuna scrittura alla lettura per singolo, famiglia, gruppo,
