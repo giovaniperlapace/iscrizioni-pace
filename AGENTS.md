@@ -11,7 +11,7 @@
   retry esplicito o chiusura. Risposte tardive scartate dopo chiusura/cambio persona.
   Dopo la visualizzazione, nessun rimontaggio globale su salvataggi/aggiornamenti.
 - Permessi, azioni presenza/stampa e bozze conservati. Nessuna migration aggiuntiva.
-  Rilascio congiunto su main autorizzato con i QR gruppo; verbale in
+  Pubblicata su main con i QR gruppo (`7251f7d`), production READY; verbale in
   `docs/scheda-partecipante-caricamento-2026-10-19.md`.
 - Superati 961 test, lint, TypeScript, build production pulita, browser con
   letture rallentate/errori/timeout e regressione azioni originali su PostgreSQL
@@ -28,7 +28,9 @@
   `20261016160000` e `20261019120000` atomicamente, dopo backup custom verificato.
   65 tabelle e 128.982 righe invariate, 2.474 voci catalogo confrontate; sola RPC
   prevista modificata. 47 QR conservati, ACL invariati, Forum internal e scuole
-  attive. Commit/push congiunto su main autorizzato.
+  attive. Commit `7251f7d` su main, deployment production READY e dominio
+  verificato. Browser non autenticato: nuove superfici collaudate sinteticamente,
+  online verificati sito pubblico, protezione dashboard e assenza errori nei log.
 - Superati 961 test, lint, TypeScript, build pulita con npm ci, SQL/concorrenza
   e browser sintetico desktop/mobile del componente condiviso. Dati e ACL
   invariati; nove prime letture condividono un solo QR/audit. Dettagli in

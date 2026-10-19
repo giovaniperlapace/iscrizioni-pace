@@ -46,7 +46,9 @@ Implementazione Manager/Admin e verifiche tecniche completate. Su richiesta
 esplicita, backup custom verificato e migration `20261016160000` e
 `20261019120000_manager_group_qr_access` applicate/registrate atomicamente in
 production: dati e permessi invariati, 47 QR conservati. Rilascio congiunto su
-main autorizzato.
+main completato: commit applicativo `7251f7d`, deployment production READY e
+dominio ufficiale verificato. Il collaudo autenticato online resta da eseguire;
+test sintetici e controlli DB/HTTP superati.
 Dettagli e limiti in [verbale QR gruppo](qr-gruppo-manager-2026-10-19.md).
 
 Su nuova richiesta, completata anche la visualizzazione congiunta della scheda

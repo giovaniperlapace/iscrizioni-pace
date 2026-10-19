@@ -69,3 +69,8 @@ una migration aggiuntiva; le due migration QR sono state applicate e registrate
 atomicamente prima del codice, con backup verificato e dati invariati, come
 riportato nel [verbale QR gruppo](qr-gruppo-manager-2026-10-19.md).
 Nessuna scrittura applicativa reale, email o stampa fisica di collaudo.
+
+Pubblicata con commit `7251f7d`; deployment production READY e dominio ufficiale
+allineato, senza errori runtime rilevati nel controllo. Il browser disponibile
+non era autenticato: verifica online limitata alle superfici pubbliche e alla
+protezione delle dashboard; nuove interazioni verificate con i test sopra.

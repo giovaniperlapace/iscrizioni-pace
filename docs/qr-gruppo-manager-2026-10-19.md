@@ -84,3 +84,18 @@ con commit/push su main e deployment Git production autorizzati dall’utente.
 Pubblico: Admin e Manager dell’evento assegnato; capigruppo nel proprio scope.
 Nessun invio reale, presenza, stampa fisica o apertura Forum di collaudo.
 Evidenze tecniche locali in `/tmp/pace-qr-sheet-release-proof/`.
+
+## Esito pubblicazione
+
+Commit applicativo `7251f7da79c73ff116d413ec1dc66ab68580891a` pubblicato su main.
+Deployment Git production `dpl_DC8XmD2cL8ET6JcpdaYm9dBBFfNj` **READY**;
+build completata e dominio `registrationspeace.santegidio.org` verificato
+sullo stesso deployment. Home e scuole HTTP 200, scuole noindex; dashboard
+Admin/Manager/capogruppo protette con reindirizzamento al login. Browser pubblico:
+form scuole e Forum disponibili nel canale scuola, senza invio di moduli.
+Nessun errore runtime restituito dalla query sul deployment durante il controllo.
+
+Il browser disponibile non aveva una sessione autenticata: il collaudo delle
+nuove superfici Admin/Manager in production non è stato eseguito. Rimangono
+validi i test sintetici desktop/mobile e con azioni originali su PostgreSQL,
+oltre ai controlli production su migration, funzione, permessi e dati.
