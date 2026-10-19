@@ -1,5 +1,7 @@
 "use client";
 
+import { useParticipantSheetSection } from "./participant-sheet-loading";
+
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { participantReceptionCommand, participantLabelCommand } from "./participants/reception-actions";
 import { PresenceRemovalDialog } from "./accoglienza/reception-presence-controls";
@@ -46,6 +48,7 @@ export function ParticipantReceptionPanel({ eventId, registrationId, code, onBus
     return () => window.removeEventListener("beforeunload", warn);
   }, [locked]);
 
+  useParticipantSheetSection("reception", !["ready", "pending"].includes(state.phase) && result?.kind !== "family");
   const printCommand = useCallback((command: LabelCommand) => (labelCommandAction ?? (input => participantLabelCommand(registrationId, input)))(command), [labelCommandAction, registrationId]);
 
   function reload() { session.setMode("enter"); void session.inspect({ kind: "code", value: code }); }

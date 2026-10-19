@@ -1,5 +1,7 @@
 "use client";
 
+import { useParticipantSheetSection } from "./participant-sheet-loading";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOperationalAssociation, updateOperationalAssociation } from "./operational-registration-actions";
@@ -23,6 +25,7 @@ export function OperationalAssociationEditor({ registrationId }: { registrationI
     }).catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
   }, [registrationId, attempt]);
+  useParticipantSheetSection("association", snapshot !== null || failed);
   return <section className="grid gap-3 text-sm">
     <h4 className="font-semibold">Associazione / organizzazione</h4>
     <p className="text-[var(--peace-muted)]">Nome dichiarato nell’iscrizione. La modifica non cambia il gruppo assegnato né la partecipazione con Sant’Egidio.</p>

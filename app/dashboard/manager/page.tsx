@@ -1,3 +1,4 @@
+import { GroupReceptionQr } from "@/app/dashboard/capogruppo/qr-gruppo/group-qr";
 import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
 import { loadQuestionnaireSummaries } from "@/lib/registrations/questionnaire-summary.server";
 import type { OperationsParticipantsSnapshot } from "@/lib/registrations/operations-types";
@@ -1752,6 +1753,7 @@ async function ManagerGroupTreeSection({
                           Capogruppo
                         </Link>
                       ) : null}
+                      {canManage && group.isActive && group.eventId === currentEventOption?.id ? <GroupReceptionQr groupId={group.id} groupName={group.name} locale={locale} /> : null}
                       {canManage ? <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} /> : null}
                     </div>
                   </td>

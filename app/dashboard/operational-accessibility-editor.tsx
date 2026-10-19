@@ -1,5 +1,7 @@
 "use client";
 
+import { useParticipantSheetSection } from "./participant-sheet-loading";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOperationalAccessibility, updateOperationalAccessibility } from "./operational-registration-actions";
@@ -28,6 +30,7 @@ export function OperationalAccessibilityEditor({ registrationId, locale = "it" }
     }).catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
   }, [registrationId, attempt]);
+  useParticipantSheetSection("accessibility", loaded !== null || failed);
   return <section className="grid gap-3 text-sm">
     <h4 className="font-semibold">{copy[0]}</h4>
     {!loaded ? failed ? <div role="alert">{copy[4]} <button type="button" className="min-h-11 underline" onClick={() => { setFailed(false); setAttempt(value => value + 1); }}>{copy[5]}</button></div> : <p role="status">{copy[3]}</p> :

@@ -30,7 +30,7 @@ try {
   const mainNames=new Set(execFileSync('git',['ls-tree','-r','--name-only',mainBase,'supabase/migrations'],{cwd:root,encoding:'utf8'}).trim().split('\n').map(x=>x.split('/').at(-1)));
   const ordered=process.argv.includes('--main-upgrade')?[...names.filter(x=>mainNames.has(x)),...names.filter(x=>!mainNames.has(x))]:names;
   for (const name of ordered) {
-    if (name==='20261016200000_manager_participant_reception.sql' || name==='20261016180000_reception_role_access.sql' || name.startsWith('20261014') || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
+    if (name==='20261019120000_manager_group_qr_access.sql' || name==='20261016200000_manager_participant_reception.sql' || name==='20261016180000_reception_role_access.sql' || ['20261014110000_admin_reception_pilot.sql','20261014120000_qr_label_queue.sql'].includes(name) || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
     if (name==='20260813170000_rename_anziani_and_amici_groups.sql') continue; // known absent fixture-only data prerequisites
     if(name==='20260912150000_reception_check_ins.sql') {
       psql(`insert into events(slug,title,city,country,status) values('p11-legacy','Synthetic legacy','Test','IT','draft');
@@ -143,7 +143,7 @@ try {
   assert.equal(corrections.filter(x=>/valid/.test(x)).length,1);
   assert.equal(corrections.filter(x=>/conflict/.test(x)).length,1);
   console.log('PASS concurrent identical retries (1 saved/7 replayed), concurrent corrections (1 saved/1 conflict)');
-  for (const name of readdirSync(join(root,'supabase/migrations')).filter(x=>(x.startsWith('20261014') || x==='20261015120000_simple_qr_label_printing.sql') && x.endsWith('.sql')).sort()) file(join(root,'supabase/migrations',name));
+  for (const name of readdirSync(join(root,'supabase/migrations')).filter(x=>(['20261014110000_admin_reception_pilot.sql','20261014120000_qr_label_queue.sql'].includes(x) || x==='20261015120000_simple_qr_label_printing.sql') && x.endsWith('.sql')).sort()) file(join(root,'supabase/migrations',name));
   console.log(file(join(root,'tests/sql/qr-label-queue.sql')).trim());
   console.log(file(join(root,'tests/sql/qr-label-simple-print.sql')).trim());
   psql(`update qr_tokens set token_encrypted='synthetic-only' where registration_id=f(10);`);
@@ -162,6 +162,7 @@ try {
   assert.match(psql(`select count(*)=1 and max(attempts)=2 from group_badge_items where artifact='qr_label' and registration_id=f(10);`),/\bt\b/);
   console.log('PASS concurrent explicit repeat clicks: one claim, one conflict, same canonical label');
   file(join(root,'supabase/migrations/20261016130000_leader_group_qr_access.sql'));
+  assert.match(psql(`select md5(prosrc) from pg_proc where oid='public.group_reception_credential(uuid,uuid,uuid,text,text,text)'::regprocedure;`),/31128479927e8793aa6a706b7acfb97d/,'Pre-stability function differs from production inspected on 2026-10-19');
   file(join(root,'supabase/migrations/20261016160000_stable_group_qr.sql'));
   console.log(file(join(root,'tests/sql/leader-group-qr-access.sql')).trim());
   psql(`insert into groups(id,event_id,name,is_active) values(f(9700),f(1),'Concurrent leader QR',true);
@@ -186,6 +187,21 @@ try {
   assert.equal(participantSnapshot(),participantDataBefore,'Participant migration changed stored application values');
   console.log('PASS participant migration preserves all preexisting public-table values');
   console.log(file(join(root,'tests/sql/manager-participant-reception.sql')).trim());
+  const groupDataBefore=participantSnapshot();
+  const groupAclBefore=psql(`select proacl,prosecdef from pg_proc where oid='public.group_reception_credential(uuid,uuid,uuid,text,text,text)'::regprocedure;`);
+  // Production missed the stable migration: also verify applying it after later access migrations.
+  file(join(root,'supabase/migrations/20261016160000_stable_group_qr.sql'));
+  file(join(root,'supabase/migrations/20261019120000_manager_group_qr_access.sql'));
+  assert.equal(psql(`select proacl,prosecdef from pg_proc where oid='public.group_reception_credential(uuid,uuid,uuid,text,text,text)'::regprocedure;`),groupAclBefore);
+  assert.equal(participantSnapshot(),groupDataBefore,'Group QR migration changed application data');
+  console.log(file(join(root,'tests/sql/manager-group-qr-access.sql')).trim());
+  psql(`insert into groups(id,event_id,name,is_active) values(f(99710),f(1),'Concurrent shared QR',true);
+    insert into group_memberships(group_id,user_id,role) values(f(99710),f(36),'capogruppo');`);
+  const sharedCredentials=await Promise.all(Array.from({length:9},(_,i)=>concurrent(`set role service_role;
+    select group_reception_credential(f(1),f(${[31,33,36][i%3]}),f(99710),'get',md5('${i}')||md5('${i}'),'candidate-${i}')->>'hash';`)));
+  assert.equal(new Set(sharedCredentials.map(value=>value.trim())).size,1);
+  assert.match(psql(`select count(*)=1 from audit_logs where entity_id=f(99710) and action='group_qr.create';`),/\bt\b/);
+  console.log('PASS 9 concurrent Manager/Admin/leader reads: one shared QR, one creation audit');
   psql(`insert into participants(id,first_name,last_name,public_code) values(f(99601),'Concurrent','Manager','CM01');
     insert into registrations(id,event_id,participant_id,status) values(f(99600),f(1),f(99601),'confirmed');
     set role service_role;select participant_reception_check_in(f(1),f(31),f(99600),'CM01','enter',f(99602),array[f(99600)]);reset role;`);

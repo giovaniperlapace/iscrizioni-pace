@@ -1,6 +1,6 @@
 "use client";
 
-import { EventAttendanceProvider, EventPresence } from "@/app/dashboard/event-attendance";
+import { EventAttendanceProvider, EventPresence, useEventAttendanceSettled } from "@/app/dashboard/event-attendance";
 import { participantSortValue, sortOperationsParticipants } from "@/lib/registrations/operations-sort";
 import { OperationalAssociationEditor } from "@/app/dashboard/operational-association-editor";
 import { OperationalDemographicsEditor } from "@/app/dashboard/operational-demographics-editor";
@@ -18,6 +18,7 @@ import { OperationalAccessibilityEditor } from "@/app/dashboard/operational-acce
 import { OperationalChildrenEditor } from "./operational-children-editor";
 
 import { LocalQueryLink } from "@/components/local-query-link";
+import { ParticipantSheetLoadingContext, useParticipantSheetPreparation, useParticipantSheetSection, type ParticipantSheetSection } from "./participant-sheet-loading";
 import { OperationsParticipantQr } from "./operations-participant-qr";
 import { OperationsAttendance } from "./operations-attendance";
 import { PendingDownload } from "@/components/pending-download";
@@ -34,7 +35,7 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
-import { ArrowDown, ArrowUp, Columns3, Download, Pencil, UserPlus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Download, LoaderCircle, Pencil, UserPlus, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
 import { OperationsParticipantFilters } from "@/app/dashboard/operations-participant-filters";
 import { OperationsParticipantsPagination } from "@/app/dashboard/operations-participants-pagination";
@@ -825,7 +826,8 @@ export function OperationsParticipantsTable({
         disabled={Object.values(pending).some(Boolean) || receptionBusy || pagePending} onPageChange={changePage} />
     </section>}
       {selected && (
-        <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath} busy={receptionBusy}>
+        <ParticipantDialog key={selected.registrationId} participant={selected} closePath={closePath} busy={receptionBusy}
+          editable={!selected.deletedAt && editableEventIds.includes(selected.eventId)} receptionEnabled={canConfirmSelected} hasAttendancePanel={attendancePanel != null}>
           {!selected.deletedAt && editableEventIds.includes(selected.eventId) ? (
             <OperationsParticipantQr key={`qr:${selected.registrationId}`} registrationId={selected.registrationId}
               participantName={selected.name} participantCode={selected.publicCode} locale={locale} eventId={selected.eventId} receptionEnabled={canConfirmSelected} onBusyChange={setReceptionBusy} />
@@ -990,17 +992,36 @@ export function OperationsParticipantsTable({
   );
 }
 
-function ParticipantDialog({
+type ParticipantDialogProps = {
+  participant: Row; closePath: string; children: ReactNode; busy?: boolean;
+  editable: boolean; receptionEnabled: boolean; hasAttendancePanel: boolean;
+};
+
+function ParticipantDialog(props: ParticipantDialogProps) {
+  const [attempt, setAttempt] = useState(0);
+  return <PreparedParticipantDialog key={attempt} {...props} onRetry={() => setAttempt(value => value + 1)} />;
+}
+
+function ParticipantSheetPresence() {
+  useParticipantSheetSection("presence", useEventAttendanceSettled());
+  return null;
+}
+
+function PreparedParticipantDialog({
   participant,
   closePath,
   children,
   busy = false,
-}: {
-  participant: Row;
-  closePath: string;
-  children: ReactNode;
-  busy?: boolean;
-}) {
+  editable, receptionEnabled, hasAttendancePanel, onRetry,
+}: ParticipantDialogProps & { onRetry: () => void }) {
+  const required: ParticipantSheetSection[] = editable
+    ? ["qr", "demographics", "association", "accessibility", ...(hasAttendancePanel ? [] : ["attendance" as const]), ...(receptionEnabled ? ["reception" as const] : [])]
+    : [];
+  const needsPresence = !participant.deletedAt && ["submitted", "confirmed"].includes(participant.registrationStatus ?? "")
+    && (!receptionEnabled || participant.children.some(child => Boolean(child.id)));
+  if (needsPresence) required.push("presence");
+  const { ready, expired, complete } = useParticipantSheetPreparation(required);
+  const locked = ready && busy;
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current!;
@@ -1019,20 +1040,21 @@ function ParticipantDialog({
     <dialog
       ref={ref}
       aria-labelledby="participant-dialog-title"
-      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-lg bg-white p-0 text-[var(--peace-ink)] shadow-xl backdrop:bg-black/40"
+      aria-busy={!ready}
+      className="fixed inset-0 m-auto h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden open:flex open:flex-col rounded-lg bg-white p-0 text-[var(--peace-ink)] shadow-xl backdrop:bg-black/40"
       onCancel={(event) => {
         event.preventDefault();
-        if (!busy) window.history.replaceState(null, "", closePath);
+        if (!locked) window.history.replaceState(null, "", closePath);
       }}
     >
-      <div className="flex items-start justify-between gap-3 border-b p-5">
+      <div className="flex shrink-0 items-start justify-between gap-3 border-b p-5">
         <div>
           <h3 id="participant-dialog-title" className="text-xl font-semibold">
             Scheda partecipante
           </h3>
           <p>{participant.name}</p>
         </div>
-        {busy ? <button type="button" className={buttonClass} disabled aria-label="Chiudi scheda partecipante"><X size={18} /></button> : <LocalQueryLink
+        {locked ? <button type="button" className={buttonClass} disabled aria-label="Chiudi scheda partecipante"><X size={18} /></button> : <LocalQueryLink
           replace
           href={closePath}
           scroll={false}
@@ -1042,9 +1064,18 @@ function ParticipantDialog({
           <X size={18} />
         </LocalQueryLink>}
       </div>
-      <div className="grid max-h-[calc(90dvh-7rem)] gap-6 overflow-y-auto p-5">
-        {children}
-      </div>
+      {!ready ? <div className="grid min-h-0 flex-1 place-content-center justify-items-center gap-3 p-5 text-center">
+        {expired ? <>
+          <p role="alert">Il caricamento della scheda non è stato completato. Riprova.</p>
+          <button type="button" className={buttonClass} onClick={onRetry}>Riprova caricamento</button>
+        </> : <p role="status" className="flex items-center gap-2"><LoaderCircle className="size-5 animate-spin" aria-hidden="true" />Caricamento scheda partecipante…</p>}
+      </div> : null}
+      <ParticipantSheetLoadingContext.Provider value={complete}>
+        {needsPresence ? <ParticipantSheetPresence /> : null}
+        <div hidden={!ready} inert={!ready} className={ready ? "grid min-h-0 flex-1 content-start gap-6 overflow-y-auto p-5" : "hidden"}>
+          {children}
+        </div>
+      </ParticipantSheetLoadingContext.Provider>
     </dialog>
   );
 }

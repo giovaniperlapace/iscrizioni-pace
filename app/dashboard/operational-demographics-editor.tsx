@@ -1,5 +1,7 @@
 "use client";
 
+import { useParticipantSheetSection } from "./participant-sheet-loading";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOperationalDemographics, updateOperationalDemographics } from "./operational-registration-actions";
@@ -27,6 +29,7 @@ export function OperationalDemographicsEditor({ registrationId, locale = "it" }:
     }).catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
   }, [registrationId, attempt]);
+  useParticipantSheetSection("demographics", loaded !== null || failed);
   return <section className="grid gap-3 text-sm">
     <h4 className="font-semibold">{DEMOGRAPHICS_COPY[locale].title}</h4>
     {!loaded ? failed ? <div role="alert">{copy.error} <button type="button" className="min-h-11 underline" onClick={() => { setFailed(false); setAttempt(value => value + 1); }}>{copy.retry}</button></div> : <p role="status">{copy.loading}</p> :

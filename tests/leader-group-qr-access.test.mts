@@ -5,9 +5,9 @@ import ts from "typescript";
 import { groupQrFilename, participantQrFilename } from "../lib/qrcode/filename.ts";
 
 const groupId = "00000000-0000-4000-8000-000000000001";
-function actionFixture({admin=false,scope=true,authenticated=true,roleError=false,active=true,rpcError=false}={}) {
+function actionFixture({admin=false,manager=false,managerEvent="event",scope=true,authenticated=true,roleError=false,active=true,rpcError=false}={}) {
  const calls: unknown[]=[];let services=0;
- const session={auth:{getUser:async()=>({data:{user:authenticated?{id:"actor"}:null},error:null})},from:(table:string)=>({select:()=>({eq:()=>table==="events"?{maybeSingle:async()=>({data:{id:"event"},error:null})}:Promise.resolve({data:admin?[{role:"admin",event_id:null}]:[{role:"capogruppo",event_id:"event"}],error:roleError?{}:null})})})};
+ const session={auth:{getUser:async()=>({data:{user:authenticated?{id:"actor"}:null},error:null})},from:(table:string)=>({select:()=>({eq:()=>table==="events"?{maybeSingle:async()=>({data:{id:"event"},error:null})}:Promise.resolve({data:admin?[{role:"admin",event_id:null}]:manager?[{role:"manager",event_id:managerEvent}]:[{role:"capogruppo",event_id:"event"}],error:roleError?{}:null})})})};
  const deps:Record<string,unknown>={
   "@/lib/supabase/server":{createSupabaseServerClient:async()=>session},
   "@/lib/supabase/service":{createSupabaseServiceClient:()=>{services++;return {rpc:async(name:string,args:unknown)=>{calls.push({name,args});return {data:{active,encrypted:"encrypted",hash:"hash"},error:rpcError?{}:null};}};}},
@@ -40,4 +40,18 @@ test("group download names identify the group and safely preserve international 
  assert.equal(groupQrFilename(""),"qr-gruppo-gruppo.png");
  assert.ok(Array.from(groupQrFilename("é".repeat(200))).length<100);
  assert.equal(participantQrFilename("Ada Mori"),"qr-Ada-Mori.png");
+});
+
+test("Manager group QR access requires the current event and respects database denials",async()=>{
+ const manager=actionFixture({manager:true,scope:false});
+ assert.equal((await manager.call(groupId,"get")).status,"active");
+ assert.equal(manager.services(),1);
+ for(const options of [{manager:true,managerEvent:"other",scope:false},{manager:true,managerEvent:"",scope:false},{manager:true,roleError:true}]){
+  const f=actionFixture(options);assert.equal((await f.call(groupId,"get")).status,"unavailable");assert.equal(f.services(),0);
+ }
+ const denied=actionFixture({manager:true,scope:false,rpcError:true});
+ assert.equal((await denied.call(groupId,"get")).status,"unavailable");
+ for(const action of ["renew","revoke",null]){
+  const f=actionFixture({manager:true,scope:false});assert.equal((await f.call(groupId,action as string)).status,"unavailable");assert.equal(f.services(),0);
+ }
 });

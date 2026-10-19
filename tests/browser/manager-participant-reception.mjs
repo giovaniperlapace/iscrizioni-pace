@@ -57,7 +57,16 @@ export async function checkManagerParticipantReception(psql,base='http://127.0.0
     await btn('Rimuovi presenza').click();await btn('Conferma rimozione').click();await page.getByRole('dialog').getByText('Partecipazione non confermata',{exact:true}).waitFor();await page.locator('tbody').getByText('Partecipazione non confermata',{exact:true}).waitFor();assert.equal(psql('select count(*) from check_ins where registration_id=f(99501) and cancelled_at is null;').trim(),'0');
     assert.equal(await page.evaluate(()=>window.__prints),1);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:`/tmp/pace-manager-participant-${role}.png`,fullPage:true});
-    if(role===31){psql("delete from event_user_roles where user_id=f(31) and role='manager';");const prior=calls.length;await btn('Conferma partecipazione').click();await page.getByRole('alert').filter({hasText:/Sessione scaduta|incarico/}).waitFor();assert.equal(calls.length,prior);psql("insert into event_user_roles(user_id,event_id,role) values(f(31),f(1),'manager');");}
+    if(role===31){
+     psql("delete from event_user_roles where user_id=f(31) and role='manager';");
+     const prior=calls.length;await btn('Conferma partecipazione').click();
+     // Middleware can intercept the action redirect before the RPC: the client
+     // then conservatively reports an uncertain outcome. Both paths deny writes.
+     await page.getByRole('alert').filter({hasText:/Sessione scaduta|incarico|Esito da verificare/}).waitFor();
+     assert.equal(calls.length,prior);
+     assert.equal(psql('select count(*) from check_ins where registration_id=f(99501) and cancelled_at is null;').trim(),'0');
+     psql("insert into event_user_roles(user_id,event_id,role) values(f(31),f(1),'manager');");
+    }
    }
    assert.deepEqual(errors,[]);await context.close();
   }

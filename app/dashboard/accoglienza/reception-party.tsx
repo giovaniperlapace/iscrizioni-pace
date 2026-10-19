@@ -1,4 +1,5 @@
 "use client";
+import { useParticipantSheetSection } from "../participant-sheet-loading";
 import { useRef, useState, type ReactNode } from "react";
 import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
 import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception/station";
@@ -15,6 +16,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
   const running = useRef(false);
   const adultId = result.persons.find(person => person.kind === "adult")?.id;
   const labels = useQrLabelPrinting({ scope: result.kind === "group" ? { groupId: result.groupId } : { registrationId: adultId! }, commandAction: labelCommandAction, enabled: printing && !!(result.kind === "group" || adultId) });
+  useParticipantSheetSection("reception", !printing || Boolean(labels.queue) || labels.failed);
   const selectedSet = new Set(selected);
   const registrations = new Map(result.kind === "group" ? result.persons.map(person => [person.id, person.registrationId]) : result.persons.map(person => [person.id, adultId!]));
   const codes = new Map(result.kind === "group" ? result.persons.map(person => [person.id, person.code]) : []);

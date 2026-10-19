@@ -1,5 +1,7 @@
 "use client";
 
+import { useParticipantSheetSection } from "./participant-sheet-loading";
+
 import { useEffect, useState } from "react";
 import { ParticipantReceptionPanel } from "./participant-reception-panel";
 import { LeaderParticipantQr } from "./capogruppo/participant-qr";
@@ -28,13 +30,20 @@ export function OperationsParticipantQr({ registrationId, participantName, parti
     }).then(async (response) => {
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) throw new Error("QR read failed");
       return response.json() as Promise<{ qr: RegistrationQrPreview }>;
-    }).then(({ qr }) => {
+    }).then(async ({ qr }) => {
+      if (controller.signal.aborted) return;
+      if (qr?.state === "active" && qr.dataUrl) {
+        const image = new Image();
+        image.src = qr.dataUrl;
+        await image.decode();
+      }
       if (!controller.signal.aborted) setResult({ registrationId, qr });
     }).catch(() => {
       if (!controller.signal.aborted) setResult({ registrationId, qr: null });
     });
     return () => controller.abort();
   }, [registrationId, attempt]);
+  useParticipantSheetSection("qr", Boolean(result && result.registrationId === registrationId));
   const copy = COPY[locale];
   const preview = !result || result.registrationId !== registrationId ? <p role="status">{copy[0]}</p> : !result.qr ? <div className="grid justify-items-start gap-2">
     <p role="alert">{copy[1]}</p>

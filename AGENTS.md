@@ -1,5 +1,41 @@
 # AGENTS.md
 
+## Scheda partecipante: visualizzazione dopo caricamento — 2026-10-19
+
+- Su richiesta dell’utente, scheda Manager/Admin con unico caricamento iniziale:
+  QR e immagine decodificata, partecipazione, contatori stampa, giorni comunicati,
+  anagrafica aggiuntiva, associazione/accessibilità e indicatori adulto/minori.
+- Contenuti nascosti e inert fino al completamento; intestazione/chiusura ferme.
+  Nessun caricamento prima dell’apertura e nessun pulsante Mostra QR aggiuntivo.
+- Errori conclusivi visibili nella scheda; dopo 25 secondi di attesa incompleta,
+  retry esplicito o chiusura. Risposte tardive scartate dopo chiusura/cambio persona.
+  Dopo la visualizzazione, nessun rimontaggio globale su salvataggi/aggiornamenti.
+- Permessi, azioni presenza/stampa e bozze conservati. Nessuna migration aggiuntiva.
+  Rilascio congiunto su main autorizzato con i QR gruppo; verbale in
+  `docs/scheda-partecipante-caricamento-2026-10-19.md`.
+- Superati 961 test, lint, TypeScript, build production pulita, browser con
+  letture rallentate/errori/timeout e regressione azioni originali su PostgreSQL
+  temporaneo, inclusa revoca ruolo. Nessuna scrittura remota o stampa fisica.
+
+## QR gruppo Manager/Admin — implementazione del 2026-10-19
+
+- Pulsante «QR del gruppo» nelle gestioni Manager/Admin, per gruppi attivi
+  dell’evento corrente autorizzato; finestra e download condivisi col capogruppo.
+- Nuova migration `20261019120000_manager_group_qr_access`: Manager circoscritto
+  all’evento, get esclusivo, token stabile e creazione unica sotto lock. Scope
+  capogruppo e Admin conservati; nessuna estensione a scanner/stampa gruppo.
+- Su richiesta esplicita, applicate e registrate in production le migration
+  `20261016160000` e `20261019120000` atomicamente, dopo backup custom verificato.
+  65 tabelle e 128.982 righe invariate, 2.474 voci catalogo confrontate; sola RPC
+  prevista modificata. 47 QR conservati, ACL invariati, Forum internal e scuole
+  attive. Commit/push congiunto su main autorizzato.
+- Superati 961 test, lint, TypeScript, build pulita con npm ci, SQL/concorrenza
+  e browser sintetico desktop/mobile del componente condiviso. Dati e ACL
+  invariati; nove prime letture condividono un solo QR/audit. Dettagli in
+  `docs/qr-gruppo-manager-2026-10-19.md`. Nessuna scrittura operativa remota.
+- L’utente ha poi richiesto di completare prima del rilascio anche il caricamento
+  congiunto della scheda partecipante, descritto nella sezione dedicata.
+
 ## Ultima settimana prima dell’evento — decisioni del 2026-10-19
 
 - Piano corrente: `docs/piano-ultima-settimana-2026-10-19.md`. Prevale sulle

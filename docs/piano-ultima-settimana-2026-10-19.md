@@ -40,6 +40,20 @@ esplicitamente superati dalle decisioni riportate qui.
    filtri, descrizioni e riepiloghi comprensibili e controllare la coerenza
    con le fonti canoniche e il perimetro autorizzato.
 
+## Avanzamento QR gruppo — 19 ottobre
+
+Implementazione Manager/Admin e verifiche tecniche completate. Su richiesta
+esplicita, backup custom verificato e migration `20261016160000` e
+`20261019120000_manager_group_qr_access` applicate/registrate atomicamente in
+production: dati e permessi invariati, 47 QR conservati. Rilascio congiunto su
+main autorizzato.
+Dettagli e limiti in [verbale QR gruppo](qr-gruppo-manager-2026-10-19.md).
+
+Su nuova richiesta, completata anche la visualizzazione congiunta della scheda
+partecipante Manager/Admin dopo il caricamento iniziale, senza pulsante Mostra QR
+aggiuntivo. Inclusa nel rilascio congiunto autorizzato; vedere il
+[verbale scheda partecipante](scheda-partecipante-caricamento-2026-10-19.md).
+
 ## Apertura Forum al via libera
 
 L’apertura non è subordinata alla conclusione delle priorità sopra: si procede

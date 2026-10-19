@@ -25,6 +25,11 @@ function useAttendanceValue<T>(select: (state: ReturnType<EventAttendanceStore["
   return useSyncExternalStore(store.subscribe, () => select(store.snapshot()), () => select(store.serverSnapshot()));
 }
 
+// A boolean subscription for the participant sheet's first reveal only.
+export function useEventAttendanceSettled() {
+  return useAttendanceValue(({ data, error }) => Boolean(data) || error);
+}
+
 function AttendanceStatus() {
   const store = useContext(AttendanceContext);
   const current = useSyncExternalStore(store.subscribe, store.snapshot, store.serverSnapshot);

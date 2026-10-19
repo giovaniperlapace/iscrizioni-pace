@@ -17,9 +17,10 @@ export async function groupReceptionQr(groupId: string, action: "get"): Promise<
     const {data:roles,error:roleError}=await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if(roleError)return {status:"unavailable"};
     const isAdmin=roles?.some(r=>r.role==="admin" && r.event_id===null);
+    const isManager=roles?.some(r=>r.role==="manager" && r.event_id===event.id);
     // Everyone, including Admins, can only read the stable credential.
     // Membership and the current event are checked again in SQL.
-    if(!isAdmin && !(await loadLeaderScope(session,user.id,event.id)).scopedGroupIds.has(groupId)) return {status:"unavailable"};
+    if(!isAdmin && !isManager && !(await loadLeaderScope(session,user.id,event.id)).scopedGroupIds.has(groupId)) return {status:"unavailable"};
     const generated=createOpaqueQrToken();
     const {data,error:rpcError}=await createSupabaseServiceClient().rpc("group_reception_credential",{
       p_event:event.id,p_actor:user.id,p_group:groupId,p_action:action,p_hash:generated.tokenHash,p_encrypted:encryptQrToken(generated.token),

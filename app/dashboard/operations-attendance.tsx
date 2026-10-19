@@ -1,5 +1,7 @@
 "use client";
 
+import { useParticipantSheetSection } from "./participant-sheet-loading";
+
 import { useEffect, useState } from "react";
 import { updateOperationsAttendance } from "@/app/actions";
 import { ReliableForm } from "@/components/reliable-form";
@@ -26,6 +28,7 @@ export function OperationsAttendance({ registrationId, dashboard, returnTo }: {
     });
     return () => controller.abort();
   }, [registrationId]);
+  useParticipantSheetSection("attendance", result !== null);
   if (!result) return <p role="status">Caricamento presenze…</p>;
   if ("error" in result) return <p role="alert">Impossibile caricare le presenze. Riapri la scheda per riprovare.</p>;
   const attendance = result.attendance;
