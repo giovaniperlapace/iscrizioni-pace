@@ -1,11 +1,11 @@
 "use client";
 import { ProgressButton } from "@/components/button-progress";
 import Image from "next/image";
-import { QrCode } from "lucide-react";
+import { LoaderCircle, QrCode } from "lucide-react";
 import { groupQrFilename } from "@/lib/qrcode/filename";
 import { useEffect, useId, useRef, useState } from "react";
 import type { SupportedLocale } from "@/lib/i18n/config";
-import { groupReceptionQr } from "./actions";
+import type { groupReceptionQr } from "./actions";
 const copies = {
  it:["QR accoglienza del gruppo", "Comprende solo questo gruppo, senza sottogruppi. L’operatore confermerà chi è arrivato, minori inclusi.", "Mostra QR", "QR non disponibile. Riprova.", "Attendi…"],
  en:["Group reception QR", "Includes this group only, without subgroups. Staff will confirm who has arrived, including children.", "Show QR", "QR unavailable. Try again.", "Please wait…"],
@@ -20,7 +20,16 @@ const buttons = {
  de: ["Gruppen-QR", "Schließen", "QR herunterladen"], es: ["QR del grupo", "Cerrar", "Descargar QR"], nl: ["Groeps-QR", "Sluiten", "QR downloaden"], uk: ["QR групи", "Закрити", "Завантажити QR"],
 } satisfies Record<SupportedLocale, string[]>;
 
-export function GroupReceptionQr({ groupId, groupName, locale, commandAction = groupReceptionQr }: {
+async function loadGroupQr(groupId: string, signal: AbortSignal): Promise<Awaited<ReturnType<typeof groupReceptionQr>>> {
+ const response = await fetch("/dashboard/groups/qr", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ groupId }), cache: "no-store", signal,
+ });
+ if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) throw new Error("Group QR unavailable");
+ return response.json();
+}
+
+export function GroupReceptionQr({ groupId, groupName, locale, commandAction }: {
  groupId: string; groupName: string; locale: SupportedLocale;
  commandAction?: typeof groupReceptionQr;
 }) {
@@ -28,6 +37,8 @@ export function GroupReceptionQr({ groupId, groupName, locale, commandAction = g
  const labels = buttons[locale];
  const titleId = useId();
  const lock = useRef(false);
+ const request = useRef<AbortController | null>(null);
+ useEffect(() => () => { request.current?.abort(); request.current = null; }, []);
  const dialog = useRef<HTMLDialogElement>(null);
  const [open, setOpen] = useState(false);
  const [busy, setBusy] = useState(false);
@@ -38,15 +49,35 @@ export function GroupReceptionQr({ groupId, groupName, locale, commandAction = g
   const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const previousOverflow = document.body.style.overflow;
   element.showModal();
-  element.querySelector<HTMLElement>("h2")?.focus();
+  element.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
   document.body.style.overflow = "hidden";
   return () => { element.close(); document.body.style.overflow = previousOverflow; if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true }); };
  }, [open]);
  async function run() {
   if (lock.current) return;
   lock.current = true; setBusy(true); setResult(null);
-  try { setResult(await commandAction(groupId, "get")); } catch { setResult({ status: "unavailable" }); }
-  finally { lock.current = false; setBusy(false); }
+  const controller = new AbortController();
+  request.current = controller;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+   const prepared = await Promise.race([
+    (async () => {
+     const qr = await (commandAction ? commandAction(groupId, "get") : loadGroupQr(groupId, controller.signal));
+     if (qr.status === "active") {
+      const image = new window.Image();
+      image.src = qr.image;
+      await image.decode();
+     }
+     return qr;
+    })(),
+    new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error("Group QR timeout")); }, 25_000); }),
+   ]);
+   if (request.current === controller) setResult(prepared);
+  } catch { if (request.current === controller) setResult({ status: "unavailable" }); }
+  finally {
+   clearTimeout(timer);
+   if (request.current === controller) { request.current = null; lock.current = false; setBusy(false); }
+  }
  }
  function close() { if (!lock.current) setOpen(false); }
  const failed = result !== null && result.status !== "active";
@@ -56,21 +87,21 @@ export function GroupReceptionQr({ groupId, groupName, locale, commandAction = g
    onClick={() => { if (lock.current) return; setOpen(true); void run(); }}>
    <QrCode className="size-4" aria-hidden="true" />{labels[0]}
   </ProgressButton>
-  {open && <dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); close(); }}
-   className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-[var(--peace-border)] bg-white p-5 text-[var(--peace-ink)] shadow-2xl backdrop:bg-slate-950/65">
-   <div className="mb-4 flex items-start justify-between gap-3">
+  {open && <dialog ref={dialog} aria-labelledby={titleId} aria-busy={busy} onCancel={event => { event.preventDefault(); close(); }}
+   className="fixed inset-0 m-auto h-[min(40rem,90dvh)] w-[calc(100%-2rem)] max-w-lg overflow-hidden open:flex open:flex-col rounded-xl border border-[var(--peace-border)] bg-white p-0 text-[var(--peace-ink)] shadow-2xl backdrop:bg-slate-950/65">
+   <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-4 pt-5">
     <h2 id={titleId} tabIndex={-1} className="min-w-0 break-words text-xl font-semibold outline-none">{groupName}</h2>
     <button type="button" className="btn-secondary min-h-11 shrink-0 px-3" disabled={busy} onClick={close}>{labels[1]}</button>
    </div>
-   <section className="grid gap-3">
+   {busy ? <div className="grid min-h-0 flex-1 place-content-center p-5"><p role="status" className="flex items-center gap-2"><LoaderCircle className="size-5 animate-spin" aria-hidden="true" />{c[4]}</p></div> :
+   <section className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto overscroll-contain px-5 pb-5 [scrollbar-gutter:stable]">
     <h3 className="font-semibold">{c[0]}</h3><p className="text-sm">{c[1]}</p>
-    {busy && <p role="status">{c[4]}</p>}
     {result?.status === "active" && <>
      <Image unoptimized src={result.image} alt={`${c[0]} · ${groupName}`} width={256} height={256} className="mx-auto h-auto max-w-full" />
      <a className="btn-primary inline-flex min-h-11 items-center justify-center px-4" download={groupQrFilename(groupName)} href={result.image}>{labels[2]}</a>
     </>}
     {failed && <><p role="alert">{c[3]}</p><ProgressButton type="button" progressError aria-busy={busy} disabled={busy} className="btn-secondary min-h-12 px-4" onClick={() => void run()}>{c[2]}</ProgressButton></>}
-   </section>
+   </section>}
   </dialog>}
  </>;
 }

@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## QR gruppo: caricamento completo e finestra stabile — 2026-10-19
+
+- Su richiesta per la gestione gruppi Manager, il componente condiviso mostra
+  un unico caricamento e rivela descrizione, QR decodificato e download insieme.
+  Finestra/chiusura ferme; errore e riprova dopo massimo 25 secondi.
+- Apertura tramite HTTP POST private/no-store, stesso origin e get canonico:
+  il rinnovo sessione non naviga la dashboard. Prima creazione stabile sotto
+  lock, scope Manager/Admin/capogruppo e download identico conservati.
+- 963 test, lint, TypeScript e browser desktop/mobile: caricamento lento,
+  immagine invalida, timeout/risposte tardive, doppio clic, sette lingue,
+  rinnovo cookie e scroll invariato. Nessuna migration o prova su dati reali.
+  Dettagli in `docs/qr-gruppo-manager-2026-10-19.md`.
+
 ## Cerimonie: navigazione e percorso guidato — 2026-10-19
 
 - Su richiesta dell’utente, navigazione comune nelle tre pagine, con selettore

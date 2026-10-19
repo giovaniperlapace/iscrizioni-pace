@@ -55,3 +55,25 @@ test("Manager group QR access requires the current event and respects database d
   const f=actionFixture({manager:true,scope:false});assert.equal((await f.call(groupId,action as string)).status,"unavailable");assert.equal(f.services(),0);
  }
 });
+
+test("group QR HTTP opening requires same origin and delegates only get to the existing scope gate", async () => {
+ const { NextRequest, NextResponse } = await import("next/server.js");
+ for (const scenario of ["valid", "foreign-origin", "missing-origin", "bad-id", "revoke", "malformed", "denied"]) {
+  const calls: unknown[] = [];
+  const source = ts.transpileModule(readFileSync("app/dashboard/groups/qr/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const exported = {} as { POST: (request: InstanceType<typeof NextRequest>) => Promise<Response> };
+  new Function("require", "exports", source)((name: string) => name === "next/server" ? { NextResponse } : {
+   groupReceptionQr: async (id: string, action: string) => { calls.push([id, action]); return { status: scenario === "denied" ? "unavailable" : "active" }; },
+  }, exported);
+  const headers: Record<string,string> = { "Content-Type": "application/json" };
+  if (scenario !== "missing-origin") headers.origin = scenario === "foreign-origin" ? "https://elsewhere.invalid" : "http://localhost";
+  const response = await exported.POST(new NextRequest("http://localhost/dashboard/groups/qr", {
+   method: "POST", headers, body: scenario === "malformed" ? "{" : JSON.stringify({ groupId: scenario === "bad-id" ? "bad" : groupId, ...(scenario === "revoke" ? { action: "revoke" } : {}) }),
+  }));
+  assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+  const allowed = ["valid", "denied"].includes(scenario);
+  assert.equal(response.status, allowed ? 200 : scenario.includes("origin") ? 403 : 400);
+  assert.deepEqual(calls, allowed ? [[groupId, "get"]] : []);
+  if (scenario === "denied") assert.deepEqual(await response.json(), { status: "unavailable" });
+ }
+});

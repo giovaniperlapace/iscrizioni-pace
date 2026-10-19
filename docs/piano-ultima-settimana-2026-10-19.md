@@ -72,6 +72,8 @@ main completato: commit applicativo `7251f7d`, deployment production READY e
 dominio ufficiale verificato. Il collaudo autenticato online resta da eseguire;
 test sintetici e controlli DB/HTTP superati.
 Dettagli e limiti in [verbale QR gruppo](qr-gruppo-manager-2026-10-19.md).
+Su richiesta successiva, anche la finestra QR gruppo attende la preparazione
+completa dell’immagine e conserva posizione/dimensioni durante il caricamento.
 
 Su nuova richiesta, completata anche la visualizzazione congiunta della scheda
 partecipante Manager/Admin dopo il caricamento iniziale, senza pulsante Mostra QR

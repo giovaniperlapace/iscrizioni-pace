@@ -99,3 +99,29 @@ Il browser disponibile non aveva una sessione autenticata: il collaudo delle
 nuove superfici Admin/Manager in production non è stato eseguito. Rimangono
 validi i test sintetici desktop/mobile e con azioni originali su PostgreSQL,
 oltre ai controlli production su migration, funzione, permessi e dati.
+
+## Caricamento completo richiesto per la gestione gruppi Manager
+
+Il 19 ottobre l’utente richiede lo stesso caricamento della scheda partecipante
+anche all’apertura del QR di gruppo. Il componente condiviso presenta prima un
+solo indicatore di attesa; descrizione, immagine già decodificata e download
+compaiono insieme. Altezza della finestra e pulsante Chiudi restano fermi;
+contenuto scorrevole su schermi piccoli. Nessun pre-caricamento prima del clic.
+
+POST HTTP privato/no-store con controllo Origin, ID valido e solo `get`, delegato
+alla funzione canonica con gli stessi controlli di ruolo e scope. POST conserva
+la prima creazione esplicita della credenziale; le letture successive non la
+sostituiscono. Il rinnovo cookie non passa dal protocollo di navigazione delle
+Server Action. Download dal PNG già mostrato, senza richiesta aggiuntiva.
+Attesa massima di 25 secondi, errore/riprova e risposte tardive scartate;
+immagine non decodificabile trattata come errore. Nessuna migration necessaria.
+
+963 test applicativi, lint e TypeScript superati. Browser sintetico sul componente
+originale e sull’endpoint HTTP: desktop/mobile, pagina già scorsa, rinnovo cookie,
+nessuna navigazione o variazione dello scroll, dimensioni finestra/chiusura
+invariate, errori/revoca/immagine invalida, timeout/risposte tardive, doppi clic,
+sette lingue, focus/Escape e PNG scaricato identico byte per byte. Scope e token
+stabile restano coperti dai test esistenti; nessun dato reale o stampa coinvolti.
+Build production Webpack completata in copia isolata senza credenziali reali.
+La modifica segue il rilascio su main della stessa tranche QR; verifica online
+pubblica e deployment separati dal collaudo autenticato, svolto sinteticamente.
