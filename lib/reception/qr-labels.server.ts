@@ -17,7 +17,7 @@ export async function executeLabelCommand(session: SupabaseClient, service: () =
     if (eventError || !event) return { status: "unavailable" };
     const { data: roles, error: roleError } = await session.from("event_user_roles").select("role,event_id").eq("user_id", user.id);
     if (roleError) return { status: "unavailable" };
-    if (!(participantRegistrationId ? canOperateParticipantReception : canOperateReception)(roles ?? [], event.id)) return { status: "forbidden" };
+    if (!(participantRegistrationId || command.groupId ? canOperateParticipantReception : canOperateReception)(roles ?? [], event.id)) return { status: "forbidden" };
     const db = service();
     async function rpc(action: string) {
       const { data, error } = await db.rpc(participantRegistrationId ? "participant_qr_label_queue" : "qr_label_queue", {

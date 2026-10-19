@@ -6,7 +6,7 @@ import { printQrLabelDocument } from "@/lib/qrcode/print-client";
 import type { LabelCommand, LabelQueue, LabelResult, LabelScope } from "@/lib/reception/qr-labels";
 
 const errors: Record<string, string> = {
-  forbidden: "La stampa è disponibile solo agli Admin. Verifica il tuo accesso.",
+  forbidden: "Non sei autorizzato a stampare questi QR. Verifica il tuo accesso.",
   unavailable: "Non è stato possibile avviare la stampa. Controlla le etichette uscite prima di riprovare.",
   migration_required: "La stampa non è ancora disponibile. Contatta il responsabile.",
   conflict: "I dati sono cambiati. Premi di nuovo il pulsante per riprovare.",
@@ -23,16 +23,18 @@ function getPrinting() { return printing; }
 function getServerPrinting() { return false; }
 function setPrinting(value: boolean) { printing = value; for (const listener of listeners) listener(); }
 
-export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBusyChange, enabled = true }: {
+export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBusyChange, enabled = true, initialResult, selectInitially = true }: {
   scope: LabelScope;
   commandAction?: (input: LabelCommand) => Promise<LabelResult>;
   onBusyChange?: (busy: boolean) => void;
   enabled?: boolean;
+  initialResult?: LabelResult;
+  selectInitially?: boolean;
 }) {
-  const [failed, setFailed] = useState(false);
-  const [message, setMessage] = useState("");
-  const [queue, setQueue] = useState<LabelQueue | null>(null);
-  const [selection, setSelection] = useState<string[]>([]);
+  const [failed, setFailed] = useState(!!initialResult && initialResult.status !== "queue");
+  const [message, setMessage] = useState(initialResult && initialResult.status !== "queue" ? errors[initialResult.status] ?? errors.unavailable : "");
+  const [queue, setQueue] = useState<LabelQueue | null>(initialResult?.status === "queue" ? initialResult : null);
+  const [selection, setSelection] = useState<string[]>(() => selectInitially && initialResult?.status === "queue" ? initialResult.items.filter(item => !item.reason).map(item => item.registrationId) : []);
   const groupId = scope.groupId;
   const registrationId = scope.registrationId;
   const busy = useSyncExternalStore(subscribe, getPrinting, getServerPrinting);
@@ -40,17 +42,17 @@ export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBu
   const readVersion = useRef(0);
   useEffect(() => () => { controller.current?.abort(); }, []);
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || initialResult) return;
     let active = true;
     const version = ++readVersion.current;
     const readScope: LabelScope = groupId ? { groupId } : { registrationId: registrationId! };
     commandAction({ ...readScope, action: "read" }).then(result => {
       if (!active || version !== readVersion.current) return;
-      if (result.status === "queue") { setQueue(result); setSelection(result.items.filter(item => !item.reason).map(item => item.registrationId)); }
+      if (result.status === "queue") { setQueue(result); setSelection(selectInitially ? result.items.filter(item => !item.reason).map(item => item.registrationId) : []); }
       else { setFailed(true); setMessage(errors[result.status] ?? errors.unavailable); }
     }).catch(() => { if (active && version === readVersion.current) { setFailed(true); setMessage(errors.unavailable); } });
     return () => { active = false; };
-  }, [groupId, registrationId, commandAction, enabled]);
+  }, [groupId, registrationId, commandAction, enabled, initialResult, selectInitially]);
 
   async function print(selectedIds?: string[]) {
     if (printing || !enabled) return;
@@ -64,7 +66,7 @@ export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBu
       if (abort.signal.aborted) return;
       if (fresh.status !== "queue") { setFailed(true); setMessage(errors[fresh.status] ?? errors.unavailable); return; }
       const available = fresh.items.filter(item => !item.reason).map(item => item.registrationId);
-      if (groupId && !queue && !selectedIds) { setQueue(fresh); setSelection(available); return; }
+      if (groupId && !queue && !selectedIds) { setQueue(fresh); setSelection(selectInitially ? available : []); return; }
       setQueue(fresh);
       const ids = selectedIds ?? (groupId ? selection : available);
       if (ids.some(id => !available.includes(id))) {
@@ -102,12 +104,14 @@ export function useQrLabelPrinting({ scope, commandAction = qrLabelCommand, onBu
   return { failed, message, queue, selection, setSelection, busy, print };
 }
 
-export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChange }: {
+export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChange, initialResult, selectInitially = true }: {
   scope: LabelScope;
+  initialResult?: LabelResult;
+  selectInitially?: boolean;
   onBusyChange?: (busy: boolean) => void;
   commandAction?: (input: LabelCommand) => Promise<LabelResult>;
 }) {
-  const { failed, message, queue, selection, setSelection, busy, print } = useQrLabelPrinting({ scope, commandAction, onBusyChange });
+  const { failed, message, queue, selection, setSelection, busy, print } = useQrLabelPrinting({ scope, commandAction, onBusyChange, initialResult, selectInitially });
   const groupId = scope.groupId;
   const registrationId = scope.registrationId;
   const available = queue?.items.filter(item => !item.reason) ?? [];
@@ -130,7 +134,7 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <ProgressButton progressError={failed} type="button" disabled={disabled} aria-busy={busy}
         className="btn-primary min-h-11 justify-self-start px-4" onClick={() => void print()}>
-        {scope.groupId ? "Stampa i QR del gruppo" : "Stampa etichetta QR"}
+        {scope.groupId ? (!queue && failed ? "Riprova caricamento elenco" : "Stampa i QR selezionati") : "Stampa etichetta QR"}
       </ProgressButton>
       {!groupId ? <span role="status" className="text-sm text-[var(--peace-muted)]">Stampe richieste: {queue ? queue.items.find(item => item.registrationId === registrationId)?.attempts ?? "—" : "—"}</span> : null}
     </div>

@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { groupReceptionQr } from "../../capogruppo/qr-gruppo/actions";
 
+import { qrLabelCommand } from "../../participants/qr/labels/actions";
+
 const headers = { "Cache-Control": "private, no-store" };
 
 // POST because the first explicit opening may create the stable credential.
@@ -20,8 +22,10 @@ export async function POST(request: NextRequest) {
   let input;
   try { input = await request.json(); } catch { return NextResponse.json({}, { status: 400, headers }); }
   if (!input || typeof input.groupId !== "string" || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(input.groupId)
+    || (input.kind !== undefined && input.kind !== "labels")
     || (input.action !== undefined && input.action !== "get")) {
     return NextResponse.json({}, { status: 400, headers });
   }
+  if (input.kind === "labels") return NextResponse.json(await qrLabelCommand({ groupId: input.groupId, action: "read" }), { headers });
   return NextResponse.json(await groupReceptionQr(input.groupId, "get"), { headers });
 }

@@ -3,8 +3,9 @@ import {mkdirSync,writeFileSync,rmSync,existsSync,readFileSync} from 'node:fs';
 const base=process.argv[2]??'http://127.0.0.1:3186';assert.match(base,/^http:\/\/(localhost|127\.0\.0\.1):\d+$/);
 assert.ok(!existsSync('.env.local'),'Use an isolated copy without real credentials');
 const actionPath='app/dashboard/capogruppo/qr-gruppo/actions.ts',originalAction=readFileSync(actionPath,'utf8');
+const labelPath='app/dashboard/participants/qr/labels/actions.ts',originalLabels=readFileSync(labelPath,'utf8');
 const route='app/leader-group-qr-check';assert.ok(!existsSync(route));mkdirSync(route);
-writeFileSync(`${route}/page.tsx`,`import Fixture from '@/tests/browser/leader-group-qr-fixture';import {renderQrDataUrl} from '@/lib/qrcode/render';export default async function Page({searchParams}:{searchParams:Promise<Record<string,string>>}){return <Fixture http={(await searchParams).http==='1'} images={await Promise.all(['a','b'].map(x=>renderQrDataUrl('G:'+x.repeat(43))))}/>;}`);
+writeFileSync(`${route}/page.tsx`,`import Fixture from '@/tests/browser/leader-group-qr-fixture';import {renderQrDataUrl} from '@/lib/qrcode/render';export default async function Page({searchParams}:{searchParams:Promise<Record<string,string>>}){return <Fixture printing={(await searchParams).printing==='1'} http={(await searchParams).http==='1'} images={await Promise.all(['a','b'].map(x=>renderQrDataUrl('G:'+x.repeat(43))))}/>;}`);
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');let browser;
 try {
  writeFileSync(actionPath,`"use server";
@@ -13,6 +14,15 @@ export async function groupReceptionQr(groupId:string,action:"get"):Promise<{sta
  (await cookies()).set('synthetic-group-session',String(Date.now()));
  if(action!=="get")throw new Error('Unexpected mutation');
  return {status:'active',image:await renderQrDataUrl('G:'+(groupId.endsWith('1')?'a':'b').repeat(43))};
+}`);
+ writeFileSync(labelPath,`"use server";
+import {cookies} from 'next/headers';
+export async function qrLabelCommand(input:unknown){
+ const c=input as {action:string;ids?:string[];requestId:string};
+ (await cookies()).set('synthetic-label-session',String(Date.now()));
+ await new Promise(resolve=>setTimeout(resolve,600));
+ if(c.action==='request')return {status:'document' as const,requestId:c.requestId,html:'<html data-qr-label="29x45"><head></head><body>'+JSON.stringify(c.ids)+'</body></html>'};
+ return {status:'queue' as const,snapshot:'a'.repeat(64),items:[1,2,3].map(i=>({registrationId:'00000000-0000-4000-8000-00000000000'+i,name:['Ada Mori','Bruno Test','Carla Test'][i-1],code:'TEST'+i,reason:i===3?'cancelled':null,state:'pending' as const,attempts:0,outcome:null,changed:false}))};
 }`);
  browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
  const page=await browser.newPage({viewport:{width:1280,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -62,6 +72,40 @@ export async function groupReceptionQr(groupId:string,action:"get"):Promise<{sta
   assert.equal(await page.locator('dialog img').getAttribute('src'),imageA);await page.keyboard.press('Escape');
   assert.equal(await page.evaluate(()=>scrollY),y);assert.equal(await button(0).evaluate(el=>el===document.activeElement),true);page.off('request',observe);
  }
+ // Unified modal: both reads settle before reveal, explicit selection and simulated printing.
+ await page.addInitScript(()=>{window.print=()=>{window.top.__prints=(window.top.__prints??0)+1;window.dispatchEvent(new Event('afterprint'));};});
+ for (const width of [1280,390]) {
+  await page.setViewportSize({width,height:844});
+  const mutations=[];let reads=0;
+  const observe=r=>{if(r.headers()['next-action'])mutations.push(r.postData());else if(r.url().endsWith('/dashboard/groups/qr'))reads++;};
+  page.on('request',observe);
+  await page.goto(base+'/leader-group-qr-check?http=1&printing=1');await button(0).waitFor();assert.equal(reads,0);
+  await button(0).scrollIntoViewIfNeeded();const y=await page.evaluate(()=>scrollY);await button(0).click();
+  await page.locator('dialog [role=status]').waitFor();assert.equal(await page.locator('dialog img,dialog input').count(),0);
+  await page.getByRole('heading',{name:'QR dei partecipanti',exact:true}).waitFor();assert.equal(reads,2);assert.equal(mutations.length,0);
+  assert.equal(await page.evaluate(()=>scrollY),y);
+  const printButton=page.getByRole('button',{name:'Stampa i QR selezionati',exact:true});
+  assert.equal(await printButton.isDisabled(),true);assert.equal(await page.locator('dialog input:checked').count(),0);
+  assert.equal(await page.getByLabel('Carla Test · TEST3',{exact:true}).isDisabled(),true);
+  await page.getByLabel('Ada Mori · TEST1',{exact:true}).check();await page.getByLabel('Bruno Test · TEST2',{exact:true}).check();await page.getByLabel('Ada Mori · TEST1',{exact:true}).uncheck();
+  await printButton.click();assert.equal(await page.getByRole('button',{name:'Chiudi',exact:true}).isDisabled(),true);
+  await page.getByText('Comando di stampa inviato.',{exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>window.__prints),1);assert.ok(mutations.some(body=>body.includes('00000000-0000-4000-8000-000000000002')));
+  assert.ok(mutations.every(body=>!body.includes('00000000-0000-4000-8000-000000000003')));
+  assert.equal(await page.getByLabel('Bruno Test · TEST2',{exact:true}).isChecked(),true);
+  assert.equal(await page.getByLabel('Ada Mori · TEST1',{exact:true}).isChecked(),false);
+  await page.screenshot({path:'/tmp/pace-unified-qr-'+width+'.png'});await page.keyboard.press('Escape');
+  page.off('request',observe);
+ }
+ await page.goto(base+'/leader-group-qr-check?http=1&printing=1');
+ const denyLabels=async route=>{if(route.request().postDataJSON()?.kind==='labels')await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'forbidden'})});else await route.continue();};
+ await page.route('**/dashboard/groups/qr',denyLabels);await open(0);
+ await page.getByText('Non sei autorizzato a stampare questi QR. Verifica il tuo accesso.',{exact:true}).waitFor();
+ assert.equal(await page.locator('dialog input').count(),0);assert.equal(await page.locator('dialog a[download]').count(),1);
+ await page.unroute('**/dashboard/groups/qr',denyLabels);await page.getByRole('button',{name:'Riprova caricamento elenco',exact:true}).click();
+ await page.getByLabel('Bruno Test · TEST2',{exact:true}).waitFor();assert.equal(await page.locator('dialog input:checked').count(),0);
+ assert.equal(await page.getByRole('button',{name:'Stampa i QR selezionati',exact:true}).isDisabled(),true);await page.keyboard.press('Escape');
+ console.log('PASS unified group QR/selected labels, no prefetch, atomic reveal, HTTP reads, empty selection, disabled invalid QR, selection preserved and simulated print');
  // Bounded image/request preparation, retry and stale result isolation.
  await page.goto(base+'/leader-group-qr-check');await page.clock.install();
  await page.getByLabel('Scenario',{exact:true}).selectOption('timeout');await button(0).click();
@@ -70,4 +114,4 @@ export async function groupReceptionQr(groupId:string,action:"get"):Promise<{sta
  await page.getByLabel('Scenario',{exact:true}).selectOption('active');await open(1);const latest=await page.locator('dialog img').getAttribute('src');
  await page.clock.fastForward(5_000);assert.equal(await page.locator('dialog img').getAttribute('src'),latest);await page.keyboard.press('Escape');
  assert.deepEqual(errors,[]);console.log('PASS stable loading/reveal, decoded image, timeout/stale results, refreshed session without navigation/scroll, error/revoked states, double click, seven languages and mobile');
-} finally {writeFileSync(actionPath,originalAction);await browser?.close();rmSync(route,{recursive:true,force:true});rmSync('.next/dev/types/app/leader-group-qr-check',{recursive:true,force:true});}
+} finally {writeFileSync(labelPath,originalLabels);writeFileSync(actionPath,originalAction);await browser?.close();rmSync(route,{recursive:true,force:true});rmSync('.next/dev/types/app/leader-group-qr-check',{recursive:true,force:true});}

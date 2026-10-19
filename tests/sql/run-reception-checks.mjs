@@ -30,7 +30,7 @@ try {
   const mainNames=new Set(execFileSync('git',['ls-tree','-r','--name-only',mainBase,'supabase/migrations'],{cwd:root,encoding:'utf8'}).trim().split('\n').map(x=>x.split('/').at(-1)));
   const ordered=process.argv.includes('--main-upgrade')?[...names.filter(x=>mainNames.has(x)),...names.filter(x=>!mainNames.has(x))]:names;
   for (const name of ordered) {
-    if (name==='20261019120000_manager_group_qr_access.sql' || name==='20261016200000_manager_participant_reception.sql' || name==='20261016180000_reception_role_access.sql' || ['20261014110000_admin_reception_pilot.sql','20261014120000_qr_label_queue.sql'].includes(name) || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
+    if (name==='20261019200000_manager_group_qr_printing.sql' || name==='20261019120000_manager_group_qr_access.sql' || name==='20261016200000_manager_participant_reception.sql' || name==='20261016180000_reception_role_access.sql' || ['20261014110000_admin_reception_pilot.sql','20261014120000_qr_label_queue.sql'].includes(name) || name==='20261015120000_simple_qr_label_printing.sql' || name==='20261016130000_leader_group_qr_access.sql' || name==='20261016160000_stable_group_qr.sql') continue; // Apply the Admin rollout after legacy domain-role regressions.
     if (name==='20260813170000_rename_anziani_and_amici_groups.sql') continue; // known absent fixture-only data prerequisites
     if(name==='20260912150000_reception_check_ins.sql') {
       psql(`insert into events(slug,title,city,country,status) values('p11-legacy','Synthetic legacy','Test','IT','draft');
@@ -214,6 +214,10 @@ try {
   assert.match(psql(`select count(*)=0 from check_ins where registration_id=f(99600) and cancelled_at is null;`),/\bt\b/);
   console.log('PASS concurrent Manager-sheet and Admin-scanner removal: one saved revision, one conflict');
   console.log(file(join(root,'tests/sql/reception-role-access.sql')).trim());
+  const printDataBefore=participantSnapshot();
+  file(join(root,'supabase/migrations/20261019200000_manager_group_qr_printing.sql'));
+  assert.equal(participantSnapshot(),printDataBefore,'Group print migration changed application data');
+  console.log(file(join(root,'tests/sql/manager-group-qr-printing.sql')).trim());
   if(process.argv.includes('--browser-reception-access')) {
     const {checkReceptionRoleAccess}=await import('../browser/reception-role-access.mjs');
     await checkReceptionRoleAccess(sql=>execFileSync(join(bin,'psql'),[...args,'-tA','-c',sql],{encoding:'utf8'}));

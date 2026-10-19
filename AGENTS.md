@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## QR gruppo: stampa individuale nella modale e accesso Manager — 2026-10-19
+
+- Unico pulsante «QR del gruppo» nelle gestioni Admin/Manager: QR unico con
+  download e sezione distinta per selezionare/stampare i QR personali. Rimosso
+  il pulsante esterno di stampa; selezione inizialmente vuota e conservata dopo
+  stampa. QR ed elenco pronti prima della visualizzazione, letture HTTP senza
+  navigazione; stampa e presenze separate, capigruppo invariati.
+- L’utente autorizza esplicitamente anche i Manager nell’evento corrente.
+  Migration `20261019200000_manager_group_qr_printing` applicata e registrata
+  atomicamente in production dopo backup verificato: 63 tabelle pubbliche,
+  129.765 righe invariate, 2.574 voci catalogo confrontate, sole due funzioni
+  previste modificate. ACL/scanner conservati, Forum internal e scuole attive.
+- 965 test, lint, TypeScript, build production da npm ci, SQL e browser
+  desktop/mobile con stampa simulata superati. Nessuna stampa fisica o
+  scrittura operativa remota. Verbale: `docs/qr-gruppo-stampa-unificata-2026-10-19.md`.
+
 ## QR gruppo: caricamento completo e finestra stabile — 2026-10-19
 
 - Su richiesta per la gestione gruppi Manager, il componente condiviso mostra

@@ -77,3 +77,23 @@ test("group QR HTTP opening requires same origin and delegates only get to the e
   if (scenario === "denied") assert.deepEqual(await response.json(), { status: "unavailable" });
  }
 });
+
+test("group label HTTP reads retain canonical permissions and never accept printing commands", async () => {
+ const { NextRequest, NextResponse } = await import("next/server.js");
+ const source = ts.transpileModule(readFileSync("app/dashboard/groups/qr/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+ for (const action of [undefined, "request", "outcome", "verify"]) {
+  const calls: unknown[] = [];
+  const exported = {} as { POST: (r: InstanceType<typeof NextRequest>) => Promise<Response> };
+  new Function("require", "exports", source)((name: string) => name === "next/server" ? { NextResponse } : {
+   qrLabelCommand: async (input: unknown) => { calls.push(input); return { status: "forbidden" }; },
+   groupReceptionQr: () => { throw Error("Unexpected group credential"); },
+  }, exported);
+  const response = await exported.POST(new NextRequest("http://localhost/dashboard/groups/qr", {
+   method: "POST", headers: { origin: "http://localhost", "Content-Type": "application/json" }, body: JSON.stringify({ groupId, kind: "labels", action }),
+  }));
+  assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+  assert.equal(response.status, action ? 400 : 200);
+  assert.deepEqual(calls, action ? [] : [{ groupId, action: "read" }]);
+  if (!action) assert.deepEqual(await response.json(), { status: "forbidden" });
+ }
+});

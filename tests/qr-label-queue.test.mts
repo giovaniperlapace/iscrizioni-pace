@@ -97,3 +97,16 @@ test("an explicit simple print renders new and previously requested labels toget
   assert.equal((await executeLabelCommand(session("admin"),()=>db,{...command,snapshot:"c".repeat(64)})).status,"conflict");
   assert.deepEqual(calls,["read"]);
 });
+
+test("Manager group printing uses canonical RPC; viewer/leader and revoked roles cannot reach service", async () => {
+ const calls: unknown[] = [];
+ const db = { rpc: async (name: string, args: unknown) => { calls.push({ name, args }); return { data: { status: "queue", items: [], snapshot }, error: null }; } } as unknown as SupabaseClient;
+ assert.equal((await executeLabelCommand(session("manager"), () => db, { groupId: id, action: "read" })).status, "queue");
+ assert.equal(calls.length, 1);
+ assert.deepEqual(calls[0], { name: "qr_label_queue", args: { p_event: "event", p_actor: id, p_action: "read", p_group: id, p_registration: null, p_ids: [], p_snapshot: null, p_request: null, p_profile: null, p_outcome: null } });
+ for (const role of [null, "manager_viewer", "capogruppo"]) {
+  assert.equal((await executeLabelCommand(session(role), () => { throw Error("Must not reach service"); }, { groupId: id, action: "read" })).status, "forbidden");
+ }
+ const denied = { rpc: async () => ({ data: null, error: { code: "42501" } }) } as unknown as SupabaseClient;
+ assert.equal((await executeLabelCommand(session("manager"), () => denied, { groupId: id, action: "read" })).status, "forbidden");
+});

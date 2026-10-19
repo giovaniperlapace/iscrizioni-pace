@@ -1753,7 +1753,7 @@ async function ManagerGroupTreeSection({
                           Capogruppo
                         </Link>
                       ) : null}
-                      {canManage && group.isActive && group.eventId === currentEventOption?.id ? <GroupReceptionQr groupId={group.id} groupName={group.name} locale={locale} /> : null}
+                      {canManage && group.isActive && group.eventId === currentEventOption?.id ? <GroupReceptionQr allowPrinting groupId={group.id} groupName={group.name} locale={locale} /> : null}
                       {canManage ? <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} /> : null}
                     </div>
                   </td>

@@ -64,6 +64,13 @@ completare e non sono inclusi nelle funzioni E1/E2/E3 già pubblicate.
 
 ## Avanzamento QR gruppo — 19 ottobre
 
+Su ulteriore richiesta, stampa dei QR personali riunita nella stessa modale,
+con sezione distinta e selezione inizialmente vuota. Rimosso il pulsante esterno.
+Autorizzata esplicitamente la stampa anche ai Manager dell’evento corrente;
+migration `20261019200000` applicata in production dopo backup verificato,
+con dati e ACL invariati. Verificati 965 test, build pulita, SQL e browser.
+Dettagli nel [verbale stampa unificata](qr-gruppo-stampa-unificata-2026-10-19.md).
+
 Implementazione Manager/Admin e verifiche tecniche completate. Su richiesta
 esplicita, backup custom verificato e migration `20261016160000` e
 `20261019120000_manager_group_qr_access` applicate/registrate atomicamente in

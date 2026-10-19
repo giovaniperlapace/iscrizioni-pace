@@ -2,7 +2,6 @@ import { GroupReceptionQr } from "@/app/dashboard/capogruppo/qr-gruppo/group-qr"
 import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
 import { loadQuestionnaireSummaries } from "@/lib/registrations/questionnaire-summary.server";
 import type { OperationsParticipantsSnapshot } from "@/lib/registrations/operations-types";
-import { GroupQrLabelButton } from "@/app/dashboard/group-qr-label-button";
 import { DeskMicrophoneIcon } from "@/components/desk-microphone-icon";
 import { ManagerEmailSection } from "@/app/dashboard/manager/email/email-section";
 import { ExportsSection } from "@/app/dashboard/exports-section";
@@ -2058,8 +2057,7 @@ async function AdminGroupTreeSection({
                       >
                         Capogruppo
                       </Link>
-                      {group.isActive && group.eventId === currentEventOption?.id ? <GroupReceptionQr groupId={group.id} groupName={group.name} locale={locale} /> : null}
-                      <GroupQrLabelButton groupId={group.id} groupName={group.name} />
+                      {group.isActive && group.eventId === currentEventOption?.id ? <GroupReceptionQr allowPrinting groupId={group.id} groupName={group.name} locale={locale} /> : null}
                       <GroupDeleteButton groupId={group.id} groupName={group.name} locale={locale} />
                     </div>
                   </td>
