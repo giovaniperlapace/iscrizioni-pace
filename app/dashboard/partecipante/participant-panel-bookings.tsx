@@ -401,7 +401,6 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <p className="font-bold">{queueCopy.deadline}: {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" }).format(new Date(row.offer_expires_at))} (Europe/Rome)</p>
         <p>{queueCopy.swap}</p>
       </div> : null}
-      {row.booking_status === "available" ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{queueCopy.bookingRule}</p> : null}
       {isFull ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{queueCopy.queueHelp}</p> : null}
       <form action={setParticipantPanelBooking}>
         <ForumChildSelection options={row.children ?? []} selected={childIds} onChange={setDraftIds} locale={locale} locked={locked} />
