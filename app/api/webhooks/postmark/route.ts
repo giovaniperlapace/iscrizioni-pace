@@ -39,6 +39,9 @@ export async function POST(request: Request) {
     );
   } catch (cause) {
     const reason = cause instanceof Error && ["wrong_stream", "unsupported_event", "invalid_recipient", "invalid_date", "invalid_message", "invalid_suppression"].includes(cause.message) ? cause.message : "invalid_json";
+    // Postmark verification probes may name a different stream. Authenticated
+    // out-of-scope events are acknowledged without persisting any evidence.
+    if (reason === "wrong_stream") return NextResponse.json({ ok: true, ignored: true });
     return NextResponse.json({ error: "Invalid event", reason }, { status: 400 });
   }
   const { error } = await createSupabaseServiceClient().rpc(

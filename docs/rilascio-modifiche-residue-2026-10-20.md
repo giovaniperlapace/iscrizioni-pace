@@ -36,3 +36,11 @@ Configurato `POSTMARK_WEBHOOK_SECRET` in Production e Development, senza
 salvare il segreto nel repository. Webhook sul solo stream broadcast, eventi
 Delivery/Bounce/SpamComplaint/SubscriptionChange, senza corpi dei messaggi.
 L’attivazione del webhook segue il deploy dell’endpoint autenticato.
+
+Completamento: migration `20261020200000_campaign_event_reconciliation` applicata
+per riallineare il riepilogo della campagna dopo un esito definitivo; nessun dato
+esistente trasformato. I probe di verifica Postmark arrivano con uno stream
+diverso da quello configurato: gli eventi autenticati fuori scope ricevono 200
+senza alcuna scrittura. Eventi broadcast validi restano normalizzati e persistiti;
+richieste senza segreto restano 401 e guasti DB 503. Test aggiornati verificano
+esplicitamente l’assenza di scritture per gli eventi fuori scope.
