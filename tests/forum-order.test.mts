@@ -31,3 +31,7 @@ test('Day grouping stays chronological with one group per day and numeric Forums
  const groups=groupPublicPanelsByDay(rows as never);
  assert.deepEqual(groups.map(x=>[x.key,x.panels.map(p=>p.title)]),[['2026-10-26',['Forum 2','Forum 10']],['2026-10-27',['Forum 1']]]);
 });
+
+ test('Youth Forums retain their number with an intervening category label', () => {
+ assert.deepEqual(sortForums([{title:'FORUM 9 - Pace'},{title:'FORUM GIOVANI 8 - Un mondo da cambiare'},{title:'FORUM 7 - Preghiera'}]).map(x=>x.title), ['FORUM 7 - Preghiera','FORUM GIOVANI 8 - Un mondo da cambiare','FORUM 9 - Pace']);
+ });

@@ -2,7 +2,7 @@
 
 Un comparatore condiviso in `lib/panels/forum-order.ts` ordina per il numero
 iniziale del Forum, indipendentemente dall'orario. Supporta i prefissi Forum,
-Panel, Foro e Форум, numeri senza prefisso e notazione n.; titoli non numerati
+Panel, Foro e Форум, incluse categorie intermedie come FORUM GIOVANI 8, numeri senza prefisso e notazione n.; titoli non numerati
 seguono quelli numerati in ordine naturale. A parità di titolo viene conservato
 l'ordine delle quote; gli array ricevuti dai componenti non vengono modificati.
 
@@ -14,7 +14,7 @@ email, assegnazione incarichi e lista incarichi dell'Accoglienza.
 Restano i raggruppamenti esistenti per giorno/sessione e prenotati/disponibili.
 La cronologia del programma generale e gli orari non cambiano.
 
-Verifiche: 990 test applicativi, TypeScript, lint, build production isolata.
+Verifiche: 991 test applicativi, TypeScript, lint, build production isolata.
 Test dedicati: 1/2/9/10, differenze d'orario, prefissi, titoli senza numero,
 stabilità quote, input non mutato, loader scuole con residui invariati e gruppi
 giornalieri. Browser sui componenti originali partecipante/capogruppo/pubblico

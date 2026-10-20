@@ -7420,6 +7420,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   raggruppamenti per sessione e prenotati/disponibili e cronologia eventi generali.
 - Inclusi scuole/docente, partecipante/capogruppo, pubblico/anteprima,
   gestione/pubblicazione, statistiche, sedi, filtro email e incarichi.
-- 990 test, lint, TypeScript, build isolata, browser originali desktop/mobile
+- 991 test, lint, TypeScript, build isolata, browser originali desktop/mobile
   e regressioni scuole su DB temporaneo superati; nessuna migration necessaria.
   Dettagli: `docs/forum-ordine-numerico-2026-10-20.md`.
