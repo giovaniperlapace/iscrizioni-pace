@@ -234,3 +234,22 @@ test("P10 report exposes all requested filters and safe operational links", () =
   assert.match(statisticsSource, /choice\.registrationStatus === "cancelled"/);
   assert.match(statisticsSource, /bookingStatus === "cancelled"/);
 });
+
+test("booking coverage counts unique adults and explicitly selected children across forums", async () => {
+  const { calculatePanelBookingCoverage } = await import("../lib/panels/panel-statistics.ts");
+  const registrations = [
+    { id: "a", registration_children: [{ id: "c1" }, { id: "c2" }, { id: "c3" }] },
+    { id: "b", registration_children: [] },
+  ];
+  const choice = { registrationId: "a", panelId: "p1", sectionId: "s1", choice: "yes", registrationStatus: "confirmed", childrenCount: 1, selectedChildIds: ["c1"] };
+  assert.deepEqual(calculatePanelBookingCoverage(registrations, [
+    choice, choice,
+    { ...choice, panelId: "p2", selectedChildIds: ["c1", "c2", "unknown"] },
+    { ...choice, registrationId: "b", choice: "no" },
+    { ...choice, registrationId: "b", registrationStatus: "cancelled" },
+    { ...choice, registrationId: "b", sectionId: null },
+    { ...choice, registrationId: "other" },
+  ]), { bookedPeople: 3, registeredPeople: 5 });
+  assert.deepEqual(calculatePanelBookingCoverage([], []), { bookedPeople: 0, registeredPeople: 0 });
+  assert.deepEqual(calculatePanelBookingCoverage(registrations, []), { bookedPeople: 0, registeredPeople: 5 });
+});

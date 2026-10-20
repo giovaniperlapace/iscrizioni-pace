@@ -52,6 +52,7 @@ export type PanelStatisticsIndividualChoiceInput = {
   choice: string;
   registrationStatus: string;
   childrenCount: number;
+  selectedChildIds?: string[];
 };
 
 export type PanelStatisticsSchoolReservationInput = {
@@ -126,6 +127,7 @@ export type PanelStatisticsSnapshot = {
   days: string[];
   summary: PanelStatisticsSummary;
   actualAttendanceAvailable: boolean;
+  bookingCoverage: { bookedPeople: number; registeredPeople: number };
 };
 
 type PanelDbRow = {
@@ -196,6 +198,7 @@ export function emptyPanelStatisticsSnapshot(): PanelStatisticsSnapshot {
     locations: [],
     days: [],
     summary: emptyPanelStatisticsSummary(),
+    bookingCoverage: { bookedPeople: 0, registeredPeople: 0 },
     actualAttendanceAvailable: false,
   };
 }
@@ -241,10 +244,13 @@ export async function getPanelStatisticsSnapshot(
 
   const panels = (panelsResult.data ?? []) as PanelDbRow[];
   const panelIds = panels.map((panel) => panel.id);
-  const [individualChoices, schoolReservations, actualTotals] = await Promise.all([
+  const [individualChoices, schoolReservations, actualTotals, registrationsResult] = await Promise.all([
     getAllIndividualChoices(supabase, panelIds),
     getAllSchoolReservations(supabase, eventId),
     loadPanelAttendanceTotals(supabase, eventId),
+    loadAllRows((from, to) => supabase.from("registrations")
+      .select("id,registration_children(id)").eq("event_id", eventId)
+      .neq("status", "cancelled").order("id").range(from, to)),
   ]);
 
   const snapshot = buildPanelStatisticsSnapshot({
@@ -280,6 +286,9 @@ export async function getPanelStatisticsSnapshot(
     individualChoices,
     schoolReservations,
   });
+  snapshot.bookingCoverage = calculatePanelBookingCoverage(
+    registrationsResult.data, individualChoices,
+  );
   if (actualTotals !== null) {
     snapshot.actualAttendanceAvailable = true;
     snapshot.panels = snapshot.panels.map(panel => ({ ...panel, actualPeople: actualTotals.get(panel.id) ?? 0 }));
@@ -532,8 +541,35 @@ export function buildPanelStatisticsSnapshot({
       ),
     ].sort(),
     summary,
+    bookingCoverage: { bookedPeople: 0, registeredPeople: 0 },
     actualAttendanceAvailable: false,
   };
+}
+
+/** Event-wide unique nominal people; school quantities cannot be deduplicated. */
+export function calculatePanelBookingCoverage(
+  registrations: Array<{ id: string; registration_children: Array<{ id: string }> | null }>,
+  choices: PanelStatisticsIndividualChoiceInput[],
+): { bookedPeople: number; registeredPeople: number } {
+  const registered = new Set<string>();
+  for (const registration of registrations) {
+    registered.add(`adult:${registration.id}`);
+    for (const child of registration.registration_children ?? []) {
+      registered.add(`child:${registration.id}:${child.id}`);
+    }
+  }
+  const booked = new Set<string>();
+  for (const choice of choices) {
+    if (choice.choice !== "yes" || choice.registrationStatus === "cancelled" || !choice.sectionId) continue;
+    const adult = `adult:${choice.registrationId}`;
+    if (!registered.has(adult)) continue;
+    booked.add(adult);
+    for (const id of choice.selectedChildIds ?? []) {
+      const child = `child:${choice.registrationId}:${id}`;
+      if (registered.has(child)) booked.add(child);
+    }
+  }
+  return { bookedPeople: booked.size, registeredPeople: registered.size };
 }
 
 export function summarizePanelStatistics(
@@ -660,6 +696,7 @@ async function getAllIndividualChoices(
       sectionId: row.seat_section_id,
       choice: row.choice,
       registrationStatus: registration?.status ?? "cancelled",
+      selectedChildIds: registration?.registration_children?.filter(child => selectedChildren.get(`${row.registration_id}:${row.moment_id}`)?.has(child.id)).map(child => child.id) ?? [],
       childrenCount: registration?.registration_children?.filter(child => selectedChildren.get(`${row.registration_id}:${row.moment_id}`)?.has(child.id)).length ?? 0,
     };
   });

@@ -99,9 +99,10 @@ export function PanelStatisticsReport({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <PanelSummaryCard
-          icon={CalendarDays}
-          label="Forum filtrati"
-          value={filteredSummary.panelCount}
+          icon={Users}
+          label="Iscritti prenotati ad almeno un Forum"
+          value={`${statistics.bookingCoverage.bookedPeople.toLocaleString("it-IT")} su ${statistics.bookingCoverage.registeredPeople.toLocaleString("it-IT")}`}
+          detail="Totale evento · adulti e minori · scuole escluse"
         />
         <PanelSummaryCard
           icon={Users}
@@ -433,10 +434,12 @@ function PanelSummaryCard({
   icon: Icon,
   label,
   value,
+  detail,
 }: {
   icon: LucideIcon;
   label: string;
   value: number | string;
+  detail?: string;
 }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
@@ -450,6 +453,7 @@ function PanelSummaryCard({
         <span className="block text-xs leading-4 text-[var(--peace-muted)]">
           {label}
         </span>
+        {detail && <span className="mt-1 block text-xs leading-4 text-[var(--peace-muted)]">{detail}</span>}
       </span>
     </div>
   );
