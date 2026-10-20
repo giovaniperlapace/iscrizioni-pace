@@ -14,7 +14,7 @@ export function PublicEventProgram({ locale, panels }: { locale: SupportedLocale
       <div className="mx-auto max-w-5xl">
         <p className="event-kicker">Assisi 2026</p>
         <h2 id="event-program-title" className="mt-3 text-3xl font-extrabold tracking-tight text-[var(--peace-blue-950)] sm:text-4xl">{copy.title}</h2>
-        <p className="mt-4 text-base leading-7 text-[var(--peace-muted)] sm:text-lg">{copy.intro}</p>
+        <p className="mt-4 text-base leading-7 text-[var(--peace-muted)] sm:text-lg">{copy.intro.split("www.santegidio.org")[0]}<a href="https://www.santegidio.org" className="font-semibold text-[var(--peace-blue-800)] underline underline-offset-4">www.santegidio.org</a>{copy.intro.split("www.santegidio.org")[1]}</p>
         <ol className="mt-8 grid gap-5 lg:grid-cols-3">
           {programme.map(day => (
             <li key={day.key} className="surface-card flex flex-col p-6 sm:p-7">
