@@ -3,7 +3,6 @@
 import {
   AlertTriangle,
   ArrowUpRight,
-  Baby,
   CalendarDays,
   CheckCircle2,
   CircleGauge,
@@ -115,9 +114,10 @@ export function PanelStatisticsReport({
           value={filteredSummary.bookableRemainingSeats}
         />
         <PanelSummaryCard
-          icon={Baby}
-          label="Minori prenotati"
-          value={filteredSummary.inheritedChildren}
+          icon={Users}
+          label="In attesa senza Forum nella stessa fascia"
+          value={statistics.waitlistedWithoutBookingPeople}
+          detail="Totale evento · persone uniche, minori selezionati inclusi · almeno una fascia senza prenotazione confermata; offerte da confermare incluse"
         />
         <PanelSummaryCard
           icon={School}

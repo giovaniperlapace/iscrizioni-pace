@@ -36,3 +36,41 @@ test("queue loader reads all pages and scopes every queue page to its event", as
   assert.deepEqual(ranges, [0, 500]);
   assert.deepEqual(result.get("p"), { waitingPeople: 501, offeredPeople: 0 });
 });
+
+test("uncovered queue counts unique people by Rome day/half-day against all confirmed Forums", async () => {
+  const { countWaitlistedWithoutBooking: count } = await import("../lib/panels/waitlist-statistics.ts");
+  const panels = [
+    {id:"morning",startsAt:"2026-10-26T08:00:00Z"},
+    {id:"morning2",startsAt:"2026-10-26T10:00:00Z"},
+    {id:"noon",startsAt:"2026-10-26T11:00:00Z"},
+    {id:"late",startsAt:"2026-10-26T16:00:00Z"},
+    {id:"tomorrow",startsAt:"2026-10-27T08:00:00Z"},
+    {id:"rome-midnight",startsAt:"2026-10-25T23:30:00Z"},
+  ];
+  const row = (panel_id:string, registration_id="r"): PanelWaitlistEntry => ({panel_id,registration_id,status:"waiting",expires_at:null,reserved_seats:null,registrations:{status:"submitted",deleted_at:null,registration_children:[]}});
+  const booking = (panelId:string, registrationId="r") => ({panelId,registrationId,sectionId:"s",choice:"yes",registrationStatus:"confirmed",selectedChildIds:[] as string[]});
+  assert.equal(count(panels,[],[row("morning"),row("morning2"),row("late"),row("tomorrow")],[]),1);
+  assert.equal(count(panels,[booking("morning2")],[row("morning")],[]),0);
+  assert.equal(count(panels,[booking("noon")],[row("late")],[]),0); // 12:00 and 17:00 same afternoon
+  assert.equal(count(panels,[booking("rome-midnight")],[row("morning")],[]),0); // UTC day differs
+  assert.equal(count(panels,[booking("morning")],[row("late")],[]),1);
+  assert.equal(count(panels,[booking("tomorrow")],[row("morning")],[]),1);
+  assert.equal(count(panels,[booking("morning")],[row("morning2"),row("late")],[]),1);
+  assert.equal(count(panels,[{...booking("morning"),choice:"no"}],[row("morning2")],[]),1);
+  assert.equal(count(panels,[{...booking("morning"),registrationStatus:"cancelled"}],[row("morning2")],[]),1);
+  assert.equal(count(panels,[booking("morning","other")],[row("morning2")],[]),1);
+});
+
+test("uncovered queue handles selected minors individually, active offers and invalid requests", async () => {
+  const { countWaitlistedWithoutBooking: count } = await import("../lib/panels/waitlist-statistics.ts");
+  const panels=[{id:"p",startsAt:"2026-10-26T09:00:00Z"},{id:"other",startsAt:"2026-10-26T10:00:00Z"}];
+  const row:PanelWaitlistEntry={panel_id:"p",registration_id:"r",status:"waiting",expires_at:null,reserved_seats:null,registrations:{status:"submitted",deleted_at:null,registration_children:[{id:"a"},{id:"b"},{id:"unselected"}]}};
+  const selections=[{panel_id:"p",registration_id:"r",child_ids:["a","b","foreign"]}];
+  const choices=[{panelId:"other",registrationId:"r",sectionId:"s",choice:"yes",registrationStatus:"submitted",selectedChildIds:["a"]}];
+  assert.equal(count(panels,[],[row],selections),3);
+  assert.equal(count(panels,choices,[row],selections),1); // child b has no confirmed seat
+  assert.equal(count(panels,[{...choices[0],selectedChildIds:["a","b"]}],[row],selections),0);
+  const now=Date.parse("2026-10-21T00:00:00Z");
+  assert.equal(count(panels,[],[{...row,status:"offered",expires_at:"2026-10-21T01:00:00Z"}],selections,now),3);
+  for(const invalid of [{...row,status:"offered",expires_at:"2026-10-21T00:00:00Z"},{...row,status:"cancelled"},{...row,status:"accepted"},{...row,panel_id:"foreign"},{...row,registrations:{...row.registrations,status:"cancelled"}},{...row,registrations:{...row.registrations,deleted_at:"2026-10-20"}}]) assert.equal(count(panels,[],[invalid],selections,now),0);
+});

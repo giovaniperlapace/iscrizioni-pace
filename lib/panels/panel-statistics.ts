@@ -1,4 +1,4 @@
-import { loadPanelWaitlistCounts, type PanelWaitlistCount } from "./waitlist-statistics.ts";
+import { loadPanelWaitlistData, countWaitlistedWithoutBooking, type PanelWaitlistCount } from "./waitlist-statistics.ts";
 import { compareForums } from "./forum-order.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -136,6 +136,7 @@ export type PanelStatisticsSnapshot = {
   summary: PanelStatisticsSummary;
   actualAttendanceAvailable: boolean;
   bookingCoverage: { bookedPeople: number; registeredPeople: number };
+  waitlistedWithoutBookingPeople: number;
 };
 
 type PanelDbRow = {
@@ -175,10 +176,12 @@ type IndividualChoiceDbRow = {
   registrations:
     | {
         status: string;
+        deleted_at: string | null;
         registration_children: Array<{ id: string }> | null;
       }
     | Array<{
         status: string;
+        deleted_at: string | null;
         registration_children: Array<{ id: string }> | null;
       }>
     | null;
@@ -207,6 +210,7 @@ export function emptyPanelStatisticsSnapshot(): PanelStatisticsSnapshot {
     days: [],
     summary: emptyPanelStatisticsSummary(),
     bookingCoverage: { bookedPeople: 0, registeredPeople: 0 },
+    waitlistedWithoutBookingPeople: 0,
     actualAttendanceAvailable: false,
   };
 }
@@ -252,14 +256,14 @@ export async function getPanelStatisticsSnapshot(
 
   const panels = (panelsResult.data ?? []) as PanelDbRow[];
   const panelIds = panels.map((panel) => panel.id);
-  const [individualChoices, schoolReservations, actualTotals, registrationsResult, waitlistCounts] = await Promise.all([
+  const [individualChoices, schoolReservations, actualTotals, registrationsResult, waitlistData] = await Promise.all([
     getAllIndividualChoices(supabase, panelIds),
     getAllSchoolReservations(supabase, eventId),
     loadPanelAttendanceTotals(supabase, eventId),
     loadAllRows((from, to) => supabase.from("registrations")
       .select("id,registration_children(id)").eq("event_id", eventId)
       .neq("status", "cancelled").order("id").range(from, to)),
-    loadPanelWaitlistCounts(supabase, eventId),
+    loadPanelWaitlistData(supabase, eventId),
   ]);
 
   const snapshot = buildPanelStatisticsSnapshot({
@@ -294,8 +298,11 @@ export async function getPanelStatisticsSnapshot(
     })),
     individualChoices,
     schoolReservations,
-    waitlistCounts,
+    waitlistCounts: waitlistData.counts,
   });
+  snapshot.waitlistedWithoutBookingPeople = countWaitlistedWithoutBooking(
+    snapshot.panels, individualChoices, waitlistData.rows, waitlistData.selections,
+  );
   snapshot.bookingCoverage = calculatePanelBookingCoverage(
     registrationsResult.data, individualChoices,
   );
@@ -556,6 +563,7 @@ export function buildPanelStatisticsSnapshot({
     ].sort(),
     summary,
     bookingCoverage: { bookedPeople: 0, registeredPeople: 0 },
+    waitlistedWithoutBookingPeople: 0,
     actualAttendanceAvailable: false,
   };
 }
@@ -700,7 +708,7 @@ async function getAllIndividualChoices(
 
   const { data: rows } = await loadRowsForIds<IndividualChoiceDbRow>(panelIds, (ids, from, to) => supabase
       .from("moment_attendance_choices")
-      .select("registration_id,moment_id,seat_section_id,choice,registrations!inner(status,registration_children(id))")
+      .select("registration_id,moment_id,seat_section_id,choice,registrations!inner(status,deleted_at,registration_children(id))")
       .in("moment_id", ids).eq("choice", "yes").not("seat_section_id", "is", null)
       .order("id").range(from, to));
 
@@ -715,7 +723,7 @@ async function getAllIndividualChoices(
       panelId: row.moment_id,
       sectionId: row.seat_section_id,
       choice: row.choice,
-      registrationStatus: registration?.status ?? "cancelled",
+      registrationStatus: registration?.deleted_at ? "cancelled" : registration?.status ?? "cancelled",
       selectedChildIds: registration?.registration_children?.filter(child => selectedChildren.get(`${row.registration_id}:${row.moment_id}`)?.has(child.id)).map(child => child.id) ?? [],
       childrenCount: registration?.registration_children?.filter(child => selectedChildren.get(`${row.registration_id}:${row.moment_id}`)?.has(child.id)).length ?? 0,
     };

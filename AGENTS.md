@@ -7444,3 +7444,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 997 test, lint, TypeScript, build, browser Admin/Manager desktop/mobile e
   riconciliazione in sola lettura con dati reali. Verbale:
   `docs/forum-iscritti-lista-attesa-2026-10-21.md`.
+
+## Statistiche Forum: attesa senza prenotazione — 2026-10-21
+
+- Riquadro Minori prenotati sostituito dal totale evento di persone uniche in
+  almeno una coda attiva senza posto confermato nella stessa fascia/giorno Rome.
+- Minori selezionati valutati individualmente, offerte valide incluse; deduplica
+  anche fra più Forum/fasce, prenotazioni alternative cercate nell’intero evento.
+- Solo Admin/Manager e aggregato; nessuna migration. 999 test, build e browser,
+  riconciliazione SQL live in sola lettura. Dettagli in
+  `docs/forum-attesa-senza-prenotazione-2026-10-21.md`.
