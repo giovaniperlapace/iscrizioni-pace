@@ -382,6 +382,9 @@ function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; com
     <div className={compact ? "space-y-1 tabular-nums" : "mt-2 space-y-1 text-sm tabular-nums text-[var(--peace-muted)]"}>
       <p>{panel.assignedCapacity} / {panel.locationCapacity ?? "—"} posti nelle quote</p>
       <p>{occupied === null ? "Disponibilità da verificare" : `${occupied} prenotati da iscritti e scuole`}</p>
+      {panel.waitingPeople !== undefined && <p className="font-semibold">Lista d’attesa: {panel.waitingPeople + (panel.offeredPeople ?? 0)} persone</p>}
+      {panel.offeredPeople !== undefined && <p className="text-xs">{panel.waitingPeople} in coda · {panel.offeredPeople} con posto offerto da confermare · minori selezionati inclusi</p>}
+      {occupied !== null && bookableSections.length > 0 && bookableSections.every(section => section.occupied! >= section.capacity) && <p className="font-semibold">Pieno · posti prenotabili esauriti</p>}
       {panel.sections.map(section => <p key={section.id} className="text-xs">
         {section.audienceName}: {section.bookingChannel === "internal_assignment"
           ? `${section.capacity} posti riservati`

@@ -1,3 +1,4 @@
+import { loadPanelWaitlistCounts, type PanelWaitlistCount } from "./waitlist-statistics.ts";
 import { compareForums } from "./forum-order.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -103,12 +104,18 @@ export type PanelStatisticsRow = {
   schoolPeople: number;
   bookedPeople: number;
   remainingSeats: number;
+  waitingPeople: number;
+  offeredPeople: number;
+  bookableRemainingSeats: number;
   utilizationPercent: number | null;
   actualPeople: number | null;
   noShowPeople: number | null;
 };
 
 export type PanelStatisticsSummary = {
+  waitingPeople: number;
+  offeredPeople: number;
+  bookableRemainingSeats: number;
   panelCount: number;
   totalCapacity: number;
   bookedPeople: number;
@@ -245,13 +252,14 @@ export async function getPanelStatisticsSnapshot(
 
   const panels = (panelsResult.data ?? []) as PanelDbRow[];
   const panelIds = panels.map((panel) => panel.id);
-  const [individualChoices, schoolReservations, actualTotals, registrationsResult] = await Promise.all([
+  const [individualChoices, schoolReservations, actualTotals, registrationsResult, waitlistCounts] = await Promise.all([
     getAllIndividualChoices(supabase, panelIds),
     getAllSchoolReservations(supabase, eventId),
     loadPanelAttendanceTotals(supabase, eventId),
     loadAllRows((from, to) => supabase.from("registrations")
       .select("id,registration_children(id)").eq("event_id", eventId)
       .neq("status", "cancelled").order("id").range(from, to)),
+    loadPanelWaitlistCounts(supabase, eventId),
   ]);
 
   const snapshot = buildPanelStatisticsSnapshot({
@@ -286,6 +294,7 @@ export async function getPanelStatisticsSnapshot(
     })),
     individualChoices,
     schoolReservations,
+    waitlistCounts,
   });
   snapshot.bookingCoverage = calculatePanelBookingCoverage(
     registrationsResult.data, individualChoices,
@@ -304,6 +313,7 @@ export function buildPanelStatisticsSnapshot({
   sections,
   individualChoices,
   schoolReservations,
+  waitlistCounts = new Map(),
 }: {
   panels: PanelStatisticsPanelInput[];
   locations: PanelStatisticsLocationInput[];
@@ -311,6 +321,7 @@ export function buildPanelStatisticsSnapshot({
   sections: PanelStatisticsSectionInput[];
   individualChoices: PanelStatisticsIndividualChoiceInput[];
   schoolReservations: PanelStatisticsSchoolReservationInput[];
+  waitlistCounts?: Map<string, PanelWaitlistCount>;
 }): PanelStatisticsSnapshot {
   const locationById = new Map(locations.map((location) => [location.id, location]));
   const audienceById = new Map(audiences.map((audience) => [audience.id, audience]));
@@ -482,12 +493,16 @@ export function buildPanelStatisticsSnapshot({
         !location.maxCapacity ||
         panelSections.length === 0 ||
         totals.capacity === 0;
+      const queue = waitlistCounts.get(panel.id) ?? { waitingPeople: 0, offeredPeople: 0 };
+      const bookable = sumPanelSections(panelSections.filter(section =>
+        section.bookingChannel === "individual" || section.bookingChannel === "school_booking"));
+      const bookableOccupied = bookable.bookedPeople + queue.offeredPeople;
       const state = resolvePanelStatisticsState({
         isInconsistent:
           exceedsLocationCapacity || hasInconsistentSection || hasOrphanBookings,
         isNotConfigured,
-        capacity: totals.capacity,
-        bookedPeople: totals.bookedPeople,
+        capacity: bookable.capacity,
+        bookedPeople: bookableOccupied,
       });
 
       return {
@@ -508,9 +523,11 @@ export function buildPanelStatisticsSnapshot({
           })
         ),
         ...totals,
+        ...queue,
+        bookableRemainingSeats: Math.max(0, bookable.capacity - bookableOccupied),
         utilizationPercent:
-          totals.capacity > 0
-            ? Math.round((totals.bookedPeople / totals.capacity) * 100)
+          bookable.capacity > 0
+            ? Math.round((bookableOccupied / bookable.capacity) * 100)
             : null,
         actualPeople: null,
         noShowPeople: null,
@@ -575,6 +592,9 @@ export function summarizePanelStatistics(
   const summary = emptyPanelStatisticsSummary();
 
   for (const panel of panels) {
+    summary.waitingPeople += panel.waitingPeople;
+    summary.offeredPeople += panel.offeredPeople;
+    summary.bookableRemainingSeats += panel.bookableRemainingSeats;
     summary.panelCount += 1;
     summary.totalCapacity += panel.capacity;
     summary.bookedPeople += panel.bookedPeople;
@@ -631,7 +651,7 @@ function resolvePanelStatisticsState({
     return "inconsistent";
   }
 
-  if (isNotConfigured || capacity <= 0) {
+  if (isNotConfigured) {
     return "not_configured";
   }
 
@@ -648,6 +668,9 @@ function resolvePanelStatisticsState({
 
 function emptyPanelStatisticsSummary(): PanelStatisticsSummary {
   return {
+    waitingPeople: 0,
+    offeredPeople: 0,
+    bookableRemainingSeats: 0,
     panelCount: 0,
     totalCapacity: 0,
     bookedPeople: 0,

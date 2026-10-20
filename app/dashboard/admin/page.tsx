@@ -512,7 +512,7 @@ export default async function AdminDashboardPage({
       ? getEventLocations(serviceSupabase, currentEventId)
       : Promise.resolve([]),
     activeSection === "panel" && currentEventId
-      ? getPanelDraftCatalog(supabase, currentEventId)
+      ? getPanelDraftCatalog(supabase, currentEventId, serviceSupabase)
       : Promise.resolve({ panels: [], audienceTypes: [] }),
     (activeSection === "panel" || participantSchoolsView) && currentEventId
       ? getSchoolBookingCatalog(serviceSupabase, currentEventId)

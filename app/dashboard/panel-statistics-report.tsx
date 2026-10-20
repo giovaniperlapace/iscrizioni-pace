@@ -89,7 +89,7 @@ export function PanelStatisticsReport({
           <p className="mt-1 max-w-4xl text-sm leading-6 text-[var(--peace-muted)]">
             I conteggi usano le scelte forum confermate e le prenotazioni scuola
             attive. Le iscrizioni annullate e le riserve cancellate non occupano
-            posti.
+            posti. Lo stato e la percentuale si riferiscono alle quote prenotabili da iscritti e scuole, escluse le quote ospiti; includono i posti offerti da confermare.
           </p>
         </div>
         <span className="inline-flex min-h-8 items-center rounded-full bg-[#eef5fa] px-3 text-xs font-semibold text-[var(--peace-blue-900)]">
@@ -111,8 +111,8 @@ export function PanelStatisticsReport({
         />
         <PanelSummaryCard
           icon={CircleGauge}
-          label="Posti residui"
-          value={filteredSummary.remainingSeats}
+          label="Posti prenotabili residui"
+          value={filteredSummary.bookableRemainingSeats}
         />
         <PanelSummaryCard
           icon={Baby}
@@ -126,6 +126,10 @@ export function PanelStatisticsReport({
         />
       </div>
 
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <PanelSummaryCard icon={Users} label="Persone in lista d’attesa" value={filteredSummary.waitingPeople + filteredSummary.offeredPeople} detail="Somma per Forum · minori selezionati inclusi; una persona può figurare in più Forum" />
+        <PanelSummaryCard icon={Users} label="Posto offerto da confermare" value={filteredSummary.offeredPeople} detail={`${filteredSummary.waitingPeople} persone ancora in coda; offerte scadute escluse`} />
+      </div>
       {filteredSummary.overCapacitySeats > 0 ? (
         <p
           role="alert"
@@ -315,6 +319,7 @@ function PanelStatisticsCard({
       </header>
 
       <div className="grid gap-3 border-t border-[var(--peace-border)] px-4 py-4 sm:grid-cols-2 lg:grid-cols-5">
+        <PanelMetric label="Persone in lista d’attesa" value={panel.waitingPeople + panel.offeredPeople} detail={`${panel.waitingPeople} in coda · ${panel.offeredPeople} con posto offerto da confermare · minori selezionati inclusi`} />
         <PanelMetric label="Capienza" value={panel.capacity} />
         {panel.actualPeople !== null && <PanelMetric label="Ingressi al panel" value={panel.actualPeople} />}
         <PanelMetric
@@ -329,14 +334,14 @@ function PanelStatisticsCard({
           detail={`${panel.schoolBookings} prenotazioni`}
         />
         <PanelMetric
-          label="Posti residui"
-          value={Math.max(0, panel.remainingSeats)}
+          label="Posti prenotabili residui"
+          value={panel.bookableRemainingSeats}
           detail={
             panel.remainingSeats < 0
               ? `${Math.abs(panel.remainingSeats)} oltre capienza`
               : panel.utilizationPercent === null
                 ? "Percentuale non calcolabile"
-                : `${panel.utilizationPercent}% occupato`
+                : `${panel.utilizationPercent}% delle quote prenotabili occupato`
           }
           alert={panel.remainingSeats < 0}
         />

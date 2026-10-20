@@ -1,3 +1,4 @@
+import { loadPanelWaitlistCounts } from "./waitlist-statistics.ts";
 import { compareForums, sortForums } from "./forum-order.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -38,6 +39,8 @@ export type PanelDraftRow = {
   publicationStatus: "draft" | "published";
   publishedAt: string | null;
   updatedAt: string | null;
+  waitingPeople?: number;
+  offeredPeople?: number;
   confirmedRegistrationCount: number;
   sections: PanelSeatSection[];
   assignedCapacity: number;
@@ -87,7 +90,8 @@ type LocationRow = {
 
 export async function getPanelDraftCatalog(
   supabase: SupabaseClient,
-  eventId: string
+  eventId: string,
+  waitlistServiceClient?: SupabaseClient
 ): Promise<{ panels: PanelDraftRow[]; audienceTypes: PanelAudienceTypeOption[] }> {
   const [panelsResult, sectionsResult, audienceResult, locationsResult] =
     await Promise.all([
@@ -179,6 +183,7 @@ export async function getPanelDraftCatalog(
     sectionsByPanel.set(row.panel_id, sections);
   }
 
+  const waitlistCounts = waitlistServiceClient ? await loadPanelWaitlistCounts(waitlistServiceClient, eventId) : new Map();
   const panels = panelRows.map((row) => {
     const location = row.location_id ? locationsById.get(row.location_id) : null;
     if (row.location_id && !location) throw new Error("Location forum non caricata.");
@@ -203,6 +208,7 @@ export async function getPanelDraftCatalog(
       confirmedRegistrationCount:
         confirmedRegistrationsByPanel.get(row.id)?.size ?? 0,
       sections,
+      ...(waitlistServiceClient ? (waitlistCounts.get(row.id) ?? { waitingPeople: 0, offeredPeople: 0 }) : {}),
       assignedCapacity: sections.reduce((sum, section) => sum + section.capacity, 0),
     } satisfies PanelDraftRow;
   });

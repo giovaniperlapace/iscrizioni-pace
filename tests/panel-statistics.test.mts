@@ -253,3 +253,21 @@ test("booking coverage counts unique adults and explicitly selected children acr
   assert.deepEqual(calculatePanelBookingCoverage([], []), { bookedPeople: 0, registeredPeople: 0 });
   assert.deepEqual(calculatePanelBookingCoverage(registrations, []), { bookedPeople: 0, registeredPeople: 5 });
 });
+
+test("full status excludes unbookable guest seats and includes outstanding offers", () => {
+  const make = (offeredPeople = 0) => buildPanelStatisticsSnapshot({
+    panels, locations,
+    audiences: [...audiences, { id: "guests", name: "Ospiti", bookingChannel: "internal_assignment" }],
+    sections: [{ ...sections[0], capacity: 2 }, { id: "guests", panelId: "panel", audienceTypeId: "guests", capacity: 28 }],
+    individualChoices: [{ registrationId: "a", panelId: "panel", sectionId: "individual-section", choice: "yes", registrationStatus: "submitted", childrenCount: offeredPeople ? 0 : 1 }],
+    schoolReservations: [], waitlistCounts: new Map([["panel", { waitingPeople: 4, offeredPeople }]]),
+  });
+  for (const snapshot of [make(), make(1)]) {
+    assert.equal(snapshot.panels[0].state, "full");
+    assert.equal(snapshot.panels[0].utilizationPercent, 100);
+    assert.equal(snapshot.panels[0].bookableRemainingSeats, 0);
+    assert.equal(snapshot.summary.waitingPeople, 4);
+    assert.equal(snapshot.panels[0].capacity, 30);
+  }
+  assert.equal(make(1).summary.offeredPeople, 1);
+});
