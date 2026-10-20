@@ -85,7 +85,7 @@ test("roster includes no-email people and children, uses panel-specific school q
 });
 
 test("all roster reads fail closed, including missing identities", async () => {
-  for (const table of ["events", "event_moments", "moment_attendance_choices", "school_panel_reservations", "panel_seat_sections", "panel_audience_types", "registrations", "school_bookings", "participants", "registration_children", "panel_child_selections"]) {
+  for (const table of ["events", "event_moments", "moment_attendance_choices", "school_panel_reservations", "panel_seat_sections", "panel_audience_types", "registrations", "school_bookings", "participants", "registration_children", "panel_child_selections", "panel_waitlist"]) {
     await assert.rejects(loadPanelRoster(fixture({}, table).db, panelId, admin), table);
   }
   await assert.rejects(loadPanelRoster(fixture({ participants: [] }).db, panelId, admin), /Incomplete/);
@@ -105,13 +105,13 @@ test("roster pages beyond 1000 people and refuses an incomplete last page", asyn
   await assert.rejects(loadPanelRoster(fixture(overrides, "moment_attendance_choices", 1000).db, panelId, admin));
 });
 
-test("Excel contains four sheets, one row per person, numeric seats and literal names", async () => {
+test("Excel contains five sheets, one row per person, numeric seats and literal names", async () => {
   const roster = (await loadPanelRoster(fixture().db, panelId, admin))!;
   roster.people[0].firstName = "=SYNTHETIC()";
   const buffer = await writePanelRosterWorkbook(roster);
   const book = new ExcelJS.Workbook();
   await book.xlsx.load(buffer as unknown as ExcelJS.Buffer);
-  assert.deepEqual(book.worksheets.map(sheet => sheet.name), ["Riepilogo", "Partecipanti", "Scuole", "Ospiti riservati"]);
+  assert.deepEqual(book.worksheets.map(sheet => sheet.name), ["Riepilogo", "Partecipanti", "Lista attesa", "Scuole", "Ospiti riservati"]);
   assert.equal(book.getWorksheet("Partecipanti")!.rowCount, 3);
   assert.equal(book.getWorksheet("Partecipanti")!.getCell("A2").value, "=SYNTHETIC()");
   assert.equal(book.getWorksheet("Partecipanti")!.getCell("F3").value, 1);
@@ -171,4 +171,45 @@ test("Forum roster and export exclude unselected linked children", async () => {
   const roster = await loadPanelRoster(fixture({panel_child_selections: []}).db, panelId, admin);
   assert.equal(roster!.individualSeats, 1);
   assert.deepEqual(roster!.people.map(person => person.id), ["r"]);
+});
+
+test("roster includes active waiting families and offers, preserves FIFO and confirmed totals, exports separate sheet", async () => {
+  const statuses = ["waiting", "offered", "expired", "cancelled", "accepted", "offered", "waiting", "waiting"];
+  const queue = statuses.map((status, i) => ({id: `q${i}`, event_id: "event", panel_id: panelId, section_id: "seats", registration_id: `w${i}`, status, sequence: 20 - i, expires_at: i === 5 ? "2020-01-01T00:00:00Z" : "2099-01-01T00:00:00Z"}));
+  const overrides = {
+    panel_waitlist: [...queue, {...queue[0], registration_id: "r"}, {...queue[0], registration_id: "foreign", event_id: "other"}, {...queue[0], registration_id: "other-panel", panel_id: "other"}],
+    registrations: [{id: "r", event_id: "event", participant_id: "p", status: "submitted", deleted_at: null}, ...statuses.map((_, i) => ({id: `w${i}`, event_id: "event", participant_id: `wp${i}`, status: i === 6 ? "cancelled" : "submitted", deleted_at: i === 7 ? "2026-01-01" : null}))],
+    participants: [{id: "p", first_name: "Anna", last_name: "Bianchi", public_code: "FIX1"}, ...statuses.map((_, i) => ({id: `wp${i}`, first_name: `Attesa${i}`, last_name: "Persona", public_code: ""}))],
+    panel_child_selections: [{panel_id: panelId, registration_id: "w0", child_ids: ["wc"]}],
+    registration_children: [{id: "wc", registration_id: "w0", first_name: "Minore", last_name: "Scelto", position: 1}, {id: "excluded", registration_id: "w0", first_name: "Non", last_name: "Scelto", position: 2}],
+  };
+  const roster = (await loadPanelRoster(fixture(overrides).db, panelId, [{role: "manager", eventId: "event"}]))!;
+  assert.equal(roster.individualSeats, 1);
+  assert.deepEqual(roster.people.map(row => row.id), ["r"]);
+  assert.deepEqual(roster.waitlist.map(row => [row.id, row.status]), [["w1", "offered"], ["w0", "waiting"], ["wc", "waiting"]]);
+  assert.equal(roster.waitlist[2].accompanyingAdult, "Attesa0 Persona");
+  assert.equal(roster.waitlist[1].expiresAt, null);
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(await writePanelRosterWorkbook(roster) as unknown as ExcelJS.Buffer);
+  assert.equal(book.getWorksheet("Partecipanti")!.rowCount, 2);
+  const sheet = book.getWorksheet("Lista attesa")!;
+  assert.equal(sheet.rowCount, 4);
+  assert.equal(sheet.getCell("F2").value, "Posto offerto da confermare");
+  assert.equal(sheet.getCell("F4").value, "In lista d’attesa");
+});
+
+test("waiting roster loads over 1000 requests and fails on a missing final page", async () => {
+  const ids = Array.from({length: 1003}, (_, i) => `q${i}`);
+  const overrides = {
+    moment_attendance_choices: [],
+    panel_waitlist: ids.map((id, sequence) => ({id, event_id: "event", panel_id: panelId, registration_id: id, section_id: "seats", status: "waiting", sequence, expires_at: null})),
+    registrations: ids.map(id => ({id, event_id: "event", participant_id: id, status: "submitted", deleted_at: null})),
+    participants: ids.map(id => ({id, first_name: "Persona", last_name: id, public_code: ""})),
+  };
+  const h = fixture(overrides);
+  const roster = (await loadPanelRoster(h.db, panelId, admin))!;
+  assert.equal(roster.individualSeats, 0);
+  assert.equal(roster.waitlist.length, 1003);
+  assert.ok(h.pages.some(page => page.table === "panel_waitlist" && page.from === 1000));
+  await assert.rejects(loadPanelRoster(fixture(overrides, "panel_waitlist", 1000).db, panelId, admin));
 });

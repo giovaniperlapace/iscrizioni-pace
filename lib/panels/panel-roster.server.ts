@@ -3,10 +3,12 @@ import type { EventUserRole } from "../auth/session.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import { canAccessPanelManagement } from "./management-access.ts";
 
+export type PanelRosterPerson = { id: string; firstName: string; lastName: string; kind: "Iscritto" | "Minore accompagnato"; accompanyingAdult: string; code: string };
 export type PanelRoster = {
   panelId: string;
   title: string;
-  people: { id: string; firstName: string; lastName: string; kind: "Iscritto" | "Minore accompagnato"; accompanyingAdult: string; code: string }[];
+  people: PanelRosterPerson[];
+  waitlist: (PanelRosterPerson & { status: "waiting" | "offered"; expiresAt: string | null })[];
   schools: { id: string; name: string; city: string; classDescription: string; students: number; companions: number }[];
   guests: { id: string; name: string; seats: number }[];
   individualSeats: number;
@@ -30,18 +32,24 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
   if (panel.error) throw new Error("Panel unavailable");
   if (!panel.data) return null;
 
-  const [choices, reservations, sections, audiences, selections] = await Promise.all([
+  const [choices, reservations, sections, audiences, selections, queue] = await Promise.all([
     loadAllRows<{ registration_id: string; seat_section_id: string | null }>((from, to) => db.from("moment_attendance_choices").select("registration_id,seat_section_id").eq("moment_id", panelId).eq("choice", "yes").order("id").range(from, to)),
     loadAllRows<{ booking_id: string; student_count: number; companion_count: number }>((from, to) => db.from("school_panel_reservations").select("booking_id,student_count,companion_count").eq("event_id", eventId).eq("panel_id", panelId).eq("status", "reserved").order("id").range(from, to)),
     loadAllRows<{ id: string; audience_type_id: string; capacity: number }>((from, to) => db.from("panel_seat_sections").select("id,audience_type_id,capacity").eq("event_id", eventId).eq("panel_id", panelId).order("id").range(from, to)),
     loadAllRows<{ id: string; name: string; booking_channel: string }>((from, to) => db.from("panel_audience_types").select("id,name,booking_channel").eq("event_id", eventId).order("id").range(from, to)),
     loadAllRows<{ registration_id: string; child_ids: string[] }>((from, to) => db.from("panel_child_selections").select("registration_id,child_ids").eq("panel_id", panelId).order("registration_id").range(from, to)),
+    loadAllRows<{ registration_id: string; section_id: string; status: "waiting" | "offered"; expires_at: string | null; sequence: number }>((from, to) => db.from("panel_waitlist").select("registration_id,section_id,status,expires_at,sequence").eq("event_id", eventId).eq("panel_id", panelId).in("status", ["waiting", "offered"]).order("sequence").range(from, to)),
   ]);
   const selectedChildren = new Map(selections.data.map(row => [row.registration_id, new Set(row.child_ids)]));
   const sectionIds = new Set(sections.data.map(row => row.id));
-  const registrationIds = choices.data.filter(row => row.seat_section_id && sectionIds.has(row.seat_section_id)).map(row => row.registration_id);
+  const confirmedIds = new Set(choices.data.filter(row => row.seat_section_id && sectionIds.has(row.seat_section_id)).map(row => row.registration_id));
+  const now = Date.now();
+  const activeQueue = queue.data.filter(row => sectionIds.has(row.section_id) && !confirmedIds.has(row.registration_id)
+    && (row.status === "waiting" || (row.status === "offered" && Date.parse(row.expires_at ?? "") > now)));
+  const queuedByRegistration = new Map(activeQueue.map(row => [row.registration_id, row]));
+  const registrationIds = [...confirmedIds, ...queuedByRegistration.keys()];
   const [registrations, bookings] = await Promise.all([
-    loadRowsForIds<{ id: string; participant_id: string }>(registrationIds, (ids, from, to) => db.from("registrations").select("id,participant_id").in("id", ids).eq("event_id", eventId).is("deleted_at", null).neq("status", "cancelled").order("id").range(from, to)),
+    loadRowsForIds<{ id: string; participant_id: string }>(registrationIds, (ids, from, to) => db.from("registrations").select("id,participant_id").in("id", ids).eq("event_id", eventId).is("deleted_at", null).in("status", ["submitted", "confirmed"]).order("id").range(from, to)),
     loadRowsForIds<{ id: string; school_name: string; school_city: string; class_description: string }>(reservations.data.map(row => row.booking_id), (ids, from, to) => db.from("school_bookings").select("id,school_name,school_city,class_description").in("id", ids).eq("event_id", eventId).neq("status", "cancelled").order("id").range(from, to)),
   ]);
   const [participants, children] = await Promise.all([
@@ -56,6 +64,7 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
     list.push(child); childrenByRegistration.set(child.registration_id, list);
   }
   const people: PanelRoster["people"] = [];
+  const waitlist: PanelRoster["waitlist"] = [];
   const sortedRegistrations = [...registrations.data].sort((a, b) => {
     const left = identities.get(a.participant_id), right = identities.get(b.participant_id);
     return `${left?.last_name ?? ""} ${left?.first_name ?? ""}`.localeCompare(`${right?.last_name ?? ""} ${right?.first_name ?? ""}`, "it") || a.id.localeCompare(b.id);
@@ -65,11 +74,20 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
     if (!person) throw new Error("Incomplete panel identities");
     const firstName = person.first_name?.trim() || "Nome non disponibile";
     const lastName = person.last_name?.trim() || "";
-    people.push({ id: registration.id, firstName, lastName, kind: "Iscritto", accompanyingAdult: "", code: person.public_code ?? "" });
+    const queued = queuedByRegistration.get(registration.id);
+    const addPerson = (person: PanelRosterPerson) => {
+      if (queued) waitlist.push({ ...person, status: queued.status, expiresAt: queued.status === "offered" ? queued.expires_at : null });
+      else people.push(person);
+    };
+    addPerson({ id: registration.id, firstName, lastName, kind: "Iscritto", accompanyingAdult: "", code: person.public_code ?? "" });
     for (const child of (childrenByRegistration.get(registration.id) ?? []).sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))) {
-      people.push({ id: child.id, firstName: child.first_name, lastName: child.last_name, kind: "Minore accompagnato", accompanyingAdult: `${firstName} ${lastName}`.trim(), code: "" });
+      addPerson({ id: child.id, firstName: child.first_name, lastName: child.last_name, kind: "Minore accompagnato", accompanyingAdult: `${firstName} ${lastName}`.trim(), code: "" });
     }
   }
+  // Keep families together in FIFO request order, without exposing recipient metadata.
+  const queueOrder = new Map(activeQueue.map(row => [row.registration_id, row.sequence]));
+  for (const child of children.data) if (queueOrder.has(child.registration_id)) queueOrder.set(child.id, queueOrder.get(child.registration_id)!);
+  waitlist.sort((a, b) => (queueOrder.get(a.id) ?? 0) - (queueOrder.get(b.id) ?? 0));
   const bookingById = new Map(bookings.data.map(row => [row.id, row]));
   const schools: PanelRoster["schools"] = [];
   for (const reservation of reservations.data) {
@@ -86,5 +104,5 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
     if (!audience || !Number.isInteger(section.capacity) || section.capacity < 0) throw new Error("Incomplete panel sections");
     if (audience.booking_channel === "internal_assignment") guests.push({ id: section.id, name: audience.name, seats: section.capacity });
   }
-  return { panelId, title: panel.data.title, people, schools, guests, individualSeats: people.length, schoolSeats: schools.reduce((sum, row) => sum + row.students + row.companions, 0), reservedGuestSeats: guests.reduce((sum, row) => sum + row.seats, 0) };
+  return { panelId, title: panel.data.title, people, waitlist, schools, guests, individualSeats: people.length, schoolSeats: schools.reduce((sum, row) => sum + row.students + row.companions, 0), reservedGuestSeats: guests.reduce((sum, row) => sum + row.seats, 0) };
 }

@@ -7434,3 +7434,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   migration o estensione permessi. Verificati test, browser desktop/mobile e
   avanzamento automatico reale FIFO con due offerte da 60 minuti al Forum 4.
   Dettagli: `docs/forum-attesa-statistiche-2026-10-20.md`.
+
+## Forum: Iscritti include lista d’attesa — 2026-10-21
+
+- Modale Iscritti Admin/Manager: confermati e lista d’attesa nominale distinti;
+  FIFO, soli minori selezionati e offerte valide con scadenza Rome.
+- Excel con foglio Lista attesa e contatori separati; prenotati non includono
+  persone in coda/offerte. Scope evento/ruoli conservato, nessuna migration.
+- 997 test, lint, TypeScript, build, browser Admin/Manager desktop/mobile e
+  riconciliazione in sola lettura con dati reali. Verbale:
+  `docs/forum-iscritti-lista-attesa-2026-10-21.md`.

@@ -20,9 +20,13 @@ export async function writePanelRosterWorkbook(roster: PanelRoster): Promise<Buf
     ["Iscritti e minori accompagnati", roster.individualSeats], ["Studenti e accompagnatori scuole", roster.schoolSeats],
     ["Totale posti prenotati", roster.individualSeats + roster.schoolSeats], ["Posti ospiti riservati", roster.reservedGuestSeats],
     ["Prenotati e riservati", roster.individualSeats + roster.schoolSeats + roster.reservedGuestSeats],
+    ["Persone in lista d’attesa", roster.waitlist.length],
+    ["Di cui con posto offerto da confermare", roster.waitlist.filter(row => row.status === "offered").length],
+    ["Nota lista d’attesa", "Adulti e minori selezionati; non inclusi nei posti prenotati. Offerte scadute escluse."],
     ["Nota", "Gli ospiti sono posti riservati, esclusi dal form pubblico. Non rappresentano iscrizioni o presenze registrate."],
   ]);
   add("Partecipanti", ["Nome", "Cognome", "Tipo", "Adulto accompagnatore", "Codice", "Posti"], roster.people.map(row => [row.firstName, row.lastName, row.kind, row.accompanyingAdult, row.code, 1]));
+  add("Lista attesa", ["Nome", "Cognome", "Tipo", "Adulto accompagnatore", "Codice", "Stato", "Scadenza offerta (Roma)"], roster.waitlist.map(row => [row.firstName, row.lastName, row.kind, row.accompanyingAdult, row.code, row.status === "offered" ? "Posto offerto da confermare" : "In lista d’attesa", row.expiresAt ? new Date(row.expiresAt).toLocaleString("it-IT", { timeZone: "Europe/Rome" }) : ""]));
   add("Scuole", ["Scuola", "Città", "Classe / gruppo", "Studenti", "Accompagnatori", "Posti"], roster.schools.map(row => [row.name, row.city, row.classDescription, row.students, row.companions, row.students + row.companions]));
   add("Ospiti riservati", ["Quota", "Posti riservati"], roster.guests.map(row => [row.name, row.seats]));
   return Buffer.from(await book.xlsx.writeBuffer());
