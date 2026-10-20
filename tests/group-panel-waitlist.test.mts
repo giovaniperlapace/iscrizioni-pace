@@ -22,7 +22,7 @@ for(const locale of ["it","en","fr","de","es","nl","uk"] as const) test(`leader 
   assert.match(email.text,new RegExp(`/dashboard/capogruppo/panel\\?section=${id}`));
   assert.match(email.text,/Synthetic <person>/);assert.match(email.html,/Synthetic &lt;person&gt;/);
   assert.doesNotMatch(email.html,/token=|claim=|accept=|registrationId=/);
-  assert.match(email.text,/30/);assert.match(email.text,/Europe\/Rome/);
+  assert.match(email.text,/60/);assert.match(email.text,/Europe\/Rome/);
 });
 test("leader email requires a valid section instead of falling back to a personal booking",()=>{
   assert.throws(()=>renderForumWaitlistEmail({...offer,sectionId:undefined},"https://example.invalid"));

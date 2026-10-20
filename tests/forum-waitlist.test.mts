@@ -15,7 +15,7 @@ const offer: ForumWaitlistOffer = { id: "offer", claim: "claim", eventId: "event
 for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"] as const) test(`Forum offer and queue instructions are complete in ${locale}`, () => {
   const email = renderForumWaitlistEmail({ ...offer, locale }, "https://example.invalid");
   assert.equal(email.subject, FORUM_WAITLIST_COPY[locale].emailSubject);
-  assert.match(email.text, /30/);
+  assert.match(email.text, /60/);
   assert.ok(email.text.includes(FORUM_WAITLIST_COPY[locale].swap));
   assert.ok(email.text.includes(FORUM_WAITLIST_COPY[locale].deadline));
   assert.match(email.text, new RegExp(`/forum/${panelId}`));

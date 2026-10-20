@@ -59,9 +59,22 @@ set role authenticated;
 select set_individual_panel_booking(fw(101),fw(401),fw(501),false);
 reset role;
 do $$ begin assert (select count(*)=0 from panel_waitlist where status='offered');end $$;
+begin;
+select app.advance_panel_waitlist(fw(501),true);
+do $$ begin
+ assert (select expires_at-offered_at between interval '1 hour' and interval '1 hour 1 second'
+   from panel_waitlist where registration_id=fw(102) and status='offered');
+end $$;
+rollback;
 set role service_role;
 select claim_panel_waitlist_notification();
 reset role;
+do $$ begin
+ assert (select expires_at-offered_at between interval '1 hour' and interval '1 hour 1 second'
+   from panel_waitlist where registration_id=fw(102) and status='offered');
+end $$;
+\echo PASS one-hour reservation both on promotion and notification claim
+
 do $$ begin
  assert (select status='offered' and notification_status='sending' from panel_waitlist where registration_id=fw(102));
  assert (select status='waiting' from panel_waitlist where registration_id=fw(103));

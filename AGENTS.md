@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Lista d’attesa Forum: un’ora per confermare — 2026-10-20
+
+- Termine portato a 60 minuti per partecipanti e capigruppo, sia alla
+  promozione sia al claim della notifica; testi web/email in sette lingue.
+  Questa durata supera i riferimenti storici a 30 minuti.
+- Migration `20261020143000_forum_waitlist_one_hour`; dettagli e verifiche
+  in `docs/forum-lista-attesa-un-ora-2026-10-20.md`.
+
 ## Forum: minori scelti per ogni prenotazione — 2026-10-20
 
 - Area personale e capogruppo scelgono nominalmente i minori per ciascun Forum;
