@@ -117,7 +117,6 @@ export function PanelStatisticsReport({
           label="In attesa senza Forum nella stessa fascia"
           value={statistics.waitlistedWithoutBookingPeople}
           mailHref={canManage ? `/dashboard/${dashboard}?section=email&nav=${navMode}&campaignForumOutreach=waiting_without_booking` : undefined}
-          detail="Totale evento · persone uniche, minori selezionati inclusi · almeno una fascia senza prenotazione confermata; offerte da confermare incluse"
         />
         <PanelSummaryCard
           icon={Users}
