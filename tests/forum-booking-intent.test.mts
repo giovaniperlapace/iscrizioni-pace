@@ -127,6 +127,7 @@ test("participant booking screen highlights the requested forum with one anchor 
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const dependencies: Record<string, unknown> = {
     "next/link": {default: (props: Record<string, unknown>) => { const {prefetch, ...rest}=props; void prefetch; return runtime.jsx("a",rest); }},
+    "@/lib/panels/seat-count": await import("../lib/panels/seat-count.ts"),
     "@/lib/panels/attendance-copy": await import("../lib/panels/attendance-copy.ts"),
     "react/jsx-runtime": runtime,
     react: await import("react"),
