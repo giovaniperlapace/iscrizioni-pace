@@ -676,6 +676,31 @@ export async function setParticipantPanelBooking(formData: FormData) {
   redirect(`/dashboard/partecipante?panelSaved=${saved}&forum=${encodeURIComponent(panelId)}#forum-${encodeURIComponent(panelId)}`);
 }
 
+export async function updateForumOpeningState(formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const auth = await getCurrentAuthContext(supabase);
+  if (!auth) redirect("/login");
+  if (!auth.eventRoles.some((role) => role.role === "admin" && role.eventId === null)) {
+    return formFailure([{ field: null, code: "forbidden" }]);
+  }
+  const eventId = optionalText(formData.get("eventId"));
+  const expectedMode = optionalText(formData.get("expectedMode"));
+  const open = formData.get("open");
+  if (!eventId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId)
+      || !expectedMode || !["internal", "catalog", "open"].includes(expectedMode)
+      || (open !== "true" && open !== "false")) {
+    return formFailure([{ field: null, code: "invalid" }]);
+  }
+  const { error } = await supabase.rpc("set_forum_bookings_open", {
+    p_event: eventId, p_expected_mode: expectedMode, p_open: open === "true",
+  });
+  if (error) {
+    return formFailure([{ field: null, code: error.code === "42501" ? "forbidden" : "forumOpeningRefresh" }]);
+  }
+  revalidatePath("/", "layout");
+  redirect("/dashboard/admin?section=impostazioni");
+}
+
 export async function updateEventOpeningState(formData: FormData) {
   const eventId = optionalText(formData.get("eventId"));
   const intent = optionalText(formData.get("intent"));

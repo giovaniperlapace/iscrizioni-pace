@@ -19,8 +19,11 @@ try {
   assert.match(denied.headers().location, /\/login/);
   await control({ mode: "catalog" });
   await page.goto(base);
+  assert.equal(await page.locator("#event-program, #panel-program").count(), 0);
+  await control({ mode: "open" });
+  await page.goto(base);
   assert.equal(await page.locator("#event-program > div > ol > li").count(), 3);
-  assert.equal(await page.locator("#schools, a.panel-access-cue").count(), 0);
+  assert.equal(await page.locator("#schools").count(), 0);
   assert.match(await page.locator("#panel-program").innerText(), /Panel pubblico sintetico/);
   await control({ mode: "internal", role: "admin" });
   const context = await browser.newContext({ locale: "it-IT" });

@@ -18,7 +18,7 @@ type HomeProps = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  if (await getPanelReleaseMode(await createSupabaseServerClient()) === "internal") return {};
+  if (await getPanelReleaseMode(await createSupabaseServerClient()) !== "open") return {};
   const locale = await getRequestLocale();
   const copy = getEventProgramCopy(locale);
 
@@ -35,9 +35,9 @@ export default async function Home({ searchParams }: HomeProps) {
     createSupabaseServerClient(),
   ]);
   const releaseMode = await getPanelReleaseMode(supabase);
-  if (releaseMode === "internal") return <RegistrationHome searchParams={Promise.resolve(params)} />;
+  if (releaseMode !== "open") return <RegistrationHome searchParams={Promise.resolve(params)} />;
   const panels = await getPublicPanelProgram(supabase);
 
-  const { data: { user } } = releaseMode === "open" ? await supabase.auth.getUser() : { data: { user: null } };
-  return <ProgramHome forum={params.forum} authenticated={Boolean(user)} locale={locale} panels={panels} bookingsOpen={releaseMode === "open"} email={params.email} error={params.error} sent={params.sent} />;
+  const { data: { user } } = await supabase.auth.getUser();
+  return <ProgramHome forum={params.forum} authenticated={Boolean(user)} locale={locale} panels={panels} bookingsOpen={true} email={params.email} error={params.error} sent={params.sent} />;
 }

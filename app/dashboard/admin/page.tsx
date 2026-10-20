@@ -28,6 +28,8 @@ import { loadRolelessPerson } from "@/lib/operational-users/roleless-person";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { OperationsSettingsNavigation } from "@/app/dashboard/operations-settings-navigation";
 import { Settings } from "lucide-react";
+import { ForumOpeningSettings } from "@/app/dashboard/admin/forum-opening-settings";
+import type { PanelReleaseMode } from "@/lib/panels/release";
 
 import { ReliableForm } from "@/components/reliable-form";
 import { permanentRedirect, redirect } from "next/navigation";
@@ -212,6 +214,7 @@ type AdminPageProps = {
 };
 
 type EventRow = {
+  panel_access_mode: PanelReleaseMode;
   id: string;
   slug: string;
   title: string;
@@ -1131,7 +1134,7 @@ export default async function AdminDashboardPage({
     const { data: events } = await loadAllRows((from, to) => serviceSupabase
       .from("events")
       .select(
-        "id,slug,title,status,is_current,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at"
+        "id,slug,title,status,is_current,city,country,starts_on,ends_on,registration_opens_at,registration_closes_at,panel_access_mode"
       )
       .order("starts_on", { ascending: false }).order("id").range(from, to));
 
@@ -1770,6 +1773,10 @@ function EventOpeningCard({ snapshot }: { snapshot: EventSnapshot }) {
           )}
         </div>
       </div>
+
+      {event.is_current && event.status === "published" ? (
+        <ForumOpeningSettings eventId={event.id} mode={event.panel_access_mode} />
+      ) : null}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <EventValue label="Iscrizioni" value={summary.total} />

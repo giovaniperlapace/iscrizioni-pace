@@ -22,9 +22,9 @@ for(const path of ['/scuole','/scuole/accesso','/scuole/conferma']){
 }
 control('http://127.0.0.1:55440/mode?value=catalog');
 ab('open',base);snap();
-check('document.body.innerText.includes("Panel sintetico riservato")&&!document.querySelector("#schools")&&!document.querySelector("a.panel-access-cue")','preserved future catalog without school/public-booking CTA');
+check('!document.querySelector("#panel-program")&&!document.querySelector("#schools")&&!!document.querySelector("input[type=email]")','legacy catalog mode keeps public forums hidden');
 ab('set','viewport','390','844');snap();
-check('document.documentElement.scrollWidth<=innerWidth','future catalog mobile width');
+check('document.documentElement.scrollWidth<=innerWidth','closed home mobile width');
 ab('screenshot','/tmp/pace-release-future-mobile.png');
 control('http://127.0.0.1:55440/mode?value=internal');
 ab('open',base+'/release-panel-check');snap();

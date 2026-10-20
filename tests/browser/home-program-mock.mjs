@@ -34,4 +34,4 @@ createServer((req, res) => {
   if (path === "rpc/get_panel_seat_availability") return send([{ section_id: "section", occupied: 20 }, ...extraPanels.map(panel => ({ section_id: `section-${panel.id}`, occupied: 20 }))]);
   if (path === "rpc/get_public_panel_program") return send([{ panel_id: "published", title: "Panel pubblico sintetico", description: null, starts_at: "2026-10-26T08:30:00Z", ends_at: "2026-10-26T10:30:00Z", location_name: "Sala pubblica", location_address: null, availability: "available" }, ...extraPanels.map(panel => ({ panel_id: panel.id, title: panel.title, description: "Forum di prova", starts_at: panel.starts_at, ends_at: panel.ends_at, location_name: "Sala pubblica", location_address: null, availability: panel.full ? "full" : "available" }))]);
   res.statusCode = 500; send({ code: "UNEXPECTED", message: `Unexpected synthetic request ${url.pathname}` });
-}).listen(55441, "127.0.0.1", () => console.log("Synthetic home programme database ready"));
+}).listen(Number(process.env.HOME_PROGRAM_MOCK_PORT ?? 55441), "127.0.0.1", () => console.log("Synthetic home programme database ready"));

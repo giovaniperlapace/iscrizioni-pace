@@ -4,6 +4,7 @@ import type { SupportedLocale } from "../i18n/config.ts";
 
 const en = {
   ...ROLE_ERRORS,
+  forumOpeningRefresh: "Could not confirm the Forum opening change. Refresh this page to check the current state before trying again.",
   groupConflict: GROUP_GEOGRAPHY_COPY.en.conflict,
   groupTerritory: GROUP_GEOGRAPHY_COPY.en.territoryError,
   conflict: "These details have changed. Reopen the participant record before saving again.",
@@ -22,6 +23,7 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   en,
   it: {
     ...ROLE_ERRORS,
+  forumOpeningRefresh: "Impossibile confermare la modifica dell’apertura dei Forum. Aggiorna questa pagina per verificare lo stato attuale prima di riprovare.",
     groupConflict: GROUP_GEOGRAPHY_COPY.it.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.it.territoryError,
     conflict: "Questi dati sono cambiati. Riapri la scheda del partecipante prima di salvare di nuovo.",
@@ -36,6 +38,7 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   },
   fr: {
     ...ROLE_ERRORS,
+  forumOpeningRefresh: "Impossible de confirmer la modification. Actualisez cette page pour vérifier l’état actuel avant de réessayer.",
     groupConflict: GROUP_GEOGRAPHY_COPY.fr.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.fr.territoryError,
     conflict: "Ces informations ont changé. Rouvrez la fiche du participant avant d’enregistrer à nouveau.",
@@ -44,6 +47,7 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   },
   de: {
     ...ROLE_ERRORS,
+  forumOpeningRefresh: "Die Änderung konnte nicht bestätigt werden. Aktualisieren Sie diese Seite, um den aktuellen Status vor einem erneuten Versuch zu prüfen.",
     groupConflict: GROUP_GEOGRAPHY_COPY.de.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.de.territoryError,
     conflict: "Diese Angaben wurden geändert. Öffne den Teilnehmendeneintrag vor dem erneuten Speichern neu.",
@@ -51,6 +55,7 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   },
   es: {
     ...ROLE_ERRORS,
+  forumOpeningRefresh: "No se pudo confirmar el cambio. Actualiza esta página para comprobar el estado actual antes de volver a intentarlo.",
     groupConflict: GROUP_GEOGRAPHY_COPY.es.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.es.territoryError,
     conflict: "Estos datos han cambiado. Vuelve a abrir la ficha del participante antes de guardar de nuevo.",
@@ -58,6 +63,7 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   },
   nl: {
     ...ROLE_ERRORS,
+  forumOpeningRefresh: "De wijziging kon niet worden bevestigd. Vernieuw deze pagina om de huidige status te controleren voordat je het opnieuw probeert.",
     groupConflict: GROUP_GEOGRAPHY_COPY.nl.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.nl.territoryError,
     conflict: "Deze gegevens zijn gewijzigd. Open de deelnemersgegevens opnieuw voordat je weer opslaat.",
@@ -65,6 +71,7 @@ export const FORM_COPY: Record<SupportedLocale, typeof en> = {
   },
   uk: {
     ...ROLE_ERRORS,
+  forumOpeningRefresh: "Не вдалося підтвердити зміну. Оновіть цю сторінку, щоб перевірити поточний стан перед повторною спробою.",
     groupConflict: GROUP_GEOGRAPHY_COPY.uk.conflict,
     groupTerritory: GROUP_GEOGRAPHY_COPY.uk.territoryError,
     conflict: "Ці дані змінилися. Знову відкрийте картку учасника перед повторним збереженням.",

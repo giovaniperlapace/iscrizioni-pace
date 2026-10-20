@@ -44,13 +44,15 @@ test("official general programme has correct Rome start times across the dayligh
   assert.equal(formatPanelProgramDay(getGeneralHomeProgram("it")[0].startsAt, "it"), "domenica 25 ottobre");
 });
 
-test("private route uses the established role/scope guard before all loaders; public internal home returns before the programme", () => {
+test("private route uses the established role/scope guard before all loaders; public closed home returns before the programme", () => {
   const route = readFileSync(new URL("../app/dashboard/anteprima-home/page.tsx", import.meta.url), "utf8");
   assert.ok(route.indexOf("await requirePanelManager()") < route.indexOf('db.from("events")'));
   assert.match(route, /index: false, follow: false/);
   assert.match(route, /bookingsOpen=\{false\} preview/);
   const home = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.ok(home.indexOf('if (releaseMode === "internal")') < home.indexOf("const panels = await"));
+  const gate = home.indexOf('if (releaseMode !== "open")');
+  assert.ok(gate >= 0 && gate < home.indexOf("const panels = await"));
+  assert.match(home, /getPanelReleaseMode\(await createSupabaseServerClient\(\)\) !== "open"/);
   assert.match(home, /return <RegistrationHome/);
 });
 

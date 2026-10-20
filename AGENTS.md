@@ -20,6 +20,19 @@
   disponibile restano senza conferma. Nessuna email di collaudo o reinvio reale.
   Dettagli e verifiche: `docs/campagne-esiti-e-reinvio-2026-10-20.md`.
 
+## Toggle apertura Forum nelle impostazioni Admin — 2026-10-20
+
+- Admin → Impostazioni → Evento, solo evento corrente
+  pubblicato. Attiva `open`; disattiva `internal`, nascondendo i Forum dal sito.
+  Su richiesta successiva, la home mostra i Forum solo in `open`, anche se
+  incontra il vecchio stato `catalog`. Prenotazioni e visibilità sono collegate.
+- Server e RPC verificano Admin globale; lock, stato atteso e audit atomico.
+  Prenotazioni e flag scuole conservati. Nessuna apertura implicita.
+- Migration `20261020220000_admin_forum_opening` applicata e registrata in
+  produzione dopo backup verificato: 67 tabelle, 135.492 righe e 201 funzioni
+  preesistenti invariate. Confermati `internal` e accesso scuole attivo.
+  Verifiche e limiti in `docs/forum-toggle-admin-2026-10-20.md`.
+
 ## Forum: presenza dichiarata richiesta — 2026-10-20
 
 - Nuove prenotazioni, coda e accettazioni personali/capogruppo richiedono
