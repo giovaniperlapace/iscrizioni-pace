@@ -162,7 +162,7 @@ async function processCampaignBlock(options: {
       if (suppression?.suppressed) throw new EmailDeliveryError("recipient_suppressed");
       prepared.push({ row, recipient: delivery.recipient, input: {
         to: delivery.email,
-        metadata: { campaign_recipient_id: row.id, campaign_id: campaign.id },
+        metadata: { recipient_id: row.id, campaign_id: campaign.id },
         subject: renderCampaignTemplate(
           campaign.subject_template,
           delivery.templateData

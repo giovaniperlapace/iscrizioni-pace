@@ -52,10 +52,11 @@ export function normalizePostmarkEvent(
     input.Metadata && typeof input.Metadata === "object"
       ? (input.Metadata as Record<string, unknown>)
       : {};
+  const metadataRecipientId = metadata.recipient_id ?? metadata.campaign_recipient_id;
   const recipientId =
-    typeof metadata.campaign_recipient_id === "string" &&
-    /^[\da-f-]{36}$/i.test(metadata.campaign_recipient_id)
-      ? metadata.campaign_recipient_id
+    typeof metadataRecipientId === "string" &&
+    /^[\da-f-]{36}$/i.test(metadataRecipientId)
+      ? metadataRecipientId
       : null;
   return {
     event_key: messageHash(

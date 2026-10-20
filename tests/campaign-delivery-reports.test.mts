@@ -32,3 +32,9 @@ test('only definitive transient bounce or exact queue expiry can be recoverable'
 test('CSV escapes multiline quotes and spreadsheet formulas',()=>{
  assert.equal(csvCell('a"b\nc'),'"a""b\nc"');assert.equal(csvCell('=WEBSERVICE("bad")'),'"\'=WEBSERVICE(""bad"")"');assert.equal(csvCell(' @SUM(A1)'),'"\' @SUM(A1)"');
 });
+test('Postmark-compatible recipient metadata resolves the same recipient as the historical key',()=>{
+ const modern=normalizePostmarkEvent({...base,RecordType:'Delivery',Metadata:{recipient_id:id}},'broadcast');
+ const legacy=normalizePostmarkEvent({...base,RecordType:'Delivery',Metadata:{campaign_recipient_id:id}},'broadcast');
+ assert.equal(modern.recipient_id,id);assert.deepEqual(modern,legacy);
+ assert.equal(normalizePostmarkEvent({...base,RecordType:'Delivery',Metadata:{recipient_id:'invalid'}},'broadcast').recipient_id,null);
+});
