@@ -1,3 +1,4 @@
+import { formatSeatCount } from "@/lib/panels/seat-count";
 import { ForumLanguages } from "@/components/forum-languages";
 import { ArrowUp, CalendarDays, CheckCircle2, Clock3, LockKeyhole, MapPin, XCircle } from "lucide-react";
 
@@ -101,7 +102,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                                 <span>{copy.availability[panel.availability]}</span>
                                 {typeof panel.remainingSeats === "number" && Number.isFinite(panel.remainingSeats) ? (
                                   <span className="text-[10px] font-normal leading-4">
-                                    <span className="sr-only">{programCopy.seats}: </span>{Math.max(0, panel.remainingSeats).toLocaleString(locale)}
+                                    {formatSeatCount(panel.remainingSeats, locale)}
                                   </span>
                                 ) : null}
                               </span>

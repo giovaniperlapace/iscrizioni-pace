@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ForumChildSelection } from "@/components/forum-child-selection";
 import { FORUM_CHILD_COPY, type ForumChildOption } from "@/lib/panels/child-selection";
 
+import { formatSeatCount } from "@/lib/panels/seat-count";
 import { ForumLanguages } from "@/components/forum-languages";
 import { useForumAvailability } from "@/lib/panels/use-forum-availability";
 import { FORUM_WAITLIST_COPY } from "@/lib/panels/waitlist-copy";
@@ -381,7 +382,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
           <span>{statusLabel}</span>
           {typeof row.remaining_seats === "number" && Number.isFinite(row.remaining_seats) ? (
             <span className="block text-[10px] font-normal leading-4">
-              <span className="sr-only">{copy.remainingSeats}: </span>{Math.max(0, row.remaining_seats).toLocaleString(locale)}
+              {formatSeatCount(row.remaining_seats, locale)}
             </span>
           ) : null}
         </span>
