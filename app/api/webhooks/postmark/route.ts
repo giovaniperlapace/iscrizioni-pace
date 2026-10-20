@@ -37,8 +37,9 @@ export async function POST(request: Request) {
       JSON.parse(text),
       getEmailConfig().broadcastStream,
     );
-  } catch {
-    return NextResponse.json({ error: "Invalid event" }, { status: 400 });
+  } catch (cause) {
+    const reason = cause instanceof Error && ["wrong_stream", "unsupported_event", "invalid_recipient", "invalid_date", "invalid_message", "invalid_suppression"].includes(cause.message) ? cause.message : "invalid_json";
+    return NextResponse.json({ error: "Invalid event", reason }, { status: 400 });
   }
   const { error } = await createSupabaseServiceClient().rpc(
     "record_campaign_delivery_event",

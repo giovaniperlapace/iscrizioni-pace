@@ -11,6 +11,7 @@ create table email_campaign_recipients(id uuid primary key default extensions.ge
 create table audit_logs(event_id uuid,actor_user_id uuid,action text,entity_table text,entity_id uuid,metadata jsonb);
 \ir ../../supabase/migrations/20261020180000_campaign_delivery_reports.sql
 \ir ../../supabase/migrations/20261020190000_campaign_evidence_guard.sql
+\ir ../../supabase/migrations/20261020200000_campaign_event_reconciliation.sql
 insert into events values(md5('event')::uuid),(md5('other')::uuid);
 insert into event_user_roles values(md5('manager')::uuid,'manager',md5('event')::uuid),(md5('viewer')::uuid,'manager_viewer',md5('event')::uuid);
 insert into email_campaigns(id,event_id,name,subject_template,body_template,status,recipient_count,test_sent_at) values(md5('campaign')::uuid,md5('event')::uuid,'Campagna','Oggetto','Testo','partial',3,now());

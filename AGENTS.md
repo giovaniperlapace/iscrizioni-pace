@@ -15,7 +15,7 @@
 
 ## Modifiche multiple e filtri Manager — 2026-10-20
 
-- Implementazione locale Admin/Manager: selezione esplicita nella pagina (max 100),
+- Admin/Manager: selezione esplicita nella pagina (max 100),
   aggiunta conservativa di un tag e assegnazione gruppo/servizio in transazione unica.
   Conferma con riepilogo e nomi; minori nel gruppo d'iscrizione, senza tag/servizi.
 - Filtri delle presenze comunicate per mezza giornata (sì/no combinabili) e
