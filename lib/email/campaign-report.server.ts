@@ -168,11 +168,7 @@ export async function campaignReport(
       !retried.has(r.id) &&
       !ev.some((e) => ["Delivery", "SpamComplaint"].includes(e.kind)) &&
       ((r.status === "failed" &&
-        [
-          "delivery_failed",
-          "invalid_recipient",
-          "postmark_message_too_large",
-        ].includes(r.error_code)) ||
+        r.error_code === "delivery_failed") ||
         (r.status === "sent" &&
           ev.some((e) => e.kind === "Bounce" && e.retryable) &&
           !ev.some((e) => e.kind === "Bounce" && !e.retryable))),

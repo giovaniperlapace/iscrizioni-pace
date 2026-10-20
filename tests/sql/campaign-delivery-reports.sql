@@ -12,6 +12,7 @@ create table audit_logs(event_id uuid,actor_user_id uuid,action text,entity_tabl
 \ir ../../supabase/migrations/20261020180000_campaign_delivery_reports.sql
 \ir ../../supabase/migrations/20261020190000_campaign_evidence_guard.sql
 \ir ../../supabase/migrations/20261020200000_campaign_event_reconciliation.sql
+\ir ../../supabase/migrations/20261020210000_campaign_retry_recoverable_only.sql
 insert into events values(md5('event')::uuid),(md5('other')::uuid);
 insert into event_user_roles values(md5('manager')::uuid,'manager',md5('event')::uuid),(md5('viewer')::uuid,'manager_viewer',md5('event')::uuid);
 insert into email_campaigns(id,event_id,name,subject_template,body_template,status,recipient_count,test_sent_at) values(md5('campaign')::uuid,md5('event')::uuid,'Campagna','Oggetto','Testo','partial',3,now());
@@ -36,6 +37,11 @@ do $$ declare e jsonb; result uuid; before_count integer; begin
  begin perform retry_email_campaign_recipients(md5('campaign')::uuid,array[md5('retry')::uuid],md5('viewer')::uuid);raise exception 'viewer accepted';exception when raise_exception then assert sqlerrm='Accesso non consentito';end;
  begin perform retry_email_campaign_recipients(md5('campaign')::uuid,array[md5('blocked')::uuid],md5('manager')::uuid);raise exception 'blocked accepted';exception when raise_exception then assert sqlerrm='Destinatario non reinviabile';end;
  begin perform retry_email_campaign_recipients(md5('campaign')::uuid,array[md5('delivered')::uuid],md5('manager')::uuid);raise exception 'delivered accepted';exception when raise_exception then assert sqlerrm='Destinatario non reinviabile';end;
+ update email_campaign_recipients set error_code='invalid_recipient' where recipient_key='retry';
+ begin perform retry_email_campaign_recipients(md5('campaign')::uuid,array[md5('retry')::uuid],md5('manager')::uuid);raise exception 'invalid address accepted';exception when raise_exception then assert sqlerrm='Destinatario non reinviabile';end;
+ update email_campaign_recipients set error_code='postmark_message_too_large' where recipient_key='retry';
+ begin perform retry_email_campaign_recipients(md5('campaign')::uuid,array[md5('retry')::uuid],md5('manager')::uuid);raise exception 'oversized message accepted';exception when raise_exception then assert sqlerrm='Destinatario non reinviabile';end;
+ update email_campaign_recipients set error_code='delivery_failed' where recipient_key='retry';
  select count(*) into before_count from email_campaigns;
  begin perform retry_email_campaign_recipients(md5('campaign')::uuid,array[md5('retry')::uuid,md5('blocked')::uuid],md5('manager')::uuid);raise exception 'mixed accepted';exception when raise_exception then assert sqlerrm='Destinatario non reinviabile';end;
  assert (select count(*)=before_count from email_campaigns),'partial retry persisted';

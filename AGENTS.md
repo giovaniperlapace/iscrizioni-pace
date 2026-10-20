@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Campagne: esiti per destinatario e reinvio selettivo — 2026-10-20
+
+- Email → Campagne inviate → Dettagli: storico paginato, ricerca, filtri,
+  conteggi, esito individuale e CSV completo. Distinguere accettazione API,
+  consegna al server, rifiuto, blocco/disiscrizione, incerto ed esclusione.
+  Il contatto corrente non va presentato come indirizzo storico verificato.
+- Webhook Postmark broadcast autenticato, eventi idempotenti e soppressioni
+  ordinate; dati di consegna protetti e nessun corpo email acquisito.
+  Anteprima con avvisi sui disiscritti; nessuna riattivazione automatica.
+- Reinvio esplicito solo dei fallimenti recuperabili, in nuova campagna collegata:
+  selezione, conferma nominale, verifica fresca di ruolo/indirizzo/soppressioni,
+  atomicità e deduplicazione. Escludere consegnati, incerti, disiscritti, reclami,
+  indirizzi invalidi e messaggi troppo grandi; questi ultimi richiedono una nuova
+  campagna corretta. Conservare la coda e i controlli precedenti.
+- Migration `20261020180000`, `20261020190000`, `20261020200000`,
+  `20261020210000` applicate in production con backup e controlli. Riconciliati
+  936 messaggi e 6 soppressioni; 78 identificativi storici senza riscontro
+  disponibile restano senza conferma. Nessuna email di collaudo o reinvio reale.
+  Dettagli e verifiche: `docs/campagne-esiti-e-reinvio-2026-10-20.md`.
+
 ## Forum: presenza dichiarata richiesta — 2026-10-20
 
 - Nuove prenotazioni, coda e accettazioni personali/capogruppo richiedono
