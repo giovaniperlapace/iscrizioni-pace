@@ -131,7 +131,8 @@ update participant_group_assignments set group_id=fw(702) where registration_id=
 select app.advance_panel_waitlist(fw(507),true);
 do $$ begin assert (select status='cancelled' from panel_waitlist where registration_id=fw(104) and panel_id=fw(407) order by sequence desc limit 1);end $$;
 \echo PASS revoked leader and moved participant lose access and pending notification
--- Existing Manager/Viewer exclusion, anonymous protection and release gate remain.
+-- Manager/Viewer alone still cannot book: remove the explicit leader memberships.
+delete from group_memberships where user_id in (fw(11),fw(12));
 do $$ declare uid uuid; begin
  foreach uid in array array[fw(11),fw(12),null] loop
   perform set_config('request.jwt.claim.sub',coalesce(uid::text,''),true);

@@ -50,6 +50,7 @@ try {
  console.log('PASS canonical migrations and Forum queue applied to disposable PostgreSQL');
  try { console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
  try { console.log(file('tests/sql/group-panel-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
+ console.log(file('tests/sql/group-forum-read-only.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/admin-forum-opening.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/explicit-forum-children.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  if(process.argv.includes('--group-browser')) { const {checkGroupForumServerActions}=await import('../browser/group-forum-waitlist-actions.mjs');await checkGroupForumServerActions(psql,process.env.GROUP_FORUM_BROWSER_URL); }

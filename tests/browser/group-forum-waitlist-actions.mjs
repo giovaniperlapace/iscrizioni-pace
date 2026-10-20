@@ -9,6 +9,7 @@ export async function checkGroupForumServerActions(psql,base='http://127.0.0.1:3
  assert.match(base,/^http:\/\/127\.0\.0\.1:\d+$/);
  // Reuse the deterministic fixture setup, before any test actions.
  psql(readFileSync('tests/sql/group-panel-waitlist.sql','utf8').split("select set_config('request.jwt.claim.sub'")[0]+'commit;');
+ psql(`insert into event_user_roles(event_id,user_id,role) values(fw(200),fw(9),'manager');select set_config('request.jwt.claim.sub',fw(9)::text,false);select set_group_panel_booking(fw(200),fw(507),fw(101),true);`);
  const calls=[];
  const literal=v=>`'${String(v).replaceAll("'","''")}'`;
  const server=createServer(async(req,res)=>{
@@ -16,17 +17,18 @@ export async function checkGroupForumServerActions(psql,base='http://127.0.0.1:3
   if(url.pathname==='/auth/v1/user'){res.end(JSON.stringify({id:fw(9),email:'queue-9@example.invalid',aud:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:'2026-01-01T00:00:00Z'}));return;}
   if(url.pathname==='/rest/v1/events'){res.end(JSON.stringify({id:fw(200),title:'Synthetic event'}));return;}
   if(url.pathname==='/rest/v1/group_memberships'){res.end(JSON.stringify([{role:'capogruppo',groups:{event_id:fw(200)}}]));return;}
-  if(url.pathname==='/rest/v1/event_user_roles'){res.end('[]');return;}
+  if(url.pathname==='/rest/v1/event_user_roles'){res.end(JSON.stringify([{role:'manager',event_id:fw(200)}]));return;}
   if(!url.pathname.startsWith('/rest/v1/rpc/')){res.statusCode=500;res.end(JSON.stringify({message:'Unexpected synthetic endpoint'}));return;}
   const name=url.pathname.split('/').at(-1);let input='';for await(const chunk of req)input+=chunk;const body=input?JSON.parse(input):{};
   let expr;
   if(name==='get_panel_release_mode')expr='to_jsonb(get_panel_release_mode())';
   else if(name==='has_panel_reception_duty')expr='to_jsonb(false)';
   else if(name==='get_group_panel_booking_view')expr=`get_group_panel_booking_view(${literal(body.p_event_id)},${body.p_section_id?literal(body.p_section_id):'null'})`;
+  else if(name==='set_panel_family_booking')expr=`set_panel_family_booking(${literal(body.p_registration_id)},${body.p_panel_id?literal(body.p_panel_id):'null'},${literal(body.p_section_id)},${literal(body.p_intent)},array[${(body.p_child_ids??[]).map(literal).join(',')}]::uuid[],${body.p_as_leader?'true':'false'},${literal(body.p_locale??'it')})`;
   else if(name==='set_group_panel_waitlist')expr=`set_group_panel_waitlist(${literal(body.p_event_id)},${literal(body.p_section_id)},${literal(body.p_registration_id)},${literal(body.p_intent)},${literal(body.p_locale)})`;
   else if(name==='set_group_panel_booking')expr=`set_group_panel_booking(${literal(body.p_event_id)},${literal(body.p_section_id)},${literal(body.p_registration_id)},${body.p_booked?'true':'false'})`;
   else {res.statusCode=500;res.end(JSON.stringify({message:'Unexpected synthetic RPC',code:'UNKNOWN'}));return;}
-  try {res.end(psql(`begin;set local role authenticated;set local "request.jwt.claim.sub"=${literal(fw(9))};select ${expr};commit;`,true).trim());}
+  try {res.end(psql(`begin${['get_panel_release_mode','get_group_panel_booking_view','has_panel_reception_duty'].includes(name)?' read only':''};set local role authenticated;set local "request.jwt.claim.sub"=${literal(fw(9))};select ${expr};commit;`,true).trim());}
   catch(e) {console.error('Synthetic RPC failed',name,String(e.stderr).slice(0,350));res.statusCode=400;res.end(JSON.stringify({message:'Synthetic RPC rejected',code:'42501'}));}
  });
  let browser;
@@ -40,13 +42,14 @@ export async function checkGroupForumServerActions(psql,base='http://127.0.0.1:3
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
   await page.clock.install();
-  await page.goto(base+'/dashboard/capogruppo/panel?section='+fw(507));
+  await page.goto(base+'/dashboard/capogruppo/panel');
+  await page.locator('#group-panel').selectOption(fw(507));
   await page.getByRole('heading',{name:'Iscrizioni ai forum'}).waitFor();
   const person=page.getByRole('row').filter({has:page.getByRole('rowheader',{name:/Synthetic 4 Queue/})});
   const click=async(label)=>{const response=page.waitForResponse(r=>!!r.request().headers()['next-action']);await person.getByRole('button',{name:label}).click();await response;};
   const joined=page.waitForResponse(r=>!!r.request().headers()['next-action']);
   await person.getByRole('button',{name:/Metti in lista d’attesa/}).evaluate(button=>{button.click();button.click();});await joined;
-  assert.equal(calls.filter(name=>name==='/rest/v1/rpc/set_group_panel_waitlist').length,1);
+  assert.equal(calls.filter(name=>name==='/rest/v1/rpc/set_panel_family_booking').length,1);
   await person.getByRole('button',{name:/Rimuovi dalla lista d’attesa/}).waitFor();
   assert.match(psql(`select status from panel_waitlist where registration_id=fw(104) and panel_id=fw(407) and status='waiting';`,true),/waiting/);
   // The leader can book a different forum while this request waits.
@@ -62,7 +65,7 @@ export async function checkGroupForumServerActions(psql,base='http://127.0.0.1:3
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.screenshot({path:'/tmp/pace-group-forum-mobile.png',fullPage:true});
-  await page.clock.setSystemTime(new Date(Date.now()+31*60*1000));await page.clock.fastForward(1000);
+  await page.clock.setSystemTime(new Date(Date.now()+61*60*1000));await page.clock.fastForward(1000);
   assert.ok(await person.getByRole('button',{name:/Conferma il posto/}).isDisabled());
   await page.clock.setSystemTime(new Date());await page.clock.fastForward(1000);
   await click(/Conferma il posto/);
@@ -93,12 +96,12 @@ export async function checkGroupForumServerActions(psql,base='http://127.0.0.1:3
   const denied=page.waitForResponse(r=>r.url().includes('/panel/availability?'));
   await page.clock.fastForward(300000);await denied;
   await page.locator('main').getByRole('alert').waitFor();await page.locator('tbody').waitFor({state:'detached'});
-  assert.ok(calls.includes('/rest/v1/set_group_panel_waitlist')||calls.includes('/rest/v1/rpc/set_group_panel_waitlist'));
+  assert.ok(calls.includes('/rest/v1/rpc/set_panel_family_booking'));
   assert.deepEqual(errors,[]);
   console.log('PASS original group page -> Server Actions -> PostgreSQL -> queue/offer/atomic swap/booking/cancellation; real five-minute route, retained filter, desktop/mobile, seven languages, duplicate click, deadline, refresh recovery, revocation');
  } finally {
   if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));
   // Group fixture is disposable, and subsequent individual tests expect no extra pending offers.
-  psql(`update panel_waitlist set status='cancelled' where panel_id=fw(407) and status in ('waiting','offered');update participants set auth_user_id=fw(4) where id=fw(24);delete from registration_children where registration_id=fw(104) and first_name='Child' and last_name='Queue';`);
+  psql(`update panel_waitlist set status='cancelled' where panel_id=fw(407) and status in ('waiting','offered');update participants set auth_user_id=fw(4) where id=fw(24);delete from event_user_roles where user_id=fw(9) and role='manager';`);
  }
 }

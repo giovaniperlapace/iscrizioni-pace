@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Forum capogruppo: lettura e ruoli cumulati — 2026-10-20
+
+- Corretto errore PostgREST `25006`: catalogo STABLE compatibile con READ ONLY;
+  lock invariati nelle prenotazioni. Migration `20261020230000` in produzione.
+- Su richiesta dell’utente, un Manager/Viewer che è anche capogruppo mantiene
+  la facoltà di prenotare per i propri gruppi. Il solo ruolo operativo non basta.
+  Migration `20261020231000` applicata; scope evento/gruppi e revoca conservati.
+- Backup verificati, dati e ACL invariati. Browser originale con DB temporaneo:
+  iscrizione, annullamento, coda/accettazione, ruoli cumulati, mobile, sette lingue.
+  Lettura READ ONLY live: 24 Forum e 120 membri per un Manager + capogruppo.
+  Dettagli: `docs/forum-capogruppo-caricamento-2026-10-20.md`.
+
 ## Campagne: esiti per destinatario e reinvio selettivo — 2026-10-20
 
 - Email → Campagne inviate → Dettagli: storico paginato, ricerca, filtri,
