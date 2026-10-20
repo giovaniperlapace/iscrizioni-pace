@@ -60,6 +60,7 @@ try {
    select set_individual_panel_waitlist(fw(103),fw(401),fw(501),'join');`);
  }
  const concurrent=sql=>new Promise((resolve,reject)=>{const proc=spawn(join(bin,'psql'),args,{stdio:['pipe','pipe','pipe']});let out='',err='';proc.stdout.on('data',x=>out+=x);proc.stderr.on('data',x=>err+=x);proc.on('error',reject);proc.on('exit',code=>code===0?resolve(out):reject(new Error(err)));proc.stdin.end(sql);});
+ console.log(file('tests/sql/forum-attendance-required.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  // Claims, last-seat bookings and an acceptance race are checked on independent connections.
  psql(`update panel_waitlist_scheduler set next_run_at=clock_timestamp(); update panel_seat_sections set capacity=2 where id=fw(501);
  `);

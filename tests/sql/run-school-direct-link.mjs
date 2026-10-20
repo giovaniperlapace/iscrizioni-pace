@@ -8,7 +8,7 @@ const bin='/opt/homebrew/opt/postgresql@17/bin';
 const dir=mkdtempSync(join(tmpdir(),'pace-school-direct-'));
 const args=['-h',dir,'-p','55491','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-q'];
 const psql=(sql,unaligned=false)=>execFileSync(join(bin,'psql'),unaligned?[...args,'-tA']:args,{input:sql,encoding:'utf8',maxBuffer:8*1024*1024,stdio:['pipe','pipe','pipe']});
-const file=path=>execFileSync(join(bin,'psql'),[...args,'-f',path],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
+const file=path=>execFileSync(join(bin,'psql'),[...args,...(path.startsWith('supabase/migrations/')?['-1']:[]),'-f',path],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
 let started=false;
 try {
  execFileSync(join(bin,'initdb'),['-D',join(dir,'data'),'-U','postgres','-A','trust','--no-locale','-E','UTF8'],{stdio:'pipe'});

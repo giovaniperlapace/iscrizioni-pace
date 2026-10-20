@@ -651,6 +651,7 @@ export async function setParticipantPanelBooking(formData: FormData) {
   if (error) {
     const message = error.message.toLowerCase();
     const errorCode =
+      error.code === "PFA01" ? "attendance" :
       error.code === "23P01" || message.includes("overlap")
         ? "overlap"
         : message.includes("full") || message.includes("capacity exceeded")
@@ -662,7 +663,7 @@ export async function setParticipantPanelBooking(formData: FormData) {
               : message.includes("not available")
                 ? "unavailable"
                 : "failed";
-    redirect(`/dashboard/partecipante?panelError=${errorCode}`);
+    redirect(`/dashboard/partecipante?panelError=${errorCode}&forum=${encodeURIComponent(panelId)}#participant-panels-title`);
   }
 
   if (data?.status === "expired" || data?.status === "available") {

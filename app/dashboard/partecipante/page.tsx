@@ -1450,6 +1450,8 @@ export default async function PartecipanteDashboardPage({
                       <EditableRegistrationInfo
                         icon={CalendarDays}
                         label={copy.expectedPresence}
+                        id="declared-attendance"
+                        open={firstParam(params.editAttendance) === "1"}
                         value={attendanceSummary}
                         editable={Boolean(editable)}
                         copy={copy}

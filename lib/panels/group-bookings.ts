@@ -12,7 +12,7 @@ export type GroupPanelParticipant = {
 };
 export type GroupPanelView = { panels: GroupPanel[]; participants: GroupPanelParticipant[] };
 export type GroupWaitlistIntent = "join" | "leave" | "accept";
-export type GroupBookingResult = { count: number; seats: number } | { status: "queued" | "left" | "booked" } | { error: "failure" | "scopeError" | "fullError" | "conflictError" | "unavailable" | "expired" | "availableNow" };
+export type GroupBookingResult = { count: number; seats: number } | { status: "queued" | "left" | "booked" } | { error: "attendance" | "failure" | "scopeError" | "fullError" | "conflictError" | "unavailable" | "expired" | "availableNow" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function isUuid(value: unknown): value is string { return typeof value === "string" && UUID.test(value); }
 export function validGroupBookingSelection(section: unknown, ids: unknown): ids is string[] {
@@ -31,6 +31,7 @@ export function toggleVisiblePanelSelection(selected: string[], visible: GroupPa
   return [...next];
 }
 export function groupBookingError(error: {code?: string; message: string}): GroupBookingResult {
+  if (error.code === "PFA01") return {error: "attendance"};
   if (error.code === "42501") return {error: "scopeError"};
   if (error.code === "23P01") return {error: "conflictError"};
   if (/full|capacity exceeded/i.test(error.message)) return {error: "fullError"};

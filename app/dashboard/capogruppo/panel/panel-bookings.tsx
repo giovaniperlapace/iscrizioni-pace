@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { FORUM_ATTENDANCE_COPY } from "@/lib/panels/attendance-copy";
 import { ForumChildSelection } from "@/components/forum-child-selection";
 import { FORUM_CHILD_COPY } from "@/lib/panels/child-selection";
 
@@ -18,7 +20,7 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
   const router = useRouter();
   const queueCopy = GROUP_WAITLIST_COPY[locale];
   const sharedQueueCopy = FORUM_WAITLIST_COPY[locale];
-  const copy = { ...GROUP_BOOKING_COPY[locale], queued: sharedQueueCopy.queued, offered: sharedQueueCopy.offered,
+  const copy = { ...GROUP_BOOKING_COPY[locale], attendance: FORUM_ATTENDANCE_COPY[locale].leaderError, queued: sharedQueueCopy.queued, offered: sharedQueueCopy.offered,
     expired: queueCopy.expired, availableNow: queueCopy.available };
   const [childDrafts, setChildDrafts] = useState<Record<string, string[]>>({});
   const [query, setQuery] = useState("");
@@ -125,6 +127,7 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
                   {row.status === "offered" ? <button type="button" className={`btn-secondary mt-2 sm:ml-2 ${buttonClass}`} disabled={pending || !!availabilityError} onClick={() => submit(row.registrationId, "leave", row.waitlistSectionId)} aria-label={`${queueCopy.leave}: ${row.name}`}>{queueCopy.leave}</button> : null}
                   {feedback ? <p role={"error" in feedback.response ? "alert" : "status"} className={`mt-2 max-w-xs text-xs ${"error" in feedback.response ? "text-red-800" : "text-green-800"}`}>
                     {"error" in feedback.response ? copy[feedback.response.error] : ""}
+                    {"error" in feedback.response && feedback.response.error === "attendance" ? <Link prefetch={false} className="mt-2 block font-semibold underline" href={`/dashboard/capogruppo?q=${encodeURIComponent(row.name)}`}>{FORUM_ATTENDANCE_COPY[locale].edit}</Link> : null}
                   </p> : null}
                 </td>
               </tr>;

@@ -126,6 +126,8 @@ test("participant booking screen highlights the requested forum with one anchor 
   const source = readFileSync(new URL("../app/dashboard/partecipante/participant-panel-bookings.tsx", import.meta.url), "utf8");
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const dependencies: Record<string, unknown> = {
+    "next/link": {default: (props: Record<string, unknown>) => { const {prefetch, ...rest}=props; void prefetch; return runtime.jsx("a",rest); }},
+    "@/lib/panels/attendance-copy": await import("../lib/panels/attendance-copy.ts"),
     "react/jsx-runtime": runtime,
     react: await import("react"),
     "@/components/forum-child-selection": {ForumChildSelection: () => null},
@@ -148,4 +150,9 @@ test("participant booking screen highlights the requested forum with one anchor 
   assert.match(html, /Mettiti in coda per questo Forum/);
   assert.doesNotMatch(html, /disabled=""/);
   assert.equal(writes, 0, "following an intent never automatically reserves a seat");
+  for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"]) {
+    const blocked = renderToStaticMarkup(exports.ParticipantPanelBookings({locale, registrationId: "registration", rows: [row], error: "attendance"}));
+    assert.match(blocked, /role="alert"/);
+    assert.match(blocked, /editAttendance=1#declared-attendance/);
+  }
 });

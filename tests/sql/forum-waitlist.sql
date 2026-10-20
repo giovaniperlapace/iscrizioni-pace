@@ -10,6 +10,10 @@ insert into event_user_roles(event_id,user_id,role) values(null,fw(10),'admin'),
 insert into participants(id,auth_user_id,first_name,last_name,public_code)
  select fw(20+n),fw(n),'Synthetic '||n,'Queue',lpad(n::text,4,'Q') from generate_series(1,9) n;
 insert into registrations(id,event_id,participant_id,status) select fw(100+n),fw(200),fw(20+n),'confirmed' from generate_series(1,9) n;
+insert into event_attendance_choices(registration_id,day,day_part,choice)
+ select fw(100+n),d::date,part,'yes' from generate_series(1,9) n
+ cross join generate_series('2026-10-25'::date,'2026-10-27'::date,interval '1 day') d
+ cross join (values('morning'),('afternoon')) parts(part);
 insert into panel_audience_types(id,event_id,code,name,booking_channel,sort_order) values
  (fw(300),fw(200),'individual','Individual','individual',1),(fw(301),fw(200),'schools','Schools','school_booking',2);
 begin;

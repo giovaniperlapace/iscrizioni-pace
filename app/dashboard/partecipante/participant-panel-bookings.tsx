@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { FORUM_ATTENDANCE_COPY } from "@/lib/panels/attendance-copy";
 import { useState } from "react";
 import { ForumChildSelection } from "@/components/forum-child-selection";
 import { FORUM_CHILD_COPY, type ForumChildOption } from "@/lib/panels/child-selection";
@@ -267,7 +269,7 @@ export function ParticipantPanelBookings({ locale, registrationId, rows: initial
   const { rows, error: refreshError } = useForumAvailability(registrationId, initialRows);
   const waitlistCopy = FORUM_WAITLIST_COPY[locale] ?? FORUM_WAITLIST_COPY.en;
   const baseCopy = COPY[locale] ?? COPY.en;
-  const copy: Copy = { ...baseCopy, conflict: waitlistCopy.conflict, errors: { ...baseCopy.errors, overlap: waitlistCopy.overlap, expired: waitlistCopy.expired, available: waitlistCopy.available } };
+  const copy: Copy = { ...baseCopy, conflict: waitlistCopy.conflict, errors: { ...baseCopy.errors, attendance: FORUM_ATTENDANCE_COPY[locale].error, overlap: waitlistCopy.overlap, expired: waitlistCopy.expired, available: waitlistCopy.available } };
   const sectionsByPanel = new Map<string, { first: string; count: number }>();
   for (const row of rows) {
     const entry = sectionsByPanel.get(row.panel_id);
@@ -300,6 +302,7 @@ export function ParticipantPanelBookings({ locale, registrationId, rows: initial
       {error || refreshError ? (
         <p role="alert" className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
           {copy.errors[error ?? refreshError ?? "failed"] ?? copy.errors.failed}
+          {error === "attendance" ? <Link prefetch={false} className="mt-2 block font-semibold underline" href="/dashboard/partecipante?overlay=iscrizione&editAttendance=1#declared-attendance">{FORUM_ATTENDANCE_COPY[locale].edit}</Link> : null}
         </p>
       ) : null}
 

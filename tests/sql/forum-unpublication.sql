@@ -11,6 +11,8 @@ insert into participants(id,auth_user_id,first_name,last_name,public_code)
  select fw(720+n),fw(n),'Withdrawal','Synthetic',lpad(n::text,4,'W') from generate_series(1,4) n;
 insert into registrations(id,event_id,participant_id,status)
  select fw(710+n),fw(200),fw(720+n),'confirmed' from generate_series(1,4) n;
+insert into event_attendance_choices(registration_id,day,day_part,choice)
+ select fw(710+n),'2026-10-25'::date,'morning','yes' from generate_series(1,4) n;
 insert into registration_children(registration_id,position,first_name,last_name,birth_date) values(fw(711),1,'Minor','Synthetic','2018-01-01');
 select set_config('request.jwt.claim.sub',fw(1)::text,true);
 select set_panel_family_booking(fw(711),fw(701),fw(702),'book',array(select id from registration_children where registration_id=fw(711)));
