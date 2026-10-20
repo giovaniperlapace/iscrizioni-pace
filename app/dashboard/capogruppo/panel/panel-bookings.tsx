@@ -1,5 +1,6 @@
 "use client";
 
+import { ForumLanguages } from "@/components/forum-languages";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { CalendarDays, RefreshCw, UserMinus, UserPlus, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -64,6 +65,7 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
         <option value="">{copy.choose}</option>
         {view.panels.map(p => <option key={p.sectionId} value={p.sectionId}>{p.title} · {dateFormat.format(new Date(p.startsAt))}–{timeFormat.format(new Date(p.endsAt))} · {p.location} · {p.audience}</option>)}
       </select>
+      {panel ? <ForumLanguages panelId={panel.panelId} locale={locale} /> : null}
       {!view.panels.length ? <p>{copy.emptyPanels}</p> : null}
       {panel ? <div className="flex items-center justify-start gap-3 border-t border-[var(--peace-border)] pt-3 text-sm">
         <strong className="rounded-full bg-[var(--peace-sky-100)] px-3 py-1.5 text-[var(--peace-blue-800)]">{copy.remaining}: {panel.remaining}</strong>

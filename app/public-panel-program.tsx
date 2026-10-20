@@ -1,3 +1,4 @@
+import { ForumLanguages } from "@/components/forum-languages";
 import { ArrowUp, CalendarDays, CheckCircle2, Clock3, LockKeyhole, MapPin, XCircle } from "lucide-react";
 
 import { forumBookingPath } from "@/lib/panels/booking-intent";
@@ -103,6 +104,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                           <h5 className="mt-4 break-words text-xl font-extrabold leading-tight text-[var(--peace-ink)]">
                             {panel.title}
                           </h5>
+                          <ForumLanguages panelId={panel.id} locale={locale} />
                           {panel.description ? (
                             <p className="mt-3 whitespace-pre-line break-words text-sm leading-6 text-[var(--peace-muted)]">
                               {panel.description}

@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Lingue dei forum — 2026-10-20
+
+- Riga discreta condivisa nel catalogo pubblico/anteprima, scelta personale,
+  forum selezionato capogruppo e scuole/docente; sette lingue, ritorno a capo
+  mobile. Fonte: programma definitivo ricevuto il 20 ottobre (forum 10 senza
+  spagnolo). Configurazione editoriale per UUID in
+  `lib/events/assisi-2026-forum-languages.ts`, nessun matching per titolo/numero.
+- UUID ignoti non mostrano lingue; nuove revisioni richiedono aggiornamento
+  esplicito della configurazione. Nessuna migration o modifica di permessi,
+  prenotazioni o apertura catalogo. Dettagli in `docs/forum-languages-2026-10-20.md`.
+
+
 ## QR gruppo: stampa individuale nella modale e accesso Manager — 2026-10-19
 
 - Unico pulsante «QR del gruppo» nelle gestioni Admin/Manager: QR unico con

@@ -1,5 +1,6 @@
 "use client";
 
+import { ForumLanguages } from "@/components/forum-languages";
 import { useForumAvailability } from "@/lib/panels/use-forum-availability";
 import { FORUM_WAITLIST_COPY } from "@/lib/panels/waitlist-copy";
 import { getEventProgramCopy } from "@/lib/events/program-copy";
@@ -366,6 +367,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
           {statusLabel}
         </span>
       </div>
+      <ForumLanguages panelId={row.panel_id} locale={locale} />
       {row.description ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{row.description}</p> : null}
       <dl className="grid gap-2 text-sm text-[var(--peace-ink)]">
         <div className="flex items-start gap-2"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{formatDate(row.starts_at, locale)}</span></div>

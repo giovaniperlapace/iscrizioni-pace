@@ -126,6 +126,7 @@ test("participant booking screen highlights the requested forum with one anchor 
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const dependencies: Record<string, unknown> = {
     "react/jsx-runtime": runtime,
+    "@/components/forum-languages": { ForumLanguages: () => null },
     "@/lib/panels/use-forum-availability": { useForumAvailability: (_id: string, rows: unknown) => ({ rows, error: null }) },
     "@/lib/events/program-copy": { getEventProgramCopy },
     "@/lib/panels/waitlist-copy": { FORUM_WAITLIST_COPY },
