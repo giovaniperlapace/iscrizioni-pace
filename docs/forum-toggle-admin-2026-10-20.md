@@ -76,4 +76,15 @@ e accesso scuole attivo. Nessuna apertura, email o prenotazione di collaudo.
 L’identificativo iniziale `20261020160000` era già occupato da
 `manager_bulk_operations`: il primo tentativo è stato interamente annullato.
 Rinominata la migration e rieseguita con successo l’intera suite SQL prima
-dell’applicazione. Il frontend è pronto per il commit/push e deploy autorizzati.
+dell’applicazione. Il codice è stato pubblicato su `main` con commit `178b18c` e deployment
+production READY `dpl_94XPUqoRtDnNqY8SbY2WD2wCM7Gh`, associato al dominio
+`registrationspeace.santegidio.org` (build 48 secondi).
+
+Verifica browser dopo READY: home con modulo email e Forum nascosti;
+`/dashboard/admin?section=impostazioni` senza sessione reindirizza al login.
+Il toggle autenticato è stato collaudato sinteticamente; non è stato azionato
+su produzione e non è stata creata una sessione Admin per questa verifica.
+
+Scope Vercel corrente verificato: `giovaniperlapaces-projects`; il riferimento
+storico `stefano-orlandos-projects-de2d57cb` non è disponibile per l’account
+attuale. Usata cache npm separata per evitare un errore della cache CLI locale.

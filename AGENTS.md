@@ -31,6 +31,8 @@
 - Migration `20261020220000_admin_forum_opening` applicata e registrata in
   produzione dopo backup verificato: 67 tabelle, 135.492 righe e 201 funzioni
   preesistenti invariate. Confermati `internal` e accesso scuole attivo.
+  Codice `178b18c` su main, production READY e dominio verificato: Forum
+  nascosti e impostazioni protette. Nessuna apertura reale di collaudo.
   Verifiche e limiti in `docs/forum-toggle-admin-2026-10-20.md`.
 
 ## Forum: presenza dichiarata richiesta — 2026-10-20
