@@ -165,8 +165,7 @@ export function PanelPublicationTable({
             <col className="w-[22%]" />
             <col className="w-[17%]" />
             <col className="w-[13%]" />
-            <col className="w-[16%]" />
-            <col className="w-[11%]" />
+            <col className="w-[27%]" />
             <col className="w-[16%]" />
           </colgroup>
           <thead>
@@ -188,7 +187,6 @@ export function PanelPublicationTable({
               <th className="py-3 pr-4 font-semibold">Quando</th>
               <th className="py-3 pr-4 font-semibold">Location</th>
               <th className="py-3 pr-4 font-semibold">Posti</th>
-              <th className="py-3 pr-4 font-semibold">Stato</th>
               <th className="py-3 pl-4 text-right font-semibold">Azioni</th>
             </tr>
           </thead>
@@ -208,11 +206,10 @@ export function PanelPublicationTable({
                     ) : null}
                   </td>
                 ) : null}
-                <td className="py-4 pr-4 font-semibold">{panel.title}</td>
+                <td className="py-4 pr-4"><div className="flex flex-wrap items-start gap-2"><span className="font-semibold">{panel.title}</span><PublicationBadge panel={panel} /></div></td>
                 <td className="py-4 pr-4 text-[var(--peace-muted)]">{formatSchedule(panel)}</td>
                 <td className="py-4 pr-4">{panel.locationName ?? "Da definire"}</td>
                 <td className="py-4 pr-4"><CapacitySummary panel={panel} compact /></td>
-                <td className="py-4 pr-4"><PublicationBadge panel={panel} /></td>
                 <td className="py-4 pl-4 text-right">
                   <div className="flex flex-col items-stretch gap-2">
                     <PanelEditLink panel={panel} panelPath={panelPath} canManage={canManage} />
@@ -375,7 +372,6 @@ function PanelRosterLink({ panel, panelPath }: { panel: PanelDraftRow; panelPath
 function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; compact?: boolean }) {
   const difference = panelCapacityDifference(panel.assignedCapacity, panel.locationCapacity);
   const bookableSections = panel.sections.filter(section => section.bookingChannel !== "internal_assignment");
-  const hasReservedSeats = panel.sections.some(section => section.bookingChannel === "internal_assignment");
   const occupied = bookableSections.every(section => Number.isInteger(section.occupied))
     ? bookableSections.reduce((sum, section) => sum + section.occupied!, 0) : null;
   return (
@@ -390,7 +386,6 @@ function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; com
           ? `${section.capacity} posti riservati`
           : section.occupied === undefined ? "da verificare" : `${section.capacity - section.occupied} disponibili su ${section.capacity}`}
       </p>)}
-      {hasReservedSeats ? <p className="text-xs text-[var(--peace-muted)]">I posti riservati agli ospiti non sono prenotabili tramite il form pubblico.</p> : null}
       {difference !== null && difference !== 0 ? <p className="text-xs">{difference > 0 ? `${difference} posti fuori dalle quote` : `${Math.abs(difference)} posti oltre capienza`}</p> : null}
     </div>
   );
@@ -399,10 +394,7 @@ function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; com
 function PublicationBadge({ panel }: { panel: PanelDraftRow }) {
   if (panel.publicationStatus === "published") {
     return (
-      <span className="grid gap-1">
-        <span className="w-fit rounded-full bg-[#e7f4e9] px-2.5 py-1 text-xs font-bold text-[#255532]">Pubblicato</span>
-        <span className="text-xs text-[var(--peace-muted)]">{formatPublicationDate(panel.publishedAt)}</span>
-      </span>
+      <span className="w-fit rounded-full bg-[#e7f4e9] px-2.5 py-1 text-xs font-bold text-[#255532]">Pubblicato</span>
     );
   }
   return <span className="rounded-full bg-[#eef3f7] px-2.5 py-1 text-xs font-bold text-[#536579]">Bozza</span>;
@@ -415,9 +407,4 @@ function formatSchedule(panel: PanelDraftRow): string {
   const day = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "numeric", month: "short" });
   const time = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   return `${day.format(start)}, ${time.format(start).replace(/^0/, "")} - ${time.format(end).replace(/^0/, "")}`;
-}
-
-function formatPublicationDate(value: string | null): string {
-  if (!value) return "Data non disponibile";
-  return new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 }

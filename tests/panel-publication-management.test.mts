@@ -67,7 +67,7 @@ test("responsive catalog supports filtered selection, single publication and con
   assert.match(table, /setDialogIds\(\[panel\.id\]\)/);
   assert.match(table, /nessuno viene pubblicato/);
   assert.match(table, /name="panelIds"/);
-  assert.match(table, /formatPublicationDate/);
+  assert.doesNotMatch(table, /formatPublicationDate/);
   assert.match(section, /Modifica di un forum già pubblicato/);
   assert.match(section, /campaignPanel=\$\{encodeURIComponent\(panel\.id\)\}/);
 });
