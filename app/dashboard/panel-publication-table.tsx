@@ -165,8 +165,8 @@ export function PanelPublicationTable({
             <col className="w-[22%]" />
             <col className="w-[17%]" />
             <col className="w-[13%]" />
-            <col className="w-[27%]" />
-            <col className="w-[16%]" />
+            <col />
+            <col className="w-11" />
           </colgroup>
           <thead>
             <tr className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[#6f7f91]">
@@ -187,7 +187,7 @@ export function PanelPublicationTable({
               <th className="py-3 pr-4 font-semibold">Quando</th>
               <th className="py-3 pr-4 font-semibold">Location</th>
               <th className="py-3 pr-4 font-semibold">Posti</th>
-              <th className="py-3 pl-4 text-right font-semibold">Azioni</th>
+              <th className="py-3 font-semibold"><span className="sr-only">Azioni</span></th>
             </tr>
           </thead>
           <tbody>
@@ -210,7 +210,7 @@ export function PanelPublicationTable({
                 <td className="py-4 pr-4 text-[var(--peace-muted)]">{formatSchedule(panel)}</td>
                 <td className="py-4 pr-4">{panel.locationName ?? "Da definire"}</td>
                 <td className="py-4 pr-4"><CapacitySummary panel={panel} compact /></td>
-                <td className="py-4 pl-4 text-right">
+                <td className="py-4">
                   <div className="flex flex-col items-stretch gap-2">
                     <PanelEditLink panel={panel} panelPath={panelPath} canManage={canManage} />
                     {canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
@@ -218,11 +218,12 @@ export function PanelPublicationTable({
                     {canManage && panel.publicationStatus === "draft" ? (
                       <button
                         type="button"
+                        title="Pubblica forum"
+                        aria-label="Pubblica forum"
                         onClick={() => setDialogIds([panel.id])}
-                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
                       >
                         <Send className="size-4" aria-hidden="true" />
-                        Pubblica forum
                       </button>
                     ) : null}
                   </div>
