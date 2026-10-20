@@ -39,8 +39,8 @@ identico. La migration risultava già registrata, quindi non è stata riapplicat
 Non è stato riscritto il commit condiviso né annullato il lavoro parallelo.
 Questo aggiornamento aggiunge soltanto il verbale delle verifiche.
 
-- Ripetuti nella copia isolata, costruita dalla base `30e876d` con i soli file
-  di questa tranche: `npm ci`, **981 test**, lint e build production con
+- Ripetuti nella copia isolata allineata al rilascio `e742941`:
+  `npm ci`, **981 test**, lint e build production con
   TypeScript, tutti superati. Ripetuta anche la suite SQL su PostgreSQL
   temporaneo, inclusi rollback, autorizzazioni e concorrenza. Le verifiche
   browser sintetiche desktop/mobile descritte sopra riguardano lo stesso
