@@ -101,7 +101,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                                 <span>{copy.availability[panel.availability]}</span>
                                 {typeof panel.remainingSeats === "number" && Number.isFinite(panel.remainingSeats) ? (
                                   <span className="text-[10px] font-normal leading-4">
-                                    {programCopy.seats}: {Math.max(0, panel.remainingSeats).toLocaleString(locale)}
+                                    <span className="sr-only">{programCopy.seats}: </span>{Math.max(0, panel.remainingSeats).toLocaleString(locale)}
                                   </span>
                                 ) : null}
                               </span>

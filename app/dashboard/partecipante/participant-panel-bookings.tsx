@@ -381,7 +381,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
           <span>{statusLabel}</span>
           {typeof row.remaining_seats === "number" && Number.isFinite(row.remaining_seats) ? (
             <span className="block text-[10px] font-normal leading-4">
-              {copy.remainingSeats}: {Math.max(0, row.remaining_seats).toLocaleString(locale)}
+              <span className="sr-only">{copy.remainingSeats}: </span>{Math.max(0, row.remaining_seats).toLocaleString(locale)}
             </span>
           ) : null}
         </span>
