@@ -15,12 +15,12 @@ export async function checkGroupWaitlistConcurrency(psql,concurrent) {
  update participants set auth_user_id=fw(4) where id=fw(24);`);
  // Two authenticated surfaces racing to enqueue one participant cannot create two FIFO entries.
  const joins=await Promise.all(Array.from({length:6},(_,n)=>concurrent(`select set_config('request.jwt.claim.sub',fw(${n%2?4:9})::text,false);set role authenticated;
- select ${n%2?"set_individual_panel_waitlist(fw(104),fw(407),fw(507),'join')":"set_group_panel_waitlist(fw(200),fw(507),fw(104),'join','it')"}->>'status';`)));
+ select set_panel_family_booking(fw(104),fw(407),fw(507),'join',array[fw(904)],${n%2?'false':'true'},'it')->>'status';`)));
  assert.ok(joins.every(x=>/queued/.test(x)));
  assert.equal(psql(`select count(*) from panel_waitlist where registration_id=fw(104) and panel_id=fw(407) and status='waiting';`,true).trim(),'1');
  psql(`select set_config('request.jwt.claim.sub',fw(9)::text,false);select set_group_panel_waitlist(fw(200),fw(507),fw(105),'join');
  select set_group_panel_booking(fw(200),fw(508),fw(104),true);
- update panel_seat_sections set capacity=app.registration_panel_party_size(fw(104)) where id=fw(507);
+ update panel_seat_sections set capacity=app.registration_panel_party_size(fw(104),fw(407)) where id=fw(507);
  update panel_waitlist set notification_status='sent' where panel_id<>fw(407) and status='offered';
  update panel_waitlist_scheduler set next_run_at=clock_timestamp();`);
  const claims=await Promise.all(Array.from({length:6},()=>concurrent(`set role service_role;select claim_panel_waitlist_notification()->>'id';`)));

@@ -20,6 +20,7 @@ function fixture(overrides: Record<string, Row[]> = {}, failure = "", failFrom =
     moment_attendance_choices: [{ id: "choice", moment_id: panelId, registration_id: "r", seat_section_id: "seats", choice: "yes" }],
     registrations: [{ id: "r", event_id: "event", participant_id: "p", status: "submitted", deleted_at: null }],
     participants: [{ id: "p", first_name: "Anna", last_name: "Bianchi", public_code: "FIX1" }],
+    panel_child_selections: [{panel_id: panelId, registration_id: "r", child_ids: ["child"]}],
     registration_children: [{ id: "child", registration_id: "r", first_name: "Luca", last_name: "Bianchi", position: 1 }],
     school_panel_reservations: [{ id: "reservation", event_id: "event", panel_id: panelId, booking_id: "b", status: "reserved", student_count: 12, companion_count: 2 }],
     school_bookings: [{ id: "b", event_id: "event", status: "confirmed", school_name: "Scuola sintetica", school_city: "Roma", class_description: "Classe A", student_count: 99, companion_count: 9 }],
@@ -84,7 +85,7 @@ test("roster includes no-email people and children, uses panel-specific school q
 });
 
 test("all roster reads fail closed, including missing identities", async () => {
-  for (const table of ["events", "event_moments", "moment_attendance_choices", "school_panel_reservations", "panel_seat_sections", "panel_audience_types", "registrations", "school_bookings", "participants", "registration_children"]) {
+  for (const table of ["events", "event_moments", "moment_attendance_choices", "school_panel_reservations", "panel_seat_sections", "panel_audience_types", "registrations", "school_bookings", "participants", "registration_children", "panel_child_selections"]) {
     await assert.rejects(loadPanelRoster(fixture({}, table).db, panelId, admin), table);
   }
   await assert.rejects(loadPanelRoster(fixture({ participants: [] }).db, panelId, admin), /Incomplete/);
@@ -163,4 +164,11 @@ test("manager roster matches admin, foreign event denied before participant read
     await assert.rejects(loadPanelRoster(h.db, panelId, roles), /forbidden/);
     assert.deepEqual(h.reads, ["events"]);
   }
+});
+
+
+test("Forum roster and export exclude unselected linked children", async () => {
+  const roster = await loadPanelRoster(fixture({panel_child_selections: []}).db, panelId, admin);
+  assert.equal(roster!.individualSeats, 1);
+  assert.deepEqual(roster!.people.map(person => person.id), ["r"]);
 });

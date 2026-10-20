@@ -160,7 +160,7 @@ select set_individual_panel_waitlist(fw(104),fw(401),fw(501),'leave');
 insert into registration_children(registration_id,position,first_name,last_name,birth_date) values(fw(104),1,'Synthetic','Child','2018-01-01');
 update panel_seat_sections set capacity=2 where id=fw(505);
 select set_config('request.jwt.claim.sub',fw(4)::text,false);
-select set_individual_panel_waitlist(fw(104),fw(405),fw(505),'join');
+select set_panel_family_booking(fw(104),fw(405),fw(505),'join',array(select id from registration_children where registration_id=fw(104)));
 select set_config('request.jwt.claim.sub',fw(5)::text,false);
 select set_individual_panel_waitlist(fw(105),fw(405),fw(505),'join');
 update panel_waitlist_scheduler set next_run_at=clock_timestamp();

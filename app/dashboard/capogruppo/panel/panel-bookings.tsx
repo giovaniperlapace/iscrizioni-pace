@@ -1,4 +1,6 @@
 "use client";
+import { ForumChildSelection } from "@/components/forum-child-selection";
+import { FORUM_CHILD_COPY } from "@/lib/panels/child-selection";
 
 import { ForumLanguages } from "@/components/forum-languages";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -18,6 +20,7 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
   const sharedQueueCopy = FORUM_WAITLIST_COPY[locale];
   const copy = { ...GROUP_BOOKING_COPY[locale], queued: sharedQueueCopy.queued, offered: sharedQueueCopy.offered,
     expired: queueCopy.expired, availableNow: queueCopy.available };
+  const [childDrafts, setChildDrafts] = useState<Record<string, string[]>>({});
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState("");
   const [result, setResult] = useState<{registrationId: string; response: GroupBookingResult} | null>(null);
@@ -40,11 +43,12 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
     inFlight.current = true;
     setActiveId(registrationId);
     setResult(null);
+    const selectedChildIds = childDrafts[`${panel.panelId}:${registrationId}`] ?? view.participants.find(row => row.registrationId === registrationId)?.children?.filter(c => c.selected).map(c => c.id) ?? [];
     startTransition(async () => {
       try {
         const response = typeof operation === "boolean"
-          ? await setGroupPanelBooking(panel.sectionId, registrationId, operation)
-          : await setGroupPanelWaitlist(waitlistSectionId ?? panel.sectionId, registrationId, operation);
+          ? await setGroupPanelBooking(panel.sectionId, registrationId, operation, selectedChildIds)
+          : await setGroupPanelWaitlist(waitlistSectionId ?? panel.sectionId, registrationId, operation, selectedChildIds);
         setResult("error" in response ? {registrationId, response} : null);
         router.refresh();
       } catch {
@@ -83,15 +87,22 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
               {[copy.person, copy.group, copy.seats, copy.status, copy.action].map(label => <th key={label} scope="col" className="p-3">{label}</th>)}</tr></thead>
             <tbody>{visible.map(row => {
               const booked = row.status === "selected";
-              const blocked = row.status === "conflict";
+
               const expired = row.status === "offered" && !!row.offerExpiresAt && now !== null && new Date(row.offerExpiresAt).getTime() <= now;
               const queued = row.status === "queued" || row.status === "offered";
-              const operation = booked ? false : row.status === "queued" ? "leave" : row.status === "offered" ? "accept" : row.status === "full" ? "join" : true;
-              const action = booked ? copy.unbook : row.status === "queued" ? queueCopy.leave : row.status === "offered" ? queueCopy.accept : row.status === "full" ? queueCopy.join : copy.book;
+              const childKey = `${panel.panelId}:${row.registrationId}`;
+              const childIds = booked || queued ? (row.children ?? []).filter(c => c.selected).map(c => c.id) : childDrafts[childKey] ?? (row.children ?? []).filter(c => c.selected).map(c => c.id);
+              const full = row.status === "full" || row.hasWaiting || 1 + childIds.length > panel.remaining;
+              const blocked = (row.hasConflict || row.status === "conflict") && !full;
+              const operation = booked ? false : row.status === "queued" ? "leave" : row.status === "offered" ? "accept" : full ? "join" : true;
+              const action = booked ? copy.unbook : row.status === "queued" ? queueCopy.leave : row.status === "offered" ? queueCopy.accept : full ? queueCopy.join : copy.book;
               const feedback = result?.registrationId === row.registrationId ? result : null;
               return <tr key={row.registrationId} className="border-b border-[var(--peace-border)] last:border-0 hover:bg-[var(--peace-soft)]">
-                <th scope="row" className="p-3 font-medium">{row.name}{row.code ? <span className="block text-xs font-normal text-[var(--peace-muted)]">{row.code}</span> : null}</th>
-                <td className="p-3">{row.groupName}</td><td className="p-3">{row.seats}</td>
+                <th scope="row" className="p-3 font-medium">{row.name}{row.code ? <span className="block text-xs font-normal text-[var(--peace-muted)]">{row.code}</span> : null}
+                  <ForumChildSelection options={row.children ?? []} selected={childIds} locale={locale} locked={booked || queued} disabled={pending}
+                    onChange={ids => setChildDrafts(old => ({...old, [childKey]: ids}))} />
+                </th>
+                <td className="p-3">{row.groupName}</td><td className="p-3">{booked || queued ? row.seats : 1 + childIds.length}</td>
                 <td className="p-3">
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${booked ? "bg-green-100 text-green-900" : "bg-slate-100 text-slate-700"}`}>
                     {booked ? <CheckCircle2 size={14} aria-hidden="true" /> : null}{booked ? copy.selected : queued ? copy[row.status] : copy.notBooked}
@@ -122,7 +133,7 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
           {!visible.length ? <p className="p-5">{copy.emptyPeople}</p> : null}
         </div>
         <section className="surface-panel grid gap-3 p-5">
-          <p className="text-sm text-[var(--peace-muted)]">{copy.family}</p>
+          <p className="text-sm text-[var(--peace-muted)]">{FORUM_CHILD_COPY[locale].help}</p>
           <div className="mt-1 flex flex-col items-start gap-3 border-t border-[var(--peace-border)] pt-4 sm:flex-row sm:items-center sm:gap-4">
             <button type="button" className={`btn-secondary shrink-0 ${buttonClass}`} aria-describedby="group-panel-refresh-help" disabled={pending} onClick={() => {setResult(null); startTransition(() => router.refresh());}}><RefreshCw size={16} aria-hidden="true" />{copy.refresh}</button>
             <p id="group-panel-refresh-help" className="max-w-xl text-sm leading-6 text-[var(--peace-muted)]">{copy.refreshHelp}</p>

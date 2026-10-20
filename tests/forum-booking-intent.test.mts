@@ -1,3 +1,4 @@
+import * as childSelection from "../lib/panels/child-selection.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -126,6 +127,9 @@ test("participant booking screen highlights the requested forum with one anchor 
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const dependencies: Record<string, unknown> = {
     "react/jsx-runtime": runtime,
+    react: await import("react"),
+    "@/components/forum-child-selection": {ForumChildSelection: () => null},
+    "@/lib/panels/child-selection": childSelection,
     "@/components/forum-languages": { ForumLanguages: () => null },
     "@/lib/panels/use-forum-availability": { useForumAvailability: (_id: string, rows: unknown) => ({ rows, error: null }) },
     "@/lib/events/program-copy": { getEventProgramCopy },

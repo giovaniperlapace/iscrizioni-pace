@@ -13,7 +13,7 @@ insert into registrations(id,event_id,participant_id,status)
  select fw(710+n),fw(200),fw(720+n),'confirmed' from generate_series(1,4) n;
 insert into registration_children(registration_id,position,first_name,last_name,birth_date) values(fw(711),1,'Minor','Synthetic','2018-01-01');
 select set_config('request.jwt.claim.sub',fw(1)::text,true);
-select set_individual_panel_booking(fw(711),fw(701),fw(702),true);
+select set_panel_family_booking(fw(711),fw(701),fw(702),'book',array(select id from registration_children where registration_id=fw(711)));
 insert into school_booking_teachers(id,event_id,email,first_name,last_name,phone) values(fw(750),fw(200),'withdrawal@example.invalid','Teacher','Synthetic','12345');
 insert into school_bookings(id,event_id,teacher_id,school_name,school_city,class_description,student_count,companion_count,privacy_version,privacy_accepted_at)
  values(fw(751),fw(200),fw(750),'Synthetic school','Test city','Test class',4,1,'synthetic',now());

@@ -7,8 +7,8 @@ insert into participant_group_assignments(registration_id,group_id,status,is_cur
  select fw(100+n),fw(701),'confirmed',true from generate_series(1,5) n;
 -- No personal account is required for a participant whose request is handled by a leader.
 update participants set auth_user_id=null where id=fw(24);
-insert into registration_children(registration_id,position,first_name,last_name,birth_date)
- values(fw(104),1,'Child','Queue','2018-01-01');
+insert into registration_children(id,registration_id,position,first_name,last_name,birth_date)
+ values(fw(904),fw(104),1,'Child','Queue','2018-01-01');
 insert into event_locations(id,event_id,name,max_capacity) values(fw(607),fw(200),'Group waiting room',20),(fw(608),fw(200),'Group alternative',20);
 insert into event_moments(id,event_id,moment_type,title,starts_at,ends_at,location_id,publication_status,is_public) values
  (fw(407),fw(200),'panel','Group queue','2026-10-25 16:00 Europe/Rome','2026-10-25 17:00 Europe/Rome',fw(607),'draft',false),
@@ -18,9 +18,9 @@ update event_moments set publication_status='published',is_public=true where id 
 select set_config('request.jwt.claim.sub',fw(9)::text,false);
 set local role authenticated;
 select set_group_panel_booking(fw(200),fw(507),fw(101),true);
-select set_group_panel_booking(fw(200),fw(508),fw(104),true);
-select set_group_panel_waitlist(fw(200),fw(507),fw(104),'join','fr');
-select set_group_panel_waitlist(fw(200),fw(507),fw(104),'join','fr');
+select set_panel_family_booking(fw(104),fw(408),fw(508),'book',array[fw(904)],true,'fr');
+select set_panel_family_booking(fw(104),fw(407),fw(507),'join',array[fw(904)],true,'fr');
+select set_panel_family_booking(fw(104),fw(407),fw(507),'join',array[fw(904)],true,'fr');
 do $$ declare v jsonb; begin
  v:=get_group_panel_booking_view(fw(200),fw(507));
  assert (select x->>'status'='queued' and x->>'queuePosition'='1' from jsonb_array_elements(v->'participants') x where x->>'registrationId'=fw(104)::text);
@@ -92,7 +92,7 @@ end $$;
 select set_config('request.jwt.claim.sub',fw(9)::text,false);
 set local role authenticated;
 select set_group_panel_booking(fw(200),fw(507),fw(104),false);
-select set_group_panel_booking(fw(200),fw(508),fw(104),true);
+select set_panel_family_booking(fw(104),fw(408),fw(508),'book',array[fw(904)],true,'fr');
 select set_group_panel_waitlist(fw(200),fw(507),fw(104),'join');
 select set_group_panel_waitlist(fw(200),fw(507),fw(105),'leave');
 select set_group_panel_waitlist(fw(200),fw(507),fw(105),'leave');

@@ -115,7 +115,7 @@ export function PanelStatisticsReport({
         />
         <PanelSummaryCard
           icon={Baby}
-          label="Minori ereditati"
+          label="Minori prenotati"
           value={filteredSummary.inheritedChildren}
         />
         <PanelSummaryCard
@@ -321,7 +321,7 @@ function PanelStatisticsCard({
           value={panel.individualPeople}
           detail={`${panel.individualBookings} iscrizioni`}
         />
-        <PanelMetric label="Minori ereditati" value={panel.inheritedChildren} />
+        <PanelMetric label="Minori prenotati" value={panel.inheritedChildren} />
         <PanelMetric
           label="Scuole"
           value={panel.schoolPeople}

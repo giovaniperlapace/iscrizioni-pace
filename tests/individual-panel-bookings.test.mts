@@ -55,7 +55,7 @@ test("family-size changes and published capacity reductions remain protected", (
 
 test("participant UI uses the atomic RPC and never resubmits panel choices as hidden registration fields", () => {
   assert.match(actions, /export async function setParticipantPanelBooking/);
-  assert.match(actions, /supabase\.rpc\("set_individual_panel_booking"/);
+  assert.match(actions, /supabase\.rpc\("set_panel_family_booking"/);
   assert.match(dashboard, /supabase\.rpc\("get_participant_panel_catalog"/);
   assert.match(dashboard, /generalMomentChoices/);
   assert.match(component, /action=\{setParticipantPanelBooking\}/);

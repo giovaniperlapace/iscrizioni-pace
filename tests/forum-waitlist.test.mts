@@ -1,3 +1,4 @@
+import { validForumChildIds } from "../lib/panels/child-selection.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -75,6 +76,7 @@ for (const intent of ["book", "cancel", "join", "leave", "accept"] as const) tes
   const fn = ts.transpileModule(node.getText(ast).replace(/^export /, ""), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   let rpcName = ""; let rpcArgs: Record<string, unknown> = {};
   const deps = {
+    validForumChildIds,
     requirePublicPanelBookings: async () => {}, optionalText: (s: unknown) => typeof s === "string" ? s : null,
     createSupabaseServerClient: async () => ({ rpc: async (name: string, args: Record<string, unknown>) => { rpcName = name; rpcArgs = args; return { data: { status: intent === "accept" ? "booked" : intent === "join" ? "queued" : "left" }, error: null }; } }),
     getCurrentAuthContext: async () => ({ user: { id: "user" } }), revalidatePath: () => {},
@@ -82,10 +84,13 @@ for (const intent of ["book", "cancel", "join", "leave", "accept"] as const) tes
   };
   const action = new Function(...Object.keys(deps), `${fn};return setParticipantPanelBooking;`)(...Object.values(deps));
   const form = new FormData(); form.set("registrationId", registrationId); form.set("panelId", panelId); form.set("sectionId", "section"); form.set("intent", intent);
+  if (intent === "book" || intent === "join") form.append("childIds", panelId);
   await assert.rejects(action(form), /panelSaved=/);
-  assert.equal(rpcName, intent === "book" || intent === "cancel" ? "set_individual_panel_booking" : "set_individual_panel_waitlist");
+  assert.equal(rpcName, "set_panel_family_booking");
   assert.equal(rpcArgs.p_registration_id, registrationId);
   assert.equal(rpcArgs.p_panel_id, panelId);
+  assert.deepEqual(rpcArgs.p_child_ids, intent === "book" || intent === "join" ? [panelId] : []);
+  assert.equal(rpcArgs.p_as_leader, false);
   assert.ok(!("actorUserId" in rpcArgs));
 });
 
@@ -138,4 +143,11 @@ test("cron authenticates before either worker and isolates their failures", asyn
   const response = await get(new Request("http://127.0.0.1/api/cron/email-campaigns", { headers: { authorization: "Bearer synthetic-secret" } }));
   assert.equal(response.status, 500); assert.equal(campaigns, 1); assert.equal(forums, 1);
   assert.doesNotMatch(await response.text(), /private details/);
+});
+
+
+test("Forum child selection accepts none, rejects duplicates, malformed values and oversized families", () => {
+  assert.ok(validForumChildIds([]));
+  assert.ok(validForumChildIds([panelId]));
+  for (const value of [null, "[]", [panelId, panelId], ["bad"], [null], Array(11).fill(panelId)]) assert.equal(validForumChildIds(value), false);
 });

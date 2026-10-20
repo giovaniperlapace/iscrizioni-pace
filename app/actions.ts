@@ -1,4 +1,5 @@
 "use server";
+import { validForumChildIds } from "@/lib/panels/child-selection";
 import { parseForumIntent, forumBookingPath, withForumIntent } from "@/lib/panels/booking-intent";
 import { resolvePublicForumIntent } from "@/lib/panels/booking-intent.server";
 import { requirePanelManager, requirePublicPanelBookings, requireSchoolBookings } from "@/lib/panels/release.server";
@@ -639,17 +640,12 @@ export async function setParticipantPanelBooking(formData: FormData) {
     redirect("/login");
   }
 
+  const childIds = formData.getAll("childIds");
+  if (!validForumChildIds(childIds)) redirect("/dashboard/partecipante?panelError=invalid");
   const queueIntent = intent === "join" || intent === "leave" || intent === "accept";
-  const { data, error } = queueIntent ? await supabase.rpc("set_individual_panel_waitlist", {
-    p_registration_id: registrationId,
-    p_panel_id: panelId,
-    p_section_id: sectionId,
-    p_intent: intent,
-  }) : await supabase.rpc("set_individual_panel_booking", {
-    p_registration_id: registrationId,
-    p_panel_id: panelId,
-    p_section_id: sectionId,
-    p_booked: intent === "book",
+  const { data, error } = await supabase.rpc("set_panel_family_booking", {
+    p_registration_id: registrationId, p_panel_id: panelId, p_section_id: sectionId,
+    p_intent: intent, p_child_ids: childIds, p_as_leader: false,
   });
 
   if (error) {

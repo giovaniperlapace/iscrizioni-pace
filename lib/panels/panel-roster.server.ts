@@ -30,12 +30,14 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
   if (panel.error) throw new Error("Panel unavailable");
   if (!panel.data) return null;
 
-  const [choices, reservations, sections, audiences] = await Promise.all([
+  const [choices, reservations, sections, audiences, selections] = await Promise.all([
     loadAllRows<{ registration_id: string; seat_section_id: string | null }>((from, to) => db.from("moment_attendance_choices").select("registration_id,seat_section_id").eq("moment_id", panelId).eq("choice", "yes").order("id").range(from, to)),
     loadAllRows<{ booking_id: string; student_count: number; companion_count: number }>((from, to) => db.from("school_panel_reservations").select("booking_id,student_count,companion_count").eq("event_id", eventId).eq("panel_id", panelId).eq("status", "reserved").order("id").range(from, to)),
     loadAllRows<{ id: string; audience_type_id: string; capacity: number }>((from, to) => db.from("panel_seat_sections").select("id,audience_type_id,capacity").eq("event_id", eventId).eq("panel_id", panelId).order("id").range(from, to)),
     loadAllRows<{ id: string; name: string; booking_channel: string }>((from, to) => db.from("panel_audience_types").select("id,name,booking_channel").eq("event_id", eventId).order("id").range(from, to)),
+    loadAllRows<{ registration_id: string; child_ids: string[] }>((from, to) => db.from("panel_child_selections").select("registration_id,child_ids").eq("panel_id", panelId).order("registration_id").range(from, to)),
   ]);
+  const selectedChildren = new Map(selections.data.map(row => [row.registration_id, new Set(row.child_ids)]));
   const sectionIds = new Set(sections.data.map(row => row.id));
   const registrationIds = choices.data.filter(row => row.seat_section_id && sectionIds.has(row.seat_section_id)).map(row => row.registration_id);
   const [registrations, bookings] = await Promise.all([
@@ -49,6 +51,7 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
   const identities = new Map(participants.data.map(row => [row.id, row]));
   const childrenByRegistration = new Map<string, typeof children.data>();
   for (const child of children.data) {
+    if (!selectedChildren.get(child.registration_id)?.has(child.id)) continue;
     const list = childrenByRegistration.get(child.registration_id) ?? [];
     list.push(child); childrenByRegistration.set(child.registration_id, list);
   }

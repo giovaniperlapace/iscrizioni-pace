@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Forum: minori scelti per ogni prenotazione — 2026-10-20
+
+- Area personale e capogruppo scelgono nominalmente i minori per ciascun Forum;
+  nessuna selezione automatica nelle nuove richieste. Conteggi, FIFO/offerte,
+  statistiche, Excel e ingressi Forum includono solo i minori selezionati.
+- Richieste attive conservano la scelta: per modificarla occorre cancellare
+  o uscire dalla coda e prenotare nuovamente. Vecchie prenotazioni conservate
+  dal backfill. Ingresso evento e apertura Forum indipendenti.
+- Migration `20261020140000_explicit_forum_children` applicata e registrata
+  in production dopo backup verificato: 63 tabelle, 134.505 righe e ACL delle
+  189 funzioni preesistenti invariati. Forum internal, nessuna prenotazione reale
+  di collaudo. Dettagli: `docs/forum-minori-scelta-2026-10-20.md`.
+
 ## Lingue dei forum — 2026-10-20
 
 - Riga discreta condivisa nel catalogo pubblico/anteprima, scelta personale,

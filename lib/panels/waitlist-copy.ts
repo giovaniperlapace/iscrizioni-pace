@@ -3,7 +3,7 @@ import type { SupportedLocale } from "../i18n/config.ts";
 export const FORUM_WAITLIST_COPY = {
   it: {
     fullStatus: "Posti esauriti · Lista d’attesa", bookingRule: "Confermando, scegli il tuo unico Forum per questa fascia. Tutti i Forum del pomeriggio, anche quello delle 17, sono nella stessa fascia.",
-    rule: "Puoi iscriverti a un solo Forum per fascia oraria di ogni giorno: uno la mattina e uno il pomeriggio. Tutti i Forum del pomeriggio, anche quello delle 17, sono nella stessa fascia. La scelta vale anche per i minori collegati alla tua iscrizione.",
+    rule: "Puoi iscriverti a un solo Forum per fascia oraria di ogni giorno: uno la mattina e uno il pomeriggio. Tutti i Forum del pomeriggio, anche quello delle 17, sono nella stessa fascia. La scelta include solo i minori selezionati per questo Forum.",
     join: "Mettiti in coda per questo Forum", queued: "In coda", leave: "Esci dalla coda", offered: "Posto riservato", accept: "Conferma iscrizione a questo Forum",
     queueHelp: "La coda segue l’ordine di iscrizione. Puoi intanto iscriverti a un altro Forum nella stessa fascia. Se si liberano i posti necessari, riceverai un’email e avrai 30 minuti per confermare. Dopo la scadenza la riserva termina e il posto passa alla persona successiva.",
     swap: "Confermando questo posto, il sistema cancellerà automaticamente l’eventuale iscrizione a un altro Forum nella stessa fascia. Se non confermi, la tua iscrizione attuale resta valida.",
@@ -13,7 +13,7 @@ export const FORUM_WAITLIST_COPY = {
   },
   en: {
     fullStatus: "Full · Waiting list", bookingRule: "Confirming chooses your only forum for this slot. All afternoon forums, including the one at 17:00, share the same slot.",
-    rule: "You can book only one forum per time slot each day: one in the morning and one in the afternoon. All afternoon forums, including the one at 17:00, share the same slot. Your choice also applies to children linked to your registration.",
+    rule: "You can book only one forum per time slot each day: one in the morning and one in the afternoon. All afternoon forums, including the one at 17:00, share the same slot. Only the children selected for this Forum are included.",
     join: "Join the queue for this forum", queued: "In the queue", leave: "Leave the queue", offered: "Seats reserved", accept: "Confirm booking for this forum",
     queueHelp: "The queue follows the order of joining. You can book another forum in the same slot while waiting. When enough seats become available, you will receive an email and have 30 minutes to confirm. After the deadline, the reservation ends and the seats go to the next person.",
     swap: "Confirming these seats automatically cancels any booking for another forum in the same slot. If you do not confirm, your current booking remains valid.",
@@ -23,7 +23,7 @@ export const FORUM_WAITLIST_COPY = {
   },
   fr: {
     fullStatus: "Complet · Liste d’attente", bookingRule: "En confirmant, tu choisis ton seul forum pour ce créneau. Tous les forums de l’après-midi, y compris celui de 17 h, partagent le même créneau.",
-    rule: "Tu peux t’inscrire à un seul forum par créneau chaque jour : un le matin et un l’après-midi. Tous les forums de l’après-midi, y compris celui de 17 h, partagent le même créneau. Ce choix vaut aussi pour les mineurs liés à ton inscription.",
+    rule: "Tu peux t’inscrire à un seul forum par créneau chaque jour : un le matin et un l’après-midi. Tous les forums de l’après-midi, y compris celui de 17 h, partagent le même créneau. Seuls les mineurs sélectionnés pour ce Forum sont inclus.",
     join: "Rejoindre la file pour ce forum", queued: "Dans la file", leave: "Quitter la file", offered: "Places réservées", accept: "Confirmer l’inscription à ce forum",
     queueHelp: "La file suit l’ordre d’inscription. Tu peux choisir un autre forum du même créneau en attendant. Quand les places nécessaires se libèrent, tu reçois un email et disposes de 30 minutes pour confirmer. Ensuite, la réservation prend fin et les places passent à la personne suivante.",
     swap: "En confirmant ces places, le système annule automatiquement ton éventuelle inscription à un autre forum du même créneau. Sans confirmation, ton inscription actuelle reste valable.",
@@ -33,7 +33,7 @@ export const FORUM_WAITLIST_COPY = {
   },
   de: {
     fullStatus: "Ausgebucht · Warteliste", bookingRule: "Mit der Bestätigung wählst du dein einziges Forum für dieses Zeitfenster. Alle Nachmittagsforen, auch das um 17 Uhr, gehören zum selben Zeitfenster.",
-    rule: "Du kannst pro Tag und Zeitfenster nur ein Forum buchen: eines am Vormittag und eines am Nachmittag. Alle Nachmittagsforen, auch das um 17 Uhr, gehören zum selben Zeitfenster. Deine Wahl gilt auch für die mit deiner Anmeldung verbundenen Minderjährigen.",
+    rule: "Du kannst pro Tag und Zeitfenster nur ein Forum buchen: eines am Vormittag und eines am Nachmittag. Alle Nachmittagsforen, auch das um 17 Uhr, gehören zum selben Zeitfenster. Nur die für dieses Forum ausgewählten Minderjährigen sind eingeschlossen.",
     join: "Für dieses Forum in die Warteschlange", queued: "In der Warteschlange", leave: "Warteschlange verlassen", offered: "Plätze reserviert", accept: "Buchung für dieses Forum bestätigen",
     queueHelp: "Die Reihenfolge richtet sich nach dem Eintritt in die Warteschlange. Während du wartest, kannst du ein anderes Forum im selben Zeitfenster buchen. Wenn genügend Plätze frei werden, erhältst du eine E-Mail und hast 30 Minuten zur Bestätigung. Danach endet die Reservierung und die nächste Person erhält das Angebot.",
     swap: "Mit der Bestätigung wird eine vorhandene Buchung für ein anderes Forum im selben Zeitfenster automatisch storniert. Ohne Bestätigung bleibt deine bisherige Buchung gültig.",
@@ -43,7 +43,7 @@ export const FORUM_WAITLIST_COPY = {
   },
   es: {
     fullStatus: "Completo · Lista de espera", bookingRule: "Al confirmar, eliges tu único foro para esta franja. Todos los foros de la tarde, incluido el de las 17:00, comparten la misma franja.",
-    rule: "Puedes inscribirte en un solo foro por franja cada día: uno por la mañana y uno por la tarde. Todos los foros de la tarde, incluido el de las 17:00, comparten la misma franja. La elección incluye a los menores vinculados a tu inscripción.",
+    rule: "Puedes inscribirte en un solo foro por franja cada día: uno por la mañana y uno por la tarde. Todos los foros de la tarde, incluido el de las 17:00, comparten la misma franja. Solo se incluyen los menores seleccionados para este Foro.",
     join: "Ponte en la cola para este foro", queued: "En la cola", leave: "Salir de la cola", offered: "Plazas reservadas", accept: "Confirmar inscripción en este foro",
     queueHelp: "La cola sigue el orden de inscripción. Mientras esperas puedes reservar otro foro de la misma franja. Cuando se liberen las plazas necesarias, recibirás un correo y tendrás 30 minutos para confirmar. Después termina la reserva y las plazas pasan a la siguiente persona.",
     swap: "Al confirmar, el sistema cancela automáticamente la inscripción en otro foro de la misma franja. Si no confirmas, tu inscripción actual sigue siendo válida.",
@@ -53,7 +53,7 @@ export const FORUM_WAITLIST_COPY = {
   },
   nl: {
     fullStatus: "Vol · Wachtlijst", bookingRule: "Met je bevestiging kies je jouw enige forum in dit tijdvak. Alle middagforums, ook dat van 17:00, horen bij hetzelfde tijdvak.",
-    rule: "Je kunt per dag en tijdvak één forum boeken: één in de ochtend en één in de middag. Alle middagforums, ook dat van 17:00, horen bij hetzelfde tijdvak. Je keuze geldt ook voor minderjarigen bij je inschrijving.",
+    rule: "Je kunt per dag en tijdvak één forum boeken: één in de ochtend en één in de middag. Alle middagforums, ook dat van 17:00, horen bij hetzelfde tijdvak. Alleen de voor dit forum geselecteerde minderjarigen zijn inbegrepen.",
     join: "Sluit aan in de wachtrij voor dit forum", queued: "In de wachtrij", leave: "Verlaat de wachtrij", offered: "Plaatsen gereserveerd", accept: "Bevestig de boeking voor dit forum",
     queueHelp: "De wachtrij volgt de volgorde van aanmelden. Je kunt ondertussen een ander forum in hetzelfde tijdvak boeken. Als er genoeg plaatsen vrijkomen, krijg je een e-mail en heb je 30 minuten om te bevestigen. Daarna vervalt de reservering en gaan de plaatsen naar de volgende persoon.",
     swap: "Als je bevestigt, annuleert het systeem automatisch een boeking voor een ander forum in hetzelfde tijdvak. Zonder bevestiging blijft je huidige boeking geldig.",
@@ -63,7 +63,7 @@ export const FORUM_WAITLIST_COPY = {
   },
   uk: {
     fullStatus: "Місць немає · Список очікування", bookingRule: "Підтверджуючи, ви обираєте свій єдиний форум на цей проміжок. Усі післяобідні форуми, зокрема о 17:00, належать до одного проміжку.",
-    rule: "Щодня можна обрати лише один форум на кожний часовий проміжок: один вранці та один після обіду. Усі післяобідні форуми, зокрема о 17:00, належать до одного проміжку. Вибір також поширюється на неповнолітніх у вашій реєстрації.",
+    rule: "Щодня можна обрати лише один форум на кожний часовий проміжок: один вранці та один після обіду. Усі післяобідні форуми, зокрема о 17:00, належать до одного проміжку. Включено лише неповнолітніх, обраних для цього форуму.",
     join: "Стати в чергу на цей форум", queued: "У черзі", leave: "Вийти з черги", offered: "Місця зарезервовано", accept: "Підтвердити участь у цьому форумі",
     queueHelp: "Черга відповідає порядку запису. Поки чекаєте, можна обрати інший форум у тому самому проміжку. Коли звільняться потрібні місця, ви отримаєте лист і матимете 30 хвилин для підтвердження. Потім резерв закінчується, і місця переходять наступній людині.",
     swap: "Підтвердження автоматично скасує запис на інший форум у тому самому проміжку. Без підтвердження ваш поточний запис залишається чинним.",

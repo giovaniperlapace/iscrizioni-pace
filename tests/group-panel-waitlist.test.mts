@@ -1,3 +1,4 @@
+import * as childSelection from "../lib/panels/child-selection.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -30,6 +31,7 @@ test("leader email requires a valid section instead of falling back to a persona
 for(const scenario of ["join","leave","accept","expired","available","revoked","closed","invalid","unknown-result"] as const) test(`group waitlist action validates ${scenario} and uses current event and authenticated actor`,async()=>{
   const calls: {name:string;args:Record<string,unknown>}[]=[];
   const deps={
+    "@/lib/panels/child-selection":childSelection,
     "@/lib/panels/release.server":{requirePublicPanelBookings:async()=>{if(scenario==="closed")throw new Error("closed");}},
     "@/lib/i18n/server":{getRequestLocale:async()=>"fr"},
     "next/cache":{revalidatePath:()=>{}},
@@ -42,9 +44,9 @@ for(const scenario of ["join","leave","accept","expired","available","revoked","
   if(scenario==="closed"){await assert.rejects(action(id,id,"join"),/closed/);assert.equal(calls.length,0);return;}
   const result=await action(id,id,scenario==="invalid"?"force":scenario==="leave"?"leave":scenario==="accept"?"accept":"join");
   if(scenario==="revoked"||scenario==="invalid"){assert.equal(calls.length,0);assert.deepEqual(result,{error:scenario==="revoked"?"scopeError":"failure"});return;}
-  assert.equal(calls[0].name,"set_group_panel_waitlist");
-  assert.deepEqual(Object.keys(calls[0].args).sort(),["p_event_id","p_intent","p_locale","p_registration_id","p_section_id"]);
-  assert.equal(calls[0].args.p_event_id,id);assert.equal(calls[0].args.p_locale,"fr");
+  assert.equal(calls[0].name,"set_panel_family_booking");
+  assert.deepEqual(Object.keys(calls[0].args).sort(),["p_as_leader","p_child_ids","p_intent","p_locale","p_panel_id","p_registration_id","p_section_id"]);
+  assert.equal(calls[0].args.p_as_leader,true);assert.deepEqual(calls[0].args.p_child_ids,[]);assert.equal(calls[0].args.p_locale,"fr");
   if(scenario==="expired"||scenario==="available"||scenario==="unknown-result")assert.deepEqual(result,{error:scenario==="expired"?"expired":scenario==="available"?"availableNow":"failure"});
 });
 for(const scenario of ["unauthenticated","role","closed","invalid","revoked","failed","withdrawn","ok"] as const)test(`group availability ${scenario} is private and scoped`,async()=>{

@@ -648,6 +648,9 @@ async function getAllIndividualChoices(
       .in("moment_id", ids).eq("choice", "yes").not("seat_section_id", "is", null)
       .order("id").range(from, to));
 
+  const { data: selections } = await loadRowsForIds<{registration_id: string; panel_id: string; child_ids: string[]}>(panelIds, (ids, from, to) => supabase
+    .from("panel_child_selections").select("registration_id,panel_id,child_ids").in("panel_id", ids).order("registration_id").order("panel_id").range(from, to));
+  const selectedChildren = new Map(selections.map(row => [`${row.registration_id}:${row.panel_id}`, new Set(row.child_ids)]));
   return rows.map((row) => {
     const registration = relatedOne(row.registrations);
 
@@ -657,7 +660,7 @@ async function getAllIndividualChoices(
       sectionId: row.seat_section_id,
       choice: row.choice,
       registrationStatus: registration?.status ?? "cancelled",
-      childrenCount: registration?.registration_children?.length ?? 0,
+      childrenCount: registration?.registration_children?.filter(child => selectedChildren.get(`${row.registration_id}:${row.moment_id}`)?.has(child.id)).length ?? 0,
     };
   });
 }

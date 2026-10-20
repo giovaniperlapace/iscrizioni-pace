@@ -1,4 +1,7 @@
 "use client";
+import { useState } from "react";
+import { ForumChildSelection } from "@/components/forum-child-selection";
+import { FORUM_CHILD_COPY, type ForumChildOption } from "@/lib/panels/child-selection";
 
 import { ForumLanguages } from "@/components/forum-languages";
 import { useForumAvailability } from "@/lib/panels/use-forum-availability";
@@ -22,6 +25,10 @@ export type ParticipantPanelCatalogRow = {
   location_address: string | null;
   booking_status: "available" | "selected" | "full" | "conflict" | "queued" | "offered";
   party_size: number;
+  children?: ForumChildOption[];
+  remaining_seats?: number;
+  has_waiting?: boolean;
+  has_slot_conflict?: boolean;
   waitlist_status?: string | null;
   offer_expires_at?: string | null;
   queue_position?: number | null;
@@ -29,7 +36,6 @@ export type ParticipantPanelCatalogRow = {
 
 type Copy = {
   title: string;
-  intro: string;
   empty: string;
   selectedTitle: string;
   availableTitle: string;
@@ -52,7 +58,6 @@ type Copy = {
 const COPY: Record<SupportedLocale, Copy> = {
   it: {
     title: "Scegli i tuoi forum",
-    intro: "Puoi prenotare i forum disponibili. La scelta vale anche per i minori collegati alla tua iscrizione.",
     empty: "Al momento non ci sono forum disponibili per l'iscrizione individuale.",
     selectedTitle: "I tuoi forum",
     availableTitle: "Programma disponibile",
@@ -81,7 +86,6 @@ const COPY: Record<SupportedLocale, Copy> = {
   },
   en: {
     title: "Choose your forums",
-    intro: "You can book available forums. Your choice also applies to the children linked to your registration.",
     empty: "There are currently no forums available for individual booking.",
     selectedTitle: "Your forums",
     availableTitle: "Available programme",
@@ -110,7 +114,6 @@ const COPY: Record<SupportedLocale, Copy> = {
   },
   fr: {
     title: "Choisis tes forums",
-    intro: "Tu peux réserver les forums disponibles. Ton choix vaut aussi pour les mineurs liés à ton inscription.",
     empty: "Aucun forum n'est actuellement disponible pour l'inscription individuelle.",
     selectedTitle: "Tes forums",
     availableTitle: "Programme disponible",
@@ -139,7 +142,6 @@ const COPY: Record<SupportedLocale, Copy> = {
   },
   de: {
     title: "Wähle deine Foren",
-    intro: "Du kannst verfügbare Foren buchen. Deine Wahl gilt auch für die mit deiner Anmeldung verbundenen Minderjährigen.",
     empty: "Derzeit sind keine Foren für Einzelbuchungen verfügbar.",
     selectedTitle: "Deine Foren",
     availableTitle: "Verfügbares Programm",
@@ -168,7 +170,6 @@ const COPY: Record<SupportedLocale, Copy> = {
   },
   es: {
     title: "Elige tus foros",
-    intro: "Puedes reservar los foros disponibles. Tu elección también se aplica a los menores vinculados a tu inscripción.",
     empty: "Ahora mismo no hay foros disponibles para inscripción individual.",
     selectedTitle: "Tus foros",
     availableTitle: "Programa disponible",
@@ -197,7 +198,6 @@ const COPY: Record<SupportedLocale, Copy> = {
   },
   nl: {
     title: "Kies je forums",
-    intro: "Je kunt beschikbare forums boeken. Je keuze geldt ook voor minderjarigen die aan je inschrijving zijn gekoppeld.",
     empty: "Er zijn momenteel geen forums beschikbaar voor individuele boeking.",
     selectedTitle: "Jouw forums",
     availableTitle: "Beschikbaar programma",
@@ -226,7 +226,6 @@ const COPY: Record<SupportedLocale, Copy> = {
   },
   uk: {
     title: "Оберіть свої форуми",
-    intro: "Ви можете забронювати доступні форуми. Ваш вибір також поширюється на неповнолітніх, пов’язаних із реєстрацією.",
     empty: "Наразі немає форумів для індивідуального бронювання.",
     selectedTitle: "Ваші форуми",
     availableTitle: "Доступна програма",
@@ -288,7 +287,7 @@ export function ParticipantPanelBookings({ locale, registrationId, rows: initial
         <h2 id="participant-panels-title" className="text-xl font-semibold text-[var(--peace-blue-950)]">
           {copy.title}
         </h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">{copy.intro}</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">{FORUM_CHILD_COPY[locale].help}</p>
         <p className="mt-3 rounded-lg border border-[var(--peace-border)] bg-[var(--peace-sky-100)] p-4 text-sm leading-6 text-[var(--peace-blue-950)]">{waitlistCopy.rule}</p>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">{waitlistCopy.queueHelp}</p>
       </div>
@@ -343,17 +342,21 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
   const queueCopy = FORUM_WAITLIST_COPY[locale];
   const isQueued = row.booking_status === "queued";
   const isOffered = row.booking_status === "offered";
-  const isFull = row.booking_status === "full";
-  const disabled = row.booking_status === "conflict";
+  const [draftIds, setDraftIds] = useState<string[] | null>(null);
+  const locked = isSelected || isQueued || isOffered;
+  const childIds = locked ? (row.children ?? []).filter(c => c.selected).map(c => c.id) : draftIds ?? (row.children ?? []).filter(c => c.selected).map(c => c.id);
+  const seats = locked ? row.party_size : 1 + childIds.length;
+  const isFull = !locked && (row.has_waiting || (row.remaining_seats !== undefined ? seats > row.remaining_seats : row.booking_status === "full"));
+  const disabled = (row.has_slot_conflict || row.booking_status === "conflict") && !isFull;
   const intent = isSelected ? "cancel" : isQueued ? "leave" : isOffered ? "accept" : isFull ? "join" : "book";
   const buttonLabel = isSelected ? copy.cancel : isQueued ? queueCopy.leave : isOffered ? queueCopy.accept : isFull ? queueCopy.join : copy.book;
   const statusLabel = isSelected
     ? copy.selected
     : isQueued ? queueCopy.queued
     : isOffered ? queueCopy.offered
-    : row.booking_status === "full"
+    : isFull
       ? copy.full
-      : row.booking_status === "conflict"
+      : disabled
         ? copy.conflict
         : copy.available;
 
@@ -373,7 +376,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <div className="flex items-start gap-2"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{formatDate(row.starts_at, locale)}</span></div>
         <div className="flex items-start gap-2"><Clock3 aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{formatTimeRange(row.starts_at, row.ends_at, locale)}</span></div>
         <div className="flex items-start gap-2"><MapPin aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span><strong>{row.location_name}</strong>{row.location_address ? ` · ${row.location_address}` : ""}</span></div>
-        <div className="flex items-start gap-2"><Users aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{copy.familySeats(row.party_size)}</span></div>
+        <div className="flex items-start gap-2"><Users aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{copy.familySeats(seats)}</span></div>
         {showAudience ? <div><dt className="inline font-semibold">{copy.section}: </dt><dd className="inline">{row.audience_name}</dd></div> : null}
       </dl>
       {isQueued && row.queue_position ? <p className="text-sm font-semibold">{queueCopy.position}: {row.queue_position}</p> : null}
@@ -384,6 +387,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
       {row.booking_status === "available" ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{queueCopy.bookingRule}</p> : null}
       {isFull ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{queueCopy.queueHelp}</p> : null}
       <form action={setParticipantPanelBooking}>
+        <ForumChildSelection options={row.children ?? []} selected={childIds} onChange={setDraftIds} locale={locale} locked={locked} />
         <input type="hidden" name="registrationId" value={registrationId} />
         <input type="hidden" name="panelId" value={row.panel_id} />
         <input type="hidden" name="sectionId" value={row.section_id} />
