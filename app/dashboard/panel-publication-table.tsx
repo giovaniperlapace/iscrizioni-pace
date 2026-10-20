@@ -343,8 +343,8 @@ export function PanelPublicationTable({
 }
 
 function UnpublishButton({ onClick }: { onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]">
-    <EyeOff className="size-4 shrink-0" aria-hidden="true" />Rendi non pubblicato
+  return <button type="button" onClick={onClick} title="Rendi non pubblicato" aria-label="Rendi non pubblicato" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]">
+    <EyeOff className="size-4 shrink-0" aria-hidden="true" />
   </button>;
 }
 
@@ -353,19 +353,20 @@ function PanelEditLink({ panel, panelPath, canManage }: { panel: PanelDraftRow; 
     <Link
       href={`${panelPath}&panelId=${encodeURIComponent(panel.id)}`}
       scroll={false}
-      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
+      title={canManage ? "Modifica" : "Consulta"}
+      aria-label={canManage ? "Modifica" : "Consulta"}
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]"
     >
       <Pencil className="size-4" aria-hidden="true" />
-      {canManage ? "Modifica" : "Consulta"}
     </Link>
   );
 }
 
 function PanelRosterLink({ panel, panelPath }: { panel: PanelDraftRow; panelPath: string }) {
   return <Link href={`${panelPath}&panelRoster=${encodeURIComponent(panel.id)}`} scroll={false} prefetch={false}
-    aria-label={`Iscritti a ${panel.title}`}
-    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]">
-    <Users className="size-4" aria-hidden="true" />Iscritti
+    title="Iscritti" aria-label={`Iscritti a ${panel.title}`}
+    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[var(--peace-border-strong)] px-3 font-semibold text-[var(--peace-blue-800)]">
+    <Users className="size-4" aria-hidden="true" />
   </Link>;
 }
 
