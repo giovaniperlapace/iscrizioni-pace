@@ -1,4 +1,7 @@
 "use client";
+
+import { sortForums } from "@/lib/panels/forum-order";
+
 import Link from "next/link";
 import { FORUM_ATTENDANCE_COPY } from "@/lib/panels/attendance-copy";
 import { useState } from "react";
@@ -285,8 +288,9 @@ export function ParticipantPanelBookings({ locale, registrationId, rows: initial
     if (entry) entry.count++;
     else sectionsByPanel.set(row.panel_id, { first: row.section_id, count: 1 });
   }
-  const selected = rows.filter((row) => row.booking_status === "selected");
-  const remaining = rows.filter((row) => row.booking_status !== "selected");
+  const orderedRows = sortForums(rows);
+  const selected = orderedRows.filter((row) => row.booking_status === "selected");
+  const remaining = orderedRows.filter((row) => row.booking_status !== "selected");
   const groups = [
     ...(selected.length > 0 ? [{ title: copy.selectedTitle, rows: selected }] : []),
     ...(remaining.length > 0 ? [{ title: copy.availableTitle, rows: remaining }] : []),

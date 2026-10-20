@@ -1,4 +1,7 @@
 "use client";
+
+import { sortForums } from "@/lib/panels/forum-order";
+
 import Link from "next/link";
 import { FORUM_ATTENDANCE_COPY } from "@/lib/panels/attendance-copy";
 import { ForumChildSelection } from "@/components/forum-child-selection";
@@ -69,7 +72,7 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
         startTransition(() => router.push(value ? `/dashboard/capogruppo/panel?section=${encodeURIComponent(value)}` : "/dashboard/capogruppo/panel"));
       }}>
         <option value="">{copy.choose}</option>
-        {view.panels.map(p => <option key={p.sectionId} value={p.sectionId}>{p.title} · {dateFormat.format(new Date(p.startsAt))}–{timeFormat.format(new Date(p.endsAt))} · {p.location} · {p.audience}</option>)}
+        {sortForums(view.panels).map(p => <option key={p.sectionId} value={p.sectionId}>{p.title} · {dateFormat.format(new Date(p.startsAt))}–{timeFormat.format(new Date(p.endsAt))} · {p.location} · {p.audience}</option>)}
       </select>
       {panel ? <ForumLanguages panelId={panel.panelId} locale={locale} /> : null}
       {!view.panels.length ? <p>{copy.emptyPanels}</p> : null}

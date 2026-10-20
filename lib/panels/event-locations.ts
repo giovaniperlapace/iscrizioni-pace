@@ -1,3 +1,4 @@
+import { sortForums } from "./forum-order.ts";
 import { loadAllRows } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -90,7 +91,7 @@ export async function getEventLocations(
           ? location.max_capacity
           : null,
       isActive: location.is_active !== false,
-      panels: panelsByLocation.get(location.id) ?? [],
+      panels: sortForums(panelsByLocation.get(location.id) ?? []),
     }));
 }
 

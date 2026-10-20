@@ -1,3 +1,4 @@
+import { sortForums } from "./forum-order.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -57,7 +58,7 @@ export async function getPublicPanelProgram(
     throw error;
   }
 
-  return ((data ?? []) as PublicPanelProgramRow[]).map((row) => ({
+  return sortForums((data ?? []) as PublicPanelProgramRow[]).map((row) => ({
     id: row.panel_id,
     title: row.title,
     description: row.description,
@@ -113,7 +114,7 @@ export function groupPublicPanelsByDay(items: PublicPanelProgramItem[]) {
 
   for (const panel of items) {
     const key = getPanelProgramDayKey(panel.startsAt);
-    const currentGroup = groups.at(-1);
+    const currentGroup = groups.find(group => group.key === key);
 
     if (currentGroup?.key === key) {
       currentGroup.panels.push(panel);
@@ -122,5 +123,7 @@ export function groupPublicPanelsByDay(items: PublicPanelProgramItem[]) {
     }
   }
 
-  return groups;
+  return groups.sort((a, b) => a.key.localeCompare(b.key)).map(group => ({
+    ...group, panels: sortForums(group.panels),
+  }));
 }

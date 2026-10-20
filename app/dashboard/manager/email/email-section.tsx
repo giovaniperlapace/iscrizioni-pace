@@ -1,3 +1,4 @@
+import { sortForums } from "@/lib/panels/forum-order";
 import { isPanelCampaign } from "@/lib/panels/management-access";
 import { loadAllRows } from "@/lib/supabase/all-rows";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -136,7 +137,7 @@ export async function ManagerEmailSection({
       groups={(groups ?? []).map((row) => ({ id: row.id, label: row.name }))}
       tags={(tags ?? []).map((row) => ({ id: row.id, label: row.label }))}
       services={(eventServices ?? []).map((row) => ({ id: row.id, label: row.label }))}
-      panels={(panels ?? []).map((row) => ({
+      panels={sortForums(panels ?? []).map((row) => ({
         id: row.id,
         label: [
           row.title,

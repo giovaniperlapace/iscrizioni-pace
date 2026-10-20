@@ -1,3 +1,4 @@
+import { compareForums } from "./forum-order.ts";
 import { loadAllRows } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -177,8 +178,8 @@ export async function getSchoolBookingCatalog(
         locationName: panel.location_id ? locations.get(panel.location_id) ?? "Location da definire" : "Location da definire",
         audienceName: audience.name,
       }];
-    })
-    .sort((left, right) => left.startsAt.localeCompare(right.startsAt) || left.title.localeCompare(right.title, "it"));
+    });
+  panelOptions.sort(compareForums);
   const optionBySection = new Map(panelOptions.map((option) => [option.sectionId, option]));
   const reservationsByBooking = new Map<string, SchoolPanelReservation[]>();
   for (const row of (reservationsResult.data ?? []) as ReservationDbRow[]) {
@@ -210,7 +211,7 @@ export async function getSchoolBookingCatalog(
       submittedAt: row.submitted_at,
       updatedAt: row.updated_at,
       teacher: { id: teacher.id, firstName: teacher.first_name, lastName: teacher.last_name, email: teacher.email, phone: teacher.phone },
-      reservations: (reservationsByBooking.get(row.id) ?? []).sort((left, right) => left.startsAt.localeCompare(right.startsAt)),
+      reservations: (reservationsByBooking.get(row.id) ?? []).sort(compareForums),
       hasActiveQr: activeQr.has(row.id),
     }];
   });

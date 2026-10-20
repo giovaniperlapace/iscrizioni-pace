@@ -1,3 +1,4 @@
+import { sortForums } from "./forum-order.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { normalizeEmail } from "../registrations/validation.ts";
@@ -111,7 +112,7 @@ export async function getPublicSchoolBookingOptions(
 
   return {
     event: { id: first.event_id, title: first.event_title },
-    panels: rows.map((row) => ({
+    panels: sortForums(rows).map((row) => ({
       panelId: row.panel_id,
       sectionId: row.section_id,
       title: row.title,

@@ -47,6 +47,7 @@ export async function checkSchoolDirectLink(psql) {
   await page.goto(base+'/scuole');await page.locator('[name=teacherFirstName]').waitFor();
   assert.equal(await page.locator('[name=sectionIds]').count(),3);
   assert.equal(await page.getByText(/Posti disponibili per le scuole:/).count(),3);
+  assert.deepEqual(await page.locator('[name=sectionIds]').evaluateAll(xs=>xs.map(x=>x.closest('label').innerText.match(/Forum scuola \d+/)[0])), ['Forum scuola 1','Forum scuola 2','Forum scuola 6']);
   assert.match(await page.locator('meta[name=robots]').getAttribute('content'),/noindex/);
   await page.locator('[name=teacherFirstName]').fill('Ada');await page.locator('[name=teacherLastName]').fill('Docente');await page.locator('[name=teacherEmail]').fill('school-3@example.invalid');await page.locator('[name=teacherPhone]').fill('+3906000000');await page.locator('[name=schoolName]').fill('Scuola browser');await page.locator('[name=schoolCity]').fill('Roma');await page.locator('[name=classDescription]').fill('3B');
   await page.locator('[name=studentCount]').fill('8');await page.locator('[name=companionCount]').fill('1');await page.locator('[name=sectionIds]').first().check();

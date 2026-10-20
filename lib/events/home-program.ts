@@ -1,3 +1,4 @@
+import { compareForums } from "../panels/forum-order.ts";
 import type { SupportedLocale } from "../i18n/config";
 import { getPanelProgramDayKey, type PublicPanelProgramItem } from "../panels/public-program.ts";
 import { getEventProgramCopy } from "./program-copy.ts";
@@ -52,9 +53,6 @@ export function getHomeProgramDays(locale: SupportedLocale, panels: PublicPanelP
   }));
 }
 
-function forumNumber(title: string): number {
-  return Number(title.match(/^\s*(?:(?:forum|panel|foro|форум)\s*(?:n[.°º]?\s*)?)?(\d+)/i)?.[1] ?? Number.MAX_SAFE_INTEGER);
-}
 
 /** Shared summary slots and detail anchors, including later starts within a slot. */
 export function getHomePanelSlots(panels: PublicPanelProgramItem[]) {
@@ -62,8 +60,6 @@ export function getHomePanelSlots(panels: PublicPanelProgramItem[]) {
     ...slot,
     panels: panels.filter(panel => getPanelProgramDayKey(panel.startsAt) === getPanelProgramDayKey(slot.startsAt)
       && Date.parse(panel.startsAt) >= Date.parse(slot.startsAt)
-      && Date.parse(panel.startsAt) < Date.parse(slot.endsAt!)).sort((left, right) => {
-      return forumNumber(left.title) - forumNumber(right.title) || left.title.localeCompare(right.title, "it", { numeric: true, sensitivity: "base" });
-    }),
+      && Date.parse(panel.startsAt) < Date.parse(slot.endsAt!)).sort(compareForums),
   }));
 }

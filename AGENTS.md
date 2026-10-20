@@ -7412,3 +7412,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   applicata in production dopo backup verificato. Nessuna modifica ai dati operativi.
 - 986 test, lint, TypeScript, build isolata, SQL e browser desktop/mobile superati.
   Dettagli: `docs/scuole-posti-disponibili-2026-10-20.md`.
+
+## Forum: ordine numerico condiviso — 2026-10-20
+
+- Tutti gli elenchi/selettori Forum usano `lib/panels/forum-order.ts`: numero
+  prima dell'orario, titoli non numerati dopo, ordine quote stabile. Conservati
+  raggruppamenti per sessione e prenotati/disponibili e cronologia eventi generali.
+- Inclusi scuole/docente, partecipante/capogruppo, pubblico/anteprima,
+  gestione/pubblicazione, statistiche, sedi, filtro email e incarichi.
+- 990 test, lint, TypeScript, build isolata, browser originali desktop/mobile
+  e regressioni scuole su DB temporaneo superati; nessuna migration necessaria.
+  Dettagli: `docs/forum-ordine-numerico-2026-10-20.md`.

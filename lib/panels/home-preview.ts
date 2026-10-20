@@ -1,3 +1,4 @@
+import { compareForums } from "./forum-order.ts";
 import type { PanelDraftRow } from "./panel-drafts";
 import type { EventLocationOption } from "./event-locations";
 import type { PublicPanelProgramItem } from "./public-program";
@@ -26,6 +27,7 @@ export function buildHomePreview(panels: PanelDraftRow[], locations: EventLocati
       remainingSeats, publicationStatus: panel.publicationStatus,
     });
   }
-  complete.sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt) || left.title.localeCompare(right.title, "it", { numeric: true }) || left.id.localeCompare(right.id));
+  complete.sort(compareForums);
+  incomplete.sort(compareForums);
   return { panels: complete, incomplete };
 }

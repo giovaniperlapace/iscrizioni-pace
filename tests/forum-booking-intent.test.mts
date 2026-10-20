@@ -126,6 +126,7 @@ test("participant booking screen highlights the requested forum with one anchor 
   const source = readFileSync(new URL("../app/dashboard/partecipante/participant-panel-bookings.tsx", import.meta.url), "utf8");
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const dependencies: Record<string, unknown> = {
+    "@/lib/panels/forum-order": await import("../lib/panels/forum-order.ts"),
     "next/link": {default: (props: Record<string, unknown>) => { const {prefetch, ...rest}=props; void prefetch; return runtime.jsx("a",rest); }},
     "@/lib/panels/seat-count": await import("../lib/panels/seat-count.ts"),
     "@/lib/panels/attendance-copy": await import("../lib/panels/attendance-copy.ts"),

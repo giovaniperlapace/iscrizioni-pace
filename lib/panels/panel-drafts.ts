@@ -1,3 +1,4 @@
+import { compareForums, sortForums } from "./forum-order.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -207,7 +208,7 @@ export async function getPanelDraftCatalog(
   });
 
   return {
-    panels,
+    panels: sortForums(panels),
     audienceTypes: audienceRows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -336,10 +337,7 @@ export function filterPanelDrafts(
     }
 
     return true;
-  }).sort((left, right) =>
-    left.title.localeCompare(right.title, "it", { sensitivity: "base", numeric: true }) ||
-    left.id.localeCompare(right.id)
-  );
+  }).sort(compareForums);
 }
 
 export function isValidPanelDayRange(start: Date, end: Date): boolean {

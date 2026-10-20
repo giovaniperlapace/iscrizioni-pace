@@ -1,3 +1,4 @@
+import { compareForums } from "../panels/forum-order.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ReceptionDuty =
@@ -23,6 +24,6 @@ export async function loadPanelReceptionDuties(db: SupabaseClient): Promise<Rece
       }
       duties.push({ key: row.assignment_id, duty: row.duty, panelId: row.panel_id, title: row.title, room: row.room });
     }
-    if (data.length < 200) return duties;
+    if (data.length < 200) return duties.sort(compareForums);
   }
 }

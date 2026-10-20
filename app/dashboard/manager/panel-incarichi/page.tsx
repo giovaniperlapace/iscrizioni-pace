@@ -1,3 +1,4 @@
+import { compareForums } from "@/lib/panels/forum-order";
 import Link from "@/components/pending-link";
 import { redirect } from "next/navigation";
 import { ReliableForm } from "@/components/reliable-form";
@@ -22,9 +23,10 @@ export default async function PanelAssignmentsPage({ searchParams }: { searchPar
     panels.push(...data);
     if (data.length < 200) break;
   }
-  panels.sort((a, b) => a.starts_at.localeCompare(b.starts_at) || a.title.localeCompare(b.title));
+  panels.sort(compareForums);
   const assignments = await loadPanelAssignments(service, manager.event.id);
   const panelLabel = (id: string) => panels.find(panel => panel.id === id)?.title ?? "Panel non disponibile";
+  assignments.sort((a, b) => compareForums({ title: panelLabel(a.panelId) }, { title: panelLabel(b.panelId) }));
   return <main className="app-page text-[var(--peace-ink)]">
     <PreserveDashboardScroll />
     <section className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8 sm:px-8">

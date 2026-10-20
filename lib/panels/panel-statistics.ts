@@ -1,3 +1,4 @@
+import { compareForums } from "./forum-order.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -515,11 +516,7 @@ export function buildPanelStatisticsSnapshot({
         noShowPeople: null,
       } satisfies PanelStatisticsRow;
     })
-    .sort(
-      (first, second) =>
-        (first.startsAt ?? "9999").localeCompare(second.startsAt ?? "9999") ||
-        first.title.localeCompare(second.title, "it", { sensitivity: "base" })
-    );
+    .sort(compareForums);
 
   const summary = summarizePanelStatistics(rows);
 
