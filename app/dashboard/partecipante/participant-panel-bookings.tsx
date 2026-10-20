@@ -51,6 +51,7 @@ type Copy = {
   cancel: string;
   cancelling: string;
   section: string;
+  remainingSeats: string;
   liveAvailability: string;
   savedBooked: string;
   savedCancelled: string;
@@ -73,6 +74,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     cancel: "Cancella iscrizione",
     cancelling: "Cancellazione…",
     section: "Tipo di posto",
+    remainingSeats: "Posti disponibili",
     liveAvailability: "La disponibilità viene verificata di nuovo al momento della conferma.",
     savedBooked: "Iscrizione al forum confermata.",
     savedCancelled: "Iscrizione al forum cancellata.",
@@ -101,6 +103,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     cancel: "Cancel booking",
     cancelling: "Cancelling…",
     section: "Seat type",
+    remainingSeats: "Available seats",
     liveAvailability: "Availability is checked again when you confirm.",
     savedBooked: "Forum booking confirmed.",
     savedCancelled: "Forum booking cancelled.",
@@ -129,6 +132,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     cancel: "Annuler l'inscription",
     cancelling: "Annulation…",
     section: "Type de place",
+    remainingSeats: "Places disponibles",
     liveAvailability: "La disponibilité est vérifiée à nouveau lors de la confirmation.",
     savedBooked: "Inscription au forum confirmée.",
     savedCancelled: "Inscription au forum annulée.",
@@ -157,6 +161,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     cancel: "Buchung stornieren",
     cancelling: "Wird storniert…",
     section: "Platzart",
+    remainingSeats: "Verfügbare Plätze",
     liveAvailability: "Die Verfügbarkeit wird bei der Bestätigung erneut geprüft.",
     savedBooked: "Forum-Buchung bestätigt.",
     savedCancelled: "Forum-Buchung storniert.",
@@ -185,6 +190,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     cancel: "Cancelar inscripción",
     cancelling: "Cancelando…",
     section: "Tipo de plaza",
+    remainingSeats: "Plazas disponibles",
     liveAvailability: "La disponibilidad se vuelve a comprobar al confirmar.",
     savedBooked: "Inscripción al foro confirmada.",
     savedCancelled: "Inscripción al foro cancelada.",
@@ -213,6 +219,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     cancel: "Boeking annuleren",
     cancelling: "Annuleren…",
     section: "Plaastype",
+    remainingSeats: "Beschikbare plaatsen",
     liveAvailability: "De beschikbaarheid wordt bij de bevestiging opnieuw gecontroleerd.",
     savedBooked: "Forumboeking bevestigd.",
     savedCancelled: "Forumboeking geannuleerd.",
@@ -241,6 +248,7 @@ const COPY: Record<SupportedLocale, Copy> = {
     cancel: "Скасувати бронювання",
     cancelling: "Скасування…",
     section: "Тип місця",
+    remainingSeats: "Доступні місця",
     liveAvailability: "Доступність перевіряється повторно під час підтвердження.",
     savedBooked: "Бронювання форуму підтверджено.",
     savedCancelled: "Бронювання форуму скасовано.",
@@ -374,6 +382,11 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         </span>
       </div>
       <ForumLanguages panelId={row.panel_id} locale={locale} />
+      {typeof row.remaining_seats === "number" && Number.isFinite(row.remaining_seats) ? (
+        <p className="text-xs leading-5 text-[var(--peace-muted)]">
+          {copy.remainingSeats}: {Math.max(0, row.remaining_seats).toLocaleString(locale)}
+        </p>
+      ) : null}
       {row.description ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{row.description}</p> : null}
       <dl className="grid gap-2 text-sm text-[var(--peace-ink)]">
         <div className="flex items-start gap-2"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{formatDate(row.starts_at, locale)}</span></div>
