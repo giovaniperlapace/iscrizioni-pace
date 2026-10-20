@@ -15,7 +15,7 @@ export type PublicPanelProgramItem = {
   locationName: string;
   locationAddress: string | null;
   availability: PublicPanelAvailability;
-  // Present only in the authenticated home preview.
+  // Aggregate seats currently bookable by individual participants.
   remainingSeats?: number;
   publicationStatus?: "draft" | "published";
 };
@@ -29,6 +29,7 @@ type PublicPanelProgramRow = {
   location_name: string;
   location_address: string | null;
   availability: PublicPanelAvailability;
+  remaining_seats?: number | null;
 };
 
 const intlLocales: Record<SupportedLocale, string> = {
@@ -44,7 +45,7 @@ const intlLocales: Record<SupportedLocale, string> = {
 export async function getPublicPanelProgram(
   supabase: SupabaseClient
 ): Promise<PublicPanelProgramItem[]> {
-  const { data, error } = await supabase.rpc("get_public_panel_program");
+  const { data, error } = await supabase.rpc("get_public_panel_program_with_seats");
 
   if (error) {
     // Keep the public home usable during a migration-first rollout. Do not
@@ -65,6 +66,7 @@ export async function getPublicPanelProgram(
     locationName: row.location_name,
     locationAddress: row.location_address,
     availability: row.availability,
+    remainingSeats: row.remaining_seats ?? undefined,
   }));
 }
 

@@ -97,7 +97,14 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                             </p>
                             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${availabilityStyles[panel.availability]}`}>
                               <AvailabilityIcon availability={panel.availability} />
-                              {copy.availability[panel.availability]}
+                              <span className="flex flex-col items-start">
+                                <span>{copy.availability[panel.availability]}</span>
+                                {typeof panel.remainingSeats === "number" && Number.isFinite(panel.remainingSeats) ? (
+                                  <span className="text-[10px] font-normal leading-4">
+                                    {programCopy.seats}: {Math.max(0, panel.remainingSeats).toLocaleString(locale)}
+                                  </span>
+                                ) : null}
+                              </span>
                             </span>
                           </div>
                           {panel.publicationStatus === "draft" ? <span className="mt-3 w-fit rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900">{programCopy.draft}</span> : null}
@@ -110,7 +117,6 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                               {panel.description}
                             </p>
                           ) : null}
-                          {panel.remainingSeats !== undefined ? <p className="mt-3 text-sm font-semibold text-[var(--peace-blue-800)]">{programCopy.seats}: {panel.remainingSeats}</p> : null}
                           <address className="mt-auto flex min-w-0 gap-2 break-words pt-5 text-sm not-italic leading-6 text-[var(--peace-ink)]">
                             <MapPin aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-[var(--peace-blue-700)]" />
                             <span>
