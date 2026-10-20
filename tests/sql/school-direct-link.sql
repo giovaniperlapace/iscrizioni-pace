@@ -69,6 +69,7 @@ do $$ declare b uuid;begin
  perform save_school_booking(sd(100),b,'school-3@example.invalid','Ada','Docente','+3906000000','Scuola sintetica','Roma','3A',20,2,'school-booking-v1',null,'submitted',
  jsonb_build_array(jsonb_build_object('panel_id',sd(401),'seat_section_id',sd(501),'student_count',20,'companion_count',2)));
  assert (select student_count=20 from school_bookings where id=b);
+ assert (select remaining_seats=3 from get_public_school_booking_options_with_availability() where section_id=sd(501));
 end $$;
 reset role;
 \echo PASS service-only booking, canonical capacity, rollback when full, verified teacher reads and reduces own booking
@@ -109,3 +110,18 @@ do $$ begin
  assert (select count(*)=1 from school_booking_qr_tokens where status='revoked');
 end $$;
 \echo PASS foreign teacher denied, personal bookings closed, link closure enforced, cancellation releases seats and revokes QR
+
+set role anon;
+do $$ begin
+ assert (select count(*)=2 from get_public_school_booking_options_with_availability());
+ assert (select remaining_seats=25 from get_public_school_booking_options_with_availability() where section_id=sd(501));
+end $$;
+reset role;
+update events set school_link_enabled=false where id=sd(100);
+set role anon;
+do $$ begin
+ assert (select count(*)=0 from get_public_school_booking_options_with_availability());
+end $$;
+reset role;
+update events set school_link_enabled=true where id=sd(100);
+\echo PASS public school availability counts school seats only and respects closed access

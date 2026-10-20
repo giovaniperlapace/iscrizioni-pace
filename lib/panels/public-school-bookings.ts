@@ -12,6 +12,7 @@ export type PublicSchoolPanelOption = {
   startsAt: string;
   endsAt: string;
   locationName: string;
+  remainingSeats?: number;
 };
 
 export type PublicSchoolBookingOptions = {
@@ -47,6 +48,7 @@ type PublicSchoolBookingOptionRow = {
   starts_at: string;
   ends_at: string;
   location_name: string;
+  remaining_seats: number;
 };
 
 export function parsePublicSchoolBookingForm(
@@ -101,7 +103,7 @@ export function parsePublicSchoolBookingForm(
 export async function getPublicSchoolBookingOptions(
   supabase: SupabaseClient
 ): Promise<PublicSchoolBookingOptions> {
-  const { data, error } = await supabase.rpc("get_public_school_booking_options");
+  const { data, error } = await supabase.rpc("get_public_school_booking_options_with_availability");
   if (error) throw error;
   const rows = (data ?? []) as PublicSchoolBookingOptionRow[];
   const first = rows[0];
@@ -117,6 +119,7 @@ export async function getPublicSchoolBookingOptions(
       startsAt: row.starts_at,
       endsAt: row.ends_at,
       locationName: row.location_name,
+      remainingSeats: row.remaining_seats,
     })),
   };
 }

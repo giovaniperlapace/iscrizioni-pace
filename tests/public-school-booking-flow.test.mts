@@ -34,7 +34,7 @@ test("P8 exposes public school options without leaking reserved capacities", () 
     migration,
     /returns table \([\s\S]*section_id uuid,[\s\S]*capacity (integer|bigint)/
   );
-  assert.match(publicOptions, /supabase\.rpc\("get_public_school_booking_options"\)/);
+  assert.match(publicOptions, /supabase\.rpc\("get_public_school_booking_options_with_availability"\)/);
   assert.doesNotMatch(publicOptions, /from\("panel_seat_sections"\)/);
 });
 

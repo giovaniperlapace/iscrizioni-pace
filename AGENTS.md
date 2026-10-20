@@ -7402,3 +7402,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Su richiesta dell’utente, niente messaggi di successo dopo iscrizione o
   rimozione: stato, pulsante e posti aggiornati confermano l’esito. Restano
   gli errori nella riga interessata.
+
+## Scuole: posti disponibili per Forum — 2026-10-20
+
+- `/scuole`: badge in sette lingue con il residuo della sola quota scolastica,
+  studenti e accompagnatori inclusi nell'occupazione; disponibilità al caricamento
+  e ricontrollo atomico all'invio conservato. Forum esauriti esclusi come prima.
+- RPC aggiuntiva che riusa il catalogo/gate canonici; migration `20261020234000`
+  applicata in production dopo backup verificato. Nessuna modifica ai dati operativi.
+- 986 test, lint, TypeScript, build isolata, SQL e browser desktop/mobile superati.
+  Dettagli: `docs/scuole-posti-disponibili-2026-10-20.md`.

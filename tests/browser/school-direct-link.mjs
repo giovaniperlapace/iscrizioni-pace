@@ -10,7 +10,7 @@ export async function checkSchoolDirectLink(psql) {
  const dir=process.env.SCHOOL_BUILD_DIR;assert.ok(dir?.startsWith('/tmp/'));
  const base='http://127.0.0.1:3179';const calls=[];const errors=[];
  const tables=new Set(['events','school_bookings','school_booking_teachers','school_panel_reservations','school_booking_qr_tokens','audit_logs']);
- const rpcTypes={get_school_booking_access:'scalar',get_panel_release_mode:'scalar',get_public_school_booking_options:'rows',get_teacher_school_panel_options:'rows',create_public_school_booking:'scalar',link_current_school_teacher_identity:'scalar',save_school_booking:'scalar',cancel_school_booking:'scalar'};
+ const rpcTypes={get_school_booking_access:'scalar',get_panel_release_mode:'scalar',get_public_school_booking_options_with_availability:'rows',get_teacher_school_panel_options:'rows',create_public_school_booking:'scalar',link_current_school_teacher_identity:'scalar',save_school_booking:'scalar',cancel_school_booking:'scalar'};
  const adapter=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');const u=new URL(req.url,base);let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{};
   calls.push(u.pathname);
@@ -46,6 +46,7 @@ export async function checkSchoolDirectLink(psql) {
   const context=await browser.newContext({locale:'it-IT'});const page=await context.newPage();const browserErrors=[];page.on('pageerror',e=>browserErrors.push(e.message));
   await page.goto(base+'/scuole');await page.locator('[name=teacherFirstName]').waitFor();
   assert.equal(await page.locator('[name=sectionIds]').count(),3);
+  assert.equal(await page.getByText(/Posti disponibili per le scuole:/).count(),3);
   assert.match(await page.locator('meta[name=robots]').getAttribute('content'),/noindex/);
   await page.locator('[name=teacherFirstName]').fill('Ada');await page.locator('[name=teacherLastName]').fill('Docente');await page.locator('[name=teacherEmail]').fill('school-3@example.invalid');await page.locator('[name=teacherPhone]').fill('+3906000000');await page.locator('[name=schoolName]').fill('Scuola browser');await page.locator('[name=schoolCity]').fill('Roma');await page.locator('[name=classDescription]').fill('3B');
   await page.locator('[name=studentCount]').fill('8');await page.locator('[name=companionCount]').fill('1');await page.locator('[name=sectionIds]').first().check();
