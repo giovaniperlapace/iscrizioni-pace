@@ -378,15 +378,15 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <h4 className="text-lg font-bold text-[var(--peace-blue-950)]">{row.title}</h4>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${isSelected ? "bg-[#e8f6e8] text-[#27613a]" : row.booking_status === "available" ? "bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]" : "bg-[#fff0eb] text-[#8a3323]"}`}>
           {isSelected ? <CheckCircle2 aria-hidden="true" className="mr-1 inline size-3.5" /> : null}
-          {statusLabel}
+          <span>{statusLabel}</span>
+          {typeof row.remaining_seats === "number" && Number.isFinite(row.remaining_seats) ? (
+            <span className="block text-[10px] font-normal leading-4">
+              {copy.remainingSeats}: {Math.max(0, row.remaining_seats).toLocaleString(locale)}
+            </span>
+          ) : null}
         </span>
       </div>
       <ForumLanguages panelId={row.panel_id} locale={locale} />
-      {typeof row.remaining_seats === "number" && Number.isFinite(row.remaining_seats) ? (
-        <p className="text-xs leading-5 text-[var(--peace-muted)]">
-          {copy.remainingSeats}: {Math.max(0, row.remaining_seats).toLocaleString(locale)}
-        </p>
-      ) : null}
       {row.description ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{row.description}</p> : null}
       <dl className="grid gap-2 text-sm text-[var(--peace-ink)]">
         <div className="flex items-start gap-2"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{formatDate(row.starts_at, locale)}</span></div>
