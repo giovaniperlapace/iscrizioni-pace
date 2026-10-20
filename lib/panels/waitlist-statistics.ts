@@ -50,13 +50,13 @@ export async function loadPanelWaitlistData(db: SupabaseClient, eventId: string)
 
 /** Unique nominal people with at least one queued slot lacking a confirmed booking.
  * A pending offer is not a confirmed booking; children are checked individually. */
-export function countWaitlistedWithoutBooking(
+export function findWaitlistedWithoutBooking(
   panels: { id: string; startsAt: string | null }[],
   choices: { registrationId: string; panelId: string; sectionId: string | null; choice: string; registrationStatus: string; selectedChildIds?: string[] }[],
   rows: PanelWaitlistEntry[],
   selections: { panel_id: string; registration_id: string; child_ids: string[] }[],
   now = Date.now(),
-): number {
+): { peopleCount: number; registrationIds: Set<string> } {
   const slots = new Map(panels.map(panel => [panel.id,
     panel.startsAt && Number.isFinite(Date.parse(panel.startsAt)) ? schoolPanelSlot(panel.startsAt) : null]));
   const booked = new Map<string, Set<string>>();
@@ -71,6 +71,7 @@ export function countWaitlistedWithoutBooking(
   }
   const selected = new Map(selections.map(row => [`${row.registration_id}:${row.panel_id}`, new Set(row.child_ids)]));
   const uncovered = new Set<string>();
+  const registrationIds = new Set<string>();
   for (const row of rows) {
     const slot = slots.get(row.panel_id);
     const registration = row.registrations;
@@ -78,7 +79,11 @@ export function countWaitlistedWithoutBooking(
     if (row.status !== "waiting" && !(row.status === "offered" && Date.parse(row.expires_at ?? "") > now)) continue;
     const children = selected.get(`${row.registration_id}:${row.panel_id}`);
     const people = [`adult:${row.registration_id}`, ...registration.registration_children.filter(child => children?.has(child.id)).map(child => `child:${row.registration_id}:${child.id}`)];
-    for (const person of people) if (!booked.get(person)?.has(slot)) uncovered.add(person);
+    for (const person of people) if (!booked.get(person)?.has(slot)) { uncovered.add(person); registrationIds.add(row.registration_id); }
   }
-  return uncovered.size;
+  return { peopleCount: uncovered.size, registrationIds };
+}
+
+export function countWaitlistedWithoutBooking(...args: Parameters<typeof findWaitlistedWithoutBooking>): number {
+  return findWaitlistedWithoutBooking(...args).peopleCount;
 }

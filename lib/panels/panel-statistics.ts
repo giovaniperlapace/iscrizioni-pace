@@ -1,3 +1,4 @@
+import { findPeopleWithoutForum } from "./forum-outreach.ts";
 import { loadPanelWaitlistData, countWaitlistedWithoutBooking, type PanelWaitlistCount } from "./waitlist-statistics.ts";
 import { compareForums } from "./forum-order.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
@@ -137,6 +138,7 @@ export type PanelStatisticsSnapshot = {
   actualAttendanceAvailable: boolean;
   bookingCoverage: { bookedPeople: number; registeredPeople: number };
   waitlistedWithoutBookingPeople: number;
+  withoutForumPeople: number;
 };
 
 type PanelDbRow = {
@@ -211,6 +213,7 @@ export function emptyPanelStatisticsSnapshot(): PanelStatisticsSnapshot {
     summary: emptyPanelStatisticsSummary(),
     bookingCoverage: { bookedPeople: 0, registeredPeople: 0 },
     waitlistedWithoutBookingPeople: 0,
+    withoutForumPeople: 0,
     actualAttendanceAvailable: false,
   };
 }
@@ -262,7 +265,7 @@ export async function getPanelStatisticsSnapshot(
     loadPanelAttendanceTotals(supabase, eventId),
     loadAllRows((from, to) => supabase.from("registrations")
       .select("id,registration_children(id)").eq("event_id", eventId)
-      .neq("status", "cancelled").order("id").range(from, to)),
+      .is("deleted_at", null).in("status", ["submitted", "confirmed"]).order("id").range(from, to)),
     loadPanelWaitlistData(supabase, eventId),
   ]);
 
@@ -303,6 +306,7 @@ export async function getPanelStatisticsSnapshot(
   snapshot.waitlistedWithoutBookingPeople = countWaitlistedWithoutBooking(
     snapshot.panels, individualChoices, waitlistData.rows, waitlistData.selections,
   );
+  snapshot.withoutForumPeople = findPeopleWithoutForum(registrationsResult.data, individualChoices).peopleCount;
   snapshot.bookingCoverage = calculatePanelBookingCoverage(
     registrationsResult.data, individualChoices,
   );
@@ -564,6 +568,7 @@ export function buildPanelStatisticsSnapshot({
     summary,
     bookingCoverage: { bookedPeople: 0, registeredPeople: 0 },
     waitlistedWithoutBookingPeople: 0,
+    withoutForumPeople: 0,
     actualAttendanceAvailable: false,
   };
 }
@@ -698,7 +703,7 @@ function emptyPanelStatisticsSummary(): PanelStatisticsSummary {
   };
 }
 
-async function getAllIndividualChoices(
+export async function getAllIndividualChoices(
   supabase: SupabaseClient,
   panelIds: string[]
 ): Promise<PanelStatisticsIndividualChoiceInput[]> {

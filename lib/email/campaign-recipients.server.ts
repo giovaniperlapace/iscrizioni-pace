@@ -1,3 +1,5 @@
+import { loadForumOutreachTargets } from "../panels/forum-outreach.server";
+import { parseForumOutreach, type ForumOutreach } from "../panels/forum-outreach";
 import { explicitParticipantDelegate, groupAndAncestorIds, chooseParticipantDelegate } from "./participant-delegate";
 import { loadAllRows, loadRowsForIds } from "@/lib/supabase/all-rows";
 import { getOperationalUserIdentities } from "@/lib/operational-users/identity";
@@ -32,6 +34,7 @@ export type CampaignRecipientPreview = CampaignRecipient & {
 
 export type CampaignRecipientFilters = {
   audience?: CampaignRecipientAudience;
+  forumOutreach?: ForumOutreach | null;
   groupId: string | null;
   tagId: string | null;
   serviceId: string | null;
@@ -63,7 +66,11 @@ export async function resolveCampaignRecipients(
     return resolveTeacherRecipients(eventId);
   }
 
-  return resolveParticipantRecipients(eventId, filters.status);
+  const recipients = await resolveParticipantRecipients(eventId, filters.status);
+  const mode = parseForumOutreach(filters.forumOutreach);
+  if (!mode) return recipients;
+  const targets = await loadForumOutreachTargets(createSupabaseServiceClient(), eventId, mode);
+  return recipients.filter(recipient => recipient.registrationId && targets.registrationIds.has(recipient.registrationId));
 }
 
 export async function resolveCurrentParticipantRecipient(eventId: string, registrationId: string) {

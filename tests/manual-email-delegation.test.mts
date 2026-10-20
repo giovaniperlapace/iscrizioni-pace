@@ -87,6 +87,7 @@ function resolver(tables: Record<string, DbRow[]>, failTable?: string) {
   }).outputText;
   const exports: Record<string, unknown> = {};
   new Function("require", "exports", output)((id: string) => {
+    if (id.includes("forum-outreach")) return {};
     if (id.includes("participant-delegate")) return delegate;
     if (id.includes("all-rows")) return allRows;
     if (id.includes("supabase/service")) return { createSupabaseServiceClient: () => service };

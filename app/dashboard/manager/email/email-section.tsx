@@ -1,3 +1,4 @@
+import { parseForumOutreach } from "@/lib/panels/forum-outreach";
 import { sortForums } from "@/lib/panels/forum-order";
 import { isPanelCampaign } from "@/lib/panels/management-access";
 import { loadAllRows } from "@/lib/supabase/all-rows";
@@ -12,11 +13,13 @@ export async function ManagerEmailSection({
   eventId,
   canManage,
   initialPanelId,
+  initialForumOutreach,
   allowPanelManagement = false,
 }: {
   eventId: string | null;
   canManage: boolean;
   initialPanelId?: string | null;
+  initialForumOutreach?: string | null;
   allowPanelManagement?: boolean;
 }) {
   if (!eventId) {
@@ -35,6 +38,7 @@ export async function ManagerEmailSection({
     );
   }
 
+  const forumOutreach = allowPanelManagement ? parseForumOutreach(initialForumOutreach) : null;
   const service = createSupabaseServiceClient();
   const [
     { data: groups },
@@ -93,19 +97,20 @@ export async function ManagerEmailSection({
   const [participantCandidates, groupLeaderCandidates, teacherCandidates] = await Promise.all([
     resolveCampaignRecipients(eventId, {
       audience: "participants",
+      forumOutreach,
       groupId: null,
       tagId: null,
       serviceId: null,
       status: "active",
     }),
-    resolveCampaignRecipients(eventId, {
+    !forumOutreach ? resolveCampaignRecipients(eventId, {
       audience: "group_leaders",
       groupId: null,
       tagId: null,
       serviceId: null,
       status: "active",
-    }),
-    allowPanelManagement ? resolveCampaignRecipients(eventId, {
+    }) : Promise.resolve([]),
+    allowPanelManagement && !forumOutreach ? resolveCampaignRecipients(eventId, {
       audience: "teachers",
       groupId: null,
       tagId: null,
@@ -115,7 +120,7 @@ export async function ManagerEmailSection({
   ]);
   const initialRecipients = await loadCampaignRecipientPreviews(
     [...participantCandidates, ...groupLeaderCandidates, ...teacherCandidates],
-    new Set(),
+    new Set(forumOutreach ? participantCandidates.map(recipient => recipient.recipientKey) : []),
     eventId,
     allowPanelManagement
   );
@@ -133,6 +138,8 @@ export async function ManagerEmailSection({
       <p role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">Il servizio email è temporaneamente in pausa. L’invio dei messaggi in attesa riprenderà automaticamente. Gli esiti da verificare non saranno reinviati.</p>
     ) : null}
     <EmailCampaignComposer
+      key={`${forumOutreach ?? "all"}:${initialPanelId ?? ""}`}
+      forumOutreach={forumOutreach}
       allowPanelManagement={allowPanelManagement}
       groups={(groups ?? []).map((row) => ({ id: row.id, label: row.name }))}
       tags={(tags ?? []).map((row) => ({ id: row.id, label: row.label }))}

@@ -8,7 +8,6 @@ import {
   CircleGauge,
   Mail,
   MapPin,
-  School,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -117,12 +116,15 @@ export function PanelStatisticsReport({
           icon={Users}
           label="In attesa senza Forum nella stessa fascia"
           value={statistics.waitlistedWithoutBookingPeople}
+          mailHref={canManage ? `/dashboard/${dashboard}?section=email&nav=${navMode}&campaignForumOutreach=waiting_without_booking` : undefined}
           detail="Totale evento · persone uniche, minori selezionati inclusi · almeno una fascia senza prenotazione confermata; offerte da confermare incluse"
         />
         <PanelSummaryCard
-          icon={School}
-          label="Scuole · prenotazioni/persone"
-          value={`${filteredSummary.schoolBookings}/${filteredSummary.schoolPeople}`}
+          icon={Users}
+          label="Iscritti senza alcun Forum"
+          value={statistics.withoutForumPeople}
+          detail="Totale evento · persone uniche, minori inclusi · nessuna prenotazione confermata"
+          mailHref={canManage ? `/dashboard/${dashboard}?section=email&nav=${navMode}&campaignForumOutreach=without_forum` : undefined}
         />
       </div>
 
@@ -440,11 +442,13 @@ function PanelSummaryCard({
   label,
   value,
   detail,
+  mailHref,
 }: {
   icon: LucideIcon;
   label: string;
   value: number | string;
   detail?: string;
+  mailHref?: string;
 }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
@@ -460,6 +464,7 @@ function PanelSummaryCard({
         </span>
         {detail && <span className="mt-1 block text-xs leading-4 text-[var(--peace-muted)]">{detail}</span>}
       </span>
+      {mailHref ? <Link href={mailHref} prefetch={false} aria-label={`Scrivi a: ${label}`} title={`Scrivi a: ${label}`} className="btn-secondary ml-auto inline-flex h-9 w-9 shrink-0 items-center justify-center"><Mail size={17} aria-hidden="true" /></Link> : null}
     </div>
   );
 }

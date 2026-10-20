@@ -1,3 +1,5 @@
+import { parseForumOutreach } from "@/lib/panels/forum-outreach";
+import { loadForumOutreachTargets } from "@/lib/panels/forum-outreach.server";
 import { suppressionWarnings } from "@/lib/email/postmark-reporting";
 import { canAccessPanelManagement, isPanelCampaign } from "@/lib/panels/management-access";
 import { loadAllRows, writeRowsForIds } from "@/lib/supabase/all-rows";
@@ -390,6 +392,13 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     })
   );
   if (!recipients.length) throw new Error("Non ci sono destinatari in attesa.");
+  const outreach = parseForumOutreach(campaign.filters_snapshot?.forumOutreach);
+  if (outreach) {
+    const targets = await loadForumOutreachTargets(service, campaign.event_id, outreach);
+    if (recipients.some(recipient => !recipient.registrationId || !targets.registrationIds.has(recipient.registrationId))) {
+      throw new Error("Le prenotazioni Forum sono cambiate. Riapri la campagna dalle statistiche per aggiornare i destinatari prima di inviare.");
+    }
+  }
   const { data: event } = await service
     .from("events")
     .select("id,title")
@@ -476,7 +485,11 @@ function recipientSelectionSummary(recipients: RecipientPreview[]) {
 }
 
 function campaignFilters(body: Record<string, unknown>) {
+  const forumOutreach = parseForumOutreach(body.forumOutreach);
+  if (body.forumOutreach && !forumOutreach) throw new Error("Filtro Forum non valido.");
+  if (forumOutreach && body.audience !== "participants") throw new Error("Il filtro Forum richiede destinatari partecipanti.");
   return {
+    forumOutreach,
     groupId: clean(body.groupId, 80) || null,
     tagId: clean(body.tagId, 80) || null,
     serviceId: clean(body.serviceId, 80) || null,

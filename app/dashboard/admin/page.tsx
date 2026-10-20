@@ -203,6 +203,7 @@ type AdminPageProps = {
     panelTool?: string;
     panelView?: string;
     campaignPanel?: string;
+    campaignForumOutreach?: string;
     schoolError?: string;
     schoolId?: string;
     schoolPanel?: string;
@@ -647,7 +648,7 @@ export default async function AdminDashboardPage({
               />
             ) : null}
 
-            {activeSection === "email" ? <ManagerEmailSection eventId={currentEventId} canManage={true} allowPanelManagement={true} initialPanelId={params.campaignPanel} /> : null}
+            {activeSection === "email" ? <ManagerEmailSection eventId={currentEventId} canManage={true} allowPanelManagement={true} initialPanelId={params.campaignPanel} initialForumOutreach={params.campaignForumOutreach} /> : null}
 
             {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 

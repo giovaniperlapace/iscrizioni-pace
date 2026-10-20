@@ -7454,3 +7454,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Solo Admin/Manager e aggregato; nessuna migration. 999 test, build e browser,
   riconciliazione SQL live in sola lettura. Dettagli in
   `docs/forum-attesa-senza-prenotazione-2026-10-21.md`.
+
+## Statistiche Forum: destinatari email dai contatori — 2026-10-21
+
+- «Iscritti senza alcun Forum» sostituisce il contatore scuole; persone uniche,
+  minori verificati nominalmente. Icona mail su questo e «In attesa senza Forum
+  nella stessa fascia», solo Admin/Manager, destinatari raggiungibili preselezionati.
+- Contatti adulti per minori e deleghe conservati; filtri server e controllo fresco
+  prima dell'invio. Nessun invio automatico o migration. Verifiche in
+  `docs/forum-contatori-email-2026-10-21.md`.

@@ -11,7 +11,7 @@ export function canAccessPanelManagement(roles: EventUserRole[], eventId?: strin
 export function isPanelCampaign(filters: unknown): boolean {
   if (!filters || typeof filters !== "object") return false;
   const value = filters as Record<string, unknown>;
-  return value.audience === "teachers" || Boolean(value.panelId) || Boolean(value.schoolName) ||
+  return value.audience === "teachers" || Boolean(value.forumOutreach) || Boolean(value.panelId) || Boolean(value.schoolName) ||
     [value.subject, value.message, value.subject_template, value.body_template].some(text =>
       typeof text === "string" && /\{\{\s*(?:panel|scuola)\s*\}\}/i.test(text));
 }

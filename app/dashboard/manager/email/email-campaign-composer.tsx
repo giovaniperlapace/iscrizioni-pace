@@ -1,5 +1,6 @@
 "use client";
 
+import type { ForumOutreach } from "@/lib/panels/forum-outreach";
 import { CampaignHistory } from "./campaign-history";
 import { ProgressButton } from "@/components/button-progress";
 
@@ -75,6 +76,7 @@ type EmailCampaignComposerProps = {
   panels: Option[];
   allowPanelManagement?: boolean;
   initialPanelId?: string | null;
+  forumOutreach?: ForumOutreach | null;
   initialRecipients: RecipientRow[];
   templates: Template[];
   campaigns: CampaignSummary[];
@@ -87,6 +89,7 @@ export function EmailCampaignComposer({
   panels,
   allowPanelManagement = false,
   initialPanelId,
+  forumOutreach = null,
   initialRecipients,
   templates: initialTemplates,
 }: EmailCampaignComposerProps) {
@@ -118,7 +121,7 @@ export function EmailCampaignComposer({
   const [recipientSearch, setRecipientSearch] = useState("");
   const recipientRows = initialRecipients;
   const [preview, setPreview] = useState<Preview | null>(null);
-  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(() => forumOutreach ? initialRecipients.filter(recipient => recipient.selected).map(recipient => recipient.recipientKey) : []);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [testSent, setTestSent] = useState(false);
   const [showSendConfirmation, setShowSendConfirmation] = useState(false);
@@ -284,6 +287,7 @@ export function EmailCampaignComposer({
       formData.set("status", "active");
       formData.set("audience", audience);
       formData.set("panelId", panelFilter);
+      if (forumOutreach) formData.set("forumOutreach", forumOutreach);
       formData.set("schoolName", schoolFilter);
       formData.set("selectedRecipientKeys", JSON.stringify(selectedRecipientIds));
       formData.set(
@@ -344,7 +348,7 @@ export function EmailCampaignComposer({
   }
 
   function changeAudience(nextAudience: "participants" | "group_leaders" | "teachers") {
-    if (nextAudience === audience) return;
+    if (forumOutreach || nextAudience === audience) return;
     setAudience(nextAudience);
     setSelectedRecipientIds([]);
     setRecipientSearch("");
@@ -592,6 +596,10 @@ export function EmailCampaignComposer({
             in piccoli gruppi.
           </span>
         </div>
+        {forumOutreach ? <p className="rounded-lg border border-[var(--peace-border)] bg-[#eef7fc] p-3 text-sm" role="status">
+          <strong>{forumOutreach === "without_forum" ? "Iscritti senza alcun Forum" : "In attesa senza Forum nella stessa fascia"}</strong>
+          {" · Destinatari raggiungibili già selezionati. Per i minori viene selezionato il contatto dell’adulto; le deleghe email restano attive. Il numero di destinatari può quindi differire dal contatore delle persone. Puoi deselezionare singoli destinatari prima dell’anteprima."}
+        </p> : null}
         <div
           role="tablist"
           aria-label="Tipo di destinatari"
@@ -617,6 +625,7 @@ export function EmailCampaignComposer({
             type="button"
             role="tab"
             id="campaign-audience-leaders-tab"
+            disabled={Boolean(forumOutreach)}
             aria-controls="campaign-audience-panel"
             aria-selected={audience === "group_leaders"}
             className={[
@@ -633,6 +642,7 @@ export function EmailCampaignComposer({
             type="button"
             role="tab"
             id="campaign-audience-teachers-tab"
+            disabled={Boolean(forumOutreach)}
             aria-controls="campaign-audience-panel"
             aria-selected={audience === "teachers"}
             className={[

@@ -175,6 +175,7 @@ type ManagerPageProps = {
     panelTool?: string;
     panelView?: string;
     campaignPanel?: string;
+    campaignForumOutreach?: string;
     schoolError?: string;
     schoolId?: string;
     schoolPanel?: string;
@@ -647,7 +648,7 @@ export default async function ManagerDashboardPage({
                 eventId={currentEventId}
                 canManage={currentEventId ? scope.canManageEvent(currentEventId) : false}
                 allowPanelManagement={canManage}
-                initialPanelId={params.campaignPanel}
+                initialPanelId={params.campaignPanel} initialForumOutreach={params.campaignForumOutreach}
               />
             ) : null}
 
