@@ -7,16 +7,17 @@ import { parseOperationsDashboardFilters, type OperationsDashboardFilters } from
 import type { OperationsParticipantsSnapshot } from "@/lib/registrations/operations-types";
 
 const EMPTY_FILTERS = parseOperationsDashboardFilters({});
-const FILTER_NAMES = ["q", "contact", "group", "service", "tag"] as const;
+const FILTER_NAMES = ["q", "contact", "group", "service", "tag", "attendanceState", "attendanceYes", "attendanceNo"] as const;
 const OVERLAY_PARAMS = ["edit", "editMode", "groupId", "groupLinkGroupId", "groupLinkToken", "groupTool"];
 const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50";
 
 export function OperationsParticipantFilters({
-  filters, groupOptions, eventServices, operationalTags, dashboard, navMode, withoutGroup,
+  filters, groupOptions, eventServices, operationalTags, dashboard, navMode, withoutGroup, attendanceColumns = [],
 }: Pick<OperationsParticipantsSnapshot, "filters" | "groupOptions" | "eventServices" | "operationalTags"> & {
   dashboard: "admin" | "manager";
   navMode: "mini" | "full";
   withoutGroup: boolean;
+  attendanceColumns?: { key: string; label: string }[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -140,6 +141,20 @@ export function OperationsParticipantFilters({
             ))}
           </select>
         </label>
+        <label className="grid min-w-0 gap-1 text-sm">
+          Giorni di presenza comunicati
+          <select className="field" name="attendanceState" value={draft.attendanceState ?? "all"}
+            onChange={event => setDraft({ ...draft, attendanceState: event.target.value as OperationsDashboardFilters["attendanceState"] })}>
+            <option value="all">Tutti</option><option value="known">Comunicati</option><option value="unknown">Da comunicare</option>
+          </select>
+        </label>
+        {(["attendanceYes", "attendanceNo"] as const).map(name => <label key={name} className="grid min-w-0 gap-1 text-sm">
+          {name === "attendanceYes" ? "Presente nella mezza giornata" : "Non presente nella mezza giornata"}
+          <select className="field" name={name} value={draft[name] ?? ""} onChange={event => setDraft({ ...draft, [name]: event.target.value })}>
+            <option value="">Qualsiasi</option>
+            {attendanceColumns.map(slot => <option key={slot.key} value={slot.key}>{slot.label}</option>)}
+          </select>
+        </label>)}
         <div className="flex flex-wrap items-start gap-2 sm:col-span-2 xl:col-span-1">
           <button type="submit" className={buttonClass} disabled={isPending}>
             Cerca
@@ -153,7 +168,7 @@ export function OperationsParticipantFilters({
           </button>
         </div>
       </div>
-      <p className="mt-2 text-sm text-[var(--peace-muted)]">Premi Invio o Cerca per applicare i filtri.</p>
+      <p className="mt-2 text-sm text-[var(--peace-muted)]">I filtri riguardano le presenze comunicate, non gli ingressi registrati. Le date da comunicare non contano come assenze. Premi Invio o Cerca per applicare i filtri.</p>
       {isPending ? <WorkStatus className="mt-2 text-sm text-[var(--peace-blue-800)]" /> : null}
     </form>
   );

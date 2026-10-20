@@ -287,12 +287,6 @@ export async function filteredExportPeople(
     eventTitle: event.title,
   }));
   const deleted = params.get("view") === "deleted";
-  let people = applyOperationsDashboardFilters(
-    all.filter((person) => Boolean(person.deletedAt) === deleted),
-    parseOperationsDashboardFilters(Object.fromEntries(params)),
-  );
-  if (params.get("view") === "without-group")
-    people = people.filter((person) => !person.currentGroupId);
   const attendance = (
     await loadRowsForIds(
       all.map((person) => person.id),
@@ -305,6 +299,18 @@ export async function filteredExportPeople(
           .range(from, to),
     )
   ).data as StatisticsAttendanceChoice[];
+  const attendanceByRegistration = new Map<string, StatisticsAttendanceChoice[]>();
+  for (const choice of attendance) {
+    const choices = attendanceByRegistration.get(choice.registration_id) ?? [];
+    choices.push(choice);
+    attendanceByRegistration.set(choice.registration_id, choices);
+  }
+  let people = applyOperationsDashboardFilters(
+    all.filter((person) => Boolean(person.deletedAt) === deleted).map(person => ({ ...person, attendance: attendanceByRegistration.get(person.id) ?? [] })),
+    parseOperationsDashboardFilters(Object.fromEntries(params)),
+  );
+  if (params.get("view") === "without-group")
+    people = people.filter((person) => !person.currentGroupId);
   if (drilldown) {
     const groups = (
       await loadAllRows((from, to) =>
@@ -338,12 +344,6 @@ export async function filteredExportPeople(
   const accessibility = includeAccessibility
     ? await loadAccessibilitySummaries(accessibilityDb, people.map(person => person.id))
     : new Map<string, string>();
-  const attendanceByRegistration = new Map<string, StatisticsAttendanceChoice[]>();
-  for (const choice of attendance) {
-    const choices = attendanceByRegistration.get(choice.registration_id) ?? [];
-    choices.push(choice);
-    attendanceByRegistration.set(choice.registration_id, choices);
-  }
   return {
     people: people.map(person => ({ ...person, accessibility: accessibility.get(person.id), attendance: attendanceByRegistration.get(person.id) ?? [] })),
     attendance: attendance.filter((choice) =>

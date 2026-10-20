@@ -26,8 +26,8 @@ function harness(failSave = false, exhaustBudget = false, recovery?: { results: 
         async maybeSingle(){return {data:table === "school_booking_teachers" ? { email: "teacher@example.invalid", first_name: "Docente", last_name: "Prova", school_bookings: [{ school_name: "Scuola", status: "confirmed", school_panel_reservations: [{ status: "reserved", event_moments: { title: "Panel" } }] }] } : {status:"completed"}};},
         then(resolve: (value: unknown) => unknown) {
           if (update && table === "email_campaign_recipients") {
-            if (failSave && id.endsWith("-0")) return Promise.resolve({error:{message:"db down"}}).then(resolve);
-            states.set(id, update.status!);
+            if (failSave && update.status === "sent" && id.endsWith("-0")) return Promise.resolve({error:{message:"db down"}}).then(resolve);
+            if (update.status) states.set(id, update.status);
           }
           if (update && table === "email_campaigns") campaignStatuses.push(update.status!);
           const data = table === "email_campaigns" && !update
@@ -42,6 +42,7 @@ function harness(failSave = false, exhaustBudget = false, recovery?: { results: 
   const source = ts.transpileModule(readFileSync(new URL("../lib/email/campaign-delivery.server.ts",import.meta.url),"utf8"), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   new Function("require","exports","Date",source)((id:string) => {
     if(id==="node:crypto")return {createHash};
+    if(id.includes("campaign-report"))return {emailHash:(email:string)=>createHash("sha256").update(email).digest("hex")};
     if(id.includes("config")) return {getEmailConfig:()=>({})};
     if(id.includes("supabase/service"))return {createSupabaseServiceClient:()=>service};
     if(id.includes("campaign-scheduling"))return {getCampaignLocalDate:()=>"2026-09-15"};

@@ -4,6 +4,7 @@ import { batchFailure, retryAfterSeconds, type BatchFailure } from "./batch-outc
 
 export type SendEmailInput = {
   to: string;
+  metadata?: Record<string, string>;
   subject: string;
   text: string;
   html: string;
@@ -86,6 +87,7 @@ function postmarkPayload(input: SendEmailInput, kind: "transactional" | "broadca
         TextBody: input.text,
         HtmlBody: input.html,
         MessageStream: kind === "broadcast" ? config.broadcastStream : config.transactionalStream,
+        Metadata: input.metadata,
         TrackOpens: false,
         TrackLinks: "None",
         Attachments: input.attachments?.map(attachment => ({

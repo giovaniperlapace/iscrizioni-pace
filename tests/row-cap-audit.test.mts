@@ -78,6 +78,7 @@ function campaignFixture(fail?: (url: URL, method: string) => boolean) {
   const { db, calls } = database({ email_campaigns: [campaign], email_campaign_recipients: recipients }, fail);
   const update = fn("app/api/email-campaigns/route.ts", "updateCampaignRecipients", {
     ...loaders, createSupabaseServiceClient: () => db, getCurrentOperationalEvent: async () => ({ id: "event" }),
+    suppressionWarnings: async () => ({checked: true, recipients: []}),
     loadCampaignRecipientPreviews: async (rows: unknown[]) => rows,
     loadCampaignDeliveryData: async () => ({ templateData: { firstName: "A", lastName: "B" } }),
     canAccessPanelManagement, isPanelCampaign,

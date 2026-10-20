@@ -1,3 +1,5 @@
+import { attendanceSlotText, type SummaryAttendanceChoice } from "./attendance-summary.ts";
+import { parseAttendanceSlot } from "./attendance-slots.ts";
 import {
   describeStatisticsDrilldown,
   filterStatisticsPeople,
@@ -17,6 +19,7 @@ export type OperationsParticipantForFilter = {
   currentGroupId: string | null;
   currentGroupName: string | null;
   currentGroupStatus: string | null;
+  attendance?: SummaryAttendanceChoice[];
   tagIds?: string[];
   currentServiceId?: string | null;
   currentServiceStatus?: string | null;
@@ -24,6 +27,9 @@ export type OperationsParticipantForFilter = {
 };
 
 export type OperationsDashboardFilters = {
+  attendanceState: "all" | "known" | "unknown";
+  attendanceYes: string;
+  attendanceNo: string;
   q: string;
   contact: string;
   group: string;
@@ -49,6 +55,9 @@ export type OperationsStatisticsFilterSummary = {
 };
 
 const DEFAULT_FILTERS: OperationsDashboardFilters = {
+  attendanceState: "all",
+  attendanceYes: "",
+  attendanceNo: "",
   q: "",
   contact: "",
   group: "all",
@@ -58,6 +67,9 @@ const DEFAULT_FILTERS: OperationsDashboardFilters = {
 };
 
 export function parseOperationsDashboardFilters(input: {
+  attendanceState?: string;
+  attendanceYes?: string;
+  attendanceNo?: string;
   q?: string;
   contact?: string;
   group?: string;
@@ -66,6 +78,9 @@ export function parseOperationsDashboardFilters(input: {
   status?: string;
 }): OperationsDashboardFilters {
   return {
+    attendanceState: input.attendanceState === "known" || input.attendanceState === "unknown" ? input.attendanceState : "all",
+    attendanceYes: parseAttendanceSlot(input.attendanceYes ?? "") ? input.attendanceYes! : "",
+    attendanceNo: parseAttendanceSlot(input.attendanceNo ?? "") ? input.attendanceNo! : "",
     q: normalizeQuery(input.q),
     contact: normalizeQuery(input.contact),
     group: normalizeGroupFilter(input.group),
@@ -150,6 +165,7 @@ export function hasActiveOperationsDashboardFilters(
   filters: OperationsDashboardFilters
 ): boolean {
   return (
+    hasAttendanceFilters(filters) ||
     filters.q !== DEFAULT_FILTERS.q ||
     filters.contact !== DEFAULT_FILTERS.contact ||
     filters.group !== DEFAULT_FILTERS.group ||
@@ -162,6 +178,17 @@ function matchesOperationsDashboardFilters(
   participant: OperationsParticipantForFilter,
   filters: OperationsDashboardFilters
 ): boolean {
+  if (hasAttendanceFilters(filters)) {
+    const attendance = participant.attendance;
+    if (!attendance) return false; // Missing reads must never become declared absences.
+    const unknown = !attendance.length || attendance.some(row => row.choice === "unknown");
+    if (filters.attendanceState === "known" && unknown) return false;
+    if (filters.attendanceState === "unknown" && !unknown) return false;
+    for (const [value, expected] of [[filters.attendanceYes, "Sì"], [filters.attendanceNo, "No"]]) {
+      const slot = parseAttendanceSlot(value ?? "");
+      if (slot && attendanceSlotText(attendance, slot) !== expected) return false;
+    }
+  }
   if (!matchesGroupFilter(participant, filters.group)) {
     return false;
   }
@@ -260,4 +287,8 @@ function normalizeServiceFilter(value: string | undefined): string {
   const normalized = (value ?? "").trim();
 
   return normalized || DEFAULT_FILTERS.service;
+}
+
+export function hasAttendanceFilters(filters: OperationsDashboardFilters): boolean {
+  return Boolean((filters.attendanceState && filters.attendanceState !== "all") || filters.attendanceYes || filters.attendanceNo);
 }

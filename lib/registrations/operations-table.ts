@@ -81,6 +81,9 @@ export function operationsReturnPath(
     for (const key of [
       "q",
       "contact",
+      "attendanceState",
+      "attendanceYes",
+      "attendanceNo",
       "group",
       "tag",
       "service",

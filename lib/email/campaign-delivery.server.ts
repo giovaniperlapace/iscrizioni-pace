@@ -1,3 +1,4 @@
+import { emailHash } from "@/lib/email/campaign-report";
 import { getEmailConfig } from "@/lib/email/config";
 import { isCampaignRecipientOperational, RegistrationNotOperationalError } from "@/lib/email/campaign-eligibility";
 import { createHash } from "node:crypto";
@@ -38,6 +39,7 @@ type CampaignRow = {
   event_id: string;
   subject_template: string;
   body_template: string;
+  retry_of_campaign_id?: string | null;
   events: { title: string } | Array<{ title: string }> | null;
 };
 
@@ -53,6 +55,7 @@ type RecipientDatabaseRow = {
   delegate_user_id: string | null;
   school_teacher_id: string | null;
   status: string;
+  delivery_email_snapshot?: string | null;
 };
 
 export async function reserveCampaignDeliverySchedule(
@@ -103,7 +106,7 @@ async function processCampaignBlock(options: {
   const campaignIds = [...new Set(recipients.map((row) => row.campaign_id))];
   const { data: campaignRows, error: campaignsError } = await service
     .from("email_campaigns")
-    .select("id,event_id,subject_template,body_template,events(title)")
+    .select("id,event_id,subject_template,body_template,retry_of_campaign_id,events(title)")
     .in("id", campaignIds);
   if (campaignsError) throw new Error(campaignsError.message);
   const campaigns = new Map(
@@ -145,8 +148,21 @@ async function processCampaignBlock(options: {
         campaignAttachments
       );
       if (!await isCampaignRecipientOperational(service, campaign.event_id, delivery.recipient)) throw new RegistrationNotOperationalError();
+      if (campaign.retry_of_campaign_id && delivery.email.trim().toLowerCase() !== row.delivery_email_snapshot?.trim().toLowerCase()) {
+        throw new EmailDeliveryError("retry_address_changed");
+      }
+      const { error: snapshotError } = await service.from("email_campaign_recipients").update({
+        delivery_email_snapshot: delivery.email.trim(),
+        recipient_name_snapshot: `${delivery.templateData.firstName} ${delivery.templateData.lastName}`.trim(),
+      }).eq("id", row.id).eq("status", "sending");
+      if (snapshotError) throw snapshotError;
+      const { data: suppression, error: suppressionError } = await service.from("email_delivery_suppressions")
+        .select("suppressed").eq("email_hash", emailHash(delivery.email)).maybeSingle();
+      if (suppressionError) throw suppressionError;
+      if (suppression?.suppressed) throw new EmailDeliveryError("recipient_suppressed");
       prepared.push({ row, recipient: delivery.recipient, input: {
         to: delivery.email,
+        metadata: { campaign_recipient_id: row.id, campaign_id: campaign.id },
         subject: renderCampaignTemplate(
           campaign.subject_template,
           delivery.templateData
@@ -406,6 +422,9 @@ export async function loadCampaignAttachments(
   service: ServiceClient,
   campaignId: string
 ) {
+  const { data: origin, error: originError } = await service.from("email_campaigns").select("retry_of_campaign_id").eq("id", campaignId).maybeSingle();
+  if (originError) throw originError;
+  if (origin?.retry_of_campaign_id) return loadCampaignAttachments(service, origin.retry_of_campaign_id);
   const { data: rows, error: rowsError } = await service
     .from("email_campaign_attachments")
     .select("file_name,content_type,storage_path,is_inline,content_id")

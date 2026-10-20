@@ -13,6 +13,21 @@
   TypeScript e build superati; `internal` conservato. Dettagli in
   `docs/forum-presenze-obbligatorie-2026-10-20.md`.
 
+## Modifiche multiple e filtri Manager — 2026-10-20
+
+- Implementazione locale Admin/Manager: selezione esplicita nella pagina (max 100),
+  aggiunta conservativa di un tag e assegnazione gruppo/servizio in transazione unica.
+  Conferma con riepilogo e nomi; minori nel gruppo d'iscrizione, senza tag/servizi.
+- Filtri delle presenze comunicate per mezza giornata (sì/no combinabili) e
+  comunicati/da comunicare, prima della paginazione e coerenti con Excel.
+  Dati sconosciuti distinti da assenze; nessun uso dei check-in.
+- Eliminazione tag con conferma globale per evento, cascata assegnazioni e audit.
+  RPC service-only con ruolo evento riletto; Viewer esclusi dalle scritture.
+- Migration `20261020160000_manager_bulk_operations` applicata e registrata
+  in produzione nel rilascio complessivo del 20 ottobre, dopo backup verificato.
+  Verifiche e limiti in `docs/modifiche-multiple-manager-2026-10-20.md`.
+
+
 ## Lista d’attesa Forum: un’ora per confermare — 2026-10-20
 
 - Termine portato a 60 minuti per partecipanti e capigruppo, sia alla

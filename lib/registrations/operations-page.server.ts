@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SupportedLocale } from "../i18n/config.ts";
 import { loadAllRows, loadAllRowsConcurrently, loadRowsForIds } from "../supabase/all-rows.ts";
 import { participantGeography, type ParticipantGeography } from "./geography.ts";
-import { applyOperationsDashboardFilters, summarizeOperationsDashboardParticipants, type OperationsDashboardFilters } from "./operations-dashboard.ts";
+import { hasAttendanceFilters, applyOperationsDashboardFilters, summarizeOperationsDashboardParticipants, type OperationsDashboardFilters } from "./operations-dashboard.ts";
 import { paginateParticipants, parseTablePreferences } from "./operations-table.ts";
 import { sortOperationsParticipants } from "./operations-sort.ts";
 import type { OperationsParticipantRow, OperationsParticipantsSnapshot, OperationsRegistrationChild } from "./operations-types.ts";
@@ -106,6 +106,10 @@ export async function loadOperationsParticipantPage(db: SupabaseClient, request:
       tags: participantTags, tagIds: participantTags.map(tag => tag.id), childrenCount: registration.registration_children.length, children: [],
     };
   });
+  if (hasAttendanceFilters(filters)) {
+    const attendance = await loadAttendanceSummaries(db, allRows.map(row => row.registrationId));
+    for (const row of allRows) row.attendance = attendance.get(row.registrationId) ?? [];
+  }
   const filtered = applyOperationsDashboardFilters(allRows, filters).filter(row => params.view !== "without-group" || !row.currentGroupId);
   const sortIds = filtered.map(row => row.registrationId);
   // Only the requested sort column may need a global auxiliary projection.

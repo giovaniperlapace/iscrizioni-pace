@@ -37,6 +37,7 @@ import {
 } from "react";
 import { ArrowDown, ArrowUp, Columns3, Download, LoaderCircle, Pencil, UserPlus, X } from "lucide-react";
 import { createOperationalTag } from "@/app/actions";
+import { OperationsBulkControls } from "./operations-bulk-controls";
 import { OperationsParticipantFilters } from "@/app/dashboard/operations-participant-filters";
 import { OperationsParticipantsPagination } from "@/app/dashboard/operations-participants-pagination";
 import { ReliableForm } from "@/components/reliable-form";
@@ -154,6 +155,8 @@ export function OperationsParticipantsTable({
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkSelection, setBulkSelection] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
   const [receptionBusy, setReceptionBusy] = useState(false);
   const [quickEditColumns, setQuickEditColumns] = useState({
     group: false,
@@ -218,6 +221,12 @@ export function OperationsParticipantsTable({
     preferences, eventStartsOn, locale, sexText,
   );
   const pagination = snapshot.serverPage ? { ...snapshot.serverPage, rows } : paginateParticipants(rows, searchParams.get("participantPage"));
+  const selectionKey = JSON.stringify([snapshot.filters, view, pagination.page, pagination.rows.map(row => row.registrationId)]);
+  if (bulkSelection.key !== selectionKey) {
+    setBulkSelection({ key: selectionKey, ids: [] });
+  }
+  const bulkIds = bulkSelection.key === selectionKey ? bulkSelection.ids : [];
+  const setBulkIds = (ids: string[]) => setBulkSelection({ key: selectionKey, ids });
   const registrationCount = snapshot.serverPage?.total ?? rows.length;
   const serverSort = snapshot.serverPage?.sort;
   const serverDirection = snapshot.serverPage?.direction;
@@ -275,7 +284,7 @@ export function OperationsParticipantsTable({
     field: "group" | "service" | "tags",
     values: string[],
   ) {
-    if (busy.current.has(row.registrationId)) return;
+    if (bulkBusy || busy.current.has(row.registrationId)) return;
     busy.current.add(row.registrationId);
     setNotice("");
     setPending((prev) => ({ ...prev, [row.registrationId]: true }));
@@ -381,7 +390,7 @@ export function OperationsParticipantsTable({
   ) {
     const canEdit =
       editingEnabled && editableEventIds.includes(row.eventId) && !row.deletedAt;
-    const disabled = pending[row.registrationId];
+    const disabled = bulkBusy || pending[row.registrationId];
     if (field === "tags")
       return canEdit ? (
         <details className="min-w-40 rounded-md border border-[var(--peace-border-strong)] bg-white px-3">
@@ -604,6 +613,7 @@ export function OperationsParticipantsTable({
         </p>
       )}
       <OperationsParticipantFilters
+        attendanceColumns={attendanceColumns}
         filters={snapshot.filters}
         groupOptions={snapshot.groupOptions}
         eventServices={snapshot.eventServices}
@@ -612,6 +622,10 @@ export function OperationsParticipantsTable({
         navMode={navMode}
         withoutGroup={view === "without-group"}
       />
+      {canManage && eventId && view !== "deleted" && <OperationsBulkControls
+        key={selectionKey} snapshot={snapshot} rows={pagination.rows} selectedIds={bulkIds} setSelectedIds={setBulkIds}
+        eventId={eventId} dashboard={dashboard} disabled={Object.values(pending).some(Boolean) || pagePending || receptionBusy}
+        onBusy={setBulkBusy} onSaved={message => { setChanges({}); setNotice(message); }} />}
       {statisticsLabel && (
         <p className="mb-4 rounded-md bg-[var(--peace-sky-100)] px-3 py-2 text-sm leading-6">
           Filtro dalle statistiche: {statisticsLabel}
@@ -771,6 +785,12 @@ export function OperationsParticipantsTable({
                   >
                     {column === "name" ? (
                       <div className="min-w-40 max-w-72">
+                        <div className="flex items-center gap-2">
+                        {canManage && !row.deletedAt && row.eventId === eventId && <label className="flex min-h-11 min-w-11 shrink-0 items-center justify-center">
+                          <input type="checkbox" aria-label={`Seleziona ${row.name}`} checked={bulkIds.includes(row.registrationId)}
+                            disabled={bulkBusy || pagePending || Object.values(pending).some(Boolean)}
+                            onChange={event => setBulkIds(event.target.checked ? [...bulkIds, row.registrationId] : bulkIds.filter(id => id !== row.registrationId))} />
+                        </label>}
                         <LocalQueryLink
                           id={`participant-${row.registrationId}`}
                           className="inline-flex min-h-11 items-center font-semibold text-[var(--peace-blue-800)] underline decoration-dotted underline-offset-4"
@@ -779,6 +799,7 @@ export function OperationsParticipantsTable({
                         >
                           {row.name}
                         </LocalQueryLink>
+                        </div>
                         <p className="text-xs text-[var(--peace-muted)]">
                           {row.publicCode ?? "Senza codice"}
                         </p>

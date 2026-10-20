@@ -65,6 +65,7 @@ test("current-event manager can load panel/school campaign recipients without de
     assertCanManageCampaignEvent,
     campaignFilters: (body: unknown) => body,
     resolveCampaignRecipients: async (eventId: string, filters: unknown) => {calls.push({eventId, filters}); return [{recipientKey: "teacher:synthetic"}];},
+    suppressionWarnings: async () => ({checked: true, recipients: []}),
     loadCampaignRecipientPreviews: async (_recipients: unknown, _selection: unknown, eventId: string, allow: boolean) => {assert.equal(eventId, "event"); assert.equal(allow, true); return [];},
     recipientSelectionSummary: () => ({}),
     NextResponse: {json: (value: unknown) => value},

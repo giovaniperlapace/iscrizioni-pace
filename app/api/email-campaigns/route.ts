@@ -1,3 +1,4 @@
+import { suppressionWarnings } from "@/lib/email/postmark-reporting";
 import { canAccessPanelManagement, isPanelCampaign } from "@/lib/panels/management-access";
 import { loadAllRows, writeRowsForIds } from "@/lib/supabase/all-rows";
 import { getEmailConfig } from "@/lib/email/config";
@@ -233,6 +234,7 @@ async function previewCampaign(
     sampleRecipientName: `${sample.templateData.firstName} ${sample.templateData.lastName}`.trim(),
     previewSubject: renderCampaignTemplate(subject, sample.templateData),
     previewHtml: renderSafeCampaignHtml(message, sample.templateData),
+    suppression: await suppressionWarnings(recipientPreviews),
     recipients: recipientPreviews,
     attachments: attachments.map((attachment) => ({
       fileName: attachment.file.name,
@@ -349,6 +351,7 @@ async function updateCampaignRecipients(
     sampleRecipientName: `${sample.templateData.firstName} ${sample.templateData.lastName}`.trim(),
     previewSubject: renderCampaignTemplate(campaign.subject_template, sample.templateData),
     previewHtml: renderSafeCampaignHtml(campaign.body_template, sample.templateData),
+    suppression: await suppressionWarnings(recipientPreviews),
     recipients: recipientPreviews,
   });
 }

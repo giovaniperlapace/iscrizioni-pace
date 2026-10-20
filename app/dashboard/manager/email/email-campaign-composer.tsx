@@ -1,10 +1,11 @@
 "use client";
 
+import { CampaignHistory } from "./campaign-history";
 import { ProgressButton } from "@/components/button-progress";
 
 import { SuccessMessage } from "@/components/success-message";
 
-import { ChevronDown, Eye, FileText, History, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
+import { ChevronDown, Eye, FileText, Image as ImageIcon, Mail, Paperclip, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
@@ -47,6 +48,7 @@ type AttachmentDraft = {
 };
 type TemplateSaveMode = "create" | "update";
 type Preview = {
+  suppression?: { checked: boolean; recipients: {name:string;email:string}[] };
   campaignId: string;
   recipientCount: number;
   directCount: number;
@@ -87,7 +89,6 @@ export function EmailCampaignComposer({
   initialPanelId,
   initialRecipients,
   templates: initialTemplates,
-  campaigns,
 }: EmailCampaignComposerProps) {
   const [savedTemplates, setSavedTemplates] = useState(initialTemplates);
   const [templateId, setTemplateId] = useState("");
@@ -300,6 +301,7 @@ export function EmailCampaignComposer({
           .map((recipient: RecipientRow) => recipient.recipientKey)
       );
       setTestSent(false);
+      window.dispatchEvent(new Event("email-campaign-queued"));
       setShowSendConfirmation(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Operazione non riuscita.");
@@ -374,6 +376,7 @@ export function EmailCampaignComposer({
       campaignId: preview.campaignId,
     });
     if (data) {
+      window.dispatchEvent(new Event("email-campaign-queued"));
       setShowSendConfirmation(false);
       setNotice(`Campagna presa in carico: ${data.scheduled} email in coda. L’invio prosegue automaticamente; puoi chiudere questa pagina e consultare gli esiti nell’elenco campagne.`);
       resetPreview();
@@ -992,33 +995,7 @@ export function EmailCampaignComposer({
         </ProgressButton>
       </section>
 
-      <section className="surface-card min-w-0 p-5 sm:p-6">
-        <div className="flex items-center gap-2">
-          <History aria-hidden="true" className="h-5 w-5" />
-          <h3 className="text-lg font-bold">Campagne inviate</h3>
-        </div>
-        {campaigns.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--peace-muted)]">Nessuna campagna inviata.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[36rem] text-left text-sm">
-              <thead className="border-b border-[var(--peace-border)] text-xs uppercase tracking-wide text-[var(--peace-muted)]">
-                <tr><th className="py-2 pr-4">Campagna</th><th className="py-2 pr-4">Stato</th><th className="py-2 pr-4">Destinatari</th><th className="py-2">Data</th></tr>
-              </thead>
-              <tbody>
-                {campaigns.map((campaign) => (
-                  <tr key={campaign.id} className="border-b border-[var(--peace-border)] last:border-0">
-                    <td className="py-3 pr-4 font-semibold">{campaign.name}</td>
-                    <td className="py-3 pr-4">{campaignStatusLabel(campaign.status)}</td>
-                    <td className="py-3 pr-4">{campaign.recipientCount}</td>
-                    <td className="py-3">{formatCampaignDate(campaign.date)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <CampaignHistory />
 
       {showTemplatePicker ? (
         <div className="dashboard-modal fixed inset-0 z-50 grid place-items-center bg-[#072c49]/55 p-4">
@@ -1217,6 +1194,9 @@ export function EmailCampaignComposer({
             </div>
             <div className="mt-4 rounded-md border border-[var(--peace-border)] bg-[#f7fbfe] p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">Oggetto</p>
+              {preview.suppression && <div className="my-3 rounded border border-amber-300 bg-amber-50 p-3" role="status">
+                {!preview.suppression.checked ? "Non è stato possibile verificare gli indirizzi disiscritti. Il servizio controllerà ogni indirizzo all’invio." : preview.suppression.recipients.length ? <><strong>{preview.suppression.recipients.length} indirizzi bloccati o disiscritti: non riceveranno la campagna.</strong><ul>{preview.suppression.recipients.map(r=><li key={r.email}>{r.name} — {r.email}</li>)}</ul></> : "Nessun indirizzo disiscritto rilevato nella selezione al momento della verifica."}
+              </div>}
               <p className="mt-1 font-bold">{preview.previewSubject}</p>
               <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">Messaggio</p>
               <div className="mt-2 rounded bg-white p-4 text-sm [&_h2]:text-xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6" dangerouslySetInnerHTML={{ __html: preview.previewHtml }} />
@@ -1498,22 +1478,7 @@ function groupLabels(groupIds: string[], groupLabelById: ReadonlyMap<string, str
   return labels.join(", ") || "Gruppo non disponibile";
 }
 
-function campaignStatusLabel(status: string) {
-  switch (status) {
-    case "completed": return "Completata";
-    case "partial": return "Parziale";
-    case "failed": return "Non riuscita";
-    case "attention": return "Esiti da verificare";
-    case "scheduled": return "Programmata";
-    case "sending": return "In invio";
-    case "ready": return "Test inviato";
-    default: return "Bozza";
-  }
-}
 
-function formatCampaignDate(value: string) {
-  return new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
-}
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
