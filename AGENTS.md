@@ -7423,3 +7423,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 991 test, lint, TypeScript, build isolata, browser originali desktop/mobile
   e regressioni scuole su DB temporaneo superati; nessuna migration necessaria.
   Dettagli: `docs/forum-ordine-numerico-2026-10-20.md`.
+
+## Forum: lista d’attesa e stato pieno nelle statistiche — 2026-10-20
+
+- Gestione Forum e statistiche Admin/Manager: conteggi persone, minori selezionati
+  inclusi; coda e offerte valide distinte, totale esplicitamente per Forum.
+- Stato e percentuale sulle quote prenotabili iscritti/scuole, escluse quote
+  ospiti; offerte valide occupano posti. Soli posti ospiti liberi = Pieno.
+- Letture paginate dopo gate evento/ruolo, soli aggregati serializzati; nessuna
+  migration o estensione permessi. Verificati test, browser desktop/mobile e
+  avanzamento automatico reale FIFO con due offerte da 60 minuti al Forum 4.
+  Dettagli: `docs/forum-attesa-statistiche-2026-10-20.md`.

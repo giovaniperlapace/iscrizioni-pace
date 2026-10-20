@@ -26,3 +26,12 @@ prenotazioni/claim/accettazioni concorrenti. Browser sui componenti originali
 Admin/Manager, desktop 1440 e telefono 390: conteggi, stato, filtro, nessun overflow
 orizzontale o errore JS. La verifica autenticata delle pagine production non è
 stata eseguita. Nessuna migration o modifica operativa remota, nessun invio di prova.
+
+Osservazione successiva alle 23:58 Europe/Rome: il ciclo automatico ha offerto i
+due posti del Forum 4 alle prime richieste FIFO (sequenze 4 e 6; restanti
+10, 11, 14, 18 ancora in coda). Entrambe notification_status=sent con identificativo
+del provider, esattamente 60 minuti da notification_started_at alla scadenza.
+Questo attesta l’accettazione del servizio email, non l’arrivo nella casella.
+Nel frattempo nuova richiesta al Forum 5: totale 21 persone, 19 ancora in coda e
+2 con offerta. Nessun trigger o invio manuale del processo automatico.
+Codice pubblicato su main nel commit 79686a2.
