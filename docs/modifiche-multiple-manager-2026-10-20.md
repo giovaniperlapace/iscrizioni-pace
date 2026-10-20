@@ -28,3 +28,54 @@ Migration: `20261020160000_manager_bulk_operations.sql`. Aggiunge soltanto due f
 ## Stato
 
 Migration applicata e registrata in produzione nel rilascio complessivo del 20 ottobre; codice incluso nel commit di rilascio. Nessuna modifica operativa a iscritti reali né invio email di prova. Dettagli in `docs/rilascio-modifiche-residue-2026-10-20.md`.
+
+## Verifica del rilascio richiesta dall'utente
+
+Durante la preparazione del rilascio circoscritto, un processo parallelo ha
+pubblicato `e742941452ebf6d4fce75301b03372391b6fd0da`, comprendendo queste
+funzioni e i report email. I 14 file applicativi, test e migration di questa
+tranche sono stati confrontati con la copia isolata verificata: contenuto
+identico. La migration risultava già registrata, quindi non è stata riapplicata.
+Non è stato riscritto il commit condiviso né annullato il lavoro parallelo.
+Questo aggiornamento aggiunge soltanto il verbale delle verifiche.
+
+- Ripetuti nella copia isolata, costruita dalla base `30e876d` con i soli file
+  di questa tranche: `npm ci`, **981 test**, lint e build production con
+  TypeScript, tutti superati. Ripetuta anche la suite SQL su PostgreSQL
+  temporaneo, inclusi rollback, autorizzazioni e concorrenza. Le verifiche
+  browser sintetiche desktop/mobile descritte sopra riguardano lo stesso
+  contenuto applicativo.
+- Verificati direttamente nel database production la registrazione di
+  `20261020160000` e i corpi esatti delle due funzioni, firme, risultato
+  `integer`, security invoker, proprietario `postgres` e search path vuoto.
+  Esecuzione negata ad `anon` e `authenticated`, consentita a `service_role`.
+  Chiamate con attore nullo respinte correttamente in una transazione conclusa
+  con rollback, senza scritture operative.
+- Ricontrollato il backup precedente alla migration:
+  `/root/backups/iscrizioni-pace/production-before-bulk-email-reports-20261020.dump`,
+  12.985.395 byte, SHA-256
+  `39546e62814eef05c3200c6e12dc0deaa4dd90aefa25032ebcaca2865494bce7`.
+  Lettura integrale con `pg_restore --file=/dev/null` riuscita; la funzione
+  bulk non era presente nello schema del backup.
+- Deployment di `e742941` confermato `READY`, target production. Successivamente
+  verificato anche il dominio `registrationspeace.santegidio.org` associato al
+  deployment production `READY` di `cb28817`, discendente del rilascio; i
+  successivi commit paralleli riguardano i report email.
+- HTTP pubblico: home 200, dashboard e POST bulk senza sessione reindirizzati
+  al login. Il redirect del proxy non costituisce un test del controllo
+  same-origin interno alla route, già coperto dalla suite locale.
+- Safari, sessione **Admin autenticata nella dashboard Manager**: visibili i
+  tre nuovi filtri, selezione della pagina, modifica multipla ed eliminazione
+  tag. Applicato “Da comunicare”: 354 iscrizioni su 4.172; applicati insieme
+  “Presente 26 ottobre mattina” e “Non presente 25 ottobre mattina”: 404
+  iscrizioni. URL e totale paginato aggiornati. Conteggi osservati al momento
+  del controllo, non valori permanenti. Filtri ripristinati e scheda di prova
+  chiusa. Il browser live non ha eseguito assegnazioni o eliminazioni, né
+  simulato un account con il solo ruolo Manager.
+- Log runtime production: zero errori nella finestra
+  `2026-10-20T10:06:07Z`–`2026-10-20T10:26:07Z`, senza intervalli esclusi.
+  Configurazione Forum `internal` e link scuole attivo conservati.
+
+Nessuna modifica a iscritti reali, stampa o invio email eseguiti per questo
+collaudo. Le operazioni di scrittura restano verificate sulle fixture locali,
+mentre in produzione sono stati controllati codice DB, permessi, letture e UI.
