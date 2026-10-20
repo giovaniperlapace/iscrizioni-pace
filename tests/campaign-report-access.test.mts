@@ -28,10 +28,10 @@ test('report authorization denies viewer and foreign-event manager on freshly re
  roles=[{role:'admin',eventId:null}];await access();
 });
 test('retry endpoint enforces same-origin and explicit selection confirmation before dispatch',async()=>{
- let calls=0;
- const mod=moduleFrom('app/api/email-campaigns/reports/route.ts',id=>id==='next/server'?{NextResponse:{json:Response.json}}:id.includes('campaign-report.server')?{reportAccess:async()=>({}),retryCampaign:async()=>{calls++;return 'new';}}:{});
+ let calls=0;let failure=false;
+ const mod=moduleFrom('app/api/email-campaigns/reports/route.ts',id=>id==='next/server'?{NextResponse:{json:Response.json}}:id.includes('campaign-report.server')?{reportAccess:async()=>({}),retryCampaign:async()=>{calls++;if(failure)throw Error('relation private_table missing');return 'new';}}:{});
  const post=mod.POST as (r:Request)=>Promise<Response>;
  const request=(origin:string,confirm:boolean)=>new Request('https://example.invalid/api/email-campaigns/reports',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify({campaignId:'11111111-1111-4111-8111-111111111111',recipientIds:['11111111-1111-4111-8111-111111111112'],confirm})});
  assert.equal((await post(request('https://attacker.invalid',true))).status,403);assert.equal((await post(request('https://example.invalid',false))).status,400);assert.equal(calls,0);
- assert.equal((await post(request('https://example.invalid',true))).status,200);assert.equal(calls,1);
+ assert.equal((await post(request('https://example.invalid',true))).status,200);assert.equal(calls,1);failure=true;const unavailable=await post(request('https://example.invalid',true));assert.equal(unavailable.status,400);assert.ok(!(await unavailable.text()).includes('private_table'));
 });

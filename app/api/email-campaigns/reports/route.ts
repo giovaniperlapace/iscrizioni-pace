@@ -134,11 +134,20 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ campaignId }, { headers });
   } catch (cause) {
+    const publicMessages = new Set([
+      "Accesso non autorizzato.", "Accesso non consentito.", "Accesso forum non consentito.",
+      "Campagna non disponibile.", "Report non disponibile.", "Selezione non valida.",
+      "Conferma o selezione non valida.", "Reinvio già avviato: aggiorna il report.",
+      "La selezione contiene esiti non reinviabili. Aggiorna il report.",
+      "Un indirizzo è bloccato o disiscritto: non è stato avviato alcun reinvio.",
+      "Un indirizzo è cambiato: prepara una nuova campagna.",
+      "Reinvio non avviato: aggiorna il report e controlla la selezione.",
+    ]);
     return NextResponse.json(
       {
         error:
           cause instanceof Error &&
-          !/provider_|fetch|database|JWT/i.test(cause.message)
+          publicMessages.has(cause.message)
             ? cause.message
             : "Verifica del servizio non disponibile. Nessun nuovo reinvio confermato: aggiorna il report.",
       },
