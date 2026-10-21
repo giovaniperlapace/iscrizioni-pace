@@ -126,16 +126,16 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                               {panel.locationAddress ? <span className="block text-[var(--peace-muted)]">{panel.locationAddress}</span> : null}
                             </span>
                           </address>
-                          {panel.availability === "full" ? <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-                            <p className="font-bold">{queueCopy.fullStatus}</p>
-                            <p className="mt-1">{queueCopy.queueHelp}</p>
-                          </div> : null}
                           {showAccessCta && panel.availability !== "unavailable" ? <div className="mt-5 border-t border-[var(--peace-border)] pt-5">
                             <a className="btn-primary flex min-h-12 w-full items-center justify-center px-4 text-center" aria-label={`${panel.availability === "full" ? queueCopy.join : programCopy.bookForum}: ${panel.title}`}
                               href={authenticated && !preview ? forumBookingPath(panel.id) : preview ? `?forum=${encodeURIComponent(panel.id)}#forum-access-form` : `/forum/${encodeURIComponent(panel.id)}`}
                               onClick={onSelectPanel && (!authenticated || preview) ? event => { event.preventDefault(); onSelectPanel(panel.id); } : undefined}>
                               {panel.availability === "full" ? queueCopy.join : programCopy.bookForum}
                             </a>
+                          </div> : null}
+                          {panel.availability === "full" ? <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                            <p className="font-bold">{queueCopy.fullStatus}</p>
+                            <p className="mt-1">{queueCopy.queueHelp}</p>
                           </div> : null}
                         </li>
                       ))}
