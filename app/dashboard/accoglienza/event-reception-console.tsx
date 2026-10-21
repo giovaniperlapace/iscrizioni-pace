@@ -21,23 +21,26 @@ type Props = {
   onChangeDuty?: () => void;
   duty?: ReceptionDuty;
   labelPrinting?: boolean;
+  onLookup?: (lookup: ReceptionCommand["lookup"] | null) => void;
+  onBusy?: (busy: boolean) => void;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>;
 };
 
 export function EventReceptionConsole(props: Props) {
-  const { commandAction, deviceMode = "computer", cameraSource, onChangeMode, onChangeDuty } = props;
-  const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, { duty: "event_entry" }, true));
+  const { commandAction, deviceMode = "computer", cameraSource, onChangeMode, onChangeDuty, onBusy } = props;
+  const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, props.duty && props.duty.duty !== "event_entry" ? {duty: props.duty.duty, panelId: props.duty.panelId} : { duty: "event_entry" }, true));
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
   const [entry, setEntry] = useState<VerifiedReception | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [removalIds, setRemovalIds] = useState<string[]>([]);
-  const [manual, setManual] = useState(false);
+  const [manual, setManual] = useState(deviceMode === "computer" && props.duty?.duty !== "event_entry" && !!props.duty);
   const [code, setCode] = useState("");
   const latch = useRef(new ScanLatch());
   const heading = useRef<HTMLHeadingElement>(null);
   const locked = busy || session.isLocked();
   const result = state.phase === "blocked" ? null : state.result ?? entry;
+  useEffect(() => { onBusy?.(locked || state.phase === "selection"); }, [locked, state.phase, onBusy]);
   const correction = state.mode !== "enter";
   const multiple = result && (result.kind === "group" || result.kind === "family" && result.persons.length > 1);
   const problem = ["error", "uncertain", "blocked"].includes(state.phase);
@@ -69,11 +72,12 @@ export function EventReceptionConsole(props: Props) {
     else await session.inspect(lookup);
     const found = session.snapshot().result;
     if (found) setEntry(found);
+    props.onLookup?.(lookup);
     return found;
   }
   function next() {
     if (busyRef.current || session.isLocked()) return;
-    session.setMode("enter"); session.next(); setEntry(null); latch.current = new ScanLatch();
+    session.setMode("enter"); session.next(); setEntry(null); props.onLookup?.(null); latch.current = new ScanLatch();
   }
   async function retry() {
     await session.retry();
@@ -99,7 +103,7 @@ export function EventReceptionConsole(props: Props) {
 
   return <section className="mx-auto grid w-full max-w-3xl gap-4" aria-labelledby="reception-title">
     <header className="flex flex-wrap items-center justify-between gap-2">
-      <h2 id="reception-title" className="text-xl font-semibold">Accoglienza evento</h2>
+      <h2 id="reception-title" className="text-xl font-semibold">{props.duty?.title ?? "Accoglienza evento"}</h2>
       <div className="flex gap-3 text-sm">
         {onChangeMode && <button className="min-h-11 underline" disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeMode}>Cambia modalità</button>}
         {onChangeDuty && <button className="min-h-11 underline" disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeDuty}>Cambia incarico</button>}
@@ -112,7 +116,7 @@ export function EventReceptionConsole(props: Props) {
             if (!entry && session.canScan() && latch.current.accept(value)) void inspect({ kind: "qr", value });
           }} onNoCode={() => { if (!entry && session.canScan()) latch.current.absent(); }} /> :
           <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void inspect({ kind: code.startsWith("G:") || code.length === 43 ? "qr" : "code", value: code }); setCode(""); }}>
-            <label className="grid gap-1">Codice partecipante o QR gruppo<input className="field min-h-12" disabled={locked || !!entry} value={code} onChange={event => setCode(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={45} /></label>
+            <label className="grid gap-1">{props.duty?.duty === "event_entry" || !props.duty ? "Codice partecipante o QR gruppo" : "Codice partecipante"}<input className="field min-h-12" disabled={locked || !!entry} value={code} onChange={event => setCode(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={45} /></label>
             <button className="btn-primary min-h-12" disabled={locked || !!entry}>Leggi codice</button>
           </form>}
         <button type="button" className="btn-secondary inline-flex min-h-11 items-center justify-self-start gap-2 px-4 text-left text-sm" disabled={locked || !!entry} onClick={() => setManual(!manual)}>

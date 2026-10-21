@@ -4,6 +4,7 @@ import { parseForumIntent, forumBookingPath, withForumIntent } from "@/lib/panel
 import { resolvePublicForumIntent } from "@/lib/panels/booking-intent.server";
 import { requirePanelManager, requirePublicPanelBookings, requireSchoolBookings } from "@/lib/panels/release.server";
 
+import { validDutyKey } from "@/lib/reception/event-duties";
 import { resolveRoleParticipant } from "@/lib/operational-users/role-participant";
 import { manualRegistrationPath } from "@/lib/registrations/manual-registration-navigation";
 import { canCreateOperationsRegistration } from "@/lib/registrations/manual-registration-access";
@@ -3336,6 +3337,19 @@ export async function assignOperationalUserRole(formData: FormData) {
     roleEventId = currentEventId;
   }
 
+  const dutyKeys = formData.getAll("dutyKeys").map(String);
+  let expectedDuties: string[] | null = null;
+  if (role === "accoglienza_forum_eventi") {
+    if (!dutyKeys.length || !dutyKeys.every(validDutyKey)) return formFailure([{ field: null, code: "roleAssignmentFailed" }]);
+    try {
+      if (formData.has("expectedDuties")) {
+        const value: unknown = JSON.parse(String(formData.get("expectedDuties")));
+        if (!Array.isArray(value) || !value.every(validDutyKey)) throw new Error();
+        expectedDuties = value;
+      }
+    } catch { return formFailure([{ field: null, code: "roleReload" }]); }
+  }
+
   let userId: string | null;
   if (mode === "existing" && existingUserId?.startsWith("participant:")) {
     const profile = await resolveRoleParticipant(serviceSupabase, existingUserId.slice("participant:".length), roleEventId ?? currentEventId ?? "");
@@ -3372,7 +3386,10 @@ export async function assignOperationalUserRole(formData: FormData) {
     if (opposite?.length) return formFailure([{ field: null, code: "roleExclusive" }]);
   }
 
-  if (role === "capogruppo") {
+  if (role === "accoglienza_forum_eventi") {
+    const { error } = await serviceSupabase.rpc("set_reception_duties", { p_event: roleEventId, p_actor: auth.user.id, p_user: userId, p_keys: dutyKeys, p_expected: expectedDuties });
+    if (error) return formFailure([{ field: null, code: error.code === "40001" ? "roleReload" : "roleAssignmentFailed" }]);
+  } else if (role === "capogruppo") {
     if (!roleGroupId) {
       return formFailureFromRedirect(`${dashboardPath}&roleError=missing-group`);
     }
@@ -3533,6 +3550,16 @@ export async function deleteOperationalUserRole(formData: FormData) {
     return formFailureFromRedirect(`${dashboardPath}&roleError=forbidden`);
   }
 
+  if (role === "accoglienza_forum_eventi") {
+    let expected: unknown;
+    try { expected = JSON.parse(String(formData.get("expectedDuties"))); } catch { return formFailure([{field:null,code:"roleReload"}]); }
+    if (!Array.isArray(expected) || !expected.every(validDutyKey)) return formFailure([{field:null,code:"roleReload"}]);
+    const { error } = await serviceSupabase.rpc("set_reception_duties", {p_event:target.eventId,p_actor:auth.user.id,p_user:userId,p_keys:[],p_expected:expected});
+    if (error) return formFailure([{field:null,code:error.code === "40001" ? "roleReload" : "roleRemovalFailed"}]);
+    revalidatePath("/dashboard/admin"); revalidatePath("/dashboard/manager");
+    if (formData.get("inline") === "on") return {status:"success" as const};
+    redirect(`${dashboardPath}&roleSaved=1`);
+  }
   const { error } = await serviceSupabase.rpc("remove_operational_role", {
     p_actor_user_id: auth.user.id,
     p_user_id: userId,
@@ -4355,12 +4382,13 @@ function isValidGroupAgeBand(value: string): value is "giovani" | "adulti" | "an
 
 function isAssignableOperationalRole(
   value: string | null
-): value is "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo" {
+): value is "admin" | "manager" | "manager_viewer" | "accoglienza" | "accoglienza_forum_eventi" | "capogruppo" {
   return (
     value === "admin" ||
     value === "manager" ||
     value === "manager_viewer" ||
     value === "accoglienza" ||
+    value === "accoglienza_forum_eventi" ||
     value === "capogruppo"
   );
 }
@@ -4369,7 +4397,7 @@ async function resolveOperationalRoleTarget(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   input: {
     userId: string | null;
-    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo";
+    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "accoglienza_forum_eventi" | "capogruppo";
     eventId: string | null;
     groupId: string | null;
   }
@@ -4447,7 +4475,7 @@ function canManageOperationalRole(
   eventRoles: EventUserRole[],
   isAdmin: boolean,
   target: {
-    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo";
+    role: "admin" | "manager" | "manager_viewer" | "accoglienza" | "accoglienza_forum_eventi" | "capogruppo";
     eventId: string | null;
   }
 ): boolean {

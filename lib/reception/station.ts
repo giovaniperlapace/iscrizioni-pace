@@ -15,7 +15,7 @@ export type StationState = {
   problem?: Exclude<ReceptionResult["status"], "valid">;
 };
 const messages = {
-  not_booked: "Non risulta una prenotazione valida per questo panel. Rivolgiti all’organizzazione.",
+  not_booked: "Non risulta una prenotazione valida. Rivolgiti alla postazione iscrizioni con computer.",
   event_entry_required: "Ingresso all’evento non registrato. Passa prima dall’accoglienza dell’evento.",
   capacity_exceeded: "Capienza disponibile superata. Rivolgiti al responsabile del panel.",
   panel_unavailable: "Panel o sala non disponibili. Verifica con l’organizzazione.",
@@ -59,7 +59,7 @@ export class ReceptionStationSession {
   private explicitPresence: boolean;
   private context: Pick<ReceptionCommand, "duty" | "panelId">;
   constructor(commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>, requestId: () => string, timeoutMs = 20000, context: Pick<ReceptionCommand, "duty" | "panelId"> = { duty: EVENT_RECEPTION_DUTY }, explicitPresence = false) {
-    this.explicitPresence = explicitPresence && context.duty === EVENT_RECEPTION_DUTY;
+    this.explicitPresence = explicitPresence && context.duty !== "room_assistance";
     this.context = context;
     this.commandAction = commandAction; this.requestId = requestId; this.timeoutMs = timeoutMs;
   }
@@ -191,7 +191,7 @@ export class ReceptionStationSession {
         phase: response.status === "unavailable" ? "uncertain" : response.status === "forbidden" ? "blocked" : "error",
         result: null,
         recent: response.status === "forbidden" ? [] : response.status === "invalid" ? this.state.recent.filter(item => item.lookup.kind !== command.lookup.kind || item.lookup.value !== command.lookup.value) : this.state.recent,
-        problem: response.status, retry: response.status === "unavailable" ? command : null, message: response.status === "conflict" && this.state.mode !== "enter" ? this.explicitPresence ? "Un altro operatore ha aggiornato le presenze. Premi Rileggi il codice e controlla lo stato prima di riprovare." : "Un altro operatore ha aggiornato le presenze. Riapri Modifica presenze dalle ultime letture per verificare i dati aggiornati." : messages[response.status],
+        problem: response.status, retry: response.status === "unavailable" ? command : null, message: response.status === "conflict" && this.state.mode !== "enter" ? this.explicitPresence ? "Un altro operatore ha aggiornato le presenze. Premi Rileggi il codice e controlla lo stato prima di riprovare." : "Un altro operatore ha aggiornato le presenze. Riapri Modifica presenze dalle ultime letture per verificare i dati aggiornati." : response.status === "not_booked" && response.routes?.length ? `Non è prenotato per questo Forum. È prenotato per: ${response.routes.map(item => item.title + (item.room ? ` · ${item.room}` : "")).join("; ")}.` : messages[response.status],
       });
       return;
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ReceptionDutyFields } from "@/components/reception-duty-fields";
 import { useState } from "react";
 
 import { GroupLeaderKindField } from "@/app/dashboard/group-leader-kind-field";
@@ -21,6 +22,8 @@ type GroupOption = {
 };
 
 type OperationalRoleFieldsProps = {
+  dutyKeys?: string[];
+  editingDuties?: boolean;
   eventOptions: EventOption[];
   groupOptions: GroupOption[];
   roleOptions: RoleOption[];
@@ -33,9 +36,10 @@ type OperationalRoleFieldsProps = {
   allowMultipleGroupLeaders?: boolean;
 };
 
-const EVENT_SCOPED_ROLES = new Set(["manager", "manager_viewer", "accoglienza"]);
+const EVENT_SCOPED_ROLES = new Set(["manager", "manager_viewer", "accoglienza", "accoglienza_forum_eventi"]);
 
 export function OperationalRoleFields({
+  dutyKeys, editingDuties,
   eventOptions,
   groupOptions,
   roleOptions,
@@ -110,6 +114,7 @@ export function OperationalRoleFields({
             value={defaultEventId ?? eventOptions[0]?.id ?? ""}
           />
         ) : null}
+        {role === "accoglienza_forum_eventi" && <ReceptionDutyFields initial={dutyKeys} editing={editingDuties} />}
         {isGroupLeader && allowMultipleGroupLeaders ? (
           <>
             <fieldset className="grid gap-2 text-sm font-semibold text-[var(--peace-ink)] lg:col-span-2">

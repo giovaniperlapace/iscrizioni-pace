@@ -81,7 +81,7 @@ test("dashboard tabs expose delegated admin areas", () => {
 
   assert.deepEqual(
     tabs.map((tab) => tab.key),
-    ["admin", "manager", "accoglienza", "capogruppo", "partecipante"]
+    ["admin", "manager", "accoglienza", "accoglienza_forum_eventi", "capogruppo", "partecipante"]
   );
   assert.deepEqual(
     tabs.map((tab) => tab.label),
@@ -89,6 +89,7 @@ test("dashboard tabs expose delegated admin areas", () => {
       "Dashboard admin",
       "Dashboard manager",
       "Dashboard accoglienza",
+      "Accoglienza forum ed eventi",
       "Dashboard capogruppo",
       "Iscrizione e QR personale",
     ]

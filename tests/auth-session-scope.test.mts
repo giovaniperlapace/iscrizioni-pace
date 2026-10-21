@@ -138,9 +138,9 @@ for (const managerRole of ["manager", "manager_viewer"]) {
 
 
 test("a panel assignment opens reception without fabricating an event role", async () => {
-  const result = await session.getCurrentAuthContext(database(null, false, true), "accoglienza");
+  const result = await session.getCurrentAuthContext(database(null, false, true), "accoglienza_forum_eventi");
   assert.deepEqual(result.eventRoles, []);
-  assert.equal(result.dashboardPath, "/dashboard/accoglienza");
-  const revoked = await session.getCurrentAuthContext(database(null, false, false), "accoglienza");
+  assert.equal(result.dashboardPath, "/dashboard/accoglienza-forum-eventi");
+  const revoked = await session.getCurrentAuthContext(database(null, false, false), "accoglienza_forum_eventi");
   assert.equal(revoked.dashboardPath, "/dashboard/partecipante");
 });

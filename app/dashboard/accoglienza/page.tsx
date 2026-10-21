@@ -24,7 +24,7 @@ export default async function AccoglienzaDashboardPage() {
 
   const readiness = await supabase.rpc("reception_ready");
   const ready = !readiness.error && readiness.data === true;
-  const duties: ReceptionDuty[] = event && ready ? await loadPanelReceptionDuties(supabase) : [];
+  const duties: ReceptionDuty[] = event && ready ? (await loadPanelReceptionDuties(supabase)).filter(duty => duty.duty === "room_assistance") : [];
   if (authorized && ready) duties.unshift({ key: "event_entry", duty: "event_entry", title: "Accoglienza evento", room: null });
 
   return (

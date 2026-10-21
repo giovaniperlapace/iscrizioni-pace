@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Accoglienza forum ed eventi — 2026-10-21
+
+- Ruolo visibile unico con incarichi Forum/apertura/finale, assegnabili e
+  modificabili da Manager/Admin in Utenti e ruoli: caselle, Seleziona tutto,
+  riepilogo «Tutti gli incarichi». Nessun ruolo generale implicito.
+- Dashboard dedicata: postazione e incarico prima della fotocamera, ricerca e
+  cambio incarico. Telefono: QR, esiti e conferma semplice; computer: codice/USB
+  e prenotazione o biglietto, separati dalla presenza. Nessuna ammissione senza
+  prenotazione; capienze, coda, fasce, presenze dichiarate e minori conservati.
+- Cerimonie consultabili con incarico, settore/posto e ingressi dedicati. Sedi
+  reali ancora assenti; il desk assegna biglietti al titolare, i minori tramite
+  distribuzione cerimonia. Statistiche del proprio incarico, ingressi distinti
+  dall’occupazione attuale della sala.
+- Migration `20261021120000` applicata/registrata atomicamente in production
+  dopo backup verificato: 67 tabelle, 173.487 righe e 2.854 voci catalogo
+  confrontate. Dati/ACL conservati; Forum già open e scuole attive invariati.
+- 1.007 test, lint, TypeScript, build production da npm ci, SQL/concorrenza
+  e browser originale desktop/mobile con QR da stream sintetico superati.
+  Nessun incarico reale assegnato, prenotazione/presenza remota o email di prova.
+  Verbale: `docs/accoglienza-forum-eventi-2026-10-21.md`.
+
 ## Forum capogruppo: lettura e ruoli cumulati — 2026-10-20
 
 - Corretto errore PostgREST `25006`: catalogo STABLE compatibile con READ ONLY;

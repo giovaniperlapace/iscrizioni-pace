@@ -50,6 +50,7 @@ test("dashboard sections execute only the queries needed by their visible conten
       } };
       const jsx = (type: unknown, props: unknown) => ({ type, props });
       const modules = {
+        "@/lib/reception/role-rows.server": { receptionRoleRows: async () => { reads.push("reception-roles"); return []; } },
         "@/lib/i18n/server": { getRequestLocale: async () => "it" },
         "@/lib/registrations/operations-page.server": { usesServerParticipantPage, loadOperationsParticipantPage: async (...args: Parameters<typeof loadOperationsParticipantPage>) => {
           reads.push("participant-associations", "email-delegations"); return loadOperationsParticipantPage(...args);
@@ -93,6 +94,7 @@ test("dashboard sections execute only the queries needed by their visible conten
       assert.equal(reads.includes("email-delegations"), ["iscritti", "disability-people"].includes(section), context);
       assert.equal(reads.includes("registrations"), ["iscritti", "disability-people", "gruppi"].includes(section), context);
       assert.equal(reads.includes("group_registration_links"), section === "gruppi", context);
+      assert.equal(reads.includes("reception-roles"), section === "ruoli", context);
       assert.equal(reads.includes("event_user_roles"), section === "gruppi" || section === "ruoli", context);
       assert.equal(reads.includes("statistics"), !foreign && ["dashboard", "attendance", "age", "registrations"].includes(section), context);
       assert.equal(reads.includes("panel-statistics"), section === "panels", context);

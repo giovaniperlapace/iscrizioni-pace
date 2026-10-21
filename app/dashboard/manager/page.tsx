@@ -1,3 +1,4 @@
+import { receptionRoleRows } from "@/lib/reception/role-rows.server";
 import { GroupReceptionQr } from "@/app/dashboard/capogruppo/qr-gruppo/group-qr";
 import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
 import { loadQuestionnaireSummaries } from "@/lib/registrations/questionnaire-summary.server";
@@ -398,6 +399,7 @@ type OperationalUserRoleRow = {
 };
 
 type OperationalUserRoleAssignment = {
+  dutyKeys?: string[];
   role: string;
   isPrimaryGroupLeader: boolean | null;
   eventId: string | null;
@@ -934,9 +936,12 @@ async function buildOperationalUserRows(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   eventRoles: unknown,
   groupMemberships: unknown,
-  eventScope: Set<string> | null
+  eventScope: Set<string> | null,
+  includeReception: boolean
 ): Promise<OperationalUserRoleRow[]> {
+  eventRoles = [...((eventRoles ?? []) as object[]), ...(includeReception ? await receptionRoleRows(supabase, eventScope) : [])];
   const eventRoleRows = ((eventRoles ?? []) as Array<{
+    dutyKeys?: string[];
     user_id: string;
     role: string;
     event_id: string | null;
@@ -986,6 +991,7 @@ async function buildOperationalUserRows(
         fullName: identity?.fullName ?? null,
         assignment: {
           role: row.role,
+          dutyKeys: row.dutyKeys,
           isPrimaryGroupLeader: null,
           eventId: row.event_id,
           eventTitle: relatedOne(row.events)?.title ?? null,
@@ -1364,7 +1370,8 @@ async function getManagerOperationsSnapshot(
     supabase,
     eventRoles,
     groupMemberships,
-    scope.eventIds
+    scope.eventIds,
+    section === "ruoli"
   );
 
   const [attendanceByRegistration, questionnaire, accessibilityByRegistration] = section === "iscritti"
@@ -2361,6 +2368,7 @@ function ManagerOperationalUsersSection({
               { value: "manager", label: "Manager" },
               { value: "manager_viewer", label: "Manager viewer" },
               { value: "accoglienza", label: "Accoglienza" },
+              { value: "accoglienza_forum_eventi", label: "Accoglienza forum ed eventi" },
             ]}
           />
           <PendingSubmitButton className="min-h-11 w-fit rounded-md bg-[var(--peace-blue-800)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--peace-blue-900)]">
@@ -2748,6 +2756,7 @@ function isGroupVisibilityFilter(value: string | undefined): boolean {
 }
 
 function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string {
+  if (role === "accoglienza_forum_eventi") return "Accoglienza forum ed eventi";
   switch (role) {
     case "admin":
       return "Admin globale";

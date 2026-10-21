@@ -1,7 +1,7 @@
 import type { CeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 export type ReceptionLookup = { kind: "qr" | "code"; value: string };
 export type ReceptionCommand = {
-  duty: "event_entry" | "panel_entry" | "room_assistance";
+  duty: "event_entry" | "panel_entry" | "room_assistance" | "ceremony_entry";
   panelId?: string;
   groupSnapshot?: string;
   lookup: ReceptionLookup;
@@ -21,6 +21,7 @@ export type ReceptionPerson = {
   lastName: string;
   checkedInAt: string | null;
   eventCheckedIn?: boolean;
+  eligible?: boolean;
 };
 type ValidReception = {
   status: "valid";
@@ -30,7 +31,8 @@ type ValidReception = {
   registrationStatus: "submitted" | "confirmed";
 };
 export type ReceptionResult =
-  | { status: "invalid" | "conflict" | "forbidden" | "invalid_request" | "unavailable" | "not_booked" | "event_entry_required" | "capacity_exceeded" | "panel_unavailable" }
+  | { status: "not_booked"; routes?: {title: string; room: string | null}[] }
+  | { status: "invalid" | "conflict" | "forbidden" | "invalid_request" | "unavailable" | "event_entry_required" | "capacity_exceeded" | "panel_unavailable" }
   | (ValidReception & { kind: "room"; label: string; panel: { id: string; title: string; room: string; section: string } })
   | (ValidReception & { kind: "group"; groupId: string; groupName: string; snapshot: string; persons: (ReceptionPerson & { registrationId: string; code: string })[] })
   | (ValidReception & { kind: "family"; code: string; persons: ReceptionPerson[] })
@@ -49,15 +51,16 @@ const integer = (value: unknown, max: number) =>
 // This boundary is deliberately strict: never accept an actor, event or raw
 // database identifier for the lookup from a client.
 export function parseReceptionCommand(input: unknown): ReceptionCommand | null {
-  if (!record(input) || typeof input.duty !== "string" || !["event_entry", "panel_entry", "room_assistance"].includes(input.duty) || !record(input.lookup) ||
+  if (!record(input) || typeof input.duty !== "string" || !["event_entry", "panel_entry", "room_assistance", "ceremony_entry"].includes(input.duty) || !record(input.lookup) ||
     Object.keys(input).some(key => !["duty","panelId","groupSnapshot","lookup","action","requestId","subjectIds","students","companions","expectedRevision","reason"].includes(key)) ||
     Object.keys(input.lookup).some(key => !["kind","value"].includes(key)) ||
     (typeof input.action !== "string" || !["inspect","enter","correct","cancel"].includes(input.action)) ||
     (typeof input.lookup.kind !== "string" || !["qr","code"].includes(input.lookup.kind)) || typeof input.lookup.value !== "string") return null;
-  if (input.duty === "event_entry" ? input.panelId !== undefined : typeof input.panelId !== "string" || !uuid.test(input.panelId)) return null;
+  if (input.duty === "event_entry" ? input.panelId !== undefined : typeof input.panelId !== "string" || (input.duty === "ceremony_entry" ? !["opening", "closing"].includes(input.panelId) : !uuid.test(input.panelId))) return null;
+  if (input.duty === "ceremony_entry" && (input.action === "correct" || input.students !== undefined || input.companions !== undefined)) return null;
   if (input.duty === "room_assistance" && input.action !== "inspect") return null;
   const context = input.duty === "event_entry" ? { duty: "event_entry" as const } :
-    { duty: input.duty as "panel_entry" | "room_assistance", panelId: input.panelId as string };
+    { duty: input.duty as "panel_entry" | "room_assistance" | "ceremony_entry", panelId: input.panelId as string };
   const kind = input.lookup.kind as ReceptionLookup["kind"];
   // QR is a bare opaque token, never a URL or arbitrary scanner contents.
   const value = kind === "code" ? input.lookup.value.trim().toUpperCase() : input.lookup.value;

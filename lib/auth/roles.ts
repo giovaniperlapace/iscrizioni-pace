@@ -10,6 +10,7 @@ export type EventRole = (typeof EVENT_ROLES)[number];
 
 export const DASHBOARD_ROLES = [
   ...EVENT_ROLES,
+  "accoglienza_forum_eventi",
   "partecipante",
 ] as const;
 
@@ -20,6 +21,7 @@ export const ROLE_ROUTES: Record<DashboardRole, string> = {
   manager: "/dashboard/manager",
   manager_viewer: "/dashboard/manager",
   accoglienza: "/dashboard/accoglienza",
+  accoglienza_forum_eventi: "/dashboard/accoglienza-forum-eventi",
   capogruppo: "/dashboard/capogruppo",
   partecipante: "/dashboard/partecipante",
 };
@@ -29,6 +31,7 @@ export const ROLE_LABELS: Record<DashboardRole, string> = {
   manager: "Manager",
   manager_viewer: "Manager viewer",
   accoglienza: "Accoglienza",
+  accoglienza_forum_eventi: "Accoglienza forum ed eventi",
   capogruppo: "Capogruppo",
   partecipante: "Partecipante",
 };
@@ -37,6 +40,7 @@ const ROLE_PRIORITY: DashboardRole[] = [
   "admin",
   "manager",
   "accoglienza",
+  "accoglienza_forum_eventi",
   "manager_viewer",
   "capogruppo",
   "partecipante",
@@ -84,7 +88,7 @@ export function isRoleAllowedForDashboard(
     return true;
   }
 
-  if (requiredRole === "accoglienza" && hasReceptionAssignments) return true;
+  if (requiredRole === "accoglienza_forum_eventi" && hasReceptionAssignments) return true;
 
   if (requiredRole === "partecipante") {
     return true;
@@ -102,6 +106,7 @@ export function isRoleAllowedForDashboard(
 }
 
 export function dashboardRoleFromPath(pathname: string): DashboardRole | null {
+  if (pathname === "/dashboard/accoglienza-forum-eventi" || pathname.startsWith("/dashboard/accoglienza-forum-eventi/")) return "accoglienza_forum_eventi";
   if (pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/")) {
     return "admin";
   }

@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ReceptionDuty =
   | { key: "event_entry"; duty: "event_entry"; title: string; room: null }
-  | { key: string; duty: "panel_entry" | "room_assistance"; panelId: string; title: string; room: string | null };
+  | { key: string; duty: "panel_entry" | "room_assistance" | "ceremony_entry"; panelId: string; title: string; room: string | null };
 
 // Navigation capability only: this never adds an event role or authorizes a command.
 export async function hasPanelReceptionDuty(db: SupabaseClient): Promise<boolean> {

@@ -61,7 +61,7 @@ export const ACCESS_EMAIL_COPY = {
   },
 };
 
-export type OperationalAccessRole = "admin" | "manager" | "manager_viewer" | "accoglienza" | "capogruppo";
+export type OperationalAccessRole = "admin" | "manager" | "manager_viewer" | "accoglienza" | "accoglienza_forum_eventi" | "capogruppo";
 const ROLE_ACCESS_COPY: Record<SupportedLocale, {
   subject: string; assigned: string; access: string; complete: string;
   labels: Record<OperationalAccessRole, string>;
@@ -70,43 +70,43 @@ const ROLE_ACCESS_COPY: Record<SupportedLocale, {
     subject: "Il tuo accesso come {role}", assigned: "Ti è stato assegnato il ruolo {role}. Il tuo accesso è pronto.",
     access: "Apri il sito e inserisci l’indirizzo email a cui hai ricevuto questo messaggio. Riceverai un link personale per accedere: non serve una password.",
     complete: "Dopo l’accesso puoi aprire l’area del tuo ruolo. Da «La mia iscrizione» puoi anche completare o aggiornare la tua partecipazione personale all’evento.",
-    labels: { admin: "Amministratore", manager: "Manager", manager_viewer: "Manager in sola lettura", accoglienza: "Accoglienza", capogruppo: "Capogruppo" },
+    labels: { accoglienza_forum_eventi: "Accoglienza forum ed eventi", admin: "Amministratore", manager: "Manager", manager_viewer: "Manager in sola lettura", accoglienza: "Accoglienza", capogruppo: "Capogruppo" },
   },
   en: {
     subject: "Your access as {role}", assigned: "You have been assigned the role of {role}. Your access is ready.",
     access: "Open the website and enter the email address that received this message. You will receive a personal sign-in link: no password is needed.",
     complete: "After signing in, you can open the area for your role. From “My registration”, you can also complete or update your personal participation in the event.",
-    labels: { admin: "Administrator", manager: "Manager", manager_viewer: "Read-only manager", accoglienza: "Reception operator", capogruppo: "Group leader" },
+    labels: { accoglienza_forum_eventi: "Forum and event reception", admin: "Administrator", manager: "Manager", manager_viewer: "Read-only manager", accoglienza: "Reception operator", capogruppo: "Group leader" },
   },
   fr: {
     subject: "Votre accès en tant que {role}", assigned: "Le rôle de {role} vous a été attribué. Votre accès est prêt.",
     access: "Ouvrez le site et saisissez l’adresse email qui a reçu ce message. Vous recevrez un lien personnel de connexion : aucun mot de passe n’est nécessaire.",
     complete: "Après la connexion, vous pouvez ouvrir l’espace correspondant à votre rôle. Dans « Mon inscription », vous pouvez aussi compléter ou modifier votre participation personnelle à l’événement.",
-    labels: { admin: "Administrateur", manager: "Gestionnaire", manager_viewer: "Gestionnaire en lecture seule", accoglienza: "Agent d’accueil", capogruppo: "Responsable de groupe" },
+    labels: { accoglienza_forum_eventi: "Accueil des forums et événements", admin: "Administrateur", manager: "Gestionnaire", manager_viewer: "Gestionnaire en lecture seule", accoglienza: "Agent d’accueil", capogruppo: "Responsable de groupe" },
   },
   de: {
     subject: "Dein Zugang als {role}", assigned: "Dir wurde die Rolle {role} zugewiesen. Dein Zugang ist bereit.",
     access: "Öffne die Website und gib die E-Mail-Adresse ein, an die diese Nachricht gesendet wurde. Du erhältst einen persönlichen Anmeldelink. Ein Passwort ist nicht erforderlich.",
     complete: "Nach der Anmeldung kannst du den Bereich für deine Rolle öffnen. Unter „Meine Anmeldung“ kannst du auch deine persönliche Teilnahme an der Veranstaltung vervollständigen oder aktualisieren.",
-    labels: { admin: "Administrator", manager: "Manager", manager_viewer: "Manager mit Lesezugriff", accoglienza: "Empfangsmitarbeiter", capogruppo: "Gruppenleitung" },
+    labels: { accoglienza_forum_eventi: "Empfang für Foren und Veranstaltungen", admin: "Administrator", manager: "Manager", manager_viewer: "Manager mit Lesezugriff", accoglienza: "Empfangsmitarbeiter", capogruppo: "Gruppenleitung" },
   },
   es: {
     subject: "Tu acceso como {role}", assigned: "Se te ha asignado el rol de {role}. Tu acceso está listo.",
     access: "Abre el sitio e introduce la dirección de correo que ha recibido este mensaje. Recibirás un enlace personal para acceder: no necesitas contraseña.",
     complete: "Después de acceder, puedes abrir el área de tu rol. Desde «Mi inscripción» también puedes completar o actualizar tu participación personal en el evento.",
-    labels: { admin: "Administrador", manager: "Gestor", manager_viewer: "Gestor de solo lectura", accoglienza: "Personal de acogida", capogruppo: "Responsable de grupo" },
+    labels: { accoglienza_forum_eventi: "Acogida de foros y eventos", admin: "Administrador", manager: "Gestor", manager_viewer: "Gestor de solo lectura", accoglienza: "Personal de acogida", capogruppo: "Responsable de grupo" },
   },
   nl: {
     subject: "Je toegang als {role}", assigned: "Je hebt de rol {role} gekregen. Je toegang is klaar.",
     access: "Open de website en voer het e-mailadres in waarop je dit bericht hebt ontvangen. Je ontvangt een persoonlijke inloglink: je hebt geen wachtwoord nodig.",
     complete: "Na het inloggen kun je de omgeving voor je rol openen. Via ‘Mijn inschrijving’ kun je ook je persoonlijke deelname aan het evenement aanvullen of bijwerken.",
-    labels: { admin: "Beheerder", manager: "Manager", manager_viewer: "Manager met alleen leestoegang", accoglienza: "Onthaalmedewerker", capogruppo: "Groepsleider" },
+    labels: { accoglienza_forum_eventi: "Onthaal voor forums en evenementen", admin: "Beheerder", manager: "Manager", manager_viewer: "Manager met alleen leestoegang", accoglienza: "Onthaalmedewerker", capogruppo: "Groepsleider" },
   },
   uk: {
     subject: "Ваш доступ у ролі {role}", assigned: "Вам призначено роль: {role}. Ваш доступ готовий.",
     access: "Відкрийте сайт і введіть адресу електронної пошти, на яку надійшло це повідомлення. Ви отримаєте особисте посилання для входу: пароль не потрібен.",
     complete: "Після входу ви можете відкрити розділ для своєї ролі. У розділі «Моя реєстрація» також можна доповнити або оновити особисту участь у події.",
-    labels: { admin: "Адміністратор", manager: "Менеджер", manager_viewer: "Менеджер із правом лише перегляду", accoglienza: "Працівник зустрічі учасників", capogruppo: "Керівник групи" },
+    labels: { accoglienza_forum_eventi: "Зустріч учасників форумів і подій", admin: "Адміністратор", manager: "Менеджер", manager_viewer: "Менеджер із правом лише перегляду", accoglienza: "Працівник зустрічі учасників", capogruppo: "Керівник групи" },
   },
 };
 

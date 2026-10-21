@@ -16,6 +16,7 @@ type PublicMessages = {
       admin: string;
       manager: string;
       accoglienza: string;
+      accoglienza_forum_eventi: string;
       capogruppo: string;
       partecipante: string;
     };
@@ -83,6 +84,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       home: "Home",
       dateToBeDefined: "Date da definire",
       roles: {
+        accoglienza_forum_eventi: "Accoglienza forum ed eventi",
         admin: "Admin",
         manager: "Manager",
         manager_viewer: "Manager viewer",
@@ -91,6 +93,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         partecipante: "Partecipante",
       },
       dashboardTabs: {
+        accoglienza_forum_eventi: "Accoglienza forum ed eventi",
         admin: "Dashboard admin",
         manager: "Dashboard manager",
         accoglienza: "Dashboard accoglienza",
@@ -172,6 +175,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       home: "Home",
       dateToBeDefined: "Dates to be confirmed",
       roles: {
+        accoglienza_forum_eventi: "Forum and event reception",
         admin: "Admin",
         manager: "Manager",
         manager_viewer: "Manager viewer",
@@ -180,6 +184,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         partecipante: "Participant",
       },
       dashboardTabs: {
+        accoglienza_forum_eventi: "Forum and event reception",
         admin: "Admin dashboard",
         manager: "Manager dashboard",
         accoglienza: "Welcome desk",
@@ -261,6 +266,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       home: "Accueil",
       dateToBeDefined: "Dates à confirmer",
       roles: {
+        accoglienza_forum_eventi: "Accueil des forums et événements",
         admin: "Admin",
         manager: "Manager",
         manager_viewer: "Lecteur manager",
@@ -269,6 +275,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         partecipante: "Participant",
       },
       dashboardTabs: {
+        accoglienza_forum_eventi: "Accueil des forums et événements",
         admin: "Dashboard admin",
         manager: "Dashboard manager",
         accoglienza: "Accueil",
@@ -350,6 +357,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       home: "Startseite",
       dateToBeDefined: "Termine werden noch bestätigt",
       roles: {
+        accoglienza_forum_eventi: "Empfang für Foren und Veranstaltungen",
         admin: "Admin",
         manager: "Manager",
         manager_viewer: "Manager viewer",
@@ -358,6 +366,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         partecipante: "Teilnehmende Person",
       },
       dashboardTabs: {
+        accoglienza_forum_eventi: "Empfang für Foren und Veranstaltungen",
         admin: "Admin-Dashboard",
         manager: "Manager-Dashboard",
         accoglienza: "Empfang",
@@ -439,6 +448,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       home: "Inicio",
       dateToBeDefined: "Fechas por confirmar",
       roles: {
+        accoglienza_forum_eventi: "Acogida de foros y eventos",
         admin: "Admin",
         manager: "Manager",
         manager_viewer: "Lector manager",
@@ -447,6 +457,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         partecipante: "Participante",
       },
       dashboardTabs: {
+        accoglienza_forum_eventi: "Acogida de foros y eventos",
         admin: "Foro admin",
         manager: "Foro manager",
         accoglienza: "Acogida",
@@ -528,6 +539,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       home: "Home",
       dateToBeDefined: "Data nog te bevestigen",
       roles: {
+        accoglienza_forum_eventi: "Onthaal voor forums en evenementen",
         admin: "Admin",
         manager: "Manager",
         manager_viewer: "Manager viewer",
@@ -536,6 +548,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         partecipante: "Deelnemer",
       },
       dashboardTabs: {
+        accoglienza_forum_eventi: "Onthaal voor forums en evenementen",
         admin: "Admin dashboard",
         manager: "Manager dashboard",
         accoglienza: "Ontvangst",
@@ -617,6 +630,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
       home: "Головна",
       dateToBeDefined: "Дати буде уточнено",
       roles: {
+        accoglienza_forum_eventi: "Зустріч учасників форумів і подій",
         admin: "Адміністратор",
         manager: "Менеджер",
         manager_viewer: "Перегляд менеджера",
@@ -625,6 +639,7 @@ export const messages: Record<SupportedLocale, PublicMessages> = {
         partecipante: "Учасник",
       },
       dashboardTabs: {
+        accoglienza_forum_eventi: "Зустріч учасників форумів і подій",
         admin: "Форум адміністратора",
         manager: "Форум менеджера",
         accoglienza: "Прийом",

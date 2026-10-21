@@ -24,7 +24,18 @@ export async function executeReceptionCommand(
     if (expectedEventId !== undefined && event.id !== expectedEventId) return { status: "forbidden" };
     const { data: roles, error: rolesError } = await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if (rolesError) return { status: "unavailable" };
-    if (!(participantRegistrationId ? canOperateParticipantReception : canOperateReception)(roles ?? [], event.id)) return { status: "forbidden" };
+    if (command.duty === "event_entry" && !(participantRegistrationId ? canOperateParticipantReception : canOperateReception)(roles ?? [], event.id)) return { status: "forbidden" };
+    if (command.duty === "ceremony_entry") {
+      const { data, error } = await service().rpc("reception_ceremony_check_in", {
+        p_event: event.id, p_actor: user.id, p_kind: command.panelId, p_lookup_kind: command.lookup.kind,
+        p_lookup: command.lookup.kind === "qr" ? hashQrToken(command.lookup.value) : command.lookup.value,
+        p_action: command.action, p_request: command.requestId ?? null, p_subjects: command.subjectIds ?? [], p_revision: command.expectedRevision ?? null,
+      });
+      if (error) return {status: error.code === "42501" ? "forbidden" : error.code === "22023" ? "invalid_request" : "unavailable"};
+      const result = projectReceptionResult(data);
+      if (result.status === "valid" && result.kind === "family") return {...result, persons: result.persons.map(person => ({...person, eligible: !!person.ceremonies?.some(seat => seat.kind === command.panelId && !seat.review)}))};
+      return result;
+    }
     if (command.duty !== "event_entry") {
       const { data: assignment, error: assignmentError } = await session.from("panel_reception_assignments")
         .select("id").eq("user_id", user.id).eq("event_id", event.id)
@@ -53,6 +64,11 @@ export async function executeReceptionCommand(
       p_reason: command.reason ?? null,
     });
     if (error) return { status: error.code === "42501" ? "forbidden" : error.code === "22023" ? "invalid_request" : "unavailable" };
+    if (data?.status === "not_booked" && command.duty === "panel_entry") {
+      const routing = await service().rpc("reception_forum_routing", {p_event:event.id,p_actor:user.id,p_panel:command.panelId,p_kind:command.lookup.kind,p_value:command.lookup.kind === "qr" ? hashQrToken(command.lookup.value) : command.lookup.value});
+      if (routing.error) return {status:routing.error.code === "42501" ? "forbidden" : "unavailable"};
+      return projectReceptionResult(routing.data);
+    }
     const result = projectReceptionResult(data);
     if (result.status === "valid" && participantRegistrationId && (result.kind !== "family" || !result.persons.some(person => person.kind === "adult" && person.id === participantRegistrationId))) return { status: "unavailable" };
     if (result.status === "valid" && ((result.kind === "group") !== group)) return { status: "unavailable" };
@@ -70,8 +86,13 @@ export async function executeReceptionCommand(
 export function projectReceptionResult(data: unknown): ReceptionResult {
   if (!data || typeof data !== "object") return { status: "unavailable" };
   const row = data as Record<string, unknown>;
-  if (["invalid", "conflict", "not_booked", "event_entry_required", "capacity_exceeded", "panel_unavailable"].includes(String(row.status))) {
+  if (["invalid", "conflict", "event_entry_required", "capacity_exceeded", "panel_unavailable"].includes(String(row.status))) {
     return { status: row.status } as ReceptionResult;
+  }
+  if (row.status === "not_booked") {
+    if (row.routes === undefined) return {status:"not_booked"};
+    if (!Array.isArray(row.routes) || row.routes.length > 100 || row.routes.some(x => !x || typeof x.title !== "string" || (x.room !== null && typeof x.room !== "string"))) return {status:"unavailable"};
+    return {status:"not_booked",routes:row.routes.map(x => ({title:x.title,room:x.room}))};
   }
   let panel: { id: string; title: string; room: string; section: string } | undefined;
   if (row.panel !== undefined) {

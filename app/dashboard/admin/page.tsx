@@ -1,3 +1,4 @@
+import { receptionRoleRows } from "@/lib/reception/role-rows.server";
 import { GroupReceptionQr } from "@/app/dashboard/capogruppo/qr-gruppo/group-qr";
 import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
 import { loadQuestionnaireSummaries } from "@/lib/registrations/questionnaire-summary.server";
@@ -445,6 +446,7 @@ type OperationalUserRoleRow = {
 };
 
 type OperationalUserRoleAssignment = {
+  dutyKeys?: string[];
   role: string;
   isPrimaryGroupLeader: boolean | null;
   eventId: string | null;
@@ -1024,7 +1026,8 @@ export default async function AdminDashboardPage({
     const roleUsers = await buildOperationalUserRows(
       serviceSupabase,
       eventRoles,
-      groupMemberships
+      groupMemberships,
+      activeSection === "ruoli"
     );
 
     return {
@@ -1462,9 +1465,12 @@ function adminRoleEditPath(
 async function buildOperationalUserRows(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   eventRoles: unknown,
-  groupMemberships: unknown
+  groupMemberships: unknown,
+  includeReception: boolean
 ): Promise<OperationalUserRoleRow[]> {
+  eventRoles = [...((eventRoles ?? []) as object[]), ...(includeReception ? await receptionRoleRows(supabase, null) : [])];
   const eventRoleRows = (eventRoles ?? []) as Array<{
+    dutyKeys?: string[];
     user_id: string;
     role: string;
     event_id: string | null;
@@ -1513,6 +1519,7 @@ async function buildOperationalUserRows(
         fullName: identity?.fullName ?? null,
         assignment: {
           role: row.role,
+          dutyKeys: row.dutyKeys,
           isPrimaryGroupLeader: null,
           eventId: row.event_id,
           eventTitle: relatedOne(row.events)?.title ?? null,
@@ -1841,6 +1848,7 @@ function AdminOperationalUsersSection({
               { value: "manager", label: "Manager" },
               { value: "manager_viewer", label: "Manager viewer" },
               { value: "accoglienza", label: "Accoglienza" },
+              { value: "accoglienza_forum_eventi", label: "Accoglienza forum ed eventi" },
               { value: "admin", label: "Admin globale" },
             ]}
           />
@@ -2675,6 +2683,7 @@ function resolveAdminSection(input: { section?: string; openingSaved?: string; o
 }
 
 function roleLabel(role: string, isPrimaryGroupLeader?: boolean | null): string {
+  if (role === "accoglienza_forum_eventi") return "Accoglienza forum ed eventi";
   switch (role) {
     case "admin":
       return "Admin globale";

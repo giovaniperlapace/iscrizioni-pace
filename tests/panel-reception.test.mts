@@ -28,9 +28,9 @@ test("panel context is explicit; room assistance cannot submit mutations", () =>
 });
 
 test("panel navigation grants neither manager access nor an event role", () => {
-  assert.equal(isRoleAllowedForDashboard("accoglienza", new Set(["partecipante"]), true), true);
+  assert.equal(isRoleAllowedForDashboard("accoglienza_forum_eventi", new Set(["partecipante"]), true), true);
   assert.equal(isRoleAllowedForDashboard("manager", new Set(["partecipante"]), true), false);
-  assert.deepEqual(getDashboardRoleTabs([], "it", true).map(tab => tab.key), ["accoglienza", "partecipante"]);
+  assert.deepEqual(getDashboardRoleTabs([], "it", true).map(tab => tab.key), ["accoglienza_forum_eventi", "partecipante"]);
 });
 
 function backend(assigned: boolean, result: ReceptionResult = family(), reception = true) {

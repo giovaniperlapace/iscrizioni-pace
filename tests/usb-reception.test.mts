@@ -50,10 +50,11 @@ test('USB uncertain inspection retries only inspection, with no automatic entry'
  await session.retry();assert.equal(calls[0],calls[1]);assert.deepEqual(calls.map(c=>c.action),['inspect','inspect']);
  assert.equal(session.snapshot().phase,'result');
 });
-test('USB explicit option cannot change phone Forum automatic entry',async()=>{
+test('Forum explicit presence reads first and saves only after confirmation',async()=>{
  const calls:ReceptionCommand[]=[];
  const session=new ReceptionStationSession(async c=>{calls.push(c);return {...single,persons:single.persons.map(p=>({...p,eventCheckedIn:true})),panel:{id,title:'Forum',room:'Sala',section:'A'}};},()=>request,20,{duty:'panel_entry',panelId:id},true);
- await session.inspect(lookup);assert.deepEqual(calls.map(c=>c.action),['inspect','enter']);
+ await session.inspect(lookup);assert.deepEqual(calls.map(c=>c.action),['inspect']);
+ session.selectPresence();await session.submit({subjectIds:[single.persons[0].id]});assert.deepEqual(calls.map(c=>c.action),['inspect','enter']);
 });
 test('USB HID buffers exact case and punctuation, completes only on Enter and swallows CRLF duplicate',()=>{
  for(const code of ['Ab_-'.repeat(10)+'Ab_', 'G:'+'G_a-b'.repeat(8)+'Ab_']) {

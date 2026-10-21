@@ -133,3 +133,14 @@ scuole già pubblicato. Fino al via libera non anticipare l’apertura generale.
 - [Accessi Forum](panel-p13-access.md)
 - [Lista d’attesa capogruppo](group-panel-waitlist-2026-10-17.md)
 - [Rilascio del 17 ottobre e stato migration](rilascio-presenze-scuole-forum-2026-10-17.md)
+
+## Avanzamento accessi — 21 ottobre
+
+Implementata Accoglienza forum ed eventi con incarichi multipli assegnabili da
+Manager/Admin. Telefono per scansione e presenze; computer anche per prenotazioni
+e biglietti, senza ammissione senza prenotazione. Cerimonie con settore/posto e
+ingresso dedicato; configurazioni reali ancora da definire. Migration production
+applicata con dati invariati; test applicativi, SQL e browser superati.
+Dettagli e limiti nel [verbale accoglienza](accoglienza-forum-eventi-2026-10-21.md).
+Le statistiche del proprio incarico sono disponibili; la revisione generale
+delle statistiche rimane il punto successivo del piano.

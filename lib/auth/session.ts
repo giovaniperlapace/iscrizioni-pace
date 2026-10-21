@@ -140,6 +140,8 @@ function dashboardPathForRole(role: DashboardRole): string {
     case "manager":
     case "manager_viewer":
       return "/dashboard/manager";
+    case "accoglienza_forum_eventi":
+      return "/dashboard/accoglienza-forum-eventi";
     case "accoglienza":
       return "/dashboard/accoglienza";
     case "capogruppo":

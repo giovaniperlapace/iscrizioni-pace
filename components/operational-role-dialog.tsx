@@ -10,11 +10,12 @@ import { FORM_COPY } from "@/lib/forms/copy";
 import type { FormFailure } from "@/lib/forms/result";
 
 export type RoleAssignment = {
+  dutyKeys?: string[];
   role: string; eventId: string | null; eventTitle: string | null;
   groupId: string | null; groupName: string | null; isPrimaryGroupLeader: boolean | null;
 };
 type Person = { userId: string; fullName: string | null; email: string | null; assignments: RoleAssignment[] };
-const labels: Record<string, string> = { admin: "Admin globale", manager: "Manager", manager_viewer: "Manager viewer", accoglienza: "Accoglienza", capogruppo: "Capogruppo" };
+const labels: Record<string, string> = { accoglienza_forum_eventi: "Accoglienza forum ed eventi", admin: "Admin globale", manager: "Manager", manager_viewer: "Manager viewer", accoglienza: "Accoglienza", capogruppo: "Capogruppo" };
 const keyOf = (a: RoleAssignment) => [a.role, a.eventId, a.groupId].join(":");
 const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[var(--peace-border-strong)] px-4 text-sm font-semibold disabled:opacity-50";
 
@@ -83,8 +84,8 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
       } else {
         const role = String(data.get("role"));
         const group = groupOptions.find(g => g.id === data.get("groupId"));
-        const a: RoleAssignment = { role, eventId: role === "admin" ? null : String(data.get("eventId") || eventOptions[0]?.id || ""),
-          eventTitle: role === "admin" ? null : eventOptions[0]?.title ?? null,
+        const a: RoleAssignment = { role, dutyKeys: role === "accoglienza_forum_eventi" ? data.getAll("dutyKeys").map(String) : undefined, eventId: role === "admin" ? null : String(data.get("eventId") || eventOptions[0]?.id || ""),
+          eventTitle: role === "accoglienza_forum_eventi" ? String(data.get("dutySummary") ?? "") : role === "admin" ? null : eventOptions[0]?.title ?? null,
           groupId: role === "capogruppo" ? group?.id ?? null : null,
           groupName: role === "capogruppo" ? group?.name ?? null : null,
           isPrimaryGroupLeader: role === "capogruppo" ? data.get("leaderKind") === "primary" : null };
@@ -117,10 +118,10 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="min-w-0 w-full sm:w-auto sm:flex-1"><p className="text-sm font-semibold">{labels[a.role] ?? a.role}{a.role === "capogruppo" ? <span className="ml-2 font-normal text-[var(--peace-muted)]">{a.isPrimaryGroupLeader ? "Principale" : "Secondario"}</span> : null}</p>
             <p className="mt-1 break-words text-sm text-[var(--peace-muted)]">{[a.eventTitle, a.groupName].filter(Boolean).join(" · ") || "Tutti gli eventi"}</p></div>
-          {<div className="flex flex-wrap gap-2">{a.role === "capogruppo" ? <button type="button" disabled={!!pending} className={button} onClick={() => { setConfirmation(null); setEditing(a); setAdding(true); setFeedback(null); }}>Modifica incarico</button> : null}<button type="button" className={`${button} text-[#8a3323]`} title={own ? "Il tuo ruolo deve essere rimosso da un altro manager o amministratore" : "Rimuovi questo incarico"} disabled={!!pending || own} onClick={() => { setAdding(false); setEditing(null); setConfirmation(key); setFeedback(null); }}>Rimuovi</button></div>}
+          {<div className="flex flex-wrap gap-2">{["capogruppo", "accoglienza_forum_eventi"].includes(a.role) ? <button type="button" disabled={!!pending} className={button} onClick={() => { setConfirmation(null); setEditing(a); setAdding(true); setFeedback(null); }}>Modifica incarico</button> : null}<button type="button" className={`${button} text-[#8a3323]`} title={own ? "Il tuo ruolo deve essere rimosso da un altro manager o amministratore" : "Rimuovi questo incarico"} disabled={!!pending || own} onClick={() => { setAdding(false); setEditing(null); setConfirmation(key); setFeedback(null); }}>Rimuovi</button></div>}
         </div>
         {confirmation === key ? <form ref={confirmationRef} className="mt-3 border-t border-[var(--peace-border)] pt-3" aria-busy={pending === key} onSubmit={e => { e.preventDefault(); void run(new FormData(e.currentTarget), a); }}>
-          <input type="hidden" name="userId" value={person.userId} /><input type="hidden" name="role" value={a.role} /><input type="hidden" name="eventId" value={a.eventId ?? ""} /><input type="hidden" name="groupId" value={a.groupId ?? ""} /><input type="hidden" name="confirmRemoval" value="on" />
+          <input type="hidden" name="userId" value={person.userId} /><input type="hidden" name="role" value={a.role} /><input type="hidden" name="eventId" value={a.eventId ?? ""} /><input type="hidden" name="groupId" value={a.groupId ?? ""} /><input type="hidden" name="confirmRemoval" value="on" />{a.dutyKeys && <input type="hidden" name="expectedDuties" value={JSON.stringify(a.dutyKeys)} />}
           <p className="text-sm">Rimuovere questo incarico? Gli altri ruoli restano invariati.</p>{notice(key)}
           <div className="mt-3 flex flex-wrap justify-end gap-2"><button type="button" className={button} disabled={!!pending} onClick={() => setConfirmation(null)}>Mantieni ruolo</button><ProgressButton type="submit" aria-busy={pending === key} progressError={feedback?.key === key && feedback.error} disabled={!!pending} className={`${button} border-[#8a3323] text-[#8a3323]`}>{pending === key ? "Rimozione…" : "Conferma rimozione"}</ProgressButton></div>
         </form> : null}
@@ -130,7 +131,7 @@ export function OperationalRoleDialog({ person, eventOptions, groupOptions, sour
         {adding ? <form key={editing ? keyOf(editing) : "add"} className="mt-4 grid gap-3" aria-busy={pending === "add"} onSubmit={e => { e.preventDefault(); void run(new FormData(e.currentTarget)); }}>
           <input type="hidden" name="mode" value="existing" /><input type="hidden" name="existingUserId" value={person.userId} />
           <fieldset disabled={!!pending}>
-            <OperationalRoleFields eventOptions={eventOptions} groupOptions={editing ? groupOptions.filter(g => g.id === editing.groupId) : groupOptions.filter(g => ![...active.values()].some(a => a.groupId === g.id))} defaultGroupId={editing?.groupId} defaultLeaderKind={editing?.isPrimaryGroupLeader ? "primary" : "secondary"} roleOptions={Object.entries(labels).filter(([value]) => (sourceDashboard === "admin" || value !== "admin") && (!editing || value === "capogruppo")).map(([value, label]) => ({ value, label }))} defaultRole="capogruppo" />
+            <OperationalRoleFields dutyKeys={editing?.dutyKeys} editingDuties={editing?.role === "accoglienza_forum_eventi"} eventOptions={eventOptions} groupOptions={editing ? groupOptions.filter(g => g.id === editing.groupId) : groupOptions.filter(g => ![...active.values()].some(a => a.groupId === g.id))} defaultGroupId={editing?.groupId} defaultLeaderKind={editing?.isPrimaryGroupLeader ? "primary" : "secondary"} roleOptions={Object.entries(labels).filter(([value]) => (sourceDashboard === "admin" || value !== "admin") && (!editing || value === editing.role)).map(([value, label]) => ({ value, label }))} defaultRole={editing?.role ?? "capogruppo"} />
           </fieldset>
           <p className="text-sm text-[var(--peace-muted)]">Il ruolo si aggiunge agli incarichi attuali. Manager e Manager viewer sono alternativi nello stesso evento.</p>
           {notice("add")}

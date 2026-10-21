@@ -1,4 +1,5 @@
 "use client";
+import { ceremonySeatText } from "@/lib/ceremonies/seat-projection";
 import { useParticipantSheetSection } from "../participant-sheet-loading";
 import { useRef, useState, type ReactNode } from "react";
 import type { LabelCommand, LabelResult } from "@/lib/reception/qr-labels";
@@ -24,7 +25,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
   const chosen = result.persons.filter(person => selectedSet.has(person.id));
   const labelIds = [...new Set(chosen.map(person => registrations.get(person.id)!))];
   const presentIds = chosen.filter(person => person.checkedInAt).map(person => person.id);
-  const pendingIds = chosen.filter(person => !person.checkedInAt).map(person => person.id);
+  const pendingIds = chosen.filter(person => !person.checkedInAt && person.eligible !== false && person.eventCheckedIn !== false).map(person => person.id);
   const unavailable = labels.queue && labelIds.some(id => !labelItems.has(id) || !!labelItems.get(id)?.reason);
   const locked = disabled || labels.busy;
   const allPresent = result.persons.every(person => person.checkedInAt);
@@ -36,7 +37,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
       if (kind === "presence") {
         if (!pendingIds.length) return;
         session.selectPresence();
-        await session.submit({ subjectIds: chosen.map(person => person.id) });
+        await session.submit({ subjectIds: pendingIds });
       } else await labels.print(labelIds);
     } finally { running.current = false; onBusyChange(false); }
   }
@@ -62,6 +63,11 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
         })}
       </fieldset>
     </>}
+    {result.kind === "family" && result.persons.map(person => <div key={person.id} className="text-sm">
+      {!!person.ceremonies?.length && <p className="font-semibold">{person.firstName} {person.lastName}: {person.ceremonies.map(ceremonySeatText).join(" · ")}</p>}
+      {person.eligible === false && <p className="text-amber-900">{person.firstName}: nessun biglietto valido per questa cerimonia. Rivolgiti alla postazione iscrizioni.</p>}
+      {person.eventCheckedIn === false && <p className="text-amber-900">{person.firstName}: passa prima dall’accoglienza generale dell’evento.</p>}
+    </div>)}
     {feedback}
     {unavailable && <p className="text-sm text-amber-900">Uno dei QR selezionati non è stampabile. Puoi comunque registrare le presenze.</p>}
     <div className="grid gap-2 border-t border-slate-200 bg-white pt-3">

@@ -18,6 +18,7 @@ export const ROLE_TAB_ORDER: DashboardTabRole[] = [
   "admin",
   "manager",
   "accoglienza",
+  "accoglienza_forum_eventi",
   "capogruppo",
   "partecipante",
 ];
@@ -26,6 +27,7 @@ const ROLE_TAB_LABELS: Record<DashboardTabRole, string> = {
   admin: "Dashboard admin",
   manager: "Dashboard manager",
   accoglienza: "Dashboard accoglienza",
+  accoglienza_forum_eventi: "Accoglienza forum ed eventi",
   capogruppo: "Dashboard capogruppo",
   partecipante: "Iscrizione e QR personale",
 };
@@ -47,7 +49,7 @@ export function getDashboardRoleTabs(
     }
   }
 
-  if (hasReceptionAssignments) available.add("accoglienza");
+  if (hasReceptionAssignments) available.add("accoglienza_forum_eventi");
 
   return ROLE_TAB_ORDER.filter((role) => available.has(role)).map((role) => ({
     key: role,
