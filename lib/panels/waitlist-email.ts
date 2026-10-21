@@ -7,12 +7,12 @@ import { parseForumIntent } from "./booking-intent.ts";
 export type ForumWaitlistOffer = {
   id: string; claim: string; eventId: string; registrationId: string; panelId: string;
   notificationKind?: "participant" | "leader"; sectionId?: string;
-  name: string; email: string; locale: string; title: string; location: string;
+  name: string; email: string; locale?: string | null; title: string; location: string;
   startsAt: string; endsAt: string; expiresAt: string; seats: number;
 };
 
 export function renderForumWaitlistEmail(offer: ForumWaitlistOffer, appUrl: string) {
-  const locale = normalizeLocale(offer.locale) ?? "en";
+  const locale = normalizeLocale(offer.locale) ?? "it";
   const copy = { ...FORUM_WAITLIST_COPY[locale], ...(offer.notificationKind === "leader" ? GROUP_WAITLIST_COPY[locale] : {}) };
   const id = parseForumIntent(offer.panelId);
   if (!id) throw new Error("Invalid Forum ID");
