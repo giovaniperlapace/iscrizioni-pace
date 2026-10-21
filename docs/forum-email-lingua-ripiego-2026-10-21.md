@@ -27,3 +27,10 @@ Applicazione e registrazione atomiche tramite script canonico con guard nella
 stessa transazione: corpo della funzione identico salvo il ripiego; tutte le
 altre definizioni app/public, proprietari e ACL conservati. Nessuna chiamata
 operativa alla funzione di claim durante le verifiche e nessuna email di prova.
+
+Codice `5584100` pubblicato su main; deployment production
+`dpl_Fhf3dshxTjcwrA1MVsotfYpNGYNb` READY, commit esatto verificato, build remota
+circa 49 secondi. Alias `registrationspeace.santegidio.org` associato senza errori.
+Lettura SQL READ ONLY conferma migration registrata, ripiego italiano e ACL
+`postgres`/`service_role` conservati. Nessun errore/fatal nei log del deployment
+nel controllo immediato; non equivale a monitoraggio prolungato o invio reale.
