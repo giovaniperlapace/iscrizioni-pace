@@ -152,9 +152,21 @@ test("participant booking screen highlights the requested forum with one anchor 
   assert.match(html, /Mettiti in coda per questo Forum/);
   assert.doesNotMatch(html, /disabled=""/);
   assert.equal(writes, 0, "following an intent never automatically reserves a seat");
+  const full = renderToStaticMarkup(exports.ParticipantPanelBookings({locale: "it", registrationId: "registration", rows: [{...row, remaining_seats: 0, booking_status: "full"}]}));
+  assert.match(full, /Completo/);
+  assert.doesNotMatch(full, /0 posti/);
+  const available = renderToStaticMarkup(exports.ParticipantPanelBookings({locale: "it", registrationId: "registration", rows: [{...row, remaining_seats: 5}]}));
+  assert.match(available, /5 posti/);
   for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"]) {
     const blocked = renderToStaticMarkup(exports.ParticipantPanelBookings({locale, registrationId: "registration", rows: [row], error: "attendance"}));
     assert.match(blocked, /role="alert"/);
     assert.match(blocked, /editAttendance=1#declared-attendance/);
+    for (const intent of ["book", "join", "accept"]) {
+      const recovery = renderToStaticMarkup(exports.ParticipantPanelBookings({locale, registrationId: "registration", rows: [row], error: "attendance", requestedForum: forum, attendanceSection: "one", attendanceIntent: intent, attendanceChildren: ["child-id"]}));
+      assert.match(recovery, /name="confirmAttendance" value="yes"/);
+      assert.match(recovery, /name="childIds" value="child-id"/);
+      assert.match(recovery, new RegExp(`name="intent" value="${intent}"`));
+      assert.doesNotMatch(recovery, /editAttendance=1/);
+    }
   }
 });

@@ -13,7 +13,7 @@ try {
  await page.route('**/*',route=>new URL(route.request().url()).hostname==='localhost'?route.continue():route.abort());
  for(const width of [390,1440]) for(const locale of ['it','en','fr','de','es','nl','uk']){
   await page.setViewportSize({width,height:1000});await page.goto('http://localhost:3137/forum-attendance-check?locale='+locale);
-  const alert=page.locator('p[role=alert]');await alert.waitFor();assert.ok((await alert.innerText()).length>60);
+  const alert=page.locator('[role=alert]');await alert.waitFor();assert.ok((await alert.innerText()).length>60);
   assert.equal(await alert.getByRole('link').getAttribute('href'),'/dashboard/partecipante?overlay=iscrizione&editAttendance=1#declared-attendance');
   assert.ok(await page.getByRole('button',{name:'Salva presenze',exact:true}).isVisible());
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

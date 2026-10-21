@@ -100,7 +100,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                               <AvailabilityIcon availability={panel.availability} />
                               <span className="flex flex-col items-start">
                                 <span>{copy.availability[panel.availability]}</span>
-                                {typeof panel.remainingSeats === "number" && Number.isFinite(panel.remainingSeats) ? (
+                                {panel.availability !== "full" && typeof panel.remainingSeats === "number" && panel.remainingSeats > 0 && Number.isFinite(panel.remainingSeats) ? (
                                   <span className="text-[10px] font-normal leading-4">
                                     {formatSeatCount(panel.remainingSeats, locale)}
                                   </span>

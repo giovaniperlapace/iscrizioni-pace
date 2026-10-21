@@ -22,7 +22,7 @@ export const REGISTRATION_CONFIRMATION_COPY: Record<SupportedLocale, Confirmatio
     qr: "In allegato trovi il tuo QR code personale per l'accesso all'evento.",
     qrAlt: "QR code personale",
     access: "Per accedere alla tua area personale, apri {site} e inserisci lo stesso indirizzo email usato per registrarti. Riceverai un link personale per consultare e aggiornare la tua iscrizione.",
-    programme: "Quando sarà pubblicato il programma completo, dalla tua area personale potrai anche scegliere a quali incontri ed eventi partecipare.",
+    programme: "Ora che hai completato l'iscrizione, puoi accedere alla tua area personale e prenotare i Forum a cui desideri partecipare.",
     thanks: "Grazie.",
   },
   en: {
@@ -33,7 +33,7 @@ export const REGISTRATION_CONFIRMATION_COPY: Record<SupportedLocale, Confirmatio
     qr: "Your personal QR code for entry to the event is attached.",
     qrAlt: "Personal QR code",
     access: "To access your personal area, open {site} and enter the same email address you used to register. You will receive a personal sign-in link to view and update your registration.",
-    programme: "Once the full programme is published, you will also be able to choose which sessions and events to attend from your personal area.",
+    programme: "Now that you have completed your registration, you can access your personal area and book the forums you would like to attend.",
     thanks: "Thank you.",
   },
   fr: {
@@ -44,7 +44,7 @@ export const REGISTRATION_CONFIRMATION_COPY: Record<SupportedLocale, Confirmatio
     qr: "Tu trouveras en pièce jointe ton QR code personnel pour accéder à l'événement.",
     qrAlt: "QR code personnel",
     access: "Pour accéder à ton espace personnel, ouvre {site} et saisis la même adresse e-mail que celle utilisée pour t'inscrire. Tu recevras un lien de connexion personnel pour consulter et modifier ton inscription.",
-    programme: "Lorsque le programme complet sera publié, tu pourras aussi choisir les rencontres et les événements auxquels tu souhaites participer depuis ton espace personnel.",
+    programme: "Maintenant que tu as terminé ton inscription, tu peux accéder à ton espace personnel et t'inscrire aux forums auxquels tu souhaites participer.",
     thanks: "Merci.",
   },
   de: {
@@ -55,7 +55,7 @@ export const REGISTRATION_CONFIRMATION_COPY: Record<SupportedLocale, Confirmatio
     qr: "Im Anhang findest du deinen persönlichen QR-Code für den Einlass zur Veranstaltung.",
     qrAlt: "Persönlicher QR-Code",
     access: "Um deinen persönlichen Bereich zu öffnen, gehe auf {site} und gib dieselbe E-Mail-Adresse ein, die du bei der Anmeldung verwendet hast. Du erhältst einen persönlichen Zugangslink, über den du deine Anmeldung einsehen und aktualisieren kannst.",
-    programme: "Sobald das vollständige Programm veröffentlicht ist, kannst du in deinem persönlichen Bereich auch auswählen, an welchen Programmpunkten und Veranstaltungen du teilnehmen möchtest.",
+    programme: "Nachdem du deine Anmeldung abgeschlossen hast, kannst du deinen persönlichen Bereich öffnen und dich für die Foren anmelden, an denen du teilnehmen möchtest.",
     thanks: "Vielen Dank.",
   },
   es: {
@@ -66,7 +66,7 @@ export const REGISTRATION_CONFIRMATION_COPY: Record<SupportedLocale, Confirmatio
     qr: "Encontrarás adjunto tu código QR personal para acceder al evento.",
     qrAlt: "Código QR personal",
     access: "Para acceder a tu área personal, abre {site} e introduce la misma dirección de correo electrónico que utilizaste para inscribirte. Recibirás un enlace personal de acceso para consultar y actualizar tu inscripción.",
-    programme: "Cuando se publique el programa completo, también podrás elegir desde tu área personal las sesiones y los eventos en los que quieras participar.",
+    programme: "Ahora que has completado tu inscripción, puedes acceder a tu área personal e inscribirte en los foros en los que deseas participar.",
     thanks: "Gracias.",
   },
   nl: {
@@ -77,7 +77,7 @@ export const REGISTRATION_CONFIRMATION_COPY: Record<SupportedLocale, Confirmatio
     qr: "In de bijlage vind je je persoonlijke QR-code voor toegang tot het evenement.",
     qrAlt: "Persoonlijke QR-code",
     access: "Om je persoonlijke pagina te openen, ga je naar {site} en vul je hetzelfde e-mailadres in dat je bij je inschrijving hebt gebruikt. Je ontvangt een persoonlijke inloglink waarmee je je inschrijving kunt bekijken en bijwerken.",
-    programme: "Zodra het volledige programma is gepubliceerd, kun je op je persoonlijke pagina ook kiezen aan welke programmaonderdelen en evenementen je wilt deelnemen.",
+    programme: "Nu je inschrijving is voltooid, kun je naar je persoonlijke pagina gaan en je aanmelden voor de forums waaraan je wilt deelnemen.",
     thanks: "Bedankt.",
   },
   uk: {
@@ -88,7 +88,7 @@ export const REGISTRATION_CONFIRMATION_COPY: Record<SupportedLocale, Confirmatio
     qr: "До листа додано ваш особистий QR-код для входу на захід.",
     qrAlt: "Особистий QR-код",
     access: "Щоб увійти до особистого кабінету, відкрийте {site} і введіть ту саму адресу електронної пошти, яку ви вказали під час реєстрації. Ви отримаєте особисте посилання для входу, щоб переглянути й оновити свою реєстрацію.",
-    programme: "Коли буде опубліковано повну програму, ви також зможете вибрати в особистому кабінеті зустрічі та заходи, у яких хочете взяти участь.",
+    programme: "Тепер, коли ви завершили реєстрацію, ви можете увійти до особистого кабінету та записатися на форуми, у яких бажаєте взяти участь.",
     thanks: "Дякуємо.",
   },
 };

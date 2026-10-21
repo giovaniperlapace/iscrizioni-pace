@@ -644,10 +644,16 @@ export async function setParticipantPanelBooking(formData: FormData) {
   const childIds = formData.getAll("childIds");
   if (!validForumChildIds(childIds)) redirect("/dashboard/partecipante?panelError=invalid");
   const queueIntent = intent === "join" || intent === "leave" || intent === "accept";
-  const { data, error } = await supabase.rpc("set_panel_family_booking", {
-    p_registration_id: registrationId, p_panel_id: panelId, p_section_id: sectionId,
-    p_intent: intent, p_child_ids: childIds, p_as_leader: false,
-  });
+  const confirmAttendance = formData.get("confirmAttendance") === "yes";
+  if (confirmAttendance && !["book", "join", "accept"].includes(intent!)) {
+    redirect("/dashboard/partecipante?panelError=invalid");
+  }
+  const { data, error } = await supabase.rpc(
+    confirmAttendance ? "confirm_attendance_and_book_forum" : "set_panel_family_booking", {
+      p_registration_id: registrationId, p_panel_id: panelId, p_section_id: sectionId,
+      p_intent: intent, p_child_ids: childIds,
+      ...(confirmAttendance ? {} : { p_as_leader: false }),
+    });
 
   if (error) {
     const message = error.message.toLowerCase();
@@ -664,7 +670,13 @@ export async function setParticipantPanelBooking(formData: FormData) {
               : message.includes("not available")
                 ? "unavailable"
                 : "failed";
-    redirect(`/dashboard/partecipante?panelError=${errorCode}&forum=${encodeURIComponent(panelId)}#participant-panels-title`);
+    const recovery = new URLSearchParams();
+    if (errorCode === "attendance") {
+      recovery.set("attendanceSection", sectionId);
+      recovery.set("attendanceIntent", intent!);
+      for (const id of childIds) recovery.append("attendanceChild", String(id));
+    }
+    redirect(`/dashboard/partecipante?panelError=${errorCode}&forum=${encodeURIComponent(panelId)}&${recovery}#participant-panels-title`);
   }
 
   if (data?.status === "expired" || data?.status === "available") {

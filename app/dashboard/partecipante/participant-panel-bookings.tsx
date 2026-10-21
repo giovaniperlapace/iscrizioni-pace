@@ -3,7 +3,7 @@
 import { sortForums } from "@/lib/panels/forum-order";
 
 import Link from "next/link";
-import { FORUM_ATTENDANCE_COPY } from "@/lib/panels/attendance-copy";
+import { FORUM_ATTENDANCE_COPY, FORUM_ATTENDANCE_CONFIRM_COPY } from "@/lib/panels/attendance-copy";
 import { useState } from "react";
 import { ForumChildSelection } from "@/components/forum-child-selection";
 import { FORUM_CHILD_COPY, type ForumChildOption } from "@/lib/panels/child-selection";
@@ -275,13 +275,21 @@ type Props = {
   saved?: string | null;
   error?: string | null;
   requestedForum?: string | null;
+  attendanceSection?: string | null;
+  attendanceIntent?: string | null;
+  attendanceChildren?: string[];
 };
 
-export function ParticipantPanelBookings({ locale, registrationId, rows: initialRows, saved, error, requestedForum }: Props) {
+export function ParticipantPanelBookings({ locale, registrationId, rows: initialRows, saved, error, requestedForum, attendanceSection, attendanceIntent, attendanceChildren = [] }: Props) {
   const { rows, error: refreshError } = useForumAvailability(registrationId, initialRows);
   const waitlistCopy = FORUM_WAITLIST_COPY[locale] ?? FORUM_WAITLIST_COPY.en;
   const baseCopy = COPY[locale] ?? COPY.en;
   const copy: Copy = { ...baseCopy, conflict: waitlistCopy.conflict, errors: { ...baseCopy.errors, attendance: FORUM_ATTENDANCE_COPY[locale].error, overlap: waitlistCopy.overlap, expired: waitlistCopy.expired, available: waitlistCopy.available } };
+  const attendanceCopy = FORUM_ATTENDANCE_CONFIRM_COPY[locale];
+  const recoveryRow = error === "attendance" && ["book", "join", "accept"].includes(attendanceIntent ?? "")
+    ? rows.find(row => row.panel_id === requestedForum && row.section_id === attendanceSection) : undefined;
+  const recoveryDate = recoveryRow ? new Date(recoveryRow.starts_at) : null;
+  const recoverySlot = recoveryDate ? `${new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Rome" }).format(recoveryDate)} · ${Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Europe/Rome" }).format(recoveryDate)) < 12 ? attendanceCopy.morning : attendanceCopy.afternoon}` : "";
   const sectionsByPanel = new Map<string, { first: string; count: number }>();
   for (const row of rows) {
     const entry = sectionsByPanel.get(row.panel_id);
@@ -313,10 +321,22 @@ export function ParticipantPanelBookings({ locale, registrationId, rows: initial
         </p>
       ) : null}
       {error || refreshError ? (
-        <p role="alert" className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
-          {copy.errors[error ?? refreshError ?? "failed"] ?? copy.errors.failed}
-          {error === "attendance" ? <Link prefetch={false} className="btn-secondary mt-3 inline-flex min-h-11 max-w-full whitespace-normal text-center" href="/dashboard/partecipante?overlay=iscrizione&editAttendance=1#declared-attendance">{FORUM_ATTENDANCE_COPY[locale].edit}</Link> : null}
-        </p>
+        <div role="alert" className="rounded-md border border-[#e0b5a9] bg-[#fff3ef] px-3 py-2 text-sm text-[#8a3323]">
+          <p>{recoveryRow ? attendanceCopy.error : copy.errors[error ?? refreshError ?? "failed"] ?? copy.errors.failed}</p>
+          {recoveryRow ? <form action={setParticipantPanelBooking} className="mt-3 grid justify-items-start gap-3">
+            <p className="font-semibold">{recoveryRow.title} · {recoverySlot}</p>
+            <p>{attendanceCopy.help}</p>
+            <input type="hidden" name="registrationId" value={registrationId} />
+            <input type="hidden" name="panelId" value={recoveryRow.panel_id} />
+            <input type="hidden" name="sectionId" value={recoveryRow.section_id} />
+            <input type="hidden" name="intent" value={attendanceIntent!} />
+            <input type="hidden" name="confirmAttendance" value="yes" />
+            {attendanceChildren.map((id, index) => <input key={`${id}-${index}`} type="hidden" name="childIds" value={id} />)}
+            <PendingSubmitButton pendingLabel={copy.booking} className="btn-primary min-h-11 max-w-full whitespace-normal text-center">
+              {attendanceCopy[attendanceIntent as "book" | "join" | "accept"]}
+            </PendingSubmitButton>
+          </form> : error === "attendance" ? <Link prefetch={false} className="btn-secondary mt-3 inline-flex min-h-11 max-w-full whitespace-normal text-center" href="/dashboard/partecipante?overlay=iscrizione&editAttendance=1#declared-attendance">{FORUM_ATTENDANCE_COPY[locale].edit}</Link> : null}
+        </div>
       ) : null}
 
       {rows.length === 0 ? (
@@ -384,7 +404,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${isSelected ? "bg-[#e8f6e8] text-[#27613a]" : row.booking_status === "available" ? "bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]" : "bg-[#fff0eb] text-[#8a3323]"}`}>
           {isSelected ? <CheckCircle2 aria-hidden="true" className="mr-1 inline size-3.5" /> : null}
           <span>{statusLabel}</span>
-          {typeof row.remaining_seats === "number" && Number.isFinite(row.remaining_seats) ? (
+          {!isFull && typeof row.remaining_seats === "number" && row.remaining_seats > 0 && Number.isFinite(row.remaining_seats) ? (
             <span className="block text-[10px] font-normal leading-4">
               {formatSeatCount(row.remaining_seats, locale)}
             </span>

@@ -58,6 +58,37 @@ npm run db:migrate:production -- \
 Non eseguire questo comando per P0-P10 prima del collaudo complessivo e della
 procedura finale di rilascio.
 
+## Configurazione locale production e SSH — 2026-10-21
+
+Accesso verificato su questo Mac:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes root@91.99.81.31
+```
+
+La precedente chiave `~/.ssh/id_ed25519_hetzner_20260613` non e' presente.
+`.env.local` usa ora `SERVER_SSH_KEY=/Users/stefanolaptop/.ssh/id_ed25519`.
+Il file `.env.production.local`, ripristinato per lo script delle migration,
+contiene:
+
+```dotenv
+DEPLOYMENT_ENVIRONMENT=production
+SERVER_SSH_HOST=91.99.81.31
+SERVER_SSH_PORT=22
+SERVER_SSH_USER=root
+SERVER_SSH_KEY=/Users/stefanolaptop/.ssh/id_ed25519
+SUPABASE_COOLIFY_STACK_ID=ammnuajlmd83t94cfy3us6cw
+SUPABASE_DB_CONTAINER=supabase-db-ammnuajlmd83t94cfy3us6cw
+SUPABASE_DB_USER=postgres
+SUPABASE_DB_NAME=postgres
+```
+
+Entrambi i file locali hanno permessi `600` e sono ignorati da Git.
+Il file production definisce il target dello script: non duplica password,
+token o chiavi API applicative presenti in `.env.local`.
+La verifica ha confermato SSH e una query in transazione READ ONLY;
+il ripristino della configurazione non applica migration e non modifica il DB.
+
 ## Ambiente staging
 
 - `.env.staging.example` documenta le variabili senza contenere segreti.

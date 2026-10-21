@@ -1240,6 +1240,9 @@ export default async function PartecipanteDashboardPage({
               registrationId={registrationId}
               rows={panelCatalog}
               requestedForum={firstParam(params.forum)}
+              attendanceSection={firstParam(params.attendanceSection)}
+              attendanceIntent={firstParam(params.attendanceIntent)}
+              attendanceChildren={Array.isArray(params.attendanceChild) ? params.attendanceChild : params.attendanceChild ? [params.attendanceChild] : []}
               saved={firstParam(params.panelSaved)}
               error={firstParam(params.panelError)}
             /> : null}

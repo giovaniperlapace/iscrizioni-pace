@@ -36,6 +36,12 @@
   Codice `8b77f1b` su main, production READY e dominio verificato; lettura
   Manager live: 26 incarichi. Revisione autenticata reale ancora da svolgere.
   Verbale: `docs/accoglienza-forum-eventi-2026-10-21.md`.
+## Configurazione SSH locale — 2026-10-21
+
+- Chiave verificata: `/Users/stefanolaptop/.ssh/id_ed25519`, utente `root`, server `91.99.81.31:22`.
+- Aggiornato `.env.local` e ripristinato `.env.production.local` con il target esplicito production per lo script migration; entrambi ignorati da Git e con permessi `600`.
+- Il file production contiene i soli parametri SSH/stack/database; le credenziali applicative restano in `.env.local`. Dettagli in `docs/supabase-workflow.md`.
+- Accesso SSH e query READ ONLY verificati; nessuna migration o modifica del database.
 
 ## Forum capogruppo: lettura e ruoli cumulati — 2026-10-20
 
@@ -5479,7 +5485,7 @@ Decisioni RLS iniziali:
 
 Applicazione su Hetzner/Coolify:
 
-- Server: `91.99.81.31`, accesso SSH riuscito come `root` con chiave locale `~/.ssh/id_ed25519_hetzner_20260613`.
+- Server: `91.99.81.31`, accesso SSH verificato il 2026-10-21 come `root` con chiave locale `~/.ssh/id_ed25519` (il precedente percorso `~/.ssh/id_ed25519_hetzner_20260613` non esiste su questo Mac).
 - Progetto Coolify: `iscrizioni_pace_cool`.
 - Servizio Coolify: `supabase-ammnuajlmd83t94cfy3us6cw`.
 - Network Docker Supabase: `ammnuajlmd83t94cfy3us6cw`.
