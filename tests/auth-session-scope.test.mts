@@ -45,6 +45,30 @@ function database(ownRole: string | null, secondaryLeader = false, panelDuty = f
 }
 
 const session = loadModule<{ getCurrentAuthContext: (db: ReturnType<typeof database>, requestedRole?: string) => Promise<{ eventRoles: unknown[]; dashboardPath: string }> }>("../lib/auth/session.ts", { "./roles": roles });
+test("proxy allows only the training page to unassigned managers and routes assigned reception operators correctly",async()=>{
+ const previous=[process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY];
+ process.env.NEXT_PUBLIC_SUPABASE_URL="https://example.test";process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY="test";
+ try {
+  for(const [role,assigned,path,destination] of [
+   ["manager",false,"/dashboard/accoglienza-forum-eventi/collaudo",undefined],
+   ["manager",false,"/dashboard/accoglienza-forum-eventi","/dashboard/manager"],
+   ["manager_viewer",false,"/dashboard/accoglienza-forum-eventi/collaudo","/dashboard/manager"],
+   [null,true,"/dashboard","/dashboard/accoglienza-forum-eventi"],
+   [null,true,"/dashboard/accoglienza-forum-eventi/collaudo",undefined],
+  ] as const){
+   const response=(url?:URL)=>({url:url?.pathname,cookies:{getAll:()=>[],set(){}}});
+   const {proxy}=loadModule<{proxy:(r:unknown)=>Promise<{url?:string}>}>("../proxy.ts",{
+    "@supabase/ssr":{createServerClient:()=>database(role,false,assigned)},
+    "next/server":{NextResponse:{next:()=>response(),redirect:(url:URL)=>response(url)}},
+    "@/lib/auth/roles":roles,"@/lib/auth/session-persistence":persistence,
+   });
+   const result=await proxy({url:`https://example.test${path}`,nextUrl:new URL(`https://example.test${path}`),cookies:{getAll:()=>[],get:()=>undefined}});
+   assert.equal(result.url,destination,`${role} ${path}`);
+  }
+ } finally {
+  for(const [i,key] of ["NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY"].entries())if(previous[i]===undefined)delete process.env[key];else process.env[key]=previous[i];
+ }
+});
 for (const ownRole of ["admin", "manager", null]) {
   test(`session resolves only the authenticated account's roles: ${ownRole}`, async () => {
     const result = await session.getCurrentAuthContext(database(ownRole));

@@ -11,7 +11,8 @@ async function send(eventId: string, body: object) {
     return await response.json();
   } catch { return {status:"unavailable"}; }
 }
-export function ForumReceptionWorkstation({eventId,choices,canManage}:{eventId:string;choices:DutyOption[];canManage:boolean}) {
+export type ForumReceptionTransport = typeof send;
+export function ForumReceptionWorkstation({eventId,choices,canManage,requestAction=send}:{eventId:string;choices:DutyOption[];canManage:boolean;requestAction?:ForumReceptionTransport}) {
   const [mode,setMode]=useState<"computer"|"phone"|null>(null);
   const [selected,setSelected]=useState<string|null>(choices.length===1 ? choices[0].key : null);
   const [query,setQuery]=useState("");
@@ -26,24 +27,24 @@ export function ForumReceptionWorkstation({eventId,choices,canManage}:{eventId:s
     <div className="grid gap-2">{choices.filter(item=>(item.title+" "+(item.room??"")).toLocaleLowerCase().includes(query.toLocaleLowerCase())).map(item=><button key={item.key} className="btn-secondary min-h-16 p-3 text-left" onClick={()=>{setSelected(item.key);setQuery("");}}><strong className="block">{item.title}</strong>{item.room}</button>)}</div>
     <button className="min-h-11 justify-self-start underline" onClick={()=>setMode(null)}>Cambia postazione</button>
   </section>;
-  return <ActiveStation key={`${mode}-${duty.key}`} {...{eventId,duty,mode,canManage}} onChangeDuty={choices.length>1 ? ()=>setSelected(null):undefined} onChangeMode={()=>setMode(null)}/>;
+  return <ActiveStation key={`${mode}-${duty.key}`} {...{eventId,duty,mode,canManage,requestAction}} onChangeDuty={choices.length>1 ? ()=>setSelected(null):undefined} onChangeMode={()=>setMode(null)}/>;
 }
-function ActiveStation({eventId,duty,mode,canManage,onChangeDuty,onChangeMode}:{eventId:string;duty:DutyOption;mode:"phone"|"computer";canManage:boolean;onChangeDuty?:()=>void;onChangeMode:()=>void}) {
+function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,onChangeMode}:{eventId:string;duty:DutyOption;mode:"phone"|"computer";canManage:boolean;requestAction:ForumReceptionTransport;onChangeDuty?:()=>void;onChangeMode:()=>void}) {
   const [lookup,setLookup]=useState<ReceptionLookup|null>(null);
   const [deskBusy,setDeskBusy]=useState(false);
   const [scanBusy,setScanBusy]=useState(false);
   const [stats,setStats]=useState<{booked:number;entered:number}|null>(null);
   const [statsError,setStatsError]=useState(false);
   const [refresh,setRefresh]=useState(0);
-  useEffect(()=>{let active=true;void send(eventId,{operation:"statistics",target:duty.key}).then(result=>{
+  useEffect(()=>{let active=true;void requestAction(eventId,{operation:"statistics",target:duty.key}).then(result=>{
     if(!active)return;if(result.status!=="ready" || !Number.isSafeInteger(result.booked)||!Number.isSafeInteger(result.entered)){setStatsError(true);setStats(null);}else {setStatsError(false);setStats(result);}
-  });return()=>{active=false;};},[eventId,duty.key,refresh]);
+  });return()=>{active=false;};},[eventId,duty.key,refresh,requestAction]);
   const commandAction=useCallback(async(command:ReceptionCommand):Promise<ReceptionResult>=>{
     if(deskBusy)return {status:"invalid_request"};
-    const result=await send(eventId,{operation:"scan",command});
+    const result=await requestAction(eventId,{operation:"scan",command});
     if(result.status==="valid" && command.action!=="inspect")setRefresh(value=>value+1);
     return result;
-  },[eventId,deskBusy]);
+  },[eventId,deskBusy,requestAction]);
   return <div className="grid gap-4">
     <section className="surface-card flex flex-wrap items-center gap-4 p-4" aria-label="Statistiche dell’incarico">
       {stats ? <><p><strong>{stats.booked}</strong> {duty.kind==="panel"?"prenotati":"assegnatari"}</p><p><strong>{stats.entered}</strong> ingressi registrati</p></>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
@@ -51,12 +52,12 @@ function ActiveStation({eventId,duty,mode,canManage,onChangeDuty,onChangeMode}:{
     </section>
     <div inert={deskBusy || undefined}><EventReceptionConsole duty={{key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
     {mode==="computer" && <section className="surface-card grid gap-3 p-5"><h2 className="text-lg font-semibold">Prenota un posto</h2><p className="text-sm">Leggi il codice della persona, poi assegna una prenotazione. La presenza si conferma separatamente.</p>
-      {lookup ? <Desk key={`${lookup.kind}:${lookup.value}`} {...{eventId,duty,lookup}} disabled={scanBusy} onBusy={setDeskBusy} onSaved={()=>setRefresh(value=>value+1)}/> : <p className="text-sm text-slate-600">Inserisci o scansiona prima il codice.</p>}
+      {lookup ? <Desk key={`${lookup.kind}:${lookup.value}`} {...{eventId,duty,lookup,requestAction}} disabled={scanBusy} onBusy={setDeskBusy} onSaved={()=>setRefresh(value=>value+1)}/> : <p className="text-sm text-slate-600">Inserisci o scansiona prima il codice.</p>}
       {canManage && <div className="flex flex-wrap gap-4 text-sm"><PendingLink href="/dashboard/manager?section=iscritti" className="underline">Gestione partecipanti</PendingLink><PendingLink href="/dashboard/manager/nuovo" className="underline">Inserisci un nuovo partecipante</PendingLink></div>}
     </section>}
   </div>;
 }
-function Desk({eventId,duty,lookup,disabled,onBusy,onSaved}:{eventId:string;duty:DutyOption;lookup:ReceptionLookup;disabled:boolean;onBusy:(value:boolean)=>void;onSaved:()=>void}) {
+function Desk({eventId,duty,lookup,disabled,onBusy,onSaved,requestAction}:{eventId:string;duty:DutyOption;lookup:ReceptionLookup;requestAction:ForumReceptionTransport;disabled:boolean;onBusy:(value:boolean)=>void;onSaved:()=>void}) {
   const [preview,setPreview]=useState<DeskResult|null>(null);
   const [option,setOption]=useState("");
   const [children,setChildren]=useState<string[]>([]);
@@ -68,7 +69,7 @@ function Desk({eventId,duty,lookup,disabled,onBusy,onSaved}:{eventId:string;duty
   async function run(command:DeskRequest) {
     if(running.current || disabled)return;
     running.current=true;setPending(true);onBusy(true);retry.current=command;
-    const result:DeskResult=await send(eventId,{operation:"desk",command});
+    const result:DeskResult=await requestAction(eventId,{operation:"desk",command});
     setStatus(result.status);
     if(result.status==="ready"){setPreview(result);setOption("");setChildren([]);}
     if(result.status==="saved"){setPreview(null);onSaved();}

@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## QR fittizi per Forum e cerimonie — 2026-10-21
+
+- Nove PNG e foglio stampabile `/collaudo-forum-eventi/qr.html`, con codici
+  F001–F009 ed esito atteso. Usarli soltanto nella pagina di prova dedicata.
+- Nuova `/dashboard/accoglienza-forum-eventi/collaudo`, collegata dalla
+  dashboard: stessi componenti, dati sintetici in memoria per scheda,
+  Ricomincia, nessuna scrittura o chiamata alle API operative. Admin, Manager
+  corrente e operatori con incarichi; Viewer esclusi. Nessuna migration.
+- Proxy: Manager senza incarico ammesso solo al collaudo; ingresso automatico
+  degli operatori Forum allineato alla selezione canonica del ruolo.
+- 1.013 test, lint, TypeScript, build production pulita, SQL/browser e
+  decodifica dei nove PNG superati; zero chiamate operative nella prova.
+  Dettagli nel verbale `docs/accoglienza-forum-eventi-2026-10-21.md`.
+
 ## Accoglienza forum ed eventi — 2026-10-21
 
 - Ruolo visibile unico con incarichi Forum/apertura/finale, assegnabili e

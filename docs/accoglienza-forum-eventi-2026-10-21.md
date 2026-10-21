@@ -95,3 +95,36 @@ Lettura SQL READ ONLY con scope Manager reale: 26 incarichi disponibili, nessuna
 assegnazione creata. Database confermato open con scuole attive.
 La revisione autenticata online resta all’organizzazione; collaudo delle nuove
 azioni svolto soltanto su dati sintetici.
+
+## QR fittizi e collaudo interattivo
+
+Su richiesta successiva dell’utente, nove QR PNG e foglio HTML autosufficiente,
+scaricabile e stampabile: `/collaudo-forum-eventi/qr.html`. Ogni scheda descrive
+l’incarico da scegliere e l’esito atteso. Codici F001–F009: prenotazione corretta,
+Forum sbagliato, senza prenotazione, già presente, adulto/minore, biglietti
+apertura/finale con posto, senza biglietto, QR non valido e accoglienza generale
+mancante. I PNG sono rigenerabili con `node scripts/generate-forum-demo-qr.mjs`.
+
+La dashboard collega `/dashboard/accoglienza-forum-eventi/collaudo`, accessibile
+ad Admin, Manager dell’evento corrente e operatori con incarichi. I Manager
+possono provare prima di assegnarsi un incarico: eccezione limitata esattamente
+alla pagina di collaudo, con controllo server sul catalogo; nessun accesso alla
+console operativa senza incarico. Allineato anche il percorso di ingresso del
+proxy alla priorità canonica: l’operatore con soli incarichi Forum arriva alla
+sua dashboard invece che alla pagina personale.
+
+Il collaudo riusa postazione, scanner, schede e comandi originali, collegati a
+un modello sintetico locale. Non simula il database né sostituisce i test SQL:
+serve a provare l’interfaccia e i QR. Nessun fetch operativo, account, iscrizione,
+prenotazione o presenza reale, nessuna migration. Dati soltanto nella memoria
+della scheda del browser, indipendenti fra dispositivi; Ricomincia o ricarica
+ripristinano i nove casi. I QR si usano soltanto nella pagina di prova.
+
+Verifiche: 1.013 test, lint, TypeScript, build production con dipendenze npm ci;
+regressione SQL e browser originale completa. Tutti i nove PNG decodificati,
+scansione F001 dal componente camera originale tramite stream sintetico,
+prenotazione e successivo ingresso, posto cerimonia, reset, download HTML con
+nove immagini incorporate e diniego Viewer. Durante le operazioni del collaudo
+zero chiamate all’API operativa (intercettata e bloccata dal test). Verificate
+visivamente pagina desktop/telefono e impaginazione di stampa A4, senza stampa
+fisica. Codice, campioni e collegamenti pubblicati insieme su main.

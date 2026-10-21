@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {createServer} from 'node:http';
+import {readFileSync} from 'node:fs';
 const fw=n=>createHash('md5').update('forum-queue-'+n).digest('hex').replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/,'$1-$2-$3-$4-$5');
 const lit=v=>v==null?'null':`'${String(v).replaceAll("'","''")}'`;
 export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
@@ -129,6 +130,68 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   psql(`select set_reception_duties(fw(200),fw(11),fw(8),array[fw(403)::text,'opening'],app.reception_duty_keys(fw(200),fw(8)));`);
   await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
   await page.getByText(/Sessione scaduta o incarico non più autorizzato/).waitFor();
+  // Training uses the same workstation but must never call an operational API.
+  const operational=[];
+  await page.route('**/api/forum-reception',route=>{operational.push(route.request().url());return route.abort();});
+  actor=12;
+  const denied=await context.request.get(base+'/dashboard/accoglienza-forum-eventi/collaudo',{maxRedirects:0});
+  assert.equal(denied.status(),307);
+  actor=11;
+  await page.setViewportSize({width:1360,height:1000});
+  await page.goto(base+'/dashboard/accoglienza-forum-eventi/collaudo');
+  await page.getByRole('heading',{name:'Prova accoglienza forum ed eventi'}).waitFor();
+  await page.getByRole('button',{name:/Computer ·/}).click();
+  await page.getByRole('button',{name:'Forum 1 · Prova Sala A fittizia'}).click();
+  await page.getByLabel('Codice partecipante',{exact:true}).fill('F003');
+  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
+  await page.getByText(/Non risulta una prenotazione valida/).waitFor();
+  await page.getByRole('button',{name:'Verifica disponibilità'}).click();
+  await page.getByLabel('Posto da prenotare').selectOption({label:'Posti individuali di prova · 15 disponibili'});
+  await page.getByRole('button',{name:'Conferma prenotazione',exact:true}).click();
+  await page.getByText(/Prenotazione registrata/).waitFor();
+  await page.getByLabel('Codice partecipante',{exact:true}).fill('F003');
+  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
+  await page.getByRole('button',{name:'Conferma partecipazione',exact:true}).click();
+  await page.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Cambia incarico'}).click();
+  await page.getByRole('button',{name:/Cerimonia d’apertura · Prova/}).click();
+  await page.getByLabel('Codice partecipante',{exact:true}).fill('F006');
+  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
+  await page.getByText(/Settore Blu.*Fila A.*Posto 12/).waitFor();
+  await page.screenshot({path:'/tmp/pace-forum-demo-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Ricomincia la prova'}).click();
+  await page.setViewportSize({width:390,height:844});
+  const demoQr='data:image/png;base64,'+readFileSync('public/collaudo-forum-eventi/F001.png').toString('base64');
+  await page.evaluate(image=>{
+   navigator.mediaDevices.getUserMedia=async()=>{
+    const canvas=document.createElement('canvas');canvas.width=640;canvas.height=640;
+    const img=new Image();img.src=image;await img.decode();canvas.getContext('2d').drawImage(img,0,0);
+    const stream=canvas.captureStream(10),timer=setInterval(()=>canvas.getContext('2d').drawImage(img,0,0),100);
+    for(const track of stream.getTracks()){const stop=track.stop.bind(track);track.stop=()=>{clearInterval(timer);stop();};}
+    return stream;
+   };
+  },demoQr);
+  await page.getByRole('button',{name:/Telefono ·/}).click();
+  assert.equal(await page.locator('video').count(),0);
+  await page.getByRole('button',{name:'Forum 1 · Prova Sala A fittizia'}).click();
+  await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
+  await page.getByRole('heading',{name:'Anna Prova',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Conferma partecipazione',exact:true}).click();
+  await page.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.screenshot({path:'/tmp/pace-forum-demo-phone.png',fullPage:true});
+  const downloadPromise=page.waitForEvent('download');
+  await page.getByRole('link',{name:'Scarica il foglio QR'}).click();
+  const download=await downloadPromise;
+  assert.equal(download.suggestedFilename(),'qr-prova-forum-eventi.html');
+  assert.equal((readFileSync(await download.path(),'utf8').match(/data:image\/png;base64/g)||[]).length,9);
+  assert.deepEqual(operational,[]);
+  const gallery=await context.newPage();
+  await gallery.goto(base+'/collaudo-forum-eventi/qr.html');
+  assert.equal(await gallery.locator('img').count(),9);
+  await gallery.setViewportSize({width:1200,height:1000});
+  await gallery.screenshot({path:'/tmp/pace-forum-demo-qr.png',fullPage:true});
+  console.log('PASS training QR camera, same desktop/mobile controls, booking then entry, ceremony seat, reset, HTML download, access gate and zero operational API calls');
   assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);
   console.log('PASS original desktop/mobile page → HTTP → scoped SQL; booking distinct from presence, wrong Forum, counts, camera QR decode, switching, revocation, no overflow');
  } finally {await browser?.close();await new Promise(resolve=>adapter.close(resolve));}
