@@ -382,7 +382,9 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
   const childIds = locked ? (row.children ?? []).filter(c => c.selected).map(c => c.id) : draftIds ?? (row.children ?? []).filter(c => c.selected).map(c => c.id);
   const seats = locked ? row.party_size : 1 + childIds.length;
   const isFull = !locked && (row.has_waiting || (row.remaining_seats !== undefined ? seats > row.remaining_seats : row.booking_status === "full"));
-  const disabled = (row.has_slot_conflict || row.booking_status === "conflict") && !isFull;
+  // Existing bookings can be cancelled; queue offers replace the conflicting
+  // booking atomically on the server, and leaving a queue never books seats.
+  const disabled = !locked && (row.has_slot_conflict || row.booking_status === "conflict") && !isFull;
   const intent = isSelected ? "cancel" : isQueued ? "leave" : isOffered ? "accept" : isFull ? "join" : "book";
   const buttonLabel = isSelected ? copy.cancel : isQueued ? queueCopy.leave : isOffered ? queueCopy.accept : isFull ? queueCopy.join : copy.book;
   const statusLabel = isSelected

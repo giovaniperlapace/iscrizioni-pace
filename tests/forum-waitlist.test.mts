@@ -151,3 +151,40 @@ test("Forum child selection accepts none, rejects duplicates, malformed values a
   assert.ok(validForumChildIds([panelId]));
   for (const value of [null, "[]", [panelId, panelId], ["bad"], [null], Array(11).fill(panelId)]) assert.equal(validForumChildIds(value), false);
 });
+
+test("participant cards allow offer acceptance and queue exit despite a same-slot booking", () => {
+  const file = "app/dashboard/partecipante/participant-panel-bookings.tsx";
+  const ast = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const card = ast.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === "PanelBookingCard");
+  assert.ok(card);
+  const code = ts.transpileModule(card.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const jsx = (type: unknown, props: unknown) => ({ type, props });
+  const deps = {
+    exports: {}, require: () => ({ jsx, jsxs: jsx }), useState: () => [null, () => {}],
+    FORUM_WAITLIST_COPY, formatSeatCount: () => "1 seat", formatDate: () => "date", formatTimeRange: () => "time",
+    ForumLanguages: "languages", ForumChildSelection: "children", PendingSubmitButton: "submit", setParticipantPanelBooking: "action",
+    CalendarDays: "calendar", Clock3: "clock", MapPin: "map", Users: "users", CheckCircle2: "check",
+  };
+  const render = new Function(...Object.keys(deps), `${code}; return PanelBookingCard;`)(...Object.values(deps));
+  function submits(node: unknown): Record<string, unknown>[] {
+    if (!node || typeof node !== "object") return [];
+    if (Array.isArray(node)) return node.flatMap(submits);
+    const element = node as { type?: unknown; props?: Record<string, unknown> };
+    return [...(element.type === "submit" && element.props ? [element.props] : []), ...submits(element.props?.children)];
+  }
+  for (const [status, full, expectedDisabled, expectedLabel] of [
+    ["offered", false, false, FORUM_WAITLIST_COPY.en.accept],
+    ["queued", false, false, FORUM_WAITLIST_COPY.en.leave],
+    ["selected", false, false, "Cancel"],
+    ["conflict", false, true, "Book"],
+    ["full", true, false, FORUM_WAITLIST_COPY.en.join],
+  ] as const) {
+    const tree = render({ locale: "en", registrationId, copy: { familySeats: () => "1 person", cancel: "Cancel", book: "Book" },
+      row: { panel_id: panelId, section_id: "section", booking_status: status, has_slot_conflict: true, has_waiting: full,
+        party_size: 1, remaining_seats: full ? 0 : 1, children: [], offer_expires_at: offer.expiresAt } });
+    const [button] = submits(tree);
+    assert.ok(button, status);
+    assert.equal(button.disabled, expectedDisabled, status);
+    assert.equal(button.children, expectedLabel, status);
+  }
+});
