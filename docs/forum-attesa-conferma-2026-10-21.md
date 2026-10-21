@@ -34,3 +34,17 @@ La correzione non ripristina offerte scadute né recupera posti già riassegnati
 - Nessuna prova autenticata operativa in production, nessuna scrittura remota.
 - TypeScript e lint dei file modificati superati; lint generale ha rilevato
   soltanto due annotazioni del nuovo test, corrette e riverificate.
+
+## Rilascio e limite del recupero
+
+Commit applicativo `aede5a8` pubblicato su main. Deployment production
+`dpl_4hrQsTJy4LMdiKiWyUzcYBGFuh26` READY con SHA corrispondente e dominio
+`registrationspeace.santegidio.org` assegnato. Home HTTP 200; area personale
+protetta con redirect 307 al login. Non eseguita una conferma autenticata live.
+Un tentativo di confrontare un chunk locale con il deployment ha ottenuto 404
+(nome del chunk differente tra build): non costituisce verifica del bundle live.
+
+Controllo READ ONLY della quota individuale Forum 12: 95 posti, tutti occupati
+o riservati, sette richieste in attesa e tre offerte attive al momento della
+lettura. Nessuna riattivazione dell’offerta scaduta o alterazione della coda.
+Modifiche parallele a email/lingua e relativa migration escluse dal commit.
