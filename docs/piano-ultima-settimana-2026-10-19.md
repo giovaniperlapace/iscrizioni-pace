@@ -26,7 +26,7 @@ verificato: 68 tabelle, 182.310 righe canoniche e ACL delle 215 funzioni
 preesistenti conservati. Sala e piantina pubblicate tramite i comandi canonici;
 nessun biglietto o presenza assegnato a dati reali. Superati 1.031 test, lint,
 TypeScript, build pulita, SQL/concorrenza e browser sintetico desktop/mobile.
-Rilascio codice in completamento. Dettagli e limiti nel
+Codice `878fd2c` su main, production READY e dominio verificato. Dettagli e limiti nel
 [verbale inaugurazione](inaugurazione-piantina-manager-2026-10-21.md).
 
 ### Decisioni precedenti — 19 ottobre

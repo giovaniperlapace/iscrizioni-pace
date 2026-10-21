@@ -29,7 +29,8 @@
   verificato: 68 tabelle, 182.310 righe canoniche e ACL di 215 funzioni conservati.
   Configurazione validata e piantina pubblicata; nessuna assegnazione reale.
 - 1.031 test, lint, TypeScript, build pulita, SQL/concorrenza e browser sintetico
-  desktop/mobile superati; rilascio codice in completamento. Verbale:
+  desktop/mobile superati. Codice `878fd2c` su main, production READY e dominio
+  verificato; revisione autenticata reale ancora da svolgere. Verbale:
   `docs/inaugurazione-piantina-manager-2026-10-21.md`.
 
 ## QR fittizi per Forum e cerimonie — 2026-10-21

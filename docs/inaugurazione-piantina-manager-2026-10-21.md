@@ -119,5 +119,20 @@ validata e piantina pubblicata in transazione, con audit del rilascio. Verificat
 Nessuna dotazione, assegnazione nominale o presenza creata; nessuna email inviata.
 Gli orari UTC memorizzati sono 15:30–18:00, equivalenti a 16:30–19:00 a Roma.
 
-Il codice è pronto per la pubblicazione; identificativo del commit, deployment
-ed esiti dei controlli sul dominio vengono registrati al completamento.
+Codice pubblicato su `main`, commit **`878fd2c`**. Il push non ha avviato una
+build Git automatica; eseguito deploy diretto dello stesso checkout pulito,
+nel progetto `iscrizioni-pace` e nel team configurato/verificato.
+Deployment production **`dpl_3rVzLaGc8mbYxDWaWak9Y3654vrV` READY**; build
+Vercel Turbopack riuscita, distinta dalla build locale Webpack.
+Il dominio `https://registrationspeace.santegidio.org` è stato risolto tramite
+Vercel allo stesso deployment, e la home risponde 200. Le tre pagine delle
+cerimonie senza sessione conducono al login. Controllo immediato dei log errori
+del deployment: nessun risultato; non è monitoraggio prolungato.
+
+Letture dei comandi canonici con un Manager reale dell'evento: 11 settori e
+3.140 sedie della versione pubblicata. Nessuna dotazione o nominativo presente
+al termine della configurazione. Forum `open` e scuole attive conservati;
+nessuna configurazione della finale creata. Non è stato eseguito un login
+Manager/Admin reale nel browser production: la revisione autenticata resta
+all'organizzazione. Le prove di assegnazione sono state eseguite solo sul DB
+sintetico e nella fixture browser, senza occupare posti reali.
