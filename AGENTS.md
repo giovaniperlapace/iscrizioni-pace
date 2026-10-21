@@ -16,6 +16,22 @@
   assenti 0/1/2 stampe, poi presenti 0/1; selezione inizialmente vuota.
   Nessuna stampa fisica o scrittura operativa remota. Commit/push autorizzati.
 
+## Piantina inaugurazione e accesso Manager — 2026-10-21
+
+- Sala del 25 ottobre, 16:30–19:00 Rome: 3.540 posti fisici, 3.250 assegnabili,
+  290 protocollo bloccati. A1/A2 100 ciascuno, A centrale 110 disponibili,
+  B1/B2 300 ciascuno, C/D/E 600 ciascuno, F 400 solo settore, H1/H2 70 ciascuno.
+- File disponibili definitive: A-b2 9–10; A-b3/A-b4/A-b5 8–10. Blocchi b1–b6
+  da sinistra a destra guardando il palco (b1 in basso nella fotografia).
+- Admin/Manager corrente: quantità ai gruppi, singole persone e figli scelti
+  nominalmente anche senza gruppo. Viewer esclusi dall'apertura; editor Admin.
+- Migration `20261021180000` applicata/registrata atomicamente dopo backup
+  verificato: 68 tabelle, 182.310 righe canoniche e ACL di 215 funzioni conservati.
+  Configurazione validata e piantina pubblicata; nessuna assegnazione reale.
+- 1.031 test, lint, TypeScript, build pulita, SQL/concorrenza e browser sintetico
+  desktop/mobile superati; rilascio codice in completamento. Verbale:
+  `docs/inaugurazione-piantina-manager-2026-10-21.md`.
+
 ## QR fittizi per Forum e cerimonie — 2026-10-21
 
 - Nove PNG e foglio stampabile `/collaudo-forum-eventi/qr.html`, con codici

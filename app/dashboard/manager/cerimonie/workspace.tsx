@@ -132,7 +132,8 @@ export function CeremonyWorkspace({
 }: Props) {
   const [query, setQuery] = useState(""),
     [page, setPage] = useState(0),
-    [target, setTarget] = useState("group");
+    [target, setTarget] = useState("group"),
+    [personId, setPersonId] = useState("");
   const plan = s.plan,
     revision = plan?.revision ?? -1;
   const common = { kind, revision, save };
@@ -157,7 +158,7 @@ export function CeremonyWorkspace({
     0,
   );
   const assigned = new Set(
-    s.allocations.flatMap((a) => (a.registrationId ? [a.registrationId] : [])),
+    s.allocations.flatMap((a) => (a.registrationId && !a.childId ? [a.registrationId] : [])),
   );
   const people = s.people.filter((p) =>
     `${p.name} ${p.code}`
@@ -226,12 +227,19 @@ export function CeremonyWorkspace({
           I posti impegnati includono le dotazioni dei gruppi ancora da distribuire
           alle persone. Questa vista non registra ingressi.
         </p>
+        {plan?.layoutKey === "assisi-opening-2026" && <p className={help}>Capienza fisica: 3.540 posti, di cui 290 riservati al protocollo e non assegnabili. Quote per i partecipanti: 3.250 posti, inclusi i 400 della sala collegata F.</p>}
         {!canManage && (
           <p className={help}>
             Sola lettura: le modifiche sono riservate ai responsabili.
           </p>
         )}
       </section>
+      {admin && kind === "opening" && !plan && <section className={box}>
+        <h2 className="text-lg font-semibold">Prepara la sala dell’inaugurazione</h2>
+        <p className={help}>Crea settori A1/A/A2, B1/B2, C, D, E, H1/H2 e la sala collegata F. La piantina segue la disposizione ricevuta: 3.140 sedie nella sala principale e 400 posti senza numerazione in F. Nessuna assegnazione alle persone.</p>
+        <p className={help}>La configurazione nasce in bozza: verifica le file del protocollo, gli orari e pubblica la piantina prima dell’uso operativo.</p>
+        <CommandForm {...common} operation="opening_layout" label="Prepara settori e piantina in bozza" />
+      </section>}
       {canManage && <section className="surface-panel grid justify-items-start gap-3 p-5" aria-labelledby="ceremony-next-step">
         <p className="text-xs font-bold uppercase tracking-wide text-[var(--peace-blue-800)]">Prossimo passaggio</p>
         <h2 id="ceremony-next-step" className="text-lg font-semibold">{next.title}</h2>
@@ -335,7 +343,7 @@ export function CeremonyWorkspace({
                   key={sector.id}
                 >
                   <h4 className="font-semibold">
-                    {sector.name} · {sector.capacity ?? "Da definire"}
+                    {sector.name} · {sector.capacity ?? "Da definire"}{sector.numbered === false ? " · senza numerazione" : ""}
                   </h4>
                   <p className={help}>
                     Quote: {quotaBySector.get(sector.id) ?? 0} · Non ripartiti:{" "}
@@ -506,6 +514,7 @@ export function CeremonyWorkspace({
           </section>
           <section id="dotazioni" className={`${box} scroll-mt-6`}>
             <h2 className="text-lg font-semibold">Dotazioni ai gruppi e posti individuali</h2>
+            <p className={help}>Per scegliere la sedia, dopo l’assegnazione apri <Link className="underline" href={`/dashboard/manager/cerimonie/mappa?kind=${kind}`}>Posti numerati</Link>. Per F basta il settore.</p>
             <p className={help}>
               La dotazione a un gruppo occupa subito i posti. La distribuzione
               ai suoi membri si completa nella fase Assegnazioni alle persone. I conteggi qui riguardano le iscrizioni
@@ -595,11 +604,11 @@ export function CeremonyWorkspace({
                     <label className="grid gap-1 text-sm font-semibold">
                       Persona
                       <select
-                        key={`person:${query}`}
                         name="registrationId"
                         className="field"
                         required
-                        defaultValue=""
+                        value={personId}
+                        onChange={e => setPersonId(e.target.value)}
                       >
                         <option value="" disabled>
                           Scegli persona
@@ -607,8 +616,7 @@ export function CeremonyWorkspace({
                         {people
                           .filter(
                             (p) =>
-                              p.eligibility === "eligible" &&
-                              !assigned.has(p.id),
+                              p.eligibility === "eligible",
                           )
                           .map((p) => (
                             <option key={p.id} value={p.id}>
@@ -620,6 +628,15 @@ export function CeremonyWorkspace({
                           ))}
                       </select>
                     </label>
+                    {personId && <label className="grid gap-1 text-sm font-semibold">
+                      Assegna il posto a
+                      <select key={personId} name="childId" className="field" defaultValue={assigned.has(personId) ? "choose" : ""}>
+                        <option value="choose" disabled>Scegli adulto o figlio</option>
+                        <option value="" disabled={assigned.has(personId)}>{s.people.find(p => p.id === personId)?.name} · adulto{assigned.has(personId) ? " · già assegnato" : ""}</option>
+                        {s.people.find(p => p.id === personId)?.children.map(child => <option key={child.id} value={child.id} disabled={s.allocations.some(a => a.childId === child.id)}>{child.name} · figlio{s.allocations.some(a => a.childId === child.id) ? " · già assegnato" : ""}</option>)}
+                      </select>
+                      <span className={help}>Un posto per la persona scelta. Per ogni figlio ripeti l’assegnazione; nessuna selezione automatica.</span>
+                    </label>}
                     <Hidden name="quantity" value="1" />
                   </>
                 )}
@@ -706,6 +723,7 @@ export function CeremonyWorkspace({
                   {a.groupId ? "Dotazione gruppo" : "Assegnazione personale"} ·{" "}
                   {quotaLabel(a.quotaId)}
                 </p>
+                {sectorById.get(quotaById.get(a.quotaId)?.sectorId ?? "")?.numbered !== false && <Link className="btn-secondary min-h-11 justify-self-start px-3" href={`/dashboard/manager/cerimonie/mappa?kind=${kind}&allocation=${a.id}`}>Scegli le sedie</Link>}
                 {a.review && (
                   <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
                     Da rivedere: iscrizione, gruppo o presenza dichiarata sono

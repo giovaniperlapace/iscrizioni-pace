@@ -1,6 +1,7 @@
 "use server";
+import { createCeremonyManagerClient } from "@/lib/ceremonies/access.server";
 import { revalidatePath } from "next/cache";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createAdminPilotClient } from "@/lib/reception/admin-pilot.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
   executeNominee,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/ceremonies/distribution.server";
 async function run(mode: "leader" | "manager", input: unknown) {
   const result = await executeNominee(
-    await createSupabaseServerClient(),
+    await (mode === "manager" ? createCeremonyManagerClient() : createAdminPilotClient()),
     createSupabaseServiceClient,
     mode,
     input,
@@ -31,14 +32,14 @@ export async function saveManagerNominee(input: unknown) {
 }
 export async function refreshLeaderDistribution() {
   return loadDistribution(
-    await createSupabaseServerClient(),
+    await createAdminPilotClient(),
     createSupabaseServiceClient,
     "leader",
   );
 }
 export async function refreshManagerDistribution() {
   return loadDistribution(
-    await createSupabaseServerClient(),
+    await createCeremonyManagerClient(),
     createSupabaseServiceClient,
     "manager",
   );

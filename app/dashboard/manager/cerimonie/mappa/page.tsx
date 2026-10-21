@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "@/components/pending-link";
 import { CeremonyNavigation } from "../navigation";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createCeremonyManagerClient as createSupabaseServerClient } from "@/lib/ceremonies/access.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { ceremonyContext, loadCeremony } from "@/lib/ceremonies/service";
 import { loadSeatMap } from "@/lib/ceremonies/seat-map.server";
@@ -13,7 +13,7 @@ import {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{ kind?: string; allocation?: string }>;
 }) {
   const db = await createSupabaseServerClient(),
     context = await ceremonyContext(db);
@@ -45,6 +45,7 @@ export default async function Page({
             key={view.planId}
             embedded
             initialView={view}
+            initialAllocation={(await searchParams).allocation}
             locale="it"
             admin={context.admin}
             manager

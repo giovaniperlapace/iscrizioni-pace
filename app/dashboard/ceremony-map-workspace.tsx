@@ -16,6 +16,7 @@ import { CeremonyMapEditor } from "./ceremony-map-editor";
 const EMPTY_MAP_SEATS: MapSeat[] = [];
 export function CeremonyMapWorkspace({
   initialView,
+  initialAllocation,
   embedded = false,
   locale,
   admin = false,
@@ -25,6 +26,7 @@ export function CeremonyMapWorkspace({
   refresh,
 }: {
   initialView: SeatMapView;
+  initialAllocation?: string;
   embedded?: boolean;
   locale: SupportedLocale;
   admin?: boolean;
@@ -36,7 +38,7 @@ export function CeremonyMapWorkspace({
   const c = SEAT_MAP_COPY[locale],
     dc = DISTRIBUTION_COPY[locale];
   const [view, setView] = useState(initialView),
-    [allocation, setAllocation] = useState(""),
+    [allocation, setAllocation] = useState(initialView.allocations.some(a => a.id === initialAllocation) ? initialAllocation! : ""),
     [selected, setSelected] = useState<string[]>([]),
     [nominee, setNominee] = useState(""),
     [count, setCount] = useState(2),
@@ -69,7 +71,6 @@ export function CeremonyMapWorkspace({
     () =>
       new Map(
         view.nominees
-          .filter((n) => !n.childId)
           .map((n) => [n.allocationId, n.name]),
       ),
     [view.nominees],
@@ -175,6 +176,7 @@ export function CeremonyMapWorkspace({
       },
     });
   };
+  const sectorOnly = !!a && view.sectors.find(s => s.id === a.sectorId)?.numbered === false;
   const names = view.nominees.filter(
     (n) => n.allocationId === a?.id && n.needsSeat,
   );
@@ -239,7 +241,7 @@ export function CeremonyMapWorkspace({
             ))}
           </select>
         </label>
-        {a && (
+        {a && !sectorOnly && (
           <>
             <p>
               {c.remaining}:{" "}
@@ -254,9 +256,11 @@ export function CeremonyMapWorkspace({
           </>
         )}
       </div>
+      {sectorOnly && <p className="surface-card p-5">F · sala collegata: assegnazione per settore, senza seduta numerata. I posti della dotazione e le assegnazioni nominali restano validi.</p>}
       {view.active && (
         <div className="surface-card grid min-w-0 gap-4 p-5">
           <CeremonySeatMap
+          layoutKey={view.layoutKey}
             seats={seats}
             sectors={view.sectors}
             claims={view.claims}
@@ -268,13 +272,13 @@ export function CeremonyMapWorkspace({
               );
               setConfirm(null);
             }}
-            disabled={blocked || !canManage || !a}
+            disabled={blocked || !canManage || !a || sectorOnly}
             locale={locale}
           />
           <p>
             {c.selected}: {selected.length}
           </p>
-          {canManage && (
+          {canManage && !sectorOnly && (
             <>
               <button
                 className="btn-secondary min-h-11 justify-self-start px-3"

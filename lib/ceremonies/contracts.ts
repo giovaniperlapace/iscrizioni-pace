@@ -2,6 +2,7 @@ export type CeremonyKind = "opening" | "closing";
 export type CeremonyPlan = {
   id: string;
   revision: number;
+  layoutKey?: string | null;
   state: "draft" | "validated";
   location: string;
   capacity: number | null;
@@ -11,7 +12,7 @@ export type CeremonyPlan = {
 };
 export type CeremonySnapshot = {
   plan: CeremonyPlan | null;
-  sectors: { id: string; name: string; capacity: number | null }[];
+  sectors: { id: string; name: string; capacity: number | null; numbered?: boolean; layoutCode?: string | null; assignableLimit?: number | null }[];
   quotas: {
     id: string;
     sectorId: string;
@@ -22,6 +23,7 @@ export type CeremonySnapshot = {
     id: string;
     quotaId: string;
     registrationId: string | null;
+    childId?: string | null;
     groupId: string | null;
     quantity: number;
     name: string;
@@ -92,16 +94,17 @@ export function parseCeremonyForm(form: FormData) {
     ],
     sector: ["id", "name", "capacity"],
     quota: ["id", "sectorId", "category", "quantity"],
-    allocate: ["id", "quotaId", "registrationId", "groupId", "quantity"],
+    allocate: ["id", "quotaId", "registrationId", "childId", "groupId", "quantity"],
+    opening_layout: [],
     revoke: ["id"],
   };
-  if (!fields[operation]) return null;
+  if (!fields[operation] || (operation === "opening_layout" && kind !== "opening")) return null;
   const data = Object.fromEntries(
     fields[operation].map((key) => [key, get(key)]),
   );
   for (const key of ["id", "sectorId", "quotaId"])
     if (key in data && !uuid.test(data[key])) return null;
-  for (const key of ["registrationId", "groupId"])
+  for (const key of ["registrationId", "childId", "groupId"])
     if (data[key] && !uuid.test(data[key])) return null;
   for (const key of ["capacity", "quantity"])
     if (
@@ -138,6 +141,7 @@ export function parseCeremonyForm(form: FormData) {
   if (
     operation === "allocate" &&
     (Boolean(data.registrationId) === Boolean(data.groupId) ||
+      (Boolean(data.childId) && !data.registrationId) ||
       Number(data.quantity) < 1 ||
       (data.registrationId && data.quantity !== "1"))
   )

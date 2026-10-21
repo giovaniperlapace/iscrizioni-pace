@@ -69,7 +69,7 @@ export function PanelLocationsSection({
           ) : null}
         </div>
 
-        <PanelTabs dashboard={dashboard} navMode={navMode} active="locations" />
+        <PanelTabs canManage={canManage} dashboard={dashboard} navMode={navMode} active="locations" />
 
         <LocationStatus error={error} saved={saved} />
 

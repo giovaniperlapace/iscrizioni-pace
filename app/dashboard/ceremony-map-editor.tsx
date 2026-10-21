@@ -95,7 +95,7 @@ export function CeremonyMapEditor({
             <label className="grid gap-1">
               Settore
               <select className="field" name="sector" required>
-                {view.sectors.map((s) => (
+                {view.sectors.filter(s => s.numbered !== false).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -137,6 +137,7 @@ export function CeremonyMapEditor({
           </fieldset>
         </ReliableForm>
         <CeremonySeatMap
+          layoutKey={view.layoutKey}
           seats={seats}
           sectors={view.sectors}
           claims={[]}

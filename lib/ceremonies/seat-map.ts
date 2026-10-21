@@ -16,6 +16,7 @@ export type MapVersion = {
   seats: MapSeat[];
 };
 export type SeatMapView = {
+  layoutKey?: string | null;
   planId: string;
   revision: number;
   kind: CeremonyKind;
@@ -23,7 +24,7 @@ export type SeatMapView = {
   active: MapVersion | null;
   draft: MapVersion | null;
   history: MapVersion[];
-  sectors: { id: string; name: string; capacity: number | null }[];
+  sectors: { id: string; name: string; capacity: number | null; numbered?: boolean; layoutCode?: string | null; assignableLimit?: number | null }[];
   allocations: (DistributionAllocation & { sectorId: string })[];
   nominees: Nominee[];
   claims: {

@@ -1,4 +1,5 @@
 "use client";
+import { OpeningHallOverview } from "./opening-hall-overview";
 import { useMemo, useState } from "react";
 import type { MapSeat, SeatMapView } from "@/lib/ceremonies/seat-map";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -6,6 +7,7 @@ import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { SEAT_MAP_COPY } from "@/lib/ceremonies/seat-map-copy";
 export function CeremonySeatMap({
   seats,
+  layoutKey,
   sectors,
   claims,
   allocationId,
@@ -15,6 +17,7 @@ export function CeremonySeatMap({
   locale,
 }: {
   seats: MapSeat[];
+  layoutKey?: string | null;
   sectors: SeatMapView["sectors"];
   claims: SeatMapView["claims"];
   allocationId: string;
@@ -24,6 +27,8 @@ export function CeremonySeatMap({
   locale: SupportedLocale;
 }) {
   const c = SEAT_MAP_COPY[locale];
+  const opening = layoutKey === "assisi-opening-2026";
+  const [block, setBlock] = useState("");
   const [table, setTable] = useState(false),
     [zoom, setZoom] = useState(1),
     [sector, setSector] = useState(""),
@@ -41,6 +46,7 @@ export function CeremonySeatMap({
   const visible = seats.filter(
     (s) =>
       (!sector || s.sectorId === sector) &&
+      (!block || s.row.startsWith(`${block}-r`)) &&
       `${s.row} ${s.number}`
         .toLocaleLowerCase(locale)
         .includes(query.toLocaleLowerCase(locale)),
@@ -62,8 +68,11 @@ export function CeremonySeatMap({
     occupied: "#fcd34d",
     free: "#fff",
   };
-  const width = Math.max(400, ...visible.map((s) => s.x + 65)),
-    height = Math.max(160, ...visible.map((s) => s.y + 65));
+  const minX = Math.min(...visible.map(s => s.x), 10000), minY = Math.min(...visible.map(s => s.y), 10000);
+  const width = Math.max(400, ...visible.map((s) => s.x - minX + 65)),
+    height = Math.max(160, ...visible.map((s) => s.y - minY + 65));
+  const sectorOnly = sectors.find(s => s.id === sector)?.numbered === false;
+  const showDetail = !opening || !!sector || !!block || !!query || table;
   const canSelect = (s: MapSeat) =>
     !disabled &&
     !s.blocked &&
@@ -73,6 +82,9 @@ export function CeremonySeatMap({
     `${sectorById.get(s.sectorId)} · ${c.row} ${s.row} · ${c.number} ${s.number} · ${c[state(s)]}`;
   return (
     <section className="grid min-w-0 gap-3" aria-label={c.map}>
+      {opening && <OpeningHallOverview seats={seats} sectors={sectors} claims={claims} onBlock={(id, key) => {setSector(id);setBlock(key);setQuery("");setPage(0);}} />}
+      {block && <div className="flex flex-wrap items-center gap-3"><strong>Dettaglio {block}</strong><button type="button" className="btn-secondary min-h-11 px-3" onClick={() => {setBlock("");setPage(0);}}>Tutti i blocchi</button></div>}
+      {sectorOnly && <p className="rounded-lg bg-blue-50 p-4">Questo settore non ha posti numerati. Assegna una quantità al gruppo oppure un posto alla persona in Preparazione e quote; non occorre scegliere una sedia.</p>}
       <div className="flex flex-wrap gap-3">
         <label className="grid gap-1">
           {c.sector}
@@ -81,6 +93,7 @@ export function CeremonySeatMap({
             value={sector}
             onChange={(e) => {
               setSector(e.target.value);
+              setBlock("");
               setPage(0);
             }}
           >
@@ -124,7 +137,7 @@ export function CeremonySeatMap({
           </li>
         ))}
       </ul>
-      {table ? (
+      {showDetail && !sectorOnly && (table ? (
         <>
           <div className="max-w-full overflow-auto">
             <table className="w-full text-left text-sm">
@@ -218,8 +231,8 @@ export function CeremonySeatMap({
                   onClick={() => onSelect(s.id)}
                   className="absolute flex min-h-11 min-w-11 items-center justify-center rounded-lg border text-xs font-semibold text-slate-950 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                   style={{
-                    left: s.x * zoom,
-                    top: s.y * zoom,
+                    left: (s.x - minX) * zoom,
+                    top: (s.y - minY) * zoom,
                     width: 44 * zoom,
                     height: 44 * zoom,
                     background: colors[state(s)],
@@ -229,7 +242,7 @@ export function CeremonySeatMap({
                       : undefined,
                   }}
                 >
-                  {s.row}
+                  {opening ? `F${Number(s.row.match(/-r(\d+)$/)?.[1] ?? 0)}` : s.row}
                   <br />
                   {s.number}
                 </button>
@@ -237,7 +250,7 @@ export function CeremonySeatMap({
             </div>
           </div>
         </>
-      )}
+      ))}
     </section>
   );
 }

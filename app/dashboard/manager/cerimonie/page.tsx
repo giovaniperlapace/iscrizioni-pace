@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { CeremonyNavigation } from "./navigation";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createCeremonyManagerClient as createSupabaseServerClient } from "@/lib/ceremonies/access.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { ceremonyContext, loadCeremony } from "@/lib/ceremonies/service";
 import { CeremonyWorkspace } from "./workspace";

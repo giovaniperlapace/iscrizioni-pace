@@ -48,7 +48,7 @@ do $$ declare v jsonb; n uuid; rev integer; total bigint; begin
  -- E1 manager direct path shares the same ledger and duplicate protection.
  assert cs(31,'allocate',jsonb_build_object('id',f(8302),'quotaId',f(8200),'registrationId',f(10),'quantity',1))->>'status'='saved';
  assert cn(36,'assign',8300,10,null,null,8403)->>'status'='duplicate';
- begin perform cs(31,'allocate',jsonb_build_object('id',f(8303),'quotaId',f(8200),'registrationId',f(11),'quantity',1));raise exception 'direct/group duplicate';exception when unique_violation then null;end;
+ assert cs(31,'allocate',jsonb_build_object('id',f(8303),'quotaId',f(8200),'registrationId',f(11),'quantity',1))->>'status'='duplicate';
  select id into n from ceremony_nominees where child_id=f(40) and revoked_at is null;
  assert cn(36,'revoke',null,null,null,n,8403)->>'status'='saved';
  -- Move direct adult into the group: direct quota is freed, group budget unchanged.

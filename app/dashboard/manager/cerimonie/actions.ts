@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createCeremonyManagerClient as createSupabaseServerClient } from "@/lib/ceremonies/access.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { executeCeremony } from "@/lib/ceremonies/service";
 export async function saveCeremony(form: FormData) {

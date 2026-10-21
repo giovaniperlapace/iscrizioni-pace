@@ -74,10 +74,12 @@ export async function executeCeremony(
   const context = await ceremonyContext(session);
   if (
     !context?.canManage ||
-    (["configure", "sector"].includes(command.operation) && !context.admin)
+    (["configure", "sector", "opening_layout"].includes(command.operation) && !context.admin)
   )
     return { status: "forbidden" };
-  const { data, error } = await service().rpc("save_ceremony", {
+  const { data, error } = await service().rpc(command.operation === "opening_layout" ? "prepare_opening_ceremony_layout" : "save_ceremony", command.operation === "opening_layout" ? {
+    p_event: context.event.id, p_actor: context.userId, p_revision: command.revision,
+  } : {
     p_event: context.event.id,
     p_actor: context.userId,
     p_kind: command.kind,

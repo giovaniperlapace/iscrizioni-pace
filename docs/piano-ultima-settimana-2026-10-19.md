@@ -7,6 +7,30 @@ esplicitamente superati dalle decisioni riportate qui.
 
 ## Priorità di lavoro
 
+### Inaugurazione: sala reale e Manager — 21 ottobre 2026
+
+Ricevuta e integrata la disposizione reale. Configurazione production validata
+per il 25 ottobre, 16:30–19:00 Rome: 3.540 posti fisici, 3.250 assegnabili e
+290 protocollo grigi/bloccati. A1/A2 da 100; A centrale da 110 assegnabili;
+B1/B2 da 300; C/D/E da 600; F da 400 solo per settore; H1/H2 da 70.
+A-b2 disponibili file 9–10; A-b3/A-b4/A-b5 file 8–10, come correzione finale.
+
+Superato per questa tranche il limite della revisione solo Admin: gestione
+abilitata ad Admin e Manager dell'evento corrente; Viewer esclusi. Supportate
+quantità ai gruppi, assegnazioni nominali e figli scelti individualmente,
+anche nel percorso diretto senza gruppo. F non richiede numeri di sedia.
+La finale resta indipendente, senza configurazione reale inventata.
+
+Migration `20261021180000` applicata/registrata atomicamente dopo backup completo
+verificato: 68 tabelle, 182.310 righe canoniche e ACL delle 215 funzioni
+preesistenti conservati. Sala e piantina pubblicate tramite i comandi canonici;
+nessun biglietto o presenza assegnato a dati reali. Superati 1.031 test, lint,
+TypeScript, build pulita, SQL/concorrenza e browser sintetico desktop/mobile.
+Rilascio codice in completamento. Dettagli e limiti nel
+[verbale inaugurazione](inaugurazione-piantina-manager-2026-10-21.md).
+
+### Decisioni precedenti — 19 ottobre
+
 Chiarimento del 19 ottobre, dopo la verifica delle cerimonie: rinviare soltanto
 la definizione delle sedi reali e della loro disposizione, ancora sconosciute.
 Proseguire il punto 2 per le altre funzioni, rendendole disponibili in production

@@ -1,11 +1,12 @@
 "use server";
+import { createCeremonyManagerClient } from "@/lib/ceremonies/access.server";
 import { revalidatePath } from "next/cache";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createAdminPilotClient } from "@/lib/reception/admin-pilot.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { executeSeatMap, loadSeatMap } from "@/lib/ceremonies/seat-map.server";
 async function save(mode: "manager" | "leader", input: unknown) {
   const result = await executeSeatMap(
-    await createSupabaseServerClient(),
+    await (mode === "manager" ? createCeremonyManagerClient() : createAdminPilotClient()),
     createSupabaseServiceClient,
     mode,
     input,
@@ -30,7 +31,7 @@ export async function saveLeaderMap(input: unknown) {
 }
 export async function refreshManagerMap(planId: string) {
   return loadSeatMap(
-    await createSupabaseServerClient(),
+    await createCeremonyManagerClient(),
     createSupabaseServiceClient,
     "manager",
     planId,
@@ -38,7 +39,7 @@ export async function refreshManagerMap(planId: string) {
 }
 export async function refreshLeaderMap(planId: string) {
   return loadSeatMap(
-    await createSupabaseServerClient(),
+    await createAdminPilotClient(),
     createSupabaseServiceClient,
     "leader",
     planId,
