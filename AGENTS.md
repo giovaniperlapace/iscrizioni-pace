@@ -19,6 +19,8 @@
 - 1.007 test, lint, TypeScript, build production da npm ci, SQL/concorrenza
   e browser originale desktop/mobile con QR da stream sintetico superati.
   Nessun incarico reale assegnato, prenotazione/presenza remota o email di prova.
+  Codice `8b77f1b` su main, production READY e dominio verificato; lettura
+  Manager live: 26 incarichi. Revisione autenticata reale ancora da svolgere.
   Verbale: `docs/accoglienza-forum-eventi-2026-10-21.md`.
 
 ## Forum capogruppo: lettura e ruoli cumulati — 2026-10-20

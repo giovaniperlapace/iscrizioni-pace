@@ -85,4 +85,13 @@ Sola definizione preesistente modificata: `has_panel_reception_duty`; proprietar
 ACL, RLS e dati conservati. Nessun incarico reale creato. Confermati `open` e
 `school_link_enabled=true`, già presenti prima del rilascio.
 
-Codice pronto per il rilascio su main; esito deployment registrato a seguire.
+Codice `8b77f1b` pubblicato su main. Deployment production
+`dpl_CJXQWyAyzNexrFnarj1v1Jc7xdVg` READY (build circa 44 secondi), dominio
+`https://registrationspeace.santegidio.org` associato e verificato. Home 200,
+nuova dashboard e sezione ruoli protette dal login, nuove API senza sessione 403.
+Log runtime del deployment: nessun errore/fatal nel controllo immediato dopo
+la pubblicazione; non equivale a monitoraggio prolungato o collaudo autenticato.
+Lettura SQL READ ONLY con scope Manager reale: 26 incarichi disponibili, nessuna
+assegnazione creata. Database confermato open con scuole attive.
+La revisione autenticata online resta all’organizzazione; collaudo delle nuove
+azioni svolto soltanto su dati sintetici.

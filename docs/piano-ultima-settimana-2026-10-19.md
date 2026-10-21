@@ -141,6 +141,7 @@ Manager/Admin. Telefono per scansione e presenze; computer anche per prenotazion
 e biglietti, senza ammissione senza prenotazione. Cerimonie con settore/posto e
 ingresso dedicato; configurazioni reali ancora da definire. Migration production
 applicata con dati invariati; test applicativi, SQL e browser superati.
+Codice `8b77f1b` su main, production READY e dominio verificato.
 Dettagli e limiti nel [verbale accoglienza](accoglienza-forum-eventi-2026-10-21.md).
 Le statistiche del proprio incarico sono disponibili; la revisione generale
 delle statistiche rimane il punto successivo del piano.
