@@ -3,6 +3,7 @@ export type LabelScope = { groupId: string; registrationId?: never } | { registr
 export type LabelItem = {
   registrationId: string; name: string; code: string | null; reason: string | null;
   state: "pending" | "prepared" | "verified"; attempts: number;
+  checkedIn?: boolean;
   outcome: "requested" | "browser_returned" | "error" | null; changed: boolean;
 };
 export type LabelQueue = { status: "queue"; items: LabelItem[]; snapshot: string };

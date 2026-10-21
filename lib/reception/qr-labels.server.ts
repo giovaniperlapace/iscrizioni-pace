@@ -55,7 +55,22 @@ export async function executeLabelCommand(session: SupabaseClient, service: () =
       safe.push({ registrationId: item.registrationId, name: item.name, code: item.code, reason,
         state: item.state, attempts: item.attempts, outcome: item.outcome, changed: item.printedContent !== null && item.printedContent !== item.content });
     }
-    if (!printing) return { status: "queue", snapshot: result.snapshot, items: safe };
+    if (!printing) {
+      if (command.groupId) {
+        // The RPC has already authorized the group. Read only its returned adults,
+        // excluding cancelled, child and Forum/ceremony check-ins.
+        const present = new Set<string>();
+        for (let offset = 0; offset < safe.length; offset += 200) {
+          const { data, error } = await db.from("check_ins").select("registration_id")
+            .eq("event_id", event.id).in("registration_id", safe.slice(offset, offset + 200).map(item => item.registrationId))
+            .is("moment_id", null).is("child_id", null).is("cancelled_at", null);
+          if (error || !data) return { status: "unavailable" };
+          for (const row of data) present.add(row.registration_id);
+        }
+        for (const item of safe) item.checkedIn = present.has(item.registrationId);
+      }
+      return { status: "queue", snapshot: result.snapshot, items: safe };
+    }
     if (command.snapshot !== result.snapshot || command.ids!.some(id => !printable.has(id))) return { status: "conflict" };
     // Complete the document before claiming. Claim rechecks identity, QR, scope and
     // versions atomically. A concurrent operator cannot print the same pending item.

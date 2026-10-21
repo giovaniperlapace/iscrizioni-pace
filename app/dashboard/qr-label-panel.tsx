@@ -115,6 +115,8 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
   const groupId = scope.groupId;
   const registrationId = scope.registrationId;
   const available = queue?.items.filter(item => !item.reason) ?? [];
+  const orderedItems = [...(queue?.items ?? [])].sort((a, b) =>
+    Number(Boolean(a.checkedIn)) - Number(Boolean(b.checkedIn)) || a.attempts - b.attempts);
   const disabled = busy || !!groupId && (queue ? !selection.length : !failed);
   return <section className="grid min-w-0 gap-3" aria-label="Etichette QR">
     {groupId ? <>
@@ -122,7 +124,7 @@ export function QrLabelPanel({ scope, commandAction = qrLabelCommand, onBusyChan
       {queue ? <>
         <label className="flex min-h-11 items-center gap-3 text-sm font-semibold"><input type="checkbox" disabled={busy || !available.length} checked={available.length > 0 && available.every(item => selection.includes(item.registrationId))}
           onChange={event => setSelection(event.target.checked ? available.map(item => item.registrationId) : [])} />Seleziona tutte · Selezionate: {selection.length}</label>
-        <ul className="grid max-h-[45dvh] gap-2 overflow-y-auto">{queue.items.map(item => <li key={item.registrationId}>
+        <ul className="grid max-h-[45dvh] gap-2 overflow-y-auto">{orderedItems.map(item => <li key={item.registrationId}>
           <label className="flex min-h-11 items-start gap-3 py-2"><input type="checkbox" aria-label={`${item.name}${item.code ? ` · ${item.code}` : ""}`} className="mt-1" disabled={busy || !!item.reason} checked={selection.includes(item.registrationId)}
             onChange={event => setSelection(ids => event.target.checked ? [...ids, item.registrationId] : ids.filter(id => id !== item.registrationId))} />
             <span>{item.name}{item.code ? ` · ${item.code}` : ""}<span className="block text-xs text-[var(--peace-muted)]">Stampe richieste: {item.attempts}</span>{item.reason ? <span className="block text-sm">{reasons[item.reason] ?? "Non stampabile"}</span> : null}</span>

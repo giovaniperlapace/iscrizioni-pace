@@ -22,6 +22,14 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
   const registrations = new Map(result.kind === "group" ? result.persons.map(person => [person.id, person.registrationId]) : result.persons.map(person => [person.id, adultId!]));
   const codes = new Map(result.kind === "group" ? result.persons.map(person => [person.id, person.code]) : []);
   const labelItems = new Map(labels.queue?.items.map(item => [item.registrationId, item]));
+  const orderedPersons = result.kind === "group" ? [...result.persons].sort((a, b) => {
+    const presenceOrder = Number(Boolean(a.checkedInAt)) - Number(Boolean(b.checkedInAt));
+    if (presenceOrder) return presenceOrder;
+    // Unknown print counts follow known counts; ties preserve the source order.
+    const aAttempts = labelItems.get(a.registrationId)?.attempts ?? Infinity;
+    const bAttempts = labelItems.get(b.registrationId)?.attempts ?? Infinity;
+    return aAttempts === bAttempts ? 0 : aAttempts - bAttempts;
+  }) : result.persons;
   const chosen = result.persons.filter(person => selectedSet.has(person.id));
   const labelIds = [...new Set(chosen.map(person => registrations.get(person.id)!))];
   const presentIds = chosen.filter(person => person.checkedInAt).map(person => person.id);
@@ -51,7 +59,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
       </div>
       <fieldset disabled={locked} className="grid max-h-[45dvh] gap-2 overflow-y-auto">
         <legend className="sr-only">Persone da accogliere</legend>
-        {result.persons.map(person => {
+        {orderedPersons.map(person => {
           const label = labelItems.get(registrations.get(person.id)!);
           return <label key={person.id} className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 ${selectedSet.has(person.id) ? "border-sky-600 bg-sky-50" : "border-slate-200"}`}>
             <input type="checkbox" name="receptionSubjects" className="h-5 w-5 shrink-0" checked={selectedSet.has(person.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, person.id] : ids.filter(id => id !== person.id))} />

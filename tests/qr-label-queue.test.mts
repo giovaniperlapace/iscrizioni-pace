@@ -62,7 +62,13 @@ test("group label responses omit deleted registrations and reject forged reprint
   const rows=[active,{...active,registrationId:req,name:"Nome eliminato di prova",code:"HIDE",reason:"deleted",state:"verified",attempts:1},
     {...active,registrationId:cancelledId,reason:"cancelled"}];
   const calls:string[]=[];
-  const db={rpc:async(_name:string,args:{p_action:string;p_group:string|null;p_registration:string|null})=>{
+  const db={from:(table:string)=>{
+    assert.equal(table,"check_ins");
+    const q={select:()=>q,eq:(key:string,value:string)=>{assert.equal(key,"event_id");assert.equal(value,"event");return q;},
+      in:(key:string,ids:string[])=>{assert.equal(key,"registration_id");assert.deepEqual(ids,[id,cancelledId]);return q;},
+      is:(key:string,value:null)=>{assert.ok(["moment_id","child_id","cancelled_at"].includes(key));assert.equal(value,null);return q;},
+      then:(resolve:(v:unknown)=>void)=>resolve({data:[{registration_id:id}],error:null})};return q;
+  },rpc:async(_name:string,args:{p_action:string;p_group:string|null;p_registration:string|null})=>{
     calls.push(args.p_action);
     return {data:{status:"queue",snapshot,items:args.p_group?rows:rows.filter(i=>i.registrationId===args.p_registration)},error:null};
   }} as unknown as SupabaseClient;
@@ -71,6 +77,8 @@ test("group label responses omit deleted registrations and reject forged reprint
   if(result.status!=="queue")return;
   assert.deepEqual(result.items.map(i=>i.registrationId),[id,cancelledId]);
   assert.equal(result.items[1].reason,"cancelled");
+  assert.equal(result.items[0].checkedIn,true);
+  assert.equal(result.items[1].checkedIn,false);
   assert.equal(result.snapshot,snapshot);
   for(const hidden of [req,"Nome eliminato di prova","HIDE"])assert.ok(!JSON.stringify(result).includes(hidden));
   calls.length=0;
@@ -109,4 +117,18 @@ test("Manager group printing uses canonical RPC; viewer/leader and revoked roles
  }
  const denied = { rpc: async () => ({ data: null, error: { code: "42501" } }) } as unknown as SupabaseClient;
  assert.equal((await executeLabelCommand(session("manager"), () => denied, { groupId: id, action: "read" })).status, "forbidden");
+});
+
+test("group attendance reads are batched and errors never invent absences", async () => {
+ const items=Array.from({length:405},(_,i)=>({registrationId:`r-${i}`,name:`Persona ${i}`,code:null,reason:"missing",state:"pending",attempts:0,printedContent:null,content:""}));
+ let fail=false;const batches:number[]=[];
+ const db={rpc:async()=>({data:{status:"queue",snapshot,items},error:null}),from:()=>{
+  const q={select:()=>q,eq:()=>q,in:(_key:string,ids:string[])=>{batches.push(ids.length);return q;},is:()=>q,
+   then:(resolve:(v:unknown)=>void)=>resolve(fail?{data:null,error:{message:"failed"}}:{data:[],error:null})};return q;
+ }} as unknown as SupabaseClient;
+ const result=await executeLabelCommand(session("manager"),()=>db,{groupId:id,action:"read"});
+ assert.equal(result.status,"queue");assert.deepEqual(batches,[200,200,5]);
+ if(result.status==="queue")assert.ok(result.items.every(item=>item.checkedIn===false));
+ fail=true;
+ assert.equal((await executeLabelCommand(session("manager"),()=>db,{groupId:id,action:"read"})).status,"unavailable");
 });

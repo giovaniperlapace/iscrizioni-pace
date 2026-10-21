@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## Accoglienza: ordine persone del gruppo — 2026-10-21
+
+- Accoglienza e lista stampa QR nel menu Gruppi Manager/Admin: elenco unico,
+  prima chi non ha presenza registrata, poi chi è presente; ciascun insieme
+  in ordine crescente di stampe richieste. Parità nell'ordine originale.
+- Selezione per ID conservata. In Accoglienza telefono senza contatori: sola
+  precedenza delle presenze mancanti; famiglie invariate. Contatori sconosciuti
+  dopo quelli conosciuti. Nessuna migration o modifica ai permessi.
+- Coda QR gruppo: presenze generali attive degli adulti, lette per evento e
+  soli ID autorizzati dalla RPC, in lotti di 200; errore di lettura esplicito.
+  Rilettura dopo stampa e riapertura, nessuna conferma di presenza implicita.
+- 1.027 test, lint, TypeScript e build production in copia isolata delle sole
+  modifiche. Browser sul componente originale con dati sintetici: ordine
+  assenti 0/1/2 stampe, poi presenti 0/1; selezione inizialmente vuota.
+  Nessuna stampa fisica o scrittura operativa remota. Commit/push autorizzati.
+
 ## QR fittizi per Forum e cerimonie — 2026-10-21
 
 - Nove PNG e foglio stampabile `/collaudo-forum-eventi/qr.html`, con codici
