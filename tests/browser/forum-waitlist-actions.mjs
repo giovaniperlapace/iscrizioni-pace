@@ -24,6 +24,7 @@ export async function checkForumServerActions(psql,base='http://127.0.0.1:3164')
   if(name==='get_panel_release_mode')expr='to_jsonb(get_panel_release_mode())';
   else if(name==='has_panel_reception_duty')expr='to_jsonb(false)';
   else if(name==='get_participant_panel_catalog')expr=`(select coalesce(jsonb_agg(x),'[]'::jsonb) from get_participant_panel_catalog(${literal(body.p_registration_id)}) x)`;
+  else if(name==='set_panel_family_booking')expr=`set_panel_family_booking(${literal(body.p_registration_id)},${literal(body.p_panel_id)},${literal(body.p_section_id)},${literal(body.p_intent)},array[${(body.p_child_ids??[]).map(literal).join(',')}]::uuid[],false)`;
   else if(name==='set_individual_panel_waitlist')expr=`set_individual_panel_waitlist(${literal(body.p_registration_id)},${literal(body.p_panel_id)},${literal(body.p_section_id)},${literal(body.p_intent)})`;
   else if(name==='set_individual_panel_booking')expr=`set_individual_panel_booking(${literal(body.p_registration_id)},${literal(body.p_panel_id)},${literal(body.p_section_id)},${body.p_booked?'true':'false'})`;
   else {res.statusCode=500;res.end(JSON.stringify({message:'Unknown synthetic RPC',code:'UNKNOWN'}));return;}
@@ -38,7 +39,7 @@ export async function checkForumServerActions(psql,base='http://127.0.0.1:3164')
   const jwt=[{alg:'HS256',typ:'JWT'},{sub:fw(3),exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'}].map(x=>Buffer.from(JSON.stringify(x)).toString('base64url')).join('.')+'.synthetic';
   const session={access_token:jwt,refresh_token:'synthetic',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:fw(3),email:'queue-3@example.invalid'}};
   await context.addCookies([{name:'sb-127-auth-token',value:'base64-'+Buffer.from(JSON.stringify(session)).toString('base64url'),url:base},{name:'iscrizioni_last_activity',value:String(Date.now()),url:base}]);
-  const page=await context.newPage();
+  const page=await context.newPage(); await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
   await page.goto(base+'/forum-waitlist-action-check');
   const target=page.locator('article').filter({has:page.getByRole('heading',{name:'Forum full',exact:true})});
   await target.getByRole('button',{name:'Mettiti in coda per questo Forum',exact:true}).waitFor();
@@ -49,12 +50,19 @@ export async function checkForumServerActions(psql,base='http://127.0.0.1:3164')
   psql(`update panel_seat_sections set capacity=2 where id=fw(501);update panel_waitlist_scheduler set next_run_at=clock_timestamp();select claim_panel_waitlist_notification();`,true);
   await page.goto(base+'/forum-waitlist-action-check');
   await target.getByRole('button',{name:'Conferma iscrizione a questo Forum',exact:true}).waitFor();
+  assert.equal(psql(`select set_config('request.jwt.claim.sub',fw(3)::text,false);select booking_status||':'||has_slot_conflict::text from get_participant_panel_catalog(fw(103)) where section_id=fw(501);`,true).trim().split('\n').at(-1),'offered:true');
+  assert.ok(await target.getByRole('button',{name:'Conferma iscrizione a questo Forum',exact:true}).isEnabled());
+  await page.screenshot({path:'/tmp/pace-waitlist-fixed-desktop.png',fullPage:true,caret:'initial'});
+  await page.setViewportSize({width:390,height:844});
+  assert.ok(await target.getByRole('button',{name:'Conferma iscrizione a questo Forum',exact:true}).isEnabled());
+  await page.screenshot({path:'/tmp/pace-waitlist-fixed-mobile.png',fullPage:true,caret:'initial'});
   const acceptance=page.waitForResponse(r=>r.request().headers()['next-action']);
   await target.getByRole('button',{name:'Conferma iscrizione a questo Forum',exact:true}).click();await acceptance;
   assert.equal(psql(`select choice from moment_attendance_choices where registration_id=fw(103) and moment_id=fw(402);`,true).trim(),'no');
   assert.equal(psql(`select choice from moment_attendance_choices where registration_id=fw(103) and moment_id=fw(401);`,true).trim(),'yes');
   await page.goto(base+'/forum-waitlist-action-check');await target.getByRole('button',{name:'Cancella iscrizione',exact:true}).waitFor();
-  assert.ok(calls.includes('/rest/v1/rpc/set_individual_panel_waitlist'));
+  assert.ok(calls.includes('/rest/v1/rpc/set_panel_family_booking'));
+  await page.screenshot({path:'/tmp/pace-waitlist-fixed-confirmed.png',fullPage:true,caret:'initial'});
   console.log('PASS real browser button -> authenticated Server Action -> disposable PostgreSQL -> canonical cancellation/new booking -> updated real Forum card');
  } finally {
   if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));rmSync(route,{recursive:true,force:true});rmSync('.next/dev/types/app/forum-waitlist-action-check',{recursive:true,force:true});

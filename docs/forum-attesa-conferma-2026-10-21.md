@@ -48,3 +48,28 @@ Controllo READ ONLY della quota individuale Forum 12: 95 posti, tutti occupati
 o riservati, sette richieste in attesa e tre offerte attive al momento della
 lettura. Nessuna riattivazione dell’offerta scaduta o alterazione della coda.
 Modifiche parallele a email/lingua e relativa migration escluse dal commit.
+
+## Verifica aggiuntiva richiesta dall’utente — 21 ottobre, circa 16:54
+
+Ricontrollato il deployment assegnato al dominio: READY, SHA applicativo
+`aede5a86e5e56fc48a80c9d80293983acd4f0e27`.
+
+Eseguito il percorso completo in Chrome con i componenti e la Server Action
+originali, su copia isolata del codice rilasciato senza file ambiente reali.
+Auth e trasporto PostgREST sintetici; RPC e vincoli su PostgreSQL 17 temporaneo
+con le migration canoniche. Traffico browser esterno bloccato.
+
+Il caso usa un partecipante con una prenotazione alle 17 e un’offerta per
+un Forum alle 16 nello stesso pomeriggio. Verificato dal catalogo SQL
+`booking_status=offered` e `has_slot_conflict=true` prima del clic.
+Pulsante attivo sia desktop sia telefono (390 px); clic da telefono:
+Server Action riuscita con redirect `panelSaved=booked`, precedente scelta
+`no`, nuova scelta `yes`, scheda finale «Iscritto» con annullamento disponibile.
+
+Superate anche le verifiche SQL di scadenza, atomicità, doppia conferma,
+concorrenza, FIFO, capienza e selezione minori. Aggiornato il trasporto del
+collaudo browser alla RPC corrente `set_panel_family_booking` e aggiunte le
+asserzioni esplicite sul conflitto, sul pulsante e sulla vista mobile.
+
+La conferma autenticata è stata eseguita sul database temporaneo, non in
+production. Nessun posto reale, offerta o dato del partecipante modificato.
