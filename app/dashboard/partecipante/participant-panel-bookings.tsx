@@ -6,7 +6,7 @@ import Link from "next/link";
 import { FORUM_ATTENDANCE_COPY, FORUM_ATTENDANCE_CONFIRM_COPY } from "@/lib/panels/attendance-copy";
 import { useState } from "react";
 import { ForumChildSelection } from "@/components/forum-child-selection";
-import { FORUM_CHILD_COPY, type ForumChildOption } from "@/lib/panels/child-selection";
+import { type ForumChildOption } from "@/lib/panels/child-selection";
 
 import { formatSeatCount } from "@/lib/panels/seat-count";
 import { ForumLanguages } from "@/components/forum-languages";
@@ -310,7 +310,6 @@ export function ParticipantPanelBookings({ locale, registrationId, rows: initial
         <h2 id="participant-panels-title" className="text-xl font-semibold text-[var(--peace-blue-950)]">
           {copy.title}
         </h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">{FORUM_CHILD_COPY[locale].help}</p>
         <p className="mt-3 rounded-lg border border-[var(--peace-border)] bg-[var(--peace-sky-100)] p-4 text-sm leading-6 text-[var(--peace-blue-950)]">{waitlistCopy.rule}</p>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">{waitlistCopy.queueHelp}</p>
       </div>
@@ -431,7 +430,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <input type="hidden" name="panelId" value={row.panel_id} />
         <input type="hidden" name="sectionId" value={row.section_id} />
         <input type="hidden" name="intent" value={intent} />
-        <PendingSubmitButton disabled={disabled} pendingLabel={isSelected ? copy.cancelling : copy.booking} className={`min-h-11 w-full rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-[#d9e0e6] disabled:text-[#637181] ${isSelected ? "border border-[#cf9b8e] text-[#8a3323] hover:bg-[#fff3ef]" : "bg-[var(--peace-blue-800)] text-white hover:bg-[var(--peace-blue-900)]"}`}>
+        <PendingSubmitButton disabled={disabled} pendingLabel={isSelected ? copy.cancelling : copy.booking} className={`min-h-11 w-full rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-[#d9e0e6] disabled:text-[#637181] ${isSelected ? "border border-[#cf9b8e] text-[#8a3323] hover:bg-[#fff3ef]" : intent === "join" ? "border border-[var(--peace-border)] bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-200)]" : "bg-[var(--peace-blue-800)] text-white hover:bg-[var(--peace-blue-900)]"}`}>
           {buttonLabel}
         </PendingSubmitButton>
       </form>
