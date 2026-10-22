@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useId } from "react";
 
 import {
   summarizePanelStatistics,
@@ -264,6 +264,8 @@ function PanelStatisticsCard({
   navMode: "full" | "mini";
   canManage: boolean;
 }) {
+  const campaignDialog = useRef<HTMLDialogElement>(null);
+  const campaignTitleId = useId();
   const visibleSections =
     audienceFilter === ALL_FILTER
       ? panel.sections
@@ -300,6 +302,7 @@ function PanelStatisticsCard({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {canManage ? <Link href={`${dashboardPath}?section=dashboard&report=panels&nav=${navMode}&panelRoster=${encodeURIComponent(panel.id)}`} scroll={false} prefetch={false} className="btn-secondary inline-flex min-h-10 items-center gap-2 px-3 text-sm" aria-label={`Iscritti e coda a ${panel.title}`}><Users size={16} aria-hidden="true" />Iscritti e coda</Link> : null}
           <Link
             href={panelHref}
             className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)]"
@@ -308,17 +311,27 @@ function PanelStatisticsCard({
             <ArrowUpRight aria-hidden="true" size={16} />
           </Link>
           {canManage && panel.publicationStatus === "published" ? (
-            <Link
-              href={campaignHref}
+            <button
+              type="button"
+              onClick={() => campaignDialog.current?.showModal()}
               className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[var(--peace-blue-800)] px-3 text-sm font-semibold text-white"
             >
               <Mail aria-hidden="true" size={16} />
               Campagna filtrata
-            </Link>
+            </button>
           ) : null}
         </div>
       </header>
 
+      {canManage ? <dialog ref={campaignDialog} aria-labelledby={campaignTitleId} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl border border-[var(--peace-border)] bg-white p-6 text-[var(--peace-ink)] shadow-xl backdrop:bg-black/40">
+        <h2 id={campaignTitleId} className="text-lg font-bold">A chi vuoi scrivere?</h2>
+        <p className="mt-2 text-sm text-[var(--peace-muted)]">{panel.title}</p>
+        <div className="mt-5 grid gap-3">
+          {([["panel_confirmed", "Solo confermati"], ["panel_waiting", "Solo in coda"], ["panel_both", "Confermati e in coda"]] as const).map(([mode, label]) => <Link key={mode} href={`${campaignHref}&campaignForumOutreach=${mode}`} prefetch={false} className="btn-secondary px-4 py-3 text-center">{label}</Link>)}
+        </div>
+        <p className="mt-3 text-sm text-[var(--peace-muted)]">La coda include i posti offerti ancora da confermare. Potrai rivedere i destinatari prima dell’invio.</p>
+        <button type="button" onClick={() => campaignDialog.current?.close()} className="btn-secondary mt-5 px-4 py-2">Annulla</button>
+      </dialog> : null}
       <div className="grid gap-3 border-t border-[var(--peace-border)] px-4 py-4 sm:grid-cols-2 lg:grid-cols-5">
         <PanelMetric label="Persone in lista d’attesa" value={panel.waitingPeople + panel.offeredPeople} detail={`${panel.waitingPeople} in coda · ${panel.offeredPeople} con posto offerto da confermare · minori selezionati inclusi`} />
         <PanelMetric label="Capienza" value={panel.capacity} />

@@ -98,6 +98,7 @@ export async function ManagerEmailSection({
     resolveCampaignRecipients(eventId, {
       audience: "participants",
       forumOutreach,
+      panelId: initialPanelId,
       groupId: null,
       tagId: null,
       serviceId: null,

@@ -580,7 +580,7 @@ export default async function AdminDashboardPage({
   const navMode: AdminNavMode = params.nav === "mini" ? "mini" : "full";
   let panelRoster: PanelRoster | null = null;
   let panelRosterError: string | null = null;
-  const rosterId = activeSection === "panel" && typeof params.panelRoster === "string" ? params.panelRoster : null;
+  const rosterId = (activeSection === "panel" || (activeSection === "dashboard" && params.report === "panels")) && typeof params.panelRoster === "string" ? params.panelRoster : null;
   const rosterCloseParams = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[0] !== "panelRoster"));
   if (rosterId) {
     try {

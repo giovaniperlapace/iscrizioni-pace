@@ -69,7 +69,7 @@ export async function resolveCampaignRecipients(
   const recipients = await resolveParticipantRecipients(eventId, filters.status);
   const mode = parseForumOutreach(filters.forumOutreach);
   if (!mode) return recipients;
-  const targets = await loadForumOutreachTargets(createSupabaseServiceClient(), eventId, mode);
+  const targets = await loadForumOutreachTargets(createSupabaseServiceClient(), eventId, mode, filters.panelId);
   return recipients.filter(recipient => recipient.registrationId && targets.registrationIds.has(recipient.registrationId));
 }
 

@@ -185,11 +185,11 @@ export function EmailCampaignComposer({
       (audience !== "participants" || attendanceFilter === "all" ||
         (attendanceFilter === "pending" && recipient.attendancePending === true) ||
         (attendanceFilter === "communicated" && recipient.attendancePending === false)) &&
-      (!panelFilter || recipient.panelIds.some((id) => panelIds.has(id))) &&
+      (forumOutreach?.startsWith("panel_") || !panelFilter || recipient.panelIds.some((id) => panelIds.has(id))) &&
       (audience !== "teachers" || !schoolFilter || recipient.schoolNames.some((name) => normalizeRecipientSearch(name).includes(schoolSearch))) &&
       (!search || normalizeRecipientSearch(`${recipient.fullName} ${recipient.destinationEmail} ${recipient.schoolNames.join(" ")}`).includes(search))
     );
-  }, [audience, attendanceFilter, groupFilter, groupMembershipFilter, groups, panelFilter, panels, recipientRows, recipientSearch, schoolFilter, serviceFilter, services, tagFilter, tags]);
+  }, [forumOutreach, audience, attendanceFilter, groupFilter, groupMembershipFilter, groups, panelFilter, panels, recipientRows, recipientSearch, schoolFilter, serviceFilter, services, tagFilter, tags]);
   const selectedRecipientRows = useMemo(
     () => recipientRows.filter((recipient) =>
       selectedRecipientIdSet.has(recipient.recipientKey)
@@ -597,7 +597,7 @@ export function EmailCampaignComposer({
           </span>
         </div>
         {forumOutreach ? <p className="rounded-lg border border-[var(--peace-border)] bg-[#eef7fc] p-3 text-sm" role="status">
-          <strong>{forumOutreach === "without_forum" ? "Iscritti senza alcun Forum" : "In attesa senza Forum nella stessa fascia"}</strong>
+          <strong>{forumOutreach === "panel_confirmed" ? "Forum: partecipanti confermati" : forumOutreach === "panel_waiting" ? "Forum: in coda, inclusi i posti offerti da confermare" : forumOutreach === "panel_both" ? "Forum: confermati e in coda" : forumOutreach === "without_forum" ? "Iscritti senza alcun Forum" : "In attesa senza Forum nella stessa fascia"}</strong>
           {" · Destinatari raggiungibili già selezionati. Per i minori viene selezionato il contatto dell’adulto; le deleghe email restano attive. Il numero di destinatari può quindi differire dal contatore delle persone. Puoi deselezionare singoli destinatari prima dell’anteprima."}
         </p> : null}
         <div
@@ -745,7 +745,7 @@ export function EmailCampaignComposer({
                 value={serviceFilter}
                 onChange={setServiceFilter}
               />
-              {allowPanelManagement ? <RecipientPanelFilter
+              {allowPanelManagement && !forumOutreach?.startsWith("panel_") ? <RecipientPanelFilter
                 id="campaign-recipient-panel"
                 label="Forum"
                 options={panels}

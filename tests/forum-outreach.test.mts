@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findPeopleWithoutForum, parseForumOutreach } from '../lib/panels/forum-outreach.ts';
+import { findPeopleWithoutForum, parseForumOutreach, findPanelCampaignTargets } from '../lib/panels/forum-outreach.ts';
 import { findWaitlistedWithoutBooking } from '../lib/panels/waitlist-statistics.ts';
 import { isPanelCampaign } from '../lib/panels/management-access.ts';
 
@@ -25,9 +25,20 @@ test('uncovered waitlist selects adult contact only when a nominal person lacks 
   assert.equal(findWaitlistedWithoutBooking(panels,[{...booking,selectedChildIds:['child']}],queue,selection).registrationIds.size,0);
 });
 test('both outreach modes require Forum campaign authorization and reject unknown modes', () => {
-  for(const mode of ['without_forum','waiting_without_booking']) {
+  for(const mode of ['without_forum','waiting_without_booking','panel_confirmed','panel_waiting','panel_both']) {
     assert.equal(parseForumOutreach(mode),mode);
     assert.equal(isPanelCampaign({forumOutreach:mode}),true);
   }
   assert.equal(parseForumOutreach('all'),null);
+});
+
+test('panel campaigns distinguish confirmed, queue and union with expired offers excluded', () => {
+  const booking = {panelId:'p', registrationId:'booked', choice:'yes', sectionId:'s', registrationStatus:'confirmed'};
+  const waiting = {panel_id:'p', registration_id:'waiting', status:'waiting', expires_at:null, registrations:{status:'confirmed',deleted_at:null}};
+  const queue = [waiting, {...waiting,registration_id:'booked'}, {...waiting,registration_id:'offer',status:'offered',expires_at:'2026-10-22T11:00:00Z'}, {...waiting,registration_id:'expired',status:'offered',expires_at:'2026-10-22T09:00:00Z'}, {...waiting,registration_id:'deleted',registrations:{status:'confirmed',deleted_at:'2026-10-21'}}, {...waiting,registration_id:'other',panel_id:'q'}, {...waiting,registration_id:'cancelled',registrations:{status:'cancelled',deleted_at:null}}];
+  const choices = [booking, {...booking,registrationId:'cancelled',choice:'no'}, {...booking,registrationId:'other',panelId:'q'}];
+  const now = Date.parse('2026-10-22T10:00:00Z');
+  assert.deepEqual([...findPanelCampaignTargets('p','panel_confirmed',choices,queue,now)], ['booked']);
+  assert.deepEqual([...findPanelCampaignTargets('p','panel_waiting',choices,queue,now)], ['waiting','booked','offer']);
+  assert.deepEqual([...findPanelCampaignTargets('p','panel_both',choices,queue,now)], ['booked','waiting','offer']);
 });

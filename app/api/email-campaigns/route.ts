@@ -394,7 +394,7 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
   if (!recipients.length) throw new Error("Non ci sono destinatari in attesa.");
   const outreach = parseForumOutreach(campaign.filters_snapshot?.forumOutreach);
   if (outreach) {
-    const targets = await loadForumOutreachTargets(service, campaign.event_id, outreach);
+    const targets = await loadForumOutreachTargets(service, campaign.event_id, outreach, campaign.filters_snapshot?.panelId);
     if (recipients.some(recipient => !recipient.registrationId || !targets.registrationIds.has(recipient.registrationId))) {
       throw new Error("Le prenotazioni Forum sono cambiate. Riapri la campagna dalle statistiche per aggiornare i destinatari prima di inviare.");
     }
