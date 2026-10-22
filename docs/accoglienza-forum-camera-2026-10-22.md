@@ -1,10 +1,14 @@
 # Accoglienza Forum: esiti nella fotocamera — 22 ottobre 2026
 
-La console condivisa in modalità fotocamera mantiene visibile il video dopo la
-lettura. Esiti, identità e comandi sono sovrapposti alla parte inferiore del
-riquadro; gli elenchi lunghi scorrono dentro il riquadro. Nessun focus automatico
-sposta la pagina alla ricezione della scheda. La modalità manuale e quella USB
-mantengono la scheda separata.
+Su ulteriore richiesta dell’utente, la console fotocamera mostra sul video solo
+una fascia breve con esito/rimando alla scheda. Al riconoscimento l’anteprima si
+riduce gradualmente a 10rem e la scheda completa appare subito sotto: nome,
+prenotazione, selezione persone e conferma non coprono più il video. La scheda
+entra con traslazione di 12px e dissolvenza in 300ms, con bordo evidenziato.
+Dopo il movimento, lo scorrimento `nearest` porta in vista la scheda soltanto
+quanto necessario. Con movimento ridotto richiesto dal sistema, ingresso e
+scorrimento sono immediati. Nessun focus viene sottratto all’operatore.
+La modalità manuale e quella USB mantengono il comportamento precedente.
 
 La prenotazione valida mostra «Iscrizione al Forum verificata» in verde.
 «Segna entrata» registra la presenza soltanto su azione esplicita; minori e
@@ -48,3 +52,12 @@ Ripetuti con successo 1.056 test, TypeScript, build e collaudo browser completo.
 Il browser verifica opacità intermedia, rimozione automatica della scheda,
 stream ancora live senza riavvio e mancata riapertura del QR fermo per ulteriori
 1,2 secondi. Lint dei file modificati superato. Nessuna operazione remota di prova.
+
+## Verifica della scheda separata dal video
+
+1.056 test, build con TypeScript, lint dei file modificati e collaudo completo
+browser desktop/mobile superati. Verificata geometricamente la scheda sotto
+il video e la fascia di esito inferiore a 80px; screenshot mobile ispezionato.
+Restano verificati stream live, salvataggio esplicito, contatori, dissolvenza,
+riarmo senza rilettura del QR fermo, revoche e assenza di chiamate operative
+nel collaudo. Nessuna migration o scrittura operativa remota.

@@ -38,6 +38,7 @@ export function EventReceptionConsole(props: Props) {
   const [code, setCode] = useState("");
   const latch = useRef(new ScanLatch());
   const heading = useRef<HTMLHeadingElement>(null);
+  const cameraCard = useRef<HTMLDivElement>(null);
   const locked = busy || session.isLocked();
   const cameraVisible = deviceMode === "phone" && !manual;
   const fading = cameraVisible && !locked && state.phase === "result" && state.mode === "enter" && !!state.result && state.result.outcome !== "verified";
@@ -46,6 +47,7 @@ export function EventReceptionConsole(props: Props) {
   const correction = state.mode !== "enter";
   const multiple = result && (result.kind === "group" || result.kind === "family" && result.persons.length > 1);
   const problem = ["error", "uncertain", "blocked"].includes(state.phase);
+  const cameraHasResult = !!result || problem;
   const correctionOpen = correction && state.phase === "selection" && state.result && state.result.kind !== "room";
   const scanHint = deviceMode === "computer" && !manual && <p className="text-sm text-slate-600">{locked || correctionOpen || state.phase === "selection" ? "Lettura sospesa durante l’operazione." : "Scansiona un nuovo QR per aprire la scheda successiva."}</p>;
 
@@ -76,6 +78,14 @@ export function EventReceptionConsole(props: Props) {
     const timer = window.setTimeout(finishCameraResult, 2000);
     return () => window.clearTimeout(timer);
   }, [fading, state.result]);
+
+  useEffect(() => {
+    if (!cameraVisible || !cameraHasResult) return;
+    const timer = window.setTimeout(() => {
+      cameraCard.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [cameraVisible, cameraHasResult, state.lookup]);
 
   function changeBusy(value: boolean) { busyRef.current = value; setBusy(value); }
   async function inspect(lookup: ReceptionCommand["lookup"], replace = false) {
@@ -115,7 +125,7 @@ export function EventReceptionConsole(props: Props) {
     onRemove={ids => { setRemovalIds(ids); void session.removeCurrent(); }}
   /> : null;
 
-  const resultCard = result && <div className={`surface-card grid gap-3 ${cameraVisible ? "p-3" : "p-5 sm:p-7"}`}>
+  const resultCard = result && <div ref={cameraCard} data-camera-result={cameraVisible || undefined} inert={fading || undefined} style={fading ? { animation: "reception-result-fade 2s linear forwards" } : undefined} className={`surface-card grid gap-3 ${cameraVisible ? "reception-result-arrive scroll-mt-24 border-2 border-sky-600 p-3" : "p-5 sm:p-7"}`}>
       <h3 ref={heading} tabIndex={-1} className={`break-words font-bold outline-none ${cameraVisible ? "text-lg" : "text-2xl"}`}>{result.kind === "group" ? result.groupName : result.kind === "family" ? `${result.persons[0]?.firstName} ${result.persons[0]?.lastName}` : result.kind === "school" ? `${result.schoolName} · ${result.classDescription}` : result.label}</h3>
       {(props.duty?.duty === "panel_entry" || props.duty?.duty === "ceremony_entry") && (result.kind !== "family" || result.persons.every(person => person.eligible !== false)) && state.phase === "result" && state.result?.outcome === "verified" && <p role="status" className="rounded-xl bg-green-100 p-3 font-semibold text-green-900">✓ {props.duty.duty === "panel_entry" ? "Iscrizione al Forum verificata." : "Biglietto per la cerimonia verificato."}</p>}
       {!cameraVisible && result.kind === "family" && <p className="text-sm text-slate-600">{result.code}</p>}
@@ -129,6 +139,10 @@ export function EventReceptionConsole(props: Props) {
       {!cameraVisible && <button className="btn-secondary min-h-12 px-4" disabled={locked || state.phase === "selection"} onClick={next}>Chiudi scheda</button>}
     </div>;
 
+  const cameraNotice = (result || problem || state.phase === "pending") && <div className={`px-3 py-2 text-sm font-semibold ${problem ? "bg-amber-100 text-amber-950" : result ? "bg-green-800 text-white" : "bg-sky-800 text-white"}`} role="status">
+    {state.phase === "pending" ? "Verifica in corso…" : problem ? "Attenzione: leggi il messaggio sotto." : fading ? "✓ Ingresso registrato" : "QR letto · controlla la scheda ↓"}
+  </div>;
+
   return <section className="mx-auto grid w-full max-w-3xl gap-4" aria-labelledby="reception-title">
     <header className="flex flex-wrap items-center justify-between gap-2">
       <h2 id="reception-title" className="text-xl font-semibold">{props.duty?.title ?? "Accoglienza evento"}</h2>
@@ -140,7 +154,7 @@ export function EventReceptionConsole(props: Props) {
     <div hidden={!cameraVisible && (!!result || problem && state.phase !== "error")}>
       <div className="surface-card grid gap-4 p-4">
         {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
-          <ReceptionCamera source={cameraSource} overlay={resultCard || feedback} overlayFading={fading} paused={locked || !!entry} onCode={value => {
+          <ReceptionCamera source={cameraSource} overlay={cameraNotice} compactPreview={!!result} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || !!entry} onCode={value => {
             if (!fading && !locked && !correction && state.phase !== "selection" && (session.canScan() || state.phase === "result") && latch.current.accept(value)) void inspect({ kind: "qr", value }, !!entry);
           }} onNoCode={() => { if (!entry && session.canScan()) latch.current.absent(); }} /> :
           <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void inspect({ kind: code.startsWith("G:") || code.length === 43 ? "qr" : "code", value: code }); setCode(""); }}>

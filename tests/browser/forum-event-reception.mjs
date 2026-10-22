@@ -122,14 +122,15 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.ok(await page.evaluate(()=>window.syntheticCameraCalls)>0);
   assert.ok(calls.some(call=>call.name==='reception_panel_check_in' && call.body.p_lookup_kind==='qr'));
   const overlay=page.locator('[data-camera-overlay]');
-  await overlay.getByText(/Non è prenotato per questo Forum/).waitFor();
+  await overlay.getByText('Attenzione: leggi il messaggio sotto.').waitFor();
+  const cameraCard=page.locator('[data-camera-result]');
   // Correct duty: inspect does not stop the stream or implicitly check in.
   await page.getByRole('button',{name:'Cambia incarico'}).click();
   await page.getByRole('button',{name:/Morning A/}).click();
   psql("update check_ins set cancelled_at=now() where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null;");
   await page.getByRole('button',{name:'Aggiorna conteggi'}).click();
   await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
-  await overlay.getByText('✓ Iscrizione al Forum verificata.',{exact:true}).waitFor();
+  await cameraCard.getByText('✓ Iscrizione al Forum verificata.',{exact:true}).waitFor();
   const cameraCalls=await page.evaluate(()=>window.syntheticCameraCalls);
   const video=page.getByLabel('Anteprima fotocamera');
   assert.equal(await video.isVisible(),true);
@@ -139,8 +140,12 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   const enteredBefore=Number((await stats.innerText()).match(/(\d+) Entrati/)[1]);
   const videoBox=await video.boundingBox(), overlayBox=await overlay.boundingBox();
   assert.ok(overlayBox.y>=videoBox.y && overlayBox.y+overlayBox.height<=videoBox.y+videoBox.height);
-  await overlay.getByRole('button',{name:'Segna entrata',exact:true}).click();
-  await overlay.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  const cardBox=await cameraCard.boundingBox();
+  assert.ok(cardBox.y>=videoBox.y+videoBox.height);
+  assert.ok(overlayBox.height<80);
+  await page.screenshot({path:'/tmp/pace-forum-camera-compact.png',fullPage:true});
+  await cameraCard.getByRole('button',{name:'Segna entrata',exact:true}).click();
+  await cameraCard.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
   await page.waitForFunction(expected=>document.querySelector('[aria-label="Statistiche dell’incarico"]').textContent.includes(expected+' Entrati'),enteredBefore+1);
   assert.equal(await video.evaluate(el=>el.srcObject.getVideoTracks()[0].readyState),'live');
   assert.equal(await page.evaluate(()=>window.syntheticCameraCalls),cameraCalls);

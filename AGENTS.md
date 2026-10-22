@@ -2,8 +2,10 @@
 
 ## Accoglienza Forum: esiti nella fotocamera — 2026-10-22
 
-- Esiti e comandi nella parte inferiore del riquadro video, anche dopo QR valido;
-  stream conservato durante conferma e salvataggio, letture concorrenti bloccate.
+- Ultima revisione: fascia breve sul video e scheda completa subito sotto,
+  anteprima ridotta al riconoscimento, ingresso animato e scorrimento minimo
+  verso la scheda. Movimento ridotto rispettato; niente elenchi sopra il video.
+  Stream conservato durante conferma e salvataggio, letture concorrenti bloccate.
 - Iscrizione Forum verificata in verde, ingresso separato con «Segna entrata».
   Selezione esplicita dei minori, retry e controlli canonici conservati.
 - Contatori per incarico: Iscritti (Assegnatari per cerimonie) ed Entrati,
