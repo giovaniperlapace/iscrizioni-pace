@@ -80,15 +80,20 @@ export function CeremonySeatMap({
     free: "#fff",
   };
   const points = new Map(visible.map(s => [s.id, ceremonyDisplayPoint(s, opening)]));
+  const rowGutter = opening ? 88 : 0;
   const minX = Math.min(...[...points.values()].map(s => s.x), 10000), minY = Math.min(...[...points.values()].map(s => s.y), 10000);
-  const width = Math.max(400, ...[...points.values()].map(s => s.x - minX + (opening ? 100 : 65))),
+  const width = Math.max(400, ...[...points.values()].map(s => s.x - minX + rowGutter + (opening ? 100 : 65))),
     height = Math.max(160, ...[...points.values()].map(s => s.y - minY + (opening ? 122 : 65)));
   const detailBlocks = opening ? Array.from(new Set(visible.map(s => `${s.sectorId}:${openingSeatAddress(s.row)?.key}`))).map(key => {
     const members = visible.filter(s => `${s.sectorId}:${openingSeatAddress(s.row)?.key}` === key);
     const first = members[0];
     const x = Math.min(...members.map(s => points.get(s.id)!.x));
     return { key, sector: sectorById.get(first.sectorId), block: openingSeatAddress(first.row)?.block,
-      x, y: Math.min(...members.map(s => points.get(s.id)!.y)), width: Math.max(...members.map(s => points.get(s.id)!.x)) - x + 84 };
+      x, y: Math.min(...members.map(s => points.get(s.id)!.y)), width: Math.max(...members.map(s => points.get(s.id)!.x)) - x + rowGutter + 84,
+      rows: Array.from(new Map(members.map(s => [s.row, {
+        key: s.row, number: openingSeatAddress(s.row)?.row, y: points.get(s.id)!.y,
+      }])).values()),
+    };
   }) : [];
   const [, blockWord, rowWord, chairWord] = seatAddressWords(locale);
   const sectorOnly = sectors.find(s => s.id === sector)?.numbered === false;
@@ -245,6 +250,15 @@ export function CeremonySeatMap({
               style={{ width: width * zoom, height: height * zoom }}
             >
               {detailBlocks.map(b => <div key={b.key} className={`absolute flex items-center rounded-md border px-2 text-sm font-semibold ${b.sector === "B1" ? "border-blue-600 bg-blue-50 text-blue-900" : b.sector === "B2" ? "border-violet-600 bg-violet-50 text-violet-900" : "border-slate-300 bg-white"}`} style={{left:(b.x-minX)*zoom,top:(b.y-minY)*zoom,width:Math.max(240,b.width)*zoom,height:44*zoom}}>{c.sector} {b.sector} · {blockWord} {b.block}</div>)}
+              {detailBlocks.flatMap(b => b.rows.map(row => (
+                <div
+                  key={`${b.key}:${row.key}`}
+                  className="absolute flex min-h-11 items-center pr-2 text-sm font-semibold text-slate-700"
+                  style={{ left: (b.x - minX) * zoom, top: (row.y - minY + 52) * zoom, width: rowGutter * zoom, height: 54 * zoom }}
+                >
+                  {rowWord} {row.number}
+                </div>
+              )))}
               {visible.map((s) => (
                 <button
                   key={s.id}
@@ -256,7 +270,7 @@ export function CeremonySeatMap({
                   onClick={() => onOccupied && claimById.has(s.id) ? onOccupied(s.id) : onSelect(s.id)}
                   className="absolute flex min-h-11 min-w-11 items-center justify-center rounded-lg border text-xs font-semibold text-slate-950 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                   style={{
-                    left: (points.get(s.id)!.x - minX) * zoom,
+                    left: (points.get(s.id)!.x - minX + rowGutter) * zoom,
                     top: (points.get(s.id)!.y - minY + (opening ? 52 : 0)) * zoom,
                     width: (opening ? 84 : 44) * zoom,
                     height: (opening ? 54 : 44) * zoom,
@@ -267,7 +281,7 @@ export function CeremonySeatMap({
                       : undefined,
                   }}
                 >
-                  {opening ? <span>{rowWord} {openingSeatAddress(s.row)?.row}<br />{chairWord} {s.number}</span> : <span>{s.row}<br />{s.number}</span>}
+                  {opening ? <span>{s.number}</span> : <span>{s.row}<br />{s.number}</span>}
                 </button>
               ))}
             </div>

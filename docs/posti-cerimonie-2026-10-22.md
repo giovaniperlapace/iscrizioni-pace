@@ -419,3 +419,23 @@ Browser sul dominio: home 200, Manager protetto con redirect al login, nessun
 errore JavaScript. Log error/fatal vuoti nel controllo del rilascio. Flussi
 autenticati verificati sul componente originale con SQL sintetico; nessuna
 sessione operativa reale usata per effettuare assegnazioni o revoche.
+
+
+## Indicatore di fila condiviso — 22 ottobre 2026
+
+Su richiesta dell’utente, nel dettaglio dei blocchi dell’inaugurazione ogni
+fila ha una sola etichetta «Fila N» a sinistra e le sedie mostrano soltanto
+il proprio numero. Una fascia dedicata evita sovrapposizioni; la vista
+«Tutto il settore» conserva l’etichetta per ciascuna fila di ciascun blocco.
+Nomi accessibili e tooltip mantengono settore, blocco, fila, sedia e stato;
+tabella accessibile e riepiloghi restano completi. Nessuna modifica ai dati,
+alla numerazione, alle selezioni o alle regole di assegnazione/revoca.
+Nessuna migration necessaria.
+
+Verifiche: 1.043 test, lint, TypeScript e build production Webpack nella
+copia isolata senza credenziali operative. Browser sui componenti originali
+con PostgreSQL temporaneo: etichette uniche e allineate a sinistra, tutte le
+viste settore/blocco, desktop e mobile, zoom 75/100/200%; regressione di
+selezione, protocollo, famiglie, gruppi, F, QR, cronologia e revoche. Suite
+SQL/concorrenza superata. Ispezionate anche le schermate desktop/mobile.
+Nessuna assegnazione, revoca o presenza reale di collaudo.

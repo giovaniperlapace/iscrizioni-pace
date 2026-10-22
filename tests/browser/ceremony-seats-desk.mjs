@@ -43,9 +43,26 @@ try{
     return document.activeElement===el && y>=80 && y<=115;
    });
    assert.equal(await sectorDetail.getByRole('button',{name:new RegExp('^Settore '+name+' · Blocco .* · Fila ')}).count(),blockTotal);
+   assert.equal(await sectorDetail.getByText(/^Fila \d+$/).count(),blockTotal/10,'one row label per row, not per chair');
+   const firstChair=sectorDetail.getByRole('button',{name:new RegExp('^Settore '+name+' · Blocco '+block+' · Fila 1 · Sedia 1 ·')});
+   assert.equal(await firstChair.innerText(),'1');
+   for(const zoom of ['0.75','1','2']) {
+    await sectorDetail.getByRole('slider').press(zoom==='2'?'End':'Home');
+    if(zoom==='1') await sectorDetail.getByRole('slider').press('ArrowRight');
+    const positions=await sectorDetail.evaluate(el=>{
+     const label=Array.from(el.querySelectorAll('div')).find(x=>x.textContent==='Fila 1');
+     const chair=el.querySelector('button[aria-label*=" · Fila 1 · Sedia 1 ·"]');
+     const a=label.getBoundingClientRect(),b=chair.getBoundingClientRect();
+     return {labelRight:a.right,chairLeft:b.left,labelCenter:a.top+a.height/2,chairCenter:b.top+b.height/2};
+    });
+    assert.ok(positions.labelRight<=positions.chairLeft && Math.abs(positions.labelCenter-positions.chairCenter)<1,'row label stays to the left and vertically aligned at every zoom');
+   }
+   await sectorDetail.getByRole('slider').press('Home');
+   await sectorDetail.getByRole('slider').press('ArrowRight');
    await sectorDetail.getByRole('button',{name:'Tutto il settore',exact:true}).click();
    assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Dettaglio posti del settore');
    assert.equal(await sectorDetail.getByRole('button',{name:new RegExp('^Settore '+name+' · Blocco .* · Fila ')}).count(),total);
+   assert.equal(await sectorDetail.getByText(/^Fila \d+$/).count(),total/10,'whole-sector view retains a label for each row in each block');
    // Returning to the SAME block used to leave the entire sector displayed.
    await card.click();
    assert.equal(await sectorDetail.getByRole('button',{name:new RegExp('^Settore '+name+' · Blocco .* · Fila ')}).count(),blockTotal);

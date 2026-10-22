@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Posti cerimonie: fila a sinistra del blocco — 2026-10-22
+
+- Dettaglio inaugurazione: etichetta «Fila N» una sola volta a sinistra di
+  ogni fila, anche nella vista dell’intero settore; sedie con il solo numero.
+  Riferimento completo conservato in aria-label, tooltip e tabella accessibile.
+- Solo presentazione: UUID, numeri, selezione, protocollo e assegnazioni
+  invariati; nessuna migration. Collaudo sintetico desktop/mobile e zoom
+  75/100/200%, regressione dei flussi originali, 1.043 test, lint, TypeScript
+  e build production superati. Dettagli nel verbale posti cerimonie.
+
 ## Posti cerimonie: B unico, cronologia esplicita e revoca dalla sedia — 2026-10-22
 
 - B1/B2 riuniti nel solo B: 600 posti, sei blocchi, file 1–10 senza rinumerare.
