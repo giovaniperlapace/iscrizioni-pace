@@ -439,3 +439,9 @@ viste settore/blocco, desktop e mobile, zoom 75/100/200%; regressione di
 selezione, protocollo, famiglie, gruppi, F, QR, cronologia e revoche. Suite
 SQL/concorrenza superata. Ispezionate anche le schermate desktop/mobile.
 Nessuna assegnazione, revoca o presenza reale di collaudo.
+
+Codice `53b0d62` su main; deployment production
+`dpl_7D2fKNuQL1gubA9YTnFbc29sRRGh` READY sul dominio operativo. Browser
+pubblico: home 200, pagina Manager protetta con redirect al login, nessun
+errore JavaScript; nessun log error/fatal nel controllo del rilascio.
+Flussi autenticati collaudati sui componenti originali con SQL sintetico.
