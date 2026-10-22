@@ -100,3 +100,18 @@ La copia di rilascio con guardie ha verificato il corpo canonico precedente
 (MD5 `57e7529ce7a7b0a4e1d9ac97e1eb67bb`) e confrontato in una transazione
 REPEATABLE READ tutti i dati: 68 tabelle/204.006 righe invariate; metadati,
 owner e ACL di 225 funzioni invariati e nessun altro corpo modificato.
+
+## Etichette riferite agli ingressi
+
+Per la dashboard Forum/cerimonie, incluse modalità manuale e fotocamera,
+collaudo, selezione famiglie e modali scuola: «Ingresso confermato»,
+«Conferma ingresso», «Rimuovi ingresso», «Modifica ingressi» e relativi plurali.
+I componenti condivisi ricevono una scelta esplicita di terminologia, così
+l'accoglienza generale conserva i testi precedenti. I messaggi contenenti
+nomi reali dei Forum non vengono riscritti. Presenze dichiarate e relative
+regole restano concetti distinti dall’ingresso. Nessuna migration o variazione
+operativa; solo testi. Test esistenti e collaudo browser aggiornati alle label,
+compresa apertura/annullamento della finestra «Rimuovi ingresso».
+
+Su ulteriore richiesta rimossa la legenda esplicativa dalla console,
+conservando i colori dei messaggi e i relativi significati.

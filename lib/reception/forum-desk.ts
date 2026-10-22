@@ -20,5 +20,5 @@ export const DESK_MESSAGES: Record<string, string> = {
  panel_unavailable:"Forum non disponibile per le prenotazioni.", attendance_required:"Prima aggiorna e salva i giorni di presenza della persona nella gestione iscritti.",
  capacity_exceeded:"Posti esauriti per questa selezione. Aggiorna le disponibilità.", booking_conflict:"La persona è già prenotata a un altro Forum nella stessa fascia. Gestisci prima quella prenotazione.",
  waitlist:"È attiva una lista d’attesa: gestisci la prenotazione attraverso la coda esistente.", already_booked:"La persona ha già una prenotazione. Rileggi il codice per verificarla.",
- saved:"Prenotazione registrata. Rileggi il codice per confermare separatamente la presenza.",
+ saved:"Prenotazione registrata. Rileggi il codice per confermare separatamente l’ingresso.",
 };

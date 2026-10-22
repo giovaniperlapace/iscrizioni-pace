@@ -19,8 +19,8 @@ export function ForumReceptionWorkstation({eventId,choices,canManage,requestActi
   const duty=choices.find(item => item.key===selected);
   if(!choices.length) return <div className="surface-card grid gap-3 p-5"><p>Nessun incarico assegnato per l’evento corrente.</p>{canManage && <PendingLink className="underline" href="/dashboard/manager?section=ruoli">Assegna gli incarichi in Utenti e ruoli</PendingLink>}</div>;
   if(!mode) return <section className="surface-card grid gap-4 p-5"><h2 className="text-xl font-semibold">Scegli la postazione</h2><div className="grid gap-3 sm:grid-cols-2">
-    <button className="btn-secondary min-h-24 p-4 text-left" onClick={()=>setMode("phone")}><strong className="block">Telefono · scansione e presenze</strong>Verifica prenotazioni e biglietti all’ingresso.</button>
-    <button className="btn-secondary min-h-24 p-4 text-left" onClick={()=>setMode("computer")}><strong className="block">Computer · iscrizioni e presenze</strong>Inserisci il codice, prenota un posto disponibile e registra l’ingresso.</button>
+    <button className="btn-secondary min-h-24 p-4 text-left" onClick={()=>setMode("phone")}><strong className="block">Telefono · scansione e ingressi</strong>Verifica prenotazioni e biglietti all’ingresso.</button>
+    <button className="btn-secondary min-h-24 p-4 text-left" onClick={()=>setMode("computer")}><strong className="block">Computer · iscrizioni e ingressi</strong>Inserisci il codice, prenota un posto disponibile e registra l’ingresso.</button>
   </div></section>;
   if(!duty) return <section className="surface-card grid gap-4 p-5"><h2 className="text-xl font-semibold">Per quale Forum o cerimonia lavori?</h2><p>La fotocamera si aprirà dopo la scelta.</p>
     <label className="grid gap-1">Cerca incarico<input className="field min-h-12" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Numero o nome del Forum"/></label>
@@ -51,7 +51,7 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
       <button className="btn-secondary min-h-11 px-3" onClick={()=>setRefresh(value=>value+1)}>Aggiorna conteggi</button><p className="w-full text-xs text-slate-600">Gli ingressi registrati non indicano quante persone sono ancora nella sala.</p>
     </section>
     <div inert={deskBusy || undefined}><EventReceptionConsole duty={{key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
-    {mode==="computer" && <section className="surface-card grid gap-3 p-5"><h2 className="text-lg font-semibold">Prenota un posto</h2><p className="text-sm">Leggi il codice della persona, poi assegna una prenotazione. La presenza si conferma separatamente.</p>
+    {mode==="computer" && <section className="surface-card grid gap-3 p-5"><h2 className="text-lg font-semibold">Prenota un posto</h2><p className="text-sm">Leggi il codice della persona, poi assegna una prenotazione. L’ingresso si conferma separatamente.</p>
       {lookup ? <Desk key={`${lookup.kind}:${lookup.value}`} {...{eventId,duty,lookup,requestAction}} disabled={scanBusy} onBusy={setDeskBusy} onSaved={()=>setRefresh(value=>value+1)}/> : <p className="text-sm text-slate-600">Inserisci o scansiona prima il codice.</p>}
       {canManage && <div className="flex flex-wrap gap-4 text-sm"><PendingLink href="/dashboard/manager?section=iscritti" className="underline">Gestione partecipanti</PendingLink><PendingLink href="/dashboard/manager/nuovo" className="underline">Inserisci un nuovo partecipante</PendingLink></div>}
     </section>}

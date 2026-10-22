@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { receptionEntryCopy } from "@/lib/reception/entry-copy";
 import { GroupCeremonyPlaces } from "./group-ceremony-places";
 import { ceremonySeatText } from "@/lib/ceremonies/seat-projection";
 import type { ReceptionCommand } from "@/lib/reception/contracts";
@@ -48,29 +49,33 @@ export function PresenceSummary({ result }: { result: VerifiedReception }) {
   </div>;
 }
 
-export function PresenceRemovalDialog({ result, subjectIds, onConfirm, onDismiss }: {
+export function PresenceRemovalDialog({ result, subjectIds, onConfirm, onDismiss, entryTerminology = false }: {
+  entryTerminology?: boolean;
   result: Extract<VerifiedReception, { kind: "family" | "group" }>;
   subjectIds: string[];
   onConfirm: (ids: string[]) => void;
   onDismiss: () => void;
 }) {
+  const copy = (value: string) => receptionEntryCopy(value, entryTerminology);
   const selected = result.persons.filter(person => subjectIds.includes(person.id));
   const presentIds = selected.filter(person => person.checkedInAt).map(person => person.id);
   return <ReceptionOperationDialog onDismiss={onDismiss} showCloseButton={false}>
-    <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-semibold outline-none">Rimuovi presenza</h2>
-    <p>Confermi la rimozione della presenza per queste persone?</p>
-    <ul className="grid gap-2">{selected.map(person => <li key={person.id}><strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}{!person.checkedInAt && " · Presenza già rimossa"}</li>)}</ul>
+    <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-semibold outline-none">{copy("Rimuovi presenza")}</h2>
+    <p>{copy("Confermi la rimozione della presenza per queste persone?")}</p>
+    <ul className="grid gap-2">{selected.map(person => <li key={person.id}><strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}{!person.checkedInAt && copy(" · Presenza già rimossa")}</li>)}</ul>
     <button className="btn-primary min-h-12 px-4" disabled={!presentIds.length} onClick={() => onConfirm(presentIds)}>Conferma rimozione</button>
     <button className="btn-secondary min-h-12 px-4" onClick={onDismiss}>Annulla</button>
   </ReceptionOperationDialog>;
 }
 
-export function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
+export function PresenceSelection({ result, mode, onSubmit, onDismiss, entryTerminology = false }: {
+  entryTerminology?: boolean;
   result: Exclude<VerifiedReception, { kind: "room" }>;
   mode: ReceptionMode;
   onSubmit: (values: Pick<ReceptionCommand, "subjectIds" | "students" | "companions">, confirmed: boolean, cancelSchool?: boolean) => void;
   onDismiss: () => void;
 }) {
+  const copy = (value: string) => receptionEntryCopy(value, entryTerminology);
   const [selected, setSelected] = useState<string[]>(() => mode === "correct" && (result.kind === "family" || result.kind === "group") ? result.persons.filter(p => p.checkedInAt).map(p => p.id) : []);
   const [students, setStudents] = useState(mode === "correct" && result.kind === "school" ? String(result.students) : "");
   const [companions, setCompanions] = useState(mode === "correct" && result.kind === "school" ? String(result.companions) : "");
@@ -86,25 +91,25 @@ export function PresenceSelection({ result, mode, onSubmit, onDismiss }: {
     onSubmit((result.kind === "family" || result.kind === "group") ? { subjectIds: selected } : mode === "cancel" ? {} : { students: Number(students), companions: Number(companions) }, confirmed, cancelSchool);
   }}>
     {(result.kind === "family" || result.kind === "group") ? <fieldset className="grid gap-2">
-      <legend className="mb-2 font-medium">{mode === "cancel" ? "Seleziona gli ingressi da annullare" : "Seleziona le persone realmente presenti"}</legend>
+      <legend className="mb-2 font-medium">{mode === "cancel" ? "Seleziona gli ingressi da annullare" : copy("Seleziona le persone realmente presenti")}</legend>
       {result.kind === "group" && <div className="flex flex-wrap gap-2"><button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>{setSelected(result.persons.filter(p=>mode!=="enter" || !p.checkedInAt).map(p=>p.id));setConfirmed(false);}}>Seleziona tutto il gruppo</button><button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>{setSelected([]);setConfirmed(false);}}>Deseleziona tutti</button></div>}
       {result.persons.map(person => <label key={person.id} className="flex min-h-14 items-center gap-3 rounded-xl border border-[var(--peace-border)] p-3">
         <input type="checkbox" name="presentSubjects" value={person.id} className="h-6 w-6 shrink-0" checked={selected.includes(person.id)} disabled={(mode === "enter" && Boolean(person.checkedInAt)) || (person.eventCheckedIn === false && !person.checkedInAt)}
           onChange={event => { setSelected(ids => event.target.checked ? [...ids, person.id] : ids.filter(id => id !== person.id)); setConfirmed(false); }} />
-        <span className="min-w-0 break-words font-medium">{person.firstName} {person.lastName}{person.kind === "child" ? " · Minore" : ""}{mode === "enter" && person.checkedInAt ? " · Già presente" : ""}{person.eventCheckedIn === false ? " · Prima passare dall’accoglienza evento" : ""}</span>
+        <span className="min-w-0 break-words font-medium">{person.firstName} {person.lastName}{person.kind === "child" ? " · Minore" : ""}{mode === "enter" && person.checkedInAt ? copy(" · Già presente") : ""}{person.eventCheckedIn === false ? " · Prima passare dall’accoglienza evento" : ""}</span>
       </label>)}
       <p className="text-sm">{mode === "correct" ? "L’ingresso delle persone deselezionate verrà annullato." : mode === "enter" ? "Gli ingressi già registrati restano validi anche se deselezionati." : "Si annullano solo gli ingressi selezionati."}</p>
     </fieldset> : mode !== "cancel" && !cancelSchool && <div className="grid gap-3 sm:grid-cols-2">
-      <label className="grid gap-1 text-sm">Studenti presenti<input className="field min-h-12" type="number" inputMode="numeric" name="students" min={0} max={result.expectedStudents} step={1} required value={students} onChange={event => { setStudents(event.target.value); setConfirmed(false); }} /></label>
-      <label className="grid gap-1 text-sm">Accompagnatori presenti<input className="field min-h-12" type="number" inputMode="numeric" name="companions" min={0} max={result.expectedCompanions} step={1} required value={companions} onChange={event => { setCompanions(event.target.value); setConfirmed(false); }} /></label>
+      <label className="grid gap-1 text-sm">{copy("Studenti presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="students" min={0} max={result.expectedStudents} step={1} required value={students} onChange={event => { setStudents(event.target.value); setConfirmed(false); }} /></label>
+      <label className="grid gap-1 text-sm">{copy("Accompagnatori presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="companions" min={0} max={result.expectedCompanions} step={1} required value={companions} onChange={event => { setCompanions(event.target.value); setConfirmed(false); }} /></label>
     </div>}
     {mode === "correct" && result.kind === "school" && result.checkedInAt && <label className="flex min-h-14 items-center gap-3 text-sm">
       <input type="checkbox" className="h-6 w-6 shrink-0" checked={cancelSchool} onChange={event => { setCancelSchool(event.target.checked); setConfirmed(false); }} />Annulla tutto l’ingresso della scuola
     </label>}
     {mode === "correct" && (result.kind === "family" || result.kind === "group") && selected.length === 0 && result.persons.some(person => person.checkedInAt) && <p role="status" className="text-sm font-semibold">Salvando annullerai tutti gli ingressi attualmente registrati.</p>}
-    {mode !== "enter" && <label className="flex min-h-14 items-center gap-3 text-sm"><input type="checkbox" name="confirmCorrection" className="h-6 w-6 shrink-0" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Confermo {(mode === "cancel" || cancelSchool || ((result.kind === "family" || result.kind === "group") && selected.length === 0)) ? "l’annullamento degli ingressi indicati" : "la correzione delle presenze indicate"}.</label>}
+    {mode !== "enter" && <label className="flex min-h-14 items-center gap-3 text-sm"><input type="checkbox" name="confirmCorrection" className="h-6 w-6 shrink-0" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Confermo {(mode === "cancel" || cancelSchool || ((result.kind === "family" || result.kind === "group") && selected.length === 0)) ? "l’annullamento degli ingressi indicati" : copy("la correzione delle presenze indicate")}.</label>}
     <div className={`${result.kind === "group" ? "" : "sticky bottom-0"} flex flex-wrap gap-2 border-t border-[var(--peace-border)] bg-white py-3`}>
-      <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || !countsValid || (mode !== "enter" && !confirmed)}>{labels[mode]}</button>
+      <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || !countsValid || (mode !== "enter" && !confirmed)}>{copy(labels[mode])}</button>
       <button className="btn-secondary min-h-12 px-4" type="button" onClick={onDismiss}>Chiudi senza modifiche</button>
     </div>
   </form>;

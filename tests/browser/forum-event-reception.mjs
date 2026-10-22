@@ -91,8 +91,13 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByText(/Prenotazione registrata/).waitFor();
   assert.equal(psql('select count(*) from check_ins where registration_id=fw(107) and moment_id is not null;',true).trim(),'0');
   await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
-  await page.getByRole('button',{name:'Conferma partecipazione',exact:true}).click();
-  await page.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Conferma ingresso',exact:true}).click();
+  await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Rimuovi ingresso',exact:true}).click();
+  await page.getByRole('heading',{name:'Rimuovi ingresso',exact:true}).waitFor();
+  await page.getByText('Confermi la rimozione dell’ingresso per queste persone?',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Annulla',exact:true}).click();
+
   assert.equal(psql('select count(*) from check_ins where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null;',true).trim(),'1');
   await page.screenshot({path:'/tmp/pace-forum-events-desktop.png',fullPage:true});
   await page.getByRole('button',{name:'Cambia incarico'}).click();
@@ -151,7 +156,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.ok(overlayBox.height<80);
   await page.screenshot({path:'/tmp/pace-forum-camera-compact.png',fullPage:true});
   await cameraCard.getByRole('button',{name:'Segna entrata',exact:true}).click();
-  await cameraCard.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  await cameraCard.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   await page.waitForFunction(expected=>document.querySelector('[aria-label="Statistiche dell’incarico"]').textContent.includes(expected+' Entrati'),enteredBefore+1);
   assert.equal(await video.evaluate(el=>el.srcObject.getVideoTracks()[0].readyState),'live');
   assert.equal(await page.evaluate(()=>window.syntheticCameraCalls),cameraCalls);
@@ -201,7 +206,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
   await page.getByRole('alert').filter({hasText:'accoglienza generale non registrata'}).waitFor();
   await page.getByRole('button',{name:'Segna l’ingresso comunque',exact:true}).click();
-  await page.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Chiudi scheda',exact:true}).click();
   await page.getByLabel('Codice partecipante',{exact:true}).fill('F003');
   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
@@ -212,8 +217,8 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByText(/Prenotazione registrata/).waitFor();
   await page.getByLabel('Codice partecipante',{exact:true}).fill('F003');
   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
-  await page.getByRole('button',{name:'Conferma partecipazione',exact:true}).click();
-  await page.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Conferma ingresso',exact:true}).click();
+  await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Cambia incarico'}).click();
   await page.getByRole('button',{name:/Cerimonia d’apertura · Prova/}).click();
   await page.getByLabel('Codice partecipante',{exact:true}).fill('F006');
@@ -246,7 +251,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
   await page.getByRole('heading',{name:'Anna Prova',exact:true}).waitFor();
   await page.getByRole('button',{name:'Segna entrata',exact:true}).click();
-  await page.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:'/tmp/pace-forum-demo-phone.png',fullPage:true});
   const downloadPromise=page.waitForEvent('download');

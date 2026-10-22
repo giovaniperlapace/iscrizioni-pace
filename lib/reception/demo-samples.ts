@@ -14,14 +14,14 @@ export const DEMO_DUTIES: DutyOption[] = [
 ];
 
 const cases = [
-  {code:"F001", name:"Anna", scenario:"Prenotazione corretta", instruction:"Scegli Forum 1: verifica il nome e conferma la presenza.", forum:DEMO_FORUM_ONE},
+  {code:"F001", name:"Anna", scenario:"Prenotazione corretta", instruction:"Scegli Forum 1: verifica il nome e conferma l’ingresso.", forum:DEMO_FORUM_ONE},
   {code:"F002", name:"Bruno", scenario:"Forum sbagliato", instruction:"Scegli Forum 1: compare il rinvio al Forum 2. Passa al Forum 2 e ripeti la scansione.", forum:DEMO_FORUM_TWO},
   {code:"F003", name:"Carla", scenario:"Senza prenotazione", instruction:"Scegli Forum 1: compare il rinvio alla postazione iscrizioni. In modalità Computer puoi prenotare, rileggere e confermare l’ingresso."},
-  {code:"F004", name:"Diego", scenario:"Già presente", instruction:"Scegli Forum 1: la presenza è già confermata. Puoi provare anche la rimozione esplicita.", forum:DEMO_FORUM_ONE, entered:true},
-  {code:"F005", name:"Elena", scenario:"Adulto e minore", instruction:"Scegli Forum 1: Elena e il minore Luca sono prenotati. Selezionali separatamente per confermare le presenze.", forum:DEMO_FORUM_ONE, child:true},
+  {code:"F004", name:"Diego", scenario:"Ingresso già registrato", instruction:"Scegli Forum 1: l’ingresso è già confermato. Puoi provare anche la rimozione esplicita.", forum:DEMO_FORUM_ONE, entered:true},
+  {code:"F005", name:"Elena", scenario:"Adulto e minore", instruction:"Scegli Forum 1: Elena e il minore Luca sono prenotati. Selezionali separatamente per confermare gli ingressi.", forum:DEMO_FORUM_ONE, child:true},
   {code:"F006", name:"Fabio", scenario:"Biglietti cerimonie", instruction:"Scegli apertura: Settore Blu, fila A, posto 12. Scegli finale: Settore Verde, fila B, posto 8.", ceremony:true},
   {code:"F007", name:"Gaia", scenario:"Senza biglietto cerimonia", instruction:"Scegli apertura: nessun biglietto valido. In modalità Computer puoi assegnare un biglietto fittizio e poi rileggere."},
-  {code:"F008", name:"Irene", scenario:"QR non valido", instruction:"In qualsiasi incarico viene mostrato codice non valido. Non è possibile prenotare o registrare presenze.", invalid:true},
+  {code:"F008", name:"Irene", scenario:"QR non valido", instruction:"In qualsiasi incarico viene mostrato codice non valido. Non è possibile prenotare o registrare ingressi.", invalid:true},
   {code:"F009", name:"Marco", scenario:"Accoglienza generale mancante", instruction:"Scegli Forum 1: avviso giallo per accoglienza generale mancante. Segna l’ingresso comunque conferma solo questo Forum.", forum:DEMO_FORUM_ONE, eventMissing:true},
 ];
 export const DEMO_SAMPLES = cases.map((sample,index) => ({

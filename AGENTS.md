@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Accoglienza Forum: terminologia ingressi — 2026-10-22
+
+- Dashboard Forum/cerimonie e collaudo: conferma, rimozione, correzione,
+  selezione famiglie e quantità scuola usano «ingresso», mai «presenza»
+  per il check-in. Lessico circoscritto agli incarichi Forum/cerimonie;
+  accoglienza generale e presenze dichiarate conservano il proprio significato.
+- Rimossa su richiesta la spiegazione della legenda; colori degli esiti conservati.
+- Solo testi, nessuna migration o modifica a salvataggi/permessi.
+
 ## Accoglienza Forum: colori ed eccezione ingresso — 2026-10-22
 
 - Riquadro fotocamera fisso: nessuna riduzione al QR o alla conferma. Scheda

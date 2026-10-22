@@ -12,6 +12,7 @@ import { ReceptionCamera } from "./reception-camera";
 import { ReceptionUsbScanner } from "./reception-usb-scanner";
 import { PresenceSelection, PresenceRemovalDialog, ReceptionOperationDialog } from "./reception-presence-controls";
 import { receptionFeedbackTone, RECEPTION_TONES } from "@/lib/reception/feedback";
+import { receptionEntryCopy } from "@/lib/reception/entry-copy";
 import PendingLink from "@/components/pending-link";
 
 type Props = {
@@ -29,6 +30,8 @@ type Props = {
 
 export function EventReceptionConsole(props: Props) {
   const { commandAction, deviceMode = "computer", cameraSource, onChangeMode, onChangeDuty, onBusy } = props;
+  const entryTerminology = props.duty?.duty === "panel_entry" || props.duty?.duty === "ceremony_entry";
+  const copy = (value: string) => receptionEntryCopy(value, entryTerminology);
   const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, props.duty && props.duty.duty !== "event_entry" ? {duty: props.duty.duty, panelId: props.duty.panelId} : { duty: "event_entry" }, true));
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
   const [entry, setEntry] = useState<VerifiedReception | null>(null);
@@ -48,6 +51,7 @@ export function EventReceptionConsole(props: Props) {
   const correction = state.mode !== "enter";
   const multiple = result && (result.kind === "group" || result.kind === "family" && result.persons.length > 1);
   const problem = ["error", "uncertain", "blocked"].includes(state.phase);
+  const message = state.problem === "not_booked" ? state.message : copy(state.message);
   const missingTicket = result?.kind === "family" && result.persons.some(person => person.eligible === false && !person.checkedInAt);
   const missingEventEntry = (result?.kind === "family" && result.persons.some(person => person.eventCheckedIn === false && !person.checkedInAt)) || (result?.kind === "school" && result.eventCheckedIn === false && !result.checkedInAt);
   const feedbackTone = receptionFeedbackTone({problem: problem ? state.problem : undefined, wrongForum: state.wrongForum, missingTicket, missingEventEntry});
@@ -114,15 +118,15 @@ export function EventReceptionConsole(props: Props) {
   }
   const feedback = <>
     {state.phase === "pending" && <p role="status" className="font-semibold">{entry ? "Operazione in corso…" : "Lettura in corso…"}</p>}
-    {state.phase === "result" && state.result?.outcome !== "verified" && multiple && <p role="status" className="rounded-xl bg-green-100 p-3 font-semibold text-green-900">✓ {state.message === "Ingresso registrato." ? "Partecipazione confermata." : state.message}</p>}
+    {state.phase === "result" && state.result?.outcome !== "verified" && multiple && <p role="status" className="rounded-xl bg-green-100 p-3 font-semibold text-green-900">✓ {state.message === "Ingresso registrato." ? copy("Partecipazione confermata.") : message}</p>}
     {problem && <div role="alert" data-reception-tone={feedbackTone} className={`rounded-xl border p-4 ${RECEPTION_TONES[feedbackTone]}`}>
-      <p>{state.message}</p>
+      <p>{message}</p>
       {state.phase === "uncertain" && <button className="btn-primary mt-3 min-h-12 px-4" onClick={() => void retry()}>Riprova la stessa operazione</button>}
       {state.phase === "blocked" && <PendingLink href="/" className="mt-3 block underline">Torna all’accesso</PendingLink>}
       {state.phase === "error" && entry && <button className="btn-secondary mt-3 min-h-12 px-4" onClick={next}>Rileggi il codice</button>}
     </div>}
   </>;
-  const party = result && (result.kind === "family" || result.kind === "group") ? <ReceptionParty
+  const party = result && (result.kind === "family" || result.kind === "group") ? <ReceptionParty entryTerminology={entryTerminology}
     key={result.kind === "group" ? result.groupId : result.code} result={result} session={session}
     printing={deviceMode === "computer" && !!props.labelPrinting} labelCommandAction={props.labelCommandAction}
     compact={cameraVisible} allowEventEntryOverride={props.duty?.duty === "panel_entry"} disabled={locked || problem || correction} onBusyChange={changeBusy} feedback={feedback}
@@ -137,8 +141,8 @@ export function EventReceptionConsole(props: Props) {
         {feedback}
         {result.kind === "school" && <>
           {result.eventCheckedIn === false && !result.checkedInAt && <p role="alert" className="rounded-lg border border-yellow-500 bg-yellow-100 p-3 text-yellow-950">Accoglienza generale non registrata. Puoi confermare solo l’ingresso a questo Forum.</p>}
-          <p>{result.checkedInAt ? `Presenti: ${result.students} studenti e ${result.companions} accompagnatori` : "Ingresso non registrato"}</p>
-          <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt ? void session.editCurrent() : session.selectPresence(result.eventCheckedIn === false)}>{result.checkedInAt ? "Modifica presenze" : result.eventCheckedIn === false ? "Segna l’ingresso comunque" : "Registra presenze"}</button>
+          <p>{result.checkedInAt ? copy(`Presenti: ${result.students} studenti e ${result.companions} accompagnatori`) : "Ingresso non registrato"}</p>
+          <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt ? void session.editCurrent() : session.selectPresence(result.eventCheckedIn === false)}>{result.checkedInAt ? copy("Modifica presenze") : result.eventCheckedIn === false ? "Segna l’ingresso comunque" : copy("Registra presenze")}</button>
         </>}
       </>}
       {!cameraVisible && <button className="btn-secondary min-h-12 px-4" disabled={locked || state.phase === "selection"} onClick={next}>Chiudi scheda</button>}
@@ -174,22 +178,17 @@ export function EventReceptionConsole(props: Props) {
     </div>
     {!cameraVisible && !result && feedback}
     {!cameraVisible && resultCard}
-    <details className="surface-card p-3 text-sm"><summary className="cursor-pointer font-semibold">Legenda colori</summary><ul className="mt-3 grid gap-2">
-      <li className={`rounded-lg border p-2 ${RECEPTION_TONES.yellow}`}>Giallo: Forum sbagliato o accoglienza generale mancante.</li>
-      <li className={`rounded-lg border p-2 ${RECEPTION_TONES.orange}`}>Arancione: senza prenotazione o senza biglietto cerimonia.</li>
-      <li className={`rounded-lg border p-2 ${RECEPTION_TONES.red}`}>Rosso: QR non valido o errore che impedisce di proseguire.</li>
-      <li className={`rounded-lg border p-2 ${RECEPTION_TONES.green}`}>Verde: verifica riuscita o ingresso confermato.</li>
-    </ul></details>
+
     {result && scanHint}
-    {state.phase === "selection" && state.result && (state.result.kind === "family" || state.result.kind === "group") && state.mode === "cancel" && <PresenceRemovalDialog
+    {state.phase === "selection" && state.result && (state.result.kind === "family" || state.result.kind === "group") && state.mode === "cancel" && <PresenceRemovalDialog entryTerminology={entryTerminology}
       result={state.result} subjectIds={removalIds}
       onDismiss={() => session.closeSelection()}
       onConfirm={async ids => {
         await session.submit({ subjectIds: ids }, true);
       }} />}
     {state.phase === "selection" && state.result?.kind === "school" && <ReceptionOperationDialog onDismiss={() => session.closeSelection()}>
-      <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-bold outline-none">{correction ? "Modifica presenze" : "Presenze della scuola"}</h2>
-      <PresenceSelection key={`${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode} onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={() => session.closeSelection()} />
+      <h2 id="reception-operation-title" tabIndex={-1} className="text-xl font-bold outline-none">{correction ? copy("Modifica presenze") : copy("Presenze della scuola")}</h2>
+      <PresenceSelection entryTerminology={entryTerminology} key={`${state.result.revision}-${state.mode}`} result={state.result} mode={state.mode} onSubmit={(values, confirmed, cancelSchool) => void session.submit(values, confirmed, cancelSchool)} onDismiss={() => session.closeSelection()} />
     </ReceptionOperationDialog>}
     <details open className="surface-card group text-sm">
       <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-xl p-4 font-semibold transition hover:bg-[var(--peace-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--peace-blue-800)] [&::-webkit-details-marker]:hidden">
