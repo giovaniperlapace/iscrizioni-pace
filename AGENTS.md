@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Accoglienza Forum: esiti nella fotocamera — 2026-10-22
+
+- Esiti e comandi nella parte inferiore del riquadro video, anche dopo QR valido;
+  stream conservato durante conferma e salvataggio, letture concorrenti bloccate.
+- Iscrizione Forum verificata in verde, ingresso separato con «Segna entrata».
+  Selezione esplicita dei minori, retry e controlli canonici conservati.
+- Contatori per incarico: Iscritti (Assegnatari per cerimonie) ed Entrati,
+  riletti dopo salvataggio; nessuna migration o prova operativa remota.
+- Dettagli: `docs/accoglienza-forum-camera-2026-10-22.md`.
+
 ## Cerimonie: menu capogruppo e schede partecipante — 2026-10-22
 
 - Menu «Posti alle cerimonie» accanto ai Forum, sempre raggiungibile; schede

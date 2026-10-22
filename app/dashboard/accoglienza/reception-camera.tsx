@@ -10,11 +10,12 @@ const feedbackStyles = {
   error: "bg-red-800 text-white",
 };
 
-export function ReceptionCamera({ paused, feedback, feedbackTone = "progress", belowPreview, onCode, onNoCode, source = startQrCamera }: {
+export function ReceptionCamera({ paused, feedback, feedbackTone = "progress", belowPreview, overlay, onCode, onNoCode, source = startQrCamera }: {
   paused: boolean;
   feedback?: string;
   feedbackTone?: keyof typeof feedbackStyles;
   belowPreview?: ReactNode;
+  overlay?: ReactNode;
   onCode: (value: string) => void;
   onNoCode: () => void;
   source?: CameraSource;
@@ -64,6 +65,7 @@ export function ReceptionCamera({ paused, feedback, feedbackTone = "progress", b
     <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-2xl bg-slate-950">
       <video ref={video} muted playsInline autoPlay aria-label="Anteprima fotocamera" className="absolute inset-0 h-full w-full object-contain" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 border-white/80" aria-hidden="true" />
+      {overlay && <div data-camera-overlay className="absolute inset-x-2 bottom-2 max-h-[65%] overflow-y-auto overscroll-contain rounded-xl bg-white text-slate-950 shadow-lg">{overlay}</div>}
       {feedback && <p role="status" data-feedback-tone={feedbackTone} className={`pointer-events-none absolute inset-x-2 bottom-2 rounded-lg p-3 text-center font-semibold shadow-lg ${feedbackStyles[feedbackTone]}`}>{feedback}</p>}
     </div>
     {belowPreview}

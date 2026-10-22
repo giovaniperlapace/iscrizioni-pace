@@ -8,7 +8,8 @@ import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception
 import { useQrLabelPrinting } from "../qr-label-panel";
 type Party = Extract<VerifiedReception, { kind: "family" | "group" }>;
 
-export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, feedback }: {
+export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, feedback, compact = false }: {
+  compact?: boolean;
   result: Party; session: ReceptionStationSession; printing: boolean;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>; disabled: boolean; onBusyChange: (value: boolean) => void;
   onRemove: (ids: string[]) => void; feedback: ReactNode;
@@ -52,7 +53,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
   }
   return <div className="grid gap-4">
     {result.kind === "group" && <GroupCeremonyPlaces summary={result.groupCeremonies}/>}
-    {single ? <p role="status" className={`rounded-xl p-4 text-lg font-semibold ${allPresent ? "bg-green-100 text-green-900" : "bg-slate-100 text-slate-700"}`}>{allPresent ? "✓ Partecipazione confermata" : "Partecipazione non confermata"}</p> : <>
+    {single ? (!compact || allPresent) && <p role="status" className={`rounded-xl p-4 text-lg font-semibold ${allPresent ? "bg-green-100 text-green-900" : "bg-slate-100 text-slate-700"}`}>{allPresent ? "✓ Partecipazione confermata" : "Partecipazione non confermata"}</p> : <>
       <h4 className="font-semibold outline-none">Gestisci Presenze</h4>
       <p className="text-sm text-[var(--peace-muted)]">Seleziona le persone su cui agire. Conferma e rimozione sono due azioni distinte. Deselezionare una persona non rimuove la sua presenza.</p>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
@@ -73,7 +74,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
         })}
       </fieldset>
     </>}
-    {result.kind === "family" && result.persons.map(person => <div key={person.id} className="text-sm">
+    {result.kind === "family" && result.persons.map(person => (!!person.ceremonies?.length || person.eligible === false || person.eventCheckedIn === false) && <div key={person.id} className="text-sm">
       {!!person.ceremonies?.length && <p className="font-semibold">{person.firstName} {person.lastName}: {person.ceremonies.map(ceremonySeatText).join(" · ")}</p>}
       {person.eligible === false && <p className="text-amber-900">{person.firstName}: nessun biglietto valido per questa cerimonia. Rivolgiti alla postazione iscrizioni.</p>}
       {person.eventCheckedIn === false && <p className="text-amber-900">{person.firstName}: passa prima dall’accoglienza generale dell’evento.</p>}
@@ -82,7 +83,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
     {unavailable && <p className="text-sm text-amber-900">Uno dei QR selezionati non è stampabile. Puoi comunque registrare le presenze.</p>}
     <div className="grid gap-2 border-t border-slate-200 bg-white pt-3">
       {!single && <p className="text-sm">Selezione: {pendingIds.length} da confermare · {presentIds.length} già presenti.</p>}
-      <button className="btn-primary min-h-12 px-4" disabled={locked || !pendingIds.length} onClick={() => void act("presence")}>{single ? "Conferma partecipazione" : `Conferma partecipazione (${pendingIds.length})`}</button>
+      {!(compact && single && allPresent) && <button className="btn-primary min-h-12 px-4" disabled={locked || !pendingIds.length} onClick={() => void act("presence")}>{compact ? (single ? "Segna entrata" : `Segna entrata (${pendingIds.length})`) : single ? "Conferma partecipazione" : `Conferma partecipazione (${pendingIds.length})`}</button>}
       {result.persons.some(person => person.checkedInAt) && <button className="btn-secondary min-h-12 px-4" disabled={locked || !presentIds.length} onClick={() => onRemove(presentIds)}>{single ? "Rimuovi presenza" : `Rimuovi presenze selezionate (${presentIds.length})`}</button>}
       {printing && <button className="btn-secondary min-h-12 px-4" disabled={locked || !chosen.length || !!unavailable} onClick={() => void act("print")}>{result.kind === "group" ? "Stampa i QR delle persone selezionate" : "Stampa etichetta QR"}</button>}
       {single && printing && <span className="text-sm text-slate-600">Stampe richieste: {labels.queue?.items.find(item => item.registrationId === adultId)?.attempts ?? "—"}</span>}

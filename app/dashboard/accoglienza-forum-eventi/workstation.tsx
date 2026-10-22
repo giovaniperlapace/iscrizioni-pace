@@ -46,8 +46,8 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
     return result;
   },[eventId,deskBusy,requestAction]);
   return <div className="grid gap-4">
-    <section className="surface-card flex flex-wrap items-center gap-4 p-4" aria-label="Statistiche dell’incarico">
-      {stats ? <><p><strong>{stats.booked}</strong> {duty.kind==="panel"?"prenotati":"assegnatari"}</p><p><strong>{stats.entered}</strong> ingressi registrati</p></>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
+    <section className="surface-card flex flex-wrap items-center gap-4 p-4" aria-label="Statistiche dell’incarico" aria-live="polite">
+      {stats ? <><p><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p><strong>{stats.entered}</strong> Entrati</p></>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
       <button className="btn-secondary min-h-11 px-3" onClick={()=>setRefresh(value=>value+1)}>Aggiorna conteggi</button><p className="w-full text-xs text-slate-600">Gli ingressi registrati non indicano quante persone sono ancora nella sala.</p>
     </section>
     <div inert={deskBusy || undefined}><EventReceptionConsole duty={{key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>

@@ -39,6 +39,7 @@ export function EventReceptionConsole(props: Props) {
   const latch = useRef(new ScanLatch());
   const heading = useRef<HTMLHeadingElement>(null);
   const locked = busy || session.isLocked();
+  const cameraVisible = deviceMode === "phone" && !manual;
   const result = state.phase === "blocked" ? null : state.result ?? entry;
   useEffect(() => { onBusy?.(locked || state.phase === "selection"); }, [locked, state.phase, onBusy]);
   const correction = state.mode !== "enter";
@@ -61,7 +62,7 @@ export function EventReceptionConsole(props: Props) {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [locked]);
-  useEffect(() => { if (entry) heading.current?.focus(); }, [entry]);
+  useEffect(() => { if (entry && !cameraVisible) heading.current?.focus(); }, [entry, cameraVisible]);
 
   function changeBusy(value: boolean) { busyRef.current = value; setBusy(value); }
   async function inspect(lookup: ReceptionCommand["lookup"], replace = false) {
@@ -97,9 +98,23 @@ export function EventReceptionConsole(props: Props) {
   const party = result && (result.kind === "family" || result.kind === "group") ? <ReceptionParty
     key={result.kind === "group" ? result.groupId : result.code} result={result} session={session}
     printing={deviceMode === "computer" && !!props.labelPrinting} labelCommandAction={props.labelCommandAction}
-    disabled={locked || problem || correction} onBusyChange={changeBusy} feedback={feedback}
+    compact={cameraVisible} disabled={locked || problem || correction} onBusyChange={changeBusy} feedback={feedback}
     onRemove={ids => { setRemovalIds(ids); void session.removeCurrent(); }}
   /> : null;
+
+  const resultCard = result && <div className={`surface-card grid gap-3 ${cameraVisible ? "p-3" : "p-5 sm:p-7"}`}>
+      <h3 ref={heading} tabIndex={-1} className={`break-words font-bold outline-none ${cameraVisible ? "text-lg" : "text-2xl"}`}>{result.kind === "group" ? result.groupName : result.kind === "family" ? `${result.persons[0]?.firstName} ${result.persons[0]?.lastName}` : result.kind === "school" ? `${result.schoolName} · ${result.classDescription}` : result.label}</h3>
+      {(props.duty?.duty === "panel_entry" || props.duty?.duty === "ceremony_entry") && (result.kind !== "family" || result.persons.every(person => person.eligible !== false)) && state.phase === "result" && state.result?.outcome === "verified" && <p role="status" className="rounded-xl bg-green-100 p-3 font-semibold text-green-900">✓ {props.duty.duty === "panel_entry" ? "Iscrizione al Forum verificata." : "Biglietto per la cerimonia verificato."}</p>}
+      {!cameraVisible && result.kind === "family" && <p className="text-sm text-slate-600">{result.code}</p>}
+      {party ?? <>
+        {feedback}
+        {result.kind === "school" && <>
+          <p>{result.checkedInAt ? `Presenti: ${result.students} studenti e ${result.companions} accompagnatori` : "Ingresso non registrato"}</p>
+          <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt ? void session.editCurrent() : session.selectPresence()}>{result.checkedInAt ? "Modifica presenze" : "Registra presenze"}</button>
+        </>}
+      </>}
+      <button className="btn-secondary min-h-12 px-4" disabled={locked || state.phase === "selection"} onClick={next}>{deviceMode === "computer" ? "Chiudi scheda" : "Scansiona un altro QR"}</button>
+    </div>;
 
   return <section className="mx-auto grid w-full max-w-3xl gap-4" aria-labelledby="reception-title">
     <header className="flex flex-wrap items-center justify-between gap-2">
@@ -109,10 +124,10 @@ export function EventReceptionConsole(props: Props) {
         {onChangeDuty && <button className="min-h-11 underline" disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeDuty}>Cambia incarico</button>}
       </div>
     </header>
-    <div hidden={!!result || problem && state.phase !== "error"}>
+    <div hidden={!cameraVisible && (!!result || problem && state.phase !== "error")}>
       <div className="surface-card grid gap-4 p-4">
         {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
-          <ReceptionCamera source={cameraSource} paused={locked || !!entry} onCode={value => {
+          <ReceptionCamera source={cameraSource} overlay={resultCard || feedback} paused={locked || !!entry} onCode={value => {
             if (!entry && session.canScan() && latch.current.accept(value)) void inspect({ kind: "qr", value });
           }} onNoCode={() => { if (!entry && session.canScan()) latch.current.absent(); }} /> :
           <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void inspect({ kind: code.startsWith("G:") || code.length === 43 ? "qr" : "code", value: code }); setCode(""); }}>
@@ -125,19 +140,8 @@ export function EventReceptionConsole(props: Props) {
         </button>
       </div>
     </div>
-    {!result && feedback}
-    {result && <div className="surface-card grid gap-4 p-5 sm:p-7">
-      <h3 ref={heading} tabIndex={-1} className="break-words text-2xl font-bold outline-none">{result.kind === "group" ? result.groupName : result.kind === "family" ? `${result.persons[0]?.firstName} ${result.persons[0]?.lastName}` : result.kind === "school" ? `${result.schoolName} · ${result.classDescription}` : result.label}</h3>
-      {result.kind === "family" && <p className="text-sm text-slate-600">{result.code}</p>}
-      {party ?? <>
-        {feedback}
-        {result.kind === "school" && <>
-          <p>{result.checkedInAt ? `Presenti: ${result.students} studenti e ${result.companions} accompagnatori` : "Ingresso non registrato"}</p>
-          <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt ? void session.editCurrent() : session.selectPresence()}>{result.checkedInAt ? "Modifica presenze" : "Registra presenze"}</button>
-        </>}
-      </>}
-      <button className="btn-secondary min-h-12 px-4" disabled={locked || state.phase === "selection"} onClick={next}>{deviceMode === "computer" ? "Chiudi scheda" : "Scansiona un altro QR"}</button>
-    </div>}
+    {!cameraVisible && !result && feedback}
+    {!cameraVisible && resultCard}
     {result && scanHint}
     {state.phase === "selection" && state.result && (state.result.kind === "family" || state.result.kind === "group") && state.mode === "cancel" && <PresenceRemovalDialog
       result={state.result} subjectIds={removalIds}
