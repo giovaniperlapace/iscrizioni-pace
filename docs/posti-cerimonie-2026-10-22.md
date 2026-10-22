@@ -409,4 +409,13 @@ dopo il backup, con guardie collaudate anche sul DB sintetico. Confrontate
 62 tabelle estranee, 157.950 righe canoniche invariate, ACL di 220 funzioni e
 68 tabelle/RLS, policy e trigger; conservate le assegnazioni, i claim, le nomine,
 gli UUID e il contenuto delle mappe storiche. Modificate soltanto le funzioni
-previste e la configurazione B. Deployment da verificare dopo il push.
+previste e la configurazione B. Lettura Manager della RPC in transazione poi
+annullata: revisione 6, mappa 3, otto settori, B 600, 3.140 sedie, zero claim e
+cronologia vuota (nessuna assegnazione reale creata per il collaudo).
+
+Codice `75e20d1` su main; deployment production
+`dpl_4rAcsKcrB6XMdi4GjiaRAeaKsHVQ` READY e dominio operativo assegnato senza errori.
+Browser sul dominio: home 200, Manager protetto con redirect al login, nessun
+errore JavaScript. Log error/fatal vuoti nel controllo del rilascio. Flussi
+autenticati verificati sul componente originale con SQL sintetico; nessuna
+sessione operativa reale usata per effettuare assegnazioni o revoche.

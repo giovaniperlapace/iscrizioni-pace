@@ -172,4 +172,3 @@ begin
    ) order by e.created_at desc,e.id desc) from selected e),'[]'::jsonb)) into result from totals t;
  return result;
 end $$;
-

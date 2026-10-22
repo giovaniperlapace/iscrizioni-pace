@@ -18,7 +18,10 @@
   aggiornamento atomico; rilasci delle riserve visibili nella cronologia.
 - 1.043 test, lint, TypeScript, build production, SQL/concorrenza e browser
   sintetico desktop/mobile; verificati rinnovo cookie e numero finito di letture.
-  Nessuna assegnazione, revoca, presenza o invio reale di prova. Verbale:
+  Migration applicata dopo backup: dati estranei/assegnazioni e ACL conservati;
+  live revisione 6, mappa 3, otto settori. Codice `75e20d1` su main, production
+  READY e dominio verificato. Nessuna assegnazione, revoca, presenza o invio
+  reale di prova. Verbale:
   `docs/posti-cerimonie-2026-10-22.md`.
 
 ## Posti cerimonie: navigazione e cronologia con revoche — 2026-10-22
