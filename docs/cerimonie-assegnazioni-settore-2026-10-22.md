@@ -154,3 +154,8 @@ salvataggio reale senza appartenenza che si arresta prima dell’accesso service
 Browser sui componenti originali a 390/1440px nelle sette lingue: due sezioni,
 icone, attesa e assegnazioni, menu e filtro dotazioni per cerimonia, nessun
 overflow orizzontale. Nessuna assegnazione reale di collaudo.
+
+Codice `f697a69` su main, deployment `dpl_6cJgMeEetfWt1usrsygNJCSZX5Co`
+production READY e dominio assegnato. Home 200 e accessi capogruppo per entrambe
+le cerimonie, dashboard partecipante e pagina personale protetti dal login;
+nessun errore JavaScript né log error/fatal nel controllo del rilascio.

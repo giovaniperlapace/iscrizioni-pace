@@ -10,6 +10,7 @@
   e figli, attesa prima dell’assegnazione, errore distinto da vuoto; sette lingue.
   RPC personale canonica e caricamento indipendente. Nessuna migration.
 - 1.056 test, lint, TypeScript, build isolata e browser 390/1440px superati.
+  Codice `f697a69` production READY, dominio e percorsi protetti verificati.
   Nessuna assegnazione reale di prova. Dettagli nel verbale cerimonie per settore.
 
 ## Cerimonie: assegnazione al settore — 2026-10-22
