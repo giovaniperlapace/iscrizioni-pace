@@ -14,7 +14,7 @@
 - UUID delle sedie conservati: spostamento grafico sicuro, rinumerazione o
   rimozione di posti occupati bloccata. Etichette fisiche ancora da concordare.
 - Migration `20261022120000` in produzione dopo backup verificato: 68 tabelle,
-  191.862 righe e ACL di 216 funzioni conservati. 1.034 test, lint, TypeScript,
+  191.862 righe e ACL di 216 funzioni conservati. 1.035 test, lint, TypeScript,
   build pulita, SQL/concorrenza e browser originale con DB temporaneo superati.
   Nessuna assegnazione reale di collaudo. Verbale:
   `docs/posti-cerimonie-2026-10-22.md`.

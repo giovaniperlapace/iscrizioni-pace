@@ -56,7 +56,7 @@ La futura etichetta fisica è ancora da concordare: proposta
 
 ## Verifiche
 
-- 1.034 test applicativi, lint e TypeScript superati.
+- 1.035 test applicativi, lint e TypeScript superati.
 - Build production Webpack in copia isolata senza credenziali reali, con
   `npm ci` dal lockfile.
 - PostgreSQL temporaneo: migrazioni complete e applicazione protetta della
@@ -90,3 +90,13 @@ Backup custom completo verificato con `pg_restore --list` e decodifica integrale
 La revisione con una sessione browser reale Manager/Admin e le etichette
 fisiche restano da svolgere con chi gestirà la sala. Il collaudo sintetico non
 viene presentato come una revisione autenticata in produzione.
+
+Prima pubblicazione automatica da `main`: codice `9b1bf06`, deployment
+`dpl_GR1tnD3b5SkTNy2bY3c9QuYUkLYN` **READY**. Lettura canonica live come
+Manager: 11 settori, 3.140 sedie, nessuna directory globale/storia nel payload,
+revisione 4 e nessuna assegnazione reale creata dal collaudo.
+
+Rifinitura successiva dello stesso rilascio: selezione inaugurazione/finale
+conservata espandendo il menu; comandi disabilitati durante il salvataggio.
+Ripetuti con successo browser completo su database temporaneo e test
+applicativi (1.035), lint e TypeScript.

@@ -576,7 +576,7 @@ export default async function ManagerDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <ManagerSidebar activeSection={activeSection} navMode={navMode} report={statisticsReport} canManage={canManage} />
+          <ManagerSidebar kind={params.kind === "closing" ? "closing" : "opening"} activeSection={activeSection} navMode={navMode} report={statisticsReport} canManage={canManage} />
 
           <div className="grid min-w-0 gap-6">
             <GroupAssignmentReports dashboard="manager" eventId={currentEventId} />
@@ -780,11 +780,13 @@ export default async function ManagerDashboardPage({
 }
 
 function ManagerSidebar({
+  kind = "opening",
   activeSection,
   navMode,
   report,
   canManage,
 }: {
+  kind?: "opening" | "closing";
   activeSection: ManagerSection;
   navMode: ManagerNavMode;
   report: StatisticsReport;
@@ -866,7 +868,7 @@ function ManagerSidebar({
           Manager
         </span>
         <Link
-          href={`/dashboard/manager?section=${activeSection}&nav=${nextMode}${activeSection === "dashboard" ? `&report=${report}` : ""}`}
+          href={`/dashboard/manager?section=${activeSection}&nav=${nextMode}${activeSection === "dashboard" ? `&report=${report}` : activeSection === "cerimonie" ? `&kind=${kind}` : ""}`}
           prefetch={false}
           aria-label={toggleLabel}
           title={toggleLabel}

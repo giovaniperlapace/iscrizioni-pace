@@ -613,7 +613,7 @@ export default async function AdminDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <AdminSidebar activeSection={activeSection} navMode={navMode} report={statisticsReport} />
+          <AdminSidebar kind={params.kind === "closing" ? "closing" : "opening"} activeSection={activeSection} navMode={navMode} report={statisticsReport} />
 
           <div className="grid min-w-0 gap-6">
             <GroupAssignmentReports dashboard="admin" eventId={currentEventId} />
@@ -1256,10 +1256,12 @@ export default async function AdminDashboardPage({
 }
 
 function AdminSidebar({
+  kind = "opening",
   activeSection,
   navMode,
   report,
 }: {
+  kind?: "opening" | "closing";
   activeSection: AdminSection;
   navMode: AdminNavMode;
   report: StatisticsReport;
@@ -1340,7 +1342,7 @@ function AdminSidebar({
           Admin
         </span>
         <Link
-          href={`${adminPath(activeSection, nextMode)}${activeSection === "dashboard" ? `&report=${report}` : ""}`}
+          href={`${adminPath(activeSection, nextMode)}${activeSection === "dashboard" ? `&report=${report}` : activeSection === "cerimonie" ? `&kind=${kind}` : ""}`}
           prefetch={false}
           aria-label={toggleLabel}
           title={toggleLabel}

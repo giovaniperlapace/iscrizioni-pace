@@ -132,3 +132,9 @@ test("foreign manager and cumulative viewer cannot reach current-event panel loa
     assert.deepEqual(f.reads, ["current-event"]);
   }
 });
+
+test("ceremony selection survives expanding the sidebar", () => {
+ const f=fixture([]);
+ const html=renderToStaticMarkup(f.ManagerSidebar({activeSection:"cerimonie",navMode:"mini",canManage:true,report:"territory",kind:"closing"}));
+ assert.match(html,/section=cerimonie&amp;nav=full&amp;kind=closing/);
+});
