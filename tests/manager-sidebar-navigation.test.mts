@@ -25,6 +25,6 @@ test("manager menu navigation always closes the sidebar", () => {
     /href: "\/dashboard\/manager\?section=[a-z]+&nav=mini"/g
   );
 
-  assert.equal(menuLinks?.length, 8);
+  assert.equal(menuLinks?.length, 9);
   assert.doesNotMatch(managerSidebar, /href: `[^`]*nav=\$\{navMode\}`/);
 });

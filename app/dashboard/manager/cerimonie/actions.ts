@@ -4,6 +4,7 @@ import { createCeremonyManagerClient as createSupabaseServerClient } from "@/lib
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { executeCeremony } from "@/lib/ceremonies/service";
 export async function saveCeremony(form: FormData) {
+  if (!["allocate", "revoke"].includes(String(form.get("operation")))) return { status: "forbidden" };
   const result = await executeCeremony(
     await createSupabaseServerClient(),
     createSupabaseServiceClient,

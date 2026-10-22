@@ -11,6 +11,9 @@ export function CeremonySeatMap({
   sectors,
   claims,
   allocationId,
+  selectableSeatIds,
+  showOverview = true,
+  initialBlock = "",
   selected,
   onSelect,
   disabled,
@@ -21,6 +24,9 @@ export function CeremonySeatMap({
   sectors: SeatMapView["sectors"];
   claims: SeatMapView["claims"];
   allocationId: string;
+  selectableSeatIds?: string[];
+  showOverview?: boolean;
+  initialBlock?: string;
   selected: string[];
   onSelect: (id: string) => void;
   disabled: boolean;
@@ -28,7 +34,7 @@ export function CeremonySeatMap({
 }) {
   const c = SEAT_MAP_COPY[locale];
   const opening = layoutKey === "assisi-opening-2026";
-  const [block, setBlock] = useState("");
+  const [block, setBlock] = useState(initialBlock);
   const [table, setTable] = useState(false),
     [zoom, setZoom] = useState(1),
     [sector, setSector] = useState(""),
@@ -72,19 +78,19 @@ export function CeremonySeatMap({
   const width = Math.max(400, ...visible.map((s) => s.x - minX + 65)),
     height = Math.max(160, ...visible.map((s) => s.y - minY + 65));
   const sectorOnly = sectors.find(s => s.id === sector)?.numbered === false;
-  const showDetail = !opening || !!sector || !!block || !!query || table;
+  const showDetail = !showOverview || !opening || !!sector || !!block || !!query || table;
   const canSelect = (s: MapSeat) =>
     !disabled &&
     !s.blocked &&
-    (!claimById.has(s.id) ||
-      claimById.get(s.id)?.allocationId === allocationId);
+    (selectableSeatIds ? selectableSeatIds.includes(s.id) : (!claimById.has(s.id) ||
+      claimById.get(s.id)?.allocationId === allocationId));
   const label = (s: MapSeat) =>
     `${sectorById.get(s.sectorId)} · ${c.row} ${s.row} · ${c.number} ${s.number} · ${c[state(s)]}`;
   return (
     <section className="grid min-w-0 gap-3" aria-label={c.map}>
-      {opening && <OpeningHallOverview seats={seats} sectors={sectors} claims={claims} onBlock={(id, key) => {setSector(id);setBlock(key);setQuery("");setPage(0);}} />}
+      {opening && showOverview && <OpeningHallOverview seats={seats} sectors={sectors} claims={claims} onBlock={(id, key) => {setSector(id);setBlock(key);setQuery("");setPage(0);}} />}
       {block && <div className="flex flex-wrap items-center gap-3"><strong>Dettaglio {block}</strong><button type="button" className="btn-secondary min-h-11 px-3" onClick={() => {setBlock("");setPage(0);}}>Tutti i blocchi</button></div>}
-      {sectorOnly && <p className="rounded-lg bg-blue-50 p-4">Questo settore non ha posti numerati. Assegna una quantità al gruppo oppure un posto alla persona in Preparazione e quote; non occorre scegliere una sedia.</p>}
+      {sectorOnly && <p className="rounded-lg bg-blue-50 p-4">Questo settore non ha posti numerati. Assegna una quantità al gruppo oppure un posto alla persona; non occorre scegliere una sedia.</p>}
       <div className="flex flex-wrap gap-3">
         <label className="grid gap-1">
           {c.sector}

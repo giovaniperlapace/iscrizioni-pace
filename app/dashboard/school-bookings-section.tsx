@@ -77,13 +77,13 @@ export function SchoolBookingsSection({ sourceSection = "panel", dashboard, navM
   );
 }
 
-export function PanelTabs({ dashboard, navMode, active, canManage = false }: { canManage?: boolean; dashboard: "admin" | "manager"; navMode: "full" | "mini"; active: "panels" | "schools" | "locations" }) {
+export function PanelTabs({ dashboard, navMode, active }: { canManage?: boolean; dashboard: "admin" | "manager"; navMode: "full" | "mini"; active: "panels" | "schools" | "locations" }) {
   const tabs = [
     { key: "locations", label: "Location", Icon: MapPin },
     { key: "panels", label: "Forum", Icon: CalendarDays },
     { key: "schools", label: "Scuole", Icon: School },
   ] as const;
-  return <div className="mt-5 flex gap-1 overflow-x-auto border-b border-[var(--peace-border)]">{tabs.map(({ key, label, Icon }) => <Link key={key} href={`/dashboard/${dashboard}?section=panel&panelView=${key}&nav=${navMode}`} className={`inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-semibold ${active === key ? "border-[var(--peace-blue-800)] text-[var(--peace-blue-800)]" : "border-transparent text-[var(--peace-muted)] hover:text-[var(--peace-blue-800)]"}`}><Icon className="size-4" aria-hidden="true" />{label}</Link>)}{canManage && <Link prefetch={false} href="/dashboard/manager/cerimonie" className="inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-semibold text-[var(--peace-muted)] hover:text-[var(--peace-blue-800)]"><CalendarDays className="size-4" aria-hidden="true"/>Cerimonie</Link>}</div>;
+  return <div className="mt-5 flex gap-1 overflow-x-auto border-b border-[var(--peace-border)]">{tabs.map(({ key, label, Icon }) => <Link key={key} href={`/dashboard/${dashboard}?section=panel&panelView=${key}&nav=${navMode}`} className={`inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-semibold ${active === key ? "border-[var(--peace-blue-800)] text-[var(--peace-blue-800)]" : "border-transparent text-[var(--peace-muted)] hover:text-[var(--peace-blue-800)]"}`}><Icon className="size-4" aria-hidden="true" />{label}</Link>)}</div>;
 }
 
 function SchoolBookingTable({ sourceSection, rows, total, dashboard, navMode, filters }: { sourceSection: SchoolSourceSection; rows: SchoolBookingRow[]; total: number; dashboard: "admin" | "manager"; navMode: "full" | "mini"; filters: SchoolBookingFilters }) {

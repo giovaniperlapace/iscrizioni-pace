@@ -169,3 +169,15 @@ Codice `8b77f1b` su main, production READY e dominio verificato.
 Dettagli e limiti nel [verbale accoglienza](accoglienza-forum-eventi-2026-10-21.md).
 Le statistiche del proprio incarico sono disponibili; la revisione generale
 delle statistiche rimane il punto successivo del piano.
+
+## Aggiornamento posti cerimonie — 22 ottobre
+
+La piantina dell'inaugurazione è configurata dal 21 ottobre. Su nuova indicazione
+dell'utente, la gestione operativa passa alla voce laterale «Posti cerimonie»:
+solo assegnazioni a iscritti, famiglie e delegazioni; struttura e numerazione
+restano manutenzione concordata attraverso ChatGPT. Tutti gli iscritti attivi
+sono assegnabili, con priorità alla presenza domenica pomeriggio; pagine da 100
+e filtri globali. Le etichette fisiche si concordano con l'allestimento prima
+della stampa. Non riprendere automaticamente l'editor web o l'obbligo di
+presenza dichiarata per i biglietti delle cerimonie. Dettagli e verifiche nel
+[verbale del 22 ottobre](posti-cerimonie-2026-10-22.md).

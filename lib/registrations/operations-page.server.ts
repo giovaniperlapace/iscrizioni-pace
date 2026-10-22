@@ -34,6 +34,8 @@ type IndexRow = {
 
 export type OperationsPageRequest = {
   event: { id: string; title: string; starts_on?: string | null };
+  activeRegistrationsOnly?: boolean;
+  priorityAttendanceSlot?: { day: string; part: string };
   actorId: string;
   canManage: boolean;
   dashboard: "admin" | "manager";
@@ -80,7 +82,7 @@ export async function loadOperationsParticipantPage(db: SupabaseClient, request:
     loadAllRows((from, to) => db.from("operational_tags").select("id,event_id,label,color").eq("event_id", event.id).order("label").order("id").range(from, to)),
     loadAllRows((from, to) => db.from("event_services").select("id,event_id,label,description,is_active,public_order").eq("event_id", event.id).order("public_order").order("label").order("id").range(from, to)),
   ]);
-  const allRows: OperationsParticipantRow[] = (index as unknown as IndexRow[]).map(registration => {
+  const allRows: OperationsParticipantRow[] = (index as unknown as IndexRow[]).filter(r => !request.activeRegistrationsOnly || ["submitted", "confirmed"].includes(r.status ?? "")).map(registration => {
     const p = registration.participants;
     const geography = participantGeography(p);
     const contact = [...(p?.participant_contacts ?? [])].sort((a, b) => a.id.localeCompare(b.id)).at(-1);
@@ -106,7 +108,7 @@ export async function loadOperationsParticipantPage(db: SupabaseClient, request:
       tags: participantTags, tagIds: participantTags.map(tag => tag.id), childrenCount: registration.registration_children.length, children: [],
     };
   });
-  if (hasAttendanceFilters(filters)) {
+  if (hasAttendanceFilters(filters) || request.priorityAttendanceSlot) {
     const attendance = await loadAttendanceSummaries(db, allRows.map(row => row.registrationId));
     for (const row of allRows) row.attendance = attendance.get(row.registrationId) ?? [];
   }
@@ -125,6 +127,11 @@ export async function loadOperationsParticipantPage(db: SupabaseClient, request:
     if (sortAccessibility) row.accessibility = sortAccessibility.get(row.registrationId);
   }
   const ordered = sortOperationsParticipants(filtered, preferences, event.starts_on ?? null, locale, id => internalSexText(sortSexes?.[id], locale));
+  if (request.priorityAttendanceSlot) {
+    const slot = request.priorityAttendanceSlot;
+    const priority = (row: OperationsParticipantRow) => Number(row.attendance?.some(a => a.day === slot.day && (slot.part === "day" || !a.day_part || a.day_part === slot.part) && a.choice === "yes") ?? false);
+    ordered.sort((a, b) => priority(b) - priority(a));
+  }
   const { rows, ...page } = paginateParticipants(ordered, params.participantPage ?? null);
   const selected = allRows.find(row => row.registrationId === params.edit);
   const detailRows = selected && !rows.some(row => row.registrationId === selected.registrationId) ? [...rows, selected] : rows;

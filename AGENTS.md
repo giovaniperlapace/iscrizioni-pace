@@ -1,5 +1,24 @@
 # AGENTS.md
 
+## Posti cerimonie: sola assegnazione — 2026-10-22
+
+- Voce laterale autonoma Admin/Manager con icona sedia; rimossa dal menu Forum.
+  Vecchie pagine reindirizzate. Configurazione, settori, quote e piantina si
+  modificano tramite manutenzione concordata con ChatGPT, non dalla UI web.
+- Tutti gli iscritti attivi assegnabili, con precedenza globale alla presenza
+  dichiarata nella fascia della cerimonia; per apertura domenica pomeriggio.
+  Ricerca/filtri prima delle pagine da 100; figli selezionati nominalmente.
+- Percorsi posto → persona e persona → famiglia; più posti a una delegazione,
+  poi nomine dei suoi membri. F solo settore. Salvataggio atomico e retry
+  idempotente; Viewer esclusi, ruolo evento riletto. Presenze Forum invariate.
+- UUID delle sedie conservati: spostamento grafico sicuro, rinumerazione o
+  rimozione di posti occupati bloccata. Etichette fisiche ancora da concordare.
+- Migration `20261022120000` in produzione dopo backup verificato: 68 tabelle,
+  191.862 righe e ACL di 216 funzioni conservati. 1.034 test, lint, TypeScript,
+  build pulita, SQL/concorrenza e browser originale con DB temporaneo superati.
+  Nessuna assegnazione reale di collaudo. Verbale:
+  `docs/posti-cerimonie-2026-10-22.md`.
+
 ## Accoglienza: ordine persone del gruppo — 2026-10-21
 
 - Accoglienza e lista stampa QR nel menu Gruppi Manager/Admin: elenco unico,

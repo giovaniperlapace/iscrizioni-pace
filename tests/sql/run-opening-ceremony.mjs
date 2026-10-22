@@ -25,14 +25,14 @@ try {
  for(const name of readdirSync('supabase/migrations').filter(x=>x.endsWith('.sql')).sort()) {
   if(name==='20260813170000_rename_anziani_and_amici_groups.sql')continue;
   const guard=process.argv.find(x=>x.startsWith('--guarded-migration='))?.slice('--guarded-migration='.length);
-  if(guard && name==='20261021180000_opening_ceremony_layout.sql') {
+  if(guard && name===(process.argv.find(x=>x.startsWith('--guarded-name='))?.slice('--guarded-name='.length)??'20261021180000_opening_ceremony_layout.sql')) {
    psql('create schema if not exists supabase_migrations;create table if not exists supabase_migrations.schema_migrations(version text primary key,name text,statements text[]);');
    file(guard);continue;
   }
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
- for (const name of ['ceremony-allocations','ceremony-distribution','ceremony-seat-maps','opening-ceremony-layout']) {
+ for (const name of ['ceremony-allocations','ceremony-distribution','ceremony-seat-maps','opening-ceremony-layout','ceremony-seats-desk']) {
    try { console.log(file(`tests/sql/${name}.sql`).split('\n').filter(line=>line.includes('PASS')).join('\n')); }
    catch(e) {throw new Error(`${name}: ${e.stderr}`);}
  }
@@ -41,16 +41,28 @@ try {
   psql(`select prepare_opening_ceremony_layout(f(1),f(33),-1);
    select save_ceremony(f(1),f(33),'opening',(select revision from ceremony_plans where kind='opening'),'configure','{"location":"Synthetic hall","capacity":3540,"startsAt":"2026-10-25T16:30","endsAt":"2026-10-25T19:00","state":"validated","attendancePart":"afternoon"}');
    select set_ceremony_map(f(1),f(33),(select id from ceremony_plans where kind='opening'),(select revision from ceremony_plans where kind='opening'),f(9990),'publish',jsonb_build_object('versionId',(select id from ceremony_map_versions where state='draft')));`);
-  if(exportFile) writeFileSync(exportFile,psql(`select jsonb_build_object('snapshot',get_ceremony(f(1),f(33),'opening'),'map',get_ceremony_map(f(1),f(33),(select id from ceremony_plans where kind='opening')));`,true).trim());
+  if(exportFile) writeFileSync(exportFile,psql(`select jsonb_build_object('snapshot',get_ceremony(f(1),f(33),'opening'),'desk',get_ceremony_seats_desk(f(1),f(33),'opening'),'map',get_ceremony_map(f(1),f(33),(select id from ceremony_plans where kind='opening')));`,true).trim());
  }
  psql(`delete from event_attendance_choices where registration_id in(f(10),f(11));insert into event_attendance_choices(registration_id,day,day_part,choice) values(f(10),'2026-10-25','afternoon','yes'),(f(11),'2026-10-25','afternoon','yes');
   update ceremony_quotas set quantity=1 where sector_id=(select id from ceremony_sectors where layout_code='A1');`);
  const revision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
  const concurrent=sql=>new Promise((resolve,reject)=>{const child=spawn(join(bin,'psql'),[...args,'-tA'],{stdio:['pipe','pipe','pipe']});let out='',err='';child.stdout.on('data',x=>out+=x);child.stderr.on('data',x=>err+=x);child.on('error',reject);child.on('exit',code=>code===0?resolve(out.trim()):reject(Error(err)));child.stdin.end(sql);});
- const race=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select save_ceremony(f(1),f(${actor}),'opening',${revision},'allocate',jsonb_build_object('id',f(${9970+i}),'quotaId',(select q.id from ceremony_quotas q join ceremony_sectors s on s.id=q.sector_id where s.layout_code='A1'),'registrationId',f(${i===0?10:11}),'childId',${i===0?'f(40)':'null'},'quantity',1))->>'status';`)));
+ const race=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select assign_ceremony_seats(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${revision},f(${9970+i}),jsonb_build_object('action','assign','sectorId',(select id from ceremony_sectors where layout_code='A1'),'quantity',1,'seatIds',jsonb_build_array((select s->>'id' from ceremony_map_versions v,jsonb_array_elements(v.seats) s where v.state='published' and (s->>'sectorId')::uuid=(select id from ceremony_sectors where layout_code='A1') limit 1)),'subjects',jsonb_build_array(jsonb_build_object('registrationId',f(${i===0?10:11}),'childId',${i===0?'f(40)':'null'}))))->>'status';`)));
  assert.equal(race.filter(x=>x==='saved').length,1);assert.equal(race.filter(x=>x==='conflict').length,1);
  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'1');
- console.log('PASS current Manager/Admin race: one final seat, one save, one conflict, one nominal assignment');
+ assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null and nominee_id is not null",true).trim(),'1');
+ console.log('PASS atomic desk Manager/Admin race: one final chair, one save, one conflict, one nominal assignment');
+ const browserBase=process.argv.find(x=>x.startsWith('--browser-base='))?.slice('--browser-base='.length);
+ if(browserBase) {
+  psql(`truncate ceremony_seat_claims,ceremony_nominees,ceremony_allocations,ceremony_map_requests,ceremony_distribution_requests cascade;
+   update ceremony_quotas set quantity=100 where sector_id=(select id from ceremony_sectors where layout_code='A1');
+   insert into groups(id,event_id,name,is_active) values('11111111-1111-4111-8111-111111111111',f(1),'Delegazione prova',true);
+   delete from event_attendance_choices where registration_id in(f(10),f(11));`);
+  execFileSync(process.execPath,['tests/browser/ceremony-seats-desk.mjs',browserBase,process.env.CEREMONY_BROWSER_ROOT],{env:{...process.env,CEREMONY_TEST_SOCKET:dir},stdio:'inherit'});
+  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'3');
+  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'2');
+  assert.equal(psql("select quantity from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111'",true).trim(),'3');
+ }
  console.log('PASS complete ceremony migrations and SQL regression on disposable PostgreSQL');
 } finally {
  if(started)execFileSync(join(bin,'pg_ctl'),['-D',join(dir,'data'),'-m','immediate','-w','stop'],{stdio:'pipe'});

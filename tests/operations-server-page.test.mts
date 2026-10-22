@@ -138,3 +138,21 @@ test("shared comparator matches previous per-comparison Italian collation for ev
     assert.deepEqual(sortOperationsParticipants(participants, preferences, "2026-10-25", "it"), old, `${column}/${direction}`);
   }
 });
+
+test("ceremony directory prioritizes the exact declared slot globally and retains undeclared attendees", async () => {
+  const { db, tables } = operationsPageDatabase(1203);
+  tables.event_attendance_choices.push({ id: 'priority', registration_id: fixtureId(1202), day: '2026-10-25', day_part: 'afternoon', choice: 'yes' });
+  tables.event_attendance_choices.push({ id: 'unknown-other-day', registration_id: fixtureId(1202), day: '2026-10-26', day_part: 'morning', choice: 'unknown' });
+  tables.registrations[0].status = 'cancelled';
+  const options = { activeRegistrationsOnly: true, priorityAttendanceSlot: {day:'2026-10-25',part:'afternoon'} };
+  const first = await loadOperationsParticipantPage(db, request({}, options));
+  assert.equal(first.serverPage?.total,1202);
+  assert.equal(first.participants[0].registrationId,fixtureId(1202));
+  assert.equal(first.participants[1].registrationId,fixtureId(1));
+  assert.equal(first.participants.length,100);
+  const second = await loadOperationsParticipantPage(db, request({participantPage:'2'},options));
+  assert.equal(second.participants[0].registrationId,fixtureId(100));
+  const filtered = await loadOperationsParticipantPage(db, request({q:'P1201'}, options));
+  assert.equal(filtered.participants[0].registrationId,fixtureId(1201));
+  assert.equal(filtered.serverPage?.total,1);
+});

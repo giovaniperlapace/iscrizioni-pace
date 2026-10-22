@@ -32,14 +32,14 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
     parseOperationsDashboardFilters: () => ({}),
     redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); },
     permanentRedirect: (url: string) => { throw new Error(`PERMANENT:${url}`); },
-    Link: "a", DeskMicrophoneIcon: "svg", FileDown: "svg", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
+    Link: "a", ChairIcon: "svg", DeskMicrophoneIcon: "svg", FileDown: "svg", BarChart3: "svg", Users: "svg", Mail: "svg", ShieldCheck: "svg", Network: "svg", Settings: "svg",
   };
   const api = new Function(...Object.keys(deps), `${js}; return {ManagerDashboardPage, ManagerSidebar};`)(...Object.values(deps));
   return { ...api, reads };
 }
 
 const deniedParams = [
-  ...["email", "ruoli", "gruppi", "impostazioni", "servizi", "panel"].map(section => ({ section })),
+  ...["email", "ruoli", "gruppi", "impostazioni", "servizi", "panel", "cerimonie"].map(section => ({ section })),
   { groupTool: "links" }, { groupId: "group" }, { groupLinkToken: "secret" },
   { roleSaved: "1" }, { serviceId: "service" },
 ];
@@ -73,7 +73,7 @@ test("manager rights belong to the current event and global admin remains unrest
     [{ role: "manager", eventId: "current" }, { role: "manager_viewer", eventId: "current" }],
   ]) {
     const f = fixture(roles);
-    for (const section of ["dashboard", "esportazioni", "iscritti", "panel", "email", "ruoli", "gruppi", "impostazioni"]) {
+    for (const section of ["dashboard", "esportazioni", "iscritti", "cerimonie", "panel", "email", "ruoli", "gruppi", "impostazioni"]) {
       assert.deepEqual(await f.ManagerDashboardPage({ searchParams: Promise.resolve({ section }) }), { canManage: true, activeSection: section });
     }
   }
@@ -92,7 +92,7 @@ test("both sidebar modes render only the allowed read-only viewer menu items", (
       const html = renderToStaticMarkup(f.ManagerSidebar({ activeSection: "dashboard", navMode, canManage, report: "territory" }));
       const menu = html.slice(html.indexOf("<nav"));
       const sections = [...menu.matchAll(/href="\/dashboard\/manager\?section=([a-z]+)&amp;nav=mini"/g)].map(match => match[1]);
-      assert.deepEqual(sections, canManage ? ["dashboard", "esportazioni", "iscritti", "panel", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "esportazioni", "iscritti"]);
+      assert.deepEqual(sections, canManage ? ["dashboard", "esportazioni", "cerimonie", "iscritti", "panel", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "esportazioni", "iscritti"]);
     }
   }
 });

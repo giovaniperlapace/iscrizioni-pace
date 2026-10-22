@@ -1,3 +1,5 @@
+import { ChairIcon } from "@/components/chair-icon";
+import { CeremonySeatsSection } from "@/app/dashboard/ceremony-seats-section";
 import { receptionRoleRows } from "@/lib/reception/role-rows.server";
 import { GroupReceptionQr } from "@/app/dashboard/capogruppo/qr-gruppo/group-qr";
 import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
@@ -198,6 +200,7 @@ type ManagerPageProps = {
     tag?: string;
     q?: string;
     nav?: string;
+    kind?: string;
     section?: string;
     stat?: string;
     report?: string;
@@ -409,7 +412,7 @@ type OperationalUserRoleAssignment = {
 };
 
 
-type ManagerSection = "panel" | "esportazioni" | "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
+type ManagerSection = "cerimonie" | "panel" | "esportazioni" | "dashboard" | "iscritti" | "impostazioni" | "email" | "ruoli" | "gruppi";
 type ManagerNavMode = "full" | "mini";
 
 export default async function ManagerDashboardPage({
@@ -611,6 +614,7 @@ export default async function ManagerDashboardPage({
 
             {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
+            {activeSection === "cerimonie" ? <CeremonySeatsSection params={params} dashboard="manager" navMode={navMode} /> : null}
             {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
                 searchParams={params}
@@ -810,6 +814,7 @@ function ManagerSidebar({
       label: "Esportazioni",
       help: "Presenze per gruppo in Excel",
     },
+    { key: "cerimonie", href: "/dashboard/manager?section=cerimonie&nav=mini", Icon: ChairIcon, label: "Posti cerimonie", help: "Assegna posti a persone, famiglie e delegazioni" },
     {
       key: "iscritti",
       href: "/dashboard/manager?section=iscritti&nav=mini",
@@ -1124,6 +1129,7 @@ function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>
   if (
     params.section === "esportazioni" ||
     params.section === "dashboard" ||
+    params.section === "cerimonie" ||
     params.section === "iscritti" ||
     params.section === "impostazioni" ||
     params.section === "panel" ||

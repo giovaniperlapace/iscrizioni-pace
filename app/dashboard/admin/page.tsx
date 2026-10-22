@@ -1,3 +1,5 @@
+import { ChairIcon } from "@/components/chair-icon";
+import { CeremonySeatsSection } from "@/app/dashboard/ceremony-seats-section";
 import { receptionRoleRows } from "@/lib/reception/role-rows.server";
 import { GroupReceptionQr } from "@/app/dashboard/capogruppo/qr-gruppo/group-qr";
 import { loadOperationsParticipantPage, usesServerParticipantPage } from "@/lib/registrations/operations-page.server";
@@ -184,6 +186,7 @@ type AdminPageProps = {
     tag?: string;
     q?: string;
     nav?: string;
+    kind?: string;
     section?: string;
     stat?: string;
     report?: string;
@@ -456,7 +459,7 @@ type OperationalUserRoleAssignment = {
 };
 
 
-type AdminSection = "panel" | "esportazioni" | "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
+type AdminSection = "cerimonie" | "panel" | "esportazioni" | "impostazioni" | "dashboard" | "iscritti" | "email" | "ruoli" | "gruppi";
 type AdminNavMode = "full" | "mini";
 
 export default async function AdminDashboardPage({
@@ -654,6 +657,7 @@ export default async function AdminDashboardPage({
 
             {activeSection === "esportazioni" ? <ExportsSection eventId={currentEventId} /> : null}
 
+            {activeSection === "cerimonie" ? <CeremonySeatsSection params={params} dashboard="admin" navMode={navMode} /> : null}
             {activeSection === "iscritti" && !participantSchoolsView ? (
               <OperationsParticipantsSection
                 searchParams={params}
@@ -1284,6 +1288,7 @@ function AdminSidebar({
       label: "Esportazioni",
       help: "Presenze per gruppo in Excel",
     },
+    { key: "cerimonie", href: `/dashboard/admin?section=cerimonie&nav=${navMode}`, Icon: ChairIcon, label: "Posti cerimonie", help: "Assegna posti a persone, famiglie e delegazioni" },
     {
       key: "iscritti",
       href: adminPath("iscritti", navMode),
@@ -2668,6 +2673,7 @@ function resolveAdminSection(input: { section?: string; openingSaved?: string; o
     input.section === "esportazioni" ||
     input.section === "impostazioni" ||
     input.section === "dashboard" ||
+    input.section === "cerimonie" ||
     input.section === "iscritti" ||
     input.section === "panel" ||
     input.section === "email" ||

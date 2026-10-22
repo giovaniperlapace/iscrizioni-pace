@@ -24,6 +24,7 @@ async function save(mode: "manager" | "leader", input: unknown) {
   return result;
 }
 export async function saveManagerMap(input: unknown) {
+  if (input && typeof input === "object" && "operation" in input && ["draft", "publish"].includes(String(input.operation))) return { status: "forbidden" };
   return save("manager", input);
 }
 export async function saveLeaderMap(input: unknown) {

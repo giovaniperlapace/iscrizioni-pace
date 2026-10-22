@@ -22,7 +22,7 @@ do $$ declare v jsonb;layout jsonb;p uuid;rev integer;n uuid;other_n uuid;total 
  assert ms(33,'configure','{"location":"Synthetic map hall","capacity":4,"startsAt":"2026-10-25T10:00","endsAt":"2026-10-25T11:00","state":"validated","attendancePart":"day"}')->>'status'='saved';
  select id into p from ceremony_plans where event_id=f(1) and kind='opening';
  assert ms(33,'sector',jsonb_build_object('id',f(9110),'name','North','capacity',4))->>'status'='saved';
- assert ms(31,'quota',jsonb_build_object('id',f(9120),'sectorId',f(9110),'category','Guests','quantity',3))->>'status'='saved';
+ assert ms(33,'quota',jsonb_build_object('id',f(9120),'sectorId',f(9110),'category','Guests','quantity',3))->>'status'='saved';
  assert ms(31,'allocate',jsonb_build_object('id',f(9130),'quotaId',f(9120),'groupId',f(9100),'quantity',2))->>'status'='saved';
  assert ms(31,'allocate',jsonb_build_object('id',f(9131),'quotaId',f(9120),'groupId',f(9101),'quantity',1))->>'status'='saved';
  assert set_ceremony_nominee(f(1),f(36),'assign',f(9130),f(10),f(40),null,(select revision from ceremony_plans where id=p),f(9200))->>'status'='saved';
@@ -68,7 +68,7 @@ do $$ declare v jsonb;layout jsonb;p uuid;rev integer;n uuid;other_n uuid;total 
  assert mm(31,'release',payload,9207)->>'status'='seats_active';
  begin perform set_ceremony_nominee(f(1),f(31),'revoke',null,null,null,n,(select revision from ceremony_plans where id=p),f(9207));raise exception 'E2 dropped seat';exception when sqlstate 'P1303' then null;end;
  begin perform ms(31,'revoke',jsonb_build_object('id',f(9131)));raise exception 'E1 dropped seats';exception when sqlstate 'P1303' then null;end;
- begin perform ms(31,'quota',jsonb_build_object('id',f(9120),'sectorId',f(9110),'category','Guests','quantity',4));raise exception 'quota exceeded mapped seats';exception when sqlstate 'P1304' then null;end;
+ begin perform ms(33,'quota',jsonb_build_object('id',f(9120),'sectorId',f(9110),'category','Guests','quantity',4));raise exception 'quota exceeded mapped seats';exception when sqlstate 'P1304' then null;end;
  -- Occupied seat cannot be relabeled, even though all quantitative capacity fits.
  assert mm(33,'draft',jsonb_build_object('title','Unsafe relabel','seats',jsonb_set(layout,'{0,number}','"9"')),9207)->>'status'='saved';
  v:=get_ceremony_map(f(1),f(33),p,'manager');

@@ -19,7 +19,7 @@ do $$ declare v jsonb; n uuid; rev integer; total bigint; begin
  select count(*) into total from check_ins;
  assert cs(33,'configure','{"location":"Opening","capacity":10,"startsAt":"2026-10-25T10:00","endsAt":"2026-10-25T11:00","state":"validated","attendancePart":"day"}')->>'status'='saved';
  assert cs(33,'sector',jsonb_build_object('id',f(8100),'name','North','capacity',10))->>'status'='saved';
- assert cs(31,'quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Guests','quantity',10))->>'status'='saved';
+ assert cs(33,'quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Guests','quantity',10))->>'status'='saved';
  assert cs(31,'allocate',jsonb_build_object('id',f(8300),'quotaId',f(8200),'groupId',f(8001),'quantity',1))->>'status'='saved';
  assert cs(31,'allocate',jsonb_build_object('id',f(8301),'quotaId',f(8200),'groupId',f(8002),'quantity',2))->>'status'='saved';
  v:=get_ceremony_distribution(f(1),f(36),'leader');

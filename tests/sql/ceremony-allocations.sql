@@ -22,8 +22,8 @@ do $$ declare v jsonb; n integer; q jsonb; c jsonb; rev integer; before_checkins
  assert v->'plan'->'capacity'='null'::jsonb;
  assert (select bool_and(p->>'eligibility'='unknown') from jsonb_array_elements(v->'people') p);
  assert cs(33,'opening','sector',jsonb_build_object('id',f(8100),'name','North','capacity',2))->>'status'='saved';
- assert cs(31,'opening','quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Delegations','quantity',3))->>'status'='capacity';
- assert cs(31,'opening','quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Delegations','quantity',2))->>'status'='saved';
+ assert cs(33,'opening','quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Delegations','quantity',3))->>'status'='capacity';
+ assert cs(33,'opening','quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Delegations','quantity',2))->>'status'='saved';
  q:=jsonb_build_object('id',f(8300),'quotaId',f(8200),'groupId',f(8000),'quantity',1);
  assert cs(31,'opening','allocate',q)->>'status'='unconfigured';
  assert cs(33,'opening','configure','{"location":"Opening real venue","capacity":2,"startsAt":"2026-10-25T10:00","endsAt":"2026-10-25T11:00","state":"validated","attendancePart":"morning"}')->>'status'='saved';
@@ -32,13 +32,15 @@ do $$ declare v jsonb; n integer; q jsonb; c jsonb; rev integer; before_checkins
  assert (select count(distinct m.location_id)=2 from ceremony_plans p join event_moments m on m.id=p.moment_id where p.event_id=f(1));
  assert (select bool_and(not m.is_public and not m.check_in_enabled and m.moment_type='general') from ceremony_plans p join event_moments m on m.id=p.moment_id);
  assert cs(33,'closing','sector',jsonb_build_object('id',f(8101),'name','Square','capacity',300))->>'status'='saved';
- begin perform cs(31,'opening','quota',jsonb_build_object('id',f(8201),'sectorId',f(8101),'category','Cross','quantity',1));raise exception 'cross ceremony sector accepted';exception when invalid_parameter_value then null;end;
+ begin perform cs(33,'opening','quota',jsonb_build_object('id',f(8201),'sectorId',f(8101),'category','Cross','quantity',1));raise exception 'cross ceremony sector accepted';exception when invalid_parameter_value then null;end;
  assert cs(31,'opening','allocate',q)->>'status'='saved';
  assert cs(31,'opening','allocate',q)->>'status'='duplicate';
- assert cs(31,'opening','allocate',jsonb_build_object('id',f(8301),'quotaId',f(8200),'registrationId',f(11),'quantity',1))->>'status'='ineligible';
+ -- Undeclared attendees are now allowed; revoke explicitly to preserve later capacity checks.
+ assert cs(31,'opening','allocate',jsonb_build_object('id',f(8399),'quotaId',f(8200),'registrationId',f(11),'quantity',1))->>'status'='saved';
+ assert cs(31,'opening','revoke',jsonb_build_object('id',f(8399)))->>'status'='saved';
  assert cs(31,'opening','allocate',jsonb_build_object('id',f(8301),'quotaId',f(8200),'registrationId',f(10),'quantity',1))->>'status'='saved';
  assert cs(31,'opening','allocate',jsonb_build_object('id',f(8302),'quotaId',f(8200),'registrationId',f(10),'quantity',1))->>'status'='duplicate';
- assert cs(31,'opening','quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Delegations','quantity',1))->>'status'='capacity';
+ assert cs(33,'opening','quota',jsonb_build_object('id',f(8200),'sectorId',f(8100),'category','Delegations','quantity',1))->>'status'='capacity';
  assert cs(33,'opening','sector',jsonb_build_object('id',f(8100),'name','North','capacity',1))->>'status'='capacity';
  assert cs(33,'opening','sector',jsonb_build_object('id',f(8102),'name','South','capacity',1))->>'status'='capacity';
  c:='{"location":"Changed","capacity":2,"startsAt":"2026-10-25T10:00","endsAt":"2026-10-25T11:00","state":"validated","attendancePart":"morning"}';

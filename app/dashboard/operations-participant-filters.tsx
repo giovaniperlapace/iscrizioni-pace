@@ -12,8 +12,9 @@ const OVERLAY_PARAMS = ["edit", "editMode", "groupId", "groupLinkGroupId", "grou
 const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-100)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50";
 
 export function OperationsParticipantFilters({
-  filters, groupOptions, eventServices, operationalTags, dashboard, navMode, withoutGroup, attendanceColumns = [],
+  filters, groupOptions, eventServices, operationalTags, dashboard, navMode, withoutGroup, attendanceColumns = [], section = "iscritti",
 }: Pick<OperationsParticipantsSnapshot, "filters" | "groupOptions" | "eventServices" | "operationalTags"> & {
+  section?: "iscritti" | "cerimonie";
   dashboard: "admin" | "manager";
   navMode: "mini" | "full";
   withoutGroup: boolean;
@@ -43,7 +44,7 @@ export function OperationsParticipantFilters({
     params.delete("status");
     params.delete("participantPage");
     if (reset) params.delete("stat");
-    params.set("section", "iscritti");
+    params.set("section", section);
     params.set("nav", navMode);
     for (const name of FILTER_NAMES) {
       if (normalized[name] === EMPTY_FILTERS[name]) params.delete(name);
@@ -63,9 +64,9 @@ export function OperationsParticipantFilters({
         event.preventDefault();
         applyFilters(draft);
       }}>
-      <input type="hidden" name="section" value="iscritti" />
+      <input type="hidden" name="section" value={section} />
       <input type="hidden" name="nav" value={navMode} />
-      {["view", "stat", "columns", "sort", "direction"].map(name => searchParams.has(name)
+      {["view", "stat", "columns", "sort", "direction", "kind"].map(name => searchParams.has(name)
         ? <input key={name} type="hidden" name={name} value={searchParams.get(name)!} /> : null)}
       <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <label className="grid gap-1 text-sm">
