@@ -12,6 +12,7 @@ export type StationState = {
   lookup: ReceptionLookup | null;
   retry: ReceptionCommand | null;
   message: string;
+  wrongForum?: boolean;
   problem?: Exclude<ReceptionResult["status"], "valid">;
 };
 const messages = {
@@ -57,6 +58,7 @@ export class ReceptionStationSession {
   private timeoutMs: number;
   private active = true;
   private explicitPresence: boolean;
+  private eventEntryOverride = false;
   private context: Pick<ReceptionCommand, "duty" | "panelId">;
   constructor(commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>, requestId: () => string, timeoutMs = 20000, context: Pick<ReceptionCommand, "duty" | "panelId"> = { duty: EVENT_RECEPTION_DUTY }, explicitPresence = false) {
     this.explicitPresence = explicitPresence && context.duty !== "room_assistance";
@@ -80,8 +82,9 @@ export class ReceptionStationSession {
     if (this.isLocked()) return;
     this.update({ phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
-  selectPresence() {
+  selectPresence(overrideMissingEventEntry = false) {
     if (!this.explicitPresence || this.state.phase !== "result" || !this.state.result || this.state.result.kind === "room") return;
+    this.eventEntryOverride = overrideMissingEventEntry && this.context.duty === "panel_entry";
     this.update({ phase: "selection", mode: "enter", message: "" });
   }
   closeSelection() {
@@ -160,7 +163,7 @@ export class ReceptionStationSession {
     if (cancelAll && this.state.result.kind === "school") values = {};
     const command: ReceptionCommand = {
       ...this.context, ...(this.state.result.kind === "group" ? { groupSnapshot: this.state.result.snapshot } : {}), lookup: this.state.lookup, action, requestId: this.requestId(), ...values,
-      ...(this.state.mode === "enter" ? {} : {
+      ...(this.state.mode === "enter" ? (this.eventEntryOverride ? { reason: "event_entry_override" as const } : {}) : {
         expectedRevision: this.state.result.revision,
         reason: action === "cancel" ? "entry_cancelled" : (this.state.result.kind === "family" || this.state.result.kind === "group") ? "selection_error" : "count_error",
       }),
@@ -191,6 +194,7 @@ export class ReceptionStationSession {
         phase: response.status === "unavailable" ? "uncertain" : response.status === "forbidden" ? "blocked" : "error",
         result: null,
         recent: response.status === "forbidden" ? [] : response.status === "invalid" ? this.state.recent.filter(item => item.lookup.kind !== command.lookup.kind || item.lookup.value !== command.lookup.value) : this.state.recent,
+        wrongForum: response.status === "not_booked" && !!response.routes?.length,
         problem: response.status, retry: response.status === "unavailable" ? command : null, message: response.status === "conflict" && this.state.mode !== "enter" ? this.explicitPresence ? "Un altro operatore ha aggiornato le presenze. Premi Rileggi il codice e controlla lo stato prima di riprovare." : "Un altro operatore ha aggiornato le presenze. Riapri Modifica presenze dalle ultime letture per verificare i dati aggiornati." : response.status === "not_booked" && response.routes?.length ? `Non è prenotato per questo Forum. È prenotato per: ${response.routes.map(item => item.title + (item.room ? ` · ${item.room}` : "")).join("; ")}.` : messages[response.status],
       });
       return;

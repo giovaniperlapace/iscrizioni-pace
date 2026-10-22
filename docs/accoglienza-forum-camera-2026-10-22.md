@@ -61,3 +61,42 @@ il video e la fascia di esito inferiore a 80px; screenshot mobile ispezionato.
 Restano verificati stream live, salvataggio esplicito, contatori, dissolvenza,
 riarmo senza rilettura del QR fermo, revoche e assenza di chiamate operative
 nel collaudo. Nessuna migration o scrittura operativa remota.
+
+## Revisione finale: riquadro fisso, colori ed ingresso comunque
+
+Su nuova richiesta il riquadro mantiene dimensioni fisse: superata la riduzione
+a 10rem descritta sopra. La scheda resta sotto il video, con animazione di
+comparsa e dissolvenza dopo il salvataggio. Legenda espandibile in tutti gli
+incarichi: giallo per Forum sbagliato e accoglienza generale mancante; arancione
+per assenza di prenotazione o biglietto cerimonia; rosso per QR invalido e
+altri errori bloccanti; verde per verifiche e ingressi riusciti. Il Forum
+sbagliato usa i riferimenti strutturati della risposta, non il testo del messaggio.
+
+Per la mancanza della sola accoglienza generale compare «Segna l’ingresso
+comunque». Il comando riusa la RPC canonica con motivo `event_entry_override`,
+ammesso soltanto per `panel_entry`/`enter`. La selezione nominale adulti/minori
+resta esplicita; per le scuole rimangono le quantità nei limiti prenotati.
+L’ingresso generale non viene creato: la deroga riguarda soltanto il Forum.
+La RPC ricontrolla sotto lock incarico, evento, token, iscrizione, prenotazione,
+capienza e persone/quantità. Motivo incluso nel fingerprint e nell’audit;
+retry incerto identico, nessuna deroga su annullamento o correzione.
+
+Verificati 1.059 test applicativi, TypeScript/build e lint dei file modificati.
+SQL temporaneo: ingresso normale rifiutato senza accoglienza generale, deroga
+esplicita con minore e scuola, replay, revoca/assenza incarico, rifiuto di
+quantità scolastiche eccedenti e conservazione dell’assenza generale.
+Browser originale desktop/mobile con API e DB temporanei: frame di altezza
+invariata, colori, pulsante esplicito, contatori, dissolvenza e QR fermo.
+Collaudo fittizio aggiornato anche nel foglio QR scaricabile; nessuna chiamata
+operativa durante la prova e nessuna presenza reale registrata.
+
+Migration `20261022210000` applicata e registrata atomicamente in produzione.
+Backup completo prima dell’applicazione, permessi 600, indice e decodifica
+integrale verificati:
+`/root/backups/iscrizioni-pace/production-before-reception-override-1792701740.dump`
+(20.130.305 byte), SHA-256
+`1dc3ee3f7a064f8815cd2fa1cf9b2d6e66b531967b8ddc363ada88c08652b643`.
+La copia di rilascio con guardie ha verificato il corpo canonico precedente
+(MD5 `57e7529ce7a7b0a4e1d9ac97e1eb67bb`) e confrontato in una transazione
+REPEATABLE READ tutti i dati: 68 tabelle/204.006 righe invariate; metadati,
+owner e ACL di 225 funzioni invariati e nessun altro corpo modificato.

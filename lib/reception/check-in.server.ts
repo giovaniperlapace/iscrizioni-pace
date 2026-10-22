@@ -136,7 +136,7 @@ export function projectReceptionResult(data: unknown): ReceptionResult {
   }
   if (row.kind === "school" && typeof row.schoolName === "string" && typeof row.classDescription === "string" &&
     [row.expectedStudents,row.expectedCompanions,row.students,row.companions].every(n => Number.isSafeInteger(n) && Number(n)>=0) && timestamp(row.checkedInAt)) {
-    return { ...common, kind: "school", schoolName:row.schoolName, classDescription:row.classDescription,
+    return { ...common, kind: "school", ...(typeof row.eventCheckedIn === "boolean" ? {eventCheckedIn:row.eventCheckedIn} : {}), schoolName:row.schoolName, classDescription:row.classDescription,
       expectedStudents:row.expectedStudents as number, expectedCompanions:row.expectedCompanions as number,
       students:row.students as number, companions:row.companions as number, checkedInAt:row.checkedInAt as string | null };
   }

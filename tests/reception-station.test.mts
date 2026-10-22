@@ -246,3 +246,22 @@ test("event history reflects presence changes across a group and its individual 
   assert.equal(group.result.kind === "group" && group.result.persons[0].checkedInAt, null);
   assert.equal(group.result.revision, 9);
 });
+
+test('explicit Forum override keeps the selected people and the same request on uncertain retry', async () => {
+  const calls: ReceptionCommand[]=[];
+  const result=family(true);result.persons=result.persons.map(p=>({...p,eventCheckedIn:false}));
+  const station=new ReceptionStationSession(async command=>{
+    calls.push(command);
+    return command.action==='inspect'?result:calls.length===2?{status:'unavailable'}:{...result,outcome:'saved'};
+  },()=>request,20000,{duty:'panel_entry',panelId:adult},true);
+  await station.inspect(lookup);
+  station.selectPresence(true);
+  await station.submit({subjectIds:[child]});
+  assert.equal(calls[1].reason,'event_entry_override');
+  assert.deepEqual(calls[1].subjectIds,[child]);
+  await station.retry();
+  assert.deepEqual(calls[2],calls[1]);
+  station.next();await station.inspect(lookup);station.selectPresence();
+  await station.submit({subjectIds:[adult]});
+  assert.equal(calls.at(-1)?.reason,undefined);
+});

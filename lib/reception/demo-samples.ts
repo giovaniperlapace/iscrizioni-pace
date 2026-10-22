@@ -22,7 +22,7 @@ const cases = [
   {code:"F006", name:"Fabio", scenario:"Biglietti cerimonie", instruction:"Scegli apertura: Settore Blu, fila A, posto 12. Scegli finale: Settore Verde, fila B, posto 8.", ceremony:true},
   {code:"F007", name:"Gaia", scenario:"Senza biglietto cerimonia", instruction:"Scegli apertura: nessun biglietto valido. In modalità Computer puoi assegnare un biglietto fittizio e poi rileggere."},
   {code:"F008", name:"Irene", scenario:"QR non valido", instruction:"In qualsiasi incarico viene mostrato codice non valido. Non è possibile prenotare o registrare presenze.", invalid:true},
-  {code:"F009", name:"Marco", scenario:"Accoglienza generale mancante", instruction:"Scegli Forum 1: prenotazione presente, ma occorre prima passare dall’accoglienza generale. Non puoi confermare l’ingresso.", forum:DEMO_FORUM_ONE, eventMissing:true},
+  {code:"F009", name:"Marco", scenario:"Accoglienza generale mancante", instruction:"Scegli Forum 1: avviso giallo per accoglienza generale mancante. Segna l’ingresso comunque conferma solo questo Forum.", forum:DEMO_FORUM_ONE, eventMissing:true},
 ];
 export const DEMO_SAMPLES = cases.map((sample,index) => ({
   forum:undefined as string|undefined, entered:false, child:false, ceremony:false, invalid:false, eventMissing:false,

@@ -24,6 +24,24 @@ do $$ declare v jsonb; keys text[]; begin
  v:=reception_panel_check_in('panel_entry',fw(403),fw(200),fw(8),'code','QQQ7');
  assert v->>'status'='valid' and jsonb_array_length(v->'persons')=2;
  assert reception_panel_check_in('panel_entry',fw(403),fw(200),fw(8),'code','QQQ7','enter',fw(993),array[fw(107)])->>'status'='event_entry_required';
+ -- Subtransaction rolls back synthetic override entries before the remaining suite.
+ begin
+  v:=reception_panel_check_in('panel_entry',fw(403),fw(200),fw(8),'code','QQQ7','enter',fw(1993),array[fw(107),fw(990)],null,null,null,'event_entry_override');
+  assert v->>'status'='valid' and v->>'outcome'='saved';
+  assert (select count(*)=2 from check_ins where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null);
+  assert not exists(select 1 from check_ins where registration_id=fw(107) and moment_id is null);
+  assert exists(select 1 from audit_logs where entity_id=fw(107) and metadata->>'reason'='event_entry_override');
+  assert reception_panel_check_in('panel_entry',fw(403),fw(200),fw(8),'code','QQQ7','enter',fw(1993),array[fw(107),fw(990)],null,null,null,'event_entry_override')->>'outcome'='replayed';
+  begin
+   perform reception_panel_check_in('panel_entry',fw(403),fw(200),fw(8),'code','QQQ7','cancel',fw(1994),array[fw(107)],null,null,1,'event_entry_override');
+   raise exception 'override allowed on cancellation';
+  exception when invalid_parameter_value then null;end;
+  begin
+   perform reception_panel_check_in('panel_entry',fw(403),fw(200),fw(9),'code','QQQ7','enter',fw(1995),array[fw(107)],null,null,null,'event_entry_override');
+   raise exception 'override allowed without duty';
+  exception when insufficient_privilege then null;end;
+  raise exception using errcode='PZ001',message='rollback override test';
+ exception when sqlstate 'PZ001' then null;end;
  assert (reception_target_statistics(fw(200),fw(8),fw(403)::text)->>'booked')::integer>=2;
  assert reception_desk(fw(200),fw(8),'opening','code','QQQ7')->>'status'='unconfigured';
  perform set_reception_duties(fw(200),fw(11),fw(8),array[fw(404)::text]);
@@ -77,4 +95,30 @@ end $$;
 reset role;
 set constraints all immediate;
 \echo PASS distinct Forum/event entries, ceremony tickets/seats, explicit minors, atomic rejection, replay and revision, service-only RPC and scoped catalogue
+-- Schools also require explicit override, retaining booked quantity bounds.
+insert into school_booking_teachers(id,event_id,email,first_name,last_name,phone)
+ values(fw(1996),fw(200),'override@example.invalid','Teacher','Override','+39000000');
+insert into school_bookings(id,event_id,teacher_id,school_name,school_city,class_description,student_count,companion_count,privacy_version,privacy_accepted_at)
+ values(fw(1997),fw(200),fw(1996),'Override school','Test','1A',10,2,'test',now());
+insert into school_booking_qr_tokens(booking_id,token_hash,token_encrypted) values(fw(1997),repeat('b',64),'synthetic');
+insert into school_panel_reservations(event_id,booking_id,panel_id,seat_section_id,student_count,companion_count)
+ values(fw(200),fw(1997),fw(401),fw(550),10,2);
+select set_reception_duties(fw(200),fw(10),fw(8),array[fw(401)::text]);
+set local role service_role;
+do $$ declare v jsonb; begin
+ v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64));
+ assert v->>'status'='valid' and v->>'eventCheckedIn'='false' and (v->>'expectedStudents')::integer=10;
+ assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1998),'{}',8,1)->>'status'='event_entry_required';
+ begin
+  perform reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1999),'{}',11,1,null,'event_entry_override');
+  raise exception 'school count bound ignored';
+ exception when invalid_parameter_value then null;end;
+ v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1998),'{}',8,1,null,'event_entry_override');
+ assert v->>'status'='valid' and v->>'outcome'='saved';
+ assert not exists(select 1 from check_ins where school_booking_id=fw(1997) and moment_id is null);
+ assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1998),'{}',8,1,null,'event_entry_override')->>'outcome'='replayed';
+end $$;
+reset role;
+set constraints all immediate;
+\echo PASS explicit school override preserves quantities, idempotency and missing general attendance
 rollback;

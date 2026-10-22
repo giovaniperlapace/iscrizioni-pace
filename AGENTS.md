@@ -1,5 +1,20 @@
 # AGENTS.md
 
+## Accoglienza Forum: colori ed eccezione ingresso — 2026-10-22
+
+- Riquadro fotocamera fisso: nessuna riduzione al QR o alla conferma. Scheda
+  animata sotto, dissolvenza di due secondi e latch conservati. Legenda: giallo
+  Forum sbagliato/accoglienza generale mancante, arancione senza prenotazione
+  o biglietto cerimonia, rosso QR invalido/errori bloccanti, verde esito valido.
+- «Segna l’ingresso comunque» esplicito solo al Forum per persone selezionate
+  o quantità scuola; non registra l’accoglienza generale. Prenotazione,
+  incarico, capienza e controlli sui minori restano obbligatori. Retry con
+  identica richiesta e motivo `event_entry_override` nello storico.
+- Migration `20261022210000` applicata/registrata in production dopo backup
+  verificato: 68 tabelle, 204.006 righe e metadati/ACL di 225 funzioni conservati;
+  modificato solo il corpo della RPC prevista. Nessuna presenza reale di prova.
+- Verifiche e rilascio in `docs/accoglienza-forum-camera-2026-10-22.md`.
+
 ## Accoglienza Forum: esiti nella fotocamera — 2026-10-22
 
 - Ultima revisione: fascia breve sul video e scheda completa subito sotto,

@@ -8,8 +8,8 @@ import { ReceptionStationSession, type VerifiedReception } from "@/lib/reception
 import { useQrLabelPrinting } from "../qr-label-panel";
 type Party = Extract<VerifiedReception, { kind: "family" | "group" }>;
 
-export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, feedback, compact = false }: {
-  compact?: boolean;
+export function ReceptionParty({ result, session, printing, labelCommandAction, disabled, onBusyChange, onRemove, feedback, compact = false, allowEventEntryOverride = false }: {
+  compact?: boolean; allowEventEntryOverride?: boolean;
   result: Party; session: ReceptionStationSession; printing: boolean;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>; disabled: boolean; onBusyChange: (value: boolean) => void;
   onRemove: (ids: string[]) => void; feedback: ReactNode;
@@ -36,18 +36,21 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
   const labelIds = [...new Set(chosen.map(person => registrations.get(person.id)!))];
   const presentIds = chosen.filter(person => person.checkedInAt).map(person => person.id);
   const pendingIds = chosen.filter(person => !person.checkedInAt && person.eligible !== false && person.eventCheckedIn !== false).map(person => person.id);
+  const overrideIds = chosen.filter(person => !person.checkedInAt && person.eligible !== false).map(person => person.id);
+  const missingEventEntry = allowEventEntryOverride && chosen.some(person => !person.checkedInAt && person.eligible !== false && person.eventCheckedIn === false);
   const unavailable = labels.queue && labelIds.some(id => !labelItems.has(id) || !!labelItems.get(id)?.reason);
   const locked = disabled || labels.busy;
   const allPresent = result.persons.every(person => person.checkedInAt);
 
-  async function act(kind: "presence" | "print") {
+  async function act(kind: "presence" | "print", override = false) {
     if (running.current || locked || !chosen.length) return;
     running.current = true; onBusyChange(true);
     try {
       if (kind === "presence") {
-        if (!pendingIds.length) return;
-        session.selectPresence();
-        await session.submit({ subjectIds: pendingIds });
+        const ids = override && missingEventEntry ? overrideIds : pendingIds;
+        if (!ids.length) return;
+        session.selectPresence(override && missingEventEntry);
+        await session.submit({ subjectIds: ids });
       } else await labels.print(labelIds);
     } finally { running.current = false; onBusyChange(false); }
   }
@@ -76,14 +79,15 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
     </>}
     {result.kind === "family" && result.persons.map(person => (!!person.ceremonies?.length || person.eligible === false || person.eventCheckedIn === false) && <div key={person.id} className="text-sm">
       {!!person.ceremonies?.length && <p className="font-semibold">{person.firstName} {person.lastName}: {person.ceremonies.map(ceremonySeatText).join(" · ")}</p>}
-      {person.eligible === false && <p className="text-amber-900">{person.firstName}: nessun biglietto valido per questa cerimonia. Rivolgiti alla postazione iscrizioni.</p>}
-      {person.eventCheckedIn === false && <p className="text-amber-900">{person.firstName}: passa prima dall’accoglienza generale dell’evento.</p>}
+      {person.eligible === false && <p role="alert" className="rounded-lg border border-orange-500 bg-orange-100 p-3 text-orange-950">{person.firstName}: nessun biglietto valido per questa cerimonia. Rivolgiti alla postazione iscrizioni.</p>}
+      {person.eventCheckedIn === false && !person.checkedInAt && <p role="alert" className="rounded-lg border border-yellow-500 bg-yellow-100 p-3 text-yellow-950">{person.firstName}: accoglienza generale non registrata.</p>}
     </div>)}
     {feedback}
     {unavailable && <p className="text-sm text-amber-900">Uno dei QR selezionati non è stampabile. Puoi comunque registrare le presenze.</p>}
     <div className="grid gap-2 border-t border-slate-200 bg-white pt-3">
       {!single && <p className="text-sm">Selezione: {pendingIds.length} da confermare · {presentIds.length} già presenti.</p>}
-      {!(compact && single && allPresent) && <button className="btn-primary min-h-12 px-4" disabled={locked || !pendingIds.length} onClick={() => void act("presence")}>{compact ? (single ? "Segna entrata" : `Segna entrata (${pendingIds.length})`) : single ? "Conferma partecipazione" : `Conferma partecipazione (${pendingIds.length})`}</button>}
+      {!missingEventEntry && !(compact && single && allPresent) && <button className="btn-primary min-h-12 px-4" disabled={locked || !pendingIds.length} onClick={() => void act("presence")}>{compact ? (single ? "Segna entrata" : `Segna entrata (${pendingIds.length})`) : single ? "Conferma partecipazione" : `Conferma partecipazione (${pendingIds.length})`}</button>}
+      {missingEventEntry && <><p className="text-sm text-yellow-950">Conferma solo l’ingresso a questo Forum; l’accoglienza generale resta non registrata.</p><button className="min-h-12 rounded-lg border border-yellow-600 bg-yellow-100 px-4 font-semibold text-yellow-950" disabled={locked || !overrideIds.length} onClick={() => void act("presence", true)}>Segna l’ingresso comunque</button></>}
       {result.persons.some(person => person.checkedInAt) && <button className="btn-secondary min-h-12 px-4" disabled={locked || !presentIds.length} onClick={() => onRemove(presentIds)}>{single ? "Rimuovi presenza" : `Rimuovi presenze selezionate (${presentIds.length})`}</button>}
       {printing && <button className="btn-secondary min-h-12 px-4" disabled={locked || !chosen.length || !!unavailable} onClick={() => void act("print")}>{result.kind === "group" ? "Stampa i QR delle persone selezionate" : "Stampa etichetta QR"}</button>}
       {single && printing && <span className="text-sm text-slate-600">Stampe richieste: {labels.queue?.items.find(item => item.registrationId === adultId)?.attempts ?? "—"}</span>}

@@ -123,12 +123,14 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.ok(calls.some(call=>call.name==='reception_panel_check_in' && call.body.p_lookup_kind==='qr'));
   const overlay=page.locator('[data-camera-overlay]');
   await overlay.getByText('Attenzione: leggi il messaggio sotto.').waitFor();
+  assert.equal(await overlay.locator('[data-reception-tone]').getAttribute('data-reception-tone'),'yellow');
   const cameraCard=page.locator('[data-camera-result]');
   // Correct duty: inspect does not stop the stream or implicitly check in.
   await page.getByRole('button',{name:'Cambia incarico'}).click();
   await page.getByRole('button',{name:/Morning A/}).click();
   psql("update check_ins set cancelled_at=now() where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null;");
   await page.getByRole('button',{name:'Aggiorna conteggi'}).click();
+  const frameBefore=await page.getByLabel('Anteprima fotocamera').boundingBox();
   await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
   await cameraCard.getByText('✓ Iscrizione al Forum verificata.',{exact:true}).waitFor();
   const cameraCalls=await page.evaluate(()=>window.syntheticCameraCalls);
@@ -138,10 +140,14 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.equal(psql('select count(*) from check_ins where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null;',true).trim(),'0');
   const stats=page.getByRole('region',{name:'Statistiche dell’incarico'});
   const enteredBefore=Number((await stats.innerText()).match(/(\d+) Entrati/)[1]);
-  const videoBox=await video.boundingBox(), overlayBox=await overlay.boundingBox();
+  const {videoBox,overlayBox,cardBox}=await page.evaluate(()=>({
+    videoBox:document.querySelector('video').getBoundingClientRect().toJSON(),
+    overlayBox:document.querySelector('[data-camera-overlay]').getBoundingClientRect().toJSON(),
+    cardBox:document.querySelector('[data-camera-result]').getBoundingClientRect().toJSON(),
+  }));
   assert.ok(overlayBox.y>=videoBox.y && overlayBox.y+overlayBox.height<=videoBox.y+videoBox.height);
-  const cardBox=await cameraCard.boundingBox();
   assert.ok(cardBox.y>=videoBox.y+videoBox.height);
+  assert.ok(Math.abs(frameBefore.height-videoBox.height)<1);
   assert.ok(overlayBox.height<80);
   await page.screenshot({path:'/tmp/pace-forum-camera-compact.png',fullPage:true});
   await cameraCard.getByRole('button',{name:'Segna entrata',exact:true}).click();
@@ -186,6 +192,17 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByRole('heading',{name:'Prova accoglienza forum ed eventi'}).waitFor();
   await page.getByRole('button',{name:/Computer ·/}).click();
   await page.getByRole('button',{name:'Forum 1 · Prova Sala A fittizia'}).click();
+  for (const [code,tone] of [['F002','yellow'],['F008','red'],['F003','orange']]) {
+    await page.getByLabel('Codice partecipante',{exact:true}).fill(code);
+    await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
+    await page.locator(`[role="alert"][data-reception-tone="${tone}"]`).waitFor();
+  }
+  await page.getByLabel('Codice partecipante',{exact:true}).fill('F009');
+  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
+  await page.getByRole('alert').filter({hasText:'accoglienza generale non registrata'}).waitFor();
+  await page.getByRole('button',{name:'Segna l’ingresso comunque',exact:true}).click();
+  await page.getByText('✓ Partecipazione confermata',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Chiudi scheda',exact:true}).click();
   await page.getByLabel('Codice partecipante',{exact:true}).fill('F003');
   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
   await page.getByText(/Non risulta una prenotazione valida/).waitFor();
@@ -203,6 +220,14 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
   await page.getByText(/Settore Blu/).waitFor();
   await page.screenshot({path:'/tmp/pace-forum-demo-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Chiudi scheda',exact:true}).click();
+  await page.getByLabel('Codice partecipante',{exact:true}).fill('F007');
+  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
+  const noTicket=page.getByRole('alert').filter({hasText:'nessun biglietto valido'});
+  await noTicket.waitFor();
+  assert.match(await noTicket.getAttribute('class'),/bg-orange-100/);
+  assert.equal(await page.getByRole('button',{name:'Segna l’ingresso comunque',exact:true}).count(),0);
+
   await page.getByRole('button',{name:'Ricomincia la prova'}).click();
   await page.setViewportSize({width:390,height:844});
   const demoQr='data:image/png;base64,'+readFileSync('public/collaudo-forum-eventi/F001.png').toString('base64');

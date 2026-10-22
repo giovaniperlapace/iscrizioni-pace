@@ -12,7 +12,7 @@ export type ReceptionCommand = {
   students?: number;
   companions?: number;
   expectedRevision?: number;
-  reason?: "selection_error" | "count_error" | "entry_cancelled";
+  reason?: "selection_error" | "count_error" | "entry_cancelled" | "event_entry_override";
 };
 export type ReceptionPerson = {
   ceremonies?: CeremonySeatInfo[];
@@ -38,7 +38,7 @@ export type ReceptionResult =
   | (ValidReception & { kind: "group"; groupCeremonies?: GroupCeremonySummary; groupId: string; groupName: string; snapshot: string; persons: (ReceptionPerson & { registrationId: string; code: string })[] })
   | (ValidReception & { kind: "family"; code: string; persons: ReceptionPerson[] })
   | (ValidReception & {
-      kind: "school"; schoolName: string; classDescription: string;
+      kind: "school"; eventCheckedIn?: boolean; schoolName: string; classDescription: string;
       expectedStudents: number; expectedCompanions: number;
       students: number; companions: number; checkedInAt: string | null;
     });
@@ -80,7 +80,8 @@ export function parseReceptionCommand(input: unknown): ReceptionCommand | null {
   if ((input.students !== undefined && !integer(input.students,1000)) ||
     (input.companions !== undefined && !integer(input.companions,100)) ||
     (input.expectedRevision !== undefined && !integer(input.expectedRevision,2147483647))) return null;
-  if (input.reason !== undefined && (typeof input.reason !== "string" || !["selection_error","count_error","entry_cancelled"].includes(input.reason))) return null;
+  if (input.reason !== undefined && (typeof input.reason !== "string" || !["selection_error","count_error","entry_cancelled","event_entry_override"].includes(input.reason))) return null;
+  if (input.reason === "event_entry_override" && (input.duty !== "panel_entry" || input.action !== "enter")) return null;
   if (["correct","cancel"].includes(String(input.action)) &&
     (input.expectedRevision === undefined || input.reason === undefined)) return null;
   return { ...input, lookup: { kind, value } } as ReceptionCommand;

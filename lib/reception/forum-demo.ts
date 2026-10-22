@@ -62,7 +62,7 @@ export function createForumReceptionDemo() {
       if(!["enter","cancel"].includes(scan.action)||!scan.subjectIds?.length)return {status:"invalid_request"};
       if(scan.subjectIds.some(id=>id!==person.id && (!person.child||id!==person.childId)))return {status:"invalid_request"};
       if(scan.action==="enter"&&scan.subjectIds.some(id=>!booked.includes(id)))return {status:"not_booked"};
-      if(scan.action==="enter"&&!ceremony&&person.eventMissing)return {status:"event_entry_required"};
+      if(scan.action==="enter"&&!ceremony&&person.eventMissing&&scan.reason!=="event_entry_override")return {status:"event_entry_required"};
       if(scan.action==="cancel"&&scan.expectedRevision!==revision)return {status:"conflict"};
       for(const id of scan.subjectIds){const key=`${duty.key}:${id}`;if(scan.action==="cancel")person.entered.delete(key);else if(!person.entered.has(key))person.entered.set(key,new Date().toISOString());}
       person.revisions.set(duty.key,revision+1);
