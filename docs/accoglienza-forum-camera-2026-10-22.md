@@ -153,3 +153,12 @@ comandi della fotocamera. Banda scura inferiore sempre presente, della stessa
 altezza di quella superiore: ospita gli esiti e resta visibile dopo la loro
 dissolvenza. Anteprima di dimensioni costanti. Collaudo browser esteso alla
 simmetria delle bande e alla label del pulsante.
+
+
+### Bande più compatte
+
+Ridotte entrambe le bande da 28% dell’anteprima a 80px: contatori e pulsante
+«Aggiorna conteggi» condividono una riga centrata, sotto il titolo. L’anteprima
+conserva le dimensioni e guadagna spazio visibile. Titoli lunghi mantengono
+lo scorrimento interno senza aumentare le bande. Collaudo con controllo
+dell’altezza, simmetria e assenza di scorrimento per l’incarico sintetico.

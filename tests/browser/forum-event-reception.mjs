@@ -163,11 +163,16 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.ok(cardBox.y>=videoBox.y+videoBox.height);
   assert.ok(Math.abs(frameBefore.height-videoBox.height)<1);
   assert.ok(overlayBox.height<80);
-  const headerBox=await page.locator('[data-camera-header]').boundingBox();
-  assert.ok(Math.abs(headerBox.y-videoBox.y)<1);
-  const footerBox=await page.locator('[data-camera-footer]').boundingBox();
+  const {headerBox,footerBox,currentVideoBox}=await page.evaluate(()=>({
+    headerBox:document.querySelector('[data-camera-header]').getBoundingClientRect().toJSON(),
+    footerBox:document.querySelector('[data-camera-footer]').getBoundingClientRect().toJSON(),
+    currentVideoBox:document.querySelector('video').getBoundingClientRect().toJSON(),
+  }));
+  assert.ok(Math.abs(headerBox.y-currentVideoBox.y)<1);
   assert.ok(Math.abs(headerBox.height-footerBox.height)<1);
-  assert.ok(Math.abs(footerBox.y+footerBox.height-videoBox.y-videoBox.height)<1);
+  assert.ok(headerBox.height<=80);
+  assert.equal(await page.locator("[data-camera-header]").evaluate(el=>el.scrollHeight<=el.clientHeight),true);
+  assert.ok(Math.abs(footerBox.y+footerBox.height-currentVideoBox.y-currentVideoBox.height)<1);
   assert.equal(await page.locator('[data-camera-header]').getByRole('button',{name:'Aggiorna conteggi'}).innerText(),'Aggiorna conteggi');
   assert.equal(await page.locator('[data-camera-header]').getByRole('heading',{name:'Morning A',exact:true}).count(),1);
   assert.equal(await page.locator('[data-camera-header]').getByRole('region',{name:'Statistiche dell’incarico'}).count(),1);

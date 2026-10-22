@@ -6,7 +6,8 @@
   fotocamera, compatta e indipendente dalla dissolvenza dell’esito. In manuale/USB
   restano nell’intestazione del riquadro anche quando compare il risultato.
 - Testo e statistiche centrati; pulsante «Aggiorna conteggi» con icona e label.
-  Bande scure superiore/inferiore simmetriche, quella inferiore sempre presente
+  Bande scure superiore/inferiore compatte (80px), contatori e aggiornamento
+  affiancati, testo centrato. Bande simmetriche, quella inferiore sempre presente
   e riservata agli esiti. Rimosso l’avviso sull’occupazione della sala;
   aggiornamento automatico dopo ingresso conservato.
 - Cambia modalità/incarico sotto il titolo della dashboard, con pulsanti nello

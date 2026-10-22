@@ -67,8 +67,8 @@ export function ReceptionCamera({ paused, feedback, feedbackTone = "progress", b
     <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-2xl bg-slate-950">
       <video ref={video} muted playsInline autoPlay aria-label="Anteprima fotocamera" className="absolute inset-0 h-full w-full object-contain" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 border-white/80" aria-hidden="true" />
-      {topOverlay && <div data-camera-header className="absolute inset-x-0 top-0 h-[28%] overflow-y-auto bg-slate-950 px-3 py-2 text-white">{topOverlay}</div>}
-      {(topOverlay || overlay) && <div data-camera-footer={topOverlay ? "" : undefined} className={topOverlay ? "absolute inset-x-0 bottom-0 flex h-[28%] items-center justify-center bg-slate-950 p-2" : "absolute inset-x-2 bottom-2 max-h-[40%]"}>
+      {topOverlay && <div data-camera-header className="absolute inset-x-0 top-0 h-20 overflow-y-auto bg-slate-950 px-2 py-1 text-white">{topOverlay}</div>}
+      {(topOverlay || overlay) && <div data-camera-footer={topOverlay ? "" : undefined} className={topOverlay ? "absolute inset-x-0 bottom-0 flex h-20 items-center justify-center bg-slate-950 p-2" : "absolute inset-x-2 bottom-2 max-h-[40%]"}>
         {overlay && <div data-camera-overlay inert={overlayFading || undefined} style={overlayFading ? { animation: "reception-result-fade 2s linear forwards" } : undefined} className="max-h-full w-full overflow-y-auto overscroll-contain rounded-xl bg-white text-center text-slate-950 shadow-lg">{overlay}</div>}
       </div>}
       {feedback && <p role="status" data-feedback-tone={feedbackTone} className={`pointer-events-none absolute inset-x-2 bottom-2 rounded-lg p-3 text-center font-semibold shadow-lg ${feedbackStyles[feedbackTone]}`}>{feedback}</p>}
