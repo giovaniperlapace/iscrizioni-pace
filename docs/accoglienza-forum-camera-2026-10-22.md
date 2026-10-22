@@ -9,8 +9,12 @@ mantengono la scheda separata.
 La prenotazione valida mostra «Iscrizione al Forum verificata» in verde.
 «Segna entrata» registra la presenza soltanto su azione esplicita; minori e
 famiglie mantengono la selezione nominale. Il video rimane attivo durante
-ispezione, conferma e salvataggio. Nuove letture restano bloccate finché la
-scheda non viene chiusa con «Scansiona un altro QR». Errori, retry della stessa
+ispezione, conferma e salvataggio. Su successiva richiesta dell’utente, «Scansiona un altro QR» è rimosso dalla
+fotocamera. Dopo il salvataggio la scheda sfuma in due secondi, con comandi
+inerti, poi la lettura riprende automaticamente. Il latch è conservato per
+non riaprire subito lo stesso QR ancora inquadrato. Prima della conferma un
+QR differente può sostituire la scheda; letture durante operazioni, selezioni
+modali o esiti incerti restano bloccate. Errori, retry della stessa
 richiesta e revoca dell'incarico riusano la sessione canonica.
 
 Ogni incarico mostra Iscritti (Assegnatari per le cerimonie) ed Entrati. La
@@ -37,3 +41,10 @@ senza incrementi ottimistici o polling. Gli ingressi non sono occupazione attual
 Nessuna migration, presenza remota, invio o stampa fisica. Commit e push su
 `main` autorizzati dall’utente dopo il collaudo. Lo stato del deployment
 non è verificato in questo verbale.
+
+## Verifica della dissolvenza
+
+Ripetuti con successo 1.056 test, TypeScript, build e collaudo browser completo.
+Il browser verifica opacità intermedia, rimozione automatica della scheda,
+stream ancora live senza riavvio e mancata riapertura del QR fermo per ulteriori
+1,2 secondi. Lint dei file modificati superato. Nessuna operazione remota di prova.

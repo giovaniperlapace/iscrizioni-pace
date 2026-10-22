@@ -433,3 +433,8 @@ input[type="radio"] {
   .button-progress-overlay[data-state="pending"] { transform: scaleX(0.9) !important; }
   .work-spinner { animation: none; }
 }
+
+@keyframes reception-result-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}

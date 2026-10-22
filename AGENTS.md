@@ -8,6 +8,9 @@
   Selezione esplicita dei minori, retry e controlli canonici conservati.
 - Contatori per incarico: Iscritti (Assegnatari per cerimonie) ed Entrati,
   riletti dopo salvataggio; nessuna migration o prova operativa remota.
+- Successiva richiesta: tolto «Scansiona un altro QR» nella fotocamera;
+  dopo ingresso salvato la scheda sfuma in due secondi e la lettura riprende.
+  Latch conservato per non riaprire lo stesso QR ancora inquadrato.
 - Dettagli: `docs/accoglienza-forum-camera-2026-10-22.md`.
 
 ## Cerimonie: menu capogruppo e schede partecipante — 2026-10-22

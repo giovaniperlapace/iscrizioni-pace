@@ -144,7 +144,20 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.waitForFunction(expected=>document.querySelector('[aria-label="Statistiche dell’incarico"]').textContent.includes(expected+' Entrati'),enteredBefore+1);
   assert.equal(await video.evaluate(el=>el.srcObject.getVideoTracks()[0].readyState),'live');
   assert.equal(await page.evaluate(()=>window.syntheticCameraCalls),cameraCalls);
+  assert.equal(await page.getByRole('button',{name:'Scansiona un altro QR',exact:true}).count(),0);
+  await page.waitForFunction(()=>{
+    const overlay=document.querySelector('[data-camera-overlay]');
+    const opacity=Number(getComputedStyle(overlay).opacity);
+    return opacity>0 && opacity<0.8;
+  });
   await page.screenshot({path:'/tmp/pace-forum-camera-overlay.png',fullPage:true});
+  await page.getByRole('heading',{name:'Synthetic 7 Queue',exact:true}).waitFor({state:'detached',timeout:4000});
+  assert.equal(await video.evaluate(el=>el.srcObject.getVideoTracks()[0].readyState),'live');
+  assert.equal(await page.evaluate(()=>window.syntheticCameraCalls),cameraCalls);
+  // An unchanged QR in the stream must not reopen the dismissed card.
+  await page.waitForTimeout(1200);
+  assert.equal(await page.getByRole('heading',{name:'Synthetic 7 Queue',exact:true}).count(),0);
+
   await page.getByRole('button',{name:'Cambia incarico'}).click();
   await page.getByRole('button',{name:/Morning B/}).click();
   await page.getByRole('button',{name:'Inserisci il codice manualmente'}).click();

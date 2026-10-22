@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, History, Keyboard, ScanLine } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import type { CameraSource } from "@/lib/reception/camera";
 import type { ReceptionDuty } from "@/lib/reception/duties.server";
@@ -40,6 +40,7 @@ export function EventReceptionConsole(props: Props) {
   const heading = useRef<HTMLHeadingElement>(null);
   const locked = busy || session.isLocked();
   const cameraVisible = deviceMode === "phone" && !manual;
+  const fading = cameraVisible && !locked && state.phase === "result" && state.mode === "enter" && !!state.result && state.result.outcome !== "verified";
   const result = state.phase === "blocked" ? null : state.result ?? entry;
   useEffect(() => { onBusy?.(locked || state.phase === "selection"); }, [locked, state.phase, onBusy]);
   const correction = state.mode !== "enter";
@@ -63,6 +64,18 @@ export function EventReceptionConsole(props: Props) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [locked]);
   useEffect(() => { if (entry && !cameraVisible) heading.current?.focus(); }, [entry, cameraVisible]);
+
+  const finishCameraResult = useEffectEvent(() => {
+    session.next();
+    setEntry(null);
+    props.onLookup?.(null);
+    // Preserve the latch: a QR still in the frame must not reopen its card.
+  });
+  useEffect(() => {
+    if (!fading) return;
+    const timer = window.setTimeout(finishCameraResult, 2000);
+    return () => window.clearTimeout(timer);
+  }, [fading, state.result]);
 
   function changeBusy(value: boolean) { busyRef.current = value; setBusy(value); }
   async function inspect(lookup: ReceptionCommand["lookup"], replace = false) {
@@ -113,7 +126,7 @@ export function EventReceptionConsole(props: Props) {
           <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt ? void session.editCurrent() : session.selectPresence()}>{result.checkedInAt ? "Modifica presenze" : "Registra presenze"}</button>
         </>}
       </>}
-      <button className="btn-secondary min-h-12 px-4" disabled={locked || state.phase === "selection"} onClick={next}>{deviceMode === "computer" ? "Chiudi scheda" : "Scansiona un altro QR"}</button>
+      {!cameraVisible && <button className="btn-secondary min-h-12 px-4" disabled={locked || state.phase === "selection"} onClick={next}>Chiudi scheda</button>}
     </div>;
 
   return <section className="mx-auto grid w-full max-w-3xl gap-4" aria-labelledby="reception-title">
@@ -127,8 +140,8 @@ export function EventReceptionConsole(props: Props) {
     <div hidden={!cameraVisible && (!!result || problem && state.phase !== "error")}>
       <div className="surface-card grid gap-4 p-4">
         {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
-          <ReceptionCamera source={cameraSource} overlay={resultCard || feedback} paused={locked || !!entry} onCode={value => {
-            if (!entry && session.canScan() && latch.current.accept(value)) void inspect({ kind: "qr", value });
+          <ReceptionCamera source={cameraSource} overlay={resultCard || feedback} overlayFading={fading} paused={locked || !!entry} onCode={value => {
+            if (!fading && !locked && !correction && state.phase !== "selection" && (session.canScan() || state.phase === "result") && latch.current.accept(value)) void inspect({ kind: "qr", value }, !!entry);
           }} onNoCode={() => { if (!entry && session.canScan()) latch.current.absent(); }} /> :
           <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void inspect({ kind: code.startsWith("G:") || code.length === 43 ? "qr" : "code", value: code }); setCode(""); }}>
             <label className="grid gap-1">{props.duty?.duty === "event_entry" || !props.duty ? "Codice partecipante o QR gruppo" : "Codice partecipante"}<input className="field min-h-12" disabled={locked || !!entry} value={code} onChange={event => setCode(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={45} /></label>
