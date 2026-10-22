@@ -5,7 +5,7 @@ import { ceremonySeatLabel } from '@/lib/ceremonies/seat-label';
 import type { AssignmentEntry, AssignmentHistory, HistoryQuery, HistoryResult, RevokeAssignment } from '@/lib/ceremonies/assignment-history';
 const date = (value: string) => new Intl.DateTimeFormat('it-IT', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Rome' }).format(new Date(value));
 function Places({ entry }: { entry: AssignmentEntry }) {
-  return <><p>Settore {entry.sector} · {entry.quantity === 0 ? 'Senza sedia' : `${entry.quantity} ${entry.quantity === 1 ? 'posto' : 'posti'}`}{!entry.numbered && entry.quantity > 0 ? ' senza sedia numerata' : ''}</p>{entry.seats.length > 0 && <details><summary className="cursor-pointer underline">Mostra i posti ({entry.seats.length})</summary><ul className="max-h-64 overflow-y-auto space-y-1 py-2 text-sm">{entry.seats.map(s => <li key={s.id}>{ceremonySeatLabel(entry.sector,s)}</li>)}</ul></details>}</>;
+  return <><p>Settore {entry.sector} · {entry.quantity === 0 ? 'Senza sedia' : `${entry.quantity} ${entry.quantity === 1 ? 'posto' : 'posti'}`}{!entry.numbered && entry.quantity > 0 ? ' senza sedia numerata' : ''}</p>{entry.numbered && entry.seats.length > 0 && <details><summary className="cursor-pointer underline">Mostra i posti ({entry.seats.length})</summary><ul className="max-h-64 overflow-y-auto space-y-1 py-2 text-sm">{entry.seats.map(s => <li key={s.id}>{ceremonySeatLabel(entry.sector,s)}</li>)}</ul></details>}</>;
 }
 export function CeremonyAssignmentHistory({ planId, refreshKey, load, revoke }: {
   planId: string; refreshKey: number; load: (query: HistoryQuery) => Promise<HistoryResult>; revoke: (command: RevokeAssignment) => Promise<{ status: string }>;

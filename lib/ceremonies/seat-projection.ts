@@ -47,5 +47,5 @@ export function parseCeremonySeatInfo(
   return result;
 }
 export function ceremonySeatText(s: CeremonySeatInfo): string {
-  return `${s.kind === "opening" ? "Inaugurazione" : "Cerimonia finale"} · ${s.needsSeat && s.seat ? ceremonySeatLabel(s.sector, s.seat) : `Settore ${s.sector} · ${s.needsSeat ? "Seduta da assegnare" : "Non serve un posto"}`}${s.review ? " · Da rivedere" : ""}`;
+  return `${s.kind === "opening" ? "Inaugurazione" : "Cerimonia finale"} · ${s.needsSeat && s.seat ? ceremonySeatLabel(s.sector, s.seat) : `Settore ${s.sector} · ${s.needsSeat ? "Posto nel settore" : "Non serve un posto"}`}${s.review ? " · Da rivedere" : ""}`;
 }

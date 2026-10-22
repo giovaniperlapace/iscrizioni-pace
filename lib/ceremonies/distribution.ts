@@ -29,8 +29,9 @@ export type DistributionPerson = {
   code: string;
   groupIds: string[];
   children: { id: string; name: string }[];
+  attendance?: { planId: string; choice: "yes" | "no" | "unknown" }[];
   eligiblePlanIds: string[];
-  assigned: { planId: string; childId: string | null; needsSeat: boolean }[];
+  assigned: { planId: string; childId: string | null; needsSeat: boolean; sector?: string }[];
 };
 export type DistributionView = {
   allocations: DistributionAllocation[];

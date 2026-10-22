@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Cerimonie: assegnazione al settore — 2026-10-22
+
+- Su nuova richiesta, superata l’assegnazione a sedie specifiche: piantine
+  principale/F sempre presenti, F con 400 quadratini; nomi A, A1, A2, B, C,
+  D, E, F. Pop-up settore con Singoli/Gruppi, nomi o quantità, ricerca e
+  presenze dichiarate visibili per tutti gli iscritti attivi.
+- Riepilogo completo del gruppo: persone assegnate direttamente o tramite
+  riserva, persone da assegnare e residuo delle dotazioni. Le nomine consumano
+  prima la riserva nello stesso settore; capogruppo con scelta multipla dei
+  nomi per settore, sette lingue, minori espliciti e annullamento conservativo.
+- Migration `20261022200000` applicata dopo backup verificato: chiude i claim attivi delle sedie ma
+  conserva storico, nomine, quantità, riserve, mappe e quote. RPC service-only,
+  ruolo/scope riletto, revisione, idempotenza e lotti atomici. Letture HTTP
+  private/no-store senza polling. Manager entra dalle piantine; Viewer invariato.
+- 1.053 test, lint, TypeScript, build isolata da npm ci, SQL/concorrenza e browser
+  originale desktop/mobile superati, compreso gruppo di 100 ripartito 20/80.
+  Rilascio autorizzato: migration production registrata atomicamente, 68 tabelle
+  e 202.645 righe confrontate, dati e ACL conservati. Codice in pubblicazione.
+  Nessuna assegnazione, presenza o invio reale di prova. Verbale:
+  `docs/cerimonie-assegnazioni-settore-2026-10-22.md`.
+
+
 ## Posti cerimonie: selezione senza salto della pagina — 2026-10-22
 
 - Disabilitato il solo ancoraggio automatico del browser nella schermata

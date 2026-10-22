@@ -60,7 +60,7 @@ try {
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
- for (const name of ['ceremony-allocations','ceremony-distribution','ceremony-seat-maps','opening-ceremony-layout','ceremony-seats-desk','ceremony-leader-pairing']) {
+ for (const name of ['ceremony-allocations','ceremony-distribution','ceremony-seat-maps','opening-ceremony-layout','ceremony-seats-desk','ceremony-leader-pairing','ceremony-sector-assignments']) {
    try { console.log(file(`tests/sql/${name}.sql`).split('\n').filter(line=>line.includes('PASS')).join('\n')); }
    catch(e) {throw new Error(`${name}: ${e.stderr}`);}
  }
@@ -90,6 +90,15 @@ try {
  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'0');
  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is not null",true).trim(),'1');
  console.log('PASS concurrent single-chair revocations: one save, one conflict, historical nominee retained, chair freed once');
+ // Unnumbered sectors use the same event lock and revision gate as chairs.
+ psql("update ceremony_quotas set quantity=1 where sector_id=(select id from ceremony_sectors where name='F');");
+ const sectorRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+ const sectorRace=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select assign_ceremony_seats(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${sectorRevision},f(${9960+i}),jsonb_build_object('action','assign','sectorId',(select id from ceremony_sectors where name='F'),'quantity',1,'seatIds','[]'::jsonb,'subjects',jsonb_build_array(jsonb_build_object('registrationId',f(${10+i}),'childId',null))))->>'status';`)));
+ assert.deepEqual(sectorRace.sort(),['conflict','saved']);
+ assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'1');
+ assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'0');
+ psql("select revoke_ceremony_assignment(f(1),f(31),(select id from ceremony_plans where kind='opening'),(select revision from ceremony_plans where kind='opening'),f(9962),'nominee',(select id from ceremony_nominees where revoked_at is null));update ceremony_quotas set quantity=400 where sector_id=(select id from ceremony_sectors where name='F');");
+ console.log('PASS concurrent final sector place: one save, one conflict, no numbered chair claims');
  const browserBase=process.argv.find(x=>x.startsWith('--browser-base='))?.slice('--browser-base='.length);
  if(browserBase) {
   psql(`truncate ceremony_seat_claims,ceremony_nominees,ceremony_allocations,ceremony_map_requests,ceremony_distribution_requests cascade;
@@ -122,6 +131,24 @@ try {
   assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'0');
   assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'4');
   assert.equal(psql("select sum(quantity) from ceremony_allocations where revoked_at is null",true).trim(),'5');
+ }
+ const sectorBase=process.argv.find(x=>x.startsWith('--sector-browser-base='))?.slice('--sector-browser-base='.length);
+ if(sectorBase) {
+  const seed=readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0].replace(/^begin;/,'');
+  psql('truncate ceremony_plans cascade;'+seed+'reset role;commit;');
+  psql(`insert into groups(id,event_id,name,parent_group_id) values(f(7810),f(1),'Gruppo cento',f(7700));
+   insert into participants(id,first_name,last_name,public_code) select f(80000+n),'Synthetic','Member '||lpad(n::text,3,'0'),'L'||lpad(n::text,3,'0') from generate_series(1,100) n;
+   insert into registrations(id,event_id,participant_id,status) select f(81000+n),f(1),f(80000+n),'submitted' from generate_series(1,100) n;
+   insert into participant_group_assignments(registration_id,group_id,is_current,source,status) select f(81000+n),f(7810),true,'manager','confirmed' from generate_series(1,100) n;
+   insert into event_attendance_choices(registration_id,day,day_part,choice) values(f(81001),'2026-10-25','afternoon','yes'),(f(81002),'2026-10-25','afternoon','no');`);
+  execFileSync(process.execPath,['tests/browser/ceremony-sector-assignments.mjs',sectorBase,process.env.CEREMONY_BROWSER_ROOT],{env:{...process.env,CEREMONY_TEST_SOCKET:dir},stdio:'inherit'});
+  const revision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+  const allocation=psql("select a.id from ceremony_allocations a join ceremony_quotas q on q.id=a.quota_id join ceremony_sectors s on s.id=q.sector_id where a.group_id=f(7701) and s.name='F' and a.revoked_at is null",true).trim();
+  const race=await Promise.all([31,36].map((actor,i)=>concurrent(`set role service_role;select assign_ceremony_group_members(f(1),f(${actor}),'${allocation}',${revision},f(${9950+i}),jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',${i?'f(41)':'null'})))->>'status';`)));
+  assert.deepEqual(race.sort(),['conflict','saved']);
+  assert.equal(psql(`select count(*) from ceremony_nominees where allocation_id='${allocation}' and revoked_at is null`,true).trim(),'1');
+  console.log('PASS concurrent leader batches: one save, one conflict, group reserve consumed once');
+
  }
  console.log('PASS complete ceremony migrations and SQL regression on disposable PostgreSQL');
 } finally {

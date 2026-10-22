@@ -7,6 +7,22 @@ esplicitamente superati dalle decisioni riportate qui.
 
 ## Priorità di lavoro
 
+### Revisione cerimonie per settore — 22 ottobre 2026
+
+L’ultima richiesta sostituisce le nomine a singole sedie con assegnazioni al
+settore. Piantine principale/F, pop-up Manager con nomi o quantità, riepiloghi
+che uniscono assegnazioni dirette e di gruppo, capogruppo con selezione multipla
+per settore. Tutti gli iscritti attivi inclusi, presenza dichiarata sempre
+visibile. Nomi operativi: A, A1, A2, B, C, D, E, F.
+
+Implementazione verificata: 1.053 test,
+controlli statici, build isolata, SQL/concorrenza e browser originale superati,
+compresa la ripartizione 20/80 di un gruppo di 100. Rilascio autorizzato:
+migration `20261022200000` applicata in produzione dopo backup e controlli
+di conservazione; codice in pubblicazione. Nessuna assegnazione reale di prova.
+Dettagli nel [verbale settore](cerimonie-assegnazioni-settore-2026-10-22.md).
+
+
 ### Inaugurazione: sala reale e Manager — 21 ottobre 2026
 
 Ricevuta e integrata la disposizione reale. Configurazione production validata

@@ -7,9 +7,10 @@ import { loadLeaderTickets } from "@/lib/ceremonies/leader-tickets.server";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { LeaderSectionNavigation } from "../section-navigation";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
-import { CeremonyLeaderTickets } from "@/app/dashboard/ceremony-leader-tickets";
+import { CeremonyLeaderSectors } from "@/app/dashboard/ceremony-leader-sectors";
 import {
   saveLeaderPair,
+  saveLeaderSectorBatch,
   refreshLeaderTickets,
 } from "@/app/dashboard/ceremony-leader-tickets-actions";
 export default async function Page() {
@@ -33,10 +34,11 @@ export default async function Page() {
         />
         <LeaderSectionNavigation active="ceremonies" locale={locale} />
         {view ? (
-          <CeremonyLeaderTickets
+          <CeremonyLeaderSectors
             initialView={view}
             locale={locale}
             save={saveLeaderPair}
+            saveMany={saveLeaderSectorBatch}
             refresh={refreshLeaderTickets}
           />
         ) : (

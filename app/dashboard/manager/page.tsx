@@ -434,7 +434,7 @@ export default async function ManagerDashboardPage({
 
   const serviceSupabase = createSupabaseServiceClient();
   const filters = parseOperationsDashboardFilters(params);
-  const activeSection = resolveManagerSection(params);
+  let activeSection = resolveManagerSection(params);
   const participantSchoolsView = activeSection === "iscritti" && params.view === "schools";
   const statisticsReport = resolveStatisticsReport(params.report);
   const statisticsDrilldown =
@@ -445,6 +445,7 @@ export default async function ManagerDashboardPage({
   );
   const currentEventId = currentEvent?.id ?? null;
   const canManage = currentEventId ? scope.canManageEvent(currentEventId) : scope.isAdmin;
+  if (canManage && !params.section && Object.keys(params).every(key => key === "nav")) activeSection = "cerimonie";
   const canViewStatistics = scope.isAdmin || Boolean(currentEventId && scope.eventIds?.has(currentEventId));
   // Authorize the resolved section before any operational data is loaded,
   // including legacy URLs, inferred sections and remembered navigation.

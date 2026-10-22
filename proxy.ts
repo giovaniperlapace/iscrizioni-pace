@@ -148,7 +148,9 @@ export async function proxy(request: NextRequest) {
       rememberedPath &&
       rememberedRole &&
       isRoleAllowedForDashboard(rememberedRole, availableRoles, hasReceptionAssignments)
-        ? rememberedPath
+        ? rememberedRole === "manager" && availableRoles.has("manager")
+          ? ROLE_ROUTES.manager
+          : rememberedPath
         : ROLE_ROUTES[defaultRole];
     const redirectResponse = redirectPreservingCookies(
       new URL(destination, request.url),
