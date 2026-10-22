@@ -505,3 +505,15 @@ Migration applicata e registrata atomicamente con guardie già collaudate sul
 DB temporaneo: 68 tabelle, 193.411 righe canoniche, 221 definizioni/ACL di
 funzioni e ACL/RLS delle 68 tabelle invariati; policy e trigger conservati.
 Nessuna assegnazione, revoca, presenza o invio reale di collaudo.
+
+Lettura della nuova RPC con uno scope capogruppo reale, in transazione poi
+annullata: 51 membri autorizzati, zero dotazioni/biglietti al momento del
+controllo; execute negato ad authenticated. Nessun nominativo esposto nel
+verbale e nessuna assegnazione creata per la verifica.
+
+Codice `391d8bf` su main; deployment production
+`dpl_BJFR1st8AAmGnXEGs7R4H6y3B7NU` READY e dominio operativo assegnato.
+Browser pubblico: home 200, nuova pagina capogruppo e vecchia mappa
+protette con redirect al login, nessun errore JavaScript. Log error/fatal
+vuoti nel controllo del rilascio. Il flusso autenticato completo è stato
+verificato sul componente originale con database temporaneo.

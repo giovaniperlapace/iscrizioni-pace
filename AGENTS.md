@@ -13,7 +13,8 @@
 - 1.047 test, lint, TypeScript, build isolata, SQL/concorrenza e browser
   originale desktop/mobile superati. Migration applicata dopo backup con
   68 tabelle/193.411 righe e 221 funzioni/ACL conservate. Nessuna assegnazione
-  o revoca reale di prova. Verbale `docs/posti-cerimonie-2026-10-22.md`.
+  o revoca reale di prova. Codice `391d8bf` in produzione READY; dominio e
+  protezione dei percorsi verificati. Verbale `docs/posti-cerimonie-2026-10-22.md`.
 
 ## Posti cerimonie: fila a sinistra del blocco — 2026-10-22
 
