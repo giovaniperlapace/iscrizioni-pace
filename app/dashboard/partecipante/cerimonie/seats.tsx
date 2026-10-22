@@ -1,51 +1,42 @@
-import { ceremonySeatLabel } from "@/lib/ceremonies/seat-label";
-import { SEAT_MAP_COPY } from "@/lib/ceremonies/seat-map-copy";
+import { CurtainIcon } from "@/components/curtain-icon";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import type { PersonalSeat } from "@/lib/ceremonies/distribution";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
-export function PersonalCeremonySeats({
-  seats,
-  locale,
-}: {
-  seats: PersonalSeat[];
+import { SECTOR_COPY } from "@/lib/ceremonies/sector-copy";
+import { PERSONAL_CEREMONY_COPY } from "@/lib/ceremonies/personal-copy";
+
+export function PersonalCeremonySeats({ seats, locale, loading = false }: {
+  seats: PersonalSeat[] | null;
   locale: SupportedLocale;
+  loading?: boolean;
 }) {
   const c = DISTRIBUTION_COPY[locale];
+  const copy = PERSONAL_CEREMONY_COPY[locale];
   return (
-    <section className="grid gap-5">
-      <header>
-        <h1 className="text-xl font-semibold">{c.title}</h1>
-        <p className="mt-2 leading-6">{c.personalIntro}</p>
-      </header>
-      {!seats.length && <p>{c.personalEmpty}</p>}
-      {seats.map((s) => (
-        <article key={s.id} className="surface-card grid gap-3 p-5">
-          <h2 className="text-lg font-semibold">
-            {c[s.kind]} · {s.name}
-          </h2>
-          {s.child && <p>{c.child}</p>}
-          {s.needsSeat ? (
-            <>
-              <p>
-                {s.location} · {s.sector} · {s.category}
-              </p>
-              <p>{s.seat ? ceremonySeatLabel(s.sector, s.seat, locale) : s.mapAvailable ? SEAT_MAP_COPY[locale].seatPending : null}</p>
-              <p>
-                {new Intl.DateTimeFormat(locale, {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                  timeZone: "Europe/Rome",
-                }).format(new Date(s.startsAt))}
-              </p>
-            </>
-          ) : (
-            <p>{c.noSeatState}</p>
-          )}
-          {s.review && (
-            <p className="rounded-lg bg-amber-50 p-3 text-sm">{c.review}</p>
-          )}
-        </article>
-      ))}
-    </section>
+    <div className="grid min-w-0 gap-5 md:grid-cols-2">
+      {(["opening", "closing"] as const).map((kind) => {
+        const assigned = seats?.filter((seat) => seat.kind === kind) ?? [];
+        return (
+          <section key={kind} aria-labelledby={`personal-ceremony-${kind}`} aria-busy={loading} className="grid content-start gap-4 rounded-xl border border-[var(--peace-border)] bg-white p-5">
+            <h2 id={`personal-ceremony-${kind}`} className="flex items-center gap-3 text-xl font-semibold text-[var(--peace-blue-950)]">
+              <CurtainIcon size={24} className="shrink-0 text-[var(--peace-blue-800)]" aria-hidden="true" />{c[kind]}
+            </h2>
+            {loading ? <p className="text-sm text-[var(--peace-muted)]">{copy.loading}</p> : seats === null ? <p role="alert">{c.failure}</p> : !assigned.length ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{copy.empty}</p> : null}
+            {assigned.map((seat) => (
+              <article key={seat.id} className="grid gap-2 border-t border-[var(--peace-border)] pt-4">
+                <h3 className="font-semibold">{seat.name}</h3>
+                {seat.child && <p className="text-sm text-[var(--peace-muted)]">{c.child}</p>}
+                {seat.needsSeat ? <>
+                  <p className="text-lg font-semibold text-[var(--peace-blue-800)]">{SECTOR_COPY[locale].sector} {seat.sector}</p>
+                  <p className="text-sm text-[var(--peace-muted)]">{seat.location}</p>
+                  <p className="text-sm">{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(seat.startsAt))}</p>
+                </> : <p>{c.noSeatState}</p>}
+                {seat.review && <p className="rounded-lg bg-amber-50 p-3 text-sm">{c.review}</p>}
+              </article>
+            ))}
+          </section>
+        );
+      })}
+    </div>
   );
 }

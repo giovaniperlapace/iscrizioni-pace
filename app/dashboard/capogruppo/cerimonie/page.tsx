@@ -1,7 +1,10 @@
+import Link from "next/link";
+import { CurtainIcon } from "@/components/curtain-icon";
+import { getPanelReleaseMode } from "@/lib/panels/release";
 import { redirect } from "next/navigation";
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getRequestLocale } from "@/lib/i18n/server";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { loadLeaderTickets } from "@/lib/ceremonies/leader-tickets.server";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
@@ -13,11 +16,12 @@ import {
   saveLeaderSectorBatch,
   refreshLeaderTickets,
 } from "@/app/dashboard/ceremony-leader-tickets-actions";
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ kind?: string }> }) {
   const db = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(db, "capogruppo");
   if (!auth || auth.dashboardRole !== "capogruppo") redirect("/dashboard");
-  const locale = await getRequestLocale();
+  const [locale, params, panelMode] = await Promise.all([getRequestLocale(), searchParams, getPanelReleaseMode(db)]);
+  const kind = params.kind === "closing" ? "closing" : "opening";
   let view;
   try {
     view = await loadLeaderTickets(db, createSupabaseServiceClient);
@@ -32,9 +36,18 @@ export default async function Page() {
           eventRoles={auth.eventRoles}
           hasReceptionAssignments={auth.hasReceptionAssignments}
         />
-        <LeaderSectionNavigation active="ceremonies" locale={locale} />
+        <LeaderSectionNavigation active="ceremonies" locale={locale} showPanels={panelMode === "open"} />
+        <nav aria-label={DISTRIBUTION_COPY[locale].title} className="flex flex-wrap gap-2">
+          {(["opening", "closing"] as const).map((item) => (
+            <Link key={item} href={`/dashboard/capogruppo/cerimonie?kind=${item}`} prefetch={false} aria-current={kind === item ? "page" : undefined} className={`${kind === item ? "btn-primary" : "btn-secondary"} min-h-11 gap-2 px-4 py-2`}>
+              <CurtainIcon size={18} aria-hidden="true" />{DISTRIBUTION_COPY[locale][item]}
+            </Link>
+          ))}
+        </nav>
         {view ? (
           <CeremonyLeaderSectors
+            key={kind}
+            kind={kind}
             initialView={view}
             locale={locale}
             save={saveLeaderPair}

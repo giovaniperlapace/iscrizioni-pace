@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Cerimonie: menu capogruppo e schede partecipante — 2026-10-22
+
+- Menu «Posti alle cerimonie» accanto ai Forum, sempre raggiungibile; schede
+  Inaugurazione/Cerimonia finale con sole dotazioni ricevute e scope corrente.
+  Rimosso il filtro Admin di collaudo sul percorso attivo, mantenuti i controlli
+  server/DB di appartenenza al gruppo e i retry atomici.
+- Dashboard partecipante: due sezioni con icona a sipario, settore personale
+  e figli, attesa prima dell’assegnazione, errore distinto da vuoto; sette lingue.
+  RPC personale canonica e caricamento indipendente. Nessuna migration.
+- 1.056 test, lint, TypeScript, build isolata e browser 390/1440px superati.
+  Nessuna assegnazione reale di prova. Dettagli nel verbale cerimonie per settore.
+
 ## Cerimonie: assegnazione al settore — 2026-10-22
 
 - Su nuova richiesta, superata l’assegnazione a sedie specifiche: piantine

@@ -1140,7 +1140,7 @@ export default async function CapogruppoDashboardPage({
           <DashboardAreaDescription>
             {copy.areaDescription}
           </DashboardAreaDescription>
-          {panelBookingsOpen ? <LeaderSectionNavigation active="participants" locale={locale} /> : null}
+          <LeaderSectionNavigation active="participants" locale={locale} showPanels={panelBookingsOpen} />
         </header>
 
         <StatusMessage

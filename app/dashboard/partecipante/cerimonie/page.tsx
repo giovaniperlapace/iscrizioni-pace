@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "@/components/pending-link";
 import { getRequestLocale } from "@/lib/i18n/server";
-import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { loadPersonalSeats } from "@/lib/ceremonies/distribution.server";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
@@ -27,6 +27,7 @@ export default async function Page() {
         <Link href="/dashboard/partecipante" className="underline">
           {c.back}
         </Link>
+        <h1 className="text-xl font-semibold text-[var(--peace-blue-950)]">{c.title}</h1>
         {seats ? (
           <PersonalCeremonySeats seats={seats} locale={locale} />
         ) : (

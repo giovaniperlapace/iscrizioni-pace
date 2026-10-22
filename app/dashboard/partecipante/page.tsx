@@ -1,5 +1,7 @@
 import { withForumIntent } from "@/lib/panels/booking-intent";
-import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
+import { Suspense } from "react";
+import { ParticipantCeremonySections } from "./cerimonie/sections";
+import { PersonalCeremonySeats } from "./cerimonie/seats";
 import { getPanelReleaseMode } from "@/lib/panels/release";
 import { nationalityName } from "@/lib/registrations/nationality-names";
 import { Accessibility, Baby, CalendarDays, ContactRound, Flag, Mail, MapPin, Pencil, Phone, Save, UserRound, type LucideIcon } from "lucide-react";
@@ -1233,7 +1235,7 @@ export default async function PartecipanteDashboardPage({
               </div>
             </section>
 
-            {auth.eventRoles.some(role => role.role === "admin" && role.eventId === null) ? <Link href="/dashboard/partecipante/cerimonie" className="btn-secondary min-h-11 justify-self-start px-4">{DISTRIBUTION_COPY[locale].title}</Link> : null}
+            <Suspense fallback={<PersonalCeremonySeats seats={null} locale={locale} loading />}><ParticipantCeremonySections locale={locale} /></Suspense>
 
             {panelBookingsOpen ? <ParticipantPanelBookings
               locale={locale}

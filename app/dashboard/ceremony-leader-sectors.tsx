@@ -15,12 +15,14 @@ import {
 type Subject = { registrationId: string; childId: string | null; name: string };
 type Command = LeaderBatchCommand | PairTicketCommand;
 export function CeremonyLeaderSectors({
+  kind,
   initialView,
   locale,
   save,
   saveMany,
   refresh,
 }: {
+  kind?: "opening" | "closing";
   initialView: LeaderTickets;
   locale: SupportedLocale;
   save: (c: PairTicketCommand) => Promise<{ status: string }>;
@@ -143,10 +145,11 @@ export function CeremonyLeaderSectors({
         : [...prev, s],
     );
   }
+  const allocations = view.allocations.filter((item) => !kind || item.kind === kind);
   return (
     <section className="grid min-w-0 gap-4">
       <header className="surface-card grid gap-3 p-5">
-        <h1 className="text-xl font-semibold">{c.title}</h1>
+        <h1 className="text-xl font-semibold">{kind ? c[kind] : c.title}</h1>
         <p>{t.intro}</p>
         <button
           className="btn-secondary justify-self-start px-4 py-2"
@@ -169,7 +172,7 @@ export function CeremonyLeaderSectors({
           </button>
         </div>
       )}
-      {!view.allocations.length && <p>{c.empty}</p>}
+      {!allocations.length && <p>{c.empty}</p>}
       <label className="grid gap-1">
         {c.choose}
         <select
@@ -186,7 +189,7 @@ export function CeremonyLeaderSectors({
           }}
         >
           <option value="">—</option>
-          {view.allocations.map((x) => (
+          {allocations.map((x) => (
             <option key={x.id} value={x.id}>
               {c[x.kind]} · {x.groupName} · {t.sector} {x.sector} ·{" "}
               {x.quantity - x.used} {c.remaining.toLocaleLowerCase(locale)}

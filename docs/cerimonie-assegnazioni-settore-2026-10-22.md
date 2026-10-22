@@ -130,3 +130,27 @@ Nessun log error/fatal nel controllo circoscritto al deployment.
 Il flusso autenticato completo è stato collaudato con componenti originali e
 PostgreSQL temporaneo; non sono state create assegnazioni reali per la prova.
 La revisione dell’interfaccia con una sessione reale resta all’utente.
+
+## Menu capogruppo e schede personali
+
+Su richiesta successiva dell’utente, il capogruppo trova «Posti alle cerimonie»
+nel menu condiviso con i Forum, con due schede Inaugurazione/Cerimonia finale.
+Il menu resta disponibile anche quando i Forum sono chiusi; il filtro conserva
+la cerimonia dopo aggiornamenti e salva soltanto sulle dotazioni ricevute.
+Tolto il precedente filtro di collaudo Admin dal percorso attivo capogruppo:
+letture e salvataggi mantengono sessione, appartenenza corrente e scope RPC.
+Le vecchie funzioni di manutenzione non sono aperte da questa modifica.
+
+La dashboard partecipante mostra due sezioni distinte, ognuna con icona a
+sipario coerente con le icone SVG del sito. Settore personale, eventuali figli,
+data e sede; stato di attesa prima dell’assegnazione e errore distinto dai dati
+vuoti. Le letture usano la RPC personale canonica, senza dati di altri gruppi,
+con caricamento indipendente dalla parte restante della dashboard. Anche il
+precedente collegamento diretto resta disponibile agli utenti autenticati.
+Testi in tutte le sette lingue; nessuna migration o scrittura operativa.
+
+Verifiche: 1.056 test, lint, TypeScript, build production isolata; test del
+salvataggio reale senza appartenenza che si arresta prima dell’accesso service.
+Browser sui componenti originali a 390/1440px nelle sette lingue: due sezioni,
+icone, attesa e assegnazioni, menu e filtro dotazioni per cerimonia, nessun
+overflow orizzontale. Nessuna assegnazione reale di collaudo.

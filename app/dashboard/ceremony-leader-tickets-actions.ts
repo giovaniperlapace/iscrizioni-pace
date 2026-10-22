@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createAdminPilotClient } from "@/lib/reception/admin-pilot.server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
   executeLeaderPair,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/ceremonies/leader-tickets.server";
 export async function saveLeaderPair(input: unknown) {
   const result = await executeLeaderPair(
-    await createAdminPilotClient(),
+    await createSupabaseServerClient(),
     createSupabaseServiceClient,
     input,
   );
@@ -24,7 +24,7 @@ export async function saveLeaderPair(input: unknown) {
 }
 export async function refreshLeaderTickets() {
   return loadLeaderTickets(
-    await createAdminPilotClient(),
+    await createSupabaseServerClient(),
     createSupabaseServiceClient,
   );
 }
@@ -37,7 +37,7 @@ export async function saveLeaderSectorBatch(input: unknown) {
   const command = parseLeaderBatch(input);
   if (!command) return { status: "invalid" };
   const context = await distributionContext(
-    await createAdminPilotClient(),
+    await createSupabaseServerClient(),
     "leader",
   );
   if (!context) return { status: "forbidden" };
