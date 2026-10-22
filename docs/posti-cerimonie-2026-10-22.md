@@ -517,3 +517,28 @@ Browser pubblico: home 200, nuova pagina capogruppo e vecchia mappa
 protette con redirect al login, nessun errore JavaScript. Log error/fatal
 vuoti nel controllo del rilascio. Il flusso autenticato completo è stato
 verificato sul componente originale con database temporaneo.
+
+
+## Prima selezione: conservare la posizione dello schermo
+
+Riprodotto sul componente originale con una pagina sintetica da 100 iscritti:
+alla prima selezione, la comparsa della sezione destinatari spostava lo scroll
+da 2.974 a 9.582 pixel, trascinando la vista al fondo dell’elenco. Il componente
+non richiedeva uno scroll: era l’ancoraggio automatico del browser al contenuto
+successivo alla piantina, ora spostato dalla lista appena inserita.
+
+Disabilitato `overflow-anchor` sul documento soltanto quando è presente
+`ceremony-seats-workspace`, senza ripristini forzati dello scroll o blocchi
+dell’interazione. Selezionare un posto lascia pagina e contenitore della mappa
+nella stessa posizione; resta possibile scegliere altri posti oppure scorrere
+intenzionalmente verso la persona/famiglia. Il clic esplicito sui blocchi
+continua a portare al dettaglio. Nessuna modifica a dati o assegnazioni.
+
+Regressione browser su componente originale e dati sintetici: viewport
+1440×1100, 1440×700 e 390×844, due altezze della sedia, clic con/senza focus
+e tastiera. Misurate posizione della pagina, della sedia e scroll interno
+prima/dopo prima selezione, seconda selezione e ultima deselezione; nessun
+movimento. Verificati anche scroll esplicito sul blocco e scorrimento manuale
+verso l’elenco con scelta della persona. Superati 1.047 test, lint e TypeScript.
+Nessuna migration, assegnazione o presenza reale di collaudo.
+Build production Webpack superata nella copia isolata senza credenziali operative.

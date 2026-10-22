@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Posti cerimonie: selezione senza salto della pagina — 2026-10-22
+
+- Disabilitato il solo ancoraggio automatico del browser nella schermata
+  di assegnazione Manager/Admin: la comparsa dei destinatari dopo il primo
+  posto non trascina la pagina al fondo dell’elenco. Nessun riposizionamento
+  forzato o blocco dello scroll manuale; scroll esplicito sul blocco conservato.
+- Regressione browser originale con 100 partecipanti, desktop/mobile,
+  diverse altezze, mouse/tastiera e focus: prima/seconda selezione e ultima
+  deselezione stabili, scorrimento intenzionale verso i destinatari riuscito.
+  Nessuna migration o scrittura operativa reale; verbale posti cerimonie.
+
 ## Cerimonie capogruppo: abbinamento biglietti senza piantina — 2026-10-22
 
 - Pagina capogruppo: dotazione ricevuta, elenco dei soli biglietti riservati,

@@ -46,6 +46,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Revealing recipients below the map must not anchor the viewport to the
+   summary/footer and pull it past the seats the user is still selecting. */
+html:has(.ceremony-seats-workspace) {
+  overflow-anchor: none;
+}
+
 html:has(body .dashboard-modal),
 body:has(.dashboard-modal) {
   overflow: hidden;
