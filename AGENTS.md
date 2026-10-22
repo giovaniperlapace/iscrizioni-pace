@@ -1,5 +1,20 @@
 # AGENTS.md
 
+## Inaugurazione: blocchi posteriori nel settore E — 2026-10-22
+
+- Su richiesta dell’utente, gli ex H1/H2 diventano E blocchi 7/8, rispettivamente
+  a sinistra/destra sul retro. Numerazione 7/8 confermata esplicitamente.
+  E passa a 740 posti; file 1–7, sedie 1–10, UUID e coordinate conservati.
+- Panoramica unica E con otto blocchi; riferimenti condivisi anche in biglietti
+  e QR gruppo. Totali 3.540/3.250 e 290 protocollo invariati.
+- Migration `20261022150000`: nuova versione della mappa, storico intatto,
+  quote coerenti e revisione incrementata. Si arresta senza effetti se H ha
+  assegnazioni anche storiche o la configurazione è cambiata. Nessun trigger
+  disabilitato e nessuna assegnazione reale di prova.
+- 1.040 test, lint, TypeScript, build pulita e browser desktop/mobile su
+  PostgreSQL temporaneo superati. Dettagli e stato del rilascio nel verbale
+  `docs/posti-cerimonie-2026-10-22.md`.
+
 ## Posti prima dei destinatari e QR gruppo — 2026-10-22
 
 - Unico percorso: selezione posti, poi persona/familiari oppure gruppo. Rimossi

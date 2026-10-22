@@ -7,8 +7,8 @@ const words = {
   uk: ['Сектор','Блок','Ряд','Місце'],
 } satisfies Record<SupportedLocale, string[]>;
 export function openingSeatAddress(row: string) {
-  const main = /^([A-E])-b([1-6])-r(\d+)$/.exec(row);
-  if (main) return { block: Number(main[2]), row: Number(main[3]), key: `${main[1]}-b${main[2]}` };
+  const main = /^([A-E])-b([1-8])-r(\d+)$/.exec(row);
+  if (main && (main[1] === 'E' || Number(main[2]) <= 6)) return { block: Number(main[2]), row: Number(main[3]), key: `${main[1]}-b${main[2]}` };
   const rear = /^(H[12])-r(\d+)$/.exec(row);
   return rear ? { block: rear[1] === 'H1' ? 1 : 6, row: Number(rear[2]), key: rear[1] } : null;
 }

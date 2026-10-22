@@ -73,6 +73,29 @@ try{
  assert.match(await page.getByRole('region',{name:'Riepilogo assegnazione'}).innerText(),/3 posti/);
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
  await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
+ // The new rear blocks belong to the same E selector and retain their positions.
+ const e=overview.getByRole('region',{name:'Settore E',exact:true});
+ assert.equal(await e.getByRole('button').count(),8);
+ assert.equal(await overview.getByText('Settori H1 · H2',{exact:true}).count(),0);
+ const e1=await e.getByRole('button',{name:/Blocco 1 /}).boundingBox();
+ const e6=await e.getByRole('button',{name:/Blocco 6 /}).boundingBox();
+ const e7=await e.getByRole('button',{name:/Blocco 7 /}).boundingBox();
+ const e8=await e.getByRole('button',{name:/Blocco 8 /}).boundingBox();
+ assert.ok(e7.y>e1.y+e1.height && Math.abs(e7.x-e1.x)<1);
+ assert.ok(e8.y>e6.y+e6.height && Math.abs(e8.x-e6.x)<1);
+ await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'E · 740 posti ancora disponibili'});
+ for (const [block,chairs] of [[7,[1,2,4]],[8,[1,2]]]) {
+  await e.getByRole('button',{name:new RegExp('Blocco '+block+' ')}).click();
+  assert.equal(await page.getByRole('button',{name:new RegExp('^Settore E · Blocco '+block+' · Fila ')}).count(),70);
+  for(const chair of chairs) await page.getByRole('button',{name:new RegExp('^Settore E · Blocco '+block+' · Fila 1 · Sedia '+chair+' ·')}).click();
+  await page.getByLabel('Destinatari',{exact:true}).selectOption('group');
+  await page.getByLabel('Gruppo',{exact:true}).selectOption('11111111-1111-4111-8111-111111111111');
+  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();
+  await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
+ }
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('option')).some(o=>o.textContent==='E · 735 posti ancora disponibili'));
+ await e.scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/sector-e-desktop.png'});
  const scanner=page.getByRole('region',{name:'Scanner di prova'});
  await scanner.scrollIntoViewIfNeeded();
  await scanner.getByLabel('Scanner USB').focus();
@@ -81,9 +104,15 @@ try{
  await summary.waitFor();
  assert.match(await summary.innerText(),/Settore B2 · Blocco 1 · Fila 6 · Sedie 1–2, 4/);
  assert.match(await summary.innerText(),/Settore F · 3 posti senza sedia numerata/);
+ assert.match(await summary.innerText(),/Settore E · Blocco 7 · Fila 1 · Sedie 1–2, 4/);
+ assert.match(await summary.innerText(),/Settore E · Blocco 8 · Fila 1 · Sedie 1–2/);
  await summary.scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/group-places-desktop.png'});
  await page.setViewportSize({width:390,height:844});
  await summary.scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/group-places-mobile.png'});
+ await e.getByRole('button',{name:/Blocco 8 /}).click();
+ assert.equal(await page.getByRole('button',{name:/^Settore E · Blocco 8 · Fila 7 · Sedia 10 ·/}).isEnabled(),true);
+ await page.getByRole('region',{name:'Mappa',exact:true}).last().scrollIntoViewIfNeeded();
+ await page.screenshot({path:'/tmp/pace-ceremony-desk/sector-e-mobile.png'});
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A · 110 posti ancora disponibili'});
  await page.getByRole('button',{name:/^Settore A · Blocco 2 · File /}).click();
  assert.equal(await page.getByRole('button',{name:/^Settore A · Blocco 2 · Fila 1 · Sedia 1 ·/}).isDisabled(),true);

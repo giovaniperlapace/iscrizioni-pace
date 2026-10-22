@@ -50,3 +50,17 @@ test("actual shared actions retain the leader pilot and use current-event Manage
   }
  }
 });
+
+
+// All user-facing seat references share this parser, including QR summaries.
+import { openingSeatAddress, ceremonySeatLabel } from "../lib/ceremonies/seat-label.ts";
+import { ceremonySeatRanges } from "../lib/ceremonies/group-seat-summary.ts";
+test("E rear blocks have distinct addresses and QR ranges without changing row/chair numbers",()=>{
+ for (const block of [7,8]) {
+  assert.deepEqual(openingSeatAddress(`E-b${block}-r07`),{block,row:7,key:`E-b${block}`});
+  assert.equal(ceremonySeatLabel('E',{row:`E-b${block}-r07`,number:'10'}),`Settore E · Blocco ${block} · Fila 7 · Sedia 10`);
+ }
+ assert.equal(openingSeatAddress('A-b7-r01'),null);
+ assert.deepEqual(ceremonySeatRanges('E',[{row:'E-b7-r01',number:'1'},{row:'E-b7-r01',number:'2'},{row:'E-b8-r01',number:'1'}]),[
+  'Settore E · Blocco 7 · Fila 1 · Sedie 1–2','Settore E · Blocco 8 · Fila 1 · Sedia 1']);
+});

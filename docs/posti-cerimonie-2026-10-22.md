@@ -158,3 +158,56 @@ Nessuna assegnazione operativa, scansione remota o stampa fisica di collaudo.
 
 Lint senza avvisi, TypeScript e build production Webpack da `npm ci` in copia
 isolata superati. Nessuna route di collaudo inclusa nella build di rilascio.
+
+
+## Blocchi posteriori E7/E8 al posto di H1/H2
+
+Il 22 ottobre l’utente richiede che i due blocchi posteriori appartengano al
+settore E e conferma esplicitamente **Blocco 7 a sinistra, Blocco 8 a destra**.
+Il settore E ha quindi 740 posti (600 + 70 + 70) e una sola cornice nella
+panoramica, con gli ultimi due blocchi nella fascia posteriore. I settori H1/H2
+scompaiono dalle selezioni operative. Restano 3.540 posti fisici, 3.250
+assegnabili, 290 protocollo e F con 400 posti senza numerazione.
+
+I 140 UUID sono conservati. Le file restano 1–7 e le sedie 1–10; il riferimento
+interno passa da `H1-r01`/`H2-r01` a `E-b7-r01`/`E-b8-r01`, senza cambiare le
+coordinate. La nomenclatura condivisa restituisce, per esempio,
+«Settore E · Blocco 7 · Fila 1 · Sedia 1», anche nei biglietti e nei QR gruppo.
+Il parser conserva la compatibilità con i riferimenti storici H.
+
+Migration `20261022150000_opening_rear_blocks_sector_e`: aggiornamento mirato
+alla piantina inaugurazione dell’evento corrente sotto lo stesso lock delle
+assegnazioni. Archivia intatta la mappa precedente, pubblica una nuova versione,
+trasferisce le identità delle sedie a E, unisce capienze/quote e incrementa la
+revisione. Non disabilita trigger né modifica funzioni di autorizzazione o
+assegnazione. La preparazione di una nuova piantina usa già E7/E8 mantenendo la
+stessa formula degli UUID originari.
+
+La lettura preliminare production ha trovato revisione 4, mappa pubblicata 1,
+11 settori e nessuna assegnazione. La migration ricontrolla comunque lo stato:
+qualsiasi assegnazione o claim in H, anche storico, una bozza aperta o quote
+inattese causano l’annullamento integrale. Le assegnazioni esistenti in E e
+negli altri settori restano identiche; non viene tentata alcuna fusione di
+assegnazioni H eventualmente comparse durante il lavoro.
+
+Verifiche completate:
+
+- 1.040 test applicativi, lint senza avvisi, TypeScript e build production
+  Webpack da `npm ci` in copia isolata senza credenziali operative.
+- SQL su PostgreSQL temporaneo: conversione della vecchia piantina con una
+  vera assegnazione sintetica in E; conservazione di claim, nomine, allocazioni,
+  UUID, coordinate e storico; rifiuto della revisione precedente; assegnazione
+  Manager a E7 dopo la conversione. Configurazioni inattese e H occupato
+  producono rollback completo. Regressioni cerimonie e gara Manager/Admin passate.
+- Browser originale → Server Action → PostgreSQL temporaneo: otto blocchi E,
+  7/8 allineati a sinistra/destra sul retro, 70 sedie ciascuno, disponibilità
+  unificata 740 e decremento dopo riserve, QR gruppo con intervalli separati
+  per E7 ed E8. Desktop e telefono 390px, nessun errore JavaScript o overflow
+  globale. Conservate le prove famiglia, contatore F, B1/B2 e protocollo.
+- Procedura protetta di rilascio collaudata sullo stesso DB temporaneo:
+  confronto dei dati estranei alla modifica, ACL di funzioni/tabelle, RLS,
+  policy, trigger, identità sedie, contenuti delle mappe e storico audit.
+
+Rilascio production da completare: prima il codice compatibile con entrambe
+le configurazioni, poi la migration dopo backup verificato. Nessuna
+assegnazione, presenza, scansione remota o stampa fisica di collaudo.

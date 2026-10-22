@@ -41,8 +41,8 @@ try{
  await page.getByLabel('Modifica una seduta (incluse quelle non utilizzabili)',{exact:false}).selectOption({index:1});
  await page.getByRole('checkbox',{name:'Non utilizzabile',exact:true}).waitFor();
  await page.getByLabel('Ruolo test').selectOption('manager');await page.setViewportSize({width:390,height:844});
- await page.getByRole('button',{name:/^Settore H1 · Blocco 1 · File /}).click();
- assert.equal(await page.getByRole('button',{name:/^Settore H1 · Blocco 1 · Fila /}).count(),70);
+ await page.getByRole('button',{name:/^Settore E · Blocco 7 · File /}).click();
+ assert.equal(await page.getByRole('button',{name:/^Settore E · Blocco 7 · Fila /}).count(),70);
  await page.screenshot({path:'/tmp/pace-opening-work/mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:'/tmp/pace-opening-work/mobile.png',fullPage:true});

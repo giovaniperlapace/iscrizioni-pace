@@ -10,7 +10,7 @@ do $$ declare p uuid; v jsonb; sid uuid; qa uuid; qf uuid; blocked uuid; free_se
  assert prepare_opening_ceremony_layout(f(1),f(33),-1)->>'status'='saved';
  assert prepare_opening_ceremony_layout(f(1),f(33),-1)->>'status'='conflict';
  select id into p from ceremony_plans where event_id=f(1) and kind='opening';
- assert (select count(*)=11 and sum(capacity)=3540 from ceremony_sectors where plan_id=p);
+ assert (select count(*)=9 and sum(capacity)=3540 from ceremony_sectors where plan_id=p);
  assert (select sum(quantity)=3250 from ceremony_quotas where plan_id=p);
  assert (select count(*)=1 from ceremony_sectors where plan_id=p and not numbered and layout_code='F');
  v:=get_ceremony_map(f(1),f(33),p);

@@ -27,7 +27,7 @@ export function OpeningHallOverview({ seats, sectors, claims, onBlock }: {
   const name = (id: string) => sectors.find(s => s.id === id)?.name ?? '';
   const f = sectors.find(s => s.layoutCode === 'F');
   return <div className="grid min-w-0 gap-3">
-    <p className="text-sm text-[var(--peace-muted)]">Palco in alto. Blocchi da 1 a 6 da sinistra a destra guardando il palco; file dalla più vicina alla più lontana. Scegli un blocco per vedere le sedie.</p>
+    <p className="text-sm text-[var(--peace-muted)]">Palco in alto. Blocchi da 1 a 6 da sinistra a destra guardando il palco; nel settore E, blocchi 7 e 8 sul retro, a sinistra e a destra. File dalla più vicina alla più lontana. Scegli un blocco per vedere le sedie.</p>
     <div className="max-w-full overflow-auto rounded-xl border border-[var(--peace-border)] bg-slate-50 p-3" role="region" aria-label="Piantina generale inaugurazione" tabIndex={0}>
       <div className="grid min-w-[720px] gap-4">
         <div className="rounded-xl bg-[var(--peace-blue-800)] p-3 text-center font-bold tracking-widest text-white">PALCO</div>
@@ -37,7 +37,7 @@ export function OpeningHallOverview({ seats, sectors, claims, onBlock }: {
             const firstRow = Math.min(...group.seats.map(s => openingSeatAddress(s.row)!.row));
             const lastRow = Math.max(...group.seats.map(s => openingSeatAddress(s.row)!.row));
             const free = group.seats.filter(s => !s.blocked && !occupied.has(s.id)).length;
-            return <button key={`${group.sectorId}:${group.key}`} type="button" onClick={() => onBlock(group.sectorId,group.key)} aria-label={`Settore ${name(group.sectorId)} · Blocco ${group.block} · File ${firstRow}–${lastRow} · ${free} sedie libere`} className="grid content-start gap-1 rounded-lg border border-slate-300 bg-white p-2 text-left text-xs focus-visible:outline-4 focus-visible:outline-blue-700" style={{gridColumn:group.block}}>
+            return <button key={`${group.sectorId}:${group.key}`} type="button" onClick={() => onBlock(group.sectorId,group.key)} aria-label={`Settore ${name(group.sectorId)} · Blocco ${group.block} · File ${firstRow}–${lastRow} · ${free} sedie libere`} className="grid content-start gap-1 rounded-lg border border-slate-300 bg-white p-2 text-left text-xs focus-visible:outline-4 focus-visible:outline-blue-700" style={{gridColumn:group.block === 7 ? 1 : group.block === 8 ? 6 : group.block, gridRow:group.block > 6 ? 2 : 1}}>
               <span className="font-semibold">Settore {name(group.sectorId)}</span><span>Blocco {group.block}</span>
               <svg viewBox={`0 0 104 ${(lastRow-firstRow+1)*10+4}`} className="my-1 w-full" aria-hidden="true">{group.seats.map(s => <rect key={s.id} x={(Number(s.number)-1)*10+2} y={(openingSeatAddress(s.row)!.row-firstRow)*10+2} width="7" height="7" rx="1" fill={s.blocked?'#94a3b8':occupied.has(s.id)?'#d97706':'#dbeafe'}/>)}</svg>
               <span>File {firstRow}–{lastRow}</span><span>{free} libere / {group.seats.length}</span>
