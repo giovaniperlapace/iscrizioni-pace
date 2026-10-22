@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Posti cerimonie: navigazione e cronologia con revoche — 2026-10-22
+
+- Clic sul blocco: scroll e focus al dettaglio, margine sotto l’intestazione,
+  movimento ridotto rispettato. F conduce al contatore.
+- «Tutto il settore» ripristina la piantina completa, azzera ricerca/tabella
+  e allinea il blocco della pagina; selezione dei posti conservata. Rimosso
+  il selettore interno ambiguo quando il settore è già unico.
+- Cronologia attive/revocate con ricerca globale e pagine da 100: riserve
+  cumulative per gruppo/settore e nomine distinte. Date, quantità e sedie.
+- Revoca confermata atomica: persona diretta libera il posto; nomina di gruppo
+  lo restituisce alla riserva; delegazione revoca tutte le sue nomine e libera
+  la dotazione del settore, con elenco esplicito delle persone coinvolte.
+- Migration `20261022170000`: due RPC service-only; ruolo/sessione/evento,
+  revisione, idempotenza, audit e storico conservati. Nessun backfill inventato.
+- Rilascio congiunto con la richiesta successiva, come chiesto dall’utente.
+  1.042 test, lint, TypeScript, build, SQL/concorrenza e browser sintetici.
+  Nessuna assegnazione/revoca/presenza reale di prova. Dettagli nel verbale posti.
+
 ## Inaugurazione: blocchi posteriori nel settore E — 2026-10-22
 
 - Su richiesta dell’utente, gli ex H1/H2 diventano E blocchi 7/8, rispettivamente

@@ -46,7 +46,7 @@ try{
  await page.screenshot({path:'/tmp/pace-opening-work/mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:'/tmp/pace-opening-work/mobile.png',fullPage:true});
- await page.setViewportSize({width:1440,height:1050});await page.getByRole('button',{name:'Tutti i blocchi',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1050});await page.getByRole('button',{name:'Tutto il settore',exact:true}).click();
  await page.screenshot({path:'/tmp/pace-opening-work/desktop.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('PASS opening UI: 38 sector/block cards, exact protocol rows, selection, conflict, sector-only F, direct child payload, Admin/Manager/Viewer, mobile and no browser errors');
 }finally{await browser?.close();rmSync(route,{recursive:true,force:true});}

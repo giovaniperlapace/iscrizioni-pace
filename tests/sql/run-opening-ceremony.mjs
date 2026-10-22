@@ -8,7 +8,7 @@ const bin='/opt/homebrew/opt/postgresql@17/bin';
 const dir=mkdtempSync(join(tmpdir(),'pace-opening-'));
 const args=['-h',dir,'-p','55484','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-q'];
 const psql=(sql,unaligned=false)=>execFileSync(join(bin,'psql'),unaligned?[...args,'-tA']:args,{input:sql,encoding:'utf8',maxBuffer:8*1024*1024,stdio:['pipe','pipe','pipe']});
-const file=path=>execFileSync(join(bin,'psql'),[...args,...(path.startsWith('supabase/migrations/')?['-1']:[]),'-f',path],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
+const file=(path,atomic=false)=>execFileSync(join(bin,'psql'),[...args,...((atomic || path.startsWith('supabase/migrations/'))?['-1']:[]),'-f',path],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
 let started=false;
 try {
  execFileSync(join(bin,'initdb'),['-D',join(dir,'data'),'-U','postgres','-A','trust','--no-locale','-E','UTF8'],{stdio:'pipe'});
@@ -27,7 +27,7 @@ try {
   const guard=process.argv.find(x=>x.startsWith('--guarded-migration='))?.slice('--guarded-migration='.length);
   if(guard && name===(process.argv.find(x=>x.startsWith('--guarded-name='))?.slice('--guarded-name='.length)??'20261021180000_opening_ceremony_layout.sql')) {
    psql('create schema if not exists supabase_migrations;create table if not exists supabase_migrations.schema_migrations(version text primary key,name text,statements text[]);');
-   file(guard);continue;
+   file(guard,true);continue;
   }
   if(name==='20261022150000_opening_rear_blocks_sector_e.sql') {
    const seed=readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0];
@@ -50,6 +50,7 @@ try {
    try { console.log(file(`tests/sql/${name}.sql`).split('\n').filter(line=>line.includes('PASS')).join('\n')); }
    catch(e) {throw new Error(`${name}: ${e.stderr}`);}
  }
+ try { console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-assignment-history.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n')); } catch(e) { throw new Error('History: '+e.stderr); }
  const exportFile=process.argv.find(x=>x.startsWith('--export-fixture='))?.slice('--export-fixture='.length);
  {
   psql(`select prepare_opening_ceremony_layout(f(1),f(33),-1);
@@ -66,6 +67,14 @@ try {
  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'1');
  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null and nominee_id is not null",true).trim(),'1');
  console.log('PASS atomic desk Manager/Admin race: one final chair, one save, one conflict, one nominal assignment');
+ const revokeRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+ const revokeTarget=psql("select id from ceremony_nominees where revoked_at is null",true).trim();
+ const revokes=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select revoke_ceremony_assignment(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${revokeRevision},f(${9980+i}),'nominee','${revokeTarget}')->>'status';`)));
+ assert.deepEqual(revokes.sort(),['conflict','saved']);
+ assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'0');
+ assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'0');
+ assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is not null",true).trim(),'1');
+ console.log('PASS concurrent revocations: one save, one conflict, historical nominee retained, chair freed once');
  const browserBase=process.argv.find(x=>x.startsWith('--browser-base='))?.slice('--browser-base='.length);
  if(browserBase) {
   psql(`truncate ceremony_seat_claims,ceremony_nominees,ceremony_allocations,ceremony_map_requests,ceremony_distribution_requests cascade;
@@ -75,8 +84,8 @@ try {
    insert into participant_group_assignments(registration_id,group_id,is_current,source,status) values(f(10),'11111111-1111-4111-8111-111111111111',true,'manager','confirmed');
    delete from event_attendance_choices where registration_id in(f(10),f(11));`);
   execFileSync(process.execPath,['tests/browser/ceremony-seats-desk.mjs',browserBase,process.env.CEREMONY_BROWSER_ROOT],{env:{...process.env,CEREMONY_TEST_SOCKET:dir},stdio:'inherit'});
-  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'3');
-  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'10');
+  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'2');
+  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'1');
   assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111'",true).trim(),'11');
  }
  console.log('PASS complete ceremony migrations and SQL regression on disposable PostgreSQL');

@@ -7,7 +7,8 @@ import { parseOperationsDashboardFilters } from '@/lib/registrations/operations-
 import { attendanceTableColumns } from '@/lib/registrations/attendance-summary';
 import type { SeatsDesk, SeatPerson } from '@/lib/ceremonies/seats-desk';
 import { CeremonySeatsWorkspace } from './ceremony-seats-workspace';
-import { assignCeremonySeats } from './ceremony-seats-actions';
+import { assignCeremonySeats, loadCeremonyAssignmentHistory, revokeCeremonyAssignment } from './ceremony-seats-actions';
+import { CeremonyAssignmentHistory } from './ceremony-assignment-history';
 export async function CeremonySeatsSection({ params, dashboard, navMode }: { params: Record<string,string | undefined>; dashboard: 'admin'|'manager'; navMode: 'full'|'mini' }) {
   const context = await ceremonyContext(await createCeremonyManagerClient());
   if (!context?.canManage) return null;
@@ -24,5 +25,5 @@ export async function CeremonySeatsSection({ params, dashboard, navMode }: { par
     const priority = choices.some(a => a.choice === 'yes');
     return { registrationId: p.registrationId, name: p.name, code: p.publicCode ?? '', place: p.place, group: p.currentGroupName, priority, attendance: priority ? 'Presenza comunicata: sì' : choices.some(a => a.choice === 'no') ? 'Presenza comunicata: no' : 'Presenza da comunicare', children: p.children.map(c => ({ id: c.id, name: [c.first_name,c.last_name].filter(Boolean).join(' ') })) };
   });
-  return <div className="grid min-w-0 gap-4">{header}<CeremonySeatsWorkspace key={desk.planId} desk={desk} people={people} page={directory.serverPage!} filterProps={{ filters: directory.filters, groupOptions: directory.groupOptions, eventServices: directory.eventServices, operationalTags: directory.operationalTags, attendanceColumns: attendanceTableColumns(desk.day,desk.day), dashboard, navMode }} save={assignCeremonySeats}/></div>;
+  return <div className="grid min-w-0 gap-4">{header}<CeremonySeatsWorkspace key={desk.planId} desk={desk} people={people} page={directory.serverPage!} filterProps={{ filters: directory.filters, groupOptions: directory.groupOptions, eventServices: directory.eventServices, operationalTags: directory.operationalTags, attendanceColumns: attendanceTableColumns(desk.day,desk.day), dashboard, navMode }} save={assignCeremonySeats}/><CeremonyAssignmentHistory key={`history-${desk.planId}`} planId={desk.planId} revision={desk.revision} load={loadCeremonyAssignmentHistory} revoke={revokeCeremonyAssignment}/></div>;
 }

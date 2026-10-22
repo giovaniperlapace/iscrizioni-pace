@@ -15,6 +15,7 @@ export function CeremonySeatMap({
   selectableSeatIds,
   showOverview = true,
   initialBlock = "",
+  onBlockChange,
   selected,
   onSelect,
   disabled,
@@ -28,6 +29,7 @@ export function CeremonySeatMap({
   selectableSeatIds?: string[];
   showOverview?: boolean;
   initialBlock?: string;
+  onBlockChange?: (block: string) => void;
   selected: string[];
   onSelect: (id: string) => void;
   disabled: boolean;
@@ -99,10 +101,10 @@ export function CeremonySeatMap({
   return (
     <section className="grid min-w-0 gap-3" aria-label={c.map}>
       {opening && showOverview && <OpeningHallOverview seats={seats} sectors={sectors} claims={claims} onBlock={(id, key) => {setSector(id);setBlock(key);setQuery("");setPage(0);}} />}
-      {block && <div className="flex flex-wrap items-center gap-3"><strong>{c.sector} {sector || sectors.length === 1 ? sectorById.get(sector || sectors[0].id) : ""} · {blockWord} {openingSeatAddress(`${block}-r01`)?.block ?? block}</strong><button type="button" className="btn-secondary min-h-11 px-3" onClick={() => {setBlock("");setPage(0);}}>Tutti i blocchi</button></div>}
+      {opening && (block || sector || sectors.length === 1) && <div className="flex flex-wrap items-center gap-3"><strong>{c.sector} {sector || sectors.length === 1 ? sectorById.get(sector || sectors[0].id) : ""}{block && <> · {blockWord} {openingSeatAddress(`${block}-r01`)?.block ?? block}</>}</strong><button type="button" className="btn-secondary min-h-11 px-3" disabled={disabled} aria-pressed={!block && !query && !table} onClick={() => {setBlock("");onBlockChange?.("");setQuery("");setPage(0);setTable(false);}}>{c.wholeSector}</button></div>}
       {sectorOnly && <p className="rounded-lg bg-blue-50 p-4">Questo settore non ha posti numerati. Assegna una quantità al gruppo oppure un posto alla persona; non occorre scegliere una sedia.</p>}
       <div className="flex flex-wrap gap-3">
-        <label className="grid gap-1">
+        {sectors.length > 1 && <label className="grid gap-1">
           {c.sector}
           <select
             className="field max-w-full"
@@ -110,6 +112,7 @@ export function CeremonySeatMap({
             onChange={(e) => {
               setSector(e.target.value);
               setBlock("");
+              onBlockChange?.("");
               setPage(0);
             }}
           >
@@ -120,7 +123,7 @@ export function CeremonySeatMap({
               </option>
             ))}
           </select>
-        </label>
+        </label>}
         <label className="grid min-w-0 gap-1">
           {c.search}
           <input

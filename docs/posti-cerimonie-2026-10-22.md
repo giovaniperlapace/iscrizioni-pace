@@ -239,3 +239,92 @@ Su questa postazione Giovani per la Pace è stata ricreata la configurazione
 locale production assente, ignorata da Git e con permessi 600: chiave
 `/Users/giovaniperlapace/.ssh/id_ed25519_hetzner_20260613`, host e container
 production verificati. Nessuna credenziale applicativa copiata o pubblicata.
+
+
+## Navigazione blocco → posti e ritorno al settore — rilascio congiunto
+
+Richiesta successiva: cliccando un blocco, scorrere al suo dettaglio; consentire
+il ritorno alla vista completa del settore anche dopo aver aperto un blocco.
+Il 22 ottobre l’utente chiede esplicitamente di rinviare commit e push finché
+non sia implementata anche la richiesta del successivo messaggio in coda.
+La tranche è rimasta locale fino al completamento della cronologia e delle
+revoche richieste nel messaggio successivo, descritte di seguito.
+
+Dopo il clic nella panoramica, il dettaglio riceve il focus senza uno scroll
+implicito e viene raggiunto con scroll esplicito, rispettando la preferenza
+«movimento ridotto» e il margine sotto l’intestazione fissa. Funziona anche
+cliccando di nuovo lo stesso blocco; F conduce al contatore della quantità.
+
+«Tutto il settore» aggiorna anche il blocco memorizzato dalla pagina, azzera
+ricerca/paginazione della mappa e ripristina la vista grafica dalla tabella.
+Le sedie selezionate restano conservate. Nella vista limitata a un solo settore
+è rimosso il secondo selettore ambiguo «Tutti»; resta il selettore operativo
+principale. Il nuovo comando condiviso è tradotto nelle sette lingue.
+
+Nessuna migration, modifica dei permessi o dei comandi di assegnazione.
+
+Verifiche locali superate: 1.040 test, lint, TypeScript, build production
+Webpack nella copia isolata con dipendenze da `npm ci`, SQL/concorrenza e
+browser originale collegato a PostgreSQL temporaneo. Per A, A1/A2, B1/B2,
+C, D ed E sono verificati blocco → scroll automatico → tutto il settore →
+stesso blocco, ricerca vuota ripristinata, ritorno dalla tabella, selezioni
+conservate, focus da tastiera e viewport 1440/390 px con movimento ridotto.
+Verificato anche il clic su F fino al contatore. Nessun errore JavaScript.
+Commit e push rinviati come richiesto e inclusi nel rilascio congiunto con
+cronologia e revoche.
+
+
+## Cronologia assegnazioni e revoche — 2026-10-22
+
+Richiesta successiva: consultare la cronologia delle assegnazioni e poterle
+revocare. Il collegamento «Cronologia e revoche» in cima ai posti conduce alla
+nuova sezione, caricata su richiesta per Admin e Manager dell’evento corrente.
+
+Elenco dal più recente, con data/ora Rome, destinatario, settore, quantità,
+dettaglio delle sedie, stato attivo/revocato e data della revoca. Ricerca letterale
+per nome, delegazione o settore e filtro Tutte/Attive/Revocate precedono le pagine
+da 100. Le riserve di gruppo sono cumulative nello stesso settore; le nomine
+sono righe distinte. Non è una ricostruzione dei singoli incrementi della riserva:
+usa il ciclo di vita canonico di dotazioni e nomine, comprese quelle preesistenti.
+Non vengono inventati autori o passaggi storici mancanti. I riferimenti delle
+sedie derivano dalla versione più recente della piantina che conserva quell’UUID.
+
+Revoca esplicita con conferma e annullamento:
+- Persona/familiare con dotazione diretta: libera sedia e quota.
+- Nomina nella delegazione: revoca la sola persona; quantità e sedie riservate
+  al gruppo restano disponibili per un altro membro. Il claim nominale è chiuso
+  conservando la relazione storica e sostituito atomicamente da uno senza nomina.
+- Intera delegazione del settore: libera la dotazione e tutte le sue sedie,
+  revocando le nomine attive elencate nella conferma. Nessuna revoca globale
+  implicita di altre cerimonie o settori.
+- F conserva solo quantità, senza riferimenti fittizi a sedie numerate.
+
+Migration `20261022170000_ceremony_assignment_history`: due nuove RPC service-only,
+nessuna modifica di dati, schema delle tabelle, trigger o funzioni preesistenti.
+Evento e attore derivati dalla sessione, ruolo riletto anche nel DB, lock canonico
+1381, revisione attesa e richiesta idempotente con fingerprint. Rilascio claim,
+revoca nomine/dotazione, incremento revisione, registro richiesta e audit avvengono
+nella stessa transazione, mantenendo attivi tutti i vincoli. Gli errori non sono
+convertiti in una cronologia vuota. Le risposte tardive delle letture sono scartate;
+la cronologia obsoleta dopo un salvataggio non offre conferme di revoca.
+
+Verifiche: 1.042 test unitari, lint, TypeScript e build production Webpack nella
+copia isolata con dipendenze da lockfile; SQL su PostgreSQL temporaneo completo di
+migration, errori di audit con rollback, permessi/scope, retry e sostituzione della
+richiesta, revoche concorrenti, adulti/figli, F, riserve e riassegnazioni, cronologia
+oltre 100 righe e ricerca globale. Browser con componenti originali e database
+sintetico: navigazione blocchi desktop/mobile, conferma/annullamento, revoca diretta,
+revoca di nomina mantenendo la riserva, riassegnazione e revoca della delegazione
+con nomi coinvolti, filtri e conservazione dello storico. Nessuna assegnazione,
+revoca, presenza o email reale di collaudo.
+
+Backup production verificato con elenco e decodifica integrale `pg_restore`:
+`/root/backups/iscrizioni-pace/production-before-assignment-history-1792668223.dump`,
+18.992.350 byte, SHA-256
+`d790a08113e1f9f6960a7b0785bf51a72b4482eeea906c41cdfe23089994357f`.
+
+Migration applicata e registrata atomicamente in produzione tramite copia
+controllata priva di BEGIN/COMMIT interni, così anche la registrazione resta nella
+transazione dello script. Confronto prima/dopo: 68 tabelle, 192.898 righe canoniche,
+218 definizioni/ACL di funzioni e 68 ACL/RLS di tabelle invariati, oltre a policy e
+trigger. Nessuna scrittura di collaudo. Deployment da verificare dopo il push.
