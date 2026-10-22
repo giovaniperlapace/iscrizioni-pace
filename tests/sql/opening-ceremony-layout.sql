@@ -10,7 +10,7 @@ do $$ declare p uuid; v jsonb; sid uuid; qa uuid; qf uuid; blocked uuid; free_se
  assert prepare_opening_ceremony_layout(f(1),f(33),-1)->>'status'='saved';
  assert prepare_opening_ceremony_layout(f(1),f(33),-1)->>'status'='conflict';
  select id into p from ceremony_plans where event_id=f(1) and kind='opening';
- assert (select count(*)=9 and sum(capacity)=3540 from ceremony_sectors where plan_id=p);
+ assert (select count(*)=8 and sum(capacity)=3540 from ceremony_sectors where plan_id=p);
  assert (select sum(quantity)=3250 from ceremony_quotas where plan_id=p);
  assert (select count(*)=1 from ceremony_sectors where plan_id=p and not numbered and layout_code='F');
  v:=get_ceremony_map(f(1),f(33),p);
@@ -19,7 +19,7 @@ do $$ declare p uuid; v jsonb; sid uuid; qa uuid; qf uuid; blocked uuid; free_se
  assert (select count(*)=290 from jsonb_array_elements(v->'draft'->'seats') s where (s->>'blocked')::boolean);
  assert (select count(*)=110 from jsonb_array_elements(v->'draft'->'seats') s join ceremony_sectors c on c.id=(s->>'sectorId')::uuid where c.layout_code='A' and not (s->>'blocked')::boolean);
  assert (select bool_and((s->>'blocked')::boolean=(substring(s->>'row' from '-r(\d+)$')::int < case when s->>'row' like 'A-b2-%' then 9 else 8 end)) from jsonb_array_elements(v->'draft'->'seats') s where s->>'row' ~ '^A-b[2-5]-');
- assert (select count(*)=300 from jsonb_array_elements(v->'draft'->'seats') s join ceremony_sectors c on c.id=(s->>'sectorId')::uuid where c.layout_code='B1');
+ assert (select count(*)=600 from jsonb_array_elements(v->'draft'->'seats') s join ceremony_sectors c on c.id=(s->>'sectorId')::uuid where c.layout_code='B');
  select revision into rev from ceremony_plans where id=p;
  assert save_ceremony(f(1),f(33),'opening',rev,'configure','{"location":"Umbria Fiere · Padiglione 9 e sala collegata","capacity":3540,"startsAt":"2026-10-25T16:30","endsAt":"2026-10-25T19:00","state":"validated","attendancePart":"afternoon"}')->>'status'='saved';
  assert set_ceremony_map(f(1),f(33),p,rev+1,f(9900),'publish',jsonb_build_object('versionId',v->'draft'->>'id'))->>'status'='saved','sector-only F must not prevent publication';

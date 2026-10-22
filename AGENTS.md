@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## Posti cerimonie: B unico, cronologia esplicita e revoca dalla sedia — 2026-10-22
+
+- B1/B2 riuniti nel solo B: 600 posti, sei blocchi, file 1–10 senza rinumerare.
+  UUID/coordinate/sedie e assegnazioni degli altri settori conservati; totali
+  3.540 fisici / 3.250 assegnabili. Superata la precedente separazione B1/B2.
+- Cronologia tramite HTTP private/no-store, indipendente dai riferimenti delle
+  Server Action e dai refresh della pagina. Carica all’apertura, con i pulsanti
+  (ricerca/pagine/Aggiorna) e dopo assegnazioni/revoche; nessun polling.
+- Clic su una sedia occupata: destinatario e conferma per liberare solo quella
+  sedia. Per i gruppi riduce la riserva di uno, revoca l’eventuale nomina e
+  conserva gli altri posti. Resta possibile scegliere il posto riservato per
+  assegnarlo a un membro. Protocollo bloccato; F tramite cronologia/quantità.
+- Migration `20261022180000`: B unificato solo se privo di assegnazioni/claim
+  anche storici, altrimenti rollback; nuova versione mappa e storico intatto.
+  Revoca singola con ruolo riletto, revisione, retry idempotente, audit e
+  aggiornamento atomico; rilasci delle riserve visibili nella cronologia.
+- 1.043 test, lint, TypeScript, build production, SQL/concorrenza e browser
+  sintetico desktop/mobile; verificati rinnovo cookie e numero finito di letture.
+  Nessuna assegnazione, revoca, presenza o invio reale di prova. Verbale:
+  `docs/posti-cerimonie-2026-10-22.md`.
+
 ## Posti cerimonie: navigazione e cronologia con revoche — 2026-10-22
 
 - Clic sul blocco: scroll e focus al dettaglio, margine sotto l’intestazione,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseHistoryQuery, parseRevokeAssignment } from '../lib/ceremonies/assignment-history.ts';
+import { parseHistoryQuery, parseRevokeAssignment, parseRevokeSeat } from '../lib/ceremonies/assignment-history.ts';
 const id='11111111-1111-4111-8111-111111111111';
 test('history validates global filters and bounded pagination before RPC',()=>{
  const q={planId:id,page:2,search:"L'école",state:'revoked'};
@@ -12,4 +12,10 @@ test('revocation requires an explicit canonical target, revision and stable requ
  assert.deepEqual(parseRevokeAssignment(c),c);
  assert.ok(parseRevokeAssignment({...c,kind:'allocation'}));
  for(const bad of [null,{}, {...c,id:null},{...c,planId:'x'},{...c,requestId:null},{...c,revision:-1},{...c,revision:'0'},{...c,kind:'all'}]) assert.equal(parseRevokeAssignment(bad),null);
+});
+
+test('single-chair revoke requires its own explicit seat and revision',()=>{
+ const c={planId:id,seatId:id,requestId:id,revision:5};
+ assert.deepEqual(parseRevokeSeat(c),c);
+ for(const bad of [null,{}, {...c,seatId:null},{...c,seatId:'all'},{...c,planId:'x'},{...c,requestId:null},{...c,revision:-1},{...c,revision:NaN},{...c,revision:'5'}]) assert.equal(parseRevokeSeat(bad),null);
 });

@@ -3,7 +3,7 @@ import {mkdirSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import assert from 'node:assert/strict';
 const base=process.argv[2],root=process.argv[3],socket=process.env.CEREMONY_TEST_SOCKET;
 assert.match(base,/^http:\/\/(localhost|127\.0\.0\.1):\d+$/);assert.match(socket,/^\/.*\/pace-opening-/);
-const route=`${root}/app/ceremony-seats-check`;assert.ok(!existsSync(route));mkdirSync(route);
+const route=`${root}/app/ceremony-seats-check`;assert.ok(!existsSync(route));mkdirSync(route);mkdirSync(`${route}/history`);
 writeFileSync(`${route}/db.ts`, `import {execFileSync} from 'node:child_process';
 const args=${JSON.stringify(['-h',socket,'-p','55484','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-tAq'])};
 export function query(sql:string){return JSON.parse(execFileSync('/opt/homebrew/opt/postgresql@17/bin/psql',args,{input:sql,encoding:'utf8',maxBuffer:8*1024*1024}).trim());}
@@ -13,12 +13,15 @@ import {desk,query} from './db';import {ceremonyReceptionDb} from '@/tests/brows
 export async function command(c:DeskCommand){if(!parseDeskCommand(c))throw Error('invalid');const quote=(x:unknown)=>"'"+String(x).replaceAll("'","''")+"'";const result=query('set role service_role;select assign_ceremony_seats(f(1),f(31),'+quote(c.planId)+','+c.revision+','+quote(c.requestId)+','+quote(JSON.stringify(c.data))+'::jsonb);');return {...result,desk:desk()};}
 export async function history(q:import('@/lib/ceremonies/assignment-history').HistoryQuery){const {parseHistoryQuery}=await import('@/lib/ceremonies/assignment-history');if(!parseHistoryQuery(q))throw Error('invalid');const quote=(x:unknown)=>"'"+String(x).replaceAll("'","''")+"'";return {status:'loaded',history:query('set role service_role;select get_ceremony_assignment_history(f(1),f(31),'+quote(q.planId)+','+q.page+','+quote(q.search)+','+quote(q.state)+');')};}
 export async function revoke(c:import('@/lib/ceremonies/assignment-history').RevokeAssignment){const {parseRevokeAssignment}=await import('@/lib/ceremonies/assignment-history');if(!parseRevokeAssignment(c))throw Error('invalid');const quote=(x:unknown)=>"'"+String(x).replaceAll("'","''")+"'";const result=query('set role service_role;select revoke_ceremony_assignment(f(1),f(31),'+quote(c.planId)+','+c.revision+','+quote(c.requestId)+','+quote(c.kind)+','+quote(c.id)+');');return {...result,desk:desk()};}
+export async function revokeSeat(c:import('@/lib/ceremonies/assignment-history').RevokeSeat){const {parseRevokeSeat}=await import('@/lib/ceremonies/assignment-history');if(!parseRevokeSeat(c))throw Error('invalid');const quote=(x:unknown)=>"'"+String(x).replaceAll("'","''")+"'";const result=query('set role service_role;select revoke_ceremony_seat(f(1),f(31),'+quote(c.planId)+','+c.revision+','+quote(c.requestId)+','+quote(c.seatId)+');');return {...result,desk:desk()};}
 export async function scan(c:ReceptionCommand){const actor=query('select to_json(f(30));');const db=ceremonyReceptionDb(query,actor);return executeReceptionCommand(db,()=>db,c);}`);
-writeFileSync(`${route}/page.tsx`, `import Fixture from '@/tests/browser/ceremony-seats-desk-fixture';import {desk,query} from './db';import {ceremonyReceptionDb} from '@/tests/browser/ceremony-reception-db';import {executeReceptionCommand} from '@/lib/reception/check-in.server';import type {ReceptionCommand} from '@/lib/reception/contracts';import {command,scan,history,revoke} from './actions';export const dynamic='force-dynamic';export default function Page(){const people=query("select jsonb_agg(jsonb_build_object('registrationId',r.id,'name',p.first_name||' '||p.last_name,'code',p.public_code,'place','Test','group','Delegazione prova','priority',false,'attendance','Presenza da comunicare','children',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',first_name||' '||last_name) order by position) from registration_children where registration_id=r.id),'[]'))) from registrations r join participants p on p.id=r.participant_id where r.id in(f(10),f(11));");return <Fixture initial={desk()} people={people} command={command} scan={scan} history={history} revoke={revoke}/>;}`);
+writeFileSync(`${route}/page.tsx`, `import Fixture from '@/tests/browser/ceremony-seats-desk-fixture';import {desk,query} from './db';import {ceremonyReceptionDb} from '@/tests/browser/ceremony-reception-db';import {executeReceptionCommand} from '@/lib/reception/check-in.server';import type {ReceptionCommand} from '@/lib/reception/contracts';import {command,scan,history,revoke,revokeSeat} from './actions';export const dynamic='force-dynamic';export default function Page(){const people=query("select jsonb_agg(jsonb_build_object('registrationId',r.id,'name',p.first_name||' '||p.last_name,'code',p.public_code,'place','Test','group','Delegazione prova','priority',false,'attendance','Presenza da comunicare','children',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',first_name||' '||last_name) order by position) from registration_children where registration_id=r.id),'[]'))) from registrations r join participants p on p.id=r.participant_id where r.id in(f(10),f(11));");return <Fixture initial={desk()} people={people} command={command} scan={scan} history={history} revoke={revoke} revokeSeat={revokeSeat}/>;}`);
+writeFileSync(`${route}/history/route.ts`, `import {NextRequest,NextResponse} from 'next/server';import {history} from '../actions';export async function GET(req:NextRequest){const q=req.nextUrl.searchParams;const result=await history({planId:q.get('planId')!,page:Number(q.get('page')),search:q.get('search')!,state:q.get('state') as 'all'});const response=NextResponse.json(result,{headers:{'Cache-Control':'private, no-store'}});response.cookies.set('synthetic-refresh',String(Date.now()),{httpOnly:true});return response;}`);
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE);let browser;
 try{
  browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:1100}});page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ let historyReads=0;await page.route('**/dashboard/ceremonies/history?**',route=>{historyReads++;return route.continue({url:route.request().url().replace('/dashboard/ceremonies/history','/ceremony-seats-check/history')});});
  await page.goto(`${base}/ceremony-seats-check`,{waitUntil:'networkidle'});
  assert.equal(await page.getByRole('button',{name:'Parti dalle persone',exact:true}).count(),0);
  assert.equal(await page.getByLabel('Destinatari',{exact:true}).count(),0);
@@ -30,7 +33,7 @@ try{
  for(const width of [1440,390]) {
   await page.setViewportSize({width,height:width===390?844:1100});
   await page.emulateMedia({reducedMotion:width===390?'reduce':'no-preference'});
-  for(const [name,block,total,blockTotal] of [['A',2,400,100],['A1',1,100,100],['A2',6,100,100],['B1',1,300,50],['B2',1,300,50],['C',1,600,100],['D',1,600,100],['E',7,740,70]]) {
+  for(const [name,block,total,blockTotal] of [['A',2,400,100],['A1',1,100,100],['A2',6,100,100],['B',1,600,100],['C',1,600,100],['D',1,600,100],['E',7,740,70]]) {
    const card=overview.getByRole('button',{name:new RegExp('^Settore '+name+' · Blocco '+block+' · File ')});
    await card.click();
    // No test scroll: the component itself brings the requested detail into view.
@@ -72,14 +75,14 @@ try{
  await page.waitForFunction(()=>{const el=document.querySelector('[aria-label="Quantità di posti"]');const r=el?.getBoundingClientRect();return r && r.top>=76 && r.bottom<=innerHeight;});
  console.log('PASS sector navigation: auto-scroll, keyboard focus, all numbered sectors, repeat block, cleared search/table, selection preserved, reduced motion and mobile');
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A1 · 100 posti ancora disponibili'});
- const b1 = overview.getByRole('region',{name:'Settore B1',exact:true}), b2 = overview.getByRole('region',{name:'Settore B2',exact:true});
+ const b2 = overview.getByRole('region',{name:'Settore B',exact:true});
  const stage=await overview.getByText('PALCO',{exact:true}).boundingBox();const front=await overview.getByRole('button',{name:/^Settore A1 · Blocco 1 · File /}).boundingBox();assert.ok(stage.y+stage.height<front.y);
  await overview.evaluate(el=>el.scrollIntoView({block:'start'}));await page.evaluate(()=>window.scrollBy(0,-100));await page.screenshot({path:'/tmp/pace-ceremony-desk/orientation-overview.png'});
- assert.equal(await b1.getByRole('button').count(),6);assert.equal(await b2.getByRole('button').count(),6);
- const box1=await b1.boundingBox(),box2=await b2.boundingBox();assert.ok(box2.y>box1.y+box1.height);
+ assert.equal(await b2.getByRole('button').count(),6);
+ assert.equal(await overview.getByRole('region',{name:/Settore B[12]/}).count(),0);
  await b2.getByRole('button',{name:/Blocco 2 /}).click();
- assert.equal(await map.getByLabel('Settore',{exact:true}).first().inputValue(),await map.getByLabel('Settore',{exact:true}).first().locator('option').filter({hasText:'B2 · 300'}).getAttribute('value'));
- assert.equal(await page.getByRole('button',{name:/^Settore B2 · Blocco 2 · Fila 6 · Sedia 1 ·/}).count(),1);
+ assert.equal(await map.getByLabel('Settore',{exact:true}).first().inputValue(),await map.getByLabel('Settore',{exact:true}).first().locator('option').filter({hasText:'B · 600'}).getAttribute('value'));
+ assert.equal(await page.getByRole('button',{name:/^Settore B · Blocco 2 · Fila 6 · Sedia 1 ·/}).count(),1);
  assert.equal(await page.getByRole('button',{name:/^Settore B1 · Blocco 2 · Fila/}).count(),0);
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A1 · 100 posti ancora disponibili'});
  const chair1=await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 1 ·/}).evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x+scrollX,y:r.y+scrollY};});
@@ -96,7 +99,8 @@ try{
  await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
  await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
  assert.equal(await page.getByLabel('Destinatari',{exact:true}).count(),0);
- assert.equal(await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 1 ·/}).isDisabled(),true);
+ await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 1 ·/}).click();
+ await page.getByRole('dialog',{name:'Posto occupato',exact:true}).getByRole('button',{name:'Chiudi',exact:true}).click();
 
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'F · 400 posti ancora disponibili'});
  await page.getByRole('button',{name:'Aumenta quantità',exact:true}).click();
@@ -114,8 +118,8 @@ try{
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
  await page.waitForFunction(()=>Array.from(document.querySelectorAll('option')).some(o=>o.textContent==='F · 396 posti ancora disponibili'));
  await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
- await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'B2 · 300 posti ancora disponibili'});
- for (const chair of [1,2,4]) await page.getByRole('button',{name:new RegExp('^Settore B2 · Blocco 1 · Fila 6 · Sedia '+chair+' ·')}).click();
+ await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'B · 600 posti ancora disponibili'});
+ for (const chair of [1,2,4]) await page.getByRole('button',{name:new RegExp('^Settore B · Blocco 1 · Fila 6 · Sedia '+chair+' ·')}).click();
  await page.getByLabel('Destinatari',{exact:true}).selectOption('assign');
  await page.getByLabel('Destinatari',{exact:true}).selectOption('group');
  assert.match(await page.getByRole('region',{name:'Riepilogo assegnazione'}).innerText(),/3 posti/);
@@ -150,7 +154,7 @@ try{
  await page.keyboard.type('G:'+'g'.repeat(43),{delay:1});await page.keyboard.press('Enter');
  const summary=page.getByRole('region',{name:'Posti cerimonie del gruppo'});
  await summary.waitFor();
- assert.match(await summary.innerText(),/Settore B2 · Blocco 1 · Fila 6 · Sedie 1–2, 4/);
+ assert.match(await summary.innerText(),/Settore B · Blocco 1 · Fila 6 · Sedie 1–2, 4/);
  assert.match(await summary.innerText(),/Settore F · 3 posti senza sedia numerata/);
  assert.match(await summary.innerText(),/Settore E · Blocco 7 · Fila 1 · Sedie 1–2, 4/);
  assert.match(await summary.innerText(),/Settore E · Blocco 8 · Fila 1 · Sedie 1–2/);
@@ -171,6 +175,15 @@ try{
  const history=page.getByRole('region',{name:'Cronologia assegnazioni',exact:true});
  await history.getByRole('button',{name:'Mostra cronologia',exact:true}).click();
  await history.getByText('6 assegnazioni · Pagina 1 di 1',{exact:true}).waitFor();
+ assert.equal(historyReads,1);
+ for(let i=0;i<5;i++)await page.getByRole('button',{name:/^Ridisegna /}).click();
+ await page.waitForTimeout(3000);assert.equal(historyReads,1,'rerenders and refreshed cookie must not reread history');
+ await history.getByLabel('Cerca nella cronologia',{exact:true}).fill('draft');
+ await history.getByLabel('Cerca nella cronologia',{exact:true}).fill('');
+ assert.equal(historyReads,1,'typing must not trigger a read');
+ await history.getByRole('button',{name:'Aggiorna cronologia',exact:true}).click();
+ await history.getByText('6 assegnazioni · Pagina 1 di 1',{exact:true}).waitFor();
+ assert.equal(historyReads,2,'explicit refresh performs one read');
  const adult=history.getByRole('listitem',{name:'Adult Test · Settore A1',exact:true});
  await adult.getByText('Mostra i posti (1)',{exact:true}).click();
  assert.match(await adult.innerText(),/Settore A1 · Blocco 1 · Fila 1 · Sedia 1/);
@@ -182,23 +195,25 @@ try{
  await history.getByText('Assegnazione revocata.',{exact:true}).waitFor();
  await adult.getByText(/Revocata il/).waitFor();
  assert.equal(await adult.getByRole('button',{name:'Revoca assegnazione',exact:true}).count(),0);
- await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'B2 · 297 posti ancora disponibili'});
- await page.getByRole('button',{name:/^Settore B2 · Blocco 1 · Fila 6 · Sedia 1 ·/}).click();
+ await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'B · 597 posti ancora disponibili'});
+ await page.getByRole('button',{name:/^Settore B · Blocco 1 · Fila 6 · Sedia 1 ·/}).click();
+ await page.getByRole('dialog',{name:'Posto occupato'}).getByRole('button',{name:'Seleziona per assegnare a un membro'}).click();
  await page.getByRole('checkbox',{name:'Seleziona Adult Test',exact:true}).check();
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();
  await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
- const member=history.getByRole('listitem',{name:'Adult Test · Settore B2',exact:true});
+ const member=history.getByRole('listitem',{name:'Adult Test · Settore B',exact:true});
  await member.getByRole('button',{name:'Revoca assegnazione',exact:true}).click();
  assert.match(await member.getByRole('region',{name:'Conferma revoca'}).innerText(),/resterà riservato alla delegazione/);
  await member.getByRole('button',{name:'Conferma revoca',exact:true}).click();
  await member.getByText(/Revocata il/).waitFor();
- assert.equal(await map.getByLabel('Settore',{exact:true}).first().locator('option:checked').textContent(),'B2 · 297 posti ancora disponibili');
- await page.getByRole('button',{name:/^Settore B2 · Blocco 1 · Fila 6 · Sedia 1 ·/}).click();
+ assert.equal(await map.getByLabel('Settore',{exact:true}).first().locator('option:checked').textContent(),'B · 597 posti ancora disponibili');
+ await page.getByRole('button',{name:/^Settore B · Blocco 1 · Fila 6 · Sedia 1 ·/}).click();
+ await page.getByRole('dialog',{name:'Posto occupato'}).getByRole('button',{name:'Seleziona per assegnare a un membro'}).click();
  await page.getByRole('checkbox',{name:'Seleziona Adult Test',exact:true}).check();
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();
  await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
  await history.getByText('8 assegnazioni · Pagina 1 di 1',{exact:true}).waitFor();
- const b2Reserve=history.getByRole('listitem',{name:'Delegazione prova · Settore B2',exact:true});
+ const b2Reserve=history.getByRole('listitem',{name:'Delegazione prova · Settore B',exact:true});
  await b2Reserve.getByRole('button',{name:'Revoca delegazione',exact:true}).click();
  assert.match(await b2Reserve.getByRole('region',{name:'Conferma revoca'}).innerText(),/Persone coinvolte \(1\):\s*Adult Test/);
  await b2Reserve.getByRole('button',{name:'Conferma revoca',exact:true}).click();
@@ -222,5 +237,50 @@ try{
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  await history.scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/history-mobile.png'});
  console.log('PASS history browser: canonical read, chair details, cancelled confirmation, direct/group revocation, retained history, global filters and mobile');
+ // Direct child: cancel first, then remove the occupied chair through the map.
+ await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A1 · 99 posti ancora disponibili'});
+ const childChair=page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 2 ·/});
+ await childChair.click();const occupiedDialog=page.getByRole('dialog',{name:'Posto occupato',exact:true});
+ assert.match(await occupiedDialog.innerText(),/Child one Test/);
+ await occupiedDialog.getByRole('button',{name:'Libera questo posto',exact:true}).click();
+ await occupiedDialog.getByRole('button',{name:'Annulla',exact:true}).click();
+ await childChair.click();await occupiedDialog.getByRole('button',{name:'Libera questo posto',exact:true}).click();
+ let beforeRead=historyReads;
+ await occupiedDialog.getByRole('button',{name:'Conferma revoca del posto',exact:true}).click();
+ await history.getByText('Nessuna assegnazione corrisponde ai filtri.',{exact:true}).waitFor();
+ assert.equal(historyReads,beforeRead+1,'one refresh after map revoke');
+ assert.match(await childChair.getAttribute('aria-label'),/Libero/);
+ // A fresh delegation spans rows 5 and 6 of the same B block.
+ await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'B · 600 posti ancora disponibili'});
+ for(const [row,chair] of [[5,10],[6,1],[6,2]]) await page.getByRole('button',{name:new RegExp('^Settore B · Blocco 1 · Fila '+row+' · Sedia '+chair+' ·')}).click();
+ await page.getByLabel('Destinatari',{exact:true}).selectOption('group');
+ await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();
+ beforeRead=historyReads;await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('option')).some(o=>o.textContent==='B · 597 posti ancora disponibili'));
+ await history.getByText('Nessuna assegnazione corrisponde ai filtri.',{exact:true}).waitFor();assert.equal(historyReads,beforeRead+1);
+ const reservedChair=page.getByRole('button',{name:/^Settore B · Blocco 1 · Fila 5 · Sedia 10 ·/});
+ await reservedChair.click();await occupiedDialog.getByRole('button',{name:'Seleziona per assegnare a un membro'}).click();
+ await page.getByRole('checkbox',{name:'Seleziona Adult Test',exact:true}).check();
+ await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('button')).some(b=>b.getAttribute('aria-label')?.startsWith('Settore B · Blocco 1 · Fila 5 · Sedia 10 ·') && b.getAttribute('aria-label')?.includes('Assegnato')));
+ await reservedChair.click();assert.match(await occupiedDialog.innerText(),/Adult Test/);assert.match(await occupiedDialog.innerText(),/Delegazione prova/);
+ await occupiedDialog.getByRole('button',{name:'Libera questo posto',exact:true}).click();
+ assert.match(await occupiedDialog.innerText(),/diminuirà di un posto/);
+ await page.screenshot({path:'/tmp/pace-ceremony-desk/occupied-mobile.png'});
+ await occupiedDialog.getByRole('button',{name:'Conferma revoca del posto',exact:true}).click();
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('option')).some(o=>o.textContent==='B · 598 posti ancora disponibili'));
+ await page.getByRole('button',{name:/^Settore B · Blocco 1 · Fila 6 · Sedia 1 ·/}).click();
+ await occupiedDialog.getByRole('button',{name:'Libera questo posto',exact:true}).click();await occupiedDialog.getByRole('button',{name:'Conferma revoca del posto',exact:true}).click();
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('option')).some(o=>o.textContent==='B · 599 posti ancora disponibili'));
+ await map.getByRole('button',{name:'Tabella accessibile',exact:true}).click();
+ await map.getByRole('searchbox').fill('Blocco 1 · Fila 6 · Sedia 2');
+ await map.getByRole('button',{name:/^Settore B · Blocco 1 · Fila 6 · Sedia 2 ·/}).click();
+ await occupiedDialog.getByRole('button',{name:'Libera questo posto',exact:true}).click();await occupiedDialog.getByRole('button',{name:'Conferma revoca del posto',exact:true}).click();
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('option')).some(o=>o.textContent==='B · 600 posti ancora disponibili'));
+ await history.getByLabel('Cerca nella cronologia',{exact:true}).fill('Delegazione prova');await history.getByLabel('Stato assegnazione',{exact:true}).selectOption('revoked');await history.getByRole('button',{name:'Applica',exact:true}).click();
+ await history.getByRole('heading',{name:'Delegazione prova · Posto liberato dalla riserva',exact:true}).first().waitFor();
+ assert.equal(await history.getByRole('heading',{name:'Delegazione prova · Posto liberato dalla riserva',exact:true}).count(),3);
+ beforeRead=historyReads;for(let i=0;i<4;i++)await page.getByRole('button',{name:/^Ridisegna /}).click();await page.waitForTimeout(3000);assert.equal(historyReads,beforeRead,'no background polling or render-driven read after mutations');
+ console.log('PASS B unified across rows 5/6; occupied-chair direct/named/unnamed/last-seat revoke, cancellation, accessible table and history; finite HTTP reads with cookie renewal and callback identity changes');
  assert.deepEqual(errors,[]);console.log('PASS browser original UI → server action → disposable SQL: places-first family, F counter, group reservation preserved, group QR ranges, protocol, mobile, no client errors');
 }catch(error){if(browser){const p=browser.contexts()[0]?.pages()[0];if(p){writeFileSync('/tmp/pace-ceremony-desk/browser-failure.txt',await p.locator('body').innerText());await p.screenshot({path:'/tmp/pace-ceremony-desk/failure.png',fullPage:true});}}throw error;}finally{await browser?.close();rmSync(route,{recursive:true,force:true});}

@@ -4,7 +4,7 @@ import { openingSeatAddress } from "@/lib/ceremonies/seat-label";
 import type { MapSeat, SeatMapView } from "@/lib/ceremonies/seat-map";
 
 // Stage above: blocks 1–6 run left to right while facing the stage.
-// B1 and B2 have independent bands and click targets, sharing stable seat IDs.
+// Sector B spans all ten rows; physical chair identities remain unchanged.
 export function OpeningHallOverview({ seats, sectors, claims, onBlock }: {
   seats: MapSeat[]; sectors: SeatMapView["sectors"]; claims: SeatMapView["claims"];
   onBlock: (sector: string, block: string) => void;
@@ -22,7 +22,7 @@ export function OpeningHallOverview({ seats, sectors, claims, onBlock }: {
       const group = groups.get(key) ?? { key: address.key, block: address.block, sectorId: seat.sectorId, band, seats: [] };
       group.seats.push(seat); groups.set(key,group);
     }
-    return ['A','B1','B2','C','D','E','H'].map(band => ({ band, groups: [...groups.values()].filter(g => g.band === band).sort((a,b) => a.block-b.block) })).filter(b => b.groups.length);
+    return ['A','B','B1','B2','C','D','E','H'].map(band => ({ band, groups: [...groups.values()].filter(g => g.band === band).sort((a,b) => a.block-b.block) })).filter(b => b.groups.length);
   }, [seats,sectors]);
   const name = (id: string) => sectors.find(s => s.id === id)?.name ?? '';
   const f = sectors.find(s => s.layoutCode === 'F');
@@ -32,7 +32,7 @@ export function OpeningHallOverview({ seats, sectors, claims, onBlock }: {
       <div className="grid min-w-[720px] gap-4">
         <div className="rounded-xl bg-[var(--peace-blue-800)] p-3 text-center font-bold tracking-widest text-white">PALCO</div>
         {bands.map(({band,groups}) => <section key={band} aria-label={band === 'A' ? 'Settori A1, A e A2' : band === 'H' ? 'Settori H1 e H2' : `Settore ${band}`} className={`rounded-xl border-2 p-2 ${band === 'B1' ? 'border-blue-600 bg-blue-50' : band === 'B2' ? 'border-violet-600 bg-violet-50' : 'border-slate-200 bg-white/60'}`}>
-          <h3 className={`mb-2 text-sm font-bold ${band === 'B1' ? 'text-blue-900' : band === 'B2' ? 'text-violet-900' : ''}`}>{band === 'A' ? 'Settori A1 · A · A2' : band === 'H' ? 'Settori H1 · H2' : `Settore ${band}`}{band === 'B1' ? ' · File 1–5 · 300 sedie' : band === 'B2' ? ' · File 6–10 · 300 sedie' : ''}</h3>
+          <h3 className={`mb-2 text-sm font-bold ${band === 'B1' ? 'text-blue-900' : band === 'B2' ? 'text-violet-900' : ''}`}>{band === 'A' ? 'Settori A1 · A · A2' : band === 'H' ? 'Settori H1 · H2' : `Settore ${band}`}{band === 'B' ? ' · File 1–10 · 600 sedie' : band === 'B1' ? ' · File 1–5 · 300 sedie' : band === 'B2' ? ' · File 6–10 · 300 sedie' : ''}</h3>
           <div className="grid grid-cols-6 gap-2">{groups.map(group => {
             const firstRow = Math.min(...group.seats.map(s => openingSeatAddress(s.row)!.row));
             const lastRow = Math.max(...group.seats.map(s => openingSeatAddress(s.row)!.row));

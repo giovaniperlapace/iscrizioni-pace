@@ -18,6 +18,7 @@ export function CeremonySeatMap({
   onBlockChange,
   selected,
   onSelect,
+  onOccupied,
   disabled,
   locale,
 }: {
@@ -32,6 +33,7 @@ export function CeremonySeatMap({
   onBlockChange?: (block: string) => void;
   selected: string[];
   onSelect: (id: string) => void;
+  onOccupied?: (id: string) => void;
   disabled: boolean;
   locale: SupportedLocale;
 }) {
@@ -174,14 +176,14 @@ export function CeremonySeatMap({
                 {visible.slice(page * 50, page * 50 + 50).map((s) => (
                   <tr key={s.id} className="border-b">
                     <td className="p-2">
-                      <input
+                      {onOccupied && claimById.has(s.id) ? <button type="button" className="btn-secondary px-3 py-2" disabled={disabled || s.blocked} aria-label={label(s)} onClick={() => onOccupied(s.id)}>Gestisci posto</button> : <input
                         type="checkbox"
                         className="h-6 w-6"
                         aria-label={label(s)}
                         checked={chosen.has(s.id)}
                         disabled={!canSelect(s)}
                         onChange={() => onSelect(s.id)}
-                      />
+                      />}
                     </td>
                     <td className="p-2">{sectorById.get(s.sectorId)}</td>
                     <td className="p-2" hidden={!opening}>{openingSeatAddress(s.row)?.block}</td>
@@ -250,8 +252,8 @@ export function CeremonySeatMap({
                   aria-label={label(s)}
                   title={label(s)}
                   aria-pressed={chosen.has(s.id)}
-                  disabled={!canSelect(s)}
-                  onClick={() => onSelect(s.id)}
+                  disabled={!canSelect(s) && !(onOccupied && claimById.has(s.id) && !disabled && !s.blocked)}
+                  onClick={() => onOccupied && claimById.has(s.id) ? onOccupied(s.id) : onSelect(s.id)}
                   className="absolute flex min-h-11 min-w-11 items-center justify-center rounded-lg border text-xs font-semibold text-slate-950 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                   style={{
                     left: (points.get(s.id)!.x - minX) * zoom,

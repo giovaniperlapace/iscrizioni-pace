@@ -50,7 +50,7 @@ insert into registrations(id,event_id,participant_id,status) values(f(6951),f(1)
 insert into participant_group_assignments(registration_id,group_id,is_current,source,status) values(f(6951),f(6900),true,'manager','confirmed');
 set local role service_role;
 do $$ declare s uuid; seats uuid[]; payload jsonb; gid uuid:=f(6900); before_qty integer; begin
- select id into s from ceremony_sectors where layout_code='B1';
+ select id into s from ceremony_sectors where layout_code='B';
  select array_agg((x->>'id')::uuid order by x->>'row',x->>'number') into seats from ceremony_map_versions v,jsonb_array_elements(v.seats) x where v.state='published' and (x->>'sectorId')::uuid=s;
  payload:=jsonb_build_object('action','group','sectorId',s,'quantity',2,'seatIds',jsonb_build_array(seats[1],seats[2]),'groupId',gid);
  assert desk_test(payload)->>'status'='saved';

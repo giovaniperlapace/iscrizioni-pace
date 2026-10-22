@@ -46,7 +46,7 @@ do $$ declare p uuid; v integer; a uuid; n uuid; seat uuid; req uuid:=gen_random
  assert not exists(select 1 from ceremony_nominees where allocation_id=a and revoked_at is null);
  assert not exists(select 1 from ceremony_seat_claims where allocation_id=a and released_at is null);
  assert (select count(*)=2 from ceremony_nominees where allocation_id=a),'revoked nominal history deleted';
- h:=get_ceremony_assignment_history(f(1),f(31),p,1,'B1','revoked');
+ h:=get_ceremony_assignment_history(f(1),f(31),p,1,'B','revoked');
  assert (h->>'total')::integer=3,'group and both nominal lifecycles';
  assert exists(select 1 from jsonb_array_elements(h->'entries') e where e->>'kind'='allocation' and jsonb_array_length(e->'seats')=4),'group chairs duplicated after re-naming';
  -- Direct adult and child revocation free both capacity and seat, independently.

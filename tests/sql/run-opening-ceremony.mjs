@@ -43,6 +43,20 @@ try {
    }
    console.log('PASS rear conversion refuses occupied H or changed quota and rolls back completely');
   }
+  if(name==='20261022180000_ceremony_unified_b_and_seat_revoke.sql') {
+   const seed=readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0];
+   const [setup,checks]=readFileSync('tests/sql/ceremony-unified-b.sql','utf8').split('-- APPLY UNIFIED B MIGRATION HERE');
+   const unifiedGuard=process.argv.find(x=>x.startsWith('--b-guard='))?.slice('--b-guard='.length);
+   const migration=readFileSync(unifiedGuard??join('supabase/migrations',name),'utf8');
+   try {console.log(psql('begin;'+seed+setup+migration+checks+'rollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}
+   catch(e){throw new Error(`B conversion regression: ${e.stderr}`);}
+   const occupied="select save_ceremony(f(1),f(31),'opening',(select revision from ceremony_plans where kind='opening'),'allocate',jsonb_build_object('id',f(9804),'quotaId',(select q.id from ceremony_quotas q join ceremony_sectors s on s.id=q.sector_id where s.layout_code='B2'),'registrationId',f(11),'quantity',1));";
+   for(const [change,message] of [[occupied,'B allocations or claims exist'],["update ceremony_quotas set quantity=299 where sector_id=(select id from ceremony_sectors where layout_code='B1');",'Unexpected B quota or seats']]) {
+    assert.throws(()=>psql('begin;'+seed+setup+change+migration+'commit;'),error=>String(error.stderr).includes(message));
+    assert.equal(psql('select count(*) from ceremony_plans',true).trim(),'0');
+   }
+   console.log('PASS B unification refuses existing B allocation or changed quota without modifying data');
+  }
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
@@ -51,6 +65,7 @@ try {
    catch(e) {throw new Error(`${name}: ${e.stderr}`);}
  }
  try { console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-assignment-history.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n')); } catch(e) { throw new Error('History: '+e.stderr); }
+ try {console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-seat-revoke.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}catch(e){throw new Error('Seat revoke: '+e.stderr);}
  const exportFile=process.argv.find(x=>x.startsWith('--export-fixture='))?.slice('--export-fixture='.length);
  {
   psql(`select prepare_opening_ceremony_layout(f(1),f(33),-1);
@@ -68,13 +83,13 @@ try {
  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null and nominee_id is not null",true).trim(),'1');
  console.log('PASS atomic desk Manager/Admin race: one final chair, one save, one conflict, one nominal assignment');
  const revokeRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
- const revokeTarget=psql("select id from ceremony_nominees where revoked_at is null",true).trim();
- const revokes=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select revoke_ceremony_assignment(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${revokeRevision},f(${9980+i}),'nominee','${revokeTarget}')->>'status';`)));
+ const revokeTarget=psql("select seat_id from ceremony_seat_claims where released_at is null",true).trim();
+ const revokes=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select revoke_ceremony_seat(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${revokeRevision},f(${9980+i}),'${revokeTarget}')->>'status';`)));
  assert.deepEqual(revokes.sort(),['conflict','saved']);
  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'0');
  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'0');
  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is not null",true).trim(),'1');
- console.log('PASS concurrent revocations: one save, one conflict, historical nominee retained, chair freed once');
+ console.log('PASS concurrent single-chair revocations: one save, one conflict, historical nominee retained, chair freed once');
  const browserBase=process.argv.find(x=>x.startsWith('--browser-base='))?.slice('--browser-base='.length);
  if(browserBase) {
   psql(`truncate ceremony_seat_claims,ceremony_nominees,ceremony_allocations,ceremony_map_requests,ceremony_distribution_requests cascade;
@@ -84,9 +99,9 @@ try {
    insert into participant_group_assignments(registration_id,group_id,is_current,source,status) values(f(10),'11111111-1111-4111-8111-111111111111',true,'manager','confirmed');
    delete from event_attendance_choices where registration_id in(f(10),f(11));`);
   execFileSync(process.execPath,['tests/browser/ceremony-seats-desk.mjs',browserBase,process.env.CEREMONY_BROWSER_ROOT],{env:{...process.env,CEREMONY_TEST_SOCKET:dir},stdio:'inherit'});
-  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'2');
-  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'1');
-  assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111'",true).trim(),'11');
+  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'1');
+  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'0');
+  assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111' and revoked_at is null",true).trim(),'3');
  }
  console.log('PASS complete ceremony migrations and SQL regression on disposable PostgreSQL');
 } finally {

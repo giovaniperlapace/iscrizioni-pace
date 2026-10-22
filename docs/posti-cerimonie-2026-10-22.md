@@ -337,3 +337,76 @@ redirect al login e nessun errore JavaScript. Log runtime error/fatal vuoti nel
 controllo del rilascio. I flussi autenticati sono stati collaudati con componenti
 originali e database sintetico; non è stata usata una sessione operativa reale.
 La navigazione rimasta locale è inclusa nello stesso commit della cronologia.
+
+
+## Settore B unico, cronologia su richiesta e revoca dal posto — 2026-10-22
+
+Richiesta: riunire B1/B2, interrompere il caricamento continuo della cronologia
+ed eliminare l’assegnazione della singola sedia cliccando il posto occupato.
+Stato iniziale locale pulito, main `6909bf9`, remoto allineato dopo fetch.
+Lettura production: revisione 5, nessuna assegnazione/claim nei due B.
+
+B diventa un settore da 600 posti, blocchi 1–6 e file 1–10; le file 6–10
+mantengono i numeri originali. Nuova mappa pubblicata, precedente archiviata
+intatta, UUID e geometria di tutte le 3.140 sedie conservati. Otto settori,
+3.540 posti fisici, 3.250 assegnabili e 290 protocollo. Il preparatore per nuove
+installazioni produce la stessa configurazione. La migration abortisce se
+B1/B2 hanno acquisito qualsiasi assegnazione o claim anche storico prima del
+lock, o se quote/configurazione sono diverse da quelle verificate. Nessuna
+revoca implicita, disabilitazione di trigger o fusione arbitraria di dotazioni.
+
+La precedente lettura della cronologia era una Server Action in un effect che
+seguiva anche l’identità della funzione e la revisione ricevuta dal server:
+questo consentiva ulteriori letture dopo la ricostruzione della pagina, in
+particolare con rinnovo dei cookie. Ora usa un endpoint HTTP autenticato
+private/no-store e un caricatore indipendente dalle identità dei callback.
+La lettura parte all’apertura esplicita, dai pulsanti di aggiornamento/filtri/pagine
+e dopo i salvataggi/revoche locali riusciti. Nessun timer o polling, nessuna
+lettura digitando nei filtri o per nuovi riferimenti delle Server Action.
+Un conflitto invita ad aggiornare esplicitamente, conservando il controllo
+server della revisione. Il timeout HTTP è 25 secondi; errori e risposte tardive
+non diventano elenchi vuoti né sovrascrivono richieste più recenti.
+
+Clic sul posto occupato, sia nella mappa sia nella tabella accessibile:
+finestra nativa con focus e destinatario, Annulla/Chiudi e conferma «Libera questo
+posto». Una persona diretta perde la propria assegnazione e libera la quota;
+una riserva di gruppo perde soltanto quella sedia e un’unità di quantità,
+revocando l’eventuale nomina su quel posto. Le altre sedie/nomine restano intatte.
+L’ultima sedia revoca la dotazione ormai vuota; eventuali altre nomine senza
+sedia bloccano il comando con spiegazione e rimando alla cronologia, senza
+revocarle di nascosto. I posti riservati senza nomina mantengono anche il comando
+per selezionarli e assegnarli a un membro. I posti protocollo restano bloccati.
+
+Nuova RPC `revoke_ceremony_seat`, service-only con attore/evento dalla sessione,
+ruolo riletto, lock canonico, revisione e richiesta idempotente. Rilascio del
+claim, revoca nominale, riduzione/revoca dotazione, revisione, audit e registrazione
+richiesta avvengono in una transazione. Nessuna cancellazione dello storico.
+La cronologia include i singoli posti restituiti da una riserva attraverso i
+claim rilasciati e l’audit canonico, anche se il resto del gruppo rimane attivo.
+La revoca di una sola nomina dalla cronologia conserva invece la riserva,
+come indicato esplicitamente nella sua conferma.
+
+Verifiche superate: 1.043 test, lint, TypeScript, build production Webpack
+nella copia isolata da lockfile. SQL su PostgreSQL temporaneo: conversione
+con assegnazione E invariata e rifiuto di B occupato/configurazione inattesa,
+permessi/eventi, retry, conflitti, errori audit con rollback, revoche concorrenti,
+adulti/figli, gruppi nominali/non nominali, ultima sedia e biglietti senza sedia.
+Browser originale con SQL sintetico desktop/mobile: B comprende file 5/6 nella
+stessa dotazione, dialogo e annullamento/conferma, riduzione di una sedia,
+ultima sedia via tabella, storico e selezione per nomina. Contate le richieste
+HTTP con rinnovo cookie a ogni risposta e identità callback cambiata a ogni
+ridisegno: zero nuove letture da inattività, ridisegni o digitazione; una sola
+lettura dopo una modifica o Aggiorna. Nessuna assegnazione, revoca, presenza,
+email o scansione operativa reale di collaudo.
+
+Backup production verificato con elenco e decodifica integrale `pg_restore`:
+`/root/backups/iscrizioni-pace/production-before-unified-b-1792669825.dump`,
+19.019.260 byte, SHA-256
+`205602e37db2bf52d5924bc6b2fd6a178a20b17a97b51523b920f34628a312da`.
+
+Migration `20261022180000` applicata e registrata atomicamente in produzione
+dopo il backup, con guardie collaudate anche sul DB sintetico. Confrontate
+62 tabelle estranee, 157.950 righe canoniche invariate, ACL di 220 funzioni e
+68 tabelle/RLS, policy e trigger; conservate le assegnazioni, i claim, le nomine,
+gli UUID e il contenuto delle mappe storiche. Modificate soltanto le funzioni
+previste e la configurazione B. Deployment da verificare dopo il push.
