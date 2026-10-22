@@ -445,3 +445,14 @@ Codice `53b0d62` su main; deployment production
 pubblico: home 200, pagina Manager protetta con redirect al login, nessun
 errore JavaScript; nessun log error/fatal nel controllo del rilascio.
 Flussi autenticati collaudati sui componenti originali con SQL sintetico.
+
+
+### Dicitura Posto conservata
+
+Correzione richiesta dall’utente: sulle sedie resta «Posto N», con la fila
+indicata una sola volta a sinistra. Le altre lingue conservano il nome
+localizzato del posto; riferimenti completi e dati invariati.
+
+Verificati lint, TypeScript, build production isolata e browser originale
+desktop/mobile, zoom e flussi di assegnazione/revoca con PostgreSQL temporaneo.
+Suite SQL/concorrenza superata; nessuna scrittura operativa reale.

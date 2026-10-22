@@ -45,7 +45,7 @@ try{
    assert.equal(await sectorDetail.getByRole('button',{name:new RegExp('^Settore '+name+' · Blocco .* · Fila ')}).count(),blockTotal);
    assert.equal(await sectorDetail.getByText(/^Fila \d+$/).count(),blockTotal/10,'one row label per row, not per chair');
    const firstChair=sectorDetail.getByRole('button',{name:new RegExp('^Settore '+name+' · Blocco '+block+' · Fila 1 · Sedia 1 ·')});
-   assert.equal(await firstChair.innerText(),'1');
+   assert.equal(await firstChair.innerText(),'Posto 1');
    for(const zoom of ['0.75','1','2']) {
     await sectorDetail.getByRole('slider').press(zoom==='2'?'End':'Home');
     if(zoom==='1') await sectorDetail.getByRole('slider').press('ArrowRight');

@@ -3,7 +3,7 @@
 ## Posti cerimonie: fila a sinistra del blocco — 2026-10-22
 
 - Dettaglio inaugurazione: etichetta «Fila N» una sola volta a sinistra di
-  ogni fila, anche nella vista dell’intero settore; sedie con il solo numero.
+  ogni fila, anche nella vista dell’intero settore; sedie con «Posto N».
   Riferimento completo conservato in aria-label, tooltip e tabella accessibile.
 - Solo presentazione: UUID, numeri, selezione, protocollo e assegnazioni
   invariati; nessuna migration. Collaudo sintetico desktop/mobile e zoom

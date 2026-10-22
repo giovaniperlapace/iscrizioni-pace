@@ -281,7 +281,7 @@ export function CeremonySeatMap({
                       : undefined,
                   }}
                 >
-                  {opening ? <span>{s.number}</span> : <span>{s.row}<br />{s.number}</span>}
+                  {opening ? <span>{locale === "it" ? "Posto" : chairWord} {s.number}</span> : <span>{s.row}<br />{s.number}</span>}
                 </button>
               ))}
             </div>
