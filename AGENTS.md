@@ -16,6 +16,8 @@
   revisione, idempotenza, audit e storico conservati. Nessun backfill inventato.
 - Rilascio congiunto con la richiesta successiva, come chiesto dall’utente.
   1.042 test, lint, TypeScript, build, SQL/concorrenza e browser sintetici.
+  Migration applicata dopo backup: 68 tabelle e 192.898 righe invariate, ACL
+  conservati. Codice `75af1b1` su main, production READY e dominio verificato.
   Nessuna assegnazione/revoca/presenza reale di prova. Dettagli nel verbale posti.
 
 ## Inaugurazione: blocchi posteriori nel settore E — 2026-10-22

@@ -327,4 +327,13 @@ Migration applicata e registrata atomicamente in produzione tramite copia
 controllata priva di BEGIN/COMMIT interni, così anche la registrazione resta nella
 transazione dello script. Confronto prima/dopo: 68 tabelle, 192.898 righe canoniche,
 218 definizioni/ACL di funzioni e 68 ACL/RLS di tabelle invariati, oltre a policy e
-trigger. Nessuna scrittura di collaudo. Deployment da verificare dopo il push.
+trigger. Nessuna scrittura di collaudo. Lettura tramite RPC con ruolo Manager
+in transazione poi annullata: cronologia vuota, revisione 5, zero claim attivi.
+
+Codice `75af1b1` pubblicato su main; deployment production
+`dpl_4wy2HjWUWHEGHsa3JEBAyXMwnUXv` READY, dominio operativo assegnato senza errori.
+Browser sul dominio: home 200, pagina Manager posti cerimonie protetta con
+redirect al login e nessun errore JavaScript. Log runtime error/fatal vuoti nel
+controllo del rilascio. I flussi autenticati sono stati collaudati con componenti
+originali e database sintetico; non è stata usata una sessione operativa reale.
+La navigazione rimasta locale è inclusa nello stesso commit della cronologia.
