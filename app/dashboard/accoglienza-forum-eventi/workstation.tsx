@@ -1,4 +1,5 @@
 "use client";
+import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DutyOption } from "@/lib/reception/event-duties";
 import type { ReceptionCommand, ReceptionLookup, ReceptionResult } from "@/lib/reception/contracts";
@@ -45,9 +46,9 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
     if(result.status==="valid" && command.action!=="inspect")setRefresh(value=>value+1);
     return result;
   },[eventId,deskBusy,requestAction]);
-  const statistics = <section className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" aria-label="Statistiche dell’incarico" aria-live="polite">
+  const statistics = <section className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm" aria-label="Statistiche dell’incarico" aria-live="polite">
       {stats ? <><p><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p><strong>{stats.entered}</strong> Entrati</p></>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
-      <button className="btn-secondary ml-auto min-h-11 px-3 text-xs" onClick={()=>setRefresh(value=>value+1)}>Aggiorna conteggi</button><p className="w-full text-xs text-slate-600">Gli ingressi registrati non indicano quante persone sono ancora nella sala.</p>
+      <button className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-current/30 hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2" aria-label="Aggiorna conteggi" title="Aggiorna conteggi" onClick={()=>setRefresh(value=>value+1)}><RefreshCw size={16} aria-hidden="true" /></button>
     </section>;
   return <div className="grid gap-4">
     <div inert={deskBusy || undefined}><EventReceptionConsole statistics={statistics} navigationAboveTitle duty={{key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>

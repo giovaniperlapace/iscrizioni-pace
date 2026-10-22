@@ -163,6 +163,12 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.ok(cardBox.y>=videoBox.y+videoBox.height);
   assert.ok(Math.abs(frameBefore.height-videoBox.height)<1);
   assert.ok(overlayBox.height<80);
+  const headerBox=await page.locator('[data-camera-header]').boundingBox();
+  assert.ok(Math.abs(headerBox.y-videoBox.y)<1);
+  assert.ok(headerBox.height<110);
+  assert.equal(await page.locator('[data-camera-header]').getByRole('heading',{name:'Morning A',exact:true}).count(),1);
+  assert.equal(await page.locator('[data-camera-header]').getByRole('region',{name:'Statistiche dell’incarico'}).count(),1);
+  assert.equal(await page.getByText('Gli ingressi registrati non indicano quante persone sono ancora nella sala.',{exact:true}).count(),0);
   await page.screenshot({path:'/tmp/pace-forum-camera-compact.png',fullPage:true});
   await cameraCard.getByRole('button',{name:'Segna entrata',exact:true}).click();
   await cameraCard.getByText('✓ Ingresso confermato',{exact:true}).waitFor();

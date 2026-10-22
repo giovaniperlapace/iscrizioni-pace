@@ -130,3 +130,16 @@ La prova con QR fittizi resta accessibile in fondo alla pagina; la rimozione
 
 Verifica di ordine e integrazione dei contatori aggiunta al collaudo browser
 del flusso originale; dati sintetici e nessuna scrittura operativa reale.
+
+
+### Precisazione: banda interna della fotocamera
+
+Su indicazione visiva dell’utente, nome e statistiche sono ora sovrapposti
+alla banda scura superiore interna dell’anteprima, non sopra la fotocamera.
+Dimensioni del video fisse; intestazione indipendente dalla dissolvenza
+dell’esito. Testo a capo per titoli lunghi e banda scorribile oltre il limite
+di altezza, senza coprire il centro della scansione. Rimosso l’avviso
+sull’occupazione della sala. Aggiorna conteggi è un pulsante a icona con
+nome accessibile e tooltip; modalità manuale/USB conserva l’intestazione
+compatta esterna. Il collaudo verifica posizione interna, altezza, nome,
+contatori e aggiornamento dopo conferma senza riavviare la camera.

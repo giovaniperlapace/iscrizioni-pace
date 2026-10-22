@@ -159,6 +159,11 @@ export function EventReceptionConsole(props: Props) {
         {onChangeDuty && <button className={props.navigationAboveTitle ? "btn-secondary min-h-11 px-4" : "min-h-11 underline"} disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeDuty}>Cambia incarico</button>}
       </div>;
 
+  const dutyHeader = props.statistics && <header className={cameraVisible ? "grid gap-1" : "grid gap-1 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] px-4 py-2"} aria-label="Incarico attivo">
+    <h2 id="reception-title" className="break-words text-base font-semibold leading-snug">{props.duty?.title ?? "Accoglienza evento"}</h2>
+    {props.statistics}
+  </header>;
+
   return <section className="mx-auto grid w-full max-w-3xl gap-4" aria-labelledby="reception-title">
     {props.navigationAboveTitle && navigation}
     {!props.statistics && <header className="flex flex-wrap items-center justify-between gap-2">
@@ -166,14 +171,11 @@ export function EventReceptionConsole(props: Props) {
       {!props.navigationAboveTitle && navigation}
     </header>}
     <div className={props.statistics ? "surface-card overflow-hidden" : undefined}>
-      {props.statistics && <header className="grid gap-2 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] p-4" aria-label="Incarico attivo">
-        <h2 id="reception-title" className="break-words text-lg font-semibold text-[var(--peace-blue-800)]">{props.duty?.title ?? "Accoglienza evento"}</h2>
-        {props.statistics}
-      </header>}
+      {!cameraVisible && dutyHeader}
     <div hidden={!cameraVisible && (!!result || problem && state.phase !== "error")}>
       <div className={props.statistics ? "grid gap-4 p-4" : "surface-card grid gap-4 p-4"}>
         {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
-          <ReceptionCamera source={cameraSource} overlay={cameraNotice} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || !!entry} onCode={value => {
+          <ReceptionCamera source={cameraSource} topOverlay={dutyHeader} overlay={cameraNotice} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || !!entry} onCode={value => {
             if (!fading && !locked && !correction && state.phase !== "selection" && (session.canScan() || state.phase === "result") && latch.current.accept(value)) void inspect({ kind: "qr", value }, !!entry);
           }} onNoCode={() => { if (!entry && session.canScan()) latch.current.absent(); }} /> :
           <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void inspect({ kind: code.startsWith("G:") || code.length === 43 ? "qr" : "code", value: code }); setCode(""); }}>

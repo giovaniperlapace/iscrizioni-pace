@@ -2,8 +2,11 @@
 
 ## Accoglienza Forum: incarico nel riquadro scanner — 2026-10-22
 
-- Nome e statistiche dell’incarico nella banda superiore del riquadro scanner,
-  visibili anche quando compare un risultato in modalità manuale/USB.
+- Nome e statistiche nella banda scura interna superiore dell’anteprima
+  fotocamera, compatta e indipendente dalla dissolvenza dell’esito. In manuale/USB
+  restano nell’intestazione del riquadro anche quando compare il risultato.
+- Rimosso l’avviso sull’occupazione della sala; aggiornamento manuale con icona
+  accessibile, aggiornamento automatico dopo ingresso conservato.
 - Cambia modalità/incarico sotto il titolo della dashboard, con pulsanti nello
   stile del sito. Conteggi aggiornati dopo le operazioni; fotocamera invariata.
 - Prova con QR fittizi mantenuta in fondo alla pagina: rimozione rinviata
