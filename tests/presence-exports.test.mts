@@ -33,6 +33,36 @@ function fixture(): PresenceSource {
     tagAssignments: [{ participant_id: "p1", tag_id: "t1" }],
   };
 }
+test("Assisi acc_uni moves only the adult to Universitari in B/B2 and conserves every attendance total", async () => {
+  const actual = presenceConfigForEvent("d302dff4-f08d-4040-8d83-9ec2042a73d5")!;
+  const university = actual.groups.find(group => group.sourceName === "Universitari")!;
+  const origin = actual.groups.find(group => group.sourceName === "Castelli")!;
+  const source = fixture();
+  source.event.id = actual.eventId;
+  source.groups = [origin, university].map(group => ({ id: group.groupId, name: group.sourceName, parent_group_id: null, is_assignable: true }));
+  source.registrations = source.registrations.slice(0, 1);
+  source.children = source.children.slice(0, 1);
+  source.assignments = [{ registration_id: "r1", group_id: origin.groupId }];
+  source.tags = [{ id: "uni", label: "acc_uni" }];
+  source.tagAssignments = [{ participant_id: "p1", tag_id: "uni" }];
+  source.serviceAssignments = source.serviceAssignments.slice(0, 1);
+  for (const variant of ["a", "a2", "b", "b2"] as const) {
+    const report = buildPresenceReport(source, actual, variant);
+    const moved = variant === "b" || variant === "b2";
+    assert.deepEqual(report.total, [2, 2, 0, 0, 0, 0, 0, 0, 0]);
+    assert.deepEqual(report.warnings, []);
+    assert.equal(report.lines.find(row => row.key === `group:${university.groupId}`)?.values[0] ?? 0, moved ? 1 : 0);
+    const original = report.lines.find(row => row.kind === "detail" && row.label === (variant.endsWith("2") ? origin.rollup : origin.sourceName))!;
+    assert.equal(original.values[0], moved ? 1 : 2);
+    assert.equal(original.values[1], moved ? 1 : 2);
+    assert.ok(!report.lines.some(row => row.key === "service:s1"));
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(await writePresenceWorkbook(report) as unknown as Parameters<typeof book.xlsx.load>[0]);
+    const rows = book.getWorksheet("Presenze")!.getSheetValues().filter(Boolean) as unknown[][];
+    assert.equal(rows.some(row => row[1] === "Universitari" && row[2] === 1 && row[3] === 1), moved);
+    assert.equal(book.getWorksheet("Presenze")!.lastRow!.getCell(2).result, 2);
+  }
+});
 test("four reports conserve distinct people and slots; operator beats service, children remain in original group", () => {
   const source = fixture();
   const reports = (["a", "a2", "b", "b2"] as PresenceVariant[]).map(kind => buildPresenceReport(source, config, kind));

@@ -1,7 +1,7 @@
 {
   "eventId": "d302dff4-f08d-4040-8d83-9ec2042a73d5",
-  "version": "2026-10-01",
-  "source": "Gruppi_ZRT.xlsx, Foglio1, righe 2-120",
+  "version": "2026-10-23",
+  "source": "Gruppi_ZRT.xlsx, Foglio1, righe 2-120; raccordo acc_uni aggiornato il 2026-10-23, riga 54",
   "zones": [
     {
       "id": "roma",
@@ -383,7 +383,7 @@
       "sourceName": "Universitari",
       "zoneId": "roma",
       "rollup": null,
-      "operatorTag": null
+      "operatorTag": "acc_uni"
     },
     {
       "groupId": "37215e1d-e397-4f49-9284-14b1ac7c0a5a",
