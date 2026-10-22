@@ -165,7 +165,10 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.ok(overlayBox.height<80);
   const headerBox=await page.locator('[data-camera-header]').boundingBox();
   assert.ok(Math.abs(headerBox.y-videoBox.y)<1);
-  assert.ok(headerBox.height<110);
+  const footerBox=await page.locator('[data-camera-footer]').boundingBox();
+  assert.ok(Math.abs(headerBox.height-footerBox.height)<1);
+  assert.ok(Math.abs(footerBox.y+footerBox.height-videoBox.y-videoBox.height)<1);
+  assert.equal(await page.locator('[data-camera-header]').getByRole('button',{name:'Aggiorna conteggi'}).innerText(),'Aggiorna conteggi');
   assert.equal(await page.locator('[data-camera-header]').getByRole('heading',{name:'Morning A',exact:true}).count(),1);
   assert.equal(await page.locator('[data-camera-header]').getByRole('region',{name:'Statistiche dell’incarico'}).count(),1);
   assert.equal(await page.getByText('Gli ingressi registrati non indicano quante persone sono ancora nella sala.',{exact:true}).count(),0);

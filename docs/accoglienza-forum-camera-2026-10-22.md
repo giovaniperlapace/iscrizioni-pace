@@ -143,3 +143,13 @@ sull’occupazione della sala. Aggiorna conteggi è un pulsante a icona con
 nome accessibile e tooltip; modalità manuale/USB conserva l’intestazione
 compatta esterna. Il collaudo verifica posizione interna, altezza, nome,
 contatori e aggiornamento dopo conferma senza riavviare la camera.
+
+
+### Centratura e bande simmetriche
+
+Nome, contatori e aggiornamento centrati nell’anteprima. Ripristinata la
+label visibile «Aggiorna conteggi» accanto all’icona, per distinguerla dai
+comandi della fotocamera. Banda scura inferiore sempre presente, della stessa
+altezza di quella superiore: ospita gli esiti e resta visibile dopo la loro
+dissolvenza. Anteprima di dimensioni costanti. Collaudo browser esteso alla
+simmetria delle bande e alla label del pulsante.

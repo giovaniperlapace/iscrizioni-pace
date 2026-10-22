@@ -5,8 +5,10 @@
 - Nome e statistiche nella banda scura interna superiore dell’anteprima
   fotocamera, compatta e indipendente dalla dissolvenza dell’esito. In manuale/USB
   restano nell’intestazione del riquadro anche quando compare il risultato.
-- Rimosso l’avviso sull’occupazione della sala; aggiornamento manuale con icona
-  accessibile, aggiornamento automatico dopo ingresso conservato.
+- Testo e statistiche centrati; pulsante «Aggiorna conteggi» con icona e label.
+  Bande scure superiore/inferiore simmetriche, quella inferiore sempre presente
+  e riservata agli esiti. Rimosso l’avviso sull’occupazione della sala;
+  aggiornamento automatico dopo ingresso conservato.
 - Cambia modalità/incarico sotto il titolo della dashboard, con pulsanti nello
   stile del sito. Conteggi aggiornati dopo le operazioni; fotocamera invariata.
 - Prova con QR fittizi mantenuta in fondo alla pagina: rimozione rinviata
