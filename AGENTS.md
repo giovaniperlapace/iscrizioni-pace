@@ -17,7 +17,8 @@
 - 1.053 test, lint, TypeScript, build isolata da npm ci, SQL/concorrenza e browser
   originale desktop/mobile superati, compreso gruppo di 100 ripartito 20/80.
   Rilascio autorizzato: migration production registrata atomicamente, 68 tabelle
-  e 202.645 righe confrontate, dati e ACL conservati. Codice in pubblicazione.
+  e 202.645 righe confrontate, dati e ACL conservati. Codice `15899be` su main,
+  production READY e dominio verificato; percorsi protetti e log senza errori.
   Nessuna assegnazione, presenza o invio reale di prova. Verbale:
   `docs/cerimonie-assegnazioni-settore-2026-10-22.md`.
 

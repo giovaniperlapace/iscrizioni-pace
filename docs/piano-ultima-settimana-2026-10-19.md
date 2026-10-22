@@ -19,7 +19,8 @@ Implementazione verificata: 1.053 test,
 controlli statici, build isolata, SQL/concorrenza e browser originale superati,
 compresa la ripartizione 20/80 di un gruppo di 100. Rilascio autorizzato:
 migration `20261022200000` applicata in produzione dopo backup e controlli
-di conservazione; codice in pubblicazione. Nessuna assegnazione reale di prova.
+di conservazione; codice `15899be` production READY, dominio e protezione dei
+percorsi verificati. Nessuna assegnazione reale di prova.
 Dettagli nel [verbale settore](cerimonie-assegnazioni-settore-2026-10-22.md).
 
 

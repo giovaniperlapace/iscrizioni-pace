@@ -3,8 +3,8 @@
 ## Stato
 
 Rilascio autorizzato esplicitamente dall’utente dopo la revisione locale.
-Migration applicata e registrata in produzione; pubblicazione del codice su
-`main` in corso, partendo da `70aa523`. Nessuna assegnazione, revoca, presenza,
+Migration applicata e registrata in produzione; codice `15899be` pubblicato
+su `main`, deployment production READY sul dominio operativo. Nessuna assegnazione, revoca, presenza,
 stampa o email reale di collaudo.
 
 ## Richiesta e comportamento
@@ -120,6 +120,13 @@ Letture canoniche live con scope reale e transazione poi annullata: Manager
 Nessun nominativo esposto nel verbale. Execute delle nuove RPC negato ad
 anon/authenticated e consentito al solo service role.
 
-Pubblicazione del codice e verifica del dominio in corso. Il flusso autenticato
-completo è stato collaudato con componenti originali e PostgreSQL temporaneo;
-non sono state create assegnazioni reali per la prova.
+Codice `15899be` pubblicato su `main`; deployment production
+`dpl_7wNWGJQDMdfiYUyh4JhtdfQSGLF6` **READY**, con commit e alias verificati.
+Dominio `registrationspeace.santegidio.org` verificato e assegnato senza errori.
+Browser pubblico: home 200; Manager, cerimonie, capogruppo, vecchia mappa e
+nuova API settori protetti con redirect al login; zero errori JavaScript.
+Nessun log error/fatal nel controllo circoscritto al deployment.
+
+Il flusso autenticato completo è stato collaudato con componenti originali e
+PostgreSQL temporaneo; non sono state create assegnazioni reali per la prova.
+La revisione dell’interfaccia con una sessione reale resta all’utente.
