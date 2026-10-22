@@ -20,15 +20,32 @@ try{
  assert.equal(await page.getByText('Preparazione e quote',{exact:true}).count(),0);
  const map=page.getByRole('region',{name:'Scegli posti'}); // section with aria-label has region role
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A1 · 100 posti ancora disponibili'});
- await page.getByRole('button',{name:/^A1 · Fila A-b1-r01 · Posto 1 ·/}).click();
- await page.getByRole('button',{name:/^A1 · Fila A-b1-r01 · Posto 2 ·/}).click();
+ const overview = page.getByRole('region',{name:'Piantina generale inaugurazione'});
+ const b1 = overview.getByRole('region',{name:'Settore B1',exact:true}), b2 = overview.getByRole('region',{name:'Settore B2',exact:true});
+ const stage=await overview.getByText('PALCO',{exact:true}).boundingBox();const front=await overview.getByRole('button',{name:/^Settore A1 · Blocco 1 · File /}).boundingBox();assert.ok(stage.y+stage.height<front.y);
+ await overview.evaluate(el=>el.scrollIntoView({block:'start'}));await page.evaluate(()=>window.scrollBy(0,-100));await page.screenshot({path:'/tmp/pace-ceremony-desk/orientation-overview.png'});
+ assert.equal(await b1.getByRole('button').count(),6);assert.equal(await b2.getByRole('button').count(),6);
+ const box1=await b1.boundingBox(),box2=await b2.boundingBox();assert.ok(box2.y>box1.y+box1.height);
+ await b2.getByRole('button',{name:/Blocco 2 /}).click();
+ assert.equal(await map.getByLabel('Settore',{exact:true}).first().inputValue(),await map.getByLabel('Settore',{exact:true}).first().locator('option').filter({hasText:'B2 · 300'}).getAttribute('value'));
+ assert.equal(await page.getByRole('button',{name:/^Settore B2 · Blocco 2 · Fila 6 · Sedia 1 ·/}).count(),1);
+ assert.equal(await page.getByRole('button',{name:/^Settore B1 · Blocco 2 · Fila/}).count(),0);
+ await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A1 · 100 posti ancora disponibili'});
+ const chair1=await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 1 ·/}).boundingBox();
+ const chair2=await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 2 ·/}).boundingBox();
+ const row2=await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 2 · Sedia 1 ·/}).boundingBox();
+ assert.ok(chair2.x>chair1.x && Math.abs(chair2.y-chair1.y)<1);assert.ok(row2.y>chair1.y && Math.abs(row2.x-chair1.x)<1);
+ const detail=page.getByRole('region',{name:'Mappa',exact:true}).last();
+ await detail.scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/orientation-desktop.png'});
+ await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 1 ·/}).click();
+ await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 2 ·/}).click();
  await page.getByRole('checkbox',{name:'Seleziona Adult Test',exact:true}).check();
  await page.getByRole('checkbox',{name:'Seleziona Child one Test',exact:true}).check();
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();
  await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
  await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
  assert.equal(await page.getByRole('checkbox',{name:'Seleziona Adult Test',exact:true}).isDisabled(),true);
- assert.equal(await page.getByRole('button',{name:/^A1 · Fila A-b1-r01 · Posto 1 ·/}).isDisabled(),true);
+ assert.equal(await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 1 ·/}).isDisabled(),true);
 
  await page.getByRole('button',{name:'Parti dalle persone',exact:true}).click();
  await page.getByRole('checkbox',{name:'Seleziona Other Test',exact:true}).check();
@@ -46,10 +63,11 @@ try{
  await page.setViewportSize({width:390,height:844});
  await page.getByLabel('Destinatari',{exact:true}).selectOption('assign');
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A · 110 posti ancora disponibili'});
- await page.getByRole('button',{name:/^Blocco A-b2 /}).click();
- assert.equal(await page.getByRole('button',{name:/^A · Fila A-b2-r01 · Posto 1 ·/}).isDisabled(),true);
- assert.equal(await page.getByRole('button',{name:/^A · Fila A-b2-r09 · Posto 1 ·/}).isEnabled(),true);
+ await page.getByRole('button',{name:/^Settore A · Blocco 2 · File /}).click();
+ assert.equal(await page.getByRole('button',{name:/^Settore A · Blocco 2 · Fila 1 · Sedia 1 ·/}).isDisabled(),true);
+ assert.equal(await page.getByRole('button',{name:/^Settore A · Blocco 2 · Fila 9 · Sedia 1 ·/}).isEnabled(),true);
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  await page.screenshot({path:'/tmp/pace-ceremony-desk/mobile.png',fullPage:true});
+ await page.getByRole('region',{name:'Mappa',exact:true}).last().scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/orientation-mobile.png'});
  assert.deepEqual(errors,[]);console.log('PASS browser original UI → server action → disposable SQL: family, person-first F, delegation, protocol, mobile, no client errors');
 }catch(error){if(browser){const p=browser.contexts()[0]?.pages()[0];if(p){writeFileSync('/tmp/pace-ceremony-desk/browser-failure.txt',await p.locator('body').innerText());await p.screenshot({path:'/tmp/pace-ceremony-desk/failure.png',fullPage:true});}}throw error;}finally{await browser?.close();rmSync(route,{recursive:true,force:true});}

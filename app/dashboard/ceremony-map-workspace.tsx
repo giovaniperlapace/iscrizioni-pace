@@ -1,4 +1,5 @@
 "use client";
+import { ceremonySeatLabel } from "@/lib/ceremonies/seat-label";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { ProgressButton } from "@/components/button-progress";
 import { ReliableForm } from "@/components/reliable-form";
@@ -496,7 +497,7 @@ export function CeremonyMapWorkspace({
                       {!n.needsSeat
                         ? dc.noSeatState
                         : seat
-                          ? `${c.row} ${seat.row} · ${c.number} ${seat.number}`
+                          ? ceremonySeatLabel(allocation?.sector ?? "", seat, locale)
                           : c.seatPending}
                     </td>
                   </tr>

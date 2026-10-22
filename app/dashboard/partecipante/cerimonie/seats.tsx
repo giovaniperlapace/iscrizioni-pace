@@ -1,3 +1,4 @@
+import { ceremonySeatLabel } from "@/lib/ceremonies/seat-label";
 import { SEAT_MAP_COPY } from "@/lib/ceremonies/seat-map-copy";
 import type { SupportedLocale } from "@/lib/i18n/config";
 import type { PersonalSeat } from "@/lib/ceremonies/distribution";
@@ -28,7 +29,7 @@ export function PersonalCeremonySeats({
               <p>
                 {s.location} · {s.sector} · {s.category}
               </p>
-              <p>{s.seat ? `${SEAT_MAP_COPY[locale].row} ${s.seat.row} · ${SEAT_MAP_COPY[locale].number} ${s.seat.number}` : s.mapAvailable ? SEAT_MAP_COPY[locale].seatPending : null}</p>
+              <p>{s.seat ? ceremonySeatLabel(s.sector, s.seat, locale) : s.mapAvailable ? SEAT_MAP_COPY[locale].seatPending : null}</p>
               <p>
                 {new Intl.DateTimeFormat(locale, {
                   dateStyle: "medium",

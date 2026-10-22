@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Orientamento e nomi sedute — 2026-10-22
+
+- Palco in alto nella panoramica inaugurazione e nei dettagli; blocchi 1–6
+  da sinistra a destra guardando il palco, file dall’alto verso il basso.
+- B1 e B2 in fasce distinte, con intestazioni, cornici e selezione separata:
+  B1 file 1–5, B2 file 6–10. Non rinumerare queste ultime da 1.
+- Riferimenti visibili espliciti: «Settore A · Blocco 2 · Fila 9 · Sedia 1»,
+  anche nei riepiloghi, biglietti personali e consultazione accoglienza.
+  Superata la proposta abbreviata A-B2-F09-P01.
+- Trasformazione solo di presentazione: UUID, coordinate archiviate, file,
+  numeri, capienze, protocollo e assegnazioni invariati. Nessuna migration.
+  Verifiche e rilascio nel verbale `docs/posti-cerimonie-2026-10-22.md`.
+
 ## Posti cerimonie: sola assegnazione — 2026-10-22
 
 - Voce laterale autonoma Admin/Manager con icona sedia; rimossa dal menu Forum.

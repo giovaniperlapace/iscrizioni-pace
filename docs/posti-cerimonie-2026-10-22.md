@@ -51,8 +51,9 @@ Gli UUID delle sedie restano indipendenti dalle coordinate. La pubblicazione
 di una nuova versione conserva le assegnazioni in caso di spostamento grafico;
 blocca eliminazione, cambio settore, fila o numero di una sedia occupata.
 Capienze, 290 posti protocollo e disposizione del 21 ottobre sono invariati.
-La futura etichetta fisica è ancora da concordare: proposta
-`A-B2-F09-P01` (blocco, fila, posto), non applicata come rinumerazione.
+Il riferimento visibile adottato su successiva indicazione dell’utente è
+«Settore A · Blocco 2 · Fila 9 · Sedia 1». La proposta abbreviata precedente
+è superata. Stampa e disposizione delle etichette fisiche restano da concordare.
 
 ## Verifiche
 
@@ -100,3 +101,25 @@ Rifinitura successiva dello stesso rilascio: selezione inaugurazione/finale
 conservata espandendo il menu; comandi disabilitati durante il salvataggio.
 Ripetuti con successo browser completo su database temporaneo e test
 applicativi (1.035), lint e TypeScript.
+
+## Palco in alto e nomenclatura esplicita
+
+Su indicazione successiva dell’utente la panoramica e i dettagli mostrano il
+palco sul lato superiore. Le file crescono allontanandosi dal palco e le sedie
+da sinistra a destra guardandolo. B1 (file 1–5) e B2 (file 6–10) hanno fasce,
+intestazioni, cornici colorate e pulsanti distinti: il clic apre esattamente il
+settore scelto. Restano sei blocchi fisici B, rappresentati dalle rispettive
+metà in dodici schede (38 schede settore/blocco in tutta la panoramica).
+
+«Settore … · Blocco … · Fila … · Sedia …» è condiviso da nomi accessibili,
+ricerca, tabella, riepilogo, biglietto personale e consultazione accoglienza.
+Nel disegno il settore/blocco compare nell’intestazione e ciascuna sedia
+riporta «Fila … / Sedia …». I blocchi posteriori conservano le posizioni
+laterali 1 (H1) e 6 (H2). Nessun nuovo numero fisico viene assegnato.
+
+La trasformazione avviene solo nel rendering; dati canonici e collegamenti
+restano invariati. Nessuna migration o scrittura remota. Verificati browser
+desktop/390px su componenti originali con PostgreSQL temporaneo, direzione
+di file/sedie, palco sopra la prima fascia, selezione indipendente B2,
+protocollo e assegnazioni nominali. 1.035 test, lint, TypeScript e build
+production con npm ci in copia isolata superati.

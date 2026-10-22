@@ -11,12 +11,12 @@ try{
  browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:1050}});page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base+'/opening-ceremony-check');await page.getByRole('heading',{name:'Collaudo sintetico inaugurazione'}).waitFor();
- assert.equal(await page.getByRole('button',{name:/^Blocco /}).count(),32);console.log('PASS overview renders');
+ assert.equal(await page.getByRole('button',{name:/^Settore .* · Blocco .* · File /}).count(),38);console.log('PASS overview renders');
  await page.getByLabel('Dotazione o assegnazione diretta',{exact:false}).selectOption('11111111-1111-4111-8111-111111111111');
- await page.getByRole('button',{name:/^Blocco A-b2 /}).click();
- assert.equal(await page.getByRole('button',{name:/^A · Fila A-b2/}).count(),100);
- assert.equal(await page.getByRole('button',{name:/^A · Fila A-b2/}).evaluateAll(es=>es.filter(e=>e.disabled).length),80);
- const available=page.getByRole('button',{name:/^A · Fila A-b2-r09 · Posto 1 ·/});await available.click();
+ await page.getByRole('button',{name:/^Settore A · Blocco 2 · File /}).click();
+ assert.equal(await page.getByRole('button',{name:/^Settore A · Blocco 2 · Fila /}).count(),100);
+ assert.equal(await page.getByRole('button',{name:/^Settore A · Blocco 2 · Fila /}).evaluateAll(es=>es.filter(e=>e.disabled).length),80);
+ const available=page.getByRole('button',{name:/^Settore A · Blocco 2 · Fila 9 · Sedia 1 ·/});await available.click();
  assert.equal(await available.getAttribute('aria-pressed'),'true');console.log('PASS protocol and selection');
  await page.getByLabel('Esito test').selectOption('conflict');await page.getByRole('button',{name:'Riserva alla dotazione',exact:true}).click();
  await page.getByRole('status').filter({hasText:/cambiata/}).waitFor();
@@ -41,12 +41,12 @@ try{
  await page.getByLabel('Modifica una seduta (incluse quelle non utilizzabili)',{exact:false}).selectOption({index:1});
  await page.getByRole('checkbox',{name:'Non utilizzabile',exact:true}).waitFor();
  await page.getByLabel('Ruolo test').selectOption('manager');await page.setViewportSize({width:390,height:844});
- await page.getByRole('button',{name:/^Blocco H1 /}).click();
- assert.equal(await page.getByRole('button',{name:/^H1 · Fila H1/}).count(),70);
+ await page.getByRole('button',{name:/^Settore H1 · Blocco 1 · File /}).click();
+ assert.equal(await page.getByRole('button',{name:/^Settore H1 · Blocco 1 · Fila /}).count(),70);
  await page.screenshot({path:'/tmp/pace-opening-work/mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:'/tmp/pace-opening-work/mobile.png',fullPage:true});
  await page.setViewportSize({width:1440,height:1050});await page.getByRole('button',{name:'Tutti i blocchi',exact:true}).click();
  await page.screenshot({path:'/tmp/pace-opening-work/desktop.png',fullPage:true});
- assert.deepEqual(errors,[]);console.log('PASS opening UI: 32 blocks, exact protocol rows, selection, conflict, sector-only F, direct child payload, Admin/Manager/Viewer, mobile and no browser errors');
+ assert.deepEqual(errors,[]);console.log('PASS opening UI: 38 sector/block cards, exact protocol rows, selection, conflict, sector-only F, direct child payload, Admin/Manager/Viewer, mobile and no browser errors');
 }finally{await browser?.close();rmSync(route,{recursive:true,force:true});}
