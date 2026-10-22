@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { GroupCeremonyPlaces } from "./group-ceremony-places";
 import { ceremonySeatText } from "@/lib/ceremonies/seat-projection";
 import type { ReceptionCommand } from "@/lib/reception/contracts";
 import type { ReceptionMode, VerifiedReception } from "@/lib/reception/station";
@@ -37,6 +38,7 @@ export function PresenceSummary({ result }: { result: VerifiedReception }) {
   </div>;
   return <div className="grid gap-2 text-sm">
     {panel}
+    {result.kind === "group" && <GroupCeremonyPlaces summary={result.groupCeremonies}/>}
     <p>{result.kind === "group" ? `${result.groupName} · ${result.persons.length} persone` : `Codice ${result.code}`}</p>
     {result.persons.map(person => <p key={person.id} className="break-words">
       <strong>{person.firstName} {person.lastName}</strong>{person.kind === "child" ? " · Minore" : ""}

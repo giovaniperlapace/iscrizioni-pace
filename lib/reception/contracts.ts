@@ -1,3 +1,4 @@
+import type { GroupCeremonySummary } from '../ceremonies/group-seat-summary.ts';
 import type { CeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 export type ReceptionLookup = { kind: "qr" | "code"; value: string };
 export type ReceptionCommand = {
@@ -34,7 +35,7 @@ export type ReceptionResult =
   | { status: "not_booked"; routes?: {title: string; room: string | null}[] }
   | { status: "invalid" | "conflict" | "forbidden" | "invalid_request" | "unavailable" | "event_entry_required" | "capacity_exceeded" | "panel_unavailable" }
   | (ValidReception & { kind: "room"; label: string; panel: { id: string; title: string; room: string; section: string } })
-  | (ValidReception & { kind: "group"; groupId: string; groupName: string; snapshot: string; persons: (ReceptionPerson & { registrationId: string; code: string })[] })
+  | (ValidReception & { kind: "group"; groupCeremonies?: GroupCeremonySummary; groupId: string; groupName: string; snapshot: string; persons: (ReceptionPerson & { registrationId: string; code: string })[] })
   | (ValidReception & { kind: "family"; code: string; persons: ReceptionPerson[] })
   | (ValidReception & {
       kind: "school"; schoolName: string; classDescription: string;

@@ -123,3 +123,38 @@ desktop/390px su componenti originali con PostgreSQL temporaneo, direzione
 di file/sedie, palco sopra la prima fascia, selezione indipendente B2,
 protocollo e assegnazioni nominali. 1.035 test, lint, TypeScript e build
 production con npm ci in copia isolata superati.
+
+
+## Percorso unico dai posti e riepilogo nel QR di gruppo
+
+Richiesta successiva del 22 ottobre: si scelgono sempre prima i posti; soltanto
+poi compare la scelta persona/familiari o delegazione. Eliminati i due pulsanti
+che invertivano il percorso. Cambiare destinatario conserva la selezione; le
+sedie già riservate a un gruppo ammettono solo la nomina dei suoi membri.
+Il settore F espone quantità e pulsanti meno/più per entrambi i destinatari.
+Il salvataggio nominale richiede altrettante persone selezionate esplicitamente.
+
+La scheda Accoglienza del QR gruppo mostra tutte le riserve attive della
+propria delegazione, anche prima delle nomine: cerimonia, settore, quantità,
+blocco, fila e intervalli contigui. Le sedie 1, 2 e 4 producono «Sedie 1–2, 4»;
+non si include il posto 3. Settore F: sola quantità. Nessuna presenza cerimonia
+implicita. Le assegnazioni personali restano distinte dalle riserve al gruppo.
+
+La lettura parte soltanto dopo il successo della RPC canonica del QR, con evento
+corrente verificato e gruppo restituito dalla RPC, non da parametri del client.
+Allocazioni e sedie sono lette a pagine da 500, con lotti di 200 allocazioni;
+revoche escluse e revisione del piano riletta prima di restituire il riepilogo.
+La UI segnala un eventuale errore di lettura senza trasformarlo in «nessun posto»
+e senza perdere l’esito di una presenza già salvata. Nessuna migration.
+
+Verifiche: 1.039 test passati, inclusi 1.205 posti riservati (oltre il limite di
+pagina), buchi negli intervalli, file/blocchi distinti, revoche, scope, letture
+fallite e revisione cambiata. Suite SQL e concorrenza su PostgreSQL temporaneo.
+Browser su componenti originali, azioni server e database sintetico: famiglia,
+contatore F e quantità incoerente bloccata, cambio destinatario senza perdere
+le sedie, riserva B2 e F, scansione USB sintetica del QR gruppo e riepilogo reale
+delle riserve appena salvate; desktop e mobile senza errori JavaScript.
+Nessuna assegnazione operativa, scansione remota o stampa fisica di collaudo.
+
+Lint senza avvisi, TypeScript e build production Webpack da `npm ci` in copia
+isolata superati. Nessuna route di collaudo inclusa nella build di rilascio.

@@ -9,14 +9,17 @@ const args=${JSON.stringify(['-h',socket,'-p','55484','-U','postgres','-d','post
 export function query(sql:string){return JSON.parse(execFileSync('/opt/homebrew/opt/postgresql@17/bin/psql',args,{input:sql,encoding:'utf8',maxBuffer:8*1024*1024}).trim());}
 export const desk=()=>query("set role service_role;select get_ceremony_seats_desk(f(1),f(31),'opening');");`);
 writeFileSync(`${route}/actions.ts`, `"use server";
-import {desk,query} from './db';import {parseDeskCommand,type DeskCommand} from '@/lib/ceremonies/seats-desk';
-export async function command(c:DeskCommand){if(!parseDeskCommand(c))throw Error('invalid');const quote=(x:unknown)=>"'"+String(x).replaceAll("'","''")+"'";const result=query('set role service_role;select assign_ceremony_seats(f(1),f(31),'+quote(c.planId)+','+c.revision+','+quote(c.requestId)+','+quote(JSON.stringify(c.data))+'::jsonb);');return {...result,desk:desk()};}`);
-writeFileSync(`${route}/page.tsx`, `import Fixture from '@/tests/browser/ceremony-seats-desk-fixture';import {desk,query} from './db';import {command} from './actions';export const dynamic='force-dynamic';export default function Page(){const people=query("select jsonb_agg(jsonb_build_object('registrationId',r.id,'name',p.first_name||' '||p.last_name,'code',p.public_code,'place','Test','group','Delegazione prova','priority',false,'attendance','Presenza da comunicare','children',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',first_name||' '||last_name) order by position) from registration_children where registration_id=r.id),'[]'))) from registrations r join participants p on p.id=r.participant_id where r.id in(f(10),f(11));");return <Fixture initial={desk()} people={people} command={command}/>;}`);
+import {desk,query} from './db';import {ceremonyReceptionDb} from '@/tests/browser/ceremony-reception-db';import {executeReceptionCommand} from '@/lib/reception/check-in.server';import type {ReceptionCommand} from '@/lib/reception/contracts';import {parseDeskCommand,type DeskCommand} from '@/lib/ceremonies/seats-desk';
+export async function command(c:DeskCommand){if(!parseDeskCommand(c))throw Error('invalid');const quote=(x:unknown)=>"'"+String(x).replaceAll("'","''")+"'";const result=query('set role service_role;select assign_ceremony_seats(f(1),f(31),'+quote(c.planId)+','+c.revision+','+quote(c.requestId)+','+quote(JSON.stringify(c.data))+'::jsonb);');return {...result,desk:desk()};}
+export async function scan(c:ReceptionCommand){const actor=query('select to_json(f(30));');const db=ceremonyReceptionDb(query,actor);return executeReceptionCommand(db,()=>db,c);}`);
+writeFileSync(`${route}/page.tsx`, `import Fixture from '@/tests/browser/ceremony-seats-desk-fixture';import {desk,query} from './db';import {ceremonyReceptionDb} from '@/tests/browser/ceremony-reception-db';import {executeReceptionCommand} from '@/lib/reception/check-in.server';import type {ReceptionCommand} from '@/lib/reception/contracts';import {command,scan} from './actions';export const dynamic='force-dynamic';export default function Page(){const people=query("select jsonb_agg(jsonb_build_object('registrationId',r.id,'name',p.first_name||' '||p.last_name,'code',p.public_code,'place','Test','group','Delegazione prova','priority',false,'attendance','Presenza da comunicare','children',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',first_name||' '||last_name) order by position) from registration_children where registration_id=r.id),'[]'))) from registrations r join participants p on p.id=r.participant_id where r.id in(f(10),f(11));");return <Fixture initial={desk()} people={people} command={command} scan={scan}/>;}`);
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE);let browser;
 try{
  browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:1100}});page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`${base}/ceremony-seats-check`,{waitUntil:'networkidle'});
+ assert.equal(await page.getByRole('button',{name:'Parti dalle persone',exact:true}).count(),0);
+ assert.equal(await page.getByLabel('Destinatari',{exact:true}).count(),0);
  assert.equal(await page.getByText('Preparazione e quote',{exact:true}).count(),0);
  const map=page.getByRole('region',{name:'Scegli posti'}); // section with aria-label has region role
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A1 · 100 posti ancora disponibili'});
@@ -44,12 +47,15 @@ try{
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();
  await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
  await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
- assert.equal(await page.getByRole('checkbox',{name:'Seleziona Adult Test',exact:true}).isDisabled(),true);
+ assert.equal(await page.getByLabel('Destinatari',{exact:true}).count(),0);
  assert.equal(await page.getByRole('button',{name:/^Settore A1 · Blocco 1 · Fila 1 · Sedia 1 ·/}).isDisabled(),true);
 
- await page.getByRole('button',{name:'Parti dalle persone',exact:true}).click();
- await page.getByRole('checkbox',{name:'Seleziona Other Test',exact:true}).check();
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'F · 400 posti ancora disponibili'});
+ await page.getByRole('button',{name:'Aumenta quantità',exact:true}).click();
+ assert.equal(await page.getByLabel('Quantità di posti',{exact:true}).inputValue(),'2');
+ await page.getByRole('checkbox',{name:'Seleziona Other Test',exact:true}).check();
+ assert.equal(await page.getByRole('button',{name:'Verifica e assegna',exact:true}).isDisabled(),true);
+ await page.getByRole('button',{name:'Riduci quantità',exact:true}).click();
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
 
  await page.getByRole('checkbox',{name:'Seleziona Other Test',exact:true}).waitFor();
@@ -60,8 +66,24 @@ try{
  await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
  await page.waitForFunction(()=>Array.from(document.querySelectorAll('option')).some(o=>o.textContent==='F · 396 posti ancora disponibili'));
  await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
- await page.setViewportSize({width:390,height:844});
+ await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'B2 · 300 posti ancora disponibili'});
+ for (const chair of [1,2,4]) await page.getByRole('button',{name:new RegExp('^Settore B2 · Blocco 1 · Fila 6 · Sedia '+chair+' ·')}).click();
  await page.getByLabel('Destinatari',{exact:true}).selectOption('assign');
+ await page.getByLabel('Destinatari',{exact:true}).selectOption('group');
+ assert.match(await page.getByRole('region',{name:'Riepilogo assegnazione'}).innerText(),/3 posti/);
+ await page.getByRole('button',{name:'Verifica e assegna',exact:true}).click();await page.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();
+ await page.getByRole('status').filter({hasText:'Assegnazione salvata.'}).waitFor();
+ const scanner=page.getByRole('region',{name:'Scanner di prova'});
+ await scanner.scrollIntoViewIfNeeded();
+ await scanner.getByLabel('Scanner USB').focus();
+ await page.keyboard.type('G:'+'g'.repeat(43),{delay:1});await page.keyboard.press('Enter');
+ const summary=page.getByRole('region',{name:'Posti cerimonie del gruppo'});
+ await summary.waitFor();
+ assert.match(await summary.innerText(),/Settore B2 · Blocco 1 · Fila 6 · Sedie 1–2, 4/);
+ assert.match(await summary.innerText(),/Settore F · 3 posti senza sedia numerata/);
+ await summary.scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/group-places-desktop.png'});
+ await page.setViewportSize({width:390,height:844});
+ await summary.scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/group-places-mobile.png'});
  await map.getByLabel('Settore',{exact:true}).first().selectOption({label:'A · 110 posti ancora disponibili'});
  await page.getByRole('button',{name:/^Settore A · Blocco 2 · File /}).click();
  assert.equal(await page.getByRole('button',{name:/^Settore A · Blocco 2 · Fila 1 · Sedia 1 ·/}).isDisabled(),true);
@@ -69,5 +91,5 @@ try{
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  await page.screenshot({path:'/tmp/pace-ceremony-desk/mobile.png',fullPage:true});
  await page.getByRole('region',{name:'Mappa',exact:true}).last().scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-desk/orientation-mobile.png'});
- assert.deepEqual(errors,[]);console.log('PASS browser original UI → server action → disposable SQL: family, person-first F, delegation, protocol, mobile, no client errors');
+ assert.deepEqual(errors,[]);console.log('PASS browser original UI → server action → disposable SQL: places-first family, F counter, group reservation preserved, group QR ranges, protocol, mobile, no client errors');
 }catch(error){if(browser){const p=browser.contexts()[0]?.pages()[0];if(p){writeFileSync('/tmp/pace-ceremony-desk/browser-failure.txt',await p.locator('body').innerText());await p.screenshot({path:'/tmp/pace-ceremony-desk/failure.png',fullPage:true});}}throw error;}finally{await browser?.close();rmSync(route,{recursive:true,force:true});}

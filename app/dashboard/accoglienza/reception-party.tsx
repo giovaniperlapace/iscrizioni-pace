@@ -1,4 +1,5 @@
 "use client";
+import { GroupCeremonyPlaces } from "./group-ceremony-places";
 import { ceremonySeatText } from "@/lib/ceremonies/seat-projection";
 import { useParticipantSheetSection } from "../participant-sheet-loading";
 import { useRef, useState, type ReactNode } from "react";
@@ -50,6 +51,7 @@ export function ReceptionParty({ result, session, printing, labelCommandAction, 
     } finally { running.current = false; onBusyChange(false); }
   }
   return <div className="grid gap-4">
+    {result.kind === "group" && <GroupCeremonyPlaces summary={result.groupCeremonies}/>}
     {single ? <p role="status" className={`rounded-xl p-4 text-lg font-semibold ${allPresent ? "bg-green-100 text-green-900" : "bg-slate-100 text-slate-700"}`}>{allPresent ? "✓ Partecipazione confermata" : "Partecipazione non confermata"}</p> : <>
       <h4 className="font-semibold outline-none">Gestisci Presenze</h4>
       <p className="text-sm text-[var(--peace-muted)]">Seleziona le persone su cui agire. Conferma e rimozione sono due azioni distinte. Deselezionare una persona non rimuove la sua presenza.</p>

@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Posti prima dei destinatari e QR gruppo — 2026-10-22
+
+- Unico percorso: selezione posti, poi persona/familiari oppure gruppo. Rimossi
+  «Parti dai posti» e «Parti dalle persone»; cambiare destinatario conserva i posti.
+  F ha quantità esplicita con contatore anche per le assegnazioni nominali.
+- QR gruppo in Accoglienza: riepilogo delle riserve attive della delegazione,
+  comprese quelle senza nomine, per cerimonia/settore/blocco/fila e intervalli
+  di sedie realmente contigue. F mostra la quantità senza inventare numeri.
+- Letture server dopo autorizzazione del QR canonico, evento/gruppo derivati
+  dalla sessione e dalla RPC; paginazione, esclusione revoche e verifica revisione.
+  Errore del riepilogo esplicito, senza perdere l’esito di una presenza salvata.
+- Nessuna migration o assegnazione reale di prova. 1.039 test e collaudo browser
+  originale con PostgreSQL temporaneo; dettagli nel verbale posti cerimonie.
+
 ## Orientamento e nomi sedute — 2026-10-22
 
 - Palco in alto nella panoramica inaugurazione e nei dettagli; blocchi 1–6

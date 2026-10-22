@@ -57,11 +57,13 @@ try {
   psql(`truncate ceremony_seat_claims,ceremony_nominees,ceremony_allocations,ceremony_map_requests,ceremony_distribution_requests cascade;
    update ceremony_quotas set quantity=100 where sector_id=(select id from ceremony_sectors where layout_code='A1');
    insert into groups(id,event_id,name,is_active) values('11111111-1111-4111-8111-111111111111',f(1),'Delegazione prova',true);
+   select group_reception_credential(f(1),f(33),'11111111-1111-4111-8111-111111111111','get',encode(extensions.digest(repeat('g',43),'sha256'),'hex'),'synthetic');
+   insert into participant_group_assignments(registration_id,group_id,is_current,source,status) values(f(10),'11111111-1111-4111-8111-111111111111',true,'manager','confirmed');
    delete from event_attendance_choices where registration_id in(f(10),f(11));`);
   execFileSync(process.execPath,['tests/browser/ceremony-seats-desk.mjs',browserBase,process.env.CEREMONY_BROWSER_ROOT],{env:{...process.env,CEREMONY_TEST_SOCKET:dir},stdio:'inherit'});
   assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'3');
-  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'2');
-  assert.equal(psql("select quantity from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111'",true).trim(),'3');
+  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'5');
+  assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111'",true).trim(),'6');
  }
  console.log('PASS complete ceremony migrations and SQL regression on disposable PostgreSQL');
 } finally {

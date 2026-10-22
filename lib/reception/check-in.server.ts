@@ -1,3 +1,4 @@
+import { readGroupCeremonySummary } from '../ceremonies/group-seat-summary.server.ts';
 import { parseCeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canOperateReception, canOperateParticipantReception } from "./access.ts";
@@ -75,6 +76,9 @@ export async function executeReceptionCommand(
     if (result.status === "valid" && command.duty !== "event_entry" &&
       (result.panel?.id !== command.panelId || (result.kind === "family" && result.persons.some(person => typeof person.eventCheckedIn !== "boolean")))) return { status: "unavailable" };
     if (result.status === "valid" && (command.duty === "room_assistance" ? result.kind !== "room" : result.kind === "room")) return { status: "unavailable" };
+    if (result.status === "valid" && result.kind === "group") {
+      return {...result, groupCeremonies: await readGroupCeremonySummary(service(), event.id, result.groupId)};
+    }
     return result;
   } catch {
     return { status: "unavailable" };
