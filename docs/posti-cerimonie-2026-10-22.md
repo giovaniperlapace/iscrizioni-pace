@@ -208,6 +208,34 @@ Verifiche completate:
   confronto dei dati estranei alla modifica, ACL di funzioni/tabelle, RLS,
   policy, trigger, identità sedie, contenuti delle mappe e storico audit.
 
-Rilascio production da completare: prima il codice compatibile con entrambe
-le configurazioni, poi la migration dopo backup verificato. Nessuna
-assegnazione, presenza, scansione remota o stampa fisica di collaudo.
+Rilascio production completato: codice `3722c87` su main, deployment
+`dpl_D4vXoKm42nS9Qr1S3rpweu5KvH5r` **READY**, dominio operativo assegnato.
+Poi applicata e registrata atomicamente la migration `20261022150000` con
+procedura protetta: **62 tabelle estranee alla modifica e 157.728 righe
+canoniche invariate; ACL di 218 funzioni e 68 tabelle, RLS, policy e trigger
+conservati**. Identità sedie e contenuto della mappa storica verificati.
+
+Lettura canonica live con ruolo Manager: revisione 5, 9 settori, 3.140 sedie,
+E con capienza/quota/disponibilità 740, file E7/E8 da 1 a 7 con sedie 1–10.
+Mappa 1 archiviata intatta, mappa 2 pubblicata. Confermati totali 3.540/3.250,
+290 protocollo, zero allocazioni e zero claim. La RPC di lettura usa lock
+`FOR SHARE`, quindi il controllo è avvenuto in una transazione conclusa con
+ROLLBACK, senza comandi di scrittura operativa.
+
+Browser production senza sessione: sito raggiungibile e sezione Manager
+protetta dal login, nessun errore JavaScript. Log del deployment controllati
+senza errori/fatal nel periodo del rilascio. Il browser desktop/mobile completo
+è stato collaudato con dati sintetici: resta distinta la revisione visiva con
+sessione reale dell’utente. Nessuna assegnazione, presenza, scansione remota
+o stampa fisica di collaudo.
+
+
+Backup production verificato con elenco e decodifica integrale `pg_restore`:
+`/root/backups/iscrizioni-pace/production-before-sector-e-1792666353.dump`,
+18.878.283 byte, SHA-256
+`f4d6b133fee31adc98cc1070275c04ece37c19044860a9e538130472ba715dfc`.
+
+Su questa postazione Giovani per la Pace è stata ricreata la configurazione
+locale production assente, ignorata da Git e con permessi 600: chiave
+`/Users/giovaniperlapace/.ssh/id_ed25519_hetzner_20260613`, host e container
+production verificati. Nessuna credenziale applicativa copiata o pubblicata.

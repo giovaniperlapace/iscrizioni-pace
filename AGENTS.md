@@ -12,7 +12,9 @@
   assegnazioni anche storiche o la configurazione è cambiata. Nessun trigger
   disabilitato e nessuna assegnazione reale di prova.
 - 1.040 test, lint, TypeScript, build pulita e browser desktop/mobile su
-  PostgreSQL temporaneo superati. Dettagli e stato del rilascio nel verbale
+  PostgreSQL temporaneo superati. Codice `3722c87` production READY; migration
+  applicata/registrata dopo backup verificato. Live: mappa 2, revisione 5,
+  9 settori, E 740; zero assegnazioni di collaudo. Dettagli nel verbale
   `docs/posti-cerimonie-2026-10-22.md`.
 
 ## Posti prima dei destinatari e QR gruppo — 2026-10-22
