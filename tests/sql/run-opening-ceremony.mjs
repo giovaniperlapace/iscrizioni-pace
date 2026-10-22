@@ -60,7 +60,7 @@ try {
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
- for (const name of ['ceremony-allocations','ceremony-distribution','ceremony-seat-maps','opening-ceremony-layout','ceremony-seats-desk']) {
+ for (const name of ['ceremony-allocations','ceremony-distribution','ceremony-seat-maps','opening-ceremony-layout','ceremony-seats-desk','ceremony-leader-pairing']) {
    try { console.log(file(`tests/sql/${name}.sql`).split('\n').filter(line=>line.includes('PASS')).join('\n')); }
    catch(e) {throw new Error(`${name}: ${e.stderr}`);}
  }
@@ -102,6 +102,26 @@ try {
   assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'1');
   assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'0');
   assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111' and revoked_at is null",true).trim(),'3');
+ }
+ const leaderBase=process.argv.find(x=>x.startsWith('--leader-browser-base='))?.slice('--leader-browser-base='.length);
+ if(leaderBase) {
+  psql('truncate ceremony_plans cascade;'+readFileSync('tests/sql/ceremony-leader-pairing.sql','utf8').split('-- BEGIN PAIR TESTS')[0].replace(/^begin;/,'')+'commit;');
+  const pairRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+  const pairAllocation=psql("select a.id from ceremony_allocations a join ceremony_quotas q on q.id=a.quota_id join ceremony_sectors s on s.id=q.sector_id where a.group_id=f(7701) and s.name='B'",true).trim();
+  const pairSeat=psql(`select seat_id from ceremony_seat_claims where allocation_id='${pairAllocation}' and released_at is null order by seat_id limit 1`,true).trim();
+  const paired=await Promise.all([36,31].map((actor,i)=>concurrent(`set role service_role;select pair_ceremony_group_ticket(f(1),f(${actor}),'${pairAllocation}',${pairRevision},f(${7780+i}),'assign','${pairSeat}',f(10),${i?'f(40)':'null'},null)->>'status';`)));
+  assert.deepEqual(paired.sort(),['conflict','saved']);
+  psql(`select pair_test('revoke',null,null,null,(select id from ceremony_nominees where revoked_at is null));`);
+  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'0');
+  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'4');
+  console.log('PASS concurrent leader pairing: one atomic save, one conflict; cancellation preserves the group reserve');
+  psql(`insert into participants(id,first_name,last_name,public_code) select f(80000+n),'Synthetic','Member '||lpad(n::text,3,'0'),'L'||lpad(n::text,3,'0') from generate_series(1,105) n;
+    insert into registrations(id,event_id,participant_id,status) select f(81000+n),f(1),f(80000+n),'submitted' from generate_series(1,105) n;
+    insert into participant_group_assignments(registration_id,group_id,is_current,source,status) select f(81000+n),f(7701),true,'manager','confirmed' from generate_series(1,105) n;`);
+  execFileSync(process.execPath,['tests/browser/ceremony-leader-tickets.mjs',leaderBase,process.env.CEREMONY_BROWSER_ROOT],{env:{...process.env,CEREMONY_TEST_SOCKET:dir},stdio:'inherit'});
+  assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'0');
+  assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'4');
+  assert.equal(psql("select sum(quantity) from ceremony_allocations where revoked_at is null",true).trim(),'5');
  }
  console.log('PASS complete ceremony migrations and SQL regression on disposable PostgreSQL');
 } finally {

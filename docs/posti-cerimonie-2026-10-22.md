@@ -456,3 +456,52 @@ localizzato del posto; riferimenti completi e dati invariati.
 Verificati lint, TypeScript, build production isolata e browser originale
 desktop/mobile, zoom e flussi di assegnazione/revoca con PostgreSQL temporaneo.
 Suite SQL/concorrenza superata; nessuna scrittura operativa reale.
+
+
+## Capogruppo: abbinamento dei biglietti alle persone
+
+La pagina `/dashboard/capogruppo/cerimonie` presenta una funzione dedicata
+all’abbinamento: scelta della dotazione, elenco dei soli biglietti già riservati
+al gruppo dai manager, scelta del membro/figlio e conferma con riferimenti
+completi. Nessuna piantina; il vecchio percorso mappa reindirizza qui.
+I gruppi discendenti restano compresi nello scope canonico del capogruppo.
+Un Manager che è anche capogruppo non usa i propri permessi generali per
+operare su altri gruppi da questa funzione.
+
+Le ricerche per persona e posto precedono la paginazione da 100, anche per
+le scelte registrate. F usa il residuo quantitativo senza inventare sedie o
+identificativi di biglietti fisici. I figli sono scelti nominalmente e rimane
+possibile indicare che un minore non necessita di posto. Le nomine precedenti
+senza sedia possono essere completate senza duplicazione.
+
+L’annullamento confermato revoca la sola nomina e restituisce il biglietto
+alla disponibilità dello stesso gruppo: quantità e riserva non diminuiscono.
+Il claim storico con persona/sedia viene conservato, sostituito da un claim
+attivo senza nome. Non è un ingresso o una presenza. Aggiornamento solo dopo
+operazioni e tramite pulsante; nessun polling. Esiti incerti mantengono lo
+stesso identificativo di richiesta per ripetere il comando senza duplicati.
+
+Migration `20261022190000_ceremony_leader_pairing`: due RPC service-only,
+lettura coerente sotto lock canonico senza geometria o storico delle mappe e
+pairing con evento/attore dalla sessione, appartenenza riletta, revisioni,
+serializzazione, deduplicazione e audit. Nomina e abbinamento alla sedia sono
+una sola transazione; errori anche dopo il primo passaggio annullano tutto.
+Non sono modificati i percorsi Manager o le funzioni canoniche preesistenti.
+
+Verifiche: 1.047 test, lint, TypeScript, build production Webpack nella copia
+isolata; SQL sintetico per scope/evento/ruoli cumulati, replay alterati,
+conflitti, minori, F, nomine precedenti, riserva invariata e rollback su errore
+audit. Due richieste concorrenti sullo stesso biglietto: un salvataggio e un
+conflitto. Browser originale con Server Action e PostgreSQL temporaneo su
+desktop/mobile: ricerca del membro 105 oltre la prima pagina, persona/figlio,
+F pieno e scelta senza posto, annullamento/Escape e conferma, risposta persa
+dopo commit e retry senza duplicati, nessuna mappa né letture periodiche.
+
+Backup production verificato con elenco e decodifica integrale pg_restore:
+`/root/backups/iscrizioni-pace/production-before-leader-pairing-1792673028.dump`,
+19.148.189 byte, SHA-256
+`e23cedbdd726b43f8c1fe3bfc110cc6eb095dbafa1f488a16f6372f95a7e497d`.
+Migration applicata e registrata atomicamente con guardie già collaudate sul
+DB temporaneo: 68 tabelle, 193.411 righe canoniche, 221 definizioni/ACL di
+funzioni e ACL/RLS delle 68 tabelle invariati; policy e trigger conservati.
+Nessuna assegnazione, revoca, presenza o invio reale di collaudo.

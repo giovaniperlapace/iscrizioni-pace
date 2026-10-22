@@ -1,5 +1,20 @@
 # AGENTS.md
 
+## Cerimonie capogruppo: abbinamento biglietti senza piantina — 2026-10-22
+
+- Pagina capogruppo: dotazione ricevuta, elenco dei soli biglietti riservati,
+  scelta del membro/figlio e conferma. Vecchia mappa reindirizzata; F per
+  quantità e scelta esplicita dei minori senza posto conservata.
+- Ricerca globale prima delle pagine da 100; aggiornamenti dopo salvataggio
+  o pulsante, nessun polling. Retry con la stessa richiesta dopo esito incerto.
+- Migration `20261022190000`: lettura limitata al gruppo e pairing atomico,
+  ruoli cumulati senza bypass Manager, revisione/lock/idempotenza. Annullare
+  conserva quantità, riserva e collegamento storico persona/sedia.
+- 1.047 test, lint, TypeScript, build isolata, SQL/concorrenza e browser
+  originale desktop/mobile superati. Migration applicata dopo backup con
+  68 tabelle/193.411 righe e 221 funzioni/ACL conservate. Nessuna assegnazione
+  o revoca reale di prova. Verbale `docs/posti-cerimonie-2026-10-22.md`.
+
 ## Posti cerimonie: fila a sinistra del blocco — 2026-10-22
 
 - Dettaglio inaugurazione: etichetta «Fila N» una sola volta a sinistra di

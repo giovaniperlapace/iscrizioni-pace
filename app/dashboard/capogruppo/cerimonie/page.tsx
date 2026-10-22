@@ -3,15 +3,15 @@ import { getCurrentAuthContext } from "@/lib/auth/session";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { createAdminPilotClient as createSupabaseServerClient } from "@/lib/reception/admin-pilot.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { loadDistribution } from "@/lib/ceremonies/distribution.server";
+import { loadLeaderTickets } from "@/lib/ceremonies/leader-tickets.server";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { LeaderSectionNavigation } from "../section-navigation";
 import { DashboardRoleTabs } from "@/app/dashboard/role-tabs";
-import { CeremonyDistribution } from "@/app/dashboard/ceremony-distribution";
+import { CeremonyLeaderTickets } from "@/app/dashboard/ceremony-leader-tickets";
 import {
-  saveLeaderNominee,
-  refreshLeaderDistribution,
-} from "@/app/dashboard/ceremony-distribution-actions";
+  saveLeaderPair,
+  refreshLeaderTickets,
+} from "@/app/dashboard/ceremony-leader-tickets-actions";
 export default async function Page() {
   const db = await createSupabaseServerClient();
   const auth = await getCurrentAuthContext(db, "capogruppo");
@@ -19,7 +19,7 @@ export default async function Page() {
   const locale = await getRequestLocale();
   let view;
   try {
-    view = await loadDistribution(db, createSupabaseServiceClient, "leader");
+    view = await loadLeaderTickets(db, createSupabaseServiceClient);
   } catch {
     view = null;
   }
@@ -33,12 +33,11 @@ export default async function Page() {
         />
         <LeaderSectionNavigation active="ceremonies" locale={locale} />
         {view ? (
-          <CeremonyDistribution
+          <CeremonyLeaderTickets
             initialView={view}
             locale={locale}
-            canManage
-            save={saveLeaderNominee}
-            refresh={refreshLeaderDistribution}
+            save={saveLeaderPair}
+            refresh={refreshLeaderTickets}
           />
         ) : (
           <p role="alert">{DISTRIBUTION_COPY[locale].failure}</p>
