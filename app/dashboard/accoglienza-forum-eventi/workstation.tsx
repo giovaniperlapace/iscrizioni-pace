@@ -45,12 +45,12 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
     if(result.status==="valid" && command.action!=="inspect")setRefresh(value=>value+1);
     return result;
   },[eventId,deskBusy,requestAction]);
-  return <div className="grid gap-4">
-    <section className="surface-card flex flex-wrap items-center gap-4 p-4" aria-label="Statistiche dell’incarico" aria-live="polite">
+  const statistics = <section className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" aria-label="Statistiche dell’incarico" aria-live="polite">
       {stats ? <><p><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p><strong>{stats.entered}</strong> Entrati</p></>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
-      <button className="btn-secondary min-h-11 px-3" onClick={()=>setRefresh(value=>value+1)}>Aggiorna conteggi</button><p className="w-full text-xs text-slate-600">Gli ingressi registrati non indicano quante persone sono ancora nella sala.</p>
-    </section>
-    <div inert={deskBusy || undefined}><EventReceptionConsole duty={{key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
+      <button className="btn-secondary ml-auto min-h-11 px-3 text-xs" onClick={()=>setRefresh(value=>value+1)}>Aggiorna conteggi</button><p className="w-full text-xs text-slate-600">Gli ingressi registrati non indicano quante persone sono ancora nella sala.</p>
+    </section>;
+  return <div className="grid gap-4">
+    <div inert={deskBusy || undefined}><EventReceptionConsole statistics={statistics} navigationAboveTitle duty={{key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
     {mode==="computer" && <section className="surface-card grid gap-3 p-5"><h2 className="text-lg font-semibold">Prenota un posto</h2><p className="text-sm">Leggi il codice della persona, poi assegna una prenotazione. L’ingresso si conferma separatamente.</p>
       {lookup ? <Desk key={`${lookup.kind}:${lookup.value}`} {...{eventId,duty,lookup,requestAction}} disabled={scanBusy} onBusy={setDeskBusy} onSaved={()=>setRefresh(value=>value+1)}/> : <p className="text-sm text-slate-600">Inserisci o scansiona prima il codice.</p>}
       {canManage && <div className="flex flex-wrap gap-4 text-sm"><PendingLink href="/dashboard/manager?section=iscritti" className="underline">Gestione partecipanti</PendingLink><PendingLink href="/dashboard/manager/nuovo" className="underline">Inserisci un nuovo partecipante</PendingLink></div>}

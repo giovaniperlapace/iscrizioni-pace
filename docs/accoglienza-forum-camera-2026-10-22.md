@@ -115,3 +115,18 @@ compresa apertura/annullamento della finestra «Rimuovi ingresso».
 
 Su ulteriore richiesta rimossa la legenda esplicativa dalla console,
 conservando i colori dei messaggi e i relativi significati.
+
+
+## Incarico e statistiche integrati nello scanner
+
+Nome dell’incarico e contatori subito sotto, nella banda superiore del
+riquadro scanner con fondo nel colore tenue del sito. La banda rimane
+visibile anche quando il modulo manuale/USB viene nascosto dal risultato.
+Pulsanti Cambia modalità e Cambia incarico sotto il titolo della dashboard:
+stile secondario del sito, affiancati su desktop e a tutta larghezza su mobile.
+Blocchi durante operazioni pendenti e aggiornamento conteggi conservati.
+La prova con QR fittizi resta accessibile in fondo alla pagina; la rimozione
+è rimandata a una successiva richiesta prima dell’evento.
+
+Verifica di ordine e integrazione dei contatori aggiunta al collaudo browser
+del flusso originale; dati sintetici e nessuna scrittura operativa reale.

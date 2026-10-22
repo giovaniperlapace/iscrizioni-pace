@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, History, Keyboard, ScanLine } from "lucide-react";
-import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
 import type { CameraSource } from "@/lib/reception/camera";
 import type { ReceptionDuty } from "@/lib/reception/duties.server";
@@ -18,6 +18,8 @@ import PendingLink from "@/components/pending-link";
 type Props = {
   commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>;
   cameraSource?: CameraSource;
+  statistics?: ReactNode;
+  navigationAboveTitle?: boolean;
   deviceMode?: "computer" | "phone";
   onChangeMode?: () => void;
   onChangeDuty?: () => void;
@@ -152,16 +154,24 @@ export function EventReceptionConsole(props: Props) {
     {state.phase === "pending" ? "Verifica in corso…" : (problem || missingTicket || missingEventEntry) ? "Attenzione: leggi il messaggio sotto." : fading ? "✓ Ingresso registrato" : "QR letto · controlla la scheda ↓"}
   </div>;
 
+  const navigation = <div className={props.navigationAboveTitle ? "grid grid-cols-1 gap-3 text-sm sm:flex sm:flex-wrap" : "flex gap-3 text-sm"} aria-label="Postazione e incarico">
+        {onChangeMode && <button className={props.navigationAboveTitle ? "btn-secondary min-h-11 px-4" : "min-h-11 underline"} disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeMode}>Cambia modalità</button>}
+        {onChangeDuty && <button className={props.navigationAboveTitle ? "btn-secondary min-h-11 px-4" : "min-h-11 underline"} disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeDuty}>Cambia incarico</button>}
+      </div>;
+
   return <section className="mx-auto grid w-full max-w-3xl gap-4" aria-labelledby="reception-title">
-    <header className="flex flex-wrap items-center justify-between gap-2">
+    {props.navigationAboveTitle && navigation}
+    {!props.statistics && <header className="flex flex-wrap items-center justify-between gap-2">
       <h2 id="reception-title" className="text-xl font-semibold">{props.duty?.title ?? "Accoglienza evento"}</h2>
-      <div className="flex gap-3 text-sm">
-        {onChangeMode && <button className="min-h-11 underline" disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeMode}>Cambia modalità</button>}
-        {onChangeDuty && <button className="min-h-11 underline" disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeDuty}>Cambia incarico</button>}
-      </div>
-    </header>
+      {!props.navigationAboveTitle && navigation}
+    </header>}
+    <div className={props.statistics ? "surface-card overflow-hidden" : undefined}>
+      {props.statistics && <header className="grid gap-2 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] p-4" aria-label="Incarico attivo">
+        <h2 id="reception-title" className="break-words text-lg font-semibold text-[var(--peace-blue-800)]">{props.duty?.title ?? "Accoglienza evento"}</h2>
+        {props.statistics}
+      </header>}
     <div hidden={!cameraVisible && (!!result || problem && state.phase !== "error")}>
-      <div className="surface-card grid gap-4 p-4">
+      <div className={props.statistics ? "grid gap-4 p-4" : "surface-card grid gap-4 p-4"}>
         {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
           <ReceptionCamera source={cameraSource} overlay={cameraNotice} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || !!entry} onCode={value => {
             if (!fading && !locked && !correction && state.phase !== "selection" && (session.canScan() || state.phase === "result") && latch.current.accept(value)) void inspect({ kind: "qr", value }, !!entry);
@@ -175,6 +185,7 @@ export function EventReceptionConsole(props: Props) {
           <span>{manual ? deviceMode === "computer" ? "Scanner USB" : "Inquadra QR code" : "Inserisci il codice manualmente"}</span>
         </button>
       </div>
+    </div>
     </div>
     {!cameraVisible && !result && feedback}
     {!cameraVisible && resultCard}

@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Accoglienza Forum: incarico nel riquadro scanner — 2026-10-22
+
+- Nome e statistiche dell’incarico nella banda superiore del riquadro scanner,
+  visibili anche quando compare un risultato in modalità manuale/USB.
+- Cambia modalità/incarico sotto il titolo della dashboard, con pulsanti nello
+  stile del sito. Conteggi aggiornati dopo le operazioni; fotocamera invariata.
+- Prova con QR fittizi mantenuta in fondo alla pagina: rimozione rinviata
+  a ridosso dell’evento, su successiva richiesta. Nessuna migration.
+
 ## Accoglienza Forum: terminologia ingressi — 2026-10-22
 
 - Dashboard Forum/cerimonie e collaudo: conferma, rimozione, correzione,

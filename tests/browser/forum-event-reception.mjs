@@ -81,6 +81,15 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.equal(await page.locator('video').count(),0);
   await page.getByLabel('Cerca incarico').fill('Morning A');
   await page.getByRole('button',{name:/Morning A/}).click();
+  const sectionOrder=await page.evaluate(()=>{
+    const mode=document.querySelector('[aria-label="Postazione e incarico"]');
+    const title=document.querySelector('#reception-title');
+    const stats=document.querySelector('[aria-label="Statistiche dell’incarico"]');
+    return Boolean(mode.compareDocumentPosition(title)&Node.DOCUMENT_POSITION_FOLLOWING) && Boolean(title.compareDocumentPosition(stats)&Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  assert.equal(sectionOrder,true);
+  assert.equal(await page.getByLabel("Incarico attivo",{exact:true}).getByLabel("Statistiche dell’incarico",{exact:true}).count(),1);
+  assert.match(await page.getByRole('button',{name:'Cambia modalità',exact:true}).getAttribute('class'),/btn-secondary/);
   await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');
   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
   await page.getByText(/Non risulta una prenotazione valida/).waitFor();
