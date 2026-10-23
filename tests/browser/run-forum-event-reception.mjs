@@ -9,7 +9,9 @@ for(const file of files){if(file.startsWith('.env'))continue;mkdirSync(dirname(j
 symlinkSync(join(root,'node_modules'),join(dir,'node_modules'),'dir');
 mkdirSync(join(dir,'app/test-forum-roles'),{recursive:true});
 copyFileSync('tests/browser/forum-role-page.fixture',join(dir,'app/test-forum-roles/page.tsx'));
-const env={LC_ALL:'C',PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
+mkdirSync(join(dir,'app/test-school-qr'),{recursive:true});
+copyFileSync('tests/browser/school-qr-page.fixture',join(dir,'app/test-school-qr/page.tsx'));
+const env={SCHOOL_QR_ONLY:process.env.SCHOOL_QR_ONLY,QR_TOKEN_ENCRYPTION_SECRET:'synthetic-school-browser',LC_ALL:'C',PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
  NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:55490',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',
  SUPABASE_SERVICE_ROLE_KEY:'synthetic-service',NEXT_PUBLIC_APP_URL:'http://127.0.0.1:3198',EMAIL_DELIVERY_MODE:'log'};
 const log=openSync('/tmp/pace-forum-events-dev.log','w');

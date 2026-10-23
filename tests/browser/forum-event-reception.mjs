@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {createServer} from 'node:http';
 import {readFileSync} from 'node:fs';
+import {encryptQrToken} from '../../lib/qrcode/secure-token.ts';
 const fw=n=>createHash('md5').update('forum-queue-'+n).digest('hex').replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/,'$1-$2-$3-$4-$5');
 const lit=v=>v==null?'null':`'${String(v).replaceAll("'","''")}'`;
 export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
@@ -14,12 +15,20 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
  update panel_waitlist set status='cancelled' where status in ('waiting','offered');
  select set_reception_duties(fw(200),fw(11),fw(8),array[fw(403)::text,fw(404)::text,'opening'],app.reception_duty_keys(fw(200),fw(8)));
  insert into check_ins(event_id,registration_id,checked_in_by,source) values(fw(200),fw(107),fw(10),'manual');`);
- const functions=new Set(['has_panel_reception_duty','reception_duty_catalog','reception_target_statistics','reception_desk','reception_forum_routing','reception_panel_check_in','reception_ceremony_check_in','set_reception_duties']);
+ const functions=new Set(['has_panel_reception_duty','reception_duty_catalog','reception_target_statistics','reception_desk','reception_forum_routing','reception_panel_check_in','reception_ceremony_check_in','set_reception_duties','reception_event_check_in']);
  const adapter=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');const url=new URL(req.url,'http://127.0.0.1');
   try {
    if(url.pathname==='/auth/v1/user'){res.end(JSON.stringify({id:fw(actor),email:`queue-${actor}@example.invalid`,aud:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:'2026-01-01T00:00:00Z'}));return;}
    if(url.pathname==='/rest/v1/events'){res.end(JSON.stringify({id:fw(200),title:'Synthetic event'}));return;}
+   if(url.pathname==='/rest/v1/school_bookings'){
+    const id=url.searchParams.get('id')?.slice(3);
+    res.end(psql(`begin;set local role authenticated;set local "request.jwt.claim.sub"=${lit(fw(actor))};select coalesce((select jsonb_build_object('id',id,'status',status) from school_bookings where id=${lit(id)}),'null');commit;`,true).trim());return;
+   }
+   if(url.pathname==='/rest/v1/school_booking_qr_tokens'){
+    const id=url.searchParams.get('booking_id')?.slice(3);
+    res.end(psql(`begin;set local role authenticated;set local "request.jwt.claim.sub"=${lit(fw(actor))};select coalesce((select jsonb_build_object('token_encrypted',token_encrypted,'token_hash',token_hash,'status',status,'revoked_at',revoked_at,'expires_at',expires_at) from school_booking_qr_tokens where booking_id=${lit(id)}),'null');commit;`,true).trim());return;
+   }
    if(url.pathname==='/rest/v1/group_memberships'){res.end('[]');return;}
    if(url.pathname==='/rest/v1/event_user_roles'){res.end(psql(`select coalesce(jsonb_agg(jsonb_build_object('role',role,'event_id',event_id)),'[]') from event_user_roles where user_id=${lit(fw(actor))};`,true).trim());return;}
    if(url.pathname==='/rest/v1/profiles'){
@@ -46,6 +55,47 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
    unexpected.push(url.pathname);res.statusCode=500;res.end(JSON.stringify({code:'UNKNOWN',message:'Unexpected synthetic endpoint'}));
   } catch(error){console.error('Adapter rejection',url.pathname,error.stderr?.toString()??error.message);res.statusCode=403;res.end(JSON.stringify({code:'42501',message:'Synthetic rejection'}));}
  });
+ const checkSchoolFlow=async(page,context)=>{
+  // Original QR component + both original scanner controls, HTTP/Server Action to SQL.
+
+  const schoolToken='S'.repeat(43);
+  psql(`insert into school_booking_teachers(id,event_id,email,first_name,last_name,phone) values(fw(3996),fw(200),'school-browser@example.invalid','Teacher','Browser','+39000000');
+    insert into school_bookings(id,event_id,teacher_id,school_name,school_city,class_description,student_count,companion_count,privacy_version,privacy_accepted_at)
+      values(fw(3997),fw(200),fw(3996),'Scuola browser','Test','1A',10,2,'test',now());
+    insert into school_booking_qr_tokens(booking_id,token_hash,token_encrypted) values(fw(3997),${lit(createHash('sha256').update(schoolToken).digest('hex'))},${lit(encryptQrToken(schoolToken))});
+    insert into school_panel_reservations(event_id,booking_id,panel_id,seat_section_id,student_count,companion_count) values(fw(200),fw(3997),fw(401),fw(550),10,2);
+    select set_reception_duties(fw(200),fw(10),fw(8),array[fw(401)::text]);`);
+  actor=10;
+  await page.setViewportSize({width:390,height:844});
+  await page.goto(base+`/test-school-qr?event=${fw(200)}&panel=${fw(401)}&booking=${fw(3997)}`);
+  await page.getByRole('button',{name:'Visualizza QR',exact:true}).click();
+  await page.getByRole('img',{name:'QR della prenotazione scuola',exact:true}).waitFor();
+  assert.ok(await page.getByRole('img',{name:'QR della prenotazione scuola',exact:true}).evaluate(image=>image.complete&&image.naturalWidth>0));
+  const schoolDownload=page.waitForEvent('download');await page.getByRole('link',{name:'Scarica QR',exact:true}).click();
+  assert.match((await schoolDownload).suggestedFilename(),/^qr-scuola-/);
+  await page.screenshot({path:'/tmp/pace-school-qr-mobile.png',fullPage:true});
+  actor=8;
+  await page.getByRole('button',{name:'Scanner USB',exact:true}).click();
+  const deniedQr=await context.request.get(base+`/api/school-booking-qr?bookingId=${fw(3997)}`);assert.equal(deniedQr.status(),404);
+  await page.getByLabel('Scanner USB',{exact:true}).focus();await page.keyboard.type(schoolToken,{delay:1});await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:'Registra evento e ingresso al Forum',exact:true}).click();
+  await page.locator('input[name="students"]').fill('8');await page.locator('input[name="companions"]').fill('1');
+  await page.screenshot({path:'/tmp/pace-school-counts-mobile.png',fullPage:true});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.getByRole('dialog').getByRole('button',{name:'Registra evento e ingresso al Forum',exact:true}).click();
+  await page.getByText(/8 studenti e 1 accompagnatori/).waitFor();
+  assert.equal(psql('select count(*) from check_ins where school_booking_id=fw(3997) and cancelled_at is null;',true).trim(),'2');
+  assert.equal(calls.filter(x=>x.name==='reception_panel_check_in'&&x.body.p_reason==='school_event_entry').length,1);
+  actor=10;
+  await page.getByRole('button',{name:'Cambia scanner prova',exact:true}).click();
+  await page.getByLabel('Scanner USB',{exact:true}).focus();await page.keyboard.type(schoolToken,{delay:1});await page.keyboard.press('Enter');
+  await page.getByText(/8 studenti e 1 accompagnatori/).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Registra evento e ingresso al Forum',exact:true}).count(),0);
+  await page.setViewportSize({width:1440,height:1000});
+  await page.screenshot({path:'/tmp/pace-school-event-desktop.png',fullPage:true});
+  assert.equal(psql('select count(*) from check_ins where school_booking_id=fw(3997) and moment_id is null;',true).trim(),'1');
+  console.log('PASS school QR display/download and RLS denial; original USB scanner → HTTP → atomic event+Forum 8/10 students; event scanner sees same counts; mobile/desktop');
+ };
  try {
   await new Promise(resolve=>adapter.listen(55490,'127.0.0.1',resolve));
   const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
@@ -56,6 +106,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await context.addCookies([{name:'sb-127-auth-token',value:'base64-'+Buffer.from(JSON.stringify(session)).toString('base64url'),url:base},{name:'iscrizioni_last_activity',value:String(Date.now()),url:base}]);
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
+  if(process.env.SCHOOL_QR_ONLY==='1'){await checkSchoolFlow(page,context);assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);return;}
   const crossOrigin=await context.request.post(base+'/api/forum-reception',{headers:{Origin:'https://untrusted.invalid'},data:{operation:'statistics',eventId:fw(200),target:fw(403)}});
   assert.equal(crossOrigin.status(),403);
   const otherEvent=await context.request.post(base+'/api/forum-reception',{headers:{Origin:base},data:{operation:'statistics',eventId:fw(201),target:fw(403)}});
@@ -289,6 +340,8 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await gallery.setViewportSize({width:1200,height:1000});
   await gallery.screenshot({path:'/tmp/pace-forum-demo-qr.png',fullPage:true});
   console.log('PASS training QR camera, same desktop/mobile controls, booking then entry, ceremony seat, reset, HTML download, access gate and zero operational API calls');
+  await page.unroute('**/api/forum-reception');
+  await checkSchoolFlow(page,context);
   assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);
   console.log('PASS original desktop/mobile page → HTTP → scoped SQL; booking distinct from presence, wrong Forum, counts, camera QR decode, switching, revocation, no overflow');
  } finally {await browser?.close();await new Promise(resolve=>adapter.close(resolve));}

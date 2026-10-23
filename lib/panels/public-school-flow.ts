@@ -1,11 +1,8 @@
+import { processSchoolQrEmails } from "./school-qr-delivery";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { sendTransactionalEmail } from "@/lib/email/smtp";
-import { renderSchoolBookingConfirmationEmail } from "@/lib/email/templates";
-import { renderQrPngBuffer } from "@/lib/qrcode/render";
 import { encryptQrToken } from "@/lib/qrcode/secure-token";
 import { createOpaqueQrToken } from "@/lib/qrcode/token";
-import { buildAppMagicLink } from "@/lib/registrations/magic-link";
 import {
   PUBLIC_SCHOOL_BOOKING_PRIVACY_VERSION,
   type PublicSchoolBookingInput,
@@ -16,7 +13,7 @@ export async function createPublicSchoolBooking(
   supabase: SupabaseClient,
   input: PublicSchoolBookingInput,
   event: { id: string; title: string },
-  panels: PublicSchoolPanelOption[],
+  _panels: PublicSchoolPanelOption[],
   appUrl: string
 ): Promise<{ bookingId: string; emailSent: boolean }> {
   const qrToken = createOpaqueQrToken();
@@ -45,25 +42,10 @@ export async function createPublicSchoolBooking(
 
   const bookingId = String(data);
   try {
-    const callbackUrl = `${appUrl}/auth/callback?redirect_to=${encodeURIComponent("/dashboard/docente")}`;
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({ type: "magiclink", email: input.teacherEmail, options: { redirectTo: callbackUrl } });
-    const accessLink = buildAppMagicLink(callbackUrl, linkData.properties?.hashed_token ?? null) ?? linkData.properties?.action_link;
-    if (linkError || !accessLink) throw linkError ?? new Error("Magic link was not generated");
-    const optionById = new Map(panels.map((panel) => [panel.panelId, panel]));
-    const panelLines = input.reservations.map((reservation) => {
-      const panel = optionById.get(reservation.panelId);
-      return panel ? `${panel.title} — ${formatPanelDate(panel.startsAt)}` : reservation.panelId;
-    });
-    const qrContentId = `school-booking-${bookingId}@iscrizioni-pace`;
-    await sendTransactionalEmail({ to: input.teacherEmail, ...renderSchoolBookingConfirmationEmail({ teacherFirstName: input.teacherFirstName, eventTitle: event.title, schoolName: input.schoolName, classDescription: input.classDescription, studentCount: input.studentCount, companionCount: input.companionCount, panelLines, accessLink, qrCodeContentId: qrContentId }), attachments: [{ filename: `qr-scuola-${bookingId.slice(0, 8)}.png`, content: await renderQrPngBuffer(qrToken.token), contentType: "image/png", cid: qrContentId }] });
-    await supabase.from("audit_logs").insert({ event_id: event.id, action: "school_booking.confirmation_email_sent", entity_table: "school_bookings", entity_id: bookingId, metadata: {} });
-    return { bookingId, emailSent: true };
+    const delivery = await processSchoolQrEmails(supabase, appUrl, {bookingId});
+    return {bookingId, emailSent:delivery.accepted === 1};
   } catch {
-    await supabase.from("audit_logs").insert({ event_id: event.id, action: "school_booking.confirmation_email_failed", entity_table: "school_bookings", entity_id: bookingId, metadata: {} });
-    return { bookingId, emailSent: false };
+    // The booking and its queued confirmation survive a delivery failure.
+    return {bookingId, emailSent:false};
   }
-}
-
-function formatPanelDate(value: string) {
-  return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value));
 }

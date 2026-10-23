@@ -5,7 +5,8 @@ import type {
   LeaderTickets,
   PairTicketCommand,
 } from "@/lib/ceremonies/leader-tickets";
-import { eligibleSubjects } from "@/lib/ceremonies/distribution";
+import { leaderSectorSubjects } from "@/lib/ceremonies/leader-tickets";
+import { Check, Ticket, Users, X } from "lucide-react";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { SECTOR_COPY } from "@/lib/ceremonies/sector-copy";
 import {
@@ -52,7 +53,7 @@ export function CeremonyLeaderSectors({
   }, [confirmation]);
   const a = view.allocations.find((a) => a.id === allocation),
     blocked = pending || stale || !!uncertain;
-  const subjects = a ? eligibleSubjects(view, a) : [];
+  const subjects = a ? leaderSectorSubjects(view, a) : [];
   const filtered = subjects.filter((p) =>
     `${p.name} ${p.code} ${p.parent ?? ""}`
       .toLocaleLowerCase(locale)
@@ -101,7 +102,13 @@ export function CeremonyLeaderSectors({
       status = "unavailable";
     }
     setConfirmation(null);
-    setMessage(status in c ? c[status as keyof typeof c] : c.unavailable);
+    setMessage(
+      status in t
+        ? t[status as keyof typeof t]
+        : status in c
+          ? c[status as keyof typeof c]
+          : c.unavailable,
+    );
     if (status === "unavailable") setUncertain(command);
     else {
       setUncertain(null);
@@ -145,7 +152,9 @@ export function CeremonyLeaderSectors({
         : [...prev, s],
     );
   }
-  const allocations = view.allocations.filter((item) => !kind || item.kind === kind);
+  const allocations = view.allocations.filter(
+    (item) => !kind || item.kind === kind,
+  );
   return (
     <section className="grid min-w-0 gap-4">
       <header className="surface-card grid gap-3 p-5">
@@ -172,40 +181,80 @@ export function CeremonyLeaderSectors({
           </button>
         </div>
       )}
-      {!allocations.length && <p>{c.empty}</p>}
-      <label className="grid gap-1">
-        {c.choose}
-        <select
-          aria-label={c.choose}
-          className="field"
-          value={allocation}
-          disabled={blocked}
-          onChange={(e) => {
-            setAllocation(e.target.value);
-            setSelected([]);
-            setQuery("");
-            setPage(0);
-            setDecisionPage(0);
-          }}
-        >
-          <option value="">—</option>
-          {allocations.map((x) => (
-            <option key={x.id} value={x.id}>
-              {c[x.kind]} · {x.groupName} · {t.sector} {x.sector} ·{" "}
-              {x.quantity - x.used} {c.remaining.toLocaleLowerCase(locale)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {!allocations.length && <p>{t.empty}</p>}
+      {allocations.length > 0 && (
+        <fieldset className="surface-card min-w-0 p-5" disabled={blocked}>
+          <legend className="px-2 text-lg font-semibold text-[var(--peace-blue-900)]">
+            {t.chooseSector}
+          </legend>
+          <p className="mb-4 text-sm leading-6 text-[var(--peace-muted)]">
+            {t.chooseHelp}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {allocations.map((x) => (
+              <label
+                key={x.id}
+                className={`relative flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--peace-blue-500)] ${allocation === x.id ? "border-[var(--peace-blue-700)] bg-[var(--peace-sky-100)]" : "border-[var(--peace-border)] bg-white hover:bg-[var(--peace-soft)]"} ${blocked ? "opacity-60" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name={`ceremony-allocation-${kind ?? "all"}`}
+                  className="mt-1 size-5 shrink-0"
+                  aria-label={`${c[x.kind]} · ${x.groupName} · ${t.sector} ${x.sector}`}
+                  value={x.id}
+                  checked={allocation === x.id}
+                  onChange={() => {
+                    setAllocation(x.id);
+                    setSelected([]);
+                    setQuery("");
+                    setPage(0);
+                    setDecisionPage(0);
+                    setMessage("");
+                  }}
+                />
+                <span className="grid min-w-0 flex-1 gap-2">
+                  <span className="flex items-center justify-between gap-2 font-semibold text-[var(--peace-blue-900)]">
+                    <span className="flex items-center gap-2">
+                      <Ticket size={18} aria-hidden="true" />
+                      {t.sector} {x.sector}
+                    </span>
+                    {allocation === x.id && (
+                      <Check size={18} aria-hidden="true" />
+                    )}
+                  </span>
+                  <span className="break-words text-sm">
+                    {x.groupName}
+                    {!kind ? ` · ${c[x.kind]}` : ""}
+                  </span>
+                  <span className="text-xs text-[var(--peace-muted)]">
+                    {t.received}: {x.quantity} · {c.used}: {x.used}
+                  </span>
+                  <span className="text-sm font-semibold text-[var(--peace-blue-800)]">
+                    {c.remaining}: {x.quantity - x.used}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       {a && (
         <>
           <section
             className="surface-card grid gap-2 p-5"
-            aria-label={c.allocation}
+            aria-label={t.received}
           >
             <h2 className="text-lg font-semibold">
               {a.groupName} · {t.sector} {a.sector}
             </h2>
+            <p className="text-sm text-[var(--peace-muted)]">
+              {new Intl.DateTimeFormat(locale, {
+                dateStyle: "full",
+                timeStyle: "short",
+                timeZone: "Europe/Rome",
+              }).format(new Date(a.startsAt))}{" "}
+              · {a.location}
+            </p>
             <p>
               {c.quantity}: <strong>{a.quantity}</strong> · {c.used}:{" "}
               <strong>{a.used}</strong> · {t.remaining}:{" "}
@@ -217,8 +266,17 @@ export function CeremonyLeaderSectors({
             </p>
             {a.numbered && <p role="alert">{c.unconfigured}</p>}
           </section>
-          <section className="surface-card grid gap-4 p-5">
-            <p className="text-sm">{c.childHelp}</p>
+          <section
+            className="surface-card grid min-w-0 gap-4 p-5"
+            aria-label={t.choosePeople}
+          >
+            <h2 className="text-lg font-semibold text-[var(--peace-blue-900)]">
+              {t.choosePeople}
+            </h2>
+            <p className="text-sm leading-6 text-[var(--peace-muted)]">
+              {t.attendanceHelp}
+            </p>
+            <p className="text-sm text-[var(--peace-muted)]">{c.childHelp}</p>
             <label className="grid gap-1">
               {c.search}
               <input
@@ -259,21 +317,19 @@ export function CeremonyLeaderSectors({
               />
               {t.all}
             </label>
-            <div className="divide-y">
+            <div className="divide-y divide-[var(--peace-border)]">
               {rows.map((row) => {
-                const person = view.people.find(
-                    (p) => p.registrationId === row.registrationId,
-                  ),
-                  choice =
-                    person?.attendance?.find((x) => x.planId === a.planId)
-                      ?.choice ?? "unknown",
-                  existing = person?.assigned.find(
-                    (x) => x.planId === a.planId && x.childId === row.childId,
-                  );
+                const choice = row.attendance,
+                  existing = personById
+                    .get(row.registrationId)
+                    ?.assigned.find(
+                      (x) => x.planId === a.planId && x.childId === row.childId,
+                    );
                 return (
                   <article
                     key={subjectKey(row)}
-                    className="flex flex-wrap items-start gap-3 py-3"
+                    aria-label={row.name}
+                    className={`flex flex-wrap items-start gap-3 rounded-lg px-3 py-4 ${ids.has(subjectKey(row)) ? "bg-[var(--peace-sky-100)]" : ""}`}
                   >
                     <label className="flex min-w-0 flex-1 items-start gap-3">
                       <input
@@ -286,13 +342,15 @@ export function CeremonyLeaderSectors({
                         }
                         onChange={() => toggle(row)}
                       />
-                      <span>
-                        <strong>{row.name}</strong>
+                      <span className="min-w-0 break-words">
+                        <strong className="text-[var(--peace-blue-900)]">
+                          {row.name}
+                        </strong>
                         <span className="block text-xs">
                           {row.parent ? `${c.child} · ${row.parent}` : row.code}
                         </span>
                         <span
-                          className={`block text-sm ${choice === "yes" ? "font-semibold text-emerald-800" : ""}`}
+                          className={`my-1 inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${choice === "yes" ? "bg-green-100 text-green-900" : "bg-[var(--peace-soft)] text-[var(--peace-muted)]"}`}
                         >
                           {t[choice]}
                         </span>
@@ -338,53 +396,97 @@ export function CeremonyLeaderSectors({
                 {c.next}
               </button>
             </nav>
-            <p>
-              {t.selected}: <strong>{selected.length}</strong> · {t.remaining}:{" "}
-              {a.quantity - a.used}
-            </p>
-            {!!selected.length && (
-              <ul className="max-h-40 overflow-y-auto">
-                {selected.map((s) => (
-                  <li key={subjectKey(s)}>
-                    {s.name}{" "}
-                    <button
-                      className="underline"
-                      disabled={blocked}
-                      onClick={() => toggle(s)}
-                      aria-label={`${t.cancel} ${s.name}`}
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <button
-              className="btn-primary justify-self-start px-4 py-2"
-              disabled={
-                blocked ||
-                !selected.length ||
-                selected.length > a.quantity - a.used ||
-                a.state !== "validated" ||
-                a.numbered
-              }
-              onClick={() =>
-                setConfirmation({
-                  names: selected.map((s) => s.name),
-                  command: {
-                    allocationId: a.id,
-                    revision: a.revision,
-                    requestId: crypto.randomUUID(),
-                    subjects: selected.map(({ registrationId, childId }) => ({
-                      registrationId,
-                      childId,
-                    })),
-                  },
-                })
-              }
+            <section
+              aria-label={t.recipients}
+              className="grid min-w-0 gap-4 rounded-xl border border-[var(--peace-border-strong)] bg-[var(--peace-soft)] p-4 sm:p-5"
             >
-              {t.confirm}
-            </button>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 font-semibold text-[var(--peace-blue-900)]">
+                    <Users size={20} aria-hidden="true" />
+                    {t.recipients}
+                  </h3>
+                  <p className="mt-1 text-sm">
+                    {a.groupName} · {t.sector} {a.sector}
+                  </p>
+                </div>
+                <p
+                  className="rounded-full bg-[var(--peace-sky-100)] px-3 py-1.5 text-sm font-semibold text-[var(--peace-blue-800)]"
+                  aria-live="polite"
+                >
+                  {t.selected}: {selected.length} · {c.remaining}:{" "}
+                  {a.quantity - a.used}
+                </p>
+              </div>
+              <p className="text-sm leading-6 text-[var(--peace-muted)]">
+                {selected.length ? t.selectionHelp : t.selectionEmpty}
+              </p>
+              {!!selected.length && (
+                <ul className="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
+                  {selected.map((person) => (
+                    <li
+                      key={subjectKey(person)}
+                      className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-[var(--peace-border)] bg-white p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="break-words font-semibold text-[var(--peace-blue-900)]">
+                          {person.name}
+                        </p>
+                        <p className="text-xs text-[var(--peace-muted)]">
+                          {person.childId
+                            ? `${c.child} · ${personById.get(person.registrationId)?.name ?? ""}`
+                            : personById.get(person.registrationId)?.code}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm"
+                        disabled={blocked}
+                        onClick={() => toggle(person)}
+                        aria-label={`${t.remove} ${person.name}`}
+                      >
+                        <X size={16} aria-hidden="true" />
+                        {t.remove}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {selected.length > a.quantity - a.used && (
+                <p
+                  role="alert"
+                  className="text-sm font-semibold text-[var(--peace-danger)]"
+                >
+                  {t.overCapacity}
+                </p>
+              )}
+              <button
+                className="btn-primary justify-self-start px-4 py-2"
+                disabled={
+                  blocked ||
+                  !selected.length ||
+                  selected.length > a.quantity - a.used ||
+                  a.state !== "validated" ||
+                  a.numbered
+                }
+                onClick={() =>
+                  setConfirmation({
+                    names: selected.map((s) => s.name),
+                    command: {
+                      allocationId: a.id,
+                      revision: a.revision,
+                      requestId: crypto.randomUUID(),
+                      subjects: selected.map(({ registrationId, childId }) => ({
+                        registrationId,
+                        childId,
+                      })),
+                    },
+                  })
+                }
+              >
+                {t.confirm}
+              </button>
+            </section>
           </section>
           <section className="surface-card grid gap-3 p-5">
             <h2 className="text-lg font-semibold">{c.nominees}</h2>
@@ -460,7 +562,7 @@ export function CeremonyLeaderSectors({
             ))}
           </ul>
           {"action" in confirmation.command &&
-            confirmation.command.action === "revoke" && <p>{c.revokeHelp}</p>}
+            confirmation.command.action === "revoke" && <p>{t.revokeHelp}</p>}
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               className="btn-primary px-4 py-2"

@@ -77,8 +77,8 @@ export function PresenceSelection({ result, mode, onSubmit, onDismiss, entryTerm
 }) {
   const copy = (value: string) => receptionEntryCopy(value, entryTerminology);
   const [selected, setSelected] = useState<string[]>(() => mode === "correct" && (result.kind === "family" || result.kind === "group") ? result.persons.filter(p => p.checkedInAt).map(p => p.id) : []);
-  const [students, setStudents] = useState(mode === "correct" && result.kind === "school" ? String(result.students) : "");
-  const [companions, setCompanions] = useState(mode === "correct" && result.kind === "school" ? String(result.companions) : "");
+  const [students, setStudents] = useState((mode === "correct" || result.kind === "school" && !!result.checkedInAt) && result.kind === "school" ? String(result.students) : "");
+  const [companions, setCompanions] = useState((mode === "correct" || result.kind === "school" && !!result.checkedInAt) && result.kind === "school" ? String(result.companions) : "");
   const [cancelSchool, setCancelSchool] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const familyValid = (result.kind !== "family" && result.kind !== "group") || selected.length > 0 || (mode === "correct" && result.persons.some(person => person.checkedInAt));
@@ -90,6 +90,7 @@ export function PresenceSelection({ result, mode, onSubmit, onDismiss, entryTerm
     if (!familyValid || !countsValid || (mode !== "enter" && !confirmed)) return;
     onSubmit((result.kind === "family" || result.kind === "group") ? { subjectIds: selected } : mode === "cancel" ? {} : { students: Number(students), companions: Number(companions) }, confirmed, cancelSchool);
   }}>
+    {result.kind === "school" && result.panel && mode === "enter" && result.eventCheckedIn === false && <p className="rounded-lg bg-sky-50 p-3 text-sm">Confermi con questi numeri sia la partecipazione all’evento sia l’ingresso al Forum. Gli assenti non vengono conteggiati. Le scuole restano separate dagli iscritti.</p>}
     {(result.kind === "family" || result.kind === "group") ? <fieldset className="grid gap-2">
       <legend className="mb-2 font-medium">{mode === "cancel" ? "Seleziona gli ingressi da annullare" : copy("Seleziona le persone realmente presenti")}</legend>
       {result.kind === "group" && <div className="flex flex-wrap gap-2"><button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>{setSelected(result.persons.filter(p=>mode!=="enter" || !p.checkedInAt).map(p=>p.id));setConfirmed(false);}}>Seleziona tutto il gruppo</button><button type="button" className="btn-secondary min-h-12 px-4" onClick={()=>{setSelected([]);setConfirmed(false);}}>Deseleziona tutti</button></div>}
@@ -109,7 +110,7 @@ export function PresenceSelection({ result, mode, onSubmit, onDismiss, entryTerm
     {mode === "correct" && (result.kind === "family" || result.kind === "group") && selected.length === 0 && result.persons.some(person => person.checkedInAt) && <p role="status" className="text-sm font-semibold">Salvando annullerai tutti gli ingressi attualmente registrati.</p>}
     {mode !== "enter" && <label className="flex min-h-14 items-center gap-3 text-sm"><input type="checkbox" name="confirmCorrection" className="h-6 w-6 shrink-0" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Confermo {(mode === "cancel" || cancelSchool || ((result.kind === "family" || result.kind === "group") && selected.length === 0)) ? "l’annullamento degli ingressi indicati" : copy("la correzione delle presenze indicate")}.</label>}
     <div className={`${result.kind === "group" ? "" : "sticky bottom-0"} flex flex-wrap gap-2 border-t border-[var(--peace-border)] bg-white py-3`}>
-      <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || !countsValid || (mode !== "enter" && !confirmed)}>{copy(labels[mode])}</button>
+      <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || !countsValid || (mode !== "enter" && !confirmed)}>{result.kind === "school" && result.panel && mode === "enter" && result.eventCheckedIn === false ? "Registra evento e ingresso al Forum" : copy(labels[mode])}</button>
       <button className="btn-secondary min-h-12 px-4" type="button" onClick={onDismiss}>Chiudi senza modifiche</button>
     </div>
   </form>;

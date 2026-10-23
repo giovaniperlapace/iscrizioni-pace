@@ -150,3 +150,68 @@ test("pairing copy covers all seven locales", () => {
     for (const value of Object.values(c)) assert.ok(value?.trim());
   }
 });
+
+test("leader sector people prioritize this ceremony's attendance before pagination, preserving family and surname order", async () => {
+  const { leaderSectorSubjects } =
+    await import("../lib/ceremonies/leader-tickets.ts");
+  const allocation = { planId: "opening", groupId: "group" };
+  const people = Array.from({ length: 105 }, (_, i) => ({
+    registrationId: `person-${i}`,
+    name: `Person ${i}`,
+    code: `P${i}`,
+    groupIds: ["group"],
+    children: [],
+    eligiblePlanIds: ["opening", "closing"],
+    assigned: [],
+    attendance: [
+      {
+        planId: "opening",
+        choice: i === 104 ? "yes" : i === 0 ? "no" : "unknown",
+      },
+      { planId: "closing", choice: i === 0 ? "yes" : "unknown" },
+    ],
+  }));
+  const view = {
+    people: [
+      ...people,
+      { ...people[104], registrationId: "outside", groupIds: ["other"] },
+    ],
+  };
+  const before = JSON.stringify(view);
+  const rows = leaderSectorSubjects(view as never, allocation as never);
+  assert.equal(rows[0].registrationId, "person-104");
+  assert.equal(rows.slice(0, 100).length, 100);
+  assert.equal(rows[1].registrationId, "person-0");
+  assert.equal(rows[1].attendance, "no");
+  assert.equal(rows[2].attendance, "unknown");
+  assert.equal(
+    rows.filter((p) => p.name.includes("Person 10"))[0].registrationId,
+    "person-104",
+  );
+  assert.equal(rows.length, 105);
+  assert.equal(
+    leaderSectorSubjects(
+      view as never,
+      { ...allocation, planId: "closing" } as never,
+    )[0].registrationId,
+    "person-0",
+  );
+  assert.equal(JSON.stringify(view), before);
+  const family = { ...people[104], children: [{ id: "child", name: "Child" }] };
+  const familyRows = leaderSectorSubjects(
+    { people: [people[0], family] } as never,
+    allocation as never,
+  );
+  assert.deepEqual(
+    familyRows.map((p) => [p.registrationId, p.childId, p.attendance]),
+    [
+      ["person-104", null, "yes"],
+      ["person-104", "child", "yes"],
+      ["person-0", null, "no"],
+    ],
+  );
+  assert.ok(
+    familyRows.every((p) => p.eligible),
+    "attendance order does not forbid undeclared or absent people",
+  );
+});

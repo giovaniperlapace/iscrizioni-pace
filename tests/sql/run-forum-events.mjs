@@ -48,12 +48,25 @@ try {
  }
  console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/forum-event-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
+ console.log(file('tests/sql/school-qr-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  psql(`select set_reception_duties(fw(200),fw(11),fw(8),array[fw(406)::text]);
  select set_reception_duties(fw(200),fw(11),fw(9),array[fw(406)::text]);`);
  const concurrent=sql=>new Promise((resolve,reject)=>{const proc=spawn(join(bin,'psql'),[...args,'-tA'],{stdio:['pipe','pipe','pipe']});let out='',err='';proc.stdout.on('data',x=>out+=x);proc.stderr.on('data',x=>err+=x);proc.on('error',reject);proc.on('exit',code=>code===0?resolve(out.trim()):reject(new Error(err)));proc.stdin.end(sql);});
  const competing=await Promise.all([7,8].map(n=>concurrent(`set role service_role;select reception_desk(fw(200),fw(${n+1}),fw(406)::text,'code','QQQ${n}','book',fw(506),'{}',fw(${1100+n}))->>'status';`)));
  if(competing.filter(x=>x==='saved').length!==1 || competing.filter(x=>x==='capacity_exceeded').length!==1) throw new Error('Last seat race: '+competing.join(','));
  console.log('PASS two independent reception desks compete for the last seat: one reservation, one capacity refusal');
+ psql(`select set_reception_duties(fw(200),fw(10),fw(8),array[fw(401)::text]);
+ insert into school_booking_teachers(id,event_id,email,first_name,last_name,phone) values(fw(4996),fw(200),'school-race@example.invalid','Teacher','Race','+39000000');
+ insert into school_bookings(id,event_id,teacher_id,school_name,school_city,class_description,student_count,companion_count,privacy_version,privacy_accepted_at)
+ values(fw(4997),fw(200),fw(4996),'School race','Test','1A',3,1,'test',now());
+ insert into school_booking_qr_tokens(booking_id,token_hash,token_encrypted) values(fw(4997),repeat('e',64),'synthetic');
+ insert into school_panel_reservations(event_id,booking_id,panel_id,seat_section_id,student_count,companion_count) values(fw(200),fw(4997),fw(401),fw(550),3,1);`);
+ const schoolRace=await Promise.all([
+ concurrent(`set role service_role;select reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('e',64),'enter',fw(4998),'{}',3,1,null,'school_event_entry')->>'status';`),
+ concurrent(`set role service_role;select reception_event_check_in('event_entry',fw(200),fw(10),'qr',repeat('e',64),'enter',fw(4999),'{}',3,1)->>'status';`)
+ ]);
+ if(schoolRace.some(x=>x!=='valid') || psql('select count(*) from check_ins where school_booking_id=fw(4997) and cancelled_at is null;',true).trim()!=='2')throw new Error('School event/Forum concurrent entry failed');
+ console.log('PASS concurrent general reception and school Forum entry create exactly one event and one Forum entry');
  if(process.argv.includes('--browser')) { const {checkForumReception}=await import('../browser/forum-event-reception.mjs'); await checkForumReception(psql); }
 } catch(error) { console.error(error.stderr?.toString() || error); if(!started) {try {console.error(readFileSync(join(dir,'postgres.log'),'utf8'));} catch {}} process.exitCode=1;
 } finally {

@@ -1,3 +1,5 @@
+import { processSchoolQrEmails } from "@/lib/panels/school-qr-delivery";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { processForumWaitlistNotifications } from "@/lib/panels/waitlist-delivery.server";
 import { NextResponse } from "next/server";
 
@@ -14,14 +16,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [campaigns, forums] = await Promise.allSettled([
+    const [campaigns, forums, schools] = await Promise.allSettled([
       processDueCampaignDeliveries({ actorUserId: null }),
       processForumWaitlistNotifications(),
+      processSchoolQrEmails(createSupabaseServiceClient(), process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ""),
     ]);
-    if (campaigns.status === "rejected" || forums.status === "rejected") {
+    if (campaigns.status === "rejected" || forums.status === "rejected" || schools.status === "rejected") {
       return NextResponse.json({ error: "Elaborazione delle code non riuscita." }, { status: 500 });
     }
-    return NextResponse.json({ ...campaigns.value, forumWaitlist: forums.value });
+    return NextResponse.json({ ...campaigns.value, forumWaitlist: forums.value, schoolQr: schools.value });
   } catch (cause) {
     const message =
       cause instanceof Error ? cause.message : "Elaborazione coda non riuscita.";

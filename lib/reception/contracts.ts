@@ -12,7 +12,7 @@ export type ReceptionCommand = {
   students?: number;
   companions?: number;
   expectedRevision?: number;
-  reason?: "selection_error" | "count_error" | "entry_cancelled" | "event_entry_override";
+  reason?: "selection_error" | "count_error" | "entry_cancelled" | "event_entry_override" | "school_event_entry";
 };
 export type ReceptionPerson = {
   ceremonies?: CeremonySeatInfo[];
@@ -80,8 +80,9 @@ export function parseReceptionCommand(input: unknown): ReceptionCommand | null {
   if ((input.students !== undefined && !integer(input.students,1000)) ||
     (input.companions !== undefined && !integer(input.companions,100)) ||
     (input.expectedRevision !== undefined && !integer(input.expectedRevision,2147483647))) return null;
-  if (input.reason !== undefined && (typeof input.reason !== "string" || !["selection_error","count_error","entry_cancelled","event_entry_override"].includes(input.reason))) return null;
-  if (input.reason === "event_entry_override" && (input.duty !== "panel_entry" || input.action !== "enter")) return null;
+  if (input.reason !== undefined && (typeof input.reason !== "string" || !["selection_error","count_error","entry_cancelled","event_entry_override","school_event_entry"].includes(input.reason))) return null;
+  if ((input.reason === "event_entry_override" || input.reason === "school_event_entry") && (input.duty !== "panel_entry" || input.action !== "enter")) return null;
+  if (input.reason === "school_event_entry" && kind !== "qr") return null;
   if (["correct","cancel"].includes(String(input.action)) &&
     (input.expectedRevision === undefined || input.reason === undefined)) return null;
   return { ...input, lookup: { kind, value } } as ReceptionCommand;

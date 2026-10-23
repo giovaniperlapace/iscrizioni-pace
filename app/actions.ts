@@ -115,6 +115,7 @@ import {
   getPublicSchoolBookingOptions,
   parsePublicSchoolBookingForm,
 } from "@/lib/panels/public-school-bookings";
+import { processSchoolQrEmails } from "@/lib/panels/school-qr-delivery";
 import { createPublicSchoolBooking } from "@/lib/panels/public-school-flow";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -2067,7 +2068,7 @@ export async function saveSchoolBooking(formData: FormData) {
   if (!canManageEvent) redirect(`${dashboardPath}&schoolError=forbidden`);
 
   const qrToken = bookingId ? null : createOpaqueQrToken();
-  const { error } = await supabase.rpc("save_school_booking", {
+  const { data: savedBookingId, error } = await supabase.rpc("save_school_booking", {
     p_event_id: eventId,
     p_booking_id: bookingId,
     p_teacher_email: teacherEmail,
@@ -2094,6 +2095,10 @@ export async function saveSchoolBooking(formData: FormData) {
         ? "capacity"
         : error.code === "42501" ? "forbidden" : "invalid";
     redirect(`${dashboardPath}&schoolError=${code}`);
+  }
+  if (!bookingId && savedBookingId) {
+    try { await processSchoolQrEmails(createSupabaseServiceClient(), getPublicSiteUrl(), {bookingId:String(savedBookingId)}); }
+    catch { /* The durable queue retains the confirmation for the scheduled worker. */ }
   }
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/admin");

@@ -1,5 +1,9 @@
 import { isMapId } from "./seat-map.ts";
-import type { DistributionView } from "./distribution.ts";
+import {
+  eligibleSubjects,
+  type DistributionView,
+  type DistributionAllocation,
+} from "./distribution.ts";
 export type LeaderTickets = Omit<DistributionView, "allocations"> & {
   allocations: (DistributionView["allocations"][number] & {
     numbered: boolean;
@@ -63,4 +67,27 @@ export function parsePairTicketCommand(
   )
     return null;
   return c;
+}
+
+// Attendance is already scoped by the canonical RPC to this ceremony's Rome
+// day and time slot. Stable sorting keeps surname/family order within each tier.
+export function leaderSectorSubjects(
+  view: DistributionView,
+  allocation: DistributionAllocation,
+) {
+  const choices = new Map(
+    view.people.map((person) => [
+      person.registrationId,
+      person.attendance?.find((a) => a.planId === allocation.planId)?.choice ??
+        "unknown",
+    ]),
+  );
+  return eligibleSubjects(view, allocation)
+    .map((subject) => ({
+      ...subject,
+      attendance: choices.get(subject.registrationId) ?? "unknown",
+    }))
+    .sort(
+      (a, b) => Number(b.attendance === "yes") - Number(a.attendance === "yes"),
+    );
 }

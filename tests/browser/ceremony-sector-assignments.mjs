@@ -101,18 +101,41 @@ try{
  await modal.getByRole('button',{name:'Conferma revoca',exact:true}).click();
  await modal.getByText('Assegnazione revocata.',{exact:true}).waitFor();
  await modal.getByRole('button',{name:'Chiudi',exact:true}).click();
+ query("insert into event_attendance_choices(registration_id,day,day_part,choice) values(f(81100),'2026-10-25','afternoon','yes'),(f(81002),'2026-10-25','morning','yes');select '{}'::json;");
  const leader=await browser.newPage({viewport:{width:390,height:844}});leader.on('pageerror',e=>errors.push(e.message));await leader.goto(base+'/ceremony-sector-check/leader',{waitUntil:'networkidle'});
- const select=leader.getByLabel('Scegli una dotazione');const aOption=await select.locator('option').filter({hasText:'Gruppo cento · Settore A'}).getAttribute('value');await select.selectOption(aOption);
+ await leader.getByRole('radio',{name:'Inaugurazione · Gruppo cento · Settore A',exact:true}).check();
+ const people=leader.getByRole('region',{name:'2. Scegli le persone',exact:true});
+ assert.equal(await people.getByRole('article').nth(1).getAttribute('aria-label'),'Synthetic Member 100');
+ assert.equal(await people.getByRole('article').first().getByRole('checkbox').getAttribute('aria-label'),'Seleziona Synthetic Member 001');
+ await people.getByRole('article').first().getByText('Presenza confermata',{exact:true}).waitFor();
+ await people.getByRole('article',{name:'Synthetic Member 002',exact:true}).getByText('Assenza dichiarata',{exact:true}).waitFor();
+ await people.getByRole('article',{name:'Synthetic Member 003',exact:true}).getByText('Presenza da comunicare',{exact:true}).waitFor();
+ await leader.getByLabel('Cerca nome o codice').fill('Member 00');
+ assert.equal(await people.getByRole('article').first().getAttribute('aria-label'),'Synthetic Member 001');
+ await leader.getByLabel('Cerca nome o codice').fill('');
+ await leader.getByLabel('Seleziona Synthetic Member 003',{exact:true}).check();
+ await leader.getByRole('region',{name:'Biglietti da assegnare',exact:true}).getByRole('button',{name:'Rimuovi Synthetic Member 003',exact:true}).click();
+ assert.equal(await leader.getByLabel('Seleziona Synthetic Member 003',{exact:true}).isChecked(),false);
  for(let i=1;i<=20;i++)await leader.getByLabel(`Seleziona Synthetic Member ${String(i).padStart(3,'0')}`,{exact:true}).check();
+ for(const width of [390,1440]){
+  await leader.setViewportSize({width,height:width===390?844:1100});
+  const recipients=leader.getByRole('region',{name:'Biglietti da assegnare',exact:true});
+  await recipients.scrollIntoViewIfNeeded();
+  assert.ok(await leader.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  assert.equal(await recipients.getByRole('listitem').count(),20);
+  await leader.screenshot({path:`/tmp/pace-leader-recipients-${width}.png`});
+  await leader.getByRole('group',{name:'1. Scegli i posti ricevuti',exact:true}).scrollIntoViewIfNeeded();
+  await leader.screenshot({path:`/tmp/pace-leader-sectors-${width}.png`});
+ }
  await leader.getByRole('button',{name:'Conferma assegnazione al settore',exact:true}).click();await leader.getByRole('dialog').getByRole('button',{name:'Conferma assegnazione al settore',exact:true}).click();await leader.getByText('Modifica salvata.',{exact:true}).waitFor();
- const bOption=await select.locator('option').filter({hasText:'Gruppo cento · Settore B'}).getAttribute('value');await select.selectOption(bOption);await leader.getByLabel('Seleziona tutte le persone disponibili in questa pagina').check();await leader.getByRole('button',{name:'Conferma assegnazione al settore',exact:true}).click();await leader.getByRole('dialog').getByRole('button',{name:'Conferma assegnazione al settore',exact:true}).click();
- await leader.waitForFunction(()=>document.querySelector('[aria-label="Dotazione"]')?.textContent?.includes('Assegnati: 80'));
+ await leader.getByRole('radio',{name:'Inaugurazione · Gruppo cento · Settore B',exact:true}).check();await leader.getByLabel('Seleziona tutte le persone disponibili in questa pagina').check();await leader.getByRole('button',{name:'Conferma assegnazione al settore',exact:true}).click();await leader.getByRole('dialog').getByRole('button',{name:'Conferma assegnazione al settore',exact:true}).click();
+ await leader.waitForFunction(()=>document.querySelector('[aria-label="Posti ricevuti"]')?.textContent?.includes('Assegnati: 80'));
  assert.equal(query("select to_json(count(*)) from ceremony_nominees n join ceremony_allocations a on a.id=n.allocation_id where a.group_id=f(7810) and n.revoked_at is null;"),100);
  assert.equal(query("select to_json(count(*)) from ceremony_seat_claims where released_at is null;"),0);
  assert.ok(await leader.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  // Independent refresh sees leader changes and retains the 20/80 sector capacity.
  await page.getByRole('button',{name:'Aggiorna disponibilità'}).click();await page.getByRole('button',{name:/^Settore A · 90 posti/}).waitFor();
- for(const locale of ['en','fr','de','es','nl','uk']){await leader.goto(base+'/ceremony-sector-check/leader?locale='+locale,{waitUntil:'networkidle'});assert.ok(await leader.locator('h1').innerText());assert.ok(await leader.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
+ for(const locale of ['en','fr','de','es','nl','uk']){await leader.goto(base+'/ceremony-sector-check/leader?locale='+locale,{waitUntil:'networkidle'});assert.ok(await leader.locator('h1').innerText());await leader.getByRole('radio').first().check();assert.ok(await leader.getByRole('checkbox').count()>0);assert.ok(await leader.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
  assert.deepEqual(errors,[]);assert.ok(reads<60,'no polling');
  await page.screenshot({path:'/tmp/pace-sector-manager-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/pace-sector-manager-mobile.png',fullPage:true});
  console.log('PASS browser: both maps, 400 F squares, no internal chair labels, desktop/mobile dialog, all attendance states, explicit groups, lost-response retry, direct family separate from reserves, one-click assignment, in-modal revocations, cleared reopening, leader 20/80 split, seven languages and no polling');

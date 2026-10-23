@@ -142,9 +142,9 @@ export function EventReceptionConsole(props: Props) {
       {party ?? <>
         {feedback}
         {result.kind === "school" && <>
-          {result.eventCheckedIn === false && !result.checkedInAt && <p role="alert" className="rounded-lg border border-yellow-500 bg-yellow-100 p-3 text-yellow-950">Accoglienza generale non registrata. Puoi confermare solo l’ingresso a questo Forum.</p>}
+          {result.eventCheckedIn === false && !result.checkedInAt && <p role="alert" className="rounded-lg border border-yellow-500 bg-yellow-100 p-3 text-yellow-950">Partecipazione all’evento non registrata. Per questa classe puoi registrare insieme la partecipazione all’evento e l’ingresso al Forum, indicando studenti e accompagnatori effettivamente arrivati.</p>}
           <p>{result.checkedInAt ? copy(`Presenti: ${result.students} studenti e ${result.companions} accompagnatori`) : "Ingresso non registrato"}</p>
-          <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt ? void session.editCurrent() : session.selectPresence(result.eventCheckedIn === false)}>{result.checkedInAt ? copy("Modifica presenze") : result.eventCheckedIn === false ? "Segna l’ingresso comunque" : copy("Registra presenze")}</button>
+          <button className="btn-primary min-h-12 px-4" disabled={locked || problem} onClick={() => result.checkedInAt && result.eventCheckedIn !== false ? void session.editCurrent() : session.selectPresence(result.eventCheckedIn === false)}>{result.eventCheckedIn === false ? "Registra evento e ingresso al Forum" : result.checkedInAt ? copy("Modifica presenze") : copy("Registra presenze")}</button>
         </>}
       </>}
       {!cameraVisible && <button className="btn-secondary min-h-12 px-4" disabled={locked || state.phase === "selection"} onClick={next}>Chiudi scheda</button>}

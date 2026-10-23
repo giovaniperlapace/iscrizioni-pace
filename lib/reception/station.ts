@@ -163,7 +163,7 @@ export class ReceptionStationSession {
     if (cancelAll && this.state.result.kind === "school") values = {};
     const command: ReceptionCommand = {
       ...this.context, ...(this.state.result.kind === "group" ? { groupSnapshot: this.state.result.snapshot } : {}), lookup: this.state.lookup, action, requestId: this.requestId(), ...values,
-      ...(this.state.mode === "enter" ? (this.eventEntryOverride ? { reason: "event_entry_override" as const } : {}) : {
+      ...(this.state.mode === "enter" ? (this.eventEntryOverride ? { reason: this.state.result.kind === "school" ? "school_event_entry" as const : "event_entry_override" as const } : {}) : {
         expectedRevision: this.state.result.revision,
         reason: action === "cancel" ? "entry_cancelled" : (this.state.result.kind === "family" || this.state.result.kind === "group") ? "selection_error" : "count_error",
       }),

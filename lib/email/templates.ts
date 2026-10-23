@@ -84,9 +84,9 @@ export function renderSchoolBookingConfirmationEmail(
       `Ciao ${input.teacherFirstName},`, "",
       `abbiamo ricevuto la prenotazione di ${input.schoolName} (${input.classDescription}) per ${input.eventTitle}.`,
       `Gruppo: ${counts}.`, "", "Forum prenotati:", ...input.panelLines.map((line) => `- ${line}`), "",
-      "In allegato trovi il QR code unico della classe.",
-      "Usa il link personale qui sotto per consultare, correggere, ridurre o annullare la prenotazione:",
-      input.accessLink, "", "Non inoltrare il link personale a terzi.",
+      "In allegato trovi il QR code unico della classe, valido per tutti i Forum prenotati. Mostralo all’accoglienza oppure direttamente all’ingresso del Forum: l’operatore registrerà il numero di studenti e accompagnatori effettivamente presenti.",
+      "Accedi con l’email del docente per consultare il QR e gestire la prenotazione:",
+      input.accessLink, "", "Conserva il QR della classe e non condividerlo pubblicamente.",
     ].join("\n"),
     html: [
       `<p>Ciao ${escapeHtml(input.teacherFirstName)},</p>`,
@@ -94,9 +94,9 @@ export function renderSchoolBookingConfirmationEmail(
       `<p>Gruppo: ${escapeHtml(counts)}.</p>`,
       `<p>Forum prenotati:</p><ul>${input.panelLines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
       input.qrCodeContentId ? `<p><img src="cid:${escapeHtml(input.qrCodeContentId)}" alt="QR code della classe" width="180" height="180" /></p>` : "",
-      "<p>In allegato trovi il QR code unico della classe.</p>",
+      "<p>In allegato trovi il QR code unico della classe, valido per tutti i Forum prenotati. Mostralo all’accoglienza oppure direttamente all’ingresso del Forum: l’operatore registrerà il numero di studenti e accompagnatori effettivamente presenti.</p>",
       `<p><a href="${escapeHtml(input.accessLink)}">Apri e gestisci le prenotazioni</a></p>`,
-      "<p>Non inoltrare il link personale a terzi.</p>",
+      "<p>Accedi con l’email del docente. Conserva il QR della classe e non condividerlo pubblicamente.</p>",
     ].join(""),
   };
 }

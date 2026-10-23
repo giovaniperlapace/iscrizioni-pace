@@ -1,0 +1,16 @@
+"use client";
+import {useState} from 'react';
+import {SchoolBookingQr} from '@/app/dashboard/school-booking-qr';
+import {EventReceptionConsole} from '@/app/dashboard/accoglienza/event-reception-console';
+import {receptionCheckIn} from '@/app/dashboard/accoglienza/actions';
+import type {ReceptionCommand} from '@/lib/reception/contracts';
+export default function Page(){
+ const [event,setEvent]=useState(false);
+ const params=new URLSearchParams(typeof window==='undefined'?'':window.location.search);
+ const eventId=params.get('event')!,panel=params.get('panel')!,booking=params.get('booking')!;
+ async function command(command:ReceptionCommand){
+  if(event)return receptionCheckIn(eventId,command);
+  const response=await fetch('/api/forum-reception',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId,operation:'scan',command})});return response.json();
+ }
+ return <main className="mx-auto grid max-w-3xl gap-6 p-4"><SchoolBookingQr bookingId={booking}/><button onClick={()=>setEvent(!event)}>Cambia scanner prova</button><EventReceptionConsole key={String(event)} commandAction={command} duty={event?{key:'event_entry',duty:'event_entry',title:'Evento',room:null}:{key:panel,duty:'panel_entry',panelId:panel,title:'Forum scuola',room:'Sala'}}/></main>;
+}

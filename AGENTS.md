@@ -1,5 +1,38 @@
 # AGENTS.md
 
+## Cerimonie capogruppo: ordine e scelta dei destinatari — 2026-10-23
+
+- Elenco/ricerca: prima presenza `yes` nel giorno e fascia canonici della
+  cerimonia, prima delle pagine da 100; parità nell’ordine cognome/famiglia.
+  Stato visibile nella riga; assenti/sconosciuti restano selezionabili.
+- «Posti ricevuti» con schede settore/gruppo e conteggi sostituisce «dotazione».
+  Riepilogo destinatari nello stile del sito, pulsante Rimuovi e avviso capienza;
+  sette lingue, scelta esplicita dei minori e salvataggi/retry conservati.
+- Nessuna migration. Inclusa nel rilascio scuole su richiesta esplicita.
+  Browser desktop/mobile, SQL e test verificati;
+  dettagli e limiti dei controlli generali in
+  `docs/cerimonie-capogruppo-selezione-2026-10-23.md`.
+
+
+## Scuole: QR, conferme e ingresso congiunto — 2026-10-23
+
+- QR stabile per prenotazione, visualizzazione/download nella scheda Scuole
+  Admin/Manager e pagina docente conservata. Studenti/accompagnatori separati
+  dagli iscritti, nessuna anagrafica individuale o presenza dichiarata generata.
+- Solo QR scuole: dal Forum, quantità effettive e «Registra evento e ingresso
+  al Forum» atomico. Evento già presente conservato, secondo Forum non duplica
+  l’evento; correzioni/revoche Forum indipendenti. Ruolo, prenotazione, capienza,
+  audit e retry obbligatori. QR personali e gruppi ordinari esclusi dalla facoltà.
+- Coda conferme per nuove prenotazioni pubbliche/gestionali e avviso richiesto
+  per le attive esistenti; stesso QR allegato. Claim unico, esito API distinto
+  dalla consegna, incerti mai reinviati automaticamente; cron esistente.
+- Migration `20261023150000` e `20261023151000` applicate in produzione dopo
+  backup verificato: 68 tabelle preesistenti e 225 funzioni/ACL conservate.
+  Sei prenotazioni accodate; invio bloccato nel DB fino all’approvazione del testo.
+  Nessuna email o presenza reale di prova. Commit/push autorizzati. Verifiche:
+  `docs/scuole-qr-ingressi-email-2026-10-23.md`.
+
+
 ## Cerimonie: modale persone, famiglie e gruppi — 2026-10-23
 
 - Due opzioni: persona cercata in tutti gli iscritti (adulto e figli al seguito,
