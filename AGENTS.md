@@ -1,5 +1,32 @@
 # AGENTS.md
 
+## Cerimonie: modale persone, famiglie e gruppi — 2026-10-23
+
+- Due opzioni: persona cercata in tutti gli iscritti (adulto e figli al seguito,
+  con avviso 1 + x e nomi prima del salvataggio) oppure quantità a un gruppo.
+  «Conferma assegnazione» salva direttamente, senza doppia conferma.
+- Assegnazioni nominali espandibili e revocabili nel settore; dotazioni di
+  gruppo distinte, senza trasformare l’appartenenza in un posto al gruppo.
+  Il nuovo percorso personale non consuma riserve; capogruppo invariato.
+- Chiusura azzera ricerca, selezione, modalità e quantità; risposte tardive
+  scartate. Revoche confermate, retry idempotenti e controlli canonici conservati.
+- Migration `20261023120000` applicata in produzione dopo backup verificato:
+  famiglia completa sotto lock; 68 tabelle, 208.469 righe e ACL conservati.
+  Rilascio autorizzato con campi email e duplicati. Verifiche e limite lint generale
+  in `docs/cerimonie-modale-assegnazioni-2026-10-23.md`.
+
+
+## Campagne: settori personali delle cerimonie — 2026-10-23
+
+- Campi `{{settore_inaugurazione}}` e `{{settore_cerimonia_finale}}` inseribili
+  in oggetto e messaggio. Anteprima, prova e coda leggono le nomine personali
+  attive del destinatario nell’evento, dirette o provenienti da riserve di gruppo.
+- Solo settore dell’adulto; per capigruppo la propria iscrizione, mai la dotazione
+  della delegazione o i settori dei figli. Nessuna assegnazione: campo vuoto.
+  Errori di lettura bloccanti; escaping HTML conservato. Lettura aggiuntiva solo
+  per campagne che usano i nuovi campi. Nessuna migration o invio reale di prova.
+
+
 ## Accoglienza Forum: incarico nel riquadro scanner — 2026-10-22
 
 - Nome e statistiche nella banda scura interna superiore dell’anteprima

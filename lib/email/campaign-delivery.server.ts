@@ -1,3 +1,4 @@
+import { loadCampaignCeremonySectors } from "@/lib/email/campaign-ceremony-sectors.server";
 import { emailHash } from "@/lib/email/campaign-report";
 import { getEmailConfig } from "@/lib/email/config";
 import { isCampaignRecipientOperational, RegistrationNotOperationalError } from "@/lib/email/campaign-eligibility";
@@ -135,7 +136,9 @@ async function processCampaignBlock(options: {
         service,
         campaign.event_id,
         eventTitle,
-        recipient
+        recipient,
+        true,
+        `${campaign.subject_template} ${campaign.body_template}`
       );
       let attachmentLoad = attachments.get(campaign.id);
       if (!attachmentLoad) {
@@ -272,8 +275,10 @@ export async function loadCampaignDeliveryData(
   eventId: string,
   eventTitle: string,
   recipient: CampaignRecipient,
-  includePanels = true
+  includePanels = true,
+  template = ""
 ) {
+  const needsCeremonySectors = /\{\{\s*settore_(inaugurazione|cerimonia_finale)\s*\}\}/i.test(template);
   if (!includePanels && recipient.recipientType === "teacher") throw new Error("Accesso forum riservato all’amministratore.");
   if (recipient.recipientType === "teacher" && recipient.schoolTeacherId) {
     const { data: teacher, error: teacherError } = await service
@@ -361,6 +366,8 @@ export async function loadCampaignDeliveryData(
       recipient,
       email: identity.email.trim(),
       templateData: {
+        ...(needsCeremonySectors && identity.participantId
+          ? await loadCampaignCeremonySectors(service, eventId, identity.participantId) : {}),
         firstName: name.firstName || identity.fullName || "Capogruppo",
         lastName: name.lastName,
         participantCode,
@@ -404,6 +411,8 @@ export async function loadCampaignDeliveryData(
     recipient,
     email,
     templateData: {
+      ...(needsCeremonySectors
+        ? await loadCampaignCeremonySectors(service, eventId, recipient.participantId, recipient.registrationId) : {}),
       firstName: participant.first_name,
       lastName: participant.last_name,
       participantCode: participant.public_code,

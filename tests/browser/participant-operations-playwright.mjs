@@ -40,11 +40,14 @@ try{
  await check(()=>document.querySelector('dialog [name=firstName]').matches(':disabled'),'viewer cannot edit');await page.keyboard.press('Escape');
  await page.getByRole('button',{name:'Modalità modifica',exact:true}).click();
  await page.getByRole('link',{name:'Duplicati',exact:true}).click();await check(()=>!!document.querySelector('[aria-label="Tabella possibili duplicati"]'),'duplicates navigation');
+ await page.getByRole('columnheader',{name:'Forum prenotati e/o in coda',exact:true}).waitFor();
+ assert.equal(await page.locator('tbody tr').first().locator('td').nth(3).textContent(),'1');
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await page.locator('tbody td:first-child a').first().click();await page.locator('dialog[open]').waitFor();
  await page.locator('dialog [name=firstName]').fill('Anna Controllo');await page.getByRole('button',{name:'Salva dati',exact:true}).click();
  await check(()=>document.querySelector('dialog')?.textContent.includes('Anna Controllo'),'save from duplicates');await page.keyboard.press('Escape');await page.locator('dialog[open]').waitFor({state:'detached'});
  assert.equal(new URL(page.url()).searchParams.get('view'),'duplicates');
- await page.locator('tbody td:nth-child(5) a').first().click();await page.locator('dialog[open]').waitFor();assert.equal(await page.locator('dialog form').count(),0);await page.keyboard.press('Escape');
+ await page.getByRole('link',{name:/^Confronta /}).first().click();await page.locator('dialog[open]').waitFor();assert.equal(await page.locator('dialog form').count(),0);await page.keyboard.press('Escape');
  await page.getByRole('link',{name:/Elimina questa iscrizione:/}).first().click();await page.locator('dialog[open]').waitFor();
  assert.equal(await page.locator('dialog input[name=confirmLifecycle]').getAttribute('required'),'');
  await page.keyboard.press('Escape');await page.getByRole('link',{name:'Non sono duplicati',exact:true}).first().click();await page.locator('dialog[open]').waitFor();

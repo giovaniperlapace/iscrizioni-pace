@@ -66,6 +66,7 @@ try {
  }
  try { console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-assignment-history.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n')); } catch(e) { throw new Error('History: '+e.stderr); }
  try {console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-seat-revoke.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}catch(e){throw new Error('Seat revoke: '+e.stderr);}
+ try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-direct-families.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Direct families: '+e.stderr);}
  const exportFile=process.argv.find(x=>x.startsWith('--export-fixture='))?.slice('--export-fixture='.length);
  {
   psql(`select prepare_opening_ceremony_layout(f(1),f(33),-1);

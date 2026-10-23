@@ -6,6 +6,8 @@ export const CAMPAIGN_TEMPLATE_FIELDS = [
   { token: "{{gruppo}}", label: "Gruppo" },
   { token: "{{scuola}}", label: "Scuola" },
   { token: "{{panel}}", label: "Forum prenotati" },
+  { token: "{{settore_inaugurazione}}", label: "Settore inaugurazione" },
+  { token: "{{settore_cerimonia_finale}}", label: "Settore cerimonia finale" },
   { token: "{{evento}}", label: "Evento" },
 ] as const;
 
@@ -16,6 +18,8 @@ export type CampaignTemplateData = {
   groupName: string | null;
   schoolName?: string | null;
   panelNames?: string | null;
+  openingSector?: string | null;
+  closingSector?: string | null;
   eventTitle: string;
 };
 
@@ -28,6 +32,8 @@ function values(data: CampaignTemplateData): Record<string, string> {
     gruppo: data.groupName?.trim() ?? "",
     scuola: data.schoolName?.trim() ?? "",
     panel: data.panelNames?.trim() ?? "",
+    settore_inaugurazione: data.openingSector?.trim() ?? "",
+    settore_cerimonia_finale: data.closingSector?.trim() ?? "",
     evento: data.eventTitle.trim(),
   };
 }

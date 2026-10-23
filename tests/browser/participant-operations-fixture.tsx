@@ -272,6 +272,10 @@ export default function Fixture() {
             </nav>
             <OperationsDuplicatesTable
               matches={showDismissed === dismissed ? matches : []}
+              forumActivity={new Map(qualityPeople.map((person, index) => [person.id, {
+                booked: index === 0 ? [{ id: "forum-2", title: "Forum 2 · Pace e dialogo" }] : [],
+                queued: index === 1 ? [{ id: "forum-10", title: "Forum 10 · Costruire la pace", offered: true }] : [],
+              }]))}
               people={qualityPeople}
               basePath={duplicatePath}
               canWrite={!viewer}

@@ -10,6 +10,12 @@ export type SectorPerson = {
   nomineeId: string | null;
   needsSeat: boolean | null;
   sector: string | null;
+  children?: {
+    id: string;
+    name: string;
+    nomineeId: string | null;
+    sector: string | null;
+  }[];
 };
 export type SectorDirectoryQuery = {
   planId: string;
@@ -102,6 +108,8 @@ export const SECTOR_MESSAGES: Record<string, string> = {
   conflict:
     "La disponibilità è cambiata. Controlla i dati aggiornati e conferma nuovamente.",
   capacity: "Posti insufficienti. Nessuna assegnazione è stata salvata.",
+  family_changed:
+    "I figli al seguito sono cambiati. Controlla la famiglia aggiornata e conferma nuovamente.",
   duplicate:
     "Una persona ha già un’assegnazione. Nessuna modifica è stata salvata.",
   ineligible:
@@ -112,3 +120,24 @@ export const SECTOR_MESSAGES: Record<string, string> = {
     "Esito non verificabile. Riprova la stessa richiesta per evitare duplicati.",
   unconfigured: "La configurazione del settore deve essere completata.",
 };
+
+// All active allocations come from the same authorized desk revision. A person's
+// membership is never used to turn a personal allocation into a group reserve.
+export function sectorAssignments(desk: SeatsDesk, sectorId: string) {
+  const allocations = desk.allocations.filter((a) => a.sectorId === sectorId);
+  const directIds = new Set(
+    allocations.filter((a) => !a.groupId).map((a) => a.id),
+  );
+  const nominal = desk.nominees.filter((n) => directIds.has(n.allocationId));
+  const groups = allocations
+    .filter((a) => a.groupId)
+    .map((a) => ({
+      ...a,
+      people: desk.nominees.filter((n) => n.allocationId === a.id),
+    }));
+  return {
+    nominal,
+    nominalCount: nominal.filter((n) => n.needsSeat).length,
+    groups,
+  };
+}

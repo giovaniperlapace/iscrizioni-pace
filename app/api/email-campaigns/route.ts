@@ -220,7 +220,8 @@ async function previewCampaign(
     event.id,
     event.title,
     selectedSample,
-    canAccessPanelManagement(eventRoles, event.id)
+    canAccessPanelManagement(eventRoles, event.id),
+    `${subject} ${message}`
   );
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
@@ -340,7 +341,8 @@ async function updateCampaignRecipients(
     event.id,
     event.title,
     selectedSample,
-    canAccessPanelManagement(eventRoles, event.id)
+    canAccessPanelManagement(eventRoles, event.id),
+    `${campaign.subject_template} ${campaign.body_template}`
   );
   await audit(service, event.id, userId, campaignId, "email_campaign.recipients_updated", {
     recipient_count: selectedIds.size,
@@ -408,7 +410,9 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     service,
     campaign.event_id,
     event?.title ?? "Evento",
-    recipients[0]
+    recipients[0],
+    true,
+    `${campaign.subject_template} ${campaign.body_template}`
   );
   const attachments = await loadCampaignAttachments(service, campaignId);
   if (action === "test") {

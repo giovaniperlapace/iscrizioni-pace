@@ -1,3 +1,4 @@
+import type { DuplicateForumActivity } from "@/lib/data-quality/forum-activity.server";
 import { LocalQueryLink } from "@/components/local-query-link";
 import Link from "@/components/pending-link";
 import {
@@ -9,11 +10,13 @@ import type { QualityPerson } from "@/lib/data-quality/data.server";
 
 export function OperationsDuplicatesTable({
   matches,
+  forumActivity,
   people,
   basePath,
   canWrite,
 }: {
   matches: DuplicateMatch[];
+  forumActivity: Map<string, DuplicateForumActivity> | null;
   people: QualityPerson[];
   basePath: string;
   canWrite: boolean;
@@ -48,13 +51,14 @@ export function OperationsDuplicatesTable({
       role="region"
       aria-label="Tabella possibili duplicati"
     >
-      <table className="w-full min-w-[900px] text-left text-sm">
+      <table className="w-full min-w-[1000px] text-left text-sm">
         <thead className="bg-[var(--peace-soft)] text-[var(--peace-blue-900)]">
           <tr>
             {[
               "Partecipante",
               "Email",
               "Gruppo",
+              "Forum prenotati e/o in coda",
               "Motivo",
               "Confronta con",
               "Azioni",
@@ -105,6 +109,9 @@ export function OperationsDuplicatesTable({
                 </td>
                 <td className="px-4 py-4 text-[var(--peace-muted)]">
                   {person.currentGroupName || "—"}
+                </td>
+                <td className="px-4 py-4 text-center font-semibold">
+                  <ForumCount activity={forumActivity?.get(person.id)} />
                 </td>
                 <td className="min-w-48 px-4 py-4">
                   <p className="font-medium">{DUPLICATE_LABELS[match.level]}</p>
@@ -179,7 +186,7 @@ export function OperationsDuplicatesTable({
           })}
           {!matches.length && (
             <tr>
-              <td colSpan={6} className="p-5 text-[var(--peace-muted)]">
+              <td colSpan={7} className="p-5 text-[var(--peace-muted)]">
                 Nessun caso in questa vista.
               </td>
             </tr>
@@ -188,4 +195,9 @@ export function OperationsDuplicatesTable({
       </table>
     </div>
   );
+}
+
+function ForumCount({ activity }: { activity: DuplicateForumActivity | undefined }) {
+  if (!activity) return <span className="font-normal text-amber-800">Dati non disponibili</span>;
+  return <>{Math.min(3, activity.booked.length + activity.queued.length)}</>;
 }

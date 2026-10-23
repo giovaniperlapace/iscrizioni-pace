@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DeskCommand, SeatsDesk } from "@/lib/ceremonies/seats-desk";
 import {
   SECTOR_MESSAGES,
-  sectorBudget,
+  sectorAssignments,
   subjectKey,
   type SectorDirectory,
   type SectorDirectoryQuery,
@@ -24,6 +24,13 @@ const attendance = {
   no: "Assenza dichiarata",
   unknown: "Presenza da comunicare",
 };
+type Revocation = {
+  command: RevokeAssignment;
+  name: string;
+  people: string[];
+  group: boolean;
+  uncertain: boolean;
+};
 export function CeremonySectorWorkspace({
   initialDesk,
   save,
@@ -37,63 +44,72 @@ export function CeremonySectorWorkspace({
   read?: (q: SectorDirectoryQuery) => Promise<SectorReadResult>;
   loadHistory?: (q: HistoryQuery) => Promise<HistoryResult>;
 }) {
-  const [desk, setDesk] = useState(initialDesk),
-    [sectorId, setSectorId] = useState(""),
-    [mode, setMode] = useState<"single" | "group">("single"),
-    [method, setMethod] = useState<"names" | "quantity">("names");
-  const [group, setGroup] = useState(""),
-    [search, setSearch] = useState(""),
-    [applied, setApplied] = useState(""),
-    [quantity, setQuantity] = useState(1);
-  const [directory, setDirectory] = useState<SectorDirectory | null>(null),
-    [selected, setSelected] = useState<SectorPerson[]>([]),
-    [confirmation, setConfirmation] = useState(false);
-  const [loading, setLoading] = useState(false),
-    [saving, setSaving] = useState(false),
-    [stale, setStale] = useState(false),
-    [status, setStatus] = useState(""),
-    [uncertain, setUncertain] = useState<DeskCommand | null>(null),
-    [historyVersion, setHistoryVersion] = useState(0);
-  const dialog = useRef<HTMLDialogElement>(null),
-    sequence = useRef(0),
-    busy = useRef(false);
-  const sector = desk.sectors.find((s) => s.id === sectorId),
-    groups = desk.groups ?? [];
-  const groupName =
-    groups.find((g) => g.id === group)?.name ??
-    (group === "none" ? "Senza gruppo" : "Tutti gli iscritti");
-  const locked = saving || !!uncertain,
-    reserved = sectorBudget(directory, sectorId);
-  const count = method === "names" ? selected.length : quantity;
+  const [desk, setDesk] = useState(initialDesk);
+  const [sectorId, setSectorId] = useState("");
+  const [mode, setMode] = useState<"single" | "group">("single");
+  const [group, setGroup] = useState("");
+  const [search, setSearch] = useState("");
+  const [applied, setApplied] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [directory, setDirectory] = useState<SectorDirectory | null>(null);
+  const [selected, setSelected] = useState<SectorPerson | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [stale, setStale] = useState(false);
+  const [status, setStatus] = useState("");
+  const [uncertain, setUncertain] = useState<DeskCommand | null>(null);
+  const [revocation, setRevocation] = useState<Revocation | null>(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const [nominalOpen, setNominalOpen] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const sequence = useRef(0);
+  const busy = useRef(false);
+  const sector = desk.sectors.find((s) => s.id === sectorId);
+  const groups = desk.groups ?? [];
+  const groupName = groups.find((g) => g.id === group)?.name;
+  const locked = saving || !!uncertain || !!revocation?.uncertain;
+  const children = selected?.childId ? [] : (selected?.children ?? []);
+  const familyKnown =
+    !!selected &&
+    (selected.childId !== null || Array.isArray(selected.children));
+  const familyAssigned =
+    !!selected?.nomineeId || children.some((c) => c.nomineeId);
+  const count =
+    mode === "single" ? (selected ? 1 + children.length : 0) : quantity;
   const canSave =
     !!sector &&
     !sector.numbered &&
     !loading &&
     !stale &&
     !locked &&
+    !revocation &&
     !!directory &&
-    count > 0 &&
     Number.isInteger(count) &&
-    (method === "names"
-      ? count <= sector.remaining + reserved
-      : !!group && group !== "none" && quantity <= sector.remaining);
-  const selectedIds = new Set(selected.map(subjectKey));
-  const selectable = (directory?.people ?? []).filter((p) => !p.nomineeId);
+    count > 0 &&
+    count <= sector.remaining &&
+    (mode === "single" ? familyKnown && !familyAssigned : !!groupName);
+  const assignments = sectorAssignments(desk, sectorId);
   useEffect(() => {
     if (sectorId) dialog.current?.showModal();
   }, [sectorId]);
+  useEffect(
+    () => () => {
+      ++sequence.current;
+    },
+    [],
+  );
   const load = useCallback(
-    async (nextGroup = group, nextSearch = applied, page = 1) => {
+    async (nextSearch = applied, page = 1) => {
       const token = ++sequence.current;
       setLoading(true);
       setStale(true);
       setDirectory(null);
-      setConfirmation(false);
+      setSelected(null);
       try {
         const result = await read({
           planId: desk.planId,
-          groupId: nextGroup && nextGroup !== "none" ? nextGroup : null,
-          withoutGroup: nextGroup === "none",
+          groupId: null,
+          withoutGroup: false,
           search: nextSearch,
           page,
         });
@@ -104,66 +120,68 @@ export function CeremonySectorWorkspace({
         setDirectory(result.directory);
         setStale(false);
       } catch {
-        if (token === sequence.current) {
-          setDirectory(null);
+        if (token === sequence.current)
           setStatus(
             "Impossibile aggiornare disponibilità e iscritti. Premi Aggiorna per riprovare.",
           );
-        }
       } finally {
         if (token === sequence.current) setLoading(false);
       }
     },
-    [desk.planId, group, applied, read],
+    [desk.planId, applied, read],
   );
-  const open = useCallback(
-    (id: string) => {
-      setSectorId(id);
-      setSelected([]);
-      setConfirmation(false);
-      setStatus("");
-      void load();
-    },
-    [load],
-  );
+  function resetForm() {
+    setMode("single");
+    setGroup("");
+    setSearch("");
+    setApplied("");
+    setQuantity(1);
+    setSelected(null);
+    setDirectory(null);
+    setStatus("");
+    setRevocation(null);
+    setNominalOpen(false);
+  }
+  function open(id: string) {
+    if (busy.current || locked) return;
+    resetForm();
+    setSectorId(id);
+    void load("");
+  }
   function close() {
-    if (locked) return;
+    if (busy.current || locked) return;
     ++sequence.current;
     setLoading(false);
-    setSectorId("");
     dialog.current?.close();
-  }
-  function toggle(p: SectorPerson) {
-    setConfirmation(false);
-    setSelected((prev) =>
-      prev.some((s) => subjectKey(s) === subjectKey(p))
-        ? prev.filter((s) => subjectKey(s) !== subjectKey(p))
-        : mode === "single"
-          ? [p]
-          : [...prev, p],
-    );
+    setSectorId("");
+    resetForm();
   }
   async function submit(command?: DeskCommand) {
     if (busy.current || (!command && !canSave)) return;
     busy.current = true;
     setSaving(true);
-    const c = command ?? {
+    const c: DeskCommand = command ?? {
       planId: desk.planId,
       revision: desk.revision,
       requestId: crypto.randomUUID(),
       data: {
-        action:
-          method === "quantity" ? ("group" as const) : ("assign" as const),
+        action: mode === "group" ? "group" : "assign_direct",
         sectorId,
         seatIds: [],
         quantity: count,
-        groupId: group && group !== "none" ? group : null,
+        groupId: mode === "group" ? group : null,
         subjects:
-          method === "names"
-            ? selected.map(({ registrationId, childId }) => ({
-                registrationId,
-                childId,
-              }))
+          mode === "single" && selected
+            ? [
+                {
+                  registrationId: selected.registrationId,
+                  childId: selected.childId,
+                },
+                ...children.map((child) => ({
+                  registrationId: selected.registrationId,
+                  childId: child.id,
+                })),
+              ]
             : [],
       },
     };
@@ -177,12 +195,58 @@ export function CeremonySectorWorkspace({
     if (result === "unavailable") setUncertain(c);
     else {
       setUncertain(null);
-      setConfirmation(false);
       if (result === "saved") {
-        setSelected([]);
+        setSelected(null);
         setQuantity(1);
         setHistoryVersion((v) => v + 1);
       }
+      await load();
+    }
+    busy.current = false;
+    setSaving(false);
+  }
+  function prepareRevoke(
+    kind: "allocation" | "nominee",
+    id: string,
+    name: string,
+    people: string[] = [],
+  ) {
+    setStatus("");
+    setRevocation({
+      name,
+      people,
+      group: kind === "allocation",
+      uncertain: false,
+      command: {
+        planId: desk.planId,
+        revision: desk.revision,
+        requestId: crypto.randomUUID(),
+        kind,
+        id,
+      },
+    });
+  }
+  async function submitRevoke() {
+    if (!revocation || busy.current) return;
+    busy.current = true;
+    setSaving(true);
+    let result: string;
+    try {
+      result = (await revoke(revocation.command)).status;
+    } catch {
+      result = "unavailable";
+    }
+    if (!["saved", "conflict", "forbidden", "invalid"].includes(result)) {
+      setRevocation({ ...revocation, uncertain: true });
+      setStatus(
+        "Esito non verificabile. Riprova la stessa revoca per evitare duplicati.",
+      );
+    } else {
+      setRevocation(null);
+      setStatus(
+        result === "saved" ? "Assegnazione revocata." : SECTOR_MESSAGES[result],
+      );
+      if (result === "saved") setHistoryVersion((v) => v + 1);
       await load();
     }
     busy.current = false;
@@ -201,7 +265,7 @@ export function CeremonySectorWorkspace({
         className="btn-secondary px-3 py-2"
         type="button"
         disabled={locked || loading || directory.page <= 1}
-        onClick={() => void load(group, applied, directory.page - 1)}
+        onClick={() => void load(applied, directory.page - 1)}
       >
         Precedente
       </button>
@@ -209,7 +273,7 @@ export function CeremonySectorWorkspace({
         className="btn-secondary px-3 py-2"
         type="button"
         disabled={locked || loading || directory.page >= directory.pageCount}
-        onClick={() => void load(group, applied, directory.page + 1)}
+        onClick={() => void load(applied, directory.page + 1)}
       >
         Successiva
       </button>
@@ -223,15 +287,14 @@ export function CeremonySectorWorkspace({
             {desk.location} · {desk.day.split("-").reverse().join("/")}
           </p>
           <p className="text-sm">
-            Scegli un settore per assegnare persone o riservare posti a un
-            gruppo.
+            Scegli un settore per assegnare posti a una persona o a un gruppo.
           </p>
         </div>
         <button
           type="button"
           className="btn-secondary px-4 py-2"
           disabled={locked || loading}
-          onClick={() => void load()}
+          onClick={() => void load("")}
         >
           Aggiorna disponibilità
         </button>
@@ -259,18 +322,15 @@ export function CeremonySectorWorkspace({
             close();
           }}
           aria-labelledby="sector-dialog-title"
-          className="fixed inset-0 z-50 m-auto max-h-[92dvh] w-[min(96vw,65rem)] overflow-y-auto rounded-xl border bg-white p-4 shadow-2xl backdrop:bg-black/35 sm:p-6"
+          className="m-auto max-h-[90dvh] w-[min(56rem,calc(100%-2rem))] min-w-0 space-y-4 overflow-y-auto rounded-2xl bg-white p-4 text-slate-900 shadow-2xl backdrop:bg-black/50 sm:p-6"
         >
-          <header className="sticky -top-4 z-10 -mx-1 mb-4 flex flex-wrap items-center justify-between gap-3 border-b bg-white p-1 pb-3">
+          <header className="sticky -top-4 z-10 -mx-4 -mt-4 flex items-start justify-between gap-3 bg-white p-4 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:p-6">
             <div>
-              <h2 id="sector-dialog-title" className="text-xl font-bold">
+              <h2 id="sector-dialog-title" className="text-xl font-semibold">
                 Settore {sector.name}
               </h2>
-              <p aria-live="polite">
+              <p>
                 <strong>{sector.remaining} posti disponibili</strong>
-                {reserved > 0
-                  ? ` · ${reserved} già riservati a ${groupName}, da abbinare`
-                  : ""}
               </p>
             </div>
             <button
@@ -289,116 +349,50 @@ export function CeremonySectorWorkspace({
             </p>
           )}
           <fieldset
-            disabled={locked}
+            disabled={locked || !!revocation}
             className="grid min-w-0 gap-4"
             aria-busy={saving || loading}
           >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1">
-                Modalità di assegnazione
-                <select
-                  aria-label="Modalità di assegnazione"
-                  className="field"
-                  value={mode}
-                  onChange={(e) => {
-                    setMode(e.target.value as "single" | "group");
-                    setSelected([]);
-                    setConfirmation(false);
-                  }}
-                >
-                  <option value="single">Singoli</option>
-                  <option value="group">Gruppi</option>
-                </select>
-              </label>
-              <label className="grid gap-1">
-                Gruppo
-                <select
-                  aria-label="Gruppo"
-                  className="field"
-                  value={group}
-                  onChange={(e) => {
-                    const g = e.target.value;
-                    setGroup(g);
-                    setSelected([]);
-                    setApplied("");
-                    setSearch("");
-                    setConfirmation(false);
-                    void load(g, "");
-                  }}
-                >
-                  <option value="">Tutti gli iscritti</option>
-                  <option value="none">Senza gruppo</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            <legend className="mb-2 font-semibold">Nuova assegnazione</legend>
             <label className="grid gap-1">
-              Come assegnare
+              Modalità di assegnazione
               <select
-                aria-label="Come assegnare"
                 className="field"
-                value={method}
+                aria-label="Modalità di assegnazione"
+                value={mode}
                 onChange={(e) => {
-                  setMethod(e.target.value as "names" | "quantity");
-                  setConfirmation(false);
+                  setMode(e.target.value as "single" | "group");
+                  setSelected(null);
+                  setGroup("");
+                  setSearch("");
+                  setApplied("");
+                  setQuantity(1);
+                  setStatus("");
+                  void load("");
                 }}
               >
-                <option value="names">Scegli i nomi</option>
-                <option value="quantity">Indica solo la quantità</option>
+                <option value="single">A una persona</option>
+                <option value="group">A un gruppo</option>
               </select>
             </label>
-            {directory && (
-              <section
-                aria-label="Riepilogo gruppo"
-                className="rounded-xl bg-blue-50 p-4 text-sm"
-              >
-                <h3 className="mb-2 font-semibold">{groupName}</h3>
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  <p>
-                    <strong>{directory.summary.total}</strong> persone iscritte,
-                    minori compresi
-                  </p>
-                  <p>
-                    <strong>{directory.summary.assigned}</strong> persone con
-                    settore assegnato
-                  </p>
-                  <p>
-                    <strong>{directory.summary.unassigned}</strong> persone
-                    ancora da assegnare
-                  </p>
-                  {directory.summary.withoutSeat > 0 && (
-                    <p>
-                      <strong>{directory.summary.withoutSeat}</strong> minori
-                      senza sedia
-                    </p>
-                  )}
-                </div>
-                <p className="mt-2">
-                  Il conteggio comprende assegnazioni singole e nomine nelle
-                  riserve del gruppo.
-                </p>
-                {directory.reserves.map((r) => (
-                  <p key={r.sectorId} className="mt-2">
-                    Settore {r.sector}: {r.quantity} posti riservati · {r.used}{" "}
-                    persone assegnate ·{" "}
-                    <strong>
-                      {r.quantity - r.used} posti ancora da abbinare
-                    </strong>
-                  </p>
-                ))}
-              </section>
-            )}
-            {method === "quantity" ? (
-              <div className="grid gap-3">
-                <p className="text-sm">
-                  Riserva una quantità al gruppo selezionato. Il capogruppo
-                  sceglierà poi le persone per questo settore. Per una persona
-                  senza gruppo scegli il nome.
-                </p>
+            {mode === "group" ? (
+              <>
+                <label className="grid gap-1">
+                  Gruppo
+                  <select
+                    className="field"
+                    aria-label="Gruppo"
+                    value={group}
+                    onChange={(e) => setGroup(e.target.value)}
+                  >
+                    <option value="">Seleziona un gruppo</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="grid gap-1">
                   Quantità di posti
                   <input
@@ -407,16 +401,20 @@ export function CeremonySectorWorkspace({
                     min="1"
                     max={sector.remaining}
                     value={quantity}
-                    onChange={(e) => {
-                      setQuantity(Number(e.target.value));
-                      setConfirmation(false);
-                    }}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
                   />
                 </label>
-                {(!group || group === "none") && (
-                  <p>Seleziona un gruppo per riservare una quantità.</p>
+                <p className="text-sm">
+                  Il capogruppo potrà abbinare i posti ricevuti ai membri del
+                  gruppo.
+                </p>
+                {groupName && (
+                  <p>
+                    Verranno assegnati {quantity} posti a {groupName} nel
+                    settore {sector.name}.
+                  </p>
                 )}
-              </div>
+              </>
             ) : (
               <>
                 <form
@@ -424,11 +422,12 @@ export function CeremonySectorWorkspace({
                   onSubmit={(e) => {
                     e.preventDefault();
                     setApplied(search);
-                    void load(group, search);
+                    setStatus("");
+                    void load(search);
                   }}
                 >
                   <label className="grid min-w-0 flex-1 gap-1">
-                    Cerca persona nel gruppo
+                    Cerca tra tutti i partecipanti
                     <input
                       type="search"
                       className="field"
@@ -442,62 +441,32 @@ export function CeremonySectorWorkspace({
                   </button>
                 </form>
                 <p className="text-sm">
-                  Tutti gli iscritti attivi sono selezionabili, anche senza
-                  presenza confermata. I minori si scelgono esplicitamente. La
-                  selezione si conserva tra le pagine.
+                  Scegli una persona. Se ha figli al seguito, la conferma
+                  assegna un posto anche a ciascuno di loro.
                 </p>
-                {loading ? (
-                  <p role="status">Caricamento persone…</p>
-                ) : (
+                {!loading && (
                   <>
                     {pagination}
-                    {mode === "group" && (
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          className="size-5"
-                          checked={
-                            selectable.length > 0 &&
-                            selectable.every((p) =>
-                              selectedIds.has(subjectKey(p)),
-                            )
-                          }
-                          disabled={!selectable.length || stale}
-                          onChange={(e) => {
-                            setConfirmation(false);
-                            setSelected((prev) =>
-                              e.target.checked
-                                ? [
-                                    ...prev,
-                                    ...selectable.filter(
-                                      (p) => !selectedIds.has(subjectKey(p)),
-                                    ),
-                                  ]
-                                : prev.filter(
-                                    (p) =>
-                                      !selectable.some(
-                                        (s) => subjectKey(s) === subjectKey(p),
-                                      ),
-                                  ),
-                            );
-                          }}
-                        />
-                        Seleziona tutte le persone disponibili in questa pagina
-                      </label>
-                    )}
-                    <div className="divide-y">
+                    <div className="max-h-72 overflow-y-auto divide-y">
                       {directory?.people.map((p) => (
                         <label
                           key={subjectKey(p)}
                           className="flex items-start gap-3 py-3"
                         >
                           <input
-                            type="checkbox"
+                            type="radio"
+                            name="ceremony-person"
                             className="mt-1 size-5 shrink-0"
                             aria-label={`Seleziona ${p.name}`}
-                            checked={selectedIds.has(subjectKey(p))}
+                            checked={
+                              !!selected &&
+                              subjectKey(selected) === subjectKey(p)
+                            }
                             disabled={!!p.nomineeId || stale}
-                            onChange={() => toggle(p)}
+                            onChange={() => {
+                              setSelected(p);
+                              setStatus("");
+                            }}
                           />
                           <span className="min-w-0 flex-1">
                             <strong>{p.name}</strong>
@@ -511,10 +480,8 @@ export function CeremonySectorWorkspace({
                             </span>
                             {p.nomineeId && (
                               <span className="block text-sm font-semibold">
-                                Settore {p.sector}
-                                {p.needsSeat
-                                  ? " · Già assegnato"
-                                  : " · Senza sedia"}
+                                Settore {p.sector} ·{" "}
+                                {p.needsSeat ? "Già assegnato" : "Senza sedia"}
                               </span>
                             )}
                           </span>
@@ -527,108 +494,244 @@ export function CeremonySectorWorkspace({
                     {pagination}
                   </>
                 )}
-                {!!selected.length && (
+                {selected && (
                   <section
-                    aria-label="Persone selezionate"
-                    className="rounded-lg border p-3"
+                    aria-label="Riepilogo persona"
+                    className="rounded-lg border bg-blue-50 p-3"
                   >
                     <p className="font-semibold">
-                      {selected.length} persone selezionate
+                      {children.length > 0
+                        ? `A ${selected.name} verranno assegnati 1 + ${children.length} posti (${count} in totale): un posto per la persona e uno per ciascun figlio al seguito.`
+                        : `A ${selected.name} verrà assegnato 1 posto nel settore ${sector.name}.`}
                     </p>
-                    <ul className="max-h-40 overflow-y-auto">
-                      {selected.map((p) => (
-                        <li
-                          key={subjectKey(p)}
-                          className="flex flex-wrap justify-between gap-2 py-1"
-                        >
-                          {p.name}
-                          <button
-                            type="button"
-                            className="text-sm underline"
-                            onClick={() => toggle(p)}
-                          >
-                            Rimuovi {p.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    {children.length > 0 && (
+                      <ul className="mt-2 list-disc pl-5">
+                        {children.map((child) => (
+                          <li key={child.id}>
+                            {child.name}
+                            {child.nomineeId
+                              ? ` · Già assegnato: settore ${child.sector}`
+                              : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {familyAssigned && (
+                      <p role="alert">
+                        Un componente della famiglia ha già un’assegnazione.
+                        Controlla le assegnazioni esistenti prima di procedere.
+                      </p>
+                    )}
+                    {!familyKnown && (
+                      <p role="alert">
+                        Impossibile verificare i figli al seguito. Aggiorna i
+                        dati prima di assegnare.
+                      </p>
+                    )}
                   </section>
                 )}
               </>
             )}
-            {status && (
-              <p role="status" className="rounded-lg bg-slate-100 p-3">
-                {status}
+            {loading && (
+              <p role="status">Caricamento persone e assegnazioni…</p>
+            )}
+            {count > sector.remaining && (
+              <p role="alert">
+                Posti insufficienti nel settore per questa assegnazione.
               </p>
             )}
-            {!uncertain && (
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                className="btn-secondary justify-self-start px-4 py-2"
+                className="btn-primary px-4 py-2"
+                disabled={!canSave}
+                onClick={() => void submit()}
+              >
+                {saving ? "Salvataggio…" : "Conferma assegnazione"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary px-4 py-2"
                 disabled={loading}
-                onClick={() => void load()}
+                onClick={() => {
+                  setStatus("");
+                  void load();
+                }}
               >
                 Aggiorna
               </button>
-            )}
-            {confirmation ? (
-              <section
-                className="space-y-3 rounded-xl border border-blue-300 bg-blue-50 p-4"
-                aria-label="Conferma assegnazione"
-              >
-                <p className="font-semibold">
-                  Assegnare {count} posti nel settore {sector.name} a{" "}
-                  {groupName}?
-                </p>
-                {method === "names" ? (
-                  <ul className="max-h-48 list-disc overflow-y-auto pl-5">
-                    {selected.map((p) => (
-                      <li key={subjectKey(p)}>{p.name}</li>
+            </div>
+          </fieldset>
+          {status && (
+            <p role="status" className="rounded-lg bg-slate-100 p-3">
+              {status}
+            </p>
+          )}
+          {uncertain && (
+            <button
+              type="button"
+              className="btn-primary px-4 py-2"
+              disabled={saving}
+              onClick={() => void submit(uncertain)}
+            >
+              Riprova la stessa assegnazione
+            </button>
+          )}
+          <section
+            aria-label="Assegnazioni del settore"
+            className="space-y-3 border-t pt-4"
+          >
+            <h3 className="font-semibold">Posti già assegnati nel settore</h3>
+            {stale ? (
+              <p>
+                {loading
+                  ? "Aggiornamento assegnazioni…"
+                  : "Assegnazioni non aggiornate. Premi Aggiorna."}
+              </p>
+            ) : (
+              <>
+                <details
+                  key={`${sectorId}-nominal`}
+                  open={nominalOpen}
+                  onToggle={(e) => setNominalOpen(e.currentTarget.open)}
+                  className="rounded-lg border p-3"
+                >
+                  <summary className="cursor-pointer font-semibold">
+                    {assignments.nominalCount}{" "}
+                    {assignments.nominalCount === 1
+                      ? "posto assegnato nominalmente"
+                      : "posti assegnati nominalmente"}
+                  </summary>
+                  <ul className="mt-2 divide-y">
+                    {assignments.nominal.map((n) => (
+                      <li
+                        key={n.id}
+                        className="flex flex-wrap items-center justify-between gap-2 py-2"
+                      >
+                        <span>
+                          {n.name}
+                          {!n.needsSeat ? " · Senza sedia" : ""}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn-secondary px-3 py-2"
+                          disabled={locked || !!revocation}
+                          aria-label={`Revoca ${n.name}`}
+                          onClick={() => prepareRevoke("nominee", n.id, n.name)}
+                        >
+                          Revoca
+                        </button>
+                      </li>
                     ))}
                   </ul>
-                ) : (
-                  <p>Il capogruppo completerà l’assegnazione dei nomi.</p>
+                  {!assignments.nominal.length && (
+                    <p className="mt-2 text-sm">
+                      Nessuna assegnazione nominale.
+                    </p>
+                  )}
+                </details>
+                {assignments.groups.map((a) => (
+                  <div key={a.id} className="space-y-2 rounded-lg border p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p>
+                        <strong>
+                          {a.groupName ?? "Gruppo non disponibile"}
+                        </strong>{" "}
+                        · {a.quantity}{" "}
+                        {a.quantity === 1
+                          ? "posto assegnato"
+                          : "posti assegnati"}
+                      </p>
+                      <button
+                        type="button"
+                        className="btn-secondary px-3 py-2"
+                        disabled={locked || !!revocation}
+                        onClick={() =>
+                          prepareRevoke(
+                            "allocation",
+                            a.id,
+                            a.groupName ?? "Gruppo",
+                            a.people.map((n) => n.name),
+                          )
+                        }
+                      >
+                        Revoca dotazione
+                      </button>
+                    </div>
+                    <p className="text-sm">
+                      {a.people.filter((n) => n.needsSeat).length} posti
+                      abbinati ·{" "}
+                      {a.quantity - a.people.filter((n) => n.needsSeat).length}{" "}
+                      ancora da abbinare
+                    </p>
+                    {a.people.length > 0 && (
+                      <details>
+                        <summary className="cursor-pointer text-sm underline">
+                          Persone abbinate al gruppo
+                        </summary>
+                        <ul className="mt-2 list-disc pl-5">
+                          {a.people.map((n) => (
+                            <li key={n.id}>
+                              {n.name}
+                              {!n.needsSeat ? " · Senza sedia" : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                ))}
+                {!assignments.groups.length && (
+                  <p className="text-sm">
+                    Nessun posto assegnato a gruppi in questo settore.
+                  </p>
                 )}
-                <button
-                  type="button"
-                  className="btn-primary mr-2 px-4 py-2"
-                  disabled={!canSave}
-                  onClick={() => void submit()}
-                >
-                  Conferma assegnazione
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary px-4 py-2"
-                  onClick={() => setConfirmation(false)}
-                >
-                  Annulla
-                </button>
-              </section>
-            ) : (
-              <button
-                type="button"
-                className="btn-primary justify-self-start px-4 py-2"
-                disabled={!canSave}
-                onClick={() => setConfirmation(true)}
-              >
-                Verifica e assegna
-              </button>
+              </>
             )}
-          </fieldset>
-          {uncertain && (
-            <div className="mt-4" role="alert">
-              <p>{SECTOR_MESSAGES.unavailable}</p>
-              <button
-                type="button"
-                disabled={saving}
-                className="btn-primary mt-2 px-4 py-2"
-                onClick={() => void submit(uncertain)}
+            {revocation && (
+              <div
+                className="space-y-3 rounded-lg border border-red-300 bg-red-50 p-4"
+                role="region"
+                aria-label="Conferma revoca"
               >
-                Riprova la stessa assegnazione
-              </button>
-            </div>
-          )}
+                <p className="font-semibold">
+                  Revocare {revocation.name} nel settore {sector.name}?
+                </p>
+                <p>
+                  {revocation.group
+                    ? "Verranno liberati tutti i posti della dotazione e revocate le persone abbinate elencate qui sotto."
+                    : "Il posto tornerà disponibile. Le altre assegnazioni della famiglia resteranno invariate."}
+                </p>
+                {revocation.people.length > 0 && (
+                  <ul className="max-h-48 overflow-y-auto list-disc pl-5">
+                    {revocation.people.map((name, i) => (
+                      <li key={i}>{name}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="btn-primary px-4 py-2"
+                    disabled={saving}
+                    onClick={() => void submitRevoke()}
+                  >
+                    {revocation.uncertain
+                      ? "Riprova la stessa revoca"
+                      : "Conferma revoca"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary px-4 py-2"
+                    disabled={locked}
+                    onClick={() => setRevocation(null)}
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
         </dialog>
       )}
     </div>

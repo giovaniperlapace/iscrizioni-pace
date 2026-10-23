@@ -565,11 +565,11 @@ export function EmailCampaignComposer({
                 <button
                   key={field.token}
                   type="button"
-                  className="flex items-center justify-between gap-3 rounded-md border border-[var(--peace-border)] px-3 py-2.5 text-left hover:bg-[#f7fbfe]"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border border-[var(--peace-border)] px-3 py-2.5 text-left hover:bg-[#f7fbfe]"
                   onClick={() => setTokenToInsert(field.token)}
                 >
                   <span className="text-sm font-semibold">{field.label}</span>
-                  <code className="text-xs text-[var(--peace-muted)]">{field.token}</code>
+                  <code className="break-all text-xs text-[var(--peace-muted)]">{field.token}</code>
                 </button>
               ))}
             </div>

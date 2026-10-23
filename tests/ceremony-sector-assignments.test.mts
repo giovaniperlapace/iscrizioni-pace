@@ -95,3 +95,66 @@ test("sector selection and attendance declarations are translated in all seven l
     for (const text of Object.values(copy)) assert.ok(text.trim());
   }
 });
+
+test("direct family commands cannot select a group, chair, unrelated adult or several children alone", () => {
+  const c = {
+    planId: id(1),
+    requestId: id(2),
+    revision: 0,
+    data: {
+      action: "assign_direct",
+      sectorId: id(3),
+      seatIds: [],
+      quantity: 2,
+      groupId: null,
+      subjects: [
+        { registrationId: id(5), childId: null },
+        { registrationId: id(5), childId: id(6) },
+      ],
+    },
+  };
+  assert.deepEqual(parseDeskCommand(c), c);
+  for (const data of [
+    { groupId: id(4) },
+    { seatIds: [id(8), id(9)] },
+    {
+      subjects: [c.data.subjects[0], { registrationId: id(7), childId: null }],
+    },
+    {
+      subjects: [{ registrationId: id(5), childId: id(8) }, c.data.subjects[1]],
+    },
+  ])
+    assert.equal(
+      parseDeskCommand({ ...c, data: { ...c.data, ...data } }),
+      null,
+    );
+});
+
+test("sector summary separates direct names from group reserves and excludes other sectors", async () => {
+  const { sectorAssignments } =
+    await import("../lib/ceremonies/sector-desk.ts");
+  const desk = {
+    allocations: [
+      { id: id(1), sectorId: id(10), groupId: null, quantity: 1 },
+      { id: id(2), sectorId: id(10), groupId: id(20), quantity: 10 },
+      { id: id(3), sectorId: id(11), groupId: null, quantity: 1 },
+    ],
+    nominees: [
+      { id: id(4), allocationId: id(1), needsSeat: true },
+      { id: id(5), allocationId: id(2), needsSeat: true },
+      { id: id(6), allocationId: id(3), needsSeat: true },
+    ],
+  };
+  const summary = sectorAssignments(desk as never, id(10));
+  assert.equal(summary.nominalCount, 1);
+  assert.deepEqual(
+    summary.nominal.map((n) => n.id),
+    [id(4)],
+  );
+  assert.equal(summary.groups.length, 1);
+  assert.equal(summary.groups[0].quantity, 10);
+  assert.deepEqual(
+    summary.groups[0].people.map((n) => n.id),
+    [id(5)],
+  );
+});

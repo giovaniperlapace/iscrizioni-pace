@@ -1,3 +1,4 @@
+import { loadDuplicateForumActivity } from "@/lib/data-quality/forum-activity.server";
 import Link from "@/components/pending-link";
 import { OperationsDuplicatesTable } from "@/app/dashboard/operations-duplicates-table";
 import { DuplicateReviewDialog } from "@/app/dashboard/participants/data-quality/review-dialog";
@@ -93,6 +94,12 @@ export async function OperationsDuplicatesSection({
     pageCount,
     Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
   );
+  const pageMatches = visible.slice((page - 1) * 50, page * 50);
+  const forumActivity = await loadDuplicateForumActivity(
+    service,
+    event.id,
+    [...new Set(pageMatches.flatMap(match => [match.left, match.right]))],
+  ).catch(() => null);
   const left = selected && people.find((person) => person.id === selected.left);
   const right =
     selected && people.find((person) => person.id === selected.right);
@@ -185,8 +192,16 @@ export async function OperationsDuplicatesSection({
           : "Possibili duplicati"}{" "}
         ({visible.length} {visible.length === 1 ? "coppia" : "coppie"})
       </h3>
+      <p className="text-sm text-[var(--peace-muted)]">
+        Il contatore somma i Forum prenotati e quelli in coda, fino a un massimo
+        visualizzato di 3, comprese le prenotazioni inserite dal capogruppo.
+      </p>
+      {forumActivity === null && (
+        <p role="alert">Impossibile caricare i Forum. Ricarica la pagina prima di valutare l’attività degli account.</p>
+      )}
       <OperationsDuplicatesTable
-        matches={visible.slice((page - 1) * 50, page * 50)}
+        matches={pageMatches}
+        forumActivity={forumActivity}
         people={people}
         basePath={path({ duplicatePair: null })}
         canWrite={canWrite}
