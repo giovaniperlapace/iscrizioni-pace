@@ -302,7 +302,7 @@ function PanelStatisticsCard({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canManage ? <Link href={`${dashboardPath}?section=dashboard&report=panels&nav=${navMode}&panelRoster=${encodeURIComponent(panel.id)}`} scroll={false} prefetch={false} className="btn-secondary inline-flex min-h-10 items-center gap-2 px-3 text-sm" aria-label={`Iscritti e coda a ${panel.title}`}><Users size={16} aria-hidden="true" />Iscritti e coda</Link> : null}
+          <Link href={`${dashboardPath}?section=dashboard&report=panels&nav=${navMode}&panelRoster=${encodeURIComponent(panel.id)}`} scroll={false} prefetch={false} className="btn-secondary inline-flex min-h-10 items-center gap-2 px-3 text-sm" aria-label={`Iscritti e coda a ${panel.title}`}><Users size={16} aria-hidden="true" />Iscritti e coda</Link>
           <Link
             href={panelHref}
             className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--peace-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--peace-blue-800)]"

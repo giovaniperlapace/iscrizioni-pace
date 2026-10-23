@@ -139,7 +139,7 @@ export function PanelPublicationTable({
                     panelPath={panelPath}
                     canManage={canManage}
                   />
-                  {canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
+                  <PanelRosterLink panel={panel} panelPath={panelPath} />
                   {canManage && panel.publicationStatus === "published" ? <UnpublishButton onClick={() => setWithdrawPanelId(panel.id)} /> : null}
                   {canManage && panel.publicationStatus === "draft" ? (
                     <button
@@ -213,7 +213,7 @@ export function PanelPublicationTable({
                 <td className="py-4">
                   <div className="flex flex-col items-stretch gap-2">
                     <PanelEditLink panel={panel} panelPath={panelPath} canManage={canManage} />
-                    {canManage ? <PanelRosterLink panel={panel} panelPath={panelPath} /> : null}
+                    <PanelRosterLink panel={panel} panelPath={panelPath} />
                     {canManage && panel.publicationStatus === "published" ? <UnpublishButton onClick={() => setWithdrawPanelId(panel.id)} /> : null}
                     {canManage && panel.publicationStatus === "draft" ? (
                       <button

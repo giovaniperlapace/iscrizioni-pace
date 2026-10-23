@@ -39,7 +39,7 @@ function fixture(roles: Array<{ role: string; eventId: string | null }>, current
 }
 
 const deniedParams = [
-  ...["email", "ruoli", "gruppi", "impostazioni", "servizi", "panel", "cerimonie"].map(section => ({ section })),
+  ...["email", "ruoli", "gruppi", "impostazioni", "servizi", "cerimonie"].map(section => ({ section })),
   { groupTool: "links" }, { groupId: "group" }, { groupLinkToken: "secret" },
   { roleSaved: "1" }, { serviceId: "service" },
 ];
@@ -53,7 +53,7 @@ for (const params of deniedParams) {
 
 test("viewer can open statistics, exports and participant data in read-only mode", async () => {
   const f = fixture([{ role: "manager_viewer", eventId: "current" }]);
-  for (const section of ["dashboard", "esportazioni", "iscritti"]) {
+  for (const section of ["dashboard", "esportazioni", "iscritti", "panel"]) {
     assert.deepEqual(await f.ManagerDashboardPage({ searchParams: Promise.resolve({ section }) }), { canManage: false, activeSection: section });
   }
 });
@@ -92,7 +92,7 @@ test("both sidebar modes render only the allowed read-only viewer menu items", (
       const html = renderToStaticMarkup(f.ManagerSidebar({ activeSection: "dashboard", navMode, canManage, report: "territory" }));
       const menu = html.slice(html.indexOf("<nav"));
       const sections = [...menu.matchAll(/href="\/dashboard\/manager\?section=([a-z]+)&amp;nav=mini"/g)].map(match => match[1]);
-      assert.deepEqual(sections, canManage ? ["dashboard", "esportazioni", "cerimonie", "iscritti", "panel", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "esportazioni", "iscritti"]);
+      assert.deepEqual(sections, canManage ? ["dashboard", "esportazioni", "cerimonie", "iscritti", "panel", "email", "ruoli", "gruppi", "impostazioni"] : ["dashboard", "esportazioni", "iscritti", "panel"]);
     }
   }
 });
@@ -109,23 +109,19 @@ test("viewer can read disability statistics and drilldowns only for their curren
 });
 
 for (const role of ["admin", "manager", "manager_viewer"]) {
-  test(`panel routes and statistics follow current-event management rights for ${role}`, async () => {
+  test(`panel routes and statistics follow current-event read rights for ${role}`, async () => {
     for (const params of [{section: "panel"}, {section: "dashboard", report: "panels"}]) {
       const f = fixture([{role, eventId: role === "admin" ? null : "current"}]);
-      if (role === "manager_viewer") {
-        await assert.rejects(f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), /REDIRECT:/);
-      } else {
-        assert.deepEqual(await f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), {canManage: true, activeSection: params.section});
-      }
+      assert.deepEqual(await f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), {canManage: role !== "manager_viewer", activeSection: params.section});
     }
   });
 }
 
 
-test("foreign manager and cumulative viewer cannot reach current-event panel loaders", async () => {
+test("foreign manager and viewer cannot reach current-event panel loaders", async () => {
   for (const roles of [
     [{role: "manager", eventId: "other"}],
-    [{role: "manager", eventId: "other"}, {role: "manager_viewer", eventId: "current"}],
+    [{role: "manager_viewer", eventId: "other"}],
   ]) for (const params of [{section: "panel"}, {section: "dashboard", report: "panels"}]) {
     const f = fixture(roles);
     await assert.rejects(f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), /REDIRECT:/);
@@ -137,4 +133,12 @@ test("ceremony selection survives expanding the sidebar", () => {
  const f=fixture([]);
  const html=renderToStaticMarkup(f.ManagerSidebar({activeSection:"cerimonie",navMode:"mini",canManage:true,report:"territory",kind:"closing"}));
  assert.match(html,/section=cerimonie&amp;nav=full&amp;kind=closing/);
+});
+
+
+test("foreign manager plus current viewer retains read-only Forum access", async () => {
+  const f = fixture([{role: "manager", eventId: "other"}, {role: "manager_viewer", eventId: "current"}]);
+  for (const params of [{section: "panel"}, {section: "dashboard", report: "panels"}]) {
+    assert.deepEqual(await f.ManagerDashboardPage({searchParams: Promise.resolve(params)}), {canManage: false, activeSection: params.section});
+  }
 });

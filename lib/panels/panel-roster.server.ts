@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventUserRole } from "../auth/session.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
-import { canAccessPanelManagement } from "./management-access.ts";
+import { canViewPanelData } from "./management-access.ts";
 
 export type PanelRosterPerson = { id: string; firstName: string; lastName: string; kind: "Iscritto" | "Minore accompagnato"; accompanyingAdult: string; code: string };
 export type PanelRoster = {
@@ -21,13 +21,13 @@ export function isPanelRosterId(value: string): boolean { return uuid.test(value
 
 /** Auth and current-event scope are checked before any participant data is read. */
 export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles: EventUserRole[]): Promise<PanelRoster | null> {
-  if (!canAccessPanelManagement(roles)) throw new Error("Panel roster forbidden");
+  if (!canViewPanelData(roles)) throw new Error("Panel roster forbidden");
   if (!isPanelRosterId(panelId)) return null;
   const event = await db.from("events").select("id").eq("is_current", true).maybeSingle();
   if (event.error) throw new Error("Current event unavailable");
   if (!event.data) return null;
   const eventId = event.data.id as string;
-  if (!canAccessPanelManagement(roles, eventId)) throw new Error("Panel roster forbidden");
+  if (!canViewPanelData(roles, eventId)) throw new Error("Panel roster forbidden");
   const panel = await db.from("event_moments").select("id,title").eq("id", panelId).eq("event_id", eventId).eq("moment_type", "panel").maybeSingle();
   if (panel.error) throw new Error("Panel unavailable");
   if (!panel.data) return null;

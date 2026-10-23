@@ -449,7 +449,7 @@ export default async function ManagerDashboardPage({
   const canViewStatistics = scope.isAdmin || Boolean(currentEventId && scope.eventIds?.has(currentEventId));
   // Authorize the resolved section before any operational data is loaded,
   // including legacy URLs, inferred sections and remembered navigation.
-  if ((!canManage && statisticsReport === "panels") || !canAccessManagerSection(activeSection, canManage) ||
+  if ((!canViewStatistics && (activeSection === "panel" || statisticsReport === "panels")) || !canAccessManagerSection(activeSection, canManage) ||
       (!canViewStatistics && (activeSection === "esportazioni" || (activeSection === "dashboard" && statisticsReport === "disability") || statisticsDrilldown?.difficulty))) {
     redirect("/dashboard/manager?section=dashboard&nav=mini");
   }
@@ -602,6 +602,7 @@ export default async function ManagerDashboardPage({
                 statistics={statistics}
                 report={statisticsReport}
                 canViewDisability={canViewStatistics}
+                canViewPanels={canViewStatistics}
                 disabilityStatistics={disabilityStatistics}
                 associationStatistics={associationStatistics}
                 panelStatistics={panelStatistics}
@@ -1124,7 +1125,7 @@ function getManagerEventScope(eventRoles: EventUserRole[]) {
 }
 
 function canAccessManagerSection(section: ManagerSection, canManage: boolean): boolean {
-  return canManage || section === "dashboard" || section === "iscritti" || section === "esportazioni";
+  return canManage || section === "panel" || section === "dashboard" || section === "iscritti" || section === "esportazioni";
 }
 
 function resolveManagerSection(params: Awaited<ManagerPageProps["searchParams"]>): ManagerSection {

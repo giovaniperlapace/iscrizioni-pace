@@ -46,6 +46,7 @@ type StatisticsSectionProps = {
   navMode: StatisticsNavMode;
   panelStatistics?: PanelStatisticsSnapshot;
   canManage?: boolean;
+  canViewPanels?: boolean;
 };
 
 type AssignedGroupRow = ReturnType<typeof buildAssignedGroupTree>[number];
@@ -67,6 +68,7 @@ export function StatisticsSection({
   associationStatistics,
   panelStatistics,
   canManage = false,
+  canViewPanels = false,
   dashboard,
   navMode,
 }: StatisticsSectionProps) {
@@ -87,7 +89,7 @@ export function StatisticsSection({
       </div>
 
       <nav aria-label="Categorie di statistiche" className="flex flex-wrap gap-2 rounded-xl border border-[var(--peace-border)] bg-white p-2">
-        {STATISTICS_REPORTS.filter(item => (item.key !== "disability" || canViewDisability) && (item.key !== "panels" || dashboard === "admin" || canManage)).map(({ key, label }) => (
+        {STATISTICS_REPORTS.filter(item => (item.key !== "disability" || canViewDisability) && (item.key !== "panels" || dashboard === "admin" || canManage || canViewPanels)).map(({ key, label }) => (
           <Link
             key={key}
             href={`/dashboard/${dashboard}?${new URLSearchParams({ section: "dashboard", nav: navMode, report: key })}`}
@@ -110,7 +112,7 @@ export function StatisticsSection({
         <EventAttendanceReport key={`${eventId}:${arrivalRead}`} eventId={eventId} />
       </ReportBlock> : null}
 
-      {(dashboard === "admin" || canManage) && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Forum">
+      {(dashboard === "admin" || canManage || canViewPanels) && report === "panels" && panelStatistics ? <ReportBlock name="panels" title="Forum">
         <PanelStatisticsReport
           statistics={panelStatistics}
           dashboard={dashboard}

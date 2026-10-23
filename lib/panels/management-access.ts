@@ -8,6 +8,13 @@ export function canAccessPanelManagement(roles: EventUserRole[], eventId?: strin
       (eventId === undefined || role.eventId === eventId)));
 }
 
+// Read-only access never grants publication, booking or campaign permissions.
+export function canViewPanelData(roles: EventUserRole[], eventId?: string | null): boolean {
+  return canAccessPanelManagement(roles, eventId) || roles.some(role =>
+    role.role === "manager_viewer" && Boolean(role.eventId) &&
+    (eventId === undefined || role.eventId === eventId));
+}
+
 export function isPanelCampaign(filters: unknown): boolean {
   if (!filters || typeof filters !== "object") return false;
   const value = filters as Record<string, unknown>;

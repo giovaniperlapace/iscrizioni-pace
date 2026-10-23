@@ -1,7 +1,7 @@
 import { getCurrentAuthContext } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { canAccessPanelManagement } from "@/lib/panels/management-access";
+import { canViewPanelData } from "@/lib/panels/management-access";
 import { isPanelRosterId, loadPanelRoster } from "@/lib/panels/panel-roster.server";
 import { writePanelRosterWorkbook } from "@/lib/panels/panel-roster-workbook";
 
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   try {
     const auth = await getCurrentAuthContext(await createSupabaseServerClient());
     if (!auth) return new Response("Accesso richiesto.", { status: 401, headers });
-    if (!canAccessPanelManagement(auth.eventRoles)) return new Response("Accesso non consentito.", { status: 403, headers });
+    if (!canViewPanelData(auth.eventRoles)) return new Response("Accesso non consentito.", { status: 403, headers });
     const panelId = new URL(request.url).searchParams.get("panelId") ?? "";
     if (!isPanelRosterId(panelId)) return new Response("Forum non valido.", { status: 400, headers });
     const roster = await loadPanelRoster(createSupabaseServiceClient(), panelId, auth.eventRoles);
