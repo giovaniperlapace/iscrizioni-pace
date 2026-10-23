@@ -1,5 +1,7 @@
 "use client";
 
+import { getForumRelayRoom } from "@/lib/events/assisi-2026-relay-rooms";
+import { FORUM_RELAY_COPY } from "@/lib/panels/relay-copy";
 import { sortForums } from "@/lib/panels/forum-order";
 
 import Link from "next/link";
@@ -29,7 +31,7 @@ export type ParticipantPanelCatalogRow = {
   ends_at: string;
   location_name: string;
   location_address: string | null;
-  booking_status: "available" | "selected" | "full" | "conflict" | "queued" | "offered";
+  booking_status: "available" | "selected" | "full" | "conflict" | "queued" | "offered" | "priority";
   party_size: number;
   children?: ForumChildOption[];
   remaining_seats?: number;
@@ -38,6 +40,7 @@ export type ParticipantPanelCatalogRow = {
   waitlist_status?: string | null;
   offer_expires_at?: string | null;
   queue_position?: number | null;
+  replacement_titles?: string[];
 };
 
 type Copy = {
@@ -373,6 +376,10 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
   row: ParticipantPanelCatalogRow;
   showAudience: boolean;
 }) {
+  const relay = getForumRelayRoom(row.panel_id);
+  const relayCopy = FORUM_RELAY_COPY[locale];
+  const priority = row.booking_status === "priority";
+  const [relayConsent, setRelayConsent] = useState(false);
   const isSelected = row.booking_status === "selected";
   const queueCopy = FORUM_WAITLIST_COPY[locale];
   const isQueued = row.booking_status === "queued";
@@ -384,10 +391,10 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
   const isFull = !locked && (row.has_waiting || (row.remaining_seats !== undefined ? seats > row.remaining_seats : row.booking_status === "full"));
   // Existing bookings can be cancelled; queue offers replace the conflicting
   // booking atomically on the server, and leaving a queue never books seats.
-  const disabled = !locked && (row.has_slot_conflict || row.booking_status === "conflict") && !isFull;
+  const disabled = priority || (!locked && (row.has_slot_conflict || row.booking_status === "conflict") && !isFull);
   const intent = isSelected ? "cancel" : isQueued ? "leave" : isOffered ? "accept" : isFull ? "join" : "book";
-  const buttonLabel = isSelected ? copy.cancel : isQueued ? queueCopy.leave : isOffered ? queueCopy.accept : isFull ? queueCopy.join : copy.book;
-  const statusLabel = isSelected
+  const buttonLabel = priority ? relayCopy.priority : relay && (intent === "accept" || intent === "book") ? relayCopy.accept : relay && intent === "leave" ? relayCopy.decline : isSelected ? copy.cancel : isQueued ? queueCopy.leave : isOffered ? queueCopy.accept : isFull ? queueCopy.join : copy.book;
+  const statusLabel = priority ? relayCopy.priority : isSelected
     ? copy.selected
     : isQueued ? queueCopy.queued
     : isOffered ? queueCopy.offered
@@ -402,10 +409,10 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
       {requested ? <p className="text-sm font-bold text-[var(--peace-blue-800)]">{getEventProgramCopy(locale).selectedForum}</p> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h4 className="text-lg font-bold text-[var(--peace-blue-950)]">{row.title}</h4>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${isSelected ? "bg-[#e8f6e8] text-[#27613a]" : row.booking_status === "available" ? "bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]" : "bg-[#fff0eb] text-[#8a3323]"}`}>
+        <span className={`max-w-full shrink-0 break-words rounded-full px-2.5 py-1 text-xs font-bold ${isSelected ? "bg-[#e8f6e8] text-[#27613a]" : row.booking_status === "available" ? "bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)]" : "bg-[#fff0eb] text-[#8a3323]"}`}>
           {isSelected ? <CheckCircle2 aria-hidden="true" className="mr-1 inline size-3.5" /> : null}
           <span>{statusLabel}</span>
-          {!isFull && typeof row.remaining_seats === "number" && row.remaining_seats > 0 && Number.isFinite(row.remaining_seats) ? (
+          {!priority && !isFull && typeof row.remaining_seats === "number" && row.remaining_seats > 0 && Number.isFinite(row.remaining_seats) ? (
             <span className="block text-[10px] font-normal leading-4">
               {formatSeatCount(row.remaining_seats, locale)}
             </span>
@@ -413,6 +420,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         </span>
       </div>
       <ForumLanguages panelId={row.panel_id} locale={locale} />
+      {relay ? <p className="text-sm leading-6">{relayCopy.queue}</p> : null}
       {row.description ? <p className="text-sm leading-6 text-[var(--peace-muted)]">{row.description}</p> : null}
       <dl className="grid gap-2 text-sm text-[var(--peace-ink)]">
         <div className="flex items-start gap-2"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 text-[var(--peace-blue-700)]" /><span>{formatDate(row.starts_at, locale)}</span></div>
@@ -425,6 +433,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
       {isOffered && row.offer_expires_at ? <div className="grid gap-2 rounded-lg border border-[#b9d5bd] bg-[#f0f8ed] p-3 text-sm leading-6">
         <p className="font-bold">{queueCopy.deadline}: {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" }).format(new Date(row.offer_expires_at))} (Europe/Rome)</p>
         <p>{queueCopy.swap}</p>
+        {row.replacement_titles?.length ? <p><strong>{relayCopy.replaced}</strong> {row.replacement_titles.join("; ")}</p> : null}
       </div> : null}
       <form action={setParticipantPanelBooking}>
         <ForumChildSelection options={row.children ?? []} selected={childIds} onChange={setDraftIds} locale={locale} locked={locked} />
@@ -432,7 +441,8 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <input type="hidden" name="panelId" value={row.panel_id} />
         <input type="hidden" name="sectionId" value={row.section_id} />
         <input type="hidden" name="intent" value={intent} />
-        <PendingSubmitButton disabled={disabled} pendingLabel={isSelected ? copy.cancelling : copy.booking} className={`min-h-11 w-full rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-[#d9e0e6] disabled:text-[#637181] ${isSelected ? "border border-[#cf9b8e] text-[#8a3323] hover:bg-[#fff3ef]" : intent === "join" ? "border border-[var(--peace-border)] bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-200)]" : "bg-[var(--peace-blue-800)] text-white hover:bg-[var(--peace-blue-900)]"}`}>
+        {relay && (intent === "accept" || intent === "book") && !priority ? <label className="mb-3 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold leading-6"><input type="checkbox" required checked={relayConsent} onChange={e => setRelayConsent(e.target.checked)} className="mt-1 size-5 shrink-0" />{relayCopy.consent}</label> : null}
+        <PendingSubmitButton disabled={disabled || (!!relay && (intent === "accept" || intent === "book") && !relayConsent)} pendingLabel={isSelected ? copy.cancelling : copy.booking} className={`min-h-11 w-full rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-[#d9e0e6] disabled:text-[#637181] ${isSelected ? "border border-[#cf9b8e] text-[#8a3323] hover:bg-[#fff3ef]" : intent === "join" ? "border border-[var(--peace-border)] bg-[var(--peace-sky-100)] text-[var(--peace-blue-800)] hover:bg-[var(--peace-sky-200)]" : "bg-[var(--peace-blue-800)] text-white hover:bg-[var(--peace-blue-900)]"}`}>
           {buttonLabel}
         </PendingSubmitButton>
       </form>
@@ -442,7 +452,7 @@ function PanelBookingCard({ copy, locale, registrationId, row, showAudience, req
         <input type="hidden" name="panelId" value={row.panel_id} />
         <input type="hidden" name="sectionId" value={row.section_id} />
         <input type="hidden" name="intent" value="leave" />
-        <PendingSubmitButton pendingLabel={copy.cancelling} className="btn-secondary min-h-11 w-full">{queueCopy.leave}</PendingSubmitButton>
+        <PendingSubmitButton pendingLabel={copy.cancelling} className="btn-secondary min-h-11 w-full">{relay ? relayCopy.decline : queueCopy.leave}</PendingSubmitButton>
       </form> : null}
     </article>
   );

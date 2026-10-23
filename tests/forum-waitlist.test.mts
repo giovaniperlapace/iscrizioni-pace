@@ -1,3 +1,5 @@
+import { getForumRelayRoom } from "../lib/events/assisi-2026-relay-rooms.ts";
+import { FORUM_RELAY_COPY } from "../lib/panels/relay-copy.ts";
 import { validForumChildIds } from "../lib/panels/child-selection.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -15,7 +17,7 @@ const offer: ForumWaitlistOffer = { id: "offer", claim: "claim", eventId: "event
 for (const locale of ["it", "en", "fr", "de", "es", "nl", "uk"] as const) test(`Forum offer and queue instructions are complete in ${locale}`, () => {
   const email = renderForumWaitlistEmail({ ...offer, locale }, "https://example.invalid");
   assert.equal(email.subject, FORUM_WAITLIST_COPY[locale].emailSubject);
-  assert.match(email.text, /60/);
+  assert.match(email.text, /2/);
   assert.ok(email.text.includes(FORUM_WAITLIST_COPY[locale].swap));
   assert.ok(email.text.includes(FORUM_WAITLIST_COPY[locale].deadline));
   assert.match(email.text, new RegExp(`/forum/${panelId}`));
@@ -163,7 +165,7 @@ test("participant cards allow offer acceptance and queue exit despite a same-slo
   const jsx = (type: unknown, props: unknown) => ({ type, props });
   const deps = {
     exports: {}, require: () => ({ jsx, jsxs: jsx }), useState: () => [null, () => {}],
-    FORUM_WAITLIST_COPY, formatSeatCount: () => "1 seat", formatDate: () => "date", formatTimeRange: () => "time",
+    FORUM_WAITLIST_COPY, getForumRelayRoom, FORUM_RELAY_COPY, formatSeatCount: () => "1 seat", formatDate: () => "date", formatTimeRange: () => "time",
     ForumLanguages: "languages", ForumChildSelection: "children", PendingSubmitButton: "submit", setParticipantPanelBooking: "action",
     CalendarDays: "calendar", Clock3: "clock", MapPin: "map", Users: "users", CheckCircle2: "check",
   };

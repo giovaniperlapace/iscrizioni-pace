@@ -1,5 +1,28 @@
 # AGENTS.md
 
+## Sale collegate Forum — rilascio autorizzato — 2026-10-23
+
+- Sei panel collegati ai Forum 1/9/19 (Domus Letitiae, 156 posti) e 3/10/18
+  (Serafico, 110 posti): 798 disponibilità complessive.
+  Domus: Viale Giovanni XXIII 2, ampio parcheggio; Serafico: Viale Guglielmo
+  Marconi 6, parcheggio limitato. Entrambe ad Assisi, navetta Linea C/mezzi propri.
+- Nome e mail: «SALA COLLEGATA — SOLO IN ITALIANO», senza traduzioni;
+  conferma esplicita personale/capogruppo, stessa fascia e sedi separate.
+- Snapshot FIFO della sola coda del Forum corrispondente, residenti in Italia
+  dal paese abituale del partecipante (non lingua/nazionalità/capogruppo).
+  Esclusi esteri/ignoti; ricontrollo prima di promozione/notifica.
+  Due ore per tutte le offerte Forum, principali e collegate,
+  minori/destinatario conservati; accettazione mantiene la coda principale,
+  successivo passaggio libera il posto collegato. Apertura dei residui dopo
+  risoluzione delle offerte; guardie database anche sui percorsi operativi.
+- Migration locali `20261023100000`, `20261023101000`, `20261023102000`
+  (estende anche offerte ancora valide senza riapertura/reinvio); attivazione service-only
+  separata. Dopo la sospensione iniziale, l’utente ha esplicitamente autorizzato
+  pubblicazione, migration production e avvio delle email il 23 ottobre.
+  Eseguire backup e controlli di compatibilità prima dell’attivazione.
+- Verifiche e procedura futura: `docs/forum-sale-collegate-2026-10-23.md`.
+
+
 ## Cerimonie: pop-up conferma revoca — 2026-10-23
 
 - Conferma revoca in piccolo dialog sopra la modale del settore. Solo Annulla

@@ -1,5 +1,7 @@
 "use client";
 
+import { getForumRelayRoom } from "@/lib/events/assisi-2026-relay-rooms";
+import { FORUM_RELAY_COPY } from "@/lib/panels/relay-copy";
 import { sortForums } from "@/lib/panels/forum-order";
 
 import Link from "next/link";
@@ -20,10 +22,12 @@ import { useGroupForumAvailability } from "@/lib/panels/use-group-forum-availabi
 import { setGroupPanelBooking, setGroupPanelWaitlist } from "./actions";
 
 export function GroupPanelBookings({view: initialView, sectionId, locale}: {view: GroupPanelView; sectionId: string | null; locale: SupportedLocale}) {
+  const [relayConsents, setRelayConsents] = useState<Record<string, boolean>>({});
+  const relayCopy = FORUM_RELAY_COPY[locale];
   const router = useRouter();
   const queueCopy = GROUP_WAITLIST_COPY[locale];
   const sharedQueueCopy = FORUM_WAITLIST_COPY[locale];
-  const copy = { ...GROUP_BOOKING_COPY[locale], attendance: FORUM_ATTENDANCE_COPY[locale].leaderError, queued: sharedQueueCopy.queued, offered: sharedQueueCopy.offered,
+  const copy = { ...GROUP_BOOKING_COPY[locale], priority: relayCopy.priority, attendance: FORUM_ATTENDANCE_COPY[locale].leaderError, queued: sharedQueueCopy.queued, offered: sharedQueueCopy.offered,
     expired: queueCopy.expired, availableNow: queueCopy.available };
   const [childDrafts, setChildDrafts] = useState<Record<string, string[]>>({});
   const [query, setQuery] = useState("");
@@ -39,6 +43,7 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
     return () => window.clearInterval(timer);
   }, []);
   const panel = view.panels.find(p => p.sectionId === sectionId);
+  const relay = panel ? getForumRelayRoom(panel.panelId) : undefined;
   const visible = filterGroupPanelParticipants(view.participants, query, group);
   const groups = [...new Map(view.participants.map(p => [p.groupId, p.groupName])).entries()].sort((a,b) => a[1].localeCompare(b[1], locale));
   const dateFormat = new Intl.DateTimeFormat(locale, {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome"});
@@ -75,9 +80,10 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
         {sortForums(view.panels).map(p => <option key={p.sectionId} value={p.sectionId}>{p.title} · {dateFormat.format(new Date(p.startsAt))}–{timeFormat.format(new Date(p.endsAt))} · {p.location} · {p.audience}</option>)}
       </select>
       {panel ? <ForumLanguages panelId={panel.panelId} locale={locale} /> : null}
+      {relay ? <p className="text-sm leading-6">{relayCopy.queue}</p> : null}
       {!view.panels.length ? <p>{copy.emptyPanels}</p> : null}
       {panel ? <div className="flex items-center justify-start gap-3 border-t border-[var(--peace-border)] pt-3 text-sm">
-        <strong className="rounded-full bg-[var(--peace-sky-100)] px-3 py-1.5 text-[var(--peace-blue-800)]">{copy.remaining}: {panel.remaining}</strong>
+        <strong className="rounded-full bg-[var(--peace-sky-100)] px-3 py-1.5 text-[var(--peace-blue-800)]">{panel.relayPriority ? relayCopy.priority : `${copy.remaining}: ${panel.remaining}`}</strong>
       </div> : null}
     </div>
     {panel ? <>
@@ -98,9 +104,9 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
               const childKey = `${panel.panelId}:${row.registrationId}`;
               const childIds = booked || queued ? (row.children ?? []).filter(c => c.selected).map(c => c.id) : childDrafts[childKey] ?? (row.children ?? []).filter(c => c.selected).map(c => c.id);
               const full = row.status === "full" || row.hasWaiting || 1 + childIds.length > panel.remaining;
-              const blocked = (row.hasConflict || row.status === "conflict") && !full;
+              const blocked = row.status === "priority" || (!booked && !queued && (row.hasConflict || row.status === "conflict") && !full);
               const operation = booked ? false : row.status === "queued" ? "leave" : row.status === "offered" ? "accept" : full ? "join" : true;
-              const action = booked ? copy.unbook : row.status === "queued" ? queueCopy.leave : row.status === "offered" ? queueCopy.accept : full ? queueCopy.join : copy.book;
+              const action = row.status === "priority" ? relayCopy.priority : relay && (operation === true || operation === "accept") ? relayCopy.accept : relay && operation === "leave" ? relayCopy.decline : booked ? copy.unbook : row.status === "queued" ? queueCopy.leave : row.status === "offered" ? queueCopy.accept : full ? queueCopy.join : copy.book;
               const feedback = result?.registrationId === row.registrationId ? result : null;
               return <tr key={row.registrationId} className="border-b border-[var(--peace-border)] last:border-0 hover:bg-[var(--peace-soft)]">
                 <th scope="row" className="p-3 font-medium">{row.name}{row.code ? <span className="block text-xs font-normal text-[var(--peace-muted)]">{row.code}</span> : null}
@@ -119,15 +125,16 @@ export function GroupPanelBookings({view: initialView, sectionId, locale}: {view
                   {blocked || row.status === "full" ? <span id={`reason-${row.registrationId}`} className="mt-1 block text-xs text-amber-800">{copy[row.status]}</span> : null}
                 </td>
                 <td className="p-3">
-                  {row.status === "offered" ? <p id={`swap-${row.registrationId}`} className="mb-2 max-w-sm text-xs leading-5">{queueCopy.swap}</p> : null}
+                  {row.status === "offered" ? <p id={`swap-${row.registrationId}`} className="mb-2 max-w-sm text-xs leading-5">{queueCopy.swap}{row.replacementTitles?.length ? <span className="mt-1 block"><strong>{relayCopy.replaced}</strong> {row.replacementTitles.join("; ")}</span> : null}</p> : null}
+                  {relay && (operation === true || operation === "accept") && !blocked ? <label className="mb-3 flex max-w-sm items-start gap-2 text-xs font-semibold leading-5"><input type="checkbox" checked={!!relayConsents[childKey]} onChange={e => setRelayConsents(old => ({...old,[childKey]:e.target.checked}))} className="mt-1 size-5 shrink-0" />{relayCopy.consent}</label> : null}
                   <button type="button" className={`${booked ? "btn-secondary" : "btn-primary"} ${buttonClass} whitespace-nowrap`}
                     aria-label={`${action}: ${row.name}`}
                     aria-describedby={blocked ? `reason-${row.registrationId}` : row.status === "offered" ? `swap-${row.registrationId}` : undefined}
-                    disabled={pending || blocked || expired || !!availabilityError} onClick={() => submit(row.registrationId, operation, queued ? row.waitlistSectionId : null)}>
+                    disabled={pending || blocked || expired || !!availabilityError || (!!relay && (operation === true || operation === "accept") && !relayConsents[childKey])} onClick={() => submit(row.registrationId, operation, queued ? row.waitlistSectionId : null)}>
                     {booked ? <UserMinus size={16} aria-hidden="true" /> : <UserPlus size={16} aria-hidden="true" />}
                     {pending && activeId === row.registrationId ? copy.pending : action}
                   </button>
-                  {row.status === "offered" ? <button type="button" className={`btn-secondary mt-2 sm:ml-2 ${buttonClass}`} disabled={pending || !!availabilityError} onClick={() => submit(row.registrationId, "leave", row.waitlistSectionId)} aria-label={`${queueCopy.leave}: ${row.name}`}>{queueCopy.leave}</button> : null}
+                  {row.status === "offered" ? <button type="button" className={`btn-secondary mt-2 sm:ml-2 ${buttonClass}`} disabled={pending || !!availabilityError} onClick={() => submit(row.registrationId, "leave", row.waitlistSectionId)} aria-label={`${queueCopy.leave}: ${row.name}`}>{relay ? relayCopy.decline : queueCopy.leave}</button> : null}
                   {feedback ? <p role={"error" in feedback.response ? "alert" : "status"} className={`mt-2 max-w-xs text-xs ${"error" in feedback.response ? "text-red-800" : "text-green-800"}`}>
                     {"error" in feedback.response ? copy[feedback.response.error] : ""}
                     {"error" in feedback.response && feedback.response.error === "attendance" ? <Link prefetch={false} className="mt-2 block font-semibold underline" href={`/dashboard/capogruppo?q=${encodeURIComponent(row.name)}`}>{FORUM_ATTENDANCE_COPY[locale].edit}</Link> : null}

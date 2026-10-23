@@ -1,3 +1,4 @@
+import { FORUM_RELAY_COPY } from "@/lib/panels/relay-copy";
 import { formatSeatCount } from "@/lib/panels/seat-count";
 import { ForumLanguages } from "@/components/forum-languages";
 import { ArrowUp, CalendarDays, CheckCircle2, Clock3, LockKeyhole, MapPin, XCircle } from "lucide-react";
@@ -29,6 +30,7 @@ type PublicPanelProgramProps = {
 };
 
 const availabilityStyles: Record<PublicPanelAvailability, string> = {
+  priority: "border-amber-300 bg-amber-50 text-amber-950",
   available: "border-emerald-200 bg-emerald-50 text-emerald-800",
   full: "border-red-200 bg-red-50 text-red-800",
   unavailable: "border-slate-200 bg-slate-100 text-slate-700",
@@ -99,7 +101,7 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${availabilityStyles[panel.availability]}`}>
                               <AvailabilityIcon availability={panel.availability} />
                               <span className="flex flex-col items-start">
-                                <span>{copy.availability[panel.availability]}</span>
+                                <span>{panel.availability === "priority" ? FORUM_RELAY_COPY[locale].priority : copy.availability[panel.availability]}</span>
                                 {panel.availability !== "full" && typeof panel.remainingSeats === "number" && panel.remainingSeats > 0 && Number.isFinite(panel.remainingSeats) ? (
                                   <span className="text-[10px] font-normal leading-4">
                                     {formatSeatCount(panel.remainingSeats, locale)}
@@ -127,10 +129,10 @@ export function PublicPanelProgram({ locale, panels, copy, bookingsOpen = true, 
                             </span>
                           </address>
                           {showAccessCta && panel.availability !== "unavailable" ? <div className="mt-5 border-t border-[var(--peace-border)] pt-5">
-                            <a className="btn-primary flex min-h-12 w-full items-center justify-center px-4 text-center" aria-label={`${panel.availability === "full" ? queueCopy.join : programCopy.bookForum}: ${panel.title}`}
+                            <a className="btn-primary flex min-h-12 w-full items-center justify-center px-4 text-center" aria-label={`${panel.availability === "priority" ? FORUM_RELAY_COPY[locale].access : panel.availability === "full" ? queueCopy.join : programCopy.bookForum}: ${panel.title}`}
                               href={authenticated && !preview ? forumBookingPath(panel.id) : preview ? `?forum=${encodeURIComponent(panel.id)}#forum-access-form` : `/forum/${encodeURIComponent(panel.id)}`}
                               onClick={onSelectPanel && (!authenticated || preview) ? event => { event.preventDefault(); onSelectPanel(panel.id); } : undefined}>
-                              {panel.availability === "full" ? queueCopy.join : programCopy.bookForum}
+                              {panel.availability === "priority" ? FORUM_RELAY_COPY[locale].access : panel.availability === "full" ? queueCopy.join : programCopy.bookForum}
                             </a>
                           </div> : null}
                           {panel.availability === "full" ? <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">

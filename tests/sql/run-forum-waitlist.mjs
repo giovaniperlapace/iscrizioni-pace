@@ -45,7 +45,12 @@ try {
     end $$;rollback;`);
    console.log('PASS migration backfill preserves exact existing bookings, waiting requests, selected minors and every section occupancy');
   }
+  const catalogMetadata = () => psql(`select jsonb_build_object('owner',proowner,'comment',obj_description(oid,'pg_proc'),'acl',
+   (select jsonb_agg(x order by x::text) from (select to_jsonb(a) x from aclexplode(coalesce(proacl,acldefault('f',proowner))) a) acl))
+   from pg_proc where oid='public.get_participant_panel_catalog(uuid)'::regprocedure;`,true).trim();
+  const beforeRelay = name==='20261023100000_forum_relay_rooms.sql' ? catalogMetadata() : null;
   try {file(join('supabase/migrations',name));}catch(e){throw new Error(`Migration ${name}: ${e.stderr}`);}
+  if(beforeRelay!==null) {assert.equal(catalogMetadata(),beforeRelay);console.log('PASS relay migration preserves participant catalog owner, comment and effective ACL');}
  }
  console.log('PASS canonical migrations and Forum queue applied to disposable PostgreSQL');
  try { console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
@@ -86,6 +91,8 @@ try {
  try { console.log(file('tests/sql/forum-unpublication.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n')); } catch(e) {throw new Error(e.stderr);}
  if(process.argv.includes('--unpublish-browser')) { const {checkForumUnpublication}=await import('../browser/forum-unpublication.mjs');await checkForumUnpublication(psql); }
  const {checkGroupWaitlistConcurrency}=await import('./group-panel-waitlist-concurrency.mjs');await checkGroupWaitlistConcurrency(psql,concurrent);
+ console.log(file('tests/sql/forum-relay-rooms.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
+ if(process.argv.includes('--relay-browser')) {const {checkRelayServerActions}=await import('../browser/forum-relay-rooms.mjs');await checkRelayServerActions(psql,concurrent);}
 } finally {
  if(started)execFileSync(join(bin,'pg_ctl'),['-D',join(dir,'data'),'-m','immediate','-w','stop'],{stdio:'pipe'});
  rmSync(dir,{recursive:true,force:true});

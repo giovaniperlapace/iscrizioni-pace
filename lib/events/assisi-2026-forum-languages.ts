@@ -1,3 +1,4 @@
+import { getForumRelayRoom } from "./assisi-2026-relay-rooms.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
 
 // Assisi 2026, printed programme received 20 October 2026, pages 6–52.
@@ -36,6 +37,7 @@ const labels: Record<SupportedLocale, string> = {
 };
 
 export function getForumLanguagesLabel(panelId: string, locale: SupportedLocale): string | null {
+  if (getForumRelayRoom(panelId)) return `${labels[locale]}: ${new Intl.DisplayNames([locale], { type: "language" }).of("it")}`;
   if (!Object.hasOwn(languagesByPanel, panelId)) return null;
   const names = new Intl.DisplayNames([locale], { type: "language" });
   return `${labels[locale]}: ${languagesByPanel[panelId].map(code => names.of(code) ?? code).join(", ")}`;

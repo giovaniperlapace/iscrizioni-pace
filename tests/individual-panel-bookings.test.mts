@@ -60,7 +60,7 @@ test("participant UI uses the atomic RPC and never resubmits panel choices as hi
   assert.match(dashboard, /generalMomentChoices/);
   assert.match(component, /action=\{setParticipantPanelBooking\}/);
   assert.match(component, /copy\.liveAvailability/);
-  assert.match(component, /disabled=\{disabled\}/);
+  assert.match(component, /disabled=\{disabled(?:\s*\|\||\})/);
   assert.match(component, /it: \{/);
   assert.match(component, /en: \{/);
   assert.match(component, /fr: \{/);

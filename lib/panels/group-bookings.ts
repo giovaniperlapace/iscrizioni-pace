@@ -1,14 +1,14 @@
 import type { ForumChildOption } from "./child-selection.ts";
 export type GroupPanel = {
   panelId: string; sectionId: string; title: string; audience: string;
-  startsAt: string; endsAt: string; location: string; remaining: number;
+  startsAt: string; endsAt: string; location: string; remaining: number; relayPriority?: boolean;
 };
 export type GroupPanelParticipant = {
   registrationId: string; name: string; code: string | null; groupId: string; groupName: string;
   children?: ForumChildOption[]; hasWaiting?: boolean; hasConflict?: boolean;
-  seats: number; status: "available" | "selected" | "conflict" | "full" | "queued" | "offered";
+  seats: number; status: "available" | "selected" | "conflict" | "full" | "queued" | "offered" | "priority";
   waitlistSectionId?: string | null; waitlistAudience?: string | null;
-  queuePosition?: number | null; offerExpiresAt?: string | null;
+  replacementTitles?: string[]; queuePosition?: number | null; offerExpiresAt?: string | null;
 };
 export type GroupPanelView = { panels: GroupPanel[]; participants: GroupPanelParticipant[] };
 export type GroupWaitlistIntent = "join" | "leave" | "accept";

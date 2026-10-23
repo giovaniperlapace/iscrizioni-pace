@@ -5,7 +5,7 @@ import type { SupportedLocale } from "@/lib/i18n/config";
 
 export const PANEL_PROGRAM_TIME_ZONE = "Europe/Rome";
 
-export type PublicPanelAvailability = "available" | "full" | "unavailable";
+export type PublicPanelAvailability = "available" | "full" | "unavailable" | "priority";
 
 export type PublicPanelProgramItem = {
   id: string;
