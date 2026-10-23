@@ -57,6 +57,7 @@ export function CampaignHistory() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingCampaignId, setLoadingCampaignId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
   const [rowPage, setRowPage] = useState(1);
@@ -65,7 +66,13 @@ export function CampaignHistory() {
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState("");
   const generation = useRef(0);
-  const detail = useRef<HTMLDivElement>(null);
+  const detail = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!report) return;
+    // Wait for React to mount the report before moving focus and the viewport.
+    detail.current?.focus({ preventScroll: true });
+    detail.current?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [report]);
   useEffect(() => {
     const controller = new AbortController();
     fetch(`/api/email-campaigns/reports?page=${page}`, {
@@ -86,6 +93,7 @@ export function CampaignHistory() {
   async function open(id: string) {
     const gen = ++generation.current;
     setLoading(true);
+    setLoadingCampaignId(id);
     setError("");
     setReport(null);
     setSelected([]);
@@ -99,13 +107,15 @@ export function CampaignHistory() {
       if (!r.ok) throw Error(d.error);
       if (gen === generation.current) {
         setReport(d);
-        setTimeout(() => detail.current?.focus(), 0);
       }
     } catch (e) {
       if (gen === generation.current)
         setError(e instanceof Error ? e.message : "Report non disponibile.");
     } finally {
-      if (gen === generation.current) setLoading(false);
+      if (gen === generation.current) {
+        setLoading(false);
+        setLoadingCampaignId(null);
+      }
     }
   }
   async function retry() {
@@ -195,11 +205,13 @@ export function CampaignHistory() {
                 <td className="whitespace-nowrap pr-3">{date(c.date)}</td>
                 <td>
                   <button
+                    type="button"
                     className="btn-secondary"
                     disabled={sending || loading}
+                    aria-busy={loadingCampaignId === c.id}
                     onClick={() => open(c.id)}
                   >
-                    Dettagli
+                    {loadingCampaignId === c.id ? "Caricamento…" : "Dettagli"}
                   </button>
                 </td>
               </tr>
@@ -234,11 +246,9 @@ export function CampaignHistory() {
       )}
       {report && (
         <div
-          ref={detail}
-          tabIndex={-1}
           className="mt-6 border-t border-[var(--peace-border)] pt-5"
         >
-          <h4 className="font-bold">
+          <h4 ref={detail} tabIndex={-1} className="scroll-mt-24 font-bold">
             {report.campaign.name} · {date(report.campaign.date)}
           </h4>
           <div className="my-3 flex flex-wrap gap-2">
