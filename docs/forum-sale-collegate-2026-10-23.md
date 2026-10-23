@@ -166,3 +166,54 @@ e `.txt`; seconda sede in `email-sala-collegata-serafico.html` e `.txt`
 
 La nuova conferma del 23 ottobre autorizza tutti i passaggi sopra, incluso
 l’avvio delle notifiche; nessun invio reale viene usato per il collaudo.
+
+
+## Esito del rilascio — 23 ottobre, 20:29 Europe/Rome
+
+- Integrati prima del rilascio i quattro commit production fino a `91059bb`,
+  conservando le modifiche cerimonie, scuole e consultazione Viewer. Risolto
+  soltanto il conflitto editoriale in AGENTS, mantenendo entrambe le sezioni.
+- Codice `430ea5bd17417d17831d0e552d2e1ee5667c4be7` su main; deployment
+  `dpl_41zfkYfUg4Dxsp9to2BLqZAM9zST` **READY**, alias production
+  `https://registrationspeace.santegidio.org` verificato nelle API Vercel.
+- Sul codice integrato: **1.085 test passati**, SQL/concorrenza passati,
+  build e TypeScript in copia isolata da `npm ci` passati. Il primo tentativo
+  di build isolata con node_modules simbolico è stato respinto da Turbopack;
+  ripetuta con installazione propria, senza modifiche ai sorgenti.
+- Backup completo remoto protetto (600), indice e decodifica integrale verificati:
+  `/root/backups/iscrizioni-pace-relay-20261023/before-relay-181957.dump`,
+  20.910.899 byte, SHA256
+  `8ee5c983675bb3a78ffb3131b4c253c51960591cef3a9a2e54c259b775090ad1`.
+- Applicate e registrate atomicamente tutte le migration `20261023100000`,
+  `20261023101000`, `20261023102000`. La prima è stata eseguita con confronto
+  nella stessa transazione: **70 tabelle, 211.458 righe preesistenti intatte**,
+  proprietari/ACL/metadati delle 229 funzioni preesistenti conservati;
+  modificati soltanto i sei corpi previsti. La migration programma ha conservato
+  tutte le righe preesistenti anche nelle tabelle destinataria delle aggiunte:
+  71 tabelle / 211.489 righe, metadati di 234 funzioni invariati.
+- Sei panel pubblici, capienza complessiva 798, due sedi con indirizzi corretti.
+  **107 offerte ancora valide** estese a due ore dal termine iniziale,
+  senza reinvio o riapertura di offerte scadute, con audit delle estensioni.
+- Attivazione esplicita completata: **269 inviti**, per 270 posti richiesti
+  compreso un minore. Confronto atomico: 1.530 righe originali di coda,
+  5.625 scelte di prenotazione e 6.359 selezioni minori preesistenti conservate.
+  Inviti: Forum 1 = 65, 3 = 22, 9 = 133, 10 = 22, 18 = 27, 19 = 0.
+  Forum 19 aperto direttamente, non avendo coda iniziale.
+- Avviato il worker canonico con configurazione production e Postmark Live,
+  stream transactional `outbound`, mittente `registrationspeace@santegidio.org`.
+  Esecuzione concorrente col cron già esistente, claim/idempotenza conservati.
+  Nessun invio manuale fuori coda e nessun reinvio degli esiti incerti.
+- **155 email accettate dall’API**, zero invii falliti o incerti, zero claim
+  pendenti. Verifica individuale Postmark delle 155: **154 Delivered**, una
+  ancora senza evento di consegna, zero bounce rilevati. Oggetto con avviso
+  della lingua e indirizzo verificati nei contenuti di tutte le 155 email.
+  Delivered indica consegna al server destinatario, non lettura.
+- **114 inviti ancora waiting**, perché la testa FIFO delle rispettive code
+  ha un’offerta principale valida: Forum 1 = 65, Forum 3 = 22, Forum 18 = 27.
+  Al controllo le scadenze principali erano 21:39, 21:42 e 21:40 Europe/Rome;
+  risposte/scadenze consentono lo scorrimento automatico successivo. Nessuna
+  forzatura della coda o del diritto a rispondere all’offerta principale.
+- Zero notifiche relay a residenze estere/non riconosciute al controllo.
+  Nessuna prenotazione, presenza o email reale usata come collaudo.
+  Il file locale estraneo `docs/forum-presenze-un-clic-2026-10-21 2.md` è
+  stato conservato e non incluso nei commit.

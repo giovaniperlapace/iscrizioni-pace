@@ -1,6 +1,6 @@
 # AGENTS.md
 
-## Sale collegate Forum — rilascio autorizzato — 2026-10-23
+## Sale collegate Forum — in produzione e invii avviati — 2026-10-23
 
 - Sei panel collegati ai Forum 1/9/19 (Domus Letitiae, 156 posti) e 3/10/18
   (Serafico, 110 posti): 798 disponibilità complessive.
@@ -15,12 +15,17 @@
   minori/destinatario conservati; accettazione mantiene la coda principale,
   successivo passaggio libera il posto collegato. Apertura dei residui dopo
   risoluzione delle offerte; guardie database anche sui percorsi operativi.
-- Migration locali `20261023100000`, `20261023101000`, `20261023102000`
+- Migration applicate `20261023100000`, `20261023101000`, `20261023102000`
   (estende anche offerte ancora valide senza riapertura/reinvio); attivazione service-only
   separata. Dopo la sospensione iniziale, l’utente ha esplicitamente autorizzato
   pubblicazione, migration production e avvio delle email il 23 ottobre.
-  Eseguire backup e controlli di compatibilità prima dell’attivazione.
-- Verifiche e procedura futura: `docs/forum-sale-collegate-2026-10-23.md`.
+  Backup verificato; 70 tabelle/211.458 righe e ACL conservati nell’infrastruttura.
+- Codice `430ea5b` production READY dopo integrazione degli aggiornamenti main.
+  1.085 test, SQL/concorrenza, TypeScript e build isolata passati. 269 inviti
+  attivati, 155 email accettate (154 consegnate al server, una in attesa al
+  controllo), zero fallimenti/incerti. 114 inviti attendono lo scorrimento FIFO
+  per offerte principali ancora valide; cron esistente continua automaticamente.
+- Verifiche e verbale: `docs/forum-sale-collegate-2026-10-23.md`.
 
 
 ## Cerimonie: pop-up conferma revoca — 2026-10-23
