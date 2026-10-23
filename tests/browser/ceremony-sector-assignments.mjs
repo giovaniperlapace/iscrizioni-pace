@@ -32,11 +32,11 @@ try{
   assert.doesNotMatch(await page.locator('main').innerText(),/\b(?:Blocco \d|Fila \d|Sedia \d|B[56])\b/);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'map has no page overflow');
   await page.getByRole('button',{name:/^Settore A ·/}).click();
-  const modal=page.getByRole('dialog');await modal.getByLabel('Cerca tra tutti i partecipanti').waitFor();
+  const modal=page.getByRole('dialog',{name:/^Settore /});await modal.getByLabel('Cerca tra tutti i partecipanti').waitFor();
   await page.waitForFunction(()=>document.querySelector('[role="status"]')?.textContent!=='Caricamento persone…');
   await modal.getByText('Presenza confermata',{exact:true}).first().waitFor();await modal.getByText('Assenza dichiarata',{exact:true}).first().waitFor();await modal.getByText('Presenza da comunicare',{exact:true}).first().waitFor();
   assert.ok(await modal.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'modal has no overflow');
-  await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog').count(),0);
+  await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:/^Settore /}).count(),0);
  }
  await page.setViewportSize({width:1440,height:1100});
  await page.getByRole('button',{name:'Simula revoca persa'}).click();
@@ -45,7 +45,7 @@ try{
  query("select pair_test('revoke',null,null,null,(select id from ceremony_nominees where child_id=f(40) and revoked_at is null));");
  const family=query("select jsonb_build_object('name',p.first_name||' '||p.last_name,'children',(select jsonb_agg(first_name||' '||last_name) from registration_children where registration_id=f(10))) from participants p join registrations r on r.participant_id=p.id where r.id=f(10);");
  await page.getByRole('button',{name:/^Settore C ·/}).click();
- let familyModal=page.getByRole('dialog');await familyModal.getByLabel('Cerca tra tutti i partecipanti').fill(family.name);await familyModal.getByRole('button',{name:'Cerca',exact:true}).click();
+ let familyModal=page.getByRole('dialog',{name:/^Settore /});await familyModal.getByLabel('Cerca tra tutti i partecipanti').fill(family.name);await familyModal.getByRole('button',{name:'Cerca',exact:true}).click();
  await familyModal.getByLabel('Seleziona '+family.name,{exact:true}).check();
  await familyModal.getByText(/1 \+ 2 posti \(3 in totale\)/).waitFor();
  assert.equal(await familyModal.getByRole('button',{name:'Verifica e assegna'}).count(),0);
@@ -60,13 +60,13 @@ try{
  // Revocations are individual, preserve siblings, and can be replayed after an uncertain response.
  for(const name of [family.name,...family.children]){
   await familyModal.getByRole('button',{name:'Revoca '+name,exact:true}).click();
-  await familyModal.getByRole('button',{name:'Conferma revoca',exact:true}).click();
-  if(name===family.name)await familyModal.getByRole('button',{name:'Riprova la stessa revoca'}).click();
+  await page.getByRole('dialog',{name:/^Revocare /}).getByRole('button',{name:'Conferma revoca',exact:true}).click();
+  if(name===family.name)await page.getByRole('dialog',{name:/^Revocare /}).getByRole('button',{name:'Riprova la stessa revoca'}).click();
   await familyModal.getByText('Assegnazione revocata.',{exact:true}).waitFor();
   await familyModal.getByRole('button',{name:'Aggiorna',exact:true}).waitFor({state:'visible'});
  }
  await familyModal.getByRole('button',{name:'Chiudi',exact:true}).click();
- await page.getByRole('button',{name:/^Settore C ·/}).click();familyModal=page.getByRole('dialog');
+ await page.getByRole('button',{name:/^Settore C ·/}).click();familyModal=page.getByRole('dialog',{name:/^Settore /});
  assert.equal(await familyModal.getByLabel('Cerca tra tutti i partecipanti').inputValue(),'');
  assert.equal(await familyModal.getByRole('region',{name:'Riepilogo persona'}).count(),0);
  await familyModal.getByRole('button',{name:'Chiudi',exact:true}).click();
@@ -76,29 +76,58 @@ try{
  await page.route('**/dashboard/ceremonies/sectors?**search=Member+099**',async route=>{
   const response=await route.fetch({url:route.request().url().replace('/dashboard/ceremonies/sectors','/ceremony-sector-check/read')});startedSearch();await gate;await route.fulfill({response});
  });
- await page.getByRole('button',{name:/^Settore C ·/}).click();familyModal=page.getByRole('dialog');
+ await page.getByRole('button',{name:/^Settore C ·/}).click();familyModal=page.getByRole('dialog',{name:/^Settore /});
  await familyModal.getByLabel('Cerca tra tutti i partecipanti').fill('Member 099');await familyModal.getByRole('button',{name:'Cerca',exact:true}).click();await started;
  await familyModal.getByRole('button',{name:'Chiudi',exact:true}).click();
- await page.getByRole('button',{name:/^Settore D ·/}).click();familyModal=page.getByRole('dialog');
+ await page.getByRole('button',{name:/^Settore D ·/}).click();familyModal=page.getByRole('dialog',{name:/^Settore /});
  await familyModal.getByText('Presenza confermata',{exact:true}).first().waitFor();
  const lateResponse=page.waitForResponse(r=>r.url().includes('search=Member+099'));releaseSearch();await lateResponse;
  assert.equal(await familyModal.getByLabel('Cerca tra tutti i partecipanti').inputValue(),'');
  await familyModal.getByText('Presenza confermata',{exact:true}).first().waitFor();
  await familyModal.getByRole('button',{name:'Chiudi',exact:true}).click();
  await page.setViewportSize({width:1440,height:1100});
- async function reserve(sector,quantity,lose=false){if(lose)await page.getByRole('button',{name:'Simula risposta persa'}).click();await page.getByRole('button',{name:new RegExp('^Settore '+sector+' ·')}).click();const modal=page.getByRole('dialog');await modal.getByLabel('Modalità di assegnazione').selectOption('group');await modal.getByLabel('Gruppo',{exact:true}).selectOption({label:'Gruppo cento'});await modal.getByLabel('Quantità di posti').fill(String(quantity));await modal.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();if(lose){await modal.getByRole('button',{name:'Riprova la stessa assegnazione'}).click();}await modal.getByText('Assegnazione salvata.',{exact:true}).waitFor();await modal.getByRole('button',{name:'Chiudi',exact:true}).click();}
+ async function reserve(sector,quantity,lose=false){if(lose)await page.getByRole('button',{name:'Simula risposta persa'}).click();await page.getByRole('button',{name:new RegExp('^Settore '+sector+' ·')}).click();const modal=page.getByRole('dialog',{name:/^Settore /});await modal.getByLabel('Modalità di assegnazione').selectOption('group');await modal.getByLabel('Gruppo',{exact:true}).selectOption({label:'Gruppo cento'});await modal.getByLabel('Quantità di posti').fill(String(quantity));await modal.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();if(lose){await modal.getByRole('button',{name:'Riprova la stessa assegnazione'}).click();}await modal.getByText('Assegnazione salvata.',{exact:true}).waitFor();await modal.getByRole('button',{name:'Chiudi',exact:true}).click();}
  await reserve('A',20,true);await reserve('B',80);
+ await reserve('C',2);
+ await page.getByRole('button',{name:/^Settore C ·/}).click();
+ const sectorModal=page.getByRole('dialog',{name:'Settore C',exact:true});
+ for(const width of [1440,390]){
+  await page.setViewportSize({width,height:width===390?844:1100});
+  await sectorModal.getByRole('button',{name:'Revoca dotazione',exact:true}).click();
+  const popup=page.getByRole('dialog',{name:'Revocare Gruppo cento nel settore C?',exact:true});
+  await popup.waitFor();
+  const box=await popup.boundingBox();assert.ok(box && box.width<=448 && box.y>=0 && box.y+box.height<=(width===390?844:1100));
+  assert.ok(await popup.evaluate(el=>el.matches(':modal')));
+  await page.keyboard.press('Tab');
+  assert.ok(await popup.evaluate(el=>el.contains(document.activeElement)),'focus stays in revocation popup');
+  await page.screenshot({path:`/tmp/pace-sector-revoke-popup-${width}.png`});
+  await page.keyboard.press('Escape');
+  assert.ok(await popup.evaluate(el=>el.matches(':modal')),'Escape must not dismiss the revocation popup');
+  await popup.getByRole('button',{name:'Annulla',exact:true}).click();
+  assert.equal(await popup.count(),0);
+  await sectorModal.getByRole('button',{name:'Revoca dotazione',exact:true}).waitFor();
+  assert.ok(await sectorModal.evaluate(el=>el.matches(':modal')),'cancel keeps sector modal open');
+  assert.equal(query("select to_json(a.quantity) from ceremony_allocations a join ceremony_quotas q on q.id=a.quota_id join ceremony_sectors s on s.id=q.sector_id where a.group_id=f(7810) and s.name='C' and a.revoked_at is null;"),2);
+ }
+ await sectorModal.getByRole('button',{name:'Revoca dotazione',exact:true}).click();
+ await page.getByRole('dialog',{name:/^Revocare /}).getByRole('button',{name:'Conferma revoca',exact:true}).click();
+ await sectorModal.getByText('Assegnazione revocata.',{exact:true}).waitFor();
+ await sectorModal.getByText('Nessun posto assegnato a gruppi in questo settore.',{exact:true}).waitFor();
+ assert.ok(await sectorModal.evaluate(el=>el.matches(':modal')),'save keeps sector modal open');
+ await sectorModal.getByRole('button',{name:'Chiudi',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1100});
+
  assert.equal(query("select to_json(sum(quantity)) from ceremony_allocations where group_id=f(7810) and revoked_at is null;"),100);
- await page.getByRole('button',{name:/^Settore A ·/}).click();let modal=page.getByRole('dialog');await modal.getByLabel('Cerca tra tutti i partecipanti').fill('Member 001');await modal.getByRole('button',{name:'Cerca',exact:true}).click();await modal.getByLabel('Seleziona Synthetic Member 001',{exact:true}).check();await modal.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();await modal.getByText('Assegnazione salvata.',{exact:true}).waitFor();await modal.getByRole('button',{name:'Chiudi',exact:true}).click();
+ await page.getByRole('button',{name:/^Settore A ·/}).click();let modal=page.getByRole('dialog',{name:/^Settore /});await modal.getByLabel('Cerca tra tutti i partecipanti').fill('Member 001');await modal.getByRole('button',{name:'Cerca',exact:true}).click();await modal.getByLabel('Seleziona Synthetic Member 001',{exact:true}).check();await modal.getByRole('button',{name:'Conferma assegnazione',exact:true}).click();await modal.getByText('Assegnazione salvata.',{exact:true}).waitFor();await modal.getByRole('button',{name:'Chiudi',exact:true}).click();
  assert.equal(query("select to_json(sum(quantity)) from ceremony_allocations where group_id=f(7810) and revoked_at is null;"),100);
  // A nominal member does not consume or create a group allocation.
  assert.equal(query("select to_json(count(*)) from ceremony_nominees n join ceremony_allocations a on a.id=n.allocation_id where n.registration_id=f(81001) and n.revoked_at is null and a.group_id is null;"),1);
- await page.getByRole('button',{name:/^Settore A ·/}).click();modal=page.getByRole('dialog');
+ await page.getByRole('button',{name:/^Settore A ·/}).click();modal=page.getByRole('dialog',{name:/^Settore /});
  assert.equal(await modal.getByLabel('Cerca tra tutti i partecipanti').inputValue(),'');
  await modal.getByText('1 posto assegnato nominalmente',{exact:true}).click();
  await modal.getByRole('region',{name:'Assegnazioni del settore'}).scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/pace-ceremony-modal-assignments-desktop.png'});
  await modal.getByRole('button',{name:'Revoca Synthetic Member 001',exact:true}).click();
- await modal.getByRole('button',{name:'Conferma revoca',exact:true}).click();
+ await page.getByRole('dialog',{name:/^Revocare /}).getByRole('button',{name:'Conferma revoca',exact:true}).click();
  await modal.getByText('Assegnazione revocata.',{exact:true}).waitFor();
  await modal.getByRole('button',{name:'Chiudi',exact:true}).click();
  query("insert into event_attendance_choices(registration_id,day,day_part,choice) values(f(81100),'2026-10-25','afternoon','yes'),(f(81002),'2026-10-25','morning','yes');select '{}'::json;");

@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Cerimonie: pop-up conferma revoca — 2026-10-23
+
+- Conferma revoca in piccolo dialog sopra la modale del settore. Solo Annulla
+  chiude il pop-up senza salvare; Escape disabilitato. Conferma aggiorna i
+  conteggi e mantiene il settore aperto. Testi, retry e salvataggi conservati.
+- Browser desktop/mobile su dati sintetici verificato. Nessuna migration.
+  Commit e push autorizzati; dettagli nel verbale modale del 23 ottobre.
+
+
 ## Cerimonie capogruppo: ordine e scelta dei destinatari — 2026-10-23
 
 - Elenco/ricerca: prima presenza `yes` nel giorno e fascia canonici della

@@ -62,6 +62,8 @@ export function CeremonySectorWorkspace({
   const [historyVersion, setHistoryVersion] = useState(0);
   const [nominalOpen, setNominalOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const revokeDialog = useRef<HTMLDialogElement>(null);
+  const revokeTrigger = useRef<HTMLElement | null>(null);
   const sequence = useRef(0);
   const busy = useRef(false);
   const sector = desk.sectors.find((s) => s.id === sectorId);
@@ -92,6 +94,21 @@ export function CeremonySectorWorkspace({
   useEffect(() => {
     if (sectorId) dialog.current?.showModal();
   }, [sectorId]);
+  useEffect(() => {
+    if (revocation) {
+      if (!revokeDialog.current?.open) revokeDialog.current?.showModal();
+    } else if (revokeTrigger.current) {
+      const trigger = revokeTrigger.current;
+      revokeTrigger.current = null;
+      if (trigger.isConnected && !trigger.matches(":disabled"))
+        trigger.focus({ preventScroll: true });
+      else dialog.current?.focus({ preventScroll: true });
+    }
+  }, [revocation]);
+  function closeRevocation() {
+    revokeDialog.current?.close();
+    setRevocation(null);
+  }
   useEffect(
     () => () => {
       ++sequence.current;
@@ -211,6 +228,10 @@ export function CeremonySectorWorkspace({
     name: string,
     people: string[] = [],
   ) {
+    revokeTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     setStatus("");
     setRevocation({
       name,
@@ -242,7 +263,7 @@ export function CeremonySectorWorkspace({
         "Esito non verificabile. Riprova la stessa revoca per evitare duplicati.",
       );
     } else {
-      setRevocation(null);
+      closeRevocation();
       setStatus(
         result === "saved" ? "Assegnazione revocata." : SECTOR_MESSAGES[result],
       );
@@ -688,50 +709,63 @@ export function CeremonySectorWorkspace({
                 )}
               </>
             )}
-            {revocation && (
-              <div
-                className="space-y-3 rounded-lg border border-red-300 bg-red-50 p-4"
-                role="region"
-                aria-label="Conferma revoca"
-              >
-                <p className="font-semibold">
-                  Revocare {revocation.name} nel settore {sector.name}?
-                </p>
-                <p>
-                  {revocation.group
-                    ? "Verranno liberati tutti i posti della dotazione e revocate le persone abbinate elencate qui sotto."
-                    : "Il posto tornerà disponibile. Le altre assegnazioni della famiglia resteranno invariate."}
-                </p>
-                {revocation.people.length > 0 && (
-                  <ul className="max-h-48 overflow-y-auto list-disc pl-5">
-                    {revocation.people.map((name, i) => (
-                      <li key={i}>{name}</li>
-                    ))}
-                  </ul>
-                )}
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    className="btn-primary px-4 py-2"
-                    disabled={saving}
-                    onClick={() => void submitRevoke()}
-                  >
-                    {revocation.uncertain
-                      ? "Riprova la stessa revoca"
-                      : "Conferma revoca"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary px-4 py-2"
-                    disabled={locked}
-                    onClick={() => setRevocation(null)}
-                  >
-                    Annulla
-                  </button>
-                </div>
-              </div>
-            )}
           </section>
+          {revocation && (
+            <dialog
+              ref={revokeDialog}
+              aria-labelledby="sector-revoke-title"
+              aria-describedby="sector-revoke-description"
+              onCancel={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              className="fixed inset-0 m-auto max-h-[80dvh] w-[min(28rem,calc(100%-2rem))] space-y-4 overflow-y-auto rounded-2xl border border-[var(--peace-border)] bg-white p-5 text-[var(--peace-ink)] shadow-2xl backdrop:bg-black/40"
+            >
+              <h3
+                id="sector-revoke-title"
+                className="text-lg font-semibold text-[var(--peace-blue-900)]"
+              >
+                Revocare {revocation.name} nel settore {sector.name}?
+              </h3>
+              <p id="sector-revoke-description" className="text-sm leading-6">
+                {revocation.group
+                  ? "Verranno liberati tutti i posti della dotazione e revocate le persone abbinate elencate qui sotto."
+                  : "Il posto tornerà disponibile. Le altre assegnazioni della famiglia resteranno invariate."}
+              </p>
+              {revocation.people.length > 0 && (
+                <ul className="max-h-48 overflow-y-auto list-disc pl-5">
+                  {revocation.people.map((name, i) => (
+                    <li key={i}>{name}</li>
+                  ))}
+                </ul>
+              )}
+              {revocation.uncertain && (
+                <p role="alert" className="text-sm text-[var(--peace-danger)]">
+                  {status}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="btn-primary px-4 py-2"
+                  disabled={saving}
+                  onClick={() => void submitRevoke()}
+                >
+                  {revocation.uncertain
+                    ? "Riprova la stessa revoca"
+                    : "Conferma revoca"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary px-4 py-2"
+                  disabled={locked}
+                  onClick={closeRevocation}
+                >
+                  Annulla
+                </button>
+              </div>
+            </dialog>
+          )}
         </dialog>
       )}
     </div>

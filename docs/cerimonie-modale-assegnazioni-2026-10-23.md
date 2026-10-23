@@ -93,3 +93,21 @@ sola posizione testuale interna del default `false`: confronto normalizzato
 con `pg_get_expr`, verificato nuovamente in locale prima dell’applicazione.
 Nessuna assegnazione, revoca, presenza, stampa o email reale di prova.
 Le modifiche separate agli incarichi Accoglienza non fanno parte del rilascio.
+
+## Conferma revoca in pop-up
+
+Su richiesta successiva, la conferma della revoca compare in un piccolo dialog
+modale centrato sopra quello del settore. Testo, persone coinvolte e regole di
+revoca conservati. Solo «Annulla» chiude il pop-up senza salvare; Escape è
+disabilitato su richiesta. Dopo il salvataggio
+resta aperto il settore e vengono riletti i conteggi. Il focus torna nella modale
+sottostante, senza tornare alla piantina. In caso di risposta incerta, messaggio e
+retry restano nel pop-up e conservano la stessa richiesta.
+
+Verificato sul componente originale con PostgreSQL temporaneo, desktop 1440px
+e telefono 390px: pop-up visibile nel viewport, focus contenuto, annullamento,
+Escape ignorato e conferma con modale settore ancora aperta; nessuna revoca su dati reali.
+Controlli applicativi, TypeScript e build isolata eseguiti; il lint generale
+mantiene i problemi preesistenti del test `ceremony-navigation.test.mts`.
+Nessuna migration. Commit e push su `main` autorizzati dall’utente, con rilascio
+automatico tramite l’integrazione Git di Vercel.
