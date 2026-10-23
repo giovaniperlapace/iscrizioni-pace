@@ -2,10 +2,17 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { campaignTextToHtml, renderCampaignTemplate, validateCampaignTemplate } from "../lib/email/campaign-templates.ts";
-import { campaignHtmlToText, renderSafeCampaignHtml } from "../lib/email/campaign-html.server.ts";
+import { campaignHtmlToText, renderSafeCampaignHtml, renderSavedCampaignHtml } from "../lib/email/campaign-html.server.ts";
 import { publicCampaignError } from "../lib/email/public-errors.ts";
 
 const person = { firstName: "Ada", lastName: "Lovelace", participantCode: "P-1", groupName: "Roma", eventTitle: "Pace" };
+
+test("saved campaign preview preserves historical tokens and strips active content", () => {
+  const html = renderSavedCampaignHtml('<p onclick="bad()">Ciao {{ nome }} <strong>{{settore_inaugurazione}}</strong></p><script>alert(1)</script><img src="https://example.invalid/tracking"><a href="javascript:bad()">Link</a>');
+  assert.match(html, /Ciao \{\{ nome \}\} <strong>\{\{settore_inaugurazione\}\}<\/strong>/);
+  assert.doesNotMatch(html, /onclick|script|alert|img|tracking|javascript/);
+  assert.equal(renderSavedCampaignHtml("Ciao {{nome}}\nA & B\n\nGrazie"), "<p>Ciao {{nome}}<br />A &amp; B</p><p>Grazie</p>");
+});
 
 test("campaign templates render supported participant fields", () => {
   assert.equal(renderCampaignTemplate("Ciao {{ nome }} — {{evento}}", person), "Ciao Ada — Pace");

@@ -14,6 +14,17 @@ export function renderSafeCampaignHtml(
     ? renderCampaignHtmlTemplate(template, data)
     : campaignTextToHtml(renderCampaignHtmlTemplate(template, data));
 
+  return sanitizeCampaignHtml(source);
+}
+
+// Historical previews preserve tokens instead of resolving them with current data.
+export function renderSavedCampaignHtml(template: string): string {
+  return sanitizeCampaignHtml(
+    /<\/?[a-z][\s\S]*>/i.test(template) ? template : campaignTextToHtml(template),
+  );
+}
+
+function sanitizeCampaignHtml(source: string): string {
   return sanitizeHtml(source, {
     allowedTags: [
       "a",

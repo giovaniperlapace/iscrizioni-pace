@@ -18,6 +18,7 @@ import {
   type DeliveryEvent,
 } from "./campaign-report";
 import { readSuppressedAddresses } from "./postmark-reporting";
+import { renderSavedCampaignHtml } from "./campaign-html.server";
 export async function reportAccess() {
   const auth = await getCurrentAuthContext(
     await createSupabaseServerClient(),
@@ -203,6 +204,8 @@ export async function campaignReport(
       date: campaign.sent_at,
       status: campaign.status,
       parent: campaign.retry_of_campaign_id,
+      subject: campaign.subject_template,
+      bodyHtml: renderSavedCampaignHtml(campaign.body_template),
     },
     counts,
     recipients,

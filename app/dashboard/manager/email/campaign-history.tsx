@@ -22,7 +22,7 @@ type Recipient = {
   retryCampaignId: string | null;
 };
 type Report = {
-  campaign: { id: string; name: string; date: string; parent: string | null };
+  campaign: { id: string; name: string; date: string; parent: string | null; subject: string; bodyHtml: string };
   counts: Record<string, number>;
   recipients: Recipient[];
 };
@@ -55,6 +55,7 @@ export function CampaignHistory() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [report, setReport] = useState<Report | null>(null);
+  const [showEmail, setShowEmail] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingCampaignId, setLoadingCampaignId] = useState<string | null>(null);
@@ -96,6 +97,7 @@ export function CampaignHistory() {
     setLoadingCampaignId(id);
     setError("");
     setReport(null);
+    setShowEmail(false);
     setSelected([]);
     setConfirm(false);
     setRowPage(1);
@@ -260,6 +262,15 @@ export function CampaignHistory() {
           </div>
           <div className="flex flex-wrap gap-3">
             <button
+              type="button"
+              className="btn-secondary"
+              aria-expanded={showEmail}
+              aria-controls="campaign-saved-email"
+              onClick={() => setShowEmail((value) => !value)}
+            >
+              {showEmail ? "Nascondi email" : "Visualizza email"}
+            </button>
+            <button
               className="btn-secondary"
               disabled={sending}
               onClick={() => open(report.campaign.id)}
@@ -282,6 +293,17 @@ export function CampaignHistory() {
               </button>
             )}
           </div>
+          {showEmail && (
+            <section id="campaign-saved-email" aria-label="Testo dell’email" className="my-4 min-w-0 rounded-xl border border-[var(--peace-border)] bg-white p-4 sm:p-5">
+              <h5 className="font-bold">Oggetto</h5>
+              <p className="mt-1 whitespace-pre-wrap break-words">{report.campaign.subject}</p>
+              <h5 className="mt-4 font-bold">Messaggio</h5>
+              <div className="mt-2 break-words text-sm [&_p]:my-2 [&_h2]:text-xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_pre]:whitespace-pre-wrap [&_a]:underline" dangerouslySetInnerHTML={{ __html: report.campaign.bodyHtml }} />
+              <p className="mt-4 text-sm text-[var(--peace-muted)]">
+                Contenuto salvato della campagna. Gli eventuali campi tra doppie parentesi graffe sono mostrati come segnaposto, senza ricostruire i valori personali ricevuti da ciascun destinatario.
+              </p>
+            </section>
+          )}
           <p className="my-3 text-sm">
             Per lo storico senza indirizzo salvato viene indicato il contatto
             attuale, che potrebbe essere cambiato. I destinatari esclusi non

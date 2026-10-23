@@ -88,3 +88,16 @@ storico reale**, già verificato, restituiscono 200 e conservano un solo evento
 Revisione visiva autenticata come Manager su dati reali non effettuata.
 
 **Nessuna email inviata o reinviata, nessuna disiscrizione rimossa.**
+
+## Anteprima del contenuto salvato — 24 ottobre 2026
+
+Nei dettagli della campagna, «Visualizza email» apre oggetto e messaggio;
+«Nascondi email» richiude il riquadro. Il cambio o aggiornamento della campagna
+azzera l'apertura. Si leggono subject_template e body_template della campagna
+con le autorizzazioni esistenti, senza ricostruire dati personali correnti.
+I segnaposto restano visibili e una nota distingue il modello dalla copia
+ricevuta dal singolo destinatario. HTML filtrato con la stessa allowlist degli
+invii; testo semplice convertito mantenendo gli a capo. Nessuna migration.
+Verificati apertura/chiusura nel browser con dati sintetici e 19 test mirati,
+inclusi conservazione dei token e rimozione di script, tracking e link attivi
+non consentiti. Nessuna email inviata durante la verifica.
