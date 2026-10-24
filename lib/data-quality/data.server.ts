@@ -79,18 +79,21 @@ type Registration = {
 export async function loadQualityPeople(
   db: SupabaseClient,
   eventId: string,
+  registrationIds?: string[],
 ): Promise<QualityPerson[]> {
+  if (registrationIds?.length === 0) return [];
   const registrations = (
-    await loadAllRows((from, to) =>
-      db
+    await loadAllRows((from, to) => {
+      const query = db
         .from("registrations")
         .select(
           "id,event_id,participant_id,status,submitted_at,deleted_at,participants(first_name,last_name,birth_date,country_other,city_other,public_code,auth_user_id,countries!participants_country_id_fkey(name_it),cities!participants_city_id_fkey(name)),registration_children(id,first_name,last_name,birth_date,position)",
         )
         .eq("event_id", eventId)
         .order("id")
-        .range(from, to),
-    )
+        .range(from, to);
+      return registrationIds ? query.in("id", registrationIds) : query;
+    })
   ).data as unknown as Registration[];
   const ids = registrations.map((row) => row.id),
     pids = registrations.map((row) => row.participant_id);

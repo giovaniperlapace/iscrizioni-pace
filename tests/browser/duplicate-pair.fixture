@@ -1,0 +1,8 @@
+import { Suspense } from "react";
+import { OperationsDuplicatesTable } from "@/app/dashboard/operations-duplicates-table";
+import { DuplicateReviewLoader } from "@/app/dashboard/participants/data-quality/review-loader";
+import type { QualityPerson } from "@/lib/data-quality/data.server";
+export default function Page() {
+ const people = [1,2,3].map(i => ({ id: `00000000-0000-0000-0000-00000000000${i}`, registrationId: `00000000-0000-0000-0000-00000000000${i}`, participantId: `p${i}`, name: `Persona ${i}`, firstName: 'Persona', lastName: String(i), publicCode: `TEST-${i}`, email: `persona${i}@example.invalid`, children: [], tagIds: [], eventId: 'synthetic', eventTitle: 'Fixture', deletedAt: null, registrationStatus: 'submitted', birthDate: null, phone: null, country: null, city: null, authUserId: null, place: '', currentGroupId: null, currentGroupName: null, currentGroupStatus: null, currentServiceId: null, currentServiceStatus: null } satisfies QualityPerson));
+ return <main className="p-6"><h1>Verifica duplicati — dati fittizi</h1><OperationsDuplicatesTable people={people} matches={[{left:people[0].id,right:people[1].id,level:'possible',signals:['Nome simile']},{left:people[0].id,right:people[2].id,level:'possible',signals:['Nome simile']}]} forumActivity={new Map()} basePath="/duplicate-pair-check?section=iscritti&view=duplicates&duplicatePage=2" canWrite /><Suspense><DuplicateReviewLoader dashboard="manager" /></Suspense></main>;
+}

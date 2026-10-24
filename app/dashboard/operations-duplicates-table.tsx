@@ -1,6 +1,5 @@
 import type { DuplicateForumActivity } from "@/lib/data-quality/forum-activity.server";
 import { LocalQueryLink } from "@/components/local-query-link";
-import Link from "@/components/pending-link";
 import {
   DUPLICATE_LABELS,
   type DuplicateMatch,
@@ -120,7 +119,7 @@ export function OperationsDuplicatesTable({
                   </p>
                 </td>
                 <td className="px-4 py-4">
-                  <Link
+                  <LocalQueryLink
                     className="text-[var(--peace-blue-800)] underline underline-offset-2"
                     href={href({ duplicatePair: pair })}
                     scroll={false}
@@ -128,7 +127,7 @@ export function OperationsDuplicatesTable({
                     aria-label={`Confronta ${person.name} (${person.publicCode}) con ${other.name} (${other.publicCode})`}
                   >
                     {other.name}
-                  </Link>
+                  </LocalQueryLink>
                   <p className="mt-1 text-xs text-[var(--peace-muted)]">
                     {other.publicCode}
                   </p>
@@ -140,7 +139,7 @@ export function OperationsDuplicatesTable({
                   <div className="flex flex-col items-start gap-2">
                     {canWrite ? (
                       <>
-                        <Link
+                        <LocalQueryLink
                           className={`${actionClass} !border-red-300 !text-red-700`}
                           href={href({
                             duplicatePair: pair,
@@ -152,12 +151,12 @@ export function OperationsDuplicatesTable({
                           aria-label={`Elimina questa iscrizione: ${person.name} (${person.publicCode}); mantieni ${other.name} (${other.publicCode})`}
                         >
                           Elimina questa iscrizione
-                        </Link>
+                        </LocalQueryLink>
                         <p className="max-w-48 text-xs text-[var(--peace-muted)]">
                           Mantieni l’altra iscrizione.
                         </p>
                         {match.level !== "dismissed" ? (
-                          <Link
+                          <LocalQueryLink
                             className={actionClass}
                             href={href({
                               duplicatePair: pair,
@@ -167,7 +166,7 @@ export function OperationsDuplicatesTable({
                             prefetch={false}
                           >
                             Non sono duplicati
-                          </Link>
+                          </LocalQueryLink>
                         ) : (
                           <span className="text-sm text-[var(--peace-muted)]">
                             Già segnati come non duplicati

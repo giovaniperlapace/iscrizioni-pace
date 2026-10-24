@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import Link from "@/components/pending-link";
+import { LocalQueryLink } from "@/components/local-query-link";
 import { X } from "lucide-react";
 
 export function DuplicateReviewDialog({
@@ -17,7 +16,6 @@ export function DuplicateReviewDialog({
   title?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const router = useRouter();
   useEffect(() => {
     const dialog = ref.current!;
     const previousFocus =
@@ -40,14 +38,14 @@ export function DuplicateReviewDialog({
       className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-hidden rounded-xl bg-white p-0 text-[var(--peace-ink)] shadow-xl backdrop:bg-black/40"
       onCancel={(event) => {
         event.preventDefault();
-        router.replace(closePath, { scroll: false });
+        window.history.replaceState(null, "", closePath);
       }}
     >
       <header className="flex items-center justify-between gap-4 border-b border-[var(--peace-border)] px-5 py-4">
         <h2 id="duplicate-dialog-title" className="text-xl font-semibold">
           {title ?? (excluding ? "Non sono duplicati" : "Confronto duplicati")}
         </h2>
-        <Link
+        <LocalQueryLink
           href={closePath}
           scroll={false}
           prefetch={false}
@@ -55,7 +53,7 @@ export function DuplicateReviewDialog({
           className="btn-secondary inline-flex min-h-11 min-w-11 items-center justify-center"
         >
           <X size={18} aria-hidden />
-        </Link>
+        </LocalQueryLink>
       </header>
       <div className="max-h-[calc(90dvh-6rem)] overflow-y-auto p-4 sm:p-5">
         {excluding && (

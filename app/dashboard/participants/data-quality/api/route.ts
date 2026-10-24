@@ -302,6 +302,7 @@ export async function POST(request: NextRequest) {
         right: string;
         leftFingerprint: string;
         rightFingerprint: string;
+        scope?: "pair-v1";
       }>(data.token, "review-v1", auth.user.id, event.id);
       if (
         data.confirm !== true ||
@@ -311,19 +312,25 @@ export async function POST(request: NextRequest) {
         data.reason.trim().length > 500
       )
         throw new Error("Scegli l’esito, indica la motivazione e conferma.");
-      const { error } = await service.rpc("review_participant_duplicate", {
+      if (preview.scope === "pair-v1" && data.decision !== "not_duplicate")
+        throw new Error("Questo confronto consente solo di confermare persone distinte.");
+      const { error } = await service.rpc(preview.scope === "pair-v1" ? "dismiss_participant_duplicate" : "review_participant_duplicate", {
         p_event_id: event.id,
         p_actor_user_id: auth.user.id,
         p_left_id: preview.left,
         p_right_id: preview.right,
-        p_decision: data.decision,
-        p_keep_id: data.keepId || null,
+        ...(preview.scope === "pair-v1" ? {} : { p_decision: data.decision, p_keep_id: data.keepId || null }),
         p_reason: data.reason.trim(),
         p_version: preview.version,
         p_left_fingerprint: preview.leftFingerprint,
         p_right_fingerprint: preview.rightFingerprint,
       });
-      if (error) throw rpcError(error.code);
+      if (error) {
+        if (preview.scope === "pair-v1" && ["PT409", "40001"].includes(error.code))
+          throw new Error("Una delle due schede è cambiata. Chiudi e riapri il confronto prima di confermare.");
+        if (error.code === "55P03") throw new Error("Aggiornamento in corso. Riprova a confermare tra pochi secondi.");
+        throw rpcError(error.code);
+      }
       for (const path of [
         "/dashboard/admin",
         "/dashboard/manager",

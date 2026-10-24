@@ -410,7 +410,10 @@ export function ReviewPanel({
         reason,
         confirm,
       });
-      router.push(returnTo, { scroll: false });
+      const destination = new URL(returnTo, window.location.href);
+      if (destination.pathname === window.location.pathname)
+        window.history.replaceState(null, "", returnTo);
+      else router.push(returnTo, { scroll: false });
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Decisione non salvata.");

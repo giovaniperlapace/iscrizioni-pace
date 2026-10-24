@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## Duplicati: confronto rapido e conferma per coppia — 2026-10-24
+
+- «Non sono duplicati», confronto ed eliminazione aprono subito il dialog via
+  URL locale e leggono soltanto le due schede. HTTP privato/no-store, retry,
+  scarto risposte tardive, ruolo/evento server; niente polling o cache condivisa.
+- Conferma persone distinte controlla la versione della sola coppia: modifiche
+  agli altri iscritti non bloccano più. Identità/contatti/figli e contesto della
+  coppia cambiati restano bloccanti. Token attore/evento/scadenza, audit atomico
+  e retry senza duplicazioni. Merge/import e soft delete canonico conservati.
+- Migration `20261024120000` applicata/registrata in produzione dopo backup
+  verificato e autorizzazione: 74 tabelle, 232.460 righe e 237 funzioni/ACL
+  conservate. Commit/push dei soli duplicati autorizzati; Accoglienza esclusa.
+  Copia isolata: 1.113 test, TypeScript e build superati. Nessuna prova operativa
+  reale. Verifiche: `docs/duplicati-confronto-rapido-2026-10-24.md`.
+
+
 ## Cerimonie: correzione email Postmark 300 — 2026-10-24
 
 - Metadata `ceremony_email_id` entro il limite Postmark di 20 caratteri;
