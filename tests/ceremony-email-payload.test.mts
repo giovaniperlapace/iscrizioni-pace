@@ -25,7 +25,7 @@ const notice: PublicationNotice = {
     lines: [{ name: "Synthetic person", sector: "A" }],
   },
 };
-test("real ceremony preparation sends provider-compliant metadata for participant and leader", async () => {
+test("real ceremony preparation sends one bilingual notification per recipient with compliant metadata", async () => {
   const env = { ...process.env },
     originalFetch = globalThis.fetch;
   let calls = 0;
@@ -37,17 +37,17 @@ test("real ceremony preparation sends provider-compliant metadata for participan
       calls++;
       const body = JSON.parse(String(init?.body));
       assert.deepEqual(body.Metadata, { ceremony_email_id: id });
-      assert.ok(body.TextBody && body.HtmlBody);
+      assert.match(body.TextBody, /Italiano[\s\S]*English/);
+      assert.match(body.HtmlBody, /lang="it"[\s\S]*lang="en"/);
+      assert.match(body.Subject, /Inaugurazione.*Opening ceremony/);
       assert.equal(body.To, "synthetic@example.invalid");
       return Response.json({ ErrorCode: 0, MessageID: "synthetic" });
     };
-    const query = {
-      select: () => query,
-      eq: () => query,
-      maybeSingle: async () => ({ data: { preferred_locale: "it" } }),
-      single: async () => ({ data: { preferred_locale: "it" } }),
+    const db = {
+      from: () => {
+        throw Error("Email must not depend on preferred_locale queries");
+      },
     };
-    const db = { from: () => query };
     const dependencies: Record<string, unknown> = {
       "@/lib/supabase/service": { createSupabaseServiceClient: () => db },
       "@/lib/email/campaign-recipients.server": {

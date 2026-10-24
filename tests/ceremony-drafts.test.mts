@@ -101,30 +101,68 @@ test("map counts distinguish published names, pending group names and drafts wit
     draft: 3,
   });
 });
-test("publication email supports seven languages, correct role links, escaping and Rome date", () => {
-  for (const lang of ["it", "en", "fr", "de", "es", "nl", "uk"]) {
-    const personal = renderPublicationEmail(
-      notice,
-      "https://example.invalid",
-      lang,
-    );
-    assert.match(personal.text, /\/partecipante\/cerimonie/);
-    assert.match(personal.html, /&lt;script&gt;/);
-    assert.doesNotMatch(personal.html, /<script>/);
-    const leader = renderPublicationEmail(
-      { ...notice, userId: id(5), registrationId: null },
-      "https://example.invalid",
-      lang,
-    );
-    assert.match(leader.text, /\/capogruppo\/cerimonie\?kind=opening/);
-    assert.notEqual(leader.subject, personal.subject);
+test("publication emails include complete Italian and English sections for both ceremonies and roles", () => {
+  for (const kind of ["opening", "closing"] as const) {
+    for (const leader of [false, true]) {
+      const email = renderPublicationEmail(
+        {
+          ...notice,
+          userId: leader ? id(5) : null,
+          registrationId: leader ? null : notice.registrationId,
+          payload: {
+            ...notice.payload,
+            kind,
+            lines: leader
+              ? [{ name: "Group & Friends", sector: "B", quantity: 12 }]
+              : notice.payload.lines,
+          },
+        },
+        "https://example.invalid",
+      );
+      const [italian, english] = email.text.split("\n\n---\n\n");
+      assert.ok(italian.startsWith("Italiano\n"));
+      assert.ok(english.startsWith("English\n"));
+      assert.match(italian, /25 ottobre 2026.*16:30/);
+      assert.match(english, /October 25, 2026.*4:30 PM/);
+      assert.match(
+        email.subject,
+        kind === "opening"
+          ? /Inaugurazione.*Opening ceremony/
+          : /Cerimonia finale.*Closing ceremony/,
+      );
+      assert.match(italian, leader ? /12 posti/ : /Settore A<script>/);
+      assert.match(english, leader ? /12 places/ : /Sector A<script>/);
+      assert.match(
+        italian,
+        leader ? /assegnali nominalmente/ : /area personale/,
+      );
+      assert.match(
+        english,
+        leader ? /assign them to your members/ : /personal area/,
+      );
+      for (const section of [italian, english]) {
+        assert.ok(
+          section.includes(
+            leader
+              ? `/capogruppo/cerimonie?kind=${kind}`
+              : "/partecipante/cerimonie",
+          ),
+        );
+        assert.ok(section.includes("Sala <Test>"));
+        assert.ok(
+          section.includes(leader ? "Group & Friends" : "Adult & Child"),
+        );
+      }
+      assert.match(email.html, /<section lang="it">.*<section lang="en">/);
+      assert.match(email.html, /Sala &lt;Test&gt;/);
+      assert.doesNotMatch(email.html, /<script>/);
+      if (!leader)
+        assert.equal(email.html.match(/A&lt;script&gt;/g)?.length, 2);
+    }
   }
-  assert.match(
-    renderPublicationEmail(notice, "https://example.invalid", "it").text,
-    /16:30/,
-  );
-  assert.throws(() => renderPublicationEmail(notice, "javascript:bad", "it"));
+  assert.throws(() => renderPublicationEmail(notice, "javascript:bad"));
 });
+
 function mockDb(finishFails = false) {
   let claimed = false;
   const updates: Record<string, unknown>[] = [];

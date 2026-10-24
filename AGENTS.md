@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Cerimonie: email italiano e inglese insieme — 2026-10-24
+
+- Ogni notifica di pubblicazione, personale o al capogruppo, contiene italiano
+  seguito da inglese nello stesso messaggio; oggetto bilingue, HTML e testo.
+  Non dipende dalla lingua del profilo; dashboard nelle sette lingue conservate.
+- Dati, link per ruolo, contatti/deleghe, coda, report e metadata Postmark
+  invariati. Nessuna migration, riaccodamento o reinvio degli invii precedenti.
+- 1.119 test, TypeScript, lint mirato e build isolata da npm ci superati.
+  Dettagli nel verbale cerimonie bozze/pubblicazione del 24 ottobre.
+
 ## Duplicati: rimozione immediata dalla lista — 2026-10-24
 
 - Dopo la conferma server «Non sono duplicati», entrambe le righe della coppia

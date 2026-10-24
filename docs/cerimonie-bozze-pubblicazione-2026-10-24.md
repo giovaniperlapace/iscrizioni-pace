@@ -107,7 +107,7 @@ Le bozze rimosse/pubblicate rimangono archiviate, con audit delle operazioni.
   minori al contatto dell’adulto. Risoluzione del contatto/delegato con le stesse
   regole correnti delle comunicazioni individuali; nessun indirizzo del minore.
 - Titolo della cerimonia, data/ora Roma, sede, nomi e settori; per i gruppi anche
-  quantità e invito ad abbinare i posti. Testi in sette lingue e HTML escapato.
+  quantità e invito ad abbinare i posti. Italiano e inglese nello stesso messaggio e HTML escapato (revisione del 24 ottobre).
 - La migration e il salvataggio delle bozze non accodano email. Soltanto la
   pubblicazione crea le notifiche. Il cron email già autenticato le elabora,
   mantenendo indipendenti campagne, Forum e scuole.
@@ -227,3 +227,22 @@ message ID, accettazione o consegna. Il rilascio della correzione non modifica
 le righe fallite, accettate o incerte: il recupero dei due rifiuti è separato.
 
 Riferimento: https://postmarkapp.com/support/article/1125-custom-metadata-faq
+
+## Notifiche bilingui — 24 ottobre
+
+Su richiesta dell’utente, ogni email di pubblicazione contiene due sezioni
+complete: Italiano, poi English. Oggetto bilingue; entrambe le versioni HTML e
+testo includono cerimonia, data in ora Roma, sede, nomi/settori o quantità del
+gruppo e collegamento alla dashboard pertinente. Una sola notifica per
+destinatario; lingua del profilo e dell’interfaccia non condizionano il testo.
+Rimosse le letture del profilo che servivano soltanto a scegliere la lingua.
+Le sette lingue dell’applicazione sono conservate.
+
+Verificati inaugurazione/finale e partecipante/capogruppo, dati completi in
+entrambe le sezioni, escaping, link, ora Roma e payload effettivo del trasporto
+con destinatari sintetici. 1.119 test, TypeScript, lint dei file modificati e
+build production Webpack da npm ci in copia isolata superati. Nessuna email
+reale di prova. Nessuna migration o modifica alle assegnazioni; report,
+contatti delegati, claim e gestione degli esiti restano invariati. La modifica
+vale per le prossime elaborazioni; snapshot storici e invii falliti restano
+intatti, senza recupero o reinvio, come richiesto dall’utente.

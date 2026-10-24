@@ -18,20 +18,12 @@ export async function processDueCeremonyPublications() {
   return processCeremonyPublicationEmails(
     db,
     async (notice: PublicationNotice) => {
-      let to: string | undefined,
-        locale: string | null = null;
+      let to: string | undefined;
       if (notice.userId) {
         const identities = await getOperationalUserIdentities(db, [
           notice.userId,
         ]);
         to = identities.get(notice.userId)?.email ?? undefined;
-        const profile = await db
-          .from("profiles")
-          .select("preferred_locale")
-          .eq("id", notice.userId)
-          .maybeSingle();
-        if (profile.error) throw Error("ceremony_email_profile_failed");
-        locale = profile.data?.preferred_locale ?? null;
       } else if (notice.registrationId) {
         // Same current contact/delegation rules as individual campaign messages.
         const recipient = await resolveCurrentParticipantRecipient(
@@ -47,18 +39,11 @@ export async function processDueCeremonyPublications() {
             false,
           )
         )[0]?.destinationEmail;
-        const participant = await db
-          .from("participants")
-          .select("preferred_locale")
-          .eq("id", recipient.participantId)
-          .single();
-        if (participant.error) throw Error("ceremony_email_locale_failed");
-        locale = participant.data?.preferred_locale ?? null;
       }
       if (!to) throw Error("ceremony_email_contact_missing");
       return {
         to,
-        ...renderPublicationEmail(notice, appUrl, locale),
+        ...renderPublicationEmail(notice, appUrl),
         metadata: { ceremony_email_id: notice.id },
       };
     },
