@@ -3276,7 +3276,7 @@ export async function assignOperationalUserRole(formData: FormData) {
   const groupId = optionalText(formData.get("groupId"));
   const leaderKind = parseGroupLeaderKind(formData.get("leaderKind"));
   const isPrimaryLeader = leaderKind === "primary";
-  const sendInvite = mode === "new" || formData.get("sendInvite") === "on";
+  const sendInvite = role !== "accoglienza_forum_eventi" && (mode === "new" || formData.get("sendInvite") === "on");
 
   if (!isAssignableOperationalRole(role) ||
       (mode !== "existing" && mode !== "new") ||

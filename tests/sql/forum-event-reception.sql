@@ -5,12 +5,18 @@ set local role service_role;
 do $$ declare v jsonb; keys text[]; begin
  begin perform set_reception_duties(fw(200),fw(12),fw(8),array[fw(403)::text]);raise exception 'viewer grant';exception when insufficient_privilege then null;end;
  perform set_reception_duties(fw(200),fw(11),fw(8),array[fw(403)::text,'opening','closing']);
- assert cardinality(app.reception_duty_keys(fw(200),fw(8)))=3;
+ assert cardinality(app.reception_duty_keys(fw(200),fw(8)))=jsonb_array_length(app.reception_duty_catalog(fw(200)));
  assert not exists(select 1 from event_user_roles where user_id=fw(8));
+ perform app.authorize_reception_target(fw(200),fw(8),fw(405)::text);
+ perform app.authorize_reception_target(fw(200),fw(8),'closing');
+ begin perform set_reception_duties(fw(200),fw(11),fw(8),array['invalid']);raise exception 'invalid target';exception when invalid_parameter_value then null;end;
+ perform set_reception_duties(fw(200),fw(10),fw(11),array['opening']);
+ begin perform set_reception_duties(fw(200),fw(11),fw(11),'{}',app.reception_duty_keys(fw(200),fw(11)));raise exception 'self revoke';exception when insufficient_privilege then null;end;
+
  keys:=app.reception_duty_keys(fw(200),fw(8));
  perform set_reception_duties(fw(200),fw(10),fw(8),array[fw(403)::text,'opening'],keys);
- begin perform set_reception_duties(fw(200),fw(11),fw(8),array['closing'],keys);raise exception 'stale duties allowed';exception when serialization_failure then null;end;
- begin perform reception_target_statistics(fw(200),fw(8),fw(405)::text);raise exception 'foreign duty stats';exception when insufficient_privilege then null;end;
+ begin perform set_reception_duties(fw(200),fw(11),fw(8),array['closing'],array['opening']);raise exception 'stale duties allowed';exception when serialization_failure then null;end;
+ begin perform reception_target_statistics(fw(200),fw(9),fw(405)::text);raise exception 'unassigned operator stats';exception when insufficient_privilege then null;end;
  v:=reception_desk(fw(200),fw(8),fw(403)::text,'code','QQQ7');
  assert v->>'status'='ready' and jsonb_array_length(v->'children')=1;
  assert v::text !~ 'email|birth|auth_user';
@@ -87,7 +93,7 @@ select set_config('request.jwt.claim.sub',fw(8)::text,true);
 set local role authenticated;
 do $$ begin
  assert has_panel_reception_duty();
- assert jsonb_array_length(reception_duty_catalog()->'choices')=3;
+ assert jsonb_array_length(reception_duty_catalog()->'choices')>3;
  begin perform set_reception_duties(fw(200),fw(10),fw(8),array['closing']);raise exception 'spoofed actor';exception when insufficient_privilege then null;end;
  begin perform reception_desk(fw(200),fw(8),'opening','code','QQQ7');raise exception 'public desk';exception when insufficient_privilege then null;end;
  begin perform 1 from ceremony_reception_assignments;raise exception 'RLS';exception when insufficient_privilege then null;end;

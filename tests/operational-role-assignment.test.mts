@@ -8,7 +8,7 @@ function actionHarness(actorRole = "manager", actorEvent = "event", profileExist
   const writes: Array<{ table: string; value: Record<string, unknown> }> = [];
   const reads: string[] = [];
   const sends: Record<string, unknown>[] = [];
-  const db = { from(table: string) {
+  const db = { rpc: async () => ({ error: null }), from(table: string) {
     reads.push(table);
     const query = {
       select() { return this; }, eq() { return this; }, is() { return this; }, limit() { return this; },
@@ -19,11 +19,12 @@ function actionHarness(actorRole = "manager", actorEvent = "event", profileExist
     return query;
   } };
   const dependencies = {
+    validDutyKey: (value: unknown) => value === "opening" || value === "closing",
     validateContactFields: () => [], formFailure: (issues: unknown) => ({ status: "error", issues }),
     optionalText: (value: unknown) => typeof value === "string" && value ? value : null,
     normalizeEmail: (value: unknown) => String(value ?? "").trim().toLowerCase(),
     getOperationalUsersDashboardPath: () => "/dashboard/manager?section=ruoli",
-    parseGroupLeaderKind: () => "secondary", isAssignableOperationalRole: (role: string) => ["manager", "manager_viewer", "accoglienza", "admin"].includes(role),
+    parseGroupLeaderKind: () => "secondary", isAssignableOperationalRole: (role: string) => ["manager", "manager_viewer", "accoglienza", "accoglienza_forum_eventi", "admin"].includes(role),
     formFailureFromRedirect: (path: string) => path,
     createSupabaseServerClient: async () => db, createSupabaseServiceClient: () => db,
     getCurrentAuthContext: async () => ({ user: { id: "actor" }, eventRoles: [{ role: actorRole, eventId: actorEvent }] }),
@@ -162,4 +163,22 @@ test("candidate search includes scoped assisted participants and aliases without
   assert.match(rows.find(row => row.id === "account")!.searchText!, /José Rossi AB12/);
   assert.equal(rows.find(row => row.id === "participant:assisted")!.searchText, "CD34");
   assert.deepEqual(scopes, [["event_id", "event"], ["deleted_at", null]]);
+});
+
+
+test("Forum/event role assignment never emails new or existing users, including explicit invite requests", async () => {
+  for (const mode of ["new", "existing"]) {
+    for (const invite of [false, true]) {
+      const h = actionHarness("manager", "event", true, { allowNew: true, mailFails: true });
+      h.form.set("role", "accoglienza_forum_eventi");
+      h.form.set("dutyKeys", "opening");
+      h.form.set("mode", mode);
+      h.form.set("firstName", "New"); h.form.set("lastName", "Person"); h.form.set("email", "new@example.test");
+      if (invite) h.form.set("sendInvite", "on");
+      await assert.rejects(h.action(h.form), /roleSaved=1/);
+      assert.equal(h.sends.length, 0);
+      const audit = h.writes.find(row => row.table === "audit_logs")!;
+      assert.equal((audit.value.metadata as Record<string, unknown>).invite_requested, false);
+    }
+  }
 });

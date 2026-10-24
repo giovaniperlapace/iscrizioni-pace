@@ -50,7 +50,9 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
     assert.ok(Object.keys(body).every(key=>/^p_[a-z_]+$/.test(key)));
     const args=Object.entries(body).map(([key,value])=>`${key} => ${Array.isArray(value)?`array[${value.map(lit).join(',')}]::${['p_keys','p_expected'].includes(key)?'text':'uuid'}[]`:lit(value)}`);
     const role=['has_panel_reception_duty','reception_duty_catalog'].includes(name)?'authenticated':'service_role';
-    res.end(psql(`begin;set local role ${role};set local "request.jwt.claim.sub"=${lit(fw(actor))};select to_jsonb(${name}(${args.join(',')}));commit;`,true).trim());return;
+    const payload=JSON.parse(psql(`begin;set local role ${role};set local "request.jwt.claim.sub"=${lit(fw(actor))};select to_jsonb(${name}(${args.join(',')}));commit;`,true).trim());
+    if(name==='reception_duty_catalog') payload.serverNow='2026-10-26T09:00:00+01:00';
+    res.end(JSON.stringify(payload));return;
    }
    unexpected.push(url.pathname);res.statusCode=500;res.end(JSON.stringify({code:'UNKNOWN',message:'Unexpected synthetic endpoint'}));
   } catch(error){console.error('Adapter rejection',url.pathname,error.stderr?.toString()??error.message);res.statusCode=403;res.end(JSON.stringify({code:'42501',message:'Synthetic rejection'}));}
@@ -114,18 +116,20 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   actor=11;
   await page.goto(base+'/test-forum-roles');
   await page.getByRole('button',{name:'Modifica incarico',exact:true}).click();
-  await page.getByLabel('Seleziona tutto',{exact:true}).check();
+  assert.equal(await page.getByRole('checkbox').count(),0);
+  await page.getByText(/Tutti gli incarichi sono inclusi/).waitFor();
   await page.getByRole('button',{name:'Salva incarico',exact:true}).click();
+  await page.getByText('Ruolo assegnato. Gli altri incarichi sono stati conservati.',{exact:true}).waitFor();
   await page.getByText('Tutti gli incarichi',{exact:true}).waitFor();
   assert.equal(psql('select cardinality(app.reception_duty_keys(fw(200),fw(8)));',true).trim(),'8');
   assert.equal(psql('select count(*) from event_user_roles where user_id=fw(8);',true).trim(),'0');
   await page.screenshot({path:'/tmp/pace-forum-events-roles.png',fullPage:true});
   await page.getByRole('button',{name:'Modifica incarico',exact:true}).click();
-  await page.getByLabel('Seleziona tutto',{exact:true}).uncheck();
-  await page.getByLabel(/Morning A/).check();await page.getByLabel(/Morning B/).check();await page.getByLabel('Cerimonia d’apertura',{exact:true}).check();
+  assert.equal(await page.getByRole('checkbox').count(),0);
+  await page.getByText(/Tutti gli incarichi sono inclusi/).waitFor();
   await page.getByRole('button',{name:'Salva incarico',exact:true}).click();
   await page.getByText('Ruolo assegnato. Gli altri incarichi sono stati conservati.',{exact:true}).waitFor();
-  assert.equal(psql('select cardinality(app.reception_duty_keys(fw(200),fw(8)));',true).trim(),'3');
+  assert.equal(psql('select cardinality(app.reception_duty_keys(fw(200),fw(8)));',true).trim(),'8');
   actor=8;
   await page.goto(base+'/dashboard/accoglienza-forum-eventi');
   await page.getByRole('button',{name:/Computer ·/}).click();
@@ -256,7 +260,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:'/tmp/pace-forum-events-phone.png',fullPage:true});
   // Revoked duty cannot be used from a page that was already open.
-  psql(`select set_reception_duties(fw(200),fw(11),fw(8),array[fw(403)::text,'opening'],app.reception_duty_keys(fw(200),fw(8)));`);
+  psql(`select set_reception_duties(fw(200),fw(11),fw(8),'{}',app.reception_duty_keys(fw(200),fw(8)));`);
   await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
   await page.getByText(/Sessione scaduta o incarico non più autorizzato/).waitFor();
   // Training uses the same workstation but must never call an operational API.
@@ -344,5 +348,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await checkSchoolFlow(page,context);
   assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);
   console.log('PASS original desktop/mobile page → HTTP → scoped SQL; booking distinct from presence, wrong Forum, counts, camera QR decode, switching, revocation, no overflow');
+  const {checkDutyWindows}=await import('./reception-duty-windows.mjs');
+  await checkDutyWindows(browser,base);
  } finally {await browser?.close();await new Promise(resolve=>adapter.close(resolve));}
 }

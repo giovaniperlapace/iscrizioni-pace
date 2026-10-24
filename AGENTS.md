@@ -122,6 +122,23 @@
   `docs/scuole-qr-ingressi-email-2026-10-23.md`.
 
 
+## Accoglienza Forum: fasce del selettore — 2026-10-23
+
+- Scelta incarico in ora Roma: tutti i Forum del mattino 07:30–13:30;
+  pomeriggio e finale dalle 13:30, inaugurazione dalle 14:00.
+- Date dai momenti canonici; finale senza piano sul giorno conclusivo evento,
+  senza inventare configurazione o posti. Fine pomeriggio/cerimonie +90 minuti,
+  massimo mezzanotte; senza piano, fino a mezzanotte.
+- Solo filtro di scelta, senza revoche. Cambio automatico locale e al ritorno
+  alla scheda; scanner/operazioni già in corso conservati con avviso.
+  Collaudo fittizio sempre disponibile. Nessun polling.
+- Migration `20261023140000` applicata/registrata in produzione il 24 ottobre
+  dopo backup verificato: 74 tabelle, 233.072 righe e 239 ACL conservati.
+  1.119 test, TypeScript, build isolata, SQL e browser desktop/mobile superati.
+  Commit/push autorizzati; verifiche e stato rilascio in
+  `docs/accoglienza-fasce-orarie-2026-10-23.md`.
+
+
 ## Cerimonie: modale persone, famiglie e gruppi — 2026-10-23
 
 - Due opzioni: persona cercata in tutti gli iscritti (adulto e figli al seguito,
@@ -136,6 +153,21 @@
   famiglia completa sotto lock; 68 tabelle, 208.469 righe e ACL conservati.
   Rilascio autorizzato con campi email e duplicati. Verifiche e limite lint generale
   in `docs/cerimonie-modale-assegnazioni-2026-10-23.md`.
+
+
+## Accoglienza Forum: tutti gli incarichi — 2026-10-23
+
+- Tutti gli operatori con il ruolo ricevono l’intero catalogo corrente di Forum,
+  inaugurazione e finale. Nessuna assegnazione generalizzata a tutti gli utenti.
+- Email di assegnazione disattivata solo per questo ruolo, per utenti nuovi
+  ed esistenti anche con `sendInvite=on`; invii degli altri ruoli conservati.
+- Rimosse le caselle nella gestione ruolo; scelta dell’incarico operativo
+  conservata nella dashboard. RPC completa ogni assegnazione non vuota.
+- Migration `20261023130000` applicata/registrata in produzione il 24 ottobre
+  dopo backup verificato: 54 operatori completati con 336 incarichi Forum e
+  1 cerimonia aggiunti, 52 audit; 232.670 righe preesistenti conservate.
+  Permessi, revoca e accoglienza generale conservati. Commit/push autorizzati.
+- Verifiche e stato rilascio: `docs/accoglienza-tutti-incarichi-2026-10-23.md`.
 
 
 ## Campagne: settori personali delle cerimonie — 2026-10-23

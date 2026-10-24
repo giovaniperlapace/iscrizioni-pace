@@ -44,9 +44,32 @@ try {
     end $$;rollback;`);
    console.log('PASS migration backfill preserves exact existing bookings, waiting requests, selected minors and every section occupancy');
   }
+  if(name==='20261023130000_reception_all_duties.sql') {
+   const seed=readFileSync('tests/sql/forum-waitlist.sql','utf8').split("select set_config('request.jwt.claim.sub'")[0].replace(/^begin;|^commit;/gm,'');
+   const migration=readFileSync(join('supabase/migrations',name),'utf8').replace(/^begin;|^commit;/gm,'');
+   psql(`begin;${seed}
+    insert into panel_reception_assignments(event_id,user_id,panel_id,duty,created_by)
+     values(fw(200),fw(8),fw(403),'panel_entry',fw(11)),(fw(200),fw(9),fw(403),'room_assistance',fw(11));
+    insert into ceremony_reception_assignments values(fw(200),fw(7),'opening',fw(11));
+    create temp table before_roles as select * from event_user_roles;
+    ${migration}
+    do $$ begin
+     assert cardinality(app.reception_duty_keys(fw(200),fw(8)))=8;
+     assert cardinality(app.reception_duty_keys(fw(200),fw(7)))=8;
+     assert cardinality(app.reception_duty_keys(fw(200),fw(9)))=0;
+     assert exists(select 1 from panel_reception_assignments where user_id=fw(9) and duty='room_assistance');
+     assert (select count(*)=2 from audit_logs where action='reception.duties_completed');
+     assert not exists((select * from event_user_roles except select * from before_roles) union all (select * from before_roles except select * from event_user_roles));
+    end $$;
+    ${migration}
+    do $$ begin assert (select count(*)=2 from audit_logs where action='reception.duties_completed');end $$;
+    rollback;`);
+   console.log('PASS existing Forum and ceremony operators expanded, assistance-only and general roles unchanged, migration idempotent');
+  }
   try {file(join('supabase/migrations',name));}catch(e){throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
+ console.log(file('tests/sql/reception-duty-windows.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/forum-event-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/school-qr-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  psql(`select set_reception_duties(fw(200),fw(11),fw(8),array[fw(406)::text]);

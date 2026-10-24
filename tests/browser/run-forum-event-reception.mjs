@@ -9,6 +9,8 @@ for(const file of files){if(file.startsWith('.env'))continue;mkdirSync(dirname(j
 symlinkSync(join(root,'node_modules'),join(dir,'node_modules'),'dir');
 mkdirSync(join(dir,'app/test-forum-roles'),{recursive:true});
 copyFileSync('tests/browser/forum-role-page.fixture',join(dir,'app/test-forum-roles/page.tsx'));
+mkdirSync(join(dir,'app/test-duty-windows'),{recursive:true});
+copyFileSync('tests/browser/reception-duty-windows.fixture',join(dir,'app/test-duty-windows/page.tsx'));
 mkdirSync(join(dir,'app/test-school-qr'),{recursive:true});
 copyFileSync('tests/browser/school-qr-page.fixture',join(dir,'app/test-school-qr/page.tsx'));
 const env={SCHOOL_QR_ONLY:process.env.SCHOOL_QR_ONLY,QR_TOKEN_ENCRYPTION_SECRET:'synthetic-school-browser',LC_ALL:'C',PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
