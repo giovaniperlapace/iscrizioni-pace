@@ -9,6 +9,7 @@ export function participantSortValue(row: OperationsParticipantRow, column: Part
   startsOn: string | null, locale: SupportedLocale, sexText: (id: string) => string | null = () => null): string | number | null {
   switch (column) {
     case "sex": return row.deletedAt ? null : sexText(row.registrationId);
+    case "birthPlace": return row.birthPlace ?? null;
     case "association": return row.association ?? null;
     case "nationality": return nationalityName(row.nationality, locale);
     case "accessibility": return row.accessibility ?? "—";

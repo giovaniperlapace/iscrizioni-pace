@@ -116,13 +116,13 @@ export async function loadOperationsParticipantPage(db: SupabaseClient, request:
   const sortIds = filtered.map(row => row.registrationId);
   // Only the requested sort column may need a global auxiliary projection.
   const [sortQuestionnaire, sortAttendance, sortAccessibility, sortSexes] = await Promise.all([
-    ["nationality", "association"].includes(preferences.sort) ? loadQuestionnaireSummaries(db, sortIds) : null,
+    ["nationality", "association", "birthPlace"].includes(preferences.sort) ? loadQuestionnaireSummaries(db, sortIds) : null,
     preferences.sort === "attendance" ? loadAttendanceSummaries(db, sortIds) : null,
     preferences.sort === "accessibility" ? loadAccessibilitySummaries(db, sortIds) : null,
     preferences.sort === "sex" && preferences.columns.includes("sex") && params.view !== "without-group" && request.canManage && !deleted ? loadInternalSexes(db, sortIds, request.actorId) : null,
   ]);
   for (const row of filtered) {
-    if (sortQuestionnaire) { row.nationality = sortQuestionnaire.nationalities.get(row.registrationId); row.association = sortQuestionnaire.associations.get(row.registrationId); }
+    if (sortQuestionnaire) { row.birthPlace = sortQuestionnaire.birthPlaces.get(row.registrationId); row.nationality = sortQuestionnaire.nationalities.get(row.registrationId); row.association = sortQuestionnaire.associations.get(row.registrationId); }
     if (sortAttendance) row.attendance = sortAttendance.get(row.registrationId) ?? [];
     if (sortAccessibility) row.accessibility = sortAccessibility.get(row.registrationId);
   }
@@ -152,6 +152,7 @@ export async function loadOperationsParticipantPage(db: SupabaseClient, request:
   }
   for (const row of detailRows) {
     row.nationality = questionnaire.nationalities.get(row.registrationId);
+    row.birthPlace = questionnaire.birthPlaces.get(row.registrationId);
     row.association = questionnaire.associations.get(row.registrationId);
     row.emailDelegated = questionnaire.emailDelegations.has(row.registrationId);
     row.attendance = attendance.get(row.registrationId) ?? [];

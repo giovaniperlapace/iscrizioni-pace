@@ -1390,8 +1390,8 @@ async function getManagerOperationsSnapshot(
           loadQuestionnaireSummaries(supabase, registrationIds),
           loadAccessibilitySummaries(supabase, registrationIds),
         ])
-      : [new Map(), { emailDelegations: new Set<string>(), nationalities: new Map<string, string | null>(), associations: new Map<string, string | null>() }, new Map<string, string>()];
-    const { emailDelegations, nationalities, associations } = questionnaire;
+      : [new Map(), { emailDelegations: new Set<string>(), nationalities: new Map<string, string | null>(), birthPlaces: new Map<string, string | null>(), associations: new Map<string, string | null>() }, new Map<string, string>()];
+    const { emailDelegations, nationalities, birthPlaces, associations } = questionnaire;
     const participantRows = registrationRows.map((registration) => {
       const participant = relatedOne(registration.participants);
       const geography = participantGeography(participant);
@@ -1409,6 +1409,7 @@ async function getManagerOperationsSnapshot(
         attendance: attendanceByRegistration.get(registration.id) ?? [],
         accessibility: accessibilityByRegistration.get(registration.id),
         nationality: nationalities.get(registration.id),
+        birthPlace: birthPlaces.get(registration.id),
         association: associations.get(registration.id),
         emailDelegated: emailDelegations.has(registration.id),
           registrationId: registration.id,

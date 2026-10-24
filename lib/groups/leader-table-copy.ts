@@ -46,6 +46,7 @@ function copy(
       city,
       age,
       birthDate: "",
+      birthPlace: "",
       group,
       service,
       tags,
@@ -257,6 +258,8 @@ export const LEADER_SERVICE_STATUS_COPY = {
 
 for (const locale of Object.keys(LEADER_TABLE_COPY) as SupportedLocale[]) {
   LEADER_TABLE_COPY[locale].columns.birthDate = MANUAL_REGISTRATION_COPY[locale].birthDate;
+  LEADER_TABLE_COPY[locale].columns.birthPlace = DEMOGRAPHICS_COPY[locale].birthPlace;
+  LEADER_TABLE_COPY[locale].columns.country = DEMOGRAPHICS_COPY[locale].country;
   LEADER_TABLE_COPY[locale].columns.nationality = DEMOGRAPHICS_COPY[locale].nationality;
   LEADER_TABLE_COPY[locale].columns.sex = DEMOGRAPHICS_COPY[locale].sex;
   LEADER_TABLE_COPY[locale].columns.accessibility = CHILDREN_EXPORT_COPY[locale].accessibility;

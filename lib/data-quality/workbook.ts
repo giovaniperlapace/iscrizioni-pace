@@ -213,6 +213,8 @@ export async function writeVisibleParticipantsWorkbook(
   const rows = people.map((person) =>
     columns.flatMap((column) => {
       switch (column) {
+        case "birthPlace":
+          return person.birthPlace ?? "—";
         case "association":
           return person.association ?? "—";
         case "nationality":
