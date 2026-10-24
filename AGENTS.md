@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Inaugurazione: sala collegata F a 500 posti — 2026-10-24
+
+- Migration `20261024140000`: F 400 → 500, totale fisico 3.640 e
+  assegnabile 3.350; lock canonico, revisione, audit e guardie configurazione.
+  Assegnazioni, bozze, email, mappe e protocollo conservati; UI già dinamica.
+- Applicata/registrata in produzione dopo conferma e backup verificato:
+  74 tabelle, 237.541 righe originarie e 239 funzioni/ACL controllate.
+  Revisione 102, lettura finale confermata; commit/push autorizzati.
+  1.119 test e regressioni SQL/concorrenza su PostgreSQL temporaneo passati.
+  Dettagli: `docs/inaugurazione-sala-collegata-500-2026-10-24.md`.
+
 ## Cerimonie: email italiano e inglese insieme — 2026-10-24
 
 - Ogni notifica di pubblicazione, personale o al capogruppo, contiene italiano

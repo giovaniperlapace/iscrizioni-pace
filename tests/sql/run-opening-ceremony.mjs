@@ -57,6 +57,21 @@ try {
    }
    console.log('PASS B unification refuses existing B allocation or changed quota without modifying data');
   }
+  if(name==='20261024140000_opening_relay_capacity_500.sql') {
+   const seed=readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0];
+   const setup=readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0].replace(/^begin;/,'');
+   const [before,after]=readFileSync('tests/sql/opening-relay-capacity.sql','utf8').split('-- APPLY CAPACITY MIGRATION HERE');
+   const relayGuard=process.argv.find(x=>x.startsWith('--relay-guard='))?.slice('--relay-guard='.length);
+   const migration=readFileSync(relayGuard??join('supabase/migrations',name),'utf8');
+   try {
+    console.log(psql('begin;'+seed+setup+before+migration+after+readFileSync(join('supabase/migrations',name),'utf8')+"do $$ begin assert (select count(*)=1 from audit_logs where action='ceremony.relay_capacity_updated');end $$;rollback;").split('\n').filter(line=>line.includes('PASS')).join('\n'));
+   } catch(e) {throw new Error(`Relay capacity regression: ${e.stderr}`);}
+   for(const change of ["update ceremony_quotas set quantity=399 where sector_id=(select id from ceremony_sectors where name='F');", "update ceremony_sectors set capacity=401 where name='F';"]) {
+    assert.throws(()=>psql('begin;'+seed+setup+'reset role;'+change+migration+'commit;'),error=>String(error.stderr).includes('Unexpected opening relay capacity'));
+    assert.equal(psql('select count(*) from ceremony_plans',true).trim(),'0');
+   }
+   console.log('PASS relay capacity refuses unexpected configuration and rolls back completely');
+  }
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
