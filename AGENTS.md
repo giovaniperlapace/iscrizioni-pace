@@ -10,6 +10,8 @@
   Scansioni consecutive, latch, manuale/USB e collaudo F001/F009/F008 conservati.
 - Cornice di tutti gli incarichi Forum/cerimonie con gradiente e motivo home;
   incarico/statistiche e bande simmetriche da 80px conservati, testo bianco.
+  Su successiva richiesta, fascia superiore senza decorazioni per leggibilità;
+  motivo conservato soltanto in basso, anche in manuale/USB titolo pulito.
 - Migration `20261024160000` applicata/registrata in produzione nel rilascio
   richiesto, dopo backup verificato: 74 tabelle, 244.199 righe e 239 funzioni/ACL
   preesistenti conservate. Commit/push richiesti. Nessuna scrittura operativa reale.

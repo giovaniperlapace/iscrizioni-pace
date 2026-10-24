@@ -33,7 +33,7 @@ test("server uses only read RPC with verified event/actor and hashed QR; session
 test("station never automatically enters or exposes selection, correction or cancellation in verification",async()=>{
  for(const explicit of [false,true]) {
   const calls:ReceptionCommand[]=[];
-  const station=new ReceptionStationSession(async c=>{calls.push(c);return result;},()=>"request",1000,{duty:"registration_check"},explicit);
+  const station:ReceptionStationSession=new ReceptionStationSession(async (c:ReceptionCommand):Promise<ReceptionResult>=>{calls.push(c);return result;},()=>"request",1000,{duty:"registration_check"},explicit);
   await station.inspect(command.lookup);
   assert.equal(station.snapshot().phase,"result");
   station.selectPresence();station.setMode("cancel");await station.editCurrent();await station.removeCurrent();await station.submit({subjectIds:["registration"]},true);
@@ -47,6 +47,6 @@ test("demo shows badge received, missing and invalid without recording an entry"
  for(const [code,expected] of [["F001","received"],["F009","missing"],["F008","invalid"]]) {
   const value=await demo.request(DEMO_EVENT,{operation:"scan",command:{...command,lookup:{kind:"code",value:code}}});
   if(expected==="invalid")assert.equal(value.status,"invalid");
-  else {assert.equal(value.status,"valid");if(value.status==="valid"&&value.kind==="family")assert.equal(!!value.persons[0].checkedInAt,expected==="received");}
+  else {assert.ok(value.status==="valid"&&"kind" in value&&value.kind==="family");assert.equal(!!value.persons[0].checkedInAt,expected==="received");}
  }
 });

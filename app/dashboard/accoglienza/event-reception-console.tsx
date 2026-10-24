@@ -1,6 +1,5 @@
 "use client";
 
-import { PeaceLineMark } from "@/components/event-identity";
 import { ChevronDown, History, Keyboard, ScanLine } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
@@ -164,7 +163,6 @@ export function EventReceptionConsole(props: Props) {
       </div>;
 
   const dutyHeader = props.statistics && <header className={cameraVisible ? "relative grid gap-1 text-center" : props.navigationAboveTitle ? "event-gradient relative isolate overflow-hidden grid gap-1 px-4 py-3 text-center text-white" : "grid gap-1 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] px-4 py-2"} aria-label="Incarico attivo">
-    {!cameraVisible && props.navigationAboveTitle && <PeaceLineMark className="pointer-events-none absolute -right-12 -top-10 -z-10 h-40 w-96 text-white/15" />}
     <h2 id="reception-title" className="break-words text-base font-semibold leading-snug">{props.duty?.title ?? "Accoglienza evento"}</h2>
     {props.statistics}
   </header>;

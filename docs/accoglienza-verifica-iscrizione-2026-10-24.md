@@ -38,7 +38,9 @@ una scheda. Revoca del ruolo riconosciuta dal server anche a pagina aperta.
 Per tutti gli incarichi Forum/cerimonie la cornice usa il gradiente blu e
 `PeaceLineMark` della home. Intestazione e fascia esito conservano posizione e
 altezza di 80px, testo bianco e conteggi centrati; il motivo decorativo è
-confinato alla cornice. Contatori e aggiornamento restano al loro posto.
+confinato alla fascia inferiore della cornice. Su successiva richiesta,
+nessun motivo decorativo dietro incarico e statistiche, sia in fotocamera sia
+in manuale/USB. Contatori e aggiornamento restano al loro posto.
 L'accoglienza generale mantiene la propria presentazione.
 
 ## Verifiche
