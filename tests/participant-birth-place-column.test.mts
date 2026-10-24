@@ -30,7 +30,7 @@ test("birth place ordering precedes pagination and remains separate from residen
   const page = await loadOperationsParticipantPage(db, {
     event: { id: "event", title: "Fixture", starts_on: "2026-10-25" }, actorId: "actor",
     canManage: false, dashboard: "manager", locale: "it", params,
-    filters: parseOperationsDashboardFilters(params),
+    filters: parseOperationsDashboardFilters({}),
   });
   assert.equal(page.participants[0].registrationId, fixtureId(100));
   assert.equal(page.participants[0].birthPlace, "Albania");

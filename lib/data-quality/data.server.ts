@@ -18,6 +18,7 @@ import {
 } from "../registrations/event-statistics.ts";
 
 export type QualityPerson = Identity & {
+  confirmedPresence?: boolean;
   nationality?: string | null;
   birthPlace?: string | null;
   association?: string | null;

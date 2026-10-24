@@ -84,7 +84,7 @@ test("table exports include nationality and internal sex only when selected, and
  const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText.replace(/import[\s\S]*?from ["'][^"']+["'];/g,"").replace(/export /g,"");
  for(const canWrite of [true,false])for(const selected of [true,false]){
   let sexReads=0;
-  const deps={qualityAccess:async()=>({db:{},auth:{user:{id:"actor"}},event:{id:"event"},isAdmin:false,canWrite}),loadCatalog:async()=>({services:[],tags:[],groups:[]}),filteredExportPeople:async()=>({people:[{id:"r",name:"Anna",children:[]}]}),parseTablePreferences,writeVisibleParticipantsWorkbook,loadNationalities:async()=>new Map([["r","Italian"]]),loadInternalSexes:async()=>{sexReads++;return {r:"female"};},createSupabaseServiceClient:()=>({from:()=>({insert:async()=>({error:null})})}),NextResponse};
+  const deps={loadConfirmedExportPresences:async()=>new Set<string>(),qualityAccess:async()=>({db:{},auth:{user:{id:"actor"}},event:{id:"event"},isAdmin:false,canWrite}),loadCatalog:async()=>({services:[],tags:[],groups:[]}),filteredExportPeople:async()=>({people:[{id:"r",name:"Anna",children:[]}]}),parseTablePreferences,writeVisibleParticipantsWorkbook,loadNationalities:async()=>new Map([["r","Italian"]]),loadInternalSexes:async()=>{sexReads++;return {r:"female"};},createSupabaseServiceClient:()=>({from:()=>({insert:async()=>({error:null})})}),NextResponse};
   const handler=new Function(...Object.keys(deps),`${code}; return GET;`)(...Object.values(deps));
   const response=await handler({nextUrl:new URL(`http://localhost/?kind=export&columns=${selected?"name,nationality,sex":"name"}`)});
   assert.equal(sexReads,selected&&canWrite?1:0);

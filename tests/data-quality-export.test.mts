@@ -201,6 +201,7 @@ test("visible-column workbook contains only chosen columns, readable values and 
     "Data iscrizione",
     "Numero dei figli accompagnati",
     "Nomi e cognomi dei minori accompagnati",
+    "Presenza confermata (badge ritirato)",
   ]);
   assert.deepEqual(sheet.getRow(2).values, [
     ,
@@ -213,9 +214,10 @@ test("visible-column workbook contains only chosen columns, readable values and 
     "6 set 2026",
     "1",
     "Child Fixture",
+    "—",
   ]);
   assert.equal(sheet.getCell("A2").type, ExcelJS.ValueType.String);
-  assert.equal(sheet.columnCount, 9);
+  assert.equal(sheet.columnCount, 10);
   assert.equal(
     Object.values(sheet.getRow(2).values).includes(person.email!),
     false,
@@ -247,6 +249,7 @@ test("empty visible-column export keeps only its selected headers", async () => 
     "Città",
     "Numero dei figli accompagnati",
     "Nomi e cognomi dei minori accompagnati",
+    "Presenza confermata (badge ritirato)",
   ]);
 });
 

@@ -1,3 +1,4 @@
+import { CONFIRMED_PRESENCE_EXPORT_COPY, confirmedPresenceExportText } from "../reception/confirmed-presence-export.ts";
 import { nationalityName } from "../registrations/nationality-names.ts";
 import { internalSexText } from "../registrations/assisted-demographics.ts";
 import { CHILDREN_EXPORT_COPY, childrenExportValues } from "../registrations/children-export.ts";
@@ -258,10 +259,10 @@ export async function writeVisibleParticipantsWorkbook(
             ? dateFormat.format(new Date(person[column]))
             : "—";
       }
-    }).concat(childrenExportValues(person.children ?? [])),
+    }).concat(childrenExportValues(person.children ?? []), confirmedPresenceExportText(person.confirmedPresence)),
   );
   const headers = columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [PARTICIPANT_COLUMNS[column]]);
-  headers.push(...CHILDREN_EXPORT_COPY.it.headers);
+  headers.push(...CHILDREN_EXPORT_COPY.it.headers, CONFIRMED_PRESENCE_EXPORT_COPY.it.header);
   return writeTableWorkbook("Iscritti", headers, rows);
 }
 

@@ -1,3 +1,5 @@
+import { loadConfirmedExportPresences } from "@/lib/reception/confirmed-presence-export.server";
+import { CONFIRMED_PRESENCE_EXPORT_COPY, confirmedPresenceExportText } from "@/lib/reception/confirmed-presence-export";
 import { loadInternalSexes } from "@/lib/registrations/assisted-demographics.server";
 import { CHILDREN_EXPORT_COPY, childrenExportValues } from "@/lib/registrations/children-export";
 import { attendanceTableColumns, attendanceSlotText } from "@/lib/registrations/attendance-summary";
@@ -68,16 +70,17 @@ export async function GET(request: Request) {
       startsOn,
       locale,
     );
+    const confirmedPresences = await loadConfirmedExportPresences(db, eventId, sorted.map(row => row.registrationId));
     const buffer = await writeTableWorkbook(
       copy.sheet,
-      [...preferences.columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [copy.columns[column]]), ...CHILDREN_EXPORT_COPY[locale].headers],
+      [...preferences.columns.flatMap((column) => column === "attendance" ? attendanceColumns.map(slot => slot.label) : [copy.columns[column]]), ...CHILDREN_EXPORT_COPY[locale].headers, CONFIRMED_PRESENCE_EXPORT_COPY[locale].header],
       sorted.map((row) =>
         preferences.columns.flatMap((column) => column === "attendance"
           ? attendanceColumns.map(slot => attendanceSlotText(row.attendance, slot, locale))
           : [leaderCellText(row, column, startsOn, locale)],
         ).concat(childrenExportValues(row.children.map(child => ({
           id: child.id, position: child.position, firstName: child.first_name, lastName: child.last_name,
-        })))),
+        }))), confirmedPresenceExportText(confirmedPresences.has(row.registrationId), locale)),
       ),
     );
     return new Response(new Uint8Array(buffer), {

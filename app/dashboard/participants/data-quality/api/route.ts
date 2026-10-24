@@ -1,3 +1,4 @@
+import { loadConfirmedExportPresences } from "@/lib/reception/confirmed-presence-export.server";
 import { loadQuestionnaireSummaries } from "@/lib/registrations/questionnaire-summary.server";
 import { loadAssociations } from "@/lib/registrations/association.server";
 import { loadNationalities, loadInternalSexes } from "@/lib/registrations/assisted-demographics.server";
@@ -83,13 +84,14 @@ export async function GET(request: NextRequest) {
         createSupabaseServiceClient(), // Disability reads use only IDs from the authorized event result.
       );
       if (columns.includes("sex") && !canWrite) throw new Error("Colonna riservata agli operatori.");
-      const [nationalities, sexes, associations, birthPlaces] = await Promise.all([
+      const [nationalities, sexes, associations, birthPlaces, confirmedPresences] = await Promise.all([
         columns.includes("nationality") ? loadNationalities(db, people.map(person => person.id)) : Promise.resolve(new Map<string, string | null>()),
         columns.includes("sex") ? loadInternalSexes(createSupabaseServiceClient(), people.filter(person => !person.deletedAt).map(person => person.id), auth.user.id) : Promise.resolve({} as Record<string, import("@/lib/registrations/assisted-demographics").InternalSex>),
         columns.includes("association") ? loadAssociations(db, people.map(person => person.id)) : Promise.resolve(new Map<string, string | null>()),
         columns.includes("birthPlace") ? loadQuestionnaireSummaries(db, people.map(person => person.id)).then(result => result.birthPlaces) : Promise.resolve(new Map<string, string | null>()),
+        loadConfirmedExportPresences(createSupabaseServiceClient(), event.id, people.map(person => person.id)),
       ]);
-      for (const person of people) { person.birthPlace = birthPlaces.get(person.id); person.association = associations.get(person.id); person.nationality = nationalities.get(person.id); person.sex = sexes[person.id]; }
+      for (const person of people) { person.confirmedPresence = confirmedPresences.has(person.id); person.birthPlace = birthPlaces.get(person.id); person.association = associations.get(person.id); person.nationality = nationalities.get(person.id); person.sex = sexes[person.id]; }
       buffer = await writeVisibleParticipantsWorkbook(
         people,
         catalog,

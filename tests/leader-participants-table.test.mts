@@ -1,3 +1,5 @@
+import { loadConfirmedExportPresences } from "../lib/reception/confirmed-presence-export.server.ts";
+import { CONFIRMED_PRESENCE_EXPORT_COPY, confirmedPresenceExportText } from "../lib/reception/confirmed-presence-export.ts";
 import { CHILDREN_EXPORT_COPY, childrenExportValues } from "../lib/registrations/children-export.ts";
 import { attendanceTableColumns, attendanceSlotText } from "../lib/registrations/attendance-summary.ts";
 import ts from "typescript";
@@ -307,6 +309,7 @@ function exportHandler(
     .outputText.replace(/import[\s\S]*?from ["'][^"']+["'];/g, "")
     .replace(/export /g, "");
   const dependencies = {
+    loadConfirmedExportPresences, CONFIRMED_PRESENCE_EXPORT_COPY, confirmedPresenceExportText,
     getCurrentAuthContext: async () =>
       dashboardRole ? { dashboardRole, user: { id: userId } } : null,
     createSupabaseServerClient: async () => ({}),
@@ -417,6 +420,7 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
   const db = database({
     groups: groups.map(group => ({...group, events: {starts_on: "2026-10-01", ends_on: "2026-10-02"}})),
     event_attendance_choices: [{registration_id: "Anna", day: "2026-10-01", day_part: "morning", choice: "yes"}],
+    check_ins: [{ id: "check-zeno", registration_id: "Zeno", event_id: "current", moment_id: null, child_id: null, school_booking_id: null, cancelled_at: null, registration: { status: "submitted", deleted_at: null, cancelled_at: null } }],
     accessibility_needs: [{registration_id: "Anna", washington_group_answers: {hearing: true}}, {registration_id: "Outside", washington_group_answers: {walkingOrSteps: true}}],
     group_memberships: members,
     participant_group_assignments: [
@@ -439,12 +443,15 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
   await book.xlsx.load(Buffer.from(await response.arrayBuffer()) as never);
   const sheet = book.worksheets[0];
   assert.equal(sheet.rowCount, 3);
-  assert.equal(sheet.columnCount, 4);
+  assert.equal(sheet.columnCount, 5);
   assert.equal(sheet.getCell("A2").value, "Zeno Prova");
   assert.equal(sheet.getCell("A3").value, "Anna Prova");
   assert.equal(sheet.getCell("C2").value, "0");
   assert.equal(sheet.getCell("C3").value, "1");
   assert.equal(sheet.getCell("D3").value, "Sofia Prova");
+  assert.equal(sheet.getCell("E1").value, "Presenza confermata (badge ritirato)");
+  assert.equal(sheet.getCell("E2").value, "Sì");
+  assert.equal(sheet.getCell("E3").value, "No");
   const disability = await route.handler(new Request("http://localhost/dashboard/capogruppo/export?columns=name,accessibility"));
   const disabilityBook = new ExcelJS.Workbook();
   await disabilityBook.xlsx.load(Buffer.from(await disability.arrayBuffer()) as never);
@@ -453,7 +460,7 @@ test("actual export handler scopes a true leader, ignores forged event/user and 
   const moments = await route.handler(new Request("http://localhost/dashboard/capogruppo/export?columns=name,attendance,email"));
   const momentBook = new ExcelJS.Workbook();
   await momentBook.xlsx.load(Buffer.from(await moments.arrayBuffer()) as never);
-  assert.equal(momentBook.worksheets[0].columnCount, 9);
+  assert.equal(momentBook.worksheets[0].columnCount, 10);
   assert.equal(momentBook.worksheets[0].getCell("C1").value, "1 ottobre · Mattina");
   assert.equal(momentBook.worksheets[0].getCell("C2").value, "Sì");
   assert.equal(momentBook.worksheets[0].getCell("D2").value, "No");

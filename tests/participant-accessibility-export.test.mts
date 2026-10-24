@@ -49,8 +49,8 @@ test("Excel always appends both child columns, preserves full names and exports 
   const summary = accessibilitySummary({hearing: true, wheelchairOrMobilityAid: true});
   const buffer = await writeVisibleParticipantsWorkbook([{name: "Parent", children, accessibility: summary}] as never, {services: [], tags: [], groups: []}, ["name", "accessibility"], null);
   const book = new ExcelJS.Workbook(); await book.xlsx.load(buffer as never);
-  assert.deepEqual(book.worksheets[0].getRow(1).values, [, "Partecipante", "Informazioni sulla disabilità", ...CHILDREN_EXPORT_COPY.it.headers]);
-  assert.deepEqual(book.worksheets[0].getRow(2).values, [, "Parent", summary, "2", "Anna Maria Rossi; Luca Bianchi"]);
+  assert.deepEqual(book.worksheets[0].getRow(1).values, [, "Partecipante", "Informazioni sulla disabilità", ...CHILDREN_EXPORT_COPY.it.headers, "Presenza confermata (badge ritirato)"]);
+  assert.deepEqual(book.worksheets[0].getRow(2).values, [, "Parent", summary, "2", "Anna Maria Rossi; Luca Bianchi", "—"]);
 });
 test("actual export GET allows disability columns and filters for viewers and managers", async () => {
   const source = readFileSync("app/dashboard/participants/data-quality/api/route.ts", "utf8").split("// Enforce an actual body budget")[0];
@@ -58,9 +58,12 @@ test("actual export GET allows disability columns and filters for viewers and ma
   for (const canWrite of [false, true]) {
     let readSensitive: boolean | undefined;
     const dependencies = {
+      loadConfirmedExportPresences: async (_db: unknown, eventId: string, ids: string[]) => {
+        assert.equal(eventId, "event"); assert.deepEqual(ids, ["parent"]); return new Set(["parent"]);
+      },
       qualityAccess: async () => ({db: {}, auth: {user: {id: "actor"}}, event: {id: "event"}, isAdmin: false, canWrite}),
       loadCatalog: async () => ({services: [], tags: [], groups: []}),
-      filteredExportPeople: async (_db: unknown, _event: unknown, _params: unknown, include: boolean) => {readSensitive = include; return {people: [{name: "Parent", children, accessibility: include ? "Sensitive fixture" : undefined}]};},
+      filteredExportPeople: async (_db: unknown, _event: unknown, _params: unknown, include: boolean) => {readSensitive = include; return {people: [{id: "parent", name: "Parent", children, accessibility: include ? "Sensitive fixture" : undefined}]};},
       parseTablePreferences, parseStatisticsDrilldown, writeVisibleParticipantsWorkbook,
       createSupabaseServiceClient: () => ({from: () => ({insert: async () => ({error: null})})}),
       NextResponse: Response,
@@ -69,7 +72,8 @@ test("actual export GET allows disability columns and filters for viewers and ma
     const response = await handler({nextUrl: new URL("http://localhost/?kind=export&columns=name,accessibility")});
     assert.equal(response.status, 200); assert.equal(readSensitive, true);
     const book = new ExcelJS.Workbook(); await book.xlsx.load(Buffer.from(await response.arrayBuffer()) as never);
-    assert.equal(book.worksheets[0].columnCount, 4);
+    assert.equal(book.worksheets[0].columnCount, 5);
+    assert.equal(book.worksheets[0].getCell("E2").value, "Sì");
     assert.equal(JSON.stringify(book.worksheets[0].getRow(2).values).includes("Sensitive fixture"), true);
     readSensitive = undefined;
     const filtered = await handler({nextUrl: new URL("http://localhost/?kind=export&columns=name&stat=difficulty%3Dhearing")});
