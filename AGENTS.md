@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Duplicati: rimozione immediata dalla lista — 2026-10-24
+
+- Dopo la conferma server «Non sono duplicati», entrambe le righe della coppia
+  scompaiono subito e i contatori si aggiornano; errore conserva la lista.
+  Altre coppie con le stesse persone conservate, ultima coppia con stato vuoto.
+- Stato locale alla lista, sostituito al successivo ricalcolo canonico; nessuna
+  esclusione persistente nel browser. Rendering server delle righe conservato.
+- Nessuna migration. 1.119 test, TypeScript, lint mirato, build isolata e browser
+  desktop/mobile con refresh rallentato superati. Commit/push autorizzati;
+  dettagli in `docs/duplicati-confronto-rapido-2026-10-24.md`.
+
+
 ## Duplicati: confronto rapido e conferma per coppia — 2026-10-24
 
 - «Non sono duplicati», confronto ed eliminazione aprono subito il dialog via

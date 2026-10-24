@@ -1,10 +1,12 @@
 import { loadDuplicateForumActivity } from "@/lib/data-quality/forum-activity.server";
+import { randomUUID } from "node:crypto";
+import { DuplicateListProvider, DuplicateListCount } from "@/app/dashboard/participants/data-quality/list-state";
 import Link from "@/components/pending-link";
 import { OperationsDuplicatesTable } from "@/app/dashboard/operations-duplicates-table";
 import { DuplicateReviewLoader } from "@/app/dashboard/participants/data-quality/review-loader";
 import { qualityAccess } from "@/lib/data-quality/access.server";
 import { loadDismissals, loadQualityPeople } from "@/lib/data-quality/data.server";
-import { findDuplicates } from "@/lib/data-quality/duplicates";
+import { findDuplicates, pairKey } from "@/lib/data-quality/duplicates";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export async function OperationsDuplicatesSection({
@@ -74,89 +76,92 @@ export async function OperationsDuplicatesSection({
         omonimie possono produrre falsi positivi. Puoi eliminare una sola
         iscrizione mantenendo l’altra, oppure segnalarle come persone distinte.
       </p>
-      <nav aria-label="Viste duplicati" className="flex flex-wrap gap-2">
-        <Link
-          className={
-            params.show !== "dismissed"
-              ? "btn-primary px-4 py-2 text-sm"
-              : "btn-secondary px-4 py-2 text-sm"
-          }
-          aria-current={params.show !== "dismissed" ? "page" : undefined}
-          scroll={false}
-          href={path({
-            duplicateShow: null,
-            duplicatePage: null,
-            duplicatePair: null,
-          })}
-        >
-          Da verificare ({matches.filter((m) => m.level !== "dismissed").length}
-          )
-        </Link>
-        <Link
-          className={
-            params.show === "dismissed"
-              ? "btn-primary px-4 py-2 text-sm"
-              : "btn-secondary px-4 py-2 text-sm"
-          }
-          aria-current={params.show === "dismissed" ? "page" : undefined}
-          scroll={false}
-          href={path({
-            duplicateShow: "dismissed",
-            duplicatePage: null,
-            duplicatePair: null,
-          })}
-        >
-          Esclusi ({matches.filter((m) => m.level === "dismissed").length})
-        </Link>
-      </nav>
-      <h3 className="text-lg font-semibold">
-        {params.show === "dismissed"
-          ? "Segnalazioni escluse"
-          : "Possibili duplicati"}{" "}
-        ({visible.length} {visible.length === 1 ? "coppia" : "coppie"})
-      </h3>
-      <p className="text-sm text-[var(--peace-muted)]">
-        Il contatore somma i Forum prenotati e quelli in coda, fino a un massimo
-        visualizzato di 3, comprese le prenotazioni inserite dal capogruppo.
-      </p>
-      {forumActivity === null && (
-        <p role="alert">Impossibile caricare i Forum. Ricarica la pagina prima di valutare l’attività degli account.</p>
-      )}
-      <OperationsDuplicatesTable
-        matches={pageMatches}
-        forumActivity={forumActivity}
-        people={people}
-        basePath={path({ duplicatePair: null })}
-        canWrite={canWrite}
-      />
-      {pageCount > 1 && (
-        <nav className="flex gap-4" aria-label="Pagine duplicati">
-          {page > 1 && (
-            <Link
-              href={path({
-                duplicatePage: String(page - 1),
-                duplicatePair: null,
-              })}
-            >
-              Precedente
-            </Link>
-          )}
-          <span>
-            Pagina {page} di {pageCount}
-          </span>
-          {page < pageCount && (
-            <Link
-              href={path({
-                duplicatePage: String(page + 1),
-                duplicatePair: null,
-              })}
-            >
-              Successiva
-            </Link>
-          )}
+      {/* A fresh server snapshot replaces local confirmations, including newly detected pairs. */}
+      <DuplicateListProvider key={randomUUID()} pendingPairs={pageMatches.filter(match => match.level !== "dismissed").map(match => pairKey(match.left, match.right))}>
+        <nav aria-label="Viste duplicati" className="flex flex-wrap gap-2">
+          <Link
+            className={
+              params.show !== "dismissed"
+                ? "btn-primary px-4 py-2 text-sm"
+                : "btn-secondary px-4 py-2 text-sm"
+            }
+            aria-current={params.show !== "dismissed" ? "page" : undefined}
+            scroll={false}
+            href={path({
+              duplicateShow: null,
+              duplicatePage: null,
+              duplicatePair: null,
+            })}
+          >
+            Da verificare (<DuplicateListCount value={matches.filter((m) => m.level !== "dismissed").length} />
+            )
+          </Link>
+          <Link
+            className={
+              params.show === "dismissed"
+                ? "btn-primary px-4 py-2 text-sm"
+                : "btn-secondary px-4 py-2 text-sm"
+            }
+            aria-current={params.show === "dismissed" ? "page" : undefined}
+            scroll={false}
+            href={path({
+              duplicateShow: "dismissed",
+              duplicatePage: null,
+              duplicatePair: null,
+            })}
+          >
+            Esclusi (<DuplicateListCount value={matches.filter((m) => m.level === "dismissed").length} excluded />)
+          </Link>
         </nav>
-      )}
-      <DuplicateReviewLoader dashboard={dashboard} />
+        <h3 className="text-lg font-semibold">
+          {params.show === "dismissed"
+            ? "Segnalazioni escluse"
+            : "Possibili duplicati"}{" "}
+          (<DuplicateListCount value={visible.length} excluded={params.show === "dismissed"} label />)
+        </h3>
+        <p className="text-sm text-[var(--peace-muted)]">
+          Il contatore somma i Forum prenotati e quelli in coda, fino a un massimo
+          visualizzato di 3, comprese le prenotazioni inserite dal capogruppo.
+        </p>
+        {forumActivity === null && (
+          <p role="alert">Impossibile caricare i Forum. Ricarica la pagina prima di valutare l’attività degli account.</p>
+        )}
+        <OperationsDuplicatesTable
+          matches={pageMatches}
+          forumActivity={forumActivity}
+          people={people}
+          basePath={path({ duplicatePair: null })}
+          canWrite={canWrite}
+        />
+        {pageCount > 1 && (
+          <nav className="flex gap-4" aria-label="Pagine duplicati">
+            {page > 1 && (
+              <Link
+                href={path({
+                  duplicatePage: String(page - 1),
+                  duplicatePair: null,
+                })}
+              >
+                Precedente
+              </Link>
+            )}
+            <span>
+              Pagina {page} di {pageCount}
+            </span>
+            {page < pageCount && (
+              <Link
+                href={path({
+                  duplicatePage: String(page + 1),
+                  duplicatePair: null,
+                })}
+              >
+                Successiva
+              </Link>
+            )}
+          </nav>
+        )}
+        <DuplicateReviewLoader dashboard={dashboard} />
+      </DuplicateListProvider>
     </section>
   );
 }

@@ -18,6 +18,7 @@ import { ReliableForm } from "@/components/reliable-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { formatDuplicateRegistrationDate } from "@/lib/data-quality/registration-date";
 import { suggestedMergeSurvivor } from "@/lib/data-quality/merge-choice";
+import { useDismissDuplicatePair } from "./list-state";
 
 const endpoint = "/dashboard/participants/data-quality/api";
 const button =
@@ -381,6 +382,7 @@ export function ReviewPanel({
   mode?: "compare" | "exclude" | "merge";
 }) {
   const router = useRouter();
+  const dismissPair = useDismissDuplicatePair();
   const [decision, setDecision] = useState(
       mode === "merge" ? "merged" : "not_duplicate",
     ),
@@ -410,6 +412,7 @@ export function ReviewPanel({
         reason,
         confirm,
       });
+      if (decision === "not_duplicate") dismissPair?.(left.id, right.id);
       const destination = new URL(returnTo, window.location.href);
       if (destination.pathname === window.location.pathname)
         window.history.replaceState(null, "", returnTo);

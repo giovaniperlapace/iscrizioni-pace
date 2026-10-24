@@ -1,7 +1,9 @@
 import type { DuplicateForumActivity } from "@/lib/data-quality/forum-activity.server";
 import { LocalQueryLink } from "@/components/local-query-link";
+import { DuplicatePairRows, DuplicateListEmpty } from "@/app/dashboard/participants/data-quality/list-state";
 import {
   DUPLICATE_LABELS,
+  pairKey,
   type DuplicateMatch,
 } from "@/lib/data-quality/duplicates";
 import { formatDuplicateRegistrationDate } from "@/lib/data-quality/registration-date";
@@ -69,12 +71,12 @@ export function OperationsDuplicatesTable({
           </tr>
         </thead>
         <tbody>
-          {matches.flatMap((match) => {
+          {matches.map((match) => {
             const left = byId.get(match.left),
               right = byId.get(match.right);
-            if (!left || !right) return [];
-            const pair = `${match.left}:${match.right}`;
-            return [
+            if (!left || !right) return null;
+            const pair = pairKey(match.left, match.right);
+            return <DuplicatePairRows key={pair} pair={pair}>{[
               [left, right],
               [right, left],
             ].map(([person, other], index) => (
@@ -181,15 +183,9 @@ export function OperationsDuplicatesTable({
                   </div>
                 </td>
               </tr>
-            ));
+            ))}</DuplicatePairRows>;
           })}
-          {!matches.length && (
-            <tr>
-              <td colSpan={7} className="p-5 text-[var(--peace-muted)]">
-                Nessun caso in questa vista.
-              </td>
-            </tr>
-          )}
+          <DuplicateListEmpty pairs={matches.map(match => pairKey(match.left, match.right))} />
         </tbody>
       </table>
     </div>

@@ -98,3 +98,34 @@ temporaneo. Conservate 74 tabelle e 232.460 righe canoniche; definizioni/ACL del
 Aggiunte soltanto le due funzioni previste, entrambe service-only. Nessuna
 modifica o prova operativa su iscrizioni, revisioni duplicati, ingressi o email.
 Le migration Accoglienza `20261023130000` e `20261023140000` restano escluse.
+
+
+## Rimozione immediata dopo la conferma — 24 ottobre 2026
+
+Su richiesta successiva, una conferma riuscita «Non sono duplicati» rimuove
+subito entrambe le righe della coppia e aggiorna Da verificare, Esclusi e il
+numero di coppie. Compare un messaggio di esito; l’ultima coppia lascia lo
+stato vuoto. Non occorre attendere il ricalcolo server né aggiornare la pagina.
+Un errore di salvataggio conserva righe, contatori e motivazione. Eventuali
+altre coppie che coinvolgono le stesse persone restano da verificare.
+
+Stato React circoscritto alla lista Admin/Manager e aggiornato soltanto dopo
+la risposta positiva dell’API esistente. Le righe restano renderizzate sul
+server: al client passano il contenuto già renderizzato e le chiavi delle sole
+coppie della pagina, senza caricare tutte le anagrafiche nel nuovo stato.
+Il refresh in background conserva la lettura canonica; ogni nuova risposta
+server sostituisce lo stato locale, così una coppia nuovamente segnalata dopo
+modifiche ai dati può ricomparire. Nessuna esclusione persistente nel browser.
+Nessuna migration o modifica di RPC, permessi, controlli o scritture database.
+
+Regressione browser sui componenti originali a 1440/390px: refresh server
+trattenuto intenzionalmente, rimozione delle due righe e aggiornamento contatori
+prima di rilasciarlo; errore senza rimozione, coppia condivisa conservata, ultima
+coppia/stato vuoto, successivo refresh e vista Esclusi, nuova rilevazione,
+eliminazione del solo ID selezionato e apertura/chiusura/retry del dialog.
+Tutti superati su dati sintetici, senza operazioni reali.
+
+1.119 test, TypeScript, lint mirato e build production in copia isolata da
+`npm ci` superati. Lint generale: soltanto i tre errori `no-explicit-any` e
+un avviso preesistenti in `tests/ceremony-navigation.test.mts`. Commit e push
+su main autorizzati esplicitamente insieme alla richiesta.
