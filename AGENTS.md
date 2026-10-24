@@ -17,9 +17,10 @@
 - Pulsante «Conferma posti e invia notifica ai partecipanti». Report per
   pubblicazione con ricerca, esiti, pagine, CSV e testo/indirizzo salvati;
   verifica consegna Postmark esplicita, distinta dall’accettazione, senza reinvio.
-- Migration locale `20261024100000`; nessuna migration remota, assegnazione o
-  email reale di prova. Commit locale autorizzato; push da completare dopo
-  accordo sul target della migration. Lavori Accoglienza conservati.
+- Migration `20261024100000` applicata/registrata in produzione dopo
+  autorizzazione e backup verificato: 71 tabelle, 226.514 righe e metadati/ACL
+  di 234 funzioni conservati. Nessuna assegnazione o email reale di prova.
+  Commit e push autorizzati. Lavori Accoglienza conservati.
   1.106 test, TypeScript, build isolata da npm ci, SQL/concorrenza e browser
   desktop/mobile superati; lint generale con i soli problemi preesistenti.
   Dettagli: `docs/cerimonie-bozze-pubblicazione-2026-10-24.md`.

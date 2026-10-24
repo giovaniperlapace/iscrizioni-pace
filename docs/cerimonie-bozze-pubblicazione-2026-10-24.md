@@ -179,10 +179,25 @@ Entrambi includono cerimonia, data, sede e collegamento alla relativa dashboard.
 integralmente i lavori locali sugli incarichi/fasce Accoglienza. Le modifiche
 Accoglienza e le migration `20261023130000`/`20261023140000` restano estranee.
 
-Implementazione verificata e commit locale richiesto dall’utente. Nessun push,
-deployment, migration remota, assegnazione/revoca reale o email di collaudo.
-Il workflow Supabase richiede un ambiente esplicitamente concordato; il target
-production per questa nuova migration deve essere confermato prima del push. La migration nuova va applicata
-prima del codice, dopo il normale backup e confronto di conservazione. Senza
-migration il nuovo percorso restituisce errore, senza ripiegare su assegnazioni
-dirette. Non sono richiesti invii di recupero per le vecchie assegnazioni.
+Il 24 ottobre l’utente ha autorizzato le migration necessarie, commit e push.
+Migration `20261024100000` applicata e registrata atomicamente in produzione,
+prima del push, con lo script del repository e guardie verificate anche sul
+PostgreSQL temporaneo. Il corpo precedente della RPC è confrontato con l’hash
+atteso; snapshot sotto lock e confronto nella stessa transazione: 71 tabelle,
+226.514 righe e metadati/ACL delle 234 funzioni preesistenti conservati. Cambia
+soltanto il corpo di `assign_ceremony_seats`; tre tabelle nuove vuote e tre
+nuove RPC service-only. Nessuna migration Accoglienza inclusa.
+
+Backup completo in infrastruttura, permessi 600, verificato con elenco e
+decodifica integrale:
+`/root/backups/iscrizioni-pace/production-before-ceremony-drafts-1792828032.dump`
+(22.537.111 byte), SHA-256
+`0784e892f2ed2933fc892b2e3b8fc28d405f16ae242c1bab1309f21d0dcbc6fd`.
+
+Lettura live con il ruolo service e autorizzazione Admin canonica: inaugurazione
+validata, otto settori, zero bozze/notifiche; registro migration presente.
+Nessuna assegnazione/revoca, presenza o email reale di prova. Il nuovo percorso
+non ripiega su assegnazioni dirette in caso di errore. Nessun recupero email
+per assegnazioni preesistenti. Codice implementativo `7e58cb9`; push su main
+tramite integrazione Git Vercel, con verifica del relativo deployment prima di
+considerarlo disponibile. Il solo stato BUILDING non costituisce verifica READY.
