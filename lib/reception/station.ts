@@ -75,7 +75,7 @@ export class ReceptionStationSession {
   isLocked() { return ["pending", "uncertain", "blocked"].includes(this.state.phase); }
   canScan() { return this.state.mode === "enter" && (this.explicitPresence ? ["ready", "error"] : ["ready", "result", "error"]).includes(this.state.phase); }
   setMode(mode: ReceptionMode) {
-    if (this.isLocked() || (this.context.duty === "room_assistance" && mode !== "enter")) return;
+    if (this.isLocked() || ((this.context.duty === "room_assistance" || this.context.duty === "registration_check") && mode !== "enter")) return;
     this.update({ mode, phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
   next() {
@@ -83,7 +83,7 @@ export class ReceptionStationSession {
     this.update({ phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
   }
   selectPresence(overrideMissingEventEntry = false) {
-    if (!this.explicitPresence || this.state.phase !== "result" || !this.state.result || this.state.result.kind === "room") return;
+    if (this.context.duty === "registration_check" || !this.explicitPresence || this.state.phase !== "result" || !this.state.result || this.state.result.kind === "room") return;
     this.eventEntryOverride = overrideMissingEventEntry && this.context.duty === "panel_entry";
     this.update({ phase: "selection", mode: "enter", message: "" });
   }
@@ -120,13 +120,13 @@ export class ReceptionStationSession {
     await this.edit(this.state.lookup);
   }
   async removeCurrent() {
-    if (!this.explicitPresence || this.isLocked() || this.state.phase !== "result" || !this.state.lookup) return;
+    if (this.context.duty === "registration_check" || !this.explicitPresence || this.isLocked() || this.state.phase !== "result" || !this.state.lookup) return;
     const lookup = this.state.lookup;
     this.setMode("cancel");
     await this.inspect(lookup);
   }
   private async edit(lookup: ReceptionLookup) {
-    if (this.context.duty === "room_assistance") return;
+    if (this.context.duty === "room_assistance" || this.context.duty === "registration_check") return;
     this.setMode("correct");
     await this.inspect(lookup);
   }
@@ -151,7 +151,7 @@ export class ReceptionStationSession {
     }) : recent });
   }
   async submit(values: Pick<ReceptionCommand, "subjectIds" | "students" | "companions">, confirmed = false, cancelSchool = false) {
-    if (this.context.duty === "room_assistance" || this.state.phase !== "selection" || !this.state.lookup || !this.state.result || this.state.result.kind === "room") return;
+    if ((this.context.duty === "room_assistance" || this.context.duty === "registration_check") || this.state.phase !== "selection" || !this.state.lookup || !this.state.result || this.state.result.kind === "room") return;
     if (this.state.mode !== "enter" && !confirmed) return;
     const cancelAll = this.state.mode === "correct" && ((this.state.result.kind === "family" || this.state.result.kind === "group")
       ? values.subjectIds?.length === 0 : cancelSchool);
@@ -202,8 +202,8 @@ export class ReceptionStationSession {
     this.remember(response, command.lookup, command.action === "inspect" && this.state.mode === "enter");
     if (command.action === "inspect") {
       this.update({ result: response });
-      if (this.context.duty === "room_assistance") {
-        this.update({ phase: "result", message: "Prenotazione verificata. Consulta sala e settore nel riepilogo." });
+      if (this.context.duty === "room_assistance" || this.context.duty === "registration_check") {
+        this.update({ phase: "result", message: this.context.duty === "registration_check" ? "Iscrizione verificata. Nessuna presenza modificata." : "Prenotazione verificata. Consulta sala e settore nel riepilogo." });
         return;
       }
       if (this.explicitPresence && this.state.mode === "enter") {

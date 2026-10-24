@@ -23,6 +23,16 @@ export async function executeReceptionCommand(
     const { data: event, error: eventError } = await session.from("events").select("id").eq("is_current",true).maybeSingle();
     if (eventError || !event) return { status: "unavailable" };
     if (expectedEventId !== undefined && event.id !== expectedEventId) return { status: "forbidden" };
+    if (command.duty === "registration_check") {
+      const { data, error } = await service().rpc("reception_registration_check", {
+        p_event: event.id, p_actor: user.id, p_kind: command.lookup.kind,
+        p_value: command.lookup.kind === "qr" ? hashQrToken(command.lookup.value) : command.lookup.value,
+      });
+      if (error) return { status: error.code === "42501" ? "forbidden" : error.code === "22023" ? "invalid_request" : "unavailable" };
+      const result = projectReceptionResult(data);
+      if (result.status === "valid" && (result.kind !== "family" || result.persons.length !== 1 || result.persons[0].kind !== "adult" || result.outcome !== "verified")) return { status: "unavailable" };
+      return result;
+    }
     const { data: roles, error: rolesError } = await session.from("event_user_roles").select("role,event_id").eq("user_id",user.id);
     if (rolesError) return { status: "unavailable" };
     if (command.duty === "event_entry" && !(participantRegistrationId ? canOperateParticipantReception : canOperateReception)(roles ?? [], event.id)) return { status: "forbidden" };

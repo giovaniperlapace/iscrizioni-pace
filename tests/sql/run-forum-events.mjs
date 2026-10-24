@@ -66,9 +66,16 @@ try {
     rollback;`);
    console.log('PASS existing Forum and ceremony operators expanded, assistance-only and general roles unchanged, migration idempotent');
   }
+  if(name==='20261024160000_reception_registration_check.sql') {
+   const migration=readFileSync(join('supabase/migrations',name),'utf8').replace(/^begin;|^commit;/gm,'');
+   psql('begin;'+readFileSync('tests/sql/registration-verification-preservation-before.sql','utf8')+migration+readFileSync('tests/sql/registration-verification-preservation-after.sql','utf8')+'commit;');
+   console.log('PASS registration verification migration preserves every table row, existing function/ACL, policy and trigger');
+   continue;
+  }
   try {file(join('supabase/migrations',name));}catch(e){throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
+ console.log(file('tests/sql/registration-verification.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/reception-duty-windows.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/forum-event-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/school-qr-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));

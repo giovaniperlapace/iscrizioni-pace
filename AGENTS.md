@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Accoglienza: verifica iscrizione e cornice scanner — 2026-10-24
+
+- «Verifica iscrizione» primo incarico, sempre disponibile agli operatori Forum/
+  eventi. Nome del titolare QR; verde presenza generale confermata/badge ritirato,
+  giallo iscrizione senza presenza, rosso QR non valido. Errori tecnici distinti.
+- Sola lettura in UI, contratto, sessione e nuova RPC service-only STABLE;
+  evento/incarichi e ultimo QR validati. Nessuna conferma, revoca o prenotazione.
+  Scansioni consecutive, latch, manuale/USB e collaudo F001/F009/F008 conservati.
+- Cornice di tutti gli incarichi Forum/cerimonie con gradiente e motivo home;
+  incarico/statistiche e bande simmetriche da 80px conservati, testo bianco.
+- Migration `20261024160000` applicata/registrata in produzione nel rilascio
+  richiesto, dopo backup verificato: 74 tabelle, 244.199 righe e 239 funzioni/ACL
+  preesistenti conservate. Commit/push richiesti. Nessuna scrittura operativa reale.
+- 1.123 test, TypeScript, lint mirato, build isolata da npm ci, SQL/concorrenza
+  e browser originale desktop/mobile superati. Dettagli:
+  `docs/accoglienza-verifica-iscrizione-2026-10-24.md`.
+
 ## Inaugurazione: sala collegata F a 500 posti — 2026-10-24
 
 - Migration `20261024140000`: F 400 → 500, totale fisico 3.640 e

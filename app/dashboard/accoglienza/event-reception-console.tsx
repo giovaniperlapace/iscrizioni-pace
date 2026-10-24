@@ -1,5 +1,6 @@
 "use client";
 
+import { PeaceLineMark } from "@/components/event-identity";
 import { ChevronDown, History, Keyboard, ScanLine } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { ReceptionCommand, ReceptionResult } from "@/lib/reception/contracts";
@@ -32,9 +33,10 @@ type Props = {
 
 export function EventReceptionConsole(props: Props) {
   const { commandAction, deviceMode = "computer", cameraSource, onChangeMode, onChangeDuty, onBusy } = props;
+  const verification = props.duty?.duty === "registration_check";
   const entryTerminology = props.duty?.duty === "panel_entry" || props.duty?.duty === "ceremony_entry";
   const copy = (value: string) => receptionEntryCopy(value, entryTerminology);
-  const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, props.duty && props.duty.duty !== "event_entry" ? {duty: props.duty.duty, panelId: props.duty.panelId} : { duty: "event_entry" }, true));
+  const [session] = useState(() => new ReceptionStationSession(commandAction, () => crypto.randomUUID(), 20000, props.duty?.duty === "registration_check" ? {duty: "registration_check"} : props.duty && props.duty.duty !== "event_entry" ? {duty: props.duty.duty, panelId: props.duty.panelId} : { duty: "event_entry" }, true));
   const state = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
   const [entry, setEntry] = useState<VerifiedReception | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,7 +58,9 @@ export function EventReceptionConsole(props: Props) {
   const message = state.problem === "not_booked" ? state.message : copy(state.message);
   const missingTicket = result?.kind === "family" && result.persons.some(person => person.eligible === false && !person.checkedInAt);
   const missingEventEntry = (result?.kind === "family" && result.persons.some(person => person.eventCheckedIn === false && !person.checkedInAt)) || (result?.kind === "school" && result.eventCheckedIn === false && !result.checkedInAt);
-  const feedbackTone = receptionFeedbackTone({problem: problem ? state.problem : undefined, wrongForum: state.wrongForum, missingTicket, missingEventEntry});
+  const verificationPerson = verification && result?.kind === "family" ? result.persons[0] : null;
+  const verificationMessage = verificationPerson ? verificationPerson.checkedInAt ? "Iscrizione verificata · badge ritirato (presenza confermata)." : "Iscrizione verificata · badge non ritirato (presenza non confermata)." : "";
+  const feedbackTone = verificationPerson && !problem ? (verificationPerson.checkedInAt ? "green" : "yellow") : receptionFeedbackTone({problem: problem ? state.problem : undefined, wrongForum: state.wrongForum, missingTicket, missingEventEntry});
   const cameraHasResult = !!result || problem;
   const correctionOpen = correction && state.phase === "selection" && state.result && state.result.kind !== "room";
   const scanHint = deviceMode === "computer" && !manual && <p className="text-sm text-slate-600">{locked || correctionOpen || state.phase === "selection" ? "Lettura sospesa durante l’operazione." : "Scansiona un nuovo QR per aprire la scheda successiva."}</p>;
@@ -101,7 +105,7 @@ export function EventReceptionConsole(props: Props) {
   async function inspect(lookup: ReceptionCommand["lookup"], replace = false) {
     if (busyRef.current || session.isLocked() || session.snapshot().phase === "selection" || session.snapshot().mode !== "enter") return;
     if (!replace && (!session.canScan() || entry)) return;
-    if (session.snapshot().lookup?.value !== lookup.value) setEntry(null);
+    if (verification || session.snapshot().lookup?.value !== lookup.value) setEntry(null);
     if (replace) await session.inspectNext(lookup);
     else await session.inspect(lookup);
     const found = session.snapshot().result;
@@ -128,7 +132,7 @@ export function EventReceptionConsole(props: Props) {
       {state.phase === "error" && entry && <button className="btn-secondary mt-3 min-h-12 px-4" onClick={next}>Rileggi il codice</button>}
     </div>}
   </>;
-  const party = result && (result.kind === "family" || result.kind === "group") ? <ReceptionParty entryTerminology={entryTerminology}
+  const party = !verification && result && (result.kind === "family" || result.kind === "group") ? <ReceptionParty entryTerminology={entryTerminology}
     key={result.kind === "group" ? result.groupId : result.code} result={result} session={session}
     printing={deviceMode === "computer" && !!props.labelPrinting} labelCommandAction={props.labelCommandAction}
     compact={cameraVisible} allowEventEntryOverride={props.duty?.duty === "panel_entry"} disabled={locked || problem || correction} onBusyChange={changeBusy} feedback={feedback}
@@ -139,7 +143,7 @@ export function EventReceptionConsole(props: Props) {
       <h3 ref={heading} tabIndex={-1} className={`break-words font-bold outline-none ${cameraVisible ? "text-lg" : "text-2xl"}`}>{result.kind === "group" ? result.groupName : result.kind === "family" ? `${result.persons[0]?.firstName} ${result.persons[0]?.lastName}` : result.kind === "school" ? `${result.schoolName} · ${result.classDescription}` : result.label}</h3>
       {(props.duty?.duty === "panel_entry" || props.duty?.duty === "ceremony_entry") && (result.kind !== "family" || result.persons.every(person => person.eligible !== false)) && !missingEventEntry && state.phase === "result" && state.result?.outcome === "verified" && <p role="status" className="rounded-xl bg-green-100 p-3 font-semibold text-green-900">✓ {props.duty.duty === "panel_entry" ? "Iscrizione al Forum verificata." : "Biglietto per la cerimonia verificato."}</p>}
       {!cameraVisible && result.kind === "family" && <p className="text-sm text-slate-600">{result.code}</p>}
-      {party ?? <>
+      {verificationPerson ? <p role="status" data-registration-check data-reception-tone={feedbackTone} className={`rounded-xl border p-4 font-semibold ${RECEPTION_TONES[feedbackTone]}`}>{verificationMessage}</p> : party ?? <>
         {feedback}
         {result.kind === "school" && <>
           {result.eventCheckedIn === false && !result.checkedInAt && <p role="alert" className="rounded-lg border border-yellow-500 bg-yellow-100 p-3 text-yellow-950">Partecipazione all’evento non registrata. Per questa classe puoi registrare insieme la partecipazione all’evento e l’ingresso al Forum, indicando studenti e accompagnatori effettivamente arrivati.</p>}
@@ -151,7 +155,7 @@ export function EventReceptionConsole(props: Props) {
     </div>;
 
   const cameraNotice = (result || problem || state.phase === "pending") && <div className={`px-3 py-2 text-sm font-semibold ${RECEPTION_TONES[state.phase === "pending" ? "progress" : feedbackTone]}`} data-reception-tone={feedbackTone} role="status">
-    {state.phase === "pending" ? "Verifica in corso…" : (problem || missingTicket || missingEventEntry) ? "Attenzione: leggi il messaggio sotto." : fading ? "✓ Ingresso registrato" : "QR letto · controlla la scheda ↓"}
+    {state.phase === "pending" ? "Verifica in corso…" : (problem || missingTicket || missingEventEntry) ? "Attenzione: leggi il messaggio sotto." : verificationPerson ? verificationMessage : fading ? "✓ Ingresso registrato" : "QR letto · controlla la scheda ↓"}
   </div>;
 
   const navigation = <div className={props.navigationAboveTitle ? "grid grid-cols-1 gap-3 text-sm sm:flex sm:flex-wrap" : "flex gap-3 text-sm"} aria-label="Postazione e incarico">
@@ -159,7 +163,8 @@ export function EventReceptionConsole(props: Props) {
         {onChangeDuty && <button className={props.navigationAboveTitle ? "btn-secondary min-h-11 px-4" : "min-h-11 underline"} disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeDuty}>Cambia incarico</button>}
       </div>;
 
-  const dutyHeader = props.statistics && <header className={cameraVisible ? "grid gap-1 text-center" : "grid gap-1 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] px-4 py-2"} aria-label="Incarico attivo">
+  const dutyHeader = props.statistics && <header className={cameraVisible ? "relative grid gap-1 text-center" : props.navigationAboveTitle ? "event-gradient relative isolate overflow-hidden grid gap-1 px-4 py-3 text-center text-white" : "grid gap-1 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] px-4 py-2"} aria-label="Incarico attivo">
+    {!cameraVisible && props.navigationAboveTitle && <PeaceLineMark className="pointer-events-none absolute -right-12 -top-10 -z-10 h-40 w-96 text-white/15" />}
     <h2 id="reception-title" className="break-words text-base font-semibold leading-snug">{props.duty?.title ?? "Accoglienza evento"}</h2>
     {props.statistics}
   </header>;
@@ -174,10 +179,10 @@ export function EventReceptionConsole(props: Props) {
       {!cameraVisible && dutyHeader}
     <div hidden={!cameraVisible && (!!result || problem && state.phase !== "error")}>
       <div className={props.statistics ? "grid gap-4 p-4" : "surface-card grid gap-4 p-4"}>
-        {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
-          <ReceptionCamera source={cameraSource} topOverlay={dutyHeader} overlay={cameraNotice} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || !!entry} onCode={value => {
+        {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner readOnly={verification} paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
+          <ReceptionCamera themed={props.navigationAboveTitle} source={cameraSource} topOverlay={dutyHeader} overlay={cameraNotice} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || (!!entry && !verification)} onCode={value => {
             if (!fading && !locked && !correction && state.phase !== "selection" && (session.canScan() || state.phase === "result") && latch.current.accept(value)) void inspect({ kind: "qr", value }, !!entry);
-          }} onNoCode={() => { if (!entry && session.canScan()) latch.current.absent(); }} /> :
+          }} onNoCode={() => { if ((!entry || verification) && !locked) latch.current.absent(); }} /> :
           <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void inspect({ kind: code.startsWith("G:") || code.length === 43 ? "qr" : "code", value: code }); setCode(""); }}>
             <label className="grid gap-1">{props.duty?.duty === "event_entry" || !props.duty ? "Codice partecipante o QR gruppo" : "Codice partecipante"}<input className="field min-h-12" disabled={locked || !!entry} value={code} onChange={event => setCode(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={45} /></label>
             <button className="btn-primary min-h-12" disabled={locked || !!entry}>Leggi codice</button>

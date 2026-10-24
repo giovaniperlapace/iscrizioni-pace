@@ -1,5 +1,6 @@
 "use client";
 
+import { PeaceLineMark } from "@/components/event-identity";
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { cameraErrorMessage, startQrCamera, type CameraSource } from "@/lib/reception/camera";
 
@@ -10,8 +11,9 @@ const feedbackStyles = {
   error: "bg-red-800 text-white",
 };
 
-export function ReceptionCamera({ paused, feedback, feedbackTone = "progress", belowPreview, topOverlay, overlay, overlayFading = false, onCode, onNoCode, source = startQrCamera }: {
+export function ReceptionCamera({ paused, themed = false, feedback, feedbackTone = "progress", belowPreview, topOverlay, overlay, overlayFading = false, onCode, onNoCode, source = startQrCamera }: {
   paused: boolean;
+  themed?: boolean;
   feedback?: string;
   feedbackTone?: keyof typeof feedbackStyles;
   belowPreview?: ReactNode;
@@ -64,11 +66,12 @@ export function ReceptionCamera({ paused, feedback, feedbackTone = "progress", b
   }, [requested, source]);
 
   return <section className="grid gap-3" aria-label="Scanner fotocamera">
-    <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-2xl bg-slate-950">
-      <video ref={video} muted playsInline autoPlay aria-label="Anteprima fotocamera" className="absolute inset-0 h-full w-full object-contain" />
+    <div data-scanner-frame={themed ? "peace" : undefined} className={`relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-2xl ${themed ? "event-gradient ring-1 ring-[var(--peace-blue-800)]/20" : "bg-slate-950"}`}>
+      <video ref={video} muted playsInline autoPlay aria-label="Anteprima fotocamera" className={`absolute inset-0 h-full w-full object-contain ${themed ? "px-2" : ""}`} />
       <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 border-white/80" aria-hidden="true" />
-      {topOverlay && <div data-camera-header className="absolute inset-x-0 top-0 h-20 overflow-y-auto bg-slate-950 px-2 py-1 text-white">{topOverlay}</div>}
-      {(topOverlay || overlay) && <div data-camera-footer={topOverlay ? "" : undefined} className={topOverlay ? "absolute inset-x-0 bottom-0 flex h-20 items-center justify-center bg-slate-950 p-2" : "absolute inset-x-2 bottom-2 max-h-[40%]"}>
+      {topOverlay && <div data-camera-header className={`absolute isolate inset-x-0 top-0 h-20 overflow-y-auto px-2 py-1 text-white ${themed ? "event-gradient" : "bg-slate-950"}`}>{themed && <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"><PeaceLineMark className="absolute -right-10 -top-6 h-28 w-96 text-white/15" /></div>}{topOverlay}</div>}
+      {(topOverlay || overlay) && <div data-camera-footer={topOverlay ? "" : undefined} className={topOverlay ? `absolute isolate inset-x-0 bottom-0 flex h-20 items-center justify-center overflow-hidden p-2 ${themed ? "event-gradient" : "bg-slate-950"}` : "absolute inset-x-2 bottom-2 max-h-[40%]"}>
+        {themed && topOverlay && <PeaceLineMark className="pointer-events-none absolute -left-20 -top-4 -z-10 h-28 w-[28rem] rotate-12 text-white/25" />}
         {overlay && <div data-camera-overlay inert={overlayFading || undefined} style={overlayFading ? { animation: "reception-result-fade 2s linear forwards" } : undefined} className="max-h-full w-full overflow-y-auto overscroll-contain rounded-xl bg-white text-center text-slate-950 shadow-lg">{overlay}</div>}
       </div>}
       {feedback && <p role="status" data-feedback-tone={feedbackTone} className={`pointer-events-none absolute inset-x-2 bottom-2 rounded-lg p-3 text-center font-semibold shadow-lg ${feedbackStyles[feedbackTone]}`}>{feedback}</p>}

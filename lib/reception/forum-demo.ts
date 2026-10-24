@@ -28,6 +28,12 @@ export function createForumReceptionDemo() {
     const scan=input.operation==="scan"?parseReceptionCommand(input.command):null;
     const desk=input.operation==="desk"?parseDeskRequest(input.command):null;
     if(!scan&&!desk)return {status:"invalid_request"};
+    if(scan?.duty==="registration_check") {
+      const person=people.find(p=>scan.lookup.kind==="qr"?p.token===scan.lookup.value:p.code===scan.lookup.value);
+      if(!person || person.invalid)return {status:"invalid"};
+      return {status:"valid",kind:"family",code:person.code,revision:0,registrationStatus:"confirmed",outcome:"verified",
+        persons:[{id:person.id,kind:"adult",firstName:person.name,lastName:"Prova",checkedInAt:person.eventMissing?null:"2026-10-25T08:00:00Z"}]};
+    }
     const target=scan?.panelId??desk!.target;
     const duty=DEMO_DUTIES.find(d=>d.key===target);
     if(!duty || scan && scan.duty!==(duty.kind==="panel"?"panel_entry":"ceremony_entry"))return {status:"invalid_request"};

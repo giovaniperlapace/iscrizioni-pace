@@ -2,7 +2,7 @@ import type { GroupCeremonySummary } from '../ceremonies/group-seat-summary.ts';
 import type { CeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 export type ReceptionLookup = { kind: "qr" | "code"; value: string };
 export type ReceptionCommand = {
-  duty: "event_entry" | "panel_entry" | "room_assistance" | "ceremony_entry";
+  duty: "registration_check" | "event_entry" | "panel_entry" | "room_assistance" | "ceremony_entry";
   panelId?: string;
   groupSnapshot?: string;
   lookup: ReceptionLookup;
@@ -52,15 +52,15 @@ const integer = (value: unknown, max: number) =>
 // This boundary is deliberately strict: never accept an actor, event or raw
 // database identifier for the lookup from a client.
 export function parseReceptionCommand(input: unknown): ReceptionCommand | null {
-  if (!record(input) || typeof input.duty !== "string" || !["event_entry", "panel_entry", "room_assistance", "ceremony_entry"].includes(input.duty) || !record(input.lookup) ||
+  if (!record(input) || typeof input.duty !== "string" || !["registration_check", "event_entry", "panel_entry", "room_assistance", "ceremony_entry"].includes(input.duty) || !record(input.lookup) ||
     Object.keys(input).some(key => !["duty","panelId","groupSnapshot","lookup","action","requestId","subjectIds","students","companions","expectedRevision","reason"].includes(key)) ||
     Object.keys(input.lookup).some(key => !["kind","value"].includes(key)) ||
     (typeof input.action !== "string" || !["inspect","enter","correct","cancel"].includes(input.action)) ||
     (typeof input.lookup.kind !== "string" || !["qr","code"].includes(input.lookup.kind)) || typeof input.lookup.value !== "string") return null;
-  if (input.duty === "event_entry" ? input.panelId !== undefined : typeof input.panelId !== "string" || (input.duty === "ceremony_entry" ? !["opening", "closing"].includes(input.panelId) : !uuid.test(input.panelId))) return null;
+  if ((input.duty === "event_entry" || input.duty === "registration_check") ? input.panelId !== undefined : typeof input.panelId !== "string" || (input.duty === "ceremony_entry" ? !["opening", "closing"].includes(input.panelId) : !uuid.test(input.panelId))) return null;
   if (input.duty === "ceremony_entry" && (input.action === "correct" || input.students !== undefined || input.companions !== undefined)) return null;
-  if (input.duty === "room_assistance" && input.action !== "inspect") return null;
-  const context = input.duty === "event_entry" ? { duty: "event_entry" as const } :
+  if ((input.duty === "room_assistance" || input.duty === "registration_check") && input.action !== "inspect") return null;
+  const context = input.duty === "registration_check" ? { duty: "registration_check" as const } : input.duty === "event_entry" ? { duty: "event_entry" as const } :
     { duty: input.duty as "panel_entry" | "room_assistance" | "ceremony_entry", panelId: input.panelId as string };
   const kind = input.lookup.kind as ReceptionLookup["kind"];
   // QR is a bare opaque token, never a URL or arbitrary scanner contents.

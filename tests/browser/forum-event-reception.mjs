@@ -15,7 +15,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
  update panel_waitlist set status='cancelled' where status in ('waiting','offered');
  select set_reception_duties(fw(200),fw(11),fw(8),array[fw(403)::text,fw(404)::text,'opening'],app.reception_duty_keys(fw(200),fw(8)));
  insert into check_ins(event_id,registration_id,checked_in_by,source) values(fw(200),fw(107),fw(10),'manual');`);
- const functions=new Set(['has_panel_reception_duty','reception_duty_catalog','reception_target_statistics','reception_desk','reception_forum_routing','reception_panel_check_in','reception_ceremony_check_in','set_reception_duties','reception_event_check_in']);
+ const functions=new Set(['has_panel_reception_duty','reception_duty_catalog','reception_target_statistics','reception_desk','reception_forum_routing','reception_panel_check_in','reception_ceremony_check_in','set_reception_duties','reception_event_check_in','reception_registration_check']);
  const adapter=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');const url=new URL(req.url,'http://127.0.0.1');
   try {
@@ -131,6 +131,8 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByText('Ruolo assegnato. Gli altri incarichi sono stati conservati.',{exact:true}).waitFor();
   assert.equal(psql('select cardinality(app.reception_duty_keys(fw(200),fw(8)));',true).trim(),'8');
   actor=8;
+  const {checkRegistrationVerification}=await import('./registration-verification.mjs');
+  await checkRegistrationVerification({page,context,base,psql,calls,setActor:value=>{actor=value;}});
   await page.goto(base+'/dashboard/accoglienza-forum-eventi');
   await page.getByRole('button',{name:/Computer ·/}).click();
   assert.equal(await page.locator('video').count(),0);

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     if(body.eventId !== event.id) return reply({status:"forbidden"},403);
     if(body.operation === "scan") {
       const command=parseReceptionCommand(body.command);
-      if(!command || !["panel_entry","ceremony_entry"].includes(command.duty)) return reply({status:"invalid_request"},400);
+      if(!command || !["registration_check","panel_entry","ceremony_entry"].includes(command.duty)) return reply({status:"invalid_request"},400);
       return reply(await executeReceptionCommand(db,createSupabaseServiceClient,command,event.id));
     }
     if(body.operation === "statistics" && validDutyKey(body.target)) {

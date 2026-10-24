@@ -2,6 +2,7 @@ import { compareForums } from "../panels/forum-order.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ReceptionDuty =
+  | { key: "registration_check"; duty: "registration_check"; title: string; room: null }
   | { key: "event_entry"; duty: "event_entry"; title: string; room: null }
   | { key: string; duty: "panel_entry" | "room_assistance" | "ceremony_entry"; panelId: string; title: string; room: string | null };
 

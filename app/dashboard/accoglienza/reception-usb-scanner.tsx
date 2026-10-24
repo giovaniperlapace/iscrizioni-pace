@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { UsbScannerBuffer } from "@/lib/reception/usb-scanner";
 
-export function ReceptionUsbScanner({ paused, onCode }: { paused: boolean; onCode: (code: string) => void }) {
+export function ReceptionUsbScanner({ paused, readOnly = false, onCode }: { paused: boolean; readOnly?: boolean; onCode: (code: string) => void }) {
   const target = useRef<HTMLDivElement>(null);
   const [buffer] = useState(() => new UsbScannerBuffer());
   const receive = useEffectEvent((code: string) => { if (!paused) onCode(code); });
@@ -42,6 +42,6 @@ export function ReceptionUsbScanner({ paused, onCode }: { paused: boolean; onCod
   }, [paused]);
   return <div ref={target} tabIndex={0} className="grid gap-2 rounded-xl border border-[var(--peace-border)] bg-slate-50 p-4 outline-offset-4" aria-label="Scanner USB">
     <p role="status" className="font-semibold">{paused ? "Lettura sospesa · completa la scheda aperta" : "Scanner USB pronto · leggi un QR code"}</p>
-    <p className="text-sm">Usa il lettore collegato a questo computer. La lettura apre la scheda; presenza e stampa si confermano dai rispettivi pulsanti.</p>
+    <p className="text-sm">{readOnly ? "Usa il lettore collegato a questo computer per verificare iscrizione e ritiro del badge. Nessuna presenza viene modificata." : "Usa il lettore collegato a questo computer. La lettura apre la scheda; presenza e stampa si confermano dai rispettivi pulsanti."}</p>
   </div>;
 }

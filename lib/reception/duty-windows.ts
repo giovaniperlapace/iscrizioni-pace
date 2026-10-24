@@ -7,6 +7,7 @@ export function dutyWindow(duty: DutyOption) {
 }
 
 export function isDutyAvailable(duty: DutyOption, now: number) {
+  if (duty.key === "registration_check" && duty.kind === "verification") return true;
   const window = dutyWindow(duty);
   return !!window && now >= window.from && now < window.until;
 }

@@ -26,12 +26,12 @@ export async function checkDutyWindows(browser,base) {
   await page.getByRole('button',{name:/Cerimonia finale/}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Forum/}).count(),0);
   await scenario('sunday');
-  await page.getByText('Nessun incarico disponibile in questo momento.').waitFor();
-  assert.match(await page.getByRole('status').innerText(),/14:00/);
+  await page.getByRole('button',{name:'Verifica iscrizione',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:/Inaugurazione/}).count(),0);
   await page.clock.runFor(1000);
   await page.getByRole('button',{name:/Inaugurazione/}).waitFor();
   await scenario('early');
-  await page.getByText('Nessun incarico disponibile in questo momento.').waitFor();
+  await page.getByRole('button',{name:'Verifica iscrizione',exact:true}).waitFor();
   // A suspended tab resumes after the boundary without having run its timer.
   await page.clock.setSystemTime(new Date(await page.evaluate(()=>Date.now())+1000));
   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
@@ -46,7 +46,7 @@ export async function checkDutyWindows(browser,base) {
   await page.getByRole('button',{name:'Cambia incarico',exact:true}).click();
   await page.getByRole('button',{name:/Forum pomeriggio ore 17/}).waitFor();
   await scenario('ended');
-  await page.getByText('Nessun incarico disponibile in questo momento.').waitFor();
+  await page.getByRole('button',{name:'Verifica iscrizione',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Forum|Cerimonia|Inaugurazione/}).count(),0);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`/tmp/pace-duty-windows-${width}.png`,fullPage:true});
