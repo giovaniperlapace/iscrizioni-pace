@@ -63,3 +63,21 @@ test("Postmark transport: streams, identity, attachments, errors and no duplicat
     Object.assign(process.env, before);
   }
 });
+
+test("metadata limits reject invalid single/batch requests before HTTP without truncating identifiers", async () => {
+  const env={...process.env}, originalFetch=globalThis.fetch;
+  const {sendBroadcastBatch}=await import('../lib/email/smtp.ts');
+  try {
+    process.env.EMAIL_DELIVERY_MODE='postmark';process.env.POSTMARK_SERVER_TOKEN='synthetic';
+    let calls=0;const payloads:Record<string,unknown>[]=[];
+    globalThis.fetch=async (_url,init)=>{calls++;const body=JSON.parse(String(init?.body));payloads.push(body);return Response.json({ErrorCode:0,MessageID:'synthetic'});};
+    const invalid=[{ceremonyPublicationEmailId:'id'},{key:'x'.repeat(81)},{Key:'one',key:'two'},Object.fromEntries(Array.from({length:11},(_,i)=>['key'+i,'v']))];
+    for(const metadata of invalid){
+      await assert.rejects(sendTransactionalEmail({...mail,metadata}),/invalid_metadata/);
+      assert.deepEqual(await sendBroadcastBatch([{...mail,metadata}]),[{errorCode:'invalid_metadata'}]);
+    }
+    assert.equal(calls,0);
+    const metadata={ceremony_email_id:'00000000-0000-4000-8000-000000000001',['k'.repeat(20)]:'v'.repeat(80)};
+    await sendTransactionalEmail({...mail,metadata});assert.equal(calls,1);assert.deepEqual(payloads[0].Metadata,metadata);
+  }finally{globalThis.fetch=originalFetch;for(const key of Object.keys(process.env))if(!(key in env))delete process.env[key];Object.assign(process.env,env);}
+});

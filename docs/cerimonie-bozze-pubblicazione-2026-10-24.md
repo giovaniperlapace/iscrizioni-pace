@@ -201,3 +201,29 @@ non ripiega su assegnazioni dirette in caso di errore. Nessun recupero email
 per assegnazioni preesistenti. Codice implementativo `7e58cb9`; push su main
 tramite integrazione Git Vercel, con verifica del relativo deployment prima di
 considerarlo disponibile. Il solo stato BUILDING non costituisce verifica READY.
+
+## Correzione Postmark 300 — 24 ottobre
+
+La chiave metadata `ceremonyPublicationEmailId` aveva 26 caratteri, oltre
+al limite Postmark di 20. Riprodotto con `POSTMARK_API_TEST`, destinatari
+sintetici e nessuna consegna: HTTP 422 / ErrorCode 300; la nuova chiave
+`ceremony_email_id` restituisce HTTP 200 / ErrorCode 0. Identificativo e
+contenuto delle notifiche restano invariati.
+
+Il trasporto verifica preventivamente numero di campi (10), lunghezze
+(20/80) e chiavi duplicate senza distinzione di maiuscole. Nessun troncamento
+degli identificativi; payload invalidi rifiutati localmente anche nei batch.
+Test di regressione sul percorso reale di preparazione, sia personale sia
+capogruppo, e sui limiti del trasporto.
+
+Verifiche: 1.111 test superati, lint mirato e build isolata da npm ci superati.
+TypeScript generale incontra un errore estraneo in
+`tests/participant-birth-place-column.test.mts:33` (TS2559), già presente
+nel commit di partenza `f9fe067`; nessuna modifica a quel lavoro.
+Nessuna migration necessaria. Lavori Accoglienza conservati.
+
+Al controllo iniziale risultavano due notifiche `failed/postmark_300`, senza
+message ID, accettazione o consegna. Il rilascio della correzione non modifica
+le righe fallite, accettate o incerte: il recupero dei due rifiuti è separato.
+
+Riferimento: https://postmarkapp.com/support/article/1125-custom-metadata-faq

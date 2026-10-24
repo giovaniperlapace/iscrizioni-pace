@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Cerimonie: correzione email Postmark 300 — 2026-10-24
+
+- Metadata `ceremony_email_id` entro il limite Postmark di 20 caratteri;
+  vecchia chiave di 26 caratteri riproduceva il rifiuto 300. Verificato con
+  token ufficiale di test, senza consegna. Controllo preventivo nel trasporto.
+- 1.111 test, lint mirato e build isolata superati; TypeScript generale
+  segnala TS2559 nel test preesistente della colonna luogo di nascita.
+- Nessuna migration; falliti/incerti non riaccodati automaticamente.
+  Dettagli nel verbale cerimonie bozze/pubblicazione del 24 ottobre.
+
 ## Cerimonie: bozze condivise e pubblicazione — 2026-10-24
 
 - Nuovi salvataggi Admin/Manager in bozza, condivisa; spostamento fra settori,

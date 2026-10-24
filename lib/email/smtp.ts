@@ -33,12 +33,24 @@ export function sendBroadcastEmail(input: SendEmailInput) {
   return sendEmail(input, "broadcast");
 }
 
+// Postmark rejects overlong or case-insensitively duplicated metadata with code 300.
+// Validate locally without truncating identifiers or silently dropping tracking fields.
+function validMetadata(metadata: SendEmailInput["metadata"]): boolean {
+  if (metadata === undefined) return true;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
+  const entries = Object.entries(metadata);
+  return entries.length <= 10
+    && entries.every(([key, value]) => key.length > 0 && key.length <= 20 && typeof value === "string" && value.length <= 80)
+    && new Set(entries.map(([key]) => key.toLowerCase())).size === entries.length;
+}
+
 async function sendEmail(input: SendEmailInput, kind: "transactional" | "broadcast") {
   const config = getEmailConfig();
   // Each call represents exactly one recipient. Prevent accidental recipient expansion.
   if (!/^[^\s,;<>@]+@[^\s,;<>@]+$/.test(input.to)) {
     throw new EmailDeliveryError("invalid_recipient");
   }
+  if (!validMetadata(input.metadata)) throw new EmailDeliveryError("invalid_metadata");
   if (config.deliveryMode === "log") {
     // Never log magic links, email bodies, recipient addresses or attachments.
     console.info("[email:log]", { kind, attachments: input.attachments?.length || 0 });
@@ -146,6 +158,9 @@ export async function sendBroadcastBatch(inputs: SendEmailInput[]): Promise<Batc
     }
     if (!/^[^\s,;<>@]+@[^\s,;<>@]+$/.test(input.to)) {
       results[index] = { errorCode: "invalid_recipient" }; continue;
+    }
+    if (!validMetadata(input.metadata)) {
+      results[index] = { errorCode: "invalid_metadata" }; continue;
     }
     if (config.deliveryMode === "log") {
       results[index] = await sendBroadcastEmail(input); continue;

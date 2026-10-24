@@ -59,7 +59,7 @@ export async function processDueCeremonyPublications() {
       return {
         to,
         ...renderPublicationEmail(notice, appUrl, locale),
-        metadata: { ceremonyPublicationEmailId: notice.id },
+        metadata: { ceremony_email_id: notice.id },
       };
     },
   );
