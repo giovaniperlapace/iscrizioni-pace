@@ -2,8 +2,9 @@
 import { memo } from "react";
 import type { SeatsDesk } from "@/lib/ceremonies/seats-desk";
 import { openingSeatAddress } from "@/lib/ceremonies/seat-label";
+import { sectorCounts } from "@/lib/ceremonies/drafts";
 type Sector = SeatsDesk["sectors"][number];
-const colors = { free: "#dbeafe", reserved: "#d97706", blocked: "#94a3b8" };
+const colors = { free: "#dbeafe", reserved: "#d97706", nominal: "#16a34a", draft: "#8b5cf6", blocked: "#94a3b8" };
 function SectorShape({
   sector,
   desk,
@@ -23,6 +24,8 @@ function SectorShape({
     sector.assignableLimit ??
     (seats.length ? seats.filter((s) => !s.blocked).length : capacity);
   const reserved = Math.max(0, available - sector.remaining);
+  const counts = sectorCounts(desk, sector.id);
+  const colorAt = (index: number) => index < counts.nominal ? colors.nominal : index < counts.nominal + counts.groupPending ? colors.reserved : index < counts.nominal + counts.groupPending + counts.draft ? colors.draft : colors.free;
   const blocks = [
     ...new Set(seats.map((s) => openingSeatAddress(s.row)?.block ?? 1)),
   ].sort((a, b) => a - b);
@@ -44,16 +47,14 @@ function SectorShape({
           y: (rear ? 112 : 0) + ((address?.row ?? 1) - 1) * 10,
           color: s.blocked
             ? colors.blocked
-            : freeIndex++ < reserved
-              ? colors.reserved
-              : colors.free,
+            : colorAt(freeIndex++),
         };
       })
     : Array.from({ length: capacity }, (_, i) => ({
         id: String(i),
         x: (i % 20) * 10,
         y: Math.floor(i / 20) * 10,
-        color: i < reserved ? colors.reserved : colors.free,
+        color: colorAt(i),
       }));
   const width = Math.max(1, ...dots.map((d) => d.x + 8)),
     height = Math.max(1, ...dots.map((d) => d.y + 8));
@@ -90,7 +91,7 @@ function SectorShape({
         ))}
       </svg>
       <span className="hidden text-[9px] text-slate-600 sm:block sm:text-xs">
-        {reserved} riservati · {available} assegnabili
+        {counts.draft} in bozza · {counts.nominal} nominativi · {counts.groupPending} da abbinare · {reserved} occupati su {available}
         {capacity > available ? ` · ${capacity - available} protocollo` : ""}
       </span>
     </button>
@@ -161,7 +162,7 @@ export const CeremonySectorMap = memo(function CeremonySectorMap({
         </section>
       )}
       <p className="col-span-2 text-sm">
-        Azzurro: libero · Arancio: riservato · Grigio: protocollo. I quadratini
+        Azzurro: libero · Viola: bozza · Verde: pubblicato e nominativo · Arancio: pubblicato al gruppo, da abbinare · Grigio: protocollo. I quadratini
         rappresentano le quantità disponibili nel settore, senza assegnare una
         sedia specifica.
       </p>

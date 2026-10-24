@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       p_page: query.page,
       p_without_group: query.withoutGroup,
     });
-    const desk = await service.rpc("get_ceremony_seats_desk", {
+    const desk = await service.rpc("get_ceremony_draft_desk", {
       p_event: context.event.id,
       p_actor: context.userId,
       p_kind: plan.data.kind,

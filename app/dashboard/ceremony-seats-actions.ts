@@ -4,6 +4,12 @@ import { createCeremonyManagerClient } from '@/lib/ceremonies/access.server';
 import { ceremonyContext } from '@/lib/ceremonies/service';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import { parseDeskCommand } from '@/lib/ceremonies/seats-desk';
+import { manageCeremonyDrafts } from './ceremony-draft-actions';
+export async function saveCeremonyDraft(input: unknown) {
+  const c = parseDeskCommand(input);
+  if (!c) return {status:'invalid'};
+  return manageCeremonyDrafts({...c,operation:'save',draftId:null});
+}
 import { parseRevokeSeat, parseHistoryQuery, parseRevokeAssignment, type AssignmentHistory, type HistoryResult } from '@/lib/ceremonies/assignment-history';
 export async function loadCeremonyAssignmentHistory(input: unknown): Promise<HistoryResult> {
   const c = parseHistoryQuery(input);

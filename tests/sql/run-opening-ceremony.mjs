@@ -67,6 +67,7 @@ try {
  try { console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-assignment-history.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n')); } catch(e) { throw new Error('History: '+e.stderr); }
  try {console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-seat-revoke.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}catch(e){throw new Error('Seat revoke: '+e.stderr);}
  try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-direct-families.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Direct families: '+e.stderr);}
+ try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-drafts.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Drafts: '+e.stderr);}
  const exportFile=process.argv.find(x=>x.startsWith('--export-fixture='))?.slice('--export-fixture='.length);
  {
   psql(`select prepare_opening_ceremony_layout(f(1),f(33),-1);
@@ -113,6 +114,15 @@ try {
   assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'0');
   assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id='11111111-1111-4111-8111-111111111111' and revoked_at is null",true).trim(),'3');
  }
+ psql("insert into groups(id,event_id,name) values(f(12100),f(1),'Concurrent drafts');update ceremony_sectors set numbered=false where name='C';");
+ const draftRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+ const draftRace=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select manage_ceremony_drafts(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${draftRevision},f(${12101+i}),'save',null,jsonb_build_object('action','group','sectorId',(select id from ceremony_sectors where name='C'),'quantity',1,'seatIds','[]'::jsonb,'subjects','[]'::jsonb,'groupId',f(12100)))->>'status';`)));
+ assert.deepEqual(draftRace.sort(),['conflict','saved']);
+ const publicationRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+ const publicationRace=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select manage_ceremony_drafts(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${publicationRevision},f(${12103+i}),'publish',null,null)->>'status';`)));
+ assert.deepEqual(publicationRace.sort(),['conflict','saved']);
+ assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id=f(12100) and revoked_at is null",true).trim(),'1');
+ console.log('PASS concurrent shared drafts/publication: one save, one conflict, one allocation');
  const leaderBase=process.argv.find(x=>x.startsWith('--leader-browser-base='))?.slice('--leader-browser-base='.length);
  if(leaderBase) {
   psql('truncate ceremony_plans cascade;'+readFileSync('tests/sql/ceremony-leader-pairing.sql','utf8').split('-- BEGIN PAIR TESTS')[0].replace(/^begin;/,'')+'commit;');
@@ -132,6 +142,12 @@ try {
   assert.equal(psql("select count(*) from ceremony_nominees where revoked_at is null",true).trim(),'0');
   assert.equal(psql("select count(*) from ceremony_seat_claims where released_at is null",true).trim(),'4');
   assert.equal(psql("select sum(quantity) from ceremony_allocations where revoked_at is null",true).trim(),'5');
+ }
+ const draftBase=process.argv.find(x=>x.startsWith('--draft-browser-base='))?.slice('--draft-browser-base='.length);
+ if(draftBase) {
+  const seed=readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0].replace(/^begin;/,'');
+  psql('truncate ceremony_plans cascade;'+seed+'reset role;commit;');
+  execFileSync(process.execPath,['tests/browser/ceremony-drafts.mjs',draftBase,process.env.CEREMONY_BROWSER_ROOT],{env:{...process.env,CEREMONY_TEST_SOCKET:dir},stdio:'inherit'});
  }
  const sectorBase=process.argv.find(x=>x.startsWith('--sector-browser-base='))?.slice('--sector-browser-base='.length);
  if(sectorBase) {

@@ -1,4 +1,5 @@
 import { processSchoolQrEmails } from "@/lib/panels/school-qr-delivery";
+import { processDueCeremonyPublications } from "@/lib/ceremonies/publication-delivery.server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { processForumWaitlistNotifications } from "@/lib/panels/waitlist-delivery.server";
 import { NextResponse } from "next/server";
@@ -16,15 +17,16 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [campaigns, forums, schools] = await Promise.allSettled([
+    const [campaigns, forums, schools, ceremonies] = await Promise.allSettled([
       processDueCampaignDeliveries({ actorUserId: null }),
       processForumWaitlistNotifications(),
       processSchoolQrEmails(createSupabaseServiceClient(), process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ""),
+      processDueCeremonyPublications(),
     ]);
-    if (campaigns.status === "rejected" || forums.status === "rejected" || schools.status === "rejected") {
+    if (campaigns.status === "rejected" || forums.status === "rejected" || schools.status === "rejected" || ceremonies.status === "rejected") {
       return NextResponse.json({ error: "Elaborazione delle code non riuscita." }, { status: 500 });
     }
-    return NextResponse.json({ ...campaigns.value, forumWaitlist: forums.value, schoolQr: schools.value });
+    return NextResponse.json({ ...campaigns.value, forumWaitlist: forums.value, schoolQr: schools.value, ceremonies: ceremonies.value });
   } catch (cause) {
     const message =
       cause instanceof Error ? cause.message : "Elaborazione coda non riuscita.";

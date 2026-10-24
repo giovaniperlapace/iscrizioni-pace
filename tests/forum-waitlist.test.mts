@@ -133,9 +133,10 @@ for (const scenario of ["unauthenticated", "closed", "invalid", "database-failur
 });
 
 test("cron authenticates before either worker and isolates their failures", async () => {
-  let campaigns = 0, forums = 0, schools = 0;
+  let campaigns = 0, forums = 0, schools = 0, ceremonies = 0;
   const exports = loadModule("app/api/cron/email-campaigns/route.ts", {
     "@/lib/panels/school-qr-delivery": { processSchoolQrEmails: async () => { schools++; return {accepted:0}; } },
+    "@/lib/ceremonies/publication-delivery.server": { processDueCeremonyPublications: async () => { ceremonies++; return {accepted:0}; } },
     "@/lib/supabase/service": { createSupabaseServiceClient: () => ({}) },
     "next/server": { NextResponse: { json: (data: unknown, options: ResponseInit = {}) => Response.json(data, options) } },
     "@/lib/email/campaign-delivery.server": { processDueCampaignDeliveries: async () => { campaigns++; return { sent: 0 }; } },
@@ -143,9 +144,9 @@ test("cron authenticates before either worker and isolates their failures", asyn
   }, { process: { env: { CRON_SECRET: "synthetic-secret" } } });
   const get = exports.GET as (request: Request) => Promise<Response>;
   assert.equal((await get(new Request("http://127.0.0.1/api/cron/email-campaigns"))).status, 401);
-  assert.equal(campaigns, 0); assert.equal(forums, 0); assert.equal(schools, 0);
+  assert.equal(campaigns, 0); assert.equal(forums, 0); assert.equal(schools, 0); assert.equal(ceremonies, 0);
   const response = await get(new Request("http://127.0.0.1/api/cron/email-campaigns", { headers: { authorization: "Bearer synthetic-secret" } }));
-  assert.equal(response.status, 500); assert.equal(campaigns, 1); assert.equal(forums, 1); assert.equal(schools, 1);
+  assert.equal(response.status, 500); assert.equal(campaigns, 1); assert.equal(forums, 1); assert.equal(schools, 1); assert.equal(ceremonies, 1);
   assert.doesNotMatch(await response.text(), /private details/);
 });
 

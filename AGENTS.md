@@ -1,5 +1,30 @@
 # AGENTS.md
 
+## Cerimonie: bozze condivise e pubblicazione — 2026-10-24
+
+- Nuovi salvataggi Admin/Manager in bozza, condivisa; spostamento fra settori,
+  quantità gruppo e rimozione. Niente visibilità personale/capogruppo o email
+  fino alla pubblicazione di tutte le bozze della cerimonia selezionata.
+- Viola bozze; verde pubblicati nominativi; arancio pubblicati ai gruppi ancora
+  da abbinare. Assegnazioni preesistenti restano pubblicate. Famiglie, ricerca,
+  risposte tardive, pop-up revoca, minori espliciti e sette lingue conservati.
+- Pubblicazione atomica con conferma riepilogo e coda email: una per capogruppo
+  coinvolto e una per iscrizione nominale (figli al contatto adulto). Claim unico,
+  accettazione API distinta dalla consegna; incerti mai reinviati automaticamente.
+- Modale: nomi dei membri del gruppo, tutti gli adulti e minori espliciti;
+  selezione completa oltre le pagine da 100, riserve conservate. Pubblicazione
+  personale con email per iscrizione; quantità gruppo affidate al capogruppo.
+- Pulsante «Conferma posti e invia notifica ai partecipanti». Report per
+  pubblicazione con ricerca, esiti, pagine, CSV e testo/indirizzo salvati;
+  verifica consegna Postmark esplicita, distinta dall’accettazione, senza reinvio.
+- Migration locale `20261024100000`; nessuna migration remota, assegnazione o
+  email reale di prova. Commit locale autorizzato; push da completare dopo
+  accordo sul target della migration. Lavori Accoglienza conservati.
+  1.106 test, TypeScript, build isolata da npm ci, SQL/concorrenza e browser
+  desktop/mobile superati; lint generale con i soli problemi preesistenti.
+  Dettagli: `docs/cerimonie-bozze-pubblicazione-2026-10-24.md`.
+
+
 ## Sale collegate Forum — in produzione e invii avviati — 2026-10-23
 
 - Sei panel collegati ai Forum 1/9/19 (Domus Letitiae, 156 posti) e 3/10/18

@@ -19,6 +19,12 @@ import { CeremonySectorMap } from "./ceremony-sector-map";
 import { CeremonyAssignmentHistory } from "./ceremony-assignment-history";
 import { readCeremonySector } from "./ceremony-sector-read";
 import { readCeremonyHistory } from "./ceremony-history-read";
+import { CeremonyDraftPanel } from "./ceremony-draft-panel";
+import type { DraftCommand, DraftResult } from "@/lib/ceremonies/drafts";
+import {
+  CeremonyGroupNominalPicker,
+  type GroupNominalSelection,
+} from "./ceremony-group-nominal-picker";
 const attendance = {
   yes: "Presenza confermata",
   no: "Assenza dichiarata",
@@ -35,18 +41,24 @@ export function CeremonySectorWorkspace({
   initialDesk,
   save,
   revoke,
+  manageDrafts,
   read = readCeremonySector,
   loadHistory = readCeremonyHistory,
 }: {
   initialDesk: SeatsDesk;
   save: (c: DeskCommand) => Promise<{ status: string }>;
   revoke: (c: RevokeAssignment) => Promise<{ status: string }>;
+  manageDrafts?: (c: DraftCommand) => Promise<DraftResult>;
   read?: (q: SectorDirectoryQuery) => Promise<SectorReadResult>;
   loadHistory?: (q: HistoryQuery) => Promise<HistoryResult>;
 }) {
   const [desk, setDesk] = useState(initialDesk);
   const [sectorId, setSectorId] = useState("");
-  const [mode, setMode] = useState<"single" | "group">("single");
+  const [mode, setMode] = useState<"single" | "group" | "group_nominal">(
+    "single",
+  );
+  const [members, setMembers] = useState<GroupNominalSelection | null>(null);
+  const [memberVersion, setMemberVersion] = useState(0);
   const [group, setGroup] = useState("");
   const [search, setSearch] = useState("");
   const [applied, setApplied] = useState("");
@@ -68,6 +80,11 @@ export function CeremonySectorWorkspace({
   const busy = useRef(false);
   const sector = desk.sectors.find((s) => s.id === sectorId);
   const groups = desk.groups ?? [];
+  const draftSubjects = new Map(
+    (desk.drafts ?? []).flatMap((d) =>
+      d.subjects.map((s) => [subjectKey(s), d.sector] as const),
+    ),
+  );
   const groupName = groups.find((g) => g.id === group)?.name;
   const locked = saving || !!uncertain || !!revocation?.uncertain;
   const children = selected?.childId ? [] : (selected?.children ?? []);
@@ -75,9 +92,17 @@ export function CeremonySectorWorkspace({
     !!selected &&
     (selected.childId !== null || Array.isArray(selected.children));
   const familyAssigned =
-    !!selected?.nomineeId || children.some((c) => c.nomineeId);
+    !!selected?.nomineeId ||
+    (!!selected && draftSubjects.has(subjectKey(selected))) ||
+    children.some((c) => c.nomineeId || draftSubjects.has(c.id));
   const count =
-    mode === "single" ? (selected ? 1 + children.length : 0) : quantity;
+    mode === "single"
+      ? selected
+        ? 1 + children.length
+        : 0
+      : mode === "group_nominal"
+        ? (members?.people.length ?? 0)
+        : quantity;
   const canSave =
     !!sector &&
     !sector.numbered &&
@@ -89,7 +114,11 @@ export function CeremonySectorWorkspace({
     Number.isInteger(count) &&
     count > 0 &&
     count <= sector.remaining &&
-    (mode === "single" ? familyKnown && !familyAssigned : !!groupName);
+    (mode === "single"
+      ? familyKnown && !familyAssigned
+      : mode === "group_nominal"
+        ? members?.revision === desk.revision
+        : !!groupName);
   const assignments = sectorAssignments(desk, sectorId);
   useEffect(() => {
     if (sectorId) dialog.current?.showModal();
@@ -148,6 +177,8 @@ export function CeremonySectorWorkspace({
     [desk.planId, applied, read],
   );
   function resetForm() {
+    setMembers(null);
+    setMemberVersion((v) => v + 1);
     setMode("single");
     setGroup("");
     setSearch("");
@@ -182,11 +213,16 @@ export function CeremonySectorWorkspace({
       revision: desk.revision,
       requestId: crypto.randomUUID(),
       data: {
-        action: mode === "group" ? "group" : "assign_direct",
+        action: mode === "single" ? "assign_direct" : mode,
         sectorId,
         seatIds: [],
         quantity: count,
-        groupId: mode === "group" ? group : null,
+        groupId:
+          mode === "group"
+            ? group
+            : mode === "group_nominal"
+              ? (members?.groupId ?? null)
+              : null,
         subjects:
           mode === "single" && selected
             ? [
@@ -199,7 +235,12 @@ export function CeremonySectorWorkspace({
                   childId: child.id,
                 })),
               ]
-            : [],
+            : mode === "group_nominal"
+              ? (members?.people ?? []).map(({ registrationId, childId }) => ({
+                  registrationId,
+                  childId,
+                }))
+              : [],
       },
     };
     let result: string;
@@ -208,10 +249,16 @@ export function CeremonySectorWorkspace({
     } catch {
       result = "unavailable";
     }
-    setStatus(SECTOR_MESSAGES[result] ?? SECTOR_MESSAGES.unavailable);
+    setStatus(
+      result === "saved" && manageDrafts
+        ? "Bozza salvata. Visibile solo ad Admin e Manager fino alla pubblicazione."
+        : (SECTOR_MESSAGES[result] ?? SECTOR_MESSAGES.unavailable),
+    );
     if (result === "unavailable") setUncertain(c);
     else {
       setUncertain(null);
+      setMembers(null);
+      setMemberVersion((v) => v + 1);
       if (result === "saved") {
         setSelected(null);
         setQuantity(1);
@@ -308,7 +355,9 @@ export function CeremonySectorWorkspace({
             {desk.location} · {desk.day.split("-").reverse().join("/")}
           </p>
           <p className="text-sm">
-            Scegli un settore per assegnare posti a una persona o a un gruppo.
+            {manageDrafts
+              ? "Scegli un settore per preparare un’assegnazione in bozza a una persona o a un gruppo."
+              : "Scegli un settore per assegnare posti a una persona o a un gruppo."}
           </p>
         </div>
         <button
@@ -324,6 +373,18 @@ export function CeremonySectorWorkspace({
         </a>
       </div>
       {!sectorId && status && <p role="status">{status}</p>}
+      {manageDrafts && (
+        <CeremonyDraftPanel
+          desk={desk}
+          disabled={locked || loading}
+          execute={manageDrafts}
+          onBusy={setSaving}
+          onSaved={async () => {
+            setHistoryVersion((v) => v + 1);
+            await load();
+          }}
+        />
+      )}
       <CeremonySectorMap desk={desk} onSelect={open} disabled={locked} />
       <CeremonyAssignmentHistory
         planId={desk.planId}
@@ -374,7 +435,18 @@ export function CeremonySectorWorkspace({
             className="grid min-w-0 gap-4"
             aria-busy={saving || loading}
           >
-            <legend className="mb-2 font-semibold">Nuova assegnazione</legend>
+            <legend className="mb-2 font-semibold">
+              {manageDrafts
+                ? "Nuova assegnazione in bozza"
+                : "Nuova assegnazione"}
+            </legend>
+            {manageDrafts && (
+              <p className="rounded-lg bg-violet-50 p-3 text-sm text-violet-950">
+                Il salvataggio crea solo una bozza. Il posto sarà visibile al
+                destinatario e notificato via email soltanto dopo la
+                pubblicazione dalla piantina.
+              </p>
+            )}
             <label className="grid gap-1">
               Modalità di assegnazione
               <select
@@ -382,7 +454,10 @@ export function CeremonySectorWorkspace({
                 aria-label="Modalità di assegnazione"
                 value={mode}
                 onChange={(e) => {
-                  setMode(e.target.value as "single" | "group");
+                  setMode(
+                    e.target.value as "single" | "group" | "group_nominal",
+                  );
+                  setMembers(null);
                   setSelected(null);
                   setGroup("");
                   setSearch("");
@@ -393,10 +468,26 @@ export function CeremonySectorWorkspace({
                 }}
               >
                 <option value="single">A una persona</option>
-                <option value="group">A un gruppo</option>
+                <option value="group">
+                  A un gruppo · abbinamento del capogruppo
+                </option>
+                {manageDrafts && (
+                  <option value="group_nominal">
+                    Ai membri di un gruppo · assegnazione nominale
+                  </option>
+                )}
               </select>
             </label>
-            {mode === "group" ? (
+            {mode === "group_nominal" ? (
+              <CeremonyGroupNominalPicker
+                key={`${sectorId}-${memberVersion}`}
+                desk={desk}
+                disabled={locked || !!revocation}
+                read={read}
+                onDesk={setDesk}
+                onSelection={setMembers}
+              />
+            ) : mode === "group" ? (
               <>
                 <label className="grid gap-1">
                   Gruppo
@@ -483,7 +574,11 @@ export function CeremonySectorWorkspace({
                               !!selected &&
                               subjectKey(selected) === subjectKey(p)
                             }
-                            disabled={!!p.nomineeId || stale}
+                            disabled={
+                              !!p.nomineeId ||
+                              draftSubjects.has(subjectKey(p)) ||
+                              stale
+                            }
                             onChange={() => {
                               setSelected(p);
                               setStatus("");
@@ -491,6 +586,12 @@ export function CeremonySectorWorkspace({
                           />
                           <span className="min-w-0 flex-1">
                             <strong>{p.name}</strong>
+                            {draftSubjects.has(subjectKey(p)) && (
+                              <span className="block text-sm font-semibold text-violet-800">
+                                In bozza · Settore{" "}
+                                {draftSubjects.get(subjectKey(p))}
+                              </span>
+                            )}
                             <span className="block text-xs text-slate-600">
                               {p.parent ? `Minore · ${p.parent}` : p.code}
                             </span>
@@ -539,8 +640,9 @@ export function CeremonySectorWorkspace({
                     )}
                     {familyAssigned && (
                       <p role="alert">
-                        Un componente della famiglia ha già un’assegnazione.
-                        Controlla le assegnazioni esistenti prima di procedere.
+                        Un componente della famiglia ha già un’assegnazione o
+                        una bozza. Controlla le assegnazioni esistenti prima di
+                        procedere.
                       </p>
                     )}
                     {!familyKnown && (
@@ -568,7 +670,11 @@ export function CeremonySectorWorkspace({
                 disabled={!canSave}
                 onClick={() => void submit()}
               >
-                {saving ? "Salvataggio…" : "Conferma assegnazione"}
+                {saving
+                  ? "Salvataggio…"
+                  : manageDrafts
+                    ? "Salva assegnazione in bozza"
+                    : "Conferma assegnazione"}
               </button>
               <button
                 type="button"
@@ -595,8 +701,22 @@ export function CeremonySectorWorkspace({
               disabled={saving}
               onClick={() => void submit(uncertain)}
             >
-              Riprova la stessa assegnazione
+              {manageDrafts
+                ? "Riprova la stessa bozza"
+                : "Riprova la stessa assegnazione"}
             </button>
+          )}
+          {manageDrafts && (
+            <CeremonyDraftPanel
+              desk={desk}
+              sectorId={sectorId}
+              disabled={locked || loading || !!revocation}
+              execute={manageDrafts}
+              onBusy={setSaving}
+              onSaved={async () => {
+                await load();
+              }}
+            />
           )}
           <section
             aria-label="Assegnazioni del settore"

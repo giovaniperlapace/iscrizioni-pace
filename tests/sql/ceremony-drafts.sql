@@ -1,0 +1,96 @@
+-- Appended to the canonical unnumbered sector fixture in one rolled-back transaction.
+set role service_role;
+do $$ declare p uuid; c uuid; d uuid; command jsonb; draft uuid; groupdraft uuid; v jsonb; result jsonb; before_alloc integer; before_nom integer; rev integer; notices integer; claim jsonb;
+begin
+ select id into p from ceremony_plans where kind='opening';
+ select id into c from ceremony_sectors where name='C';select id into d from ceremony_sectors where name='D';
+ update participants set auth_user_id=f(37) where id=f(21);
+ select count(*) into before_alloc from ceremony_allocations; select count(*) into before_nom from ceremony_nominees;
+ command:=jsonb_build_object('action','group','sectorId',c,'quantity',10,'seatIds','[]'::jsonb,'groupId',f(7701),'subjects','[]'::jsonb);
+ select revision into rev from ceremony_plans where id=p;
+ result:=manage_ceremony_drafts(f(1),f(31),p,rev,f(12001),'save',null,command);assert result->>'status'='saved',result;
+ assert manage_ceremony_drafts(f(1),f(31),p,rev,f(12001),'save',null,command)=result,'draft retry';
+ select id into groupdraft from ceremony_assignment_drafts where plan_id=p and state='draft';
+ command:=jsonb_build_object('action','assign_direct','sectorId',c,'quantity',2,'seatIds','[]'::jsonb,'groupId',null,'subjects',jsonb_build_array(jsonb_build_object('registrationId',f(11),'childId',null),jsonb_build_object('registrationId',f(11),'childId',f(42))));
+ result:=manage_ceremony_drafts(f(1),f(33),p,(select revision from ceremony_plans where id=p),f(12002),'save',null,command);assert result->>'status'='saved',result;
+ select id into draft from ceremony_assignment_drafts where plan_id=p and data->>'action'='assign_direct';
+ assert (select count(*) from ceremony_allocations)=before_alloc,'draft leaked allocation';
+ assert (select count(*) from ceremony_nominees)=before_nom,'draft leaked nominee';
+ assert not exists(select 1 from ceremony_publication_emails),'draft queued mail';
+ assert get_my_ceremony_seats(f(1),f(37))='[]'::jsonb,'personal dashboard saw draft';
+ assert not exists(select 1 from ceremony_map_requests where request_id in(f(12001),f(12002))),'validation request persisted';
+ v:=get_ceremony_draft_desk(f(1),f(31),'opening');assert jsonb_array_length(v->'drafts')=2,v;
+ assert (select (x->>'remaining')::integer from jsonb_array_elements(v->'sectors') x where x->>'name'='C')=588,v;
+ assert not (get_ceremony_seats_desk(f(1),f(31),'opening') ? 'drafts');
+ assert not exists(select 1 from jsonb_array_elements(get_ceremony_leader_tickets(f(1),f(36))->'allocations') a where a->>'sector'='C'),'leader saw draft';
+ result:=manage_ceremony_drafts(f(1),f(31),p,(select revision from ceremony_plans where id=p),f(12003),'save',null,command);assert result->>'status'='duplicate',result;
+ result:=manage_ceremony_drafts(f(1),f(31),p,(select revision from ceremony_plans where id=p),f(12004),'save',groupdraft,jsonb_build_object('action','group','sectorId',d,'quantity',12,'seatIds','[]'::jsonb,'groupId',f(7701),'subjects','[]'::jsonb));assert result->>'status'='saved',result;
+ -- Draft cap accounts for all other drafts in the same sector.
+ result:=manage_ceremony_drafts(f(1),f(31),p,(select revision from ceremony_plans where id=p),f(12005),'save',null,jsonb_build_object('action','group','sectorId',d,'quantity',589,'seatIds','[]'::jsonb,'groupId',f(7702),'subjects','[]'::jsonb));assert result->>'status'='capacity',result;
+ begin perform manage_ceremony_drafts(f(1),f(32),p,(select revision from ceremony_plans where id=p),f(12006),'publish',null,null);raise exception 'Viewer bypass';exception when insufficient_privilege then null;end;
+ begin perform get_ceremony_draft_desk(f(1),f(36),'opening');raise exception 'Leader bypass';exception when insufficient_privilege then null;end;
+ begin perform manage_ceremony_drafts(f(2),f(33),p,0,f(12007),'publish',null,null);raise exception 'Event bypass';exception when insufficient_privilege then null;end;
+ -- After saving, a family changes: even the earlier group publication must roll back.
+ insert into registration_children(id,registration_id,position,first_name,last_name,birth_date) values(f(12040),f(11),2,'New','Child','2019-01-01');
+ select revision into rev from ceremony_plans where id=p;
+ result:=manage_ceremony_drafts(f(1),f(31),p,rev,f(12008),'publish',null,null);assert result->>'status'='family_changed',result;
+ assert (select count(*) from ceremony_allocations)=before_alloc,'partial publication';
+ assert (select count(*) from ceremony_nominees)=before_nom,'partial family';
+ assert not exists(select 1 from ceremony_publication_emails),'mail from rolled-back publication';
+ assert (select count(*) from ceremony_assignment_drafts where state='draft')=2;
+ assert (select revision from ceremony_plans where id=p)=rev;
+ delete from registration_children where id=f(12040);
+ result:=manage_ceremony_drafts(f(1),f(31),p,rev,f(12008),'publish',null,null);assert result->>'status'='saved',result;
+ assert result->>'seats'='14',result;assert result->>'notifications'='3',result;
+ assert manage_ceremony_drafts(f(1),f(31),p,rev,f(12008),'publish',null,null)=result,'publication retry';
+ assert (select count(*) from ceremony_publication_emails)=3;
+ assert (select count(*) from ceremony_nominees where registration_id=f(11) and revoked_at is null)=2;
+ assert jsonb_array_length(get_my_ceremony_seats(f(1),f(37)))=2,'personal dashboard missing publication';
+ assert (select sum(a.quantity) from ceremony_allocations a join ceremony_quotas q on q.id=a.quota_id where q.sector_id=d and a.group_id=f(7701) and a.revoked_at is null)=12;
+ assert jsonb_array_length(get_ceremony_draft_desk(f(1),f(31),'opening')->'drafts')=0;
+ assert exists(select 1 from jsonb_array_elements(get_ceremony_leader_tickets(f(1),f(36))->'allocations') a where a->>'sector'='D');
+ assert exists(select 1 from ceremony_publication_emails where registration_id=f(11) and jsonb_array_length(payload->'lines')=2),'one family mail';
+ claim:=claim_ceremony_publication_email();assert claim->>'claim' is not null and jsonb_array_length(claim->'payload'->'lines')>0,claim;
+ assert claim_ceremony_publication_email()->>'id'<>claim->>'id','double claim';
+ assert claim_ceremony_publication_email()->>'id'<>claim->>'id';
+ assert claim_ceremony_publication_email() is null;
+ update ceremony_publication_emails set updated_at=clock_timestamp()-interval '11 minutes' where state='sending';
+ assert claim_ceremony_publication_email() is null,'uncertain resend';
+ assert (select count(*) from ceremony_publication_emails where state='uncertain')=3;
+ -- A disposable group draft can be removed and replayed without touching real reserves.
+ command:=jsonb_build_object('action','group','sectorId',c,'quantity',1,'seatIds','[]'::jsonb,'groupId',f(7701),'subjects','[]'::jsonb);
+ assert manage_ceremony_drafts(f(1),f(31),p,(select revision from ceremony_plans where id=p),f(12009),'save',null,command)->>'status'='saved';
+ select id into draft from ceremony_assignment_drafts where state='draft';select revision into rev from ceremony_plans where id=p;
+ assert manage_ceremony_drafts(f(1),f(31),p,rev,f(12010),'remove',draft,null)->>'status'='saved';
+ assert manage_ceremony_drafts(f(1),f(31),p,rev,f(12010),'remove',draft,null)->>'status'='saved';
+ assert not has_function_privilege('authenticated','public.manage_ceremony_drafts(uuid,uuid,uuid,integer,uuid,text,uuid,jsonb)','execute');
+ assert not has_table_privilege('authenticated','public.ceremony_assignment_drafts','select');
+ assert not has_table_privilege('anon','public.ceremony_publication_emails','select');
+end $$;
+select 'PASS shared ceremony drafts: hidden public state, canonical family validation, move/quantity/remove, reserved capacity, roles, atomic publication/queue, exact retry and non-reclaimed uncertain mail';
+-- Explicit group members create personal allocations, leaving reserves unchanged.
+do $$ declare p uuid; s uuid; cmd jsonb; r jsonb; rev integer; draft uuid; before_reserve integer; begin
+ select id into p from ceremony_plans where kind='opening';select id into s from ceremony_sectors where plan_id=p and name='B';
+ select sum(quantity) into before_reserve from ceremony_allocations where plan_id=p and group_id=f(7701) and revoked_at is null;
+ cmd:=jsonb_build_object('action','group_nominal','sectorId',s,'quantity',2,'seatIds','[]'::jsonb,'groupId',f(7701),'subjects',jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',null),jsonb_build_object('registrationId',f(10),'childId',f(41))));
+ r:=manage_ceremony_drafts(f(1),f(31),p,(select revision from ceremony_plans where id=p),f(12200),'save',null,cmd);assert r->>'status'='saved',r;
+ select id into draft from ceremony_assignment_drafts where state='draft';
+ assert exists(select 1 from jsonb_array_elements(get_ceremony_draft_desk(f(1),f(31),'opening')->'drafts') x where x->>'action'='group_nominal' and jsonb_array_length(x->'subjects')=2);
+ assert not exists(select 1 from ceremony_nominees where subject_id=f(41) and revoked_at is null),'draft exposed';
+ r:=manage_ceremony_drafts(f(1),f(31),p,(select revision from ceremony_plans where id=p),f(12201),'save',null,cmd);assert r->>'status'='duplicate',r;
+ -- Membership changes before publication invalidate the entire batch.
+ update participant_group_assignments set is_current=false where registration_id=f(10) and group_id=f(7701);
+ rev:=(select revision from ceremony_plans where id=p);
+ r:=manage_ceremony_drafts(f(1),f(31),p,rev,f(12202),'publish',null,null);assert r->>'status'='ineligible',r;
+ assert not exists(select 1 from ceremony_publication_emails where publication_id=f(12202));
+ assert (select state from ceremony_assignment_drafts where id=draft)='draft';
+ update participant_group_assignments set is_current=true where registration_id=f(10) and group_id=f(7701);
+ r:=manage_ceremony_drafts(f(1),f(31),p,rev,f(12202),'publish',null,null);assert r->>'status'='saved',r;
+ assert r->>'notifications'='1',r;
+ assert (select sum(quantity) from ceremony_allocations where plan_id=p and group_id=f(7701) and revoked_at is null)=before_reserve,'reserve consumed';
+ assert (select count(*) from ceremony_nominees n join ceremony_allocations a on a.id=n.allocation_id where n.subject_id in(f(10),f(41)) and n.revoked_at is null and a.group_id is null)=2,'not personal';
+ assert (select count(*) from ceremony_publication_emails where publication_id=f(12202) and registration_id=f(10) and user_id is null and jsonb_array_length(payload->'lines')=2)=1,'family mail not aggregated';
+ assert not exists(select 1 from ceremony_publication_emails where publication_id=f(12202) and user_id is not null),'nominal notified leader';
+ assert manage_ceremony_drafts(f(1),f(31),p,rev,f(12202),'publish',null,null)=r;
+end $$;
+select 'PASS nominal group drafts: explicit minors, membership rechecked, personal allocations, untouched reserves, family mail only, retry';
