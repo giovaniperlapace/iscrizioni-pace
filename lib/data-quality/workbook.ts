@@ -250,9 +250,10 @@ export async function writeVisibleParticipantsWorkbook(
               .filter(Boolean)
               .join("; ") || "Senza tag"
           );
+        case "birthDate":
         case "submittedAt":
-          return person.submittedAt
-            ? dateFormat.format(new Date(person.submittedAt))
+          return person[column]
+            ? dateFormat.format(new Date(person[column]))
             : "—";
       }
     }).concat(childrenExportValues(person.children ?? [])),

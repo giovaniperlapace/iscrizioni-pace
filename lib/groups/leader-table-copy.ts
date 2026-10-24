@@ -1,4 +1,5 @@
 import { DEMOGRAPHICS_COPY } from "../registrations/assisted-demographics.ts";
+import { MANUAL_REGISTRATION_COPY } from "../registrations/manual-registration-copy.ts";
 import { CHILDREN_EXPORT_COPY } from "../registrations/children-export.ts";
 import { ATTENDANCE_SUMMARY_COPY } from "../registrations/attendance-summary.ts";
 import type { SupportedLocale } from "../i18n/config.ts";
@@ -44,6 +45,7 @@ function copy(
       country,
       city,
       age,
+      birthDate: "",
       group,
       service,
       tags,
@@ -254,6 +256,7 @@ export const LEADER_SERVICE_STATUS_COPY = {
 } satisfies Record<SupportedLocale, Record<string, string>>;
 
 for (const locale of Object.keys(LEADER_TABLE_COPY) as SupportedLocale[]) {
+  LEADER_TABLE_COPY[locale].columns.birthDate = MANUAL_REGISTRATION_COPY[locale].birthDate;
   LEADER_TABLE_COPY[locale].columns.nationality = DEMOGRAPHICS_COPY[locale].nationality;
   LEADER_TABLE_COPY[locale].columns.sex = DEMOGRAPHICS_COPY[locale].sex;
   LEADER_TABLE_COPY[locale].columns.accessibility = CHILDREN_EXPORT_COPY[locale].accessibility;

@@ -7,6 +7,7 @@ export const PARTICIPANT_COLUMNS = {
   association: "Associazione / organizzazione",
   sex: "Sesso",
   city: "Città",
+  birthDate: "Data di nascita",
   age: "Età",
   group: "Gruppo",
   service: "Servizio",

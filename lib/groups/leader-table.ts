@@ -91,6 +91,8 @@ export function leaderColumnValue(
       return row.participantCountry;
     case "city":
       return row.participantCity;
+    case "birthDate":
+      return row.birthDate;
     case "age":
       return calculateAgeAtDate(row.birthDate, startsOn);
     case "group":
@@ -120,10 +122,10 @@ export function leaderCellText(
   const value = leaderColumnValue(row, column, startsOn);
   if (column === "service" && value && row.serviceStatus)
     return `${value}\n${LEADER_SERVICE_STATUS_COPY[locale][row.serviceStatus]}`;
-  if (column === "submittedAt" && value)
+  if ((column === "submittedAt" || column === "birthDate") && value)
     return new Intl.DateTimeFormat(locale, {
       dateStyle: "medium",
-      timeZone: "Europe/Rome",
+      timeZone: column === "birthDate" ? "UTC" : "Europe/Rome",
     }).format(new Date(String(value)));
   return String(value ?? "—");
 }

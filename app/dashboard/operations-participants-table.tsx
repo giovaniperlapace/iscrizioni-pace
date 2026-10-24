@@ -824,8 +824,8 @@ export function OperationsParticipantsTable({
                       )
                     ) : column === "email" ? (
                       <ParticipantEmailCell email={row.email} delegated={row.emailDelegated} locale={locale} />
-                    ) : column === "submittedAt" ? (
-                      formatDate(row.submittedAt)
+                    ) : column === "submittedAt" || column === "birthDate" ? (
+                      formatDate(row[column])
                     ) : (
                       (sortValue(row, column) ?? "—")
                     )}
