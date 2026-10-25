@@ -1,6 +1,6 @@
 # Cerimonie: overbooking per settore — 25 ottobre 2026
 
-Rilascio in produzione autorizzato il 25 ottobre 2026, inclusi backup, migration, commit e push. Migration applicata e registrata; pubblicazione del codice in corso. Nessun invio email, assegnazione o ingresso operativo di prova eseguito.
+Rilascio in produzione autorizzato il 25 ottobre 2026, inclusi backup, migration, commit e push. Migration applicata e registrata; codice `e1ffcf3` pubblicato su `main`, deployment production READY verificato. Nessun invio email, assegnazione o ingresso operativo di prova eseguito.
 
 ## Comportamento
 
@@ -49,3 +49,9 @@ Il rilascio esclude le modifiche concorrenti relative all’apertura dell’acco
 - Scanner originale con QR sintetico: numeri 600 / 0 / +20 prima dell’ingresso, 600 / 1 / +20 dopo, ritorno a zero dopo rimozione; dati nascosti prima della lettura e dopo chiusura. Modalità telefono con sorgente camera sintetica: conteggio aggiornato prima della dissolvenza e latch conservato. Nessuna fotocamera fisica o QR operativo usato.
 
 Anteprime locali con dati sintetici, escluse da Git: `output/cerimonie-overbooking-2026-10-25/` (`modale-1440.png`, `modale-390.png`, `accoglienza-1440.png`, `accoglienza-390.png`, `accoglienza-telefono.png`).
+
+## Esito produzione
+
+Commit funzionale `e1ffcf3b226b11aef8deda47e0728747fd1895a9`, push su `origin/main` completato. Deployment Git `dpl_F7VjZ1Q8Xum5KtPSg3gVJRpnGow6` READY, target production, SHA corrispondente e alias `registrationspeace.santegidio.org` verificati. Homepage HTTP 200; pagine manager cerimonie e accoglienza Forum/eventi HTTP 307 verso il login in assenza di sessione. Nessun errore/fatal nei log runtime del deployment al controllo iniziale.
+
+Le prove operative complete sono state eseguite soltanto sul database temporaneo; in produzione sono state controllate migration, preservazione dei dati, autorizzazioni, letture canoniche e disponibilità HTTP. Nessun invio email, assegnazione, modifica di overbooking o ingresso di prova reale. Evidenze locali escluse da Git in `output/cerimonie-overbooking-2026-10-25/`.

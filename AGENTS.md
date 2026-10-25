@@ -16,7 +16,8 @@
   RPC service-only, lock/revisione/ricevuta/audit. Letture live verificate,
   overbooking iniziale zero; nessun invio email o ingresso reale di prova.
 - 1.136 test, TypeScript, lint mirato, build isolata da npm ci, SQL/concorrenza
-  e browser desktop/mobile passati. Commit/push autorizzati; rilascio in corso.
+  e browser desktop/mobile passati. Codice `e1ffcf3` production READY,
+  dominio e percorsi protetti verificati; commit/push autorizzati e completati.
   Anteprime e dettagli: `docs/cerimonie-overbooking-2026-10-25.md`.
 
 
