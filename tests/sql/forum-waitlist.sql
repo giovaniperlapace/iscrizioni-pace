@@ -66,7 +66,7 @@ do $$ begin assert (select count(*)=0 from panel_waitlist where status='offered'
 begin;
 select app.advance_panel_waitlist(fw(501),true);
 do $$ begin
- assert (select expires_at-offered_at between interval '2 hours' and interval '2 hours 1 second'
+ assert (select expires_at-offered_at between interval '1 hour' and interval '1 hour 1 second'
    from panel_waitlist where registration_id=fw(102) and status='offered');
 end $$;
 rollback;
@@ -74,10 +74,10 @@ set role service_role;
 select claim_panel_waitlist_notification();
 reset role;
 do $$ begin
- assert (select expires_at-offered_at between interval '2 hours' and interval '2 hours 1 second'
+ assert (select expires_at-offered_at between interval '1 hour' and interval '1 hour 1 second'
    from panel_waitlist where registration_id=fw(102) and status='offered');
 end $$;
-\echo PASS two-hour reservation both on promotion and notification claim
+\echo PASS one-hour reservation both on promotion and notification claim
 
 do $$ begin
  assert (select status='offered' and notification_status='sending' from panel_waitlist where registration_id=fw(102));

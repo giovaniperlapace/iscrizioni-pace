@@ -51,7 +51,7 @@ test("both venues carry their own address and parking in actual email rendering"
    startsAt:"2026-10-26T08:30:00Z",endsAt:"2026-10-26T11:30:00Z",expiresAt:"2026-10-23T12:30:00Z",seats:1},"https://example.invalid");
   assert.ok(email.text.includes(room.address));
   assert.match(email.text,/navetta Linea C o con mezzi propri/);
-  assert.match(email.text,/2 ore/);
+  assert.match(email.text,/1 ora/);
   assert.ok(email.text.includes(room.parking === "ample" ? "Ampio parcheggio." : "Parcheggio limitato."));
  }
 });

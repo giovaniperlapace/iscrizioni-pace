@@ -77,6 +77,11 @@ do $$ begin
  assert not exists(select 1 from panel_waitlist q join old_deadlines old using(id) where (to_jsonb(q)-'expires_at')<>(to_jsonb(old)-'expires_at'));
  assert (select count(*)=1 from audit_logs where action='panel.waitlist_window_extended' and event_id='d302dff4-f08d-4040-8d83-9ec2042a73d5');
 end $$;
+create temp table before_one_hour as select * from panel_waitlist;
+\i supabase/migrations/20261025200000_forum_waitlist_one_hour.sql
+do $$ begin
+ assert not exists((select * from panel_waitlist except select * from before_one_hour) union all (select * from before_one_hour except select * from panel_waitlist));
+end $$;
 rollback to extend_existing;
 \echo PASS existing live offers extended without restart/revival/shortening/resend; migration retry does not duplicate audit
 select set_config('request.jwt.claim.sub',fw(7001)::text,true);
@@ -111,7 +116,7 @@ do $$ declare notice jsonb; begin
  assert notice->>'registrationId'=fw(7203)::text;
  assert (select status='cancelled' from panel_waitlist where source_waitlist_id is not null and registration_id=fw(7202));
  assert (select status='waiting' from panel_waitlist where panel_id='fc9f3085-dabf-4e2d-b01b-7ccaf1b984da' and registration_id=fw(7202));
- assert (notice->>'expiresAt')::timestamptz-clock_timestamp() between interval '119 minutes' and interval '2 hours';
+ assert (notice->>'expiresAt')::timestamptz-clock_timestamp() between interval '59 minutes' and interval '1 hour';
 end $$;
 rollback to residence_filter;
 \echo PASS Italy residence only (canonical/text), no nationality or language inference, unknown/foreign excluded, original queues unchanged and recheck at claim
@@ -163,7 +168,7 @@ reset role;
 update panel_seat_sections set capacity=2 where id='3e30d388-2fdc-401d-a8e0-40a582b70a9a';
 select app.advance_panel_waitlist('3e30d388-2fdc-401d-a8e0-40a582b70a9a',true);
 do $$ begin
- assert (select expires_at-offered_at between interval '2 hours' and interval '2 hours 1 second' from panel_waitlist where panel_id='dbcee5e7-c080-42b5-a2d3-d54f485b5706' and registration_id=fw(7202));
+ assert (select expires_at-offered_at between interval '1 hour' and interval '1 hour 1 second' from panel_waitlist where panel_id='dbcee5e7-c080-42b5-a2d3-d54f485b5706' and registration_id=fw(7202));
  assert (select reserved_seats=2 and status='offered' from panel_waitlist where panel_id='dbcee5e7-c080-42b5-a2d3-d54f485b5706' and registration_id=fw(7202));
  assert (select count(*)=2 from panel_waitlist where panel_id='dbcee5e7-c080-42b5-a2d3-d54f485b5706' and status='waiting');
  assert app.panel_section_occupancy('3e30d388-2fdc-401d-a8e0-40a582b70a9a')=2;
