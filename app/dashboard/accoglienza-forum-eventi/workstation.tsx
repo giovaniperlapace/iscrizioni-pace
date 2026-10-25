@@ -2,6 +2,7 @@
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isDutyAvailable, nextDutyWindow, nextDutyBoundary, formatDutyWindowTime } from "@/lib/reception/duty-windows";
+import { receptionDutyTitle } from "@/lib/reception/duty-labels";
 import { REGISTRATION_CHECK_DUTY, type DutyOption } from "@/lib/reception/event-duties";
 import type { ReceptionCommand, ReceptionLookup, ReceptionResult } from "@/lib/reception/contracts";
 import { DESK_MESSAGES, type DeskRequest, type DeskResult } from "@/lib/reception/forum-desk";
@@ -49,7 +50,7 @@ function useDutyClock(serverNow: number | undefined, choices: DutyOption[]) {
 }
 
 export function ForumReceptionWorkstation({eventId,choices:assignedChoices,canManage,requestAction=send,serverNow,phoneOnly=false}:{eventId:string;choices:DutyOption[];canManage:boolean;requestAction?:ForumReceptionTransport;serverNow?:number;phoneOnly?:boolean}) {
-  const choices=useMemo(()=>[REGISTRATION_CHECK_DUTY,...assignedChoices.filter(item=>item.key!==REGISTRATION_CHECK_DUTY.key)],[assignedChoices]);
+  const choices=useMemo(()=>[REGISTRATION_CHECK_DUTY,...assignedChoices.filter(item=>item.key!==REGISTRATION_CHECK_DUTY.key).map(item=>({...item,title:receptionDutyTitle(item)}))],[assignedChoices]);
   const [selectedMode,setMode]=useState<"computer"|"phone"|null>(null);
   const mode=phoneOnly ? "phone" : selectedMode;
   const [localSelected,setSelected]=useState<string|null>(serverNow === undefined && choices.length===1 ? choices[0].key : null);
@@ -116,8 +117,8 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
     if(result.status==="valid" && command.action!=="inspect")refreshStatistics();
     return result;
   },[eventId,deskBusy,requestAction,refreshStatistics]);
-  const statistics = <section className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs" aria-label="Statistiche dell’incarico" aria-live="polite">
-      {stats ? <><p><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p><strong>{stats.entered}</strong> Entrati</p></>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
+  const statistics = <section className="mx-auto grid w-full max-w-sm grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-center text-xs" aria-label="Statistiche dell’incarico" aria-live="polite">
+      {stats ? <div className="flex min-w-0 flex-wrap justify-center gap-x-2"><p className="whitespace-nowrap"><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p className="whitespace-nowrap"><strong>{stats.entered}</strong> Entrati</p></div>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
       <button className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-current/30 px-2 text-xs hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2" aria-label="Aggiorna conteggi" title="Aggiorna conteggi" onClick={refreshStatistics}><RefreshCw size={16} aria-hidden="true" />Aggiorna conteggi</button>
     </section>;
   return <div className="grid gap-4">

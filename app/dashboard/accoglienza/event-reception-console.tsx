@@ -171,8 +171,8 @@ export function EventReceptionConsole(props: Props) {
         {onChangeDuty && <button className={props.navigationAboveTitle ? "btn-secondary min-h-11 px-4" : "min-h-11 underline"} disabled={locked || state.phase === "selection" || !!correctionOpen} onClick={onChangeDuty}>Cambia incarico</button>}
       </div>;
 
-  const dutyHeader = props.statistics && <header className={cameraVisible ? "relative grid gap-1 text-center" : props.navigationAboveTitle ? "event-gradient relative isolate overflow-hidden grid gap-1 px-4 py-3 text-center text-white" : "grid gap-1 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] px-4 py-2"} aria-label="Incarico attivo">
-    <h2 id="reception-title" className="break-words text-base font-semibold leading-snug">{props.duty?.title ?? "Accoglienza evento"}</h2>
+  const dutyHeader = props.statistics && <header className={cameraVisible ? "relative grid min-w-0 gap-1 text-center" : props.navigationAboveTitle ? "event-gradient relative isolate overflow-hidden grid gap-1 px-4 py-3 text-center text-white" : "grid gap-1 border-b border-[var(--peace-border)] bg-[var(--peace-soft)] px-4 py-2"} aria-label="Incarico attivo">
+    <h2 id="reception-title" title={props.duty?.title} className={`${cameraVisible ? "min-w-0 truncate" : "break-words"} text-base font-semibold leading-snug`}>{props.duty?.title ?? "Accoglienza evento"}</h2>
     {props.statistics}
   </header>;
 

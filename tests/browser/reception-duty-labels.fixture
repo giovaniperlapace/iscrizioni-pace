@@ -1,0 +1,12 @@
+"use client";
+import { ForumReceptionWorkstation } from "@/app/dashboard/accoglienza-forum-eventi/workstation";
+import { FORUM_RELAY_ROOMS } from "@/lib/events/assisi-2026-relay-rooms";
+import type { DutyOption } from "@/lib/reception/event-duties";
+const choices: DutyOption[] = [
+ ...FORUM_RELAY_ROOMS.map(room=>({key:room.id,title:`SALA COLLEGATA — SOLO IN ITALIANO — FORUM ${room.number} — Il titolo completo del Forum trasmesso in collegamento dalla sala principale`,room:room.venue+' — Assisi',kind:'panel' as const})),
+ {key:'11111111-1111-4111-8111-111111111111',title:'Forum principale con un titolo molto lungo che non deve nascondere i dati degli ingressi',room:'Sala principale',kind:'panel'},
+ {key:'opening',title:'Cerimonia di apertura con titolo esteso',room:null,kind:'ceremony'},
+];
+let refresh=0;
+async function requestAction(){refresh++;return {status:'ready',booked:156,entered:refresh,relayRooms:[]};}
+export default function Fixture(){return <main className="mx-auto max-w-3xl p-4"><ForumReceptionWorkstation eventId="synthetic-labels" choices={choices} phoneOnly canManage={false} requestAction={requestAction}/></main>;}

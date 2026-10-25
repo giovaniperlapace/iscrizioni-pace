@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Accoglienza: nomi interni brevi per le sale collegate — 2026-10-25
+
+- «Collegata F1/F9/F19 · Domus» e «Collegata F3/F10/F18 · Serafico»
+  nel selettore e nello scanner. Associazione tramite ID canonici, titoli
+  pubblici/email/database invariati, nessuna migration.
+- Titolo su una riga nella camera, contatori e aggiornamento con spazio
+  dedicato; bande simmetriche da 80px. Conteggi sempre visibili anche a 320px.
+- Test, TypeScript, lint, build isolata e browser 320/360/390/844px verificati.
+  Dettagli: `docs/accoglienza-nomi-brevi-sale-collegate-2026-10-25.md`.
+
 ## Accoglienza: Indietro sul telefono — 2026-10-25
 
 - Scelta incarico con singolo passaggio nella cronologia: Indietro torna
