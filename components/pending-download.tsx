@@ -7,10 +7,11 @@ import { ButtonProgress } from "@/components/button-progress";
 type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "download" | "onClick" | "href"> & {
   href: string;
   filename: string;
+  contentType?: string;
 };
 
 // These authenticated Excel endpoints return a file without navigating the page.
-export function PendingDownload({ href, filename, children, ...props }: Props) {
+export function PendingDownload({ href, filename, contentType = "spreadsheetml", children, ...props }: Props) {
   const inFlight = useRef(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
@@ -26,7 +27,7 @@ export function PendingDownload({ href, filename, children, ...props }: Props) {
         setError(false);
         try {
           const response = await fetch(href);
-          if (!response.ok || !response.headers.get("content-type")?.includes("spreadsheetml")) throw new Error("Download failed");
+          if (!response.ok || !response.headers.get("content-type")?.includes(contentType)) throw new Error("Download failed");
           const url = URL.createObjectURL(await response.blob());
           const link = document.createElement("a");
           link.href = url;

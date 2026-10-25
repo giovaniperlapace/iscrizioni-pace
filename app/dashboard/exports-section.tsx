@@ -1,3 +1,4 @@
+import { ForumExportDownload } from "./forum-export-download";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { PendingDownload } from "@/components/pending-download";
 import { PRESENCE_EXPORTS } from "@/lib/presence-exports/catalog";
@@ -11,6 +12,7 @@ export function ExportsSection({ eventId }: { eventId: string | null }) {
       <p className="max-w-3xl text-sm leading-6 text-[var(--peace-muted)]">Scarica le presenze per gruppo in Excel, pronte per la stampa. Ogni file contiene i dati dell’evento corrente, con subtotali per zona, totale generale, date non indicate e data e ora di estrazione.</p>
       <p className="text-sm leading-6 text-[var(--peace-muted)]">I totali includono i figli accompagnati, che restano nel gruppo d’iscrizione anche nei report con i servizi. Il foglio Raccordo permette di controllare gruppi, raggruppamenti e tag.</p>
     </div>
+    {eventId ? <ForumExportDownload eventId={eventId} /> : null}
     {!available ? <p role="status" className="text-sm">{eventId ? "Il raccordo delle esportazioni deve essere configurato per questo evento." : "Nessun evento corrente disponibile."}</p> :
       <div className="grid gap-4 xl:grid-cols-2">
         {PRESENCE_EXPORTS.map(report => <article key={report.key} className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--peace-border)] p-5">
