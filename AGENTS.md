@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Cerimonie: selezione nominale Senza gruppo — 2026-10-25
+
+- «Senza gruppo» nel selettore dei gruppi per assegnazione nominale Admin/Manager.
+  Su chiarimento dell’utente, solo nomi con possibilità di selezionarli tutti;
+  nessuna riserva per quantità. Tutti gli adulti oltre le pagine da 100 e la
+  ricerca, minori espliciti, esclusione di assegnati/bozze già presenti.
+- Voce virtuale: nessun gruppo o appartenenza creati. `group_nominal` con
+  `groupId: null` verifica l’assenza di appartenenze correnti confermate sotto
+  lock sia al salvataggio sia alla pubblicazione. Email personali e flusso
+  bozze/pubblicazione conservati; cambio gruppo azzera la selezione.
+- Migration `20261025140000` applicata/registrata in produzione dopo backup
+  verificato: 74 tabelle, 268.134 righe e 242 funzioni/ACL conservate.
+  Test, TypeScript, lint mirato, build isolata
+  da npm ci e browser desktop/mobile passati; lint generale con tre errori
+  preesistenti in `tests/ceremony-navigation.test.mts`. Commit/push autorizzati.
+  Dettagli: `docs/cerimonie-senza-gruppo-2026-10-25.md`.
+
+
 ## Cerimonie: overbooking per settore — 2026-10-25
 
 - Sezione Overbooking nella modale Admin/Manager: numero esplicito di posti

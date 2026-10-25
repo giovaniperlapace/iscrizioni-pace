@@ -25,6 +25,7 @@ export function parseDeskCommand(input: unknown): DeskCommand | null {
   if (d.action === 'group') return isMapId(d.groupId) && !d.subjects.length ? c : null;
   if ((d.groupId !== null && (!isMapId(d.groupId) || d.seatIds.length > 0)) || d.subjects.length !== d.quantity || !d.subjects.every(s => s && isMapId(s.registrationId) && (s.childId === null || isMapId(s.childId))) || new Set(d.subjects.map(s => s.childId ?? s.registrationId)).size !== d.subjects.length) return null;
   if (d.action === 'assign_direct' && (d.groupId !== null || d.seatIds.length > 0 || new Set(d.subjects.map(s => s.registrationId)).size !== 1 || (!d.subjects.some(s => s.childId === null) && d.subjects.length !== 1))) return null;
-  if (d.action === 'group_nominal' && (!isMapId(d.groupId) || d.seatIds.length)) return null;
+  // A null group in a nominal batch explicitly means participants without a confirmed group.
+  if (d.action === 'group_nominal' && (d.groupId === undefined || d.seatIds.length)) return null;
   return c;
 }

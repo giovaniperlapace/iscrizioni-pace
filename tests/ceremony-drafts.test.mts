@@ -298,8 +298,9 @@ test("nominal group drafts preserve scope and personal subjects when moved", () 
   assert.ok(parseDraftCommand(c));
   assert.equal(data.action, "group_nominal");
   assert.equal(data.sectorId, id(8));
+  assert.ok(parseDraftCommand({ ...c, data: { ...data, groupId: null } }));
   assert.equal(
-    parseDraftCommand({ ...c, data: { ...data, groupId: null } }),
+    parseDraftCommand({ ...c, data: { ...data, groupId: undefined } }),
     null,
   );
   assert.equal(
@@ -313,4 +314,27 @@ test("nominal group drafts preserve scope and personal subjects when moved", () 
     parseDraftCommand({ ...c, data: { ...data, quantity: 3 } }),
     null,
   );
+});
+
+test("Senza gruppo keeps its explicit null scope on moves and only accepts named people", () => {
+  const data = draftData({
+    action: "group_nominal",
+    id: id(1), sectorId: id(2), sector: "A", quantity: 2,
+    groupId: null, groupName: null,
+    subjects: [
+      { registrationId: id(3), childId: null, name: "Adult" },
+      { registrationId: id(4), childId: id(5), name: "Explicit child" },
+    ],
+  }, id(6));
+  const c = { planId: id(7), revision: 2, requestId: id(8), operation: "save", draftId: id(1), data };
+  assert.ok(parseDraftCommand(c));
+  assert.equal(data.groupId, null);
+  assert.equal(data.sectorId, id(6));
+  for (const change of [
+    { subjects: [] },
+    { quantity: 3 },
+    { action: "group", subjects: [] },
+    { groupId: "without-group" },
+    { seatIds: [id(9), id(10)] },
+  ]) assert.equal(parseDraftCommand({ ...c, data: { ...data, ...change } }), null);
 });

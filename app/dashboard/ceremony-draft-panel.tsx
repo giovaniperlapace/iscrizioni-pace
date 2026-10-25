@@ -31,7 +31,7 @@ function DraftRow({
   const [quantity, setQuantity] = useState(draft.quantity);
   const name =
     draft.action === "group_nominal"
-      ? `${draft.groupName} · ${draft.quantity} nomi`
+      ? `${draft.groupId === null ? "Senza gruppo" : draft.groupName} · ${draft.quantity} nomi`
       : draft.subjects.length
         ? draft.subjects.map((s) => s.name).join(", ")
         : draft.groupName;

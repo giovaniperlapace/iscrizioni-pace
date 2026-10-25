@@ -8,7 +8,7 @@ import {
   type SectorReadResult,
 } from "@/lib/ceremonies/sector-desk";
 export type GroupNominalSelection = {
-  groupId: string;
+  groupId: string | null;
   revision: number;
   people: SectorPerson[];
 };
@@ -44,8 +44,8 @@ export function CeremonyGroupNominalPicker({
       for (let page = 1; ; page++) {
         const r = await read({
           planId: desk.planId,
-          groupId: group,
-          withoutGroup: false,
+          groupId: group === "without-group" ? null : group,
+          withoutGroup: group === "without-group",
           search: "",
           page,
         });
@@ -106,7 +106,7 @@ export function CeremonyGroupNominalPicker({
   function select(keys: string[]) {
     setSelected(keys);
     onSelection({
-      groupId: group,
+      groupId: group === "without-group" ? null : group,
       revision,
       people: eligible.filter((p) => keys.includes(subjectKey(p))),
     });
@@ -143,6 +143,7 @@ export function CeremonyGroupNominalPicker({
           }}
         >
           <option value="">Seleziona un gruppo</option>
+          <option value="without-group">Senza gruppo</option>
           {(desk.groups ?? []).map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}
@@ -155,6 +156,13 @@ export function CeremonyGroupNominalPicker({
         dopo la pubblicazione. Non sarà necessario l’abbinamento da parte del
         capogruppo. I minori vanno scelti esplicitamente.
       </p>
+      {group === "without-group" && (
+        <p className="text-sm">
+          Partecipanti senza un’appartenenza confermata a un gruppo. Puoi
+          scegliere i singoli nomi oppure selezionarli in blocco con i comandi
+          qui sotto.
+        </p>
+      )}
       {loading && (
         <p role="status">Caricamento di tutti i membri del gruppo…</p>
       )}

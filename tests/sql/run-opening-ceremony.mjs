@@ -111,6 +111,7 @@ try {
  try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-direct-families.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Direct families: '+e.stderr);}
  try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-drafts.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Drafts: '+e.stderr);}
  try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-overbooking.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Overbooking: '+e.stderr);}
+ try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-without-group.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Without group: '+e.stderr);}
  const exportFile=process.argv.find(x=>x.startsWith('--export-fixture='))?.slice('--export-fixture='.length);
  {
   psql(`select prepare_opening_ceremony_layout(f(1),f(33),-1);
