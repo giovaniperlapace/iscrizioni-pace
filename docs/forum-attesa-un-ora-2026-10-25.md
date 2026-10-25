@@ -1,6 +1,6 @@
 # Lista d’attesa: inviti di un’ora — 25 ottobre 2026
 
-Modifica preparata localmente, non pubblicata né applicata in produzione.
+Migration applicata in produzione; pubblicazione dei testi in corso.
 
 Nuovi inviti Forum principali e sale collegate: un’ora alla promozione e finestra completa di un’ora al claim della notifica. La migration `20261025200000_forum_waitlist_one_hour.sql` sostituisce le due funzioni mantenendo controlli, FIFO, famiglie, lock, privilegi e claim. Nessun aggiornamento delle righe esistenti: gli inviti già notificati conservano la scadenza comunicata; i pending ricevono la nuova finestra al claim ordinario.
 
@@ -15,3 +15,9 @@ Repository aggiornato in fast-forward a origin/main 6d54d31, preservando i file 
 1.163 test applicativi e build production con TypeScript superati in copia isolata da npm ci. Vercel CLI autenticata: progetto e team confermati, produzione READY sul commit precedente 6d54d31. Il connettore Vercel non dispone dell’accesso al team; la CLI funziona.
 
 Accesso SSH al server canonico in timeout ripetuto, anche con connessione nuova senza multiplexing. Impossibile verificare backup e database: nessuna migration applicata. Modifica conservata in commit locale; push e deploy rinviati per non mostrare un’ora mentre il database mantiene due ore. Nessun cambiamento operativo remoto.
+
+## Rilascio dopo ripristino accesso
+
+Nuovo accesso SSH riuscito. Le funzioni live coincidono con quelle versionate, salvo la durata richiesta. Backup completo verificato mediante indice e decodifica: `/root/backups/iscrizioni-pace/production-before-waitlist-one-hour-20261025.dump`, 27.722.142 byte, SHA256 `47bcaa1ab7900d6a1f4918f1ad950d723fd2d10160e0ef9c3cbc4bfea2563a0a`.
+
+Migration `20261025200000` applicata e registrata atomicamente. Conservate integralmente 2.791 righe della lista d’attesa sotto lock; proprietari, ACL, security definer e configurazione delle 243 funzioni public/app invariati. Nessuna offerta preesistente accorciata, nessuna notifica reale di prova.
