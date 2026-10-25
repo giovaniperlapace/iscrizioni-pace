@@ -29,11 +29,12 @@ type Props = {
   labelPrinting?: boolean;
   onLookup?: (lookup: ReceptionCommand["lookup"] | null) => void;
   onBusy?: (busy: boolean) => void;
+  onNavigationBusy?: (busy: boolean) => void;
   labelCommandAction?: (command: LabelCommand) => Promise<LabelResult>;
 };
 
 export function EventReceptionConsole(props: Props) {
-  const { commandAction, deviceMode = "computer", cameraSource, onChangeMode, onChangeDuty, onBusy } = props;
+  const { commandAction, deviceMode = "computer", cameraSource, onChangeMode, onChangeDuty, onBusy, onNavigationBusy } = props;
   const verification = props.duty?.duty === "registration_check";
   const entryTerminology = props.duty?.duty === "panel_entry" || props.duty?.duty === "ceremony_entry";
   const copy = (value: string) => receptionEntryCopy(value, entryTerminology);
@@ -53,6 +54,11 @@ export function EventReceptionConsole(props: Props) {
   const fading = cameraVisible && !locked && state.phase === "result" && state.mode === "enter" && !!state.result && state.result.outcome !== "verified";
   const result = state.phase === "blocked" ? null : state.result ?? entry;
   useEffect(() => { onBusy?.(locked || state.phase === "selection"); }, [locked, state.phase, onBusy]);
+  useEffect(() => {
+    // A revoked session may return to the chooser; only unfinished work blocks Back.
+    onNavigationBusy?.(busy || state.phase === "pending" || state.phase === "uncertain" || state.phase === "selection");
+    return () => onNavigationBusy?.(false);
+  }, [busy, state.phase, onNavigationBusy]);
   const correction = state.mode !== "enter";
   const multiple = result && (result.kind === "group" || result.kind === "family" && result.persons.length > 1);
   const problem = ["error", "uncertain", "blocked"].includes(state.phase);

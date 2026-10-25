@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Accoglienza: Indietro sul telefono — 2026-10-25
+
+- Scelta incarico con singolo passaggio nella cronologia: Indietro torna
+  all’elenco, un ulteriore Indietro può uscire. Pulsante Cambia incarico
+  coerente; Avanti/ricaricamento e finestre orarie verificati, desktop invariato.
+- Arresto camera all’uscita; richieste, esiti incerti e conferme conservano
+  scheda/retry. QR invalidi e sessioni revocate non intrappolano la navigazione.
+  Nessun dato personale nella cronologia e nessuna migration.
+- Test, TypeScript, lint mirato, build isolata e browser mobile con API/SQL
+  sintetici passati. Dettagli: `docs/accoglienza-indietro-telefono-2026-10-25.md`.
+
 ## Accoglienza Forum: disponibilità delle sale collegate — 2026-10-25
 
 - Dal Forum principale: sede e residuo fisico (capienza meno ingressi attivi),

@@ -108,6 +108,11 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await context.addCookies([{name:'sb-127-auth-token',value:'base64-'+Buffer.from(JSON.stringify(session)).toString('base64url'),url:base},{name:'iscrizioni_last_activity',value:String(Date.now()),url:base}]);
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
+  if(process.env.PHONE_HISTORY_ONLY==='1') {
+   const {checkPhoneHistory}=await import('./reception-phone-history.mjs');
+   await checkPhoneHistory({browser,context,base,psql,calls,errors});
+   assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);return;
+  }
   if(process.env.RELAY_STATS_ONLY==='1') {
    const {checkRelayStatistics}=await import('./reception-relay-statistics.mjs');
    await checkRelayStatistics({page,context,base,psql,calls,qrImage});

@@ -6,6 +6,7 @@ import { REGISTRATION_CHECK_DUTY, type DutyOption } from "@/lib/reception/event-
 import type { ReceptionCommand, ReceptionLookup, ReceptionResult } from "@/lib/reception/contracts";
 import { DESK_MESSAGES, type DeskRequest, type DeskResult } from "@/lib/reception/forum-desk";
 import { EventReceptionConsole } from "../accoglienza/event-reception-console";
+import { usePhoneDutyHistory } from "./use-phone-duty-history";
 import PendingLink from "@/components/pending-link";
 import { RelayRoomStatistics } from "../accoglienza/relay-room-statistics";
 import { parseRelayRoomStatistics, type RelayRoomStatistics as RelayRoom } from "@/lib/reception/relay-room-statistics";
@@ -51,12 +52,22 @@ export function ForumReceptionWorkstation({eventId,choices:assignedChoices,canMa
   const choices=useMemo(()=>[REGISTRATION_CHECK_DUTY,...assignedChoices.filter(item=>item.key!==REGISTRATION_CHECK_DUTY.key)],[assignedChoices]);
   const [selectedMode,setMode]=useState<"computer"|"phone"|null>(null);
   const mode=phoneOnly ? "phone" : selectedMode;
-  const [selected,setSelected]=useState<string|null>(serverNow === undefined && choices.length===1 ? choices[0].key : null);
+  const [localSelected,setSelected]=useState<string|null>(serverNow === undefined && choices.length===1 ? choices[0].key : null);
   const {now,readNow}=useDutyClock(serverNow,choices);
+  const navigationBlocked=useRef(false);
+  const onNavigationBusy=useCallback((value:boolean)=>{navigationBlocked.current=value;},[]);
+  const isNavigationBlocked=useCallback(()=>navigationBlocked.current,[]);
+  const canSelect=useCallback((key:string)=>{
+    const item=choices.find(choice=>choice.key===key);
+    const current=readNow();
+    return !!item && (current===undefined || isDutyAvailable(item,current));
+  },[choices,readNow]);
+  const phoneHistory=usePhoneDutyHistory({enabled:phoneOnly,eventId,canSelect,isBlocked:isNavigationBlocked});
+  const selected=phoneOnly ? phoneHistory.selected : localSelected;
   const available=now === undefined ? choices : choices.filter(item=>isDutyAvailable(item,now));
   const duty=choices.find(item => item.key===selected);
   const next=now === undefined ? null : nextDutyWindow(choices,now);
-  const changeDuty=()=>setSelected(null);
+  const changeDuty=()=>{if(phoneOnly)phoneHistory.back();else setSelected(null);};
   const chooseMode=(nextMode:"phone"|"computer")=>{
     const current=readNow();
     if(duty && current !== undefined && !isDutyAvailable(duty,current)) changeDuty();
@@ -72,18 +83,18 @@ export function ForumReceptionWorkstation({eventId,choices:assignedChoices,canMa
       <div className="grid gap-2">{available.map(item=><button key={item.key} className="btn-secondary min-h-16 p-3 text-left" onClick={()=>{
         const current=readNow();
         if(current !== undefined && !isDutyAvailable(item,current)) return;
-        setSelected(item.key);
+        if(phoneOnly)phoneHistory.select(item.key);else setSelected(item.key);
       }}><strong className="block">{item.title}</strong>{item.room}</button>)}</div>
     </> : <div role="status" className="grid gap-2"><p>Nessun incarico disponibile in questo momento.</p>{next && <p>Prossimo incarico: {next.duty.title}, dal {formatDutyWindowTime(next.from)}.</p>}</div>}
     {!phoneOnly && <button className="min-h-11 justify-self-start underline" onClick={()=>{changeDuty();setMode(null);}}>Cambia postazione</button>}
   </section>;
   return <>
     {now !== undefined && !isDutyAvailable(duty,now) && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3">La fascia di questo incarico è terminata. Concludi l’operazione in corso, poi scegli «Cambia incarico».</p>}
-    <ActiveStation key={`${mode}-${duty.key}`} {...{eventId,duty,mode,canManage,requestAction}} onChangeDuty={serverNow !== undefined || choices.length>1 ? changeDuty:undefined} onChangeMode={phoneOnly?undefined:()=>setMode(null)}/>
+    <ActiveStation key={`${mode}-${duty.key}`} {...{eventId,duty,mode,canManage,requestAction,onNavigationBusy}} onChangeDuty={serverNow !== undefined || choices.length>1 ? changeDuty:undefined} onChangeMode={phoneOnly?undefined:()=>setMode(null)}/>
   </>;
 }
 
-function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,onChangeMode}:{eventId:string;duty:DutyOption;mode:"phone"|"computer";canManage:boolean;requestAction:ForumReceptionTransport;onChangeDuty?:()=>void;onChangeMode?:()=>void}) {
+function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,onChangeMode,onNavigationBusy}:{eventId:string;duty:DutyOption;mode:"phone"|"computer";canManage:boolean;requestAction:ForumReceptionTransport;onChangeDuty?:()=>void;onChangeMode?:()=>void;onNavigationBusy:(busy:boolean)=>void}) {
   const [lookup,setLookup]=useState<ReceptionLookup|null>(null);
   const [deskBusy,setDeskBusy]=useState(false);
   const [scanBusy,setScanBusy]=useState(false);
@@ -110,7 +121,7 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
       <button className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-current/30 px-2 text-xs hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2" aria-label="Aggiorna conteggi" title="Aggiorna conteggi" onClick={refreshStatistics}><RefreshCw size={16} aria-hidden="true" />Aggiorna conteggi</button>
     </section>;
   return <div className="grid gap-4">
-    <div inert={deskBusy || undefined}><EventReceptionConsole statistics={duty.kind==="verification" ? <p className="text-xs">Iscrizione alla Preghiera per la pace · sola lettura</p> : statistics} belowResult={duty.kind==="panel" ? <RelayRoomStatistics rooms={relayRooms} loading={statsLoading}/> : undefined} navigationAboveTitle duty={duty.kind==="verification" ? {key:"registration_check",duty:"registration_check",title:duty.title,room:null} : {key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
+    <div inert={deskBusy || undefined}><EventReceptionConsole statistics={duty.kind==="verification" ? <p className="text-xs">Iscrizione alla Preghiera per la pace · sola lettura</p> : statistics} belowResult={duty.kind==="panel" ? <RelayRoomStatistics rooms={relayRooms} loading={statsLoading}/> : undefined} navigationAboveTitle duty={duty.kind==="verification" ? {key:"registration_check",duty:"registration_check",title:duty.title,room:null} : {key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onNavigationBusy={onNavigationBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
     {mode==="computer" && duty.kind!=="verification" && <section className="surface-card grid gap-3 p-5"><h2 className="text-lg font-semibold">Prenota un posto</h2><p className="text-sm">Leggi il codice della persona, poi assegna una prenotazione. L’ingresso si conferma separatamente.</p>
       {lookup ? <Desk key={`${lookup.kind}:${lookup.value}`} {...{eventId,duty,lookup,requestAction}} disabled={scanBusy} onBusy={setDeskBusy} onSaved={refreshStatistics}/> : <p className="text-sm text-slate-600">Inserisci o scansiona prima il codice.</p>}
       {canManage && <div className="flex flex-wrap gap-4 text-sm"><PendingLink href="/dashboard/manager?section=iscritti" className="underline">Gestione partecipanti</PendingLink><PendingLink href="/dashboard/manager/nuovo" className="underline">Inserisci un nuovo partecipante</PendingLink></div>}
