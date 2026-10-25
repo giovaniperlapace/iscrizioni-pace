@@ -6,7 +6,7 @@ export type SeatsDesk = {
   notifications?: Record<string, number>;
   planId: string; kind: 'opening' | 'closing'; revision: number; state: 'draft' | 'validated';
   layoutKey: string | null; day: string; part: string; location: string; active: MapVersion | null;
-  sectors: (SeatMapView['sectors'][number] & { remaining: number })[];
+  sectors: (SeatMapView['sectors'][number] & { remaining: number; overbooking?: number; baseAssignable?: number })[];
   groups?: { id: string; name: string }[];
   allocations: { id: string; sectorId: string; groupId: string | null; groupName: string | null; quantity: number }[];
   nominees: Nominee[]; claims: SeatMapView['claims'];

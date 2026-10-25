@@ -25,6 +25,7 @@ import {
   CeremonyGroupNominalPicker,
   type GroupNominalSelection,
 } from "./ceremony-group-nominal-picker";
+import { sectorCapacitySummary, type OverbookingCommand } from "@/lib/ceremonies/overbooking";
 const attendance = {
   yes: "Presenza confermata",
   no: "Assenza dichiarata",
@@ -42,9 +43,11 @@ export function CeremonySectorWorkspace({
   save,
   revoke,
   manageDrafts,
+  setOverbooking,
   read = readCeremonySector,
   loadHistory = readCeremonyHistory,
 }: {
+  setOverbooking?: (c: OverbookingCommand) => Promise<{ status: string }>;
   initialDesk: SeatsDesk;
   save: (c: DeskCommand) => Promise<{ status: string }>;
   revoke: (c: RevokeAssignment) => Promise<{ status: string }>;
@@ -52,6 +55,9 @@ export function CeremonySectorWorkspace({
   read?: (q: SectorDirectoryQuery) => Promise<SectorReadResult>;
   loadHistory?: (q: HistoryQuery) => Promise<HistoryResult>;
 }) {
+  const [extra, setExtra] = useState(0);
+  const [pendingExtra, setPendingExtra] = useState<OverbookingCommand | null>(null);
+  const [extraMessage, setExtraMessage] = useState("");
   const [desk, setDesk] = useState(initialDesk);
   const [sectorId, setSectorId] = useState("");
   const [mode, setMode] = useState<"single" | "group" | "group_nominal">(
@@ -79,6 +85,7 @@ export function CeremonySectorWorkspace({
   const sequence = useRef(0);
   const busy = useRef(false);
   const sector = desk.sectors.find((s) => s.id === sectorId);
+  const capacity = sector ? sectorCapacitySummary(desk, sector.id) : null;
   const groups = desk.groups ?? [];
   const draftSubjects = new Map(
     (desk.drafts ?? []).flatMap((d) =>
@@ -86,7 +93,7 @@ export function CeremonySectorWorkspace({
     ),
   );
   const groupName = groups.find((g) => g.id === group)?.name;
-  const locked = saving || !!uncertain || !!revocation?.uncertain;
+  const locked = saving || !!pendingExtra || !!uncertain || !!revocation?.uncertain;
   const children = selected?.childId ? [] : (selected?.children ?? []);
   const familyKnown =
     !!selected &&
@@ -120,6 +127,10 @@ export function CeremonySectorWorkspace({
         ? members?.revision === desk.revision
         : !!groupName);
   const assignments = sectorAssignments(desk, sectorId);
+  const totals = desk.sectors.reduce((sum, s) => {
+    const c = sectorCapacitySummary(desk, s.id);
+    return { physical: sum.physical + (c.physical ?? 0), assigned: sum.assigned + c.assigned, extra: sum.extra + c.extra, remaining: sum.remaining + s.remaining };
+  }, { physical: 0, assigned: 0, extra: 0, remaining: 0 });
   useEffect(() => {
     if (sectorId) dialog.current?.showModal();
   }, [sectorId]);
@@ -145,7 +156,7 @@ export function CeremonySectorWorkspace({
     [],
   );
   const load = useCallback(
-    async (nextSearch = applied, page = 1) => {
+    async (nextSearch = applied, page = 1, activeSector = sectorId) => {
       const token = ++sequence.current;
       setLoading(true);
       setStale(true);
@@ -163,6 +174,7 @@ export function CeremonySectorWorkspace({
         if (result.status !== "loaded" || !result.directory)
           throw Error(result.status);
         setDesk(result.desk);
+        setExtra(result.desk.sectors.find(s => s.id === activeSector)?.overbooking ?? 0);
         setDirectory(result.directory);
         setStale(false);
       } catch {
@@ -174,9 +186,10 @@ export function CeremonySectorWorkspace({
         if (token === sequence.current) setLoading(false);
       }
     },
-    [desk.planId, applied, read],
+    [desk.planId, applied, read, sectorId],
   );
   function resetForm() {
+    setExtraMessage("");
     setMembers(null);
     setMemberVersion((v) => v + 1);
     setMode("single");
@@ -194,7 +207,8 @@ export function CeremonySectorWorkspace({
     if (busy.current || locked) return;
     resetForm();
     setSectorId(id);
-    void load("");
+    setExtra(desk.sectors.find(s => s.id === id)?.overbooking ?? 0);
+    void load("", 1, id);
   }
   function close() {
     if (busy.current || locked) return;
@@ -264,6 +278,24 @@ export function CeremonySectorWorkspace({
         setQuantity(1);
         setHistoryVersion((v) => v + 1);
       }
+      await load();
+    }
+    busy.current = false;
+    setSaving(false);
+  }
+  async function saveExtra(retry?: OverbookingCommand) {
+    if (!setOverbooking || !sector || busy.current || (!retry && (locked || loading || stale))) return;
+    const command = retry ?? { planId: desk.planId, sectorId: sector.id, revision: desk.revision, requestId: crypto.randomUUID(), extra };
+    busy.current = true;
+    setSaving(true);
+    let outcome: string;
+    try { outcome = (await setOverbooking(command)).status; } catch { outcome = "unavailable"; }
+    if (outcome === "unavailable") {
+      setPendingExtra(command);
+      setExtraMessage("Esito non verificabile. Riprova la stessa richiesta.");
+    } else {
+      setPendingExtra(null);
+      setExtraMessage(outcome === "saved" ? "Overbooking aggiornato." : outcome === "overbooking_in_use" ? "Questi posti sono già impegnati, anche in bozza. Riduci prima le assegnazioni." : (SECTOR_MESSAGES[outcome] ?? SECTOR_MESSAGES.unavailable));
       await load();
     }
     busy.current = false;
@@ -372,6 +404,9 @@ export function CeremonySectorWorkspace({
           Cronologia e revoche
         </a>
       </div>
+      <dl aria-label="Totali cerimonia" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[["Capienza reale", totals.physical], ["Impegnati, incluse bozze", totals.assigned], ["Overbooking previsto", `+${totals.extra}`], ["Ancora assegnabili", totals.remaining]].map(([label,value]) => <div key={label} className="surface-card p-4"><dt className="text-sm text-slate-600">{label}</dt><dd className="text-2xl font-semibold tabular-nums">{value}</dd></div>)}
+      </dl>
       {!sectorId && status && <p role="status">{status}</p>}
       {manageDrafts && (
         <CeremonyDraftPanel
@@ -412,7 +447,7 @@ export function CeremonySectorWorkspace({
                 Settore {sector.name}
               </h2>
               <p>
-                <strong>{sector.remaining} posti disponibili</strong>
+                <strong>{sector.remaining} posti assegnabili</strong>
               </p>
             </div>
             <button
@@ -424,6 +459,20 @@ export function CeremonySectorWorkspace({
               Chiudi
             </button>
           </header>
+          {capacity && <dl aria-label="Conteggi del settore" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[["Capienza reale", capacity.physical ?? "—"], ["Posti ordinari", capacity.base], ["Impegnati, incluse bozze", capacity.assigned], ["Overbooking previsto", `+${capacity.extra}`]].map(([label, value]) => <div key={label} className="rounded-xl border border-[var(--peace-border)] bg-[var(--peace-soft)] p-3"><dt className="text-xs text-slate-600">{label}</dt><dd className="mt-1 text-xl font-semibold">{value}</dd></div>)}
+          </dl>}
+          {setOverbooking && capacity && !sector.numbered && <section aria-labelledby="overbooking-title" className="grid gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <div><h3 id="overbooking-title" className="font-semibold text-amber-950">Overbooking del settore</h3><p className="mt-1 text-sm text-amber-950">Autorizza posti aggiuntivi oltre i {capacity.base} posti ordinari. La capienza reale resta di {capacity.physical ?? "—"} persone.</p></div>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="grid gap-1 text-sm">Posti aggiuntivi autorizzati<input className="field w-36" type="number" min={0} max={10000} step={1} value={Number.isNaN(extra) ? "" : extra} disabled={locked || loading || stale} onChange={e => setExtra(e.target.value === "" ? NaN : Number(e.target.value))}/></label>
+              <button className="btn-secondary min-h-11 px-4 py-2" type="button" disabled={locked || loading || stale || !Number.isInteger(extra) || extra < 0 || extra > 10000 || extra === capacity.extra} onClick={() => void saveExtra()}>Salva overbooking</button>
+            </div>
+            <p className="text-sm">{capacity.usedExtra} posti aggiuntivi impegnati · {capacity.extraRemaining} ancora assegnabili. Totale autorizzato: {capacity.total}.</p>
+            <p className="text-sm text-amber-950">Dopo il salvataggio, assegna i posti qui sotto. Le assegnazioni seguono la normale pubblicazione; l’accoglienza vedrà capienza reale, ingressi e overbooking previsto.</p>
+            {extraMessage && <p role="status" className="text-sm font-semibold">{extraMessage}</p>}
+            {pendingExtra && <button className="btn-primary px-4 py-2" type="button" disabled={saving} onClick={() => void saveExtra(pendingExtra)}>Riprova lo stesso overbooking</button>}
+          </section>}
           {sector.numbered && (
             <p role="alert">
               La configurazione per l’assegnazione al settore deve essere

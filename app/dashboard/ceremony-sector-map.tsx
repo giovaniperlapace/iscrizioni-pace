@@ -2,7 +2,7 @@
 import { memo } from "react";
 import type { SeatsDesk } from "@/lib/ceremonies/seats-desk";
 import { openingSeatAddress } from "@/lib/ceremonies/seat-label";
-import { sectorCounts } from "@/lib/ceremonies/drafts";
+import { sectorCapacitySummary } from "@/lib/ceremonies/overbooking";
 type Sector = SeatsDesk["sectors"][number];
 const colors = { free: "#dbeafe", reserved: "#d97706", nominal: "#16a34a", draft: "#8b5cf6", blocked: "#94a3b8" };
 function SectorShape({
@@ -23,8 +23,8 @@ function SectorShape({
   const available =
     sector.assignableLimit ??
     (seats.length ? seats.filter((s) => !s.blocked).length : capacity);
-  const reserved = Math.max(0, available - sector.remaining);
-  const counts = sectorCounts(desk, sector.id);
+  const counts = sectorCapacitySummary(desk, sector.id);
+  const reserved = counts.assigned;
   const colorAt = (index: number) => index < counts.nominal ? colors.nominal : index < counts.nominal + counts.groupPending ? colors.reserved : index < counts.nominal + counts.groupPending + counts.draft ? colors.draft : colors.free;
   const blocks = [
     ...new Set(seats.map((s) => openingSeatAddress(s.row)?.block ?? 1)),
@@ -69,9 +69,10 @@ function SectorShape({
       <span className="flex flex-wrap items-baseline justify-between gap-2">
         <strong className="text-sm sm:text-base">{sector.name}</strong>
         <span className="text-[10px] font-semibold text-blue-900 sm:text-sm">
-          {sector.remaining} liberi
+          {sector.remaining} assegnabili
         </span>
       </span>
+      {counts.extra > 0 && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-950 sm:text-xs">Overbooking +{counts.extra} · {counts.usedExtra} impegnati</span>}
       <svg
         viewBox={`-1 -1 ${width + 2} ${height + 2}`}
         aria-hidden="true"
@@ -91,7 +92,7 @@ function SectorShape({
         ))}
       </svg>
       <span className="hidden text-[9px] text-slate-600 sm:block sm:text-xs">
-        {counts.draft} in bozza · {counts.nominal} nominativi · {counts.groupPending} da abbinare · {reserved} occupati su {available}
+        {counts.draft} in bozza · {counts.nominal} nominativi · {counts.groupPending} da abbinare · {reserved} impegnati · {capacity} capienza reale · {counts.base} ordinari
         {capacity > available ? ` · ${capacity - available} protocollo` : ""}
       </span>
     </button>
@@ -163,8 +164,7 @@ export const CeremonySectorMap = memo(function CeremonySectorMap({
       )}
       <p className="col-span-2 text-sm">
         Azzurro: libero · Viola: bozza · Verde: pubblicato e nominativo · Arancio: pubblicato al gruppo, da abbinare · Grigio: protocollo. I quadratini
-        rappresentano le quantità disponibili nel settore, senza assegnare una
-        sedia specifica.
+        rappresentano i posti fisici del settore. L’overbooking è indicato separatamente, senza aggiungere sedie alla piantina.
       </p>
     </div>
   );

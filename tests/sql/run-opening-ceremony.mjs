@@ -86,6 +86,19 @@ try {
    assert.equal(psql('select count(*) from ceremony_plans',true).trim(),'0');
    console.log('PASS relay rename is idempotent and rejects unexpected names without partial changes');
   }
+  if(name==='20261025120000_ceremony_overbooking.sql') {
+   const seed=readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0];
+   const setup=readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0].replace(/^begin;/,'');
+   const entry="insert into ceremony_reception_assignments values(f(1),f(30),'opening',f(33));select reception_ceremony_check_in(f(1),f(30),'opening','code','TST1','enter',f(14900),array[f(40)]);reset role;";
+   const migration=readFileSync(join('supabase/migrations',name),'utf8');
+   const body=migration.replace(/\bbegin;\n/,'').replace(/commit;\s*$/,'');
+   try {psql('begin;'+seed+setup+entry+body+"do $$ begin assert (select ceremony_sector_id=(select id from ceremony_sectors where name='B') from check_ins where child_id=f(40) and moment_id is not null);end $$;rollback;");}
+   catch(e){throw new Error('Overbooking admission backfill: '+e.stderr);}
+   const orphan="update ceremony_nominees set revoked_at=now() where child_id=f(40);";
+   assert.throws(()=>psql('begin;'+seed+setup+entry+orphan+body+'commit;'),e=>String(e.stderr).includes('require reconciliation'));
+   assert.equal(psql('select count(*) from ceremony_plans',true).trim(),'0');
+   console.log('PASS overbooking migration attributes existing entries and refuses unattributed active entries with full rollback');
+  }
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
@@ -97,6 +110,7 @@ try {
  try {console.log(psql(readFileSync('tests/sql/ceremony-seats-desk.sql','utf8').replace(/rollback;\s*$/, '') + readFileSync('tests/sql/ceremony-seat-revoke.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}catch(e){throw new Error('Seat revoke: '+e.stderr);}
  try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-direct-families.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Direct families: '+e.stderr);}
  try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-drafts.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Drafts: '+e.stderr);}
+ try {console.log(psql(readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0] + readFileSync('tests/sql/ceremony-overbooking.sql','utf8') + '\nrollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));} catch(e) {throw new Error('Overbooking: '+e.stderr);}
  const exportFile=process.argv.find(x=>x.startsWith('--export-fixture='))?.slice('--export-fixture='.length);
  {
   psql(`select prepare_opening_ceremony_layout(f(1),f(33),-1);
@@ -152,6 +166,16 @@ try {
  assert.deepEqual(publicationRace.sort(),['conflict','saved']);
  assert.equal(psql("select sum(quantity) from ceremony_allocations where group_id=f(12100) and revoked_at is null",true).trim(),'1');
  console.log('PASS concurrent shared drafts/publication: one save, one conflict, one allocation');
+ // Two operators changing the same allowance share the assignment revision and event lock.
+ const extraRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+ const extraRace=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select set_ceremony_overbooking(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),(select id from ceremony_sectors where name='C'),${extraRevision},f(${14001+i}),${i+1})->>'status';`)));
+ assert.deepEqual(extraRace.sort(),['conflict','saved']);
+ psql("select set_ceremony_overbooking(f(1),f(31),(select id from ceremony_plans where kind='opening'),(select id from ceremony_sectors where name='C'),(select revision from ceremony_plans where kind='opening'),f(14003),1);update ceremony_quotas set quantity=1 where sector_id=(select id from ceremony_sectors where name='C');");
+ const finalExtraRevision=Number(psql("select revision from ceremony_plans where kind='opening'",true).trim());
+ const finalExtraRace=await Promise.all([31,33].map((actor,i)=>concurrent(`set role service_role;select manage_ceremony_drafts(f(1),f(${actor}),(select id from ceremony_plans where kind='opening'),${finalExtraRevision},f(${14004+i}),'save',null,jsonb_build_object('action','group','sectorId',(select id from ceremony_sectors where name='C'),'quantity',1,'seatIds','[]'::jsonb,'subjects','[]'::jsonb,'groupId',f(12100)))->>'status';`)));
+ assert.deepEqual(finalExtraRace.sort(),['conflict','saved']);
+ assert.equal(psql("select x->>'remaining' from jsonb_array_elements(get_ceremony_draft_desk(f(1),f(31),'opening')->'sectors') x where x->>'name'='C'",true).trim(),'0');
+ console.log('PASS concurrent overbooking changes and final extra place: one save, one conflict, no over-allocation');
  const leaderBase=process.argv.find(x=>x.startsWith('--leader-browser-base='))?.slice('--leader-browser-base='.length);
  if(leaderBase) {
   psql('truncate ceremony_plans cascade;'+readFileSync('tests/sql/ceremony-leader-pairing.sql','utf8').split('-- BEGIN PAIR TESTS')[0].replace(/^begin;/,'')+'commit;');

@@ -1,3 +1,4 @@
+import { parseCeremonySectorStatistics } from "./ceremony-sector-statistics.ts";
 import { readGroupCeremonySummary } from '../ceremonies/group-seat-summary.server.ts';
 import { parseCeremonySeatInfo } from "../ceremonies/seat-projection.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -118,7 +119,10 @@ export function projectReceptionResult(data: unknown): ReceptionResult {
   if (row.status !== "valid" || !Number.isSafeInteger(row.revision) || Number(row.revision)<0 ||
     !["verified","saved","unchanged","replayed"].includes(String(row.outcome)) ||
     !["submitted","confirmed"].includes(String(row.registrationStatus))) return { status: "unavailable" };
+  const sectorStatistics = row.sectorStatistics === undefined ? undefined : parseCeremonySectorStatistics(row.sectorStatistics);
+  if (sectorStatistics === null) return { status: "unavailable" };
   const common = {
+    ...(sectorStatistics ? { sectorStatistics } : {}),
     ...(panel ? { panel } : {}),
     status: "valid" as const, revision: row.revision as number,
     outcome: row.outcome as "verified" | "saved" | "unchanged" | "replayed",

@@ -25,6 +25,7 @@ export type ReceptionPerson = {
   eligible?: boolean;
 };
 type ValidReception = {
+  sectorStatistics?: import("./ceremony-sector-statistics.ts").CeremonySectorStatistics[];
   status: "valid";
   panel?: { id: string; title: string; room: string; section: string };
   revision: number;

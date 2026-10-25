@@ -1,4 +1,5 @@
 "use client";
+import { CeremonySectorStatistics } from "./ceremony-sector-statistics";
 
 import { ChevronDown, History, Keyboard, ScanLine } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -142,6 +143,7 @@ export function EventReceptionConsole(props: Props) {
       <h3 ref={heading} tabIndex={-1} className={`break-words font-bold outline-none ${cameraVisible ? "text-lg" : "text-2xl"}`}>{result.kind === "group" ? result.groupName : result.kind === "family" ? `${result.persons[0]?.firstName} ${result.persons[0]?.lastName}` : result.kind === "school" ? `${result.schoolName} · ${result.classDescription}` : result.label}</h3>
       {(props.duty?.duty === "panel_entry" || props.duty?.duty === "ceremony_entry") && (result.kind !== "family" || result.persons.every(person => person.eligible !== false)) && !missingEventEntry && state.phase === "result" && state.result?.outcome === "verified" && <p role="status" className="rounded-xl bg-green-100 p-3 font-semibold text-green-900">✓ {props.duty.duty === "panel_entry" ? "Iscrizione al Forum verificata." : "Biglietto per la cerimonia verificato."}</p>}
       {!cameraVisible && result.kind === "family" && <p className="text-sm text-slate-600">{result.code}</p>}
+      {props.duty?.duty === "ceremony_entry" && result.sectorStatistics && <CeremonySectorStatistics sectors={result.sectorStatistics}/>}
       {verificationPerson ? <p role="status" data-registration-check data-reception-tone={feedbackTone} className={`rounded-xl border p-4 font-semibold ${RECEPTION_TONES[feedbackTone]}`}>{verificationMessage}</p> : party ?? <>
         {feedback}
         {result.kind === "school" && <>

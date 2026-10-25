@@ -1,0 +1,87 @@
+import assert from 'node:assert/strict';
+import {mkdirSync} from 'node:fs';
+export async function checkOverbooking({page,base,query}) {
+ const output=process.env.CEREMONY_PREVIEW_DIR??'/tmp/pace-overbooking-preview';mkdirSync(output,{recursive:true});
+ for(const width of [1440,390]) {
+  await page.setViewportSize({width,height:width===390?844:1100});
+  await page.goto(base+'/ceremony-draft-check',{waitUntil:'networkidle'});
+  await page.getByRole('button',{name:'Simula overbooking perso',exact:true}).click();
+  await page.getByRole('button',{name:/^Settore C ·/}).click();
+  const modal=page.getByRole('dialog',{name:'Settore C',exact:true});
+  await modal.getByLabel('Posti aggiuntivi autorizzati').fill('20');
+  await modal.getByRole('button',{name:'Salva overbooking',exact:true}).click();
+  await modal.getByRole('button',{name:'Riprova lo stesso overbooking',exact:true}).waitFor();
+  await page.keyboard.press('Escape');assert.ok(await modal.isVisible(),'uncertain setting must stay open');
+  await modal.getByRole('button',{name:'Riprova lo stesso overbooking',exact:true}).click();
+  await modal.getByText('Overbooking aggiornato.',{exact:true}).waitFor();
+  await modal.getByText('620 posti assegnabili',{exact:true}).waitFor();
+  await modal.getByLabel('Modalità di assegnazione').selectOption('group');
+  await modal.getByLabel('Gruppo',{exact:true}).selectOption({label:'Leader group'});
+  await modal.getByLabel('Quantità di posti').fill('615');
+  await modal.getByRole('button',{name:'Salva assegnazione in bozza',exact:true}).click();
+  await modal.getByText('Bozza salvata. Visibile solo ad Admin e Manager fino alla pubblicazione.',{exact:true}).waitFor();
+  await modal.getByText('5 posti assegnabili',{exact:true}).waitFor();
+  await modal.getByText(/15 posti aggiuntivi impegnati · 5 ancora assegnabili/).waitFor();
+  await modal.getByLabel('Posti aggiuntivi autorizzati').fill('14');
+  await modal.getByRole('button',{name:'Salva overbooking',exact:true}).click();
+  await modal.getByText(/Questi posti sono già impegnati/).waitFor();
+  await page.waitForFunction(()=>document.querySelector('dialog input[type=number]')?.value==='20');
+  assert.equal(query("select overbooking from ceremony_sectors where name='C'"),20);
+  assert.equal(query("select capacity from ceremony_sectors where name='C'"),600);
+  await modal.getByRole('button',{name:'Chiudi',exact:true}).click();
+  await page.getByRole('button',{name:/^Settore C ·/}).click();
+  await modal.getByLabel('Posti aggiuntivi autorizzati').waitFor();
+  await page.waitForFunction(()=>!document.querySelector('input[type="number"]')?.disabled);
+  await modal.evaluate(el=>{el.scrollTop=0;});
+  assert.ok(await modal.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'modal overflow');
+  await modal.screenshot({path:`${output}/modale-${width}.png`});
+  await modal.getByRole('button',{name:'Rimuovi bozza Leader group',exact:true}).click();
+  await modal.getByText('Bozza rimossa.',{exact:true}).waitFor();
+  await modal.getByLabel('Posti aggiuntivi autorizzati').fill('0');
+  await modal.getByRole('button',{name:'Salva overbooking',exact:true}).click();
+  await modal.getByText('Overbooking aggiornato.',{exact:true}).waitFor();
+  await modal.getByRole('button',{name:'Chiudi',exact:true}).click();
+ }
+ // Original scanner + original result projection + live SQL, with a real synthetic QR token.
+ query(`insert into participants(id,first_name,last_name,public_code) values(f(13900),'Giulia','Esempio','OVBK');
+ insert into registrations(id,event_id,participant_id,status) values(f(13901),f(1),f(13900),'confirmed');
+ insert into qr_tokens(registration_id,token_hash) values(f(13901),encode(sha256(convert_to(repeat('O',43),'UTF8')),'hex'));
+ insert into ceremony_reception_assignments values(f(1),f(30),'opening',f(33));
+ select assign_ceremony_seats(f(1),f(31),(select id from ceremony_plans where kind='opening'),(select revision from ceremony_plans where kind='opening'),f(13902),jsonb_build_object('action','assign_direct','sectorId',(select id from ceremony_sectors where name='C'),'quantity',1,'groupId',null,'seatIds','[]'::jsonb,'subjects',jsonb_build_array(jsonb_build_object('registrationId',f(13901),'childId',null))));`);
+ query("select set_ceremony_overbooking(f(1),f(31),(select id from ceremony_plans where kind='opening'),(select id from ceremony_sectors where name='C'),(select revision from ceremony_plans where kind='opening'),f(13903),20);");
+ for(const width of [1440,390]) {
+  await page.setViewportSize({width,height:width===390?844:1100});
+  await page.goto(base+'/ceremony-draft-check/reception',{waitUntil:'networkidle'});
+  assert.equal(await page.getByRole('region',{name:'Situazione settore C'}).count(),0);
+  await page.getByLabel('Codice partecipante',{exact:true}).fill('O'.repeat(43));
+  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
+  const stats=page.getByRole('region',{name:'Situazione settore C'});
+  await stats.waitFor();
+  assert.equal(await stats.locator('dd').allTextContents().then(xs=>xs.join(',')),'600,0,+20');
+  assert.equal(await page.getByRole('region',{name:'Situazione settore B'}).count(),0);
+  await page.getByRole('button',{name:'Conferma ingresso',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('[aria-label="Situazione settore C"] dd:nth-of-type(1)')&&Array.from(document.querySelectorAll('[aria-label="Situazione settore C"] dd')).map(x=>x.textContent).join(',')==='600,1,+20');
+  assert.equal(query("select count(*) from check_ins where registration_id=f(13901) and cancelled_at is null"),1);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.screenshot({path:`${output}/accoglienza-${width}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Rimuovi ingresso',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:/Conferma/}).click();
+  await page.waitForFunction(()=>Array.from(document.querySelectorAll('[aria-label="Situazione settore C"] dd')).map(x=>x.textContent).join(',')==='600,0,+20');
+  await page.getByRole('button',{name:'Chiudi scheda',exact:true}).click();
+  assert.equal(await stats.count(),0);
+ }
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(base+'/ceremony-draft-check/reception?phone=1',{waitUntil:'networkidle'});
+ assert.equal(await page.getByRole('region',{name:'Situazione settore C'}).count(),0);
+ await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
+ const phoneStats=page.getByRole('region',{name:'Situazione settore C'});
+ await phoneStats.waitFor();
+ await page.getByRole('button',{name:'Segna entrata',exact:true}).click();
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('[aria-label="Situazione settore C"] dd')).map(x=>x.textContent).join(',')==='600,1,+20');
+ await page.screenshot({path:`${output}/accoglienza-telefono.png`,fullPage:true});
+ await phoneStats.waitFor({state:'hidden'});
+ assert.equal(query("select count(*) from check_ins where registration_id=f(13901) and cancelled_at is null"),1);
+ query("select revoke_ceremony_assignment(f(1),f(31),(select id from ceremony_plans where kind='opening'),(select revision from ceremony_plans where kind='opening'),f(13904),'nominee',(select id from ceremony_nominees where registration_id=f(13901) and revoked_at is null));");
+ query("select set_ceremony_overbooking(f(1),f(31),(select id from ceremony_plans where kind='opening'),(select id from ceremony_sectors where name='C'),(select revision from ceremony_plans where kind='opening'),f(13905),0);");
+ console.log('PASS desktop/mobile overbooking: save, lost response retry, extra draft, reduction guard, persisted modal; QR sector counters refreshed after entry/removal and hidden when closed');
+}

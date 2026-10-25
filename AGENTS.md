@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Cerimonie: overbooking per settore — 2026-10-25
+
+- Sezione Overbooking nella modale Admin/Manager: numero esplicito di posti
+  aggiuntivi alla quota ordinaria, condiviso, capienza/mappe/protocollo conservati.
+  Assegnazioni tramite bozze/pubblicazione esistenti; riduzioni sotto gli impegni
+  pubblicati o in bozza bloccate. Contatori e piantina distinguono fisico/extra.
+- Accoglienza cerimonie: capienza reale, persone entrate e overbooking previsto
+  solo nei settori del QR letto, aggiornati da RPC dopo ingresso/rimozione/retry.
+  Avviso a capienza raggiunta; decisione dell’operatore e controlli ordinari conservati.
+  Settore dell’ingresso archiviato anche dopo revoca del biglietto.
+- Migration `20261025120000` applicata/registrata dopo backup verificato:
+  74 tabelle, 264.037 righe originarie e 240 funzioni/ACL conservate.
+  Backfill da nomine attive; arresto se ingressi attivi non attribuibili.
+  RPC service-only, lock/revisione/ricevuta/audit. Letture live verificate,
+  overbooking iniziale zero; nessun invio email o ingresso reale di prova.
+- 1.136 test, TypeScript, lint mirato, build isolata da npm ci, SQL/concorrenza
+  e browser desktop/mobile passati. Commit/push autorizzati; rilascio in corso.
+  Anteprime e dettagli: `docs/cerimonie-overbooking-2026-10-25.md`.
+
+
 ## Inaugurazione: nome sala Maschiella — 2026-10-25
 
 - Nome «Settore F: Sala Maschiella in collegamento» in produzione; nome DB senza
