@@ -53,5 +53,5 @@ export async function checkDutyWindows(browser,base) {
   assert.deepEqual(errors,[]);assert.deepEqual(calls,[]);
   await context.close();
  }
- console.log('PASS desktop/mobile timed chooser: 07:30, 13:30, Sunday 14:00, final ceremony, no search, active input preserved, non-Rome device and no polling');
+ console.log('PASS desktop/mobile timed chooser: 07:30, 13:30, Sunday 13:30, final ceremony, no search, active input preserved, non-Rome device and no polling');
 }

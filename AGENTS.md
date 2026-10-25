@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Forum: ingresso automatico del singolo iscritto — 2026-10-25
+
+- Nuova lettura camera/USB/manuale: singolo adulto prenotato, con accoglienza
+  generale registrata, attiva automaticamente la normale conferma. Su chiarimento
+  dell’utente il pulsante manuale resta invariato. Server ricontrolla
+  incarico/prenotazione/capienza; contatori e latch conservati. Scheda leggibile
+  per 10 secondi dal successo automatico, subito sostituibile da un nuovo QR;
+  il timer precedente non chiude nuove schede, errori o operazioni in corso.
+- Famiglie/minori/scuole e assenza di accoglienza generale mantengono scelta
+  esplicita. Storico/rimozione/correzione non registrano ingressi impliciti;
+  retry con identica richiesta. Cerimonie/verifica/accoglienza generale invariati.
+- Nessuna migration o operazione remota. Verifiche e limiti:
+  `docs/accoglienza-forum-ingresso-automatico-2026-10-25.md`.
+
 ## Accoglienza: entrati/prenotazioni nelle sale collegate — 2026-10-25
 
 - Riepilogo sotto scheda/azioni e statistiche dell’incarico collegato: «x entrati / y prenotazioni». Capienza e posti rimanenti restano separati.
@@ -42,6 +56,18 @@
 - 1.145 test sul commit, TypeScript, lint mirato, build e browser desktop/mobile
   passati. Commit/push richiesti. Dettagli:
   `docs/accoglienza-sale-collegate-disponibilita-2026-10-25.md`.
+
+## Accoglienza: anticipo incarichi del 26 ottobre mattina — 2026-10-25
+
+- Su richiesta per la spiegazione agli operatori, Forum 1–8 e sale collegate
+  di 1/3 già selezionabili dal 25 ottobre alle 18:25 Roma, fino al 26 alle 13:30.
+  Eccezione limitata all’evento corrente e alla mattina del 26; altri orari
+  invariati. Apertura conservata fino alle 20:30 del 25 ottobre.
+- Migration `20261025180000` applicata/registrata in produzione dopo backup
+  verificato: 74 tabelle, 274.094 righe e 242 funzioni/ACL conservate salvo
+  la sola espressione di inizio nel catalogo. Tutti i 55 operatori verificati.
+- Test finestre e SQL/concorrenza passati; nessun ingresso di prova o invio.
+  Dettagli in `docs/accoglienza-fasce-orarie-2026-10-23.md`.
 
 ## Accoglienza: ripresa fotocamera senza soft lock — 2026-10-25
 

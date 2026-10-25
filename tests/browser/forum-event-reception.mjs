@@ -108,6 +108,11 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await context.addCookies([{name:'sb-127-auth-token',value:'base64-'+Buffer.from(JSON.stringify(session)).toString('base64url'),url:base},{name:'iscrizioni_last_activity',value:String(Date.now()),url:base}]);
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
+  if(process.env.AUTO_PANEL_ENTRY_ONLY==='1') {
+   const {checkAutomaticPanelEntry}=await import('./reception-auto-panel-entry.mjs');
+   await checkAutomaticPanelEntry({page,base,psql,calls,qrImage});
+   assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);return;
+  }
   if(process.env.PHONE_HISTORY_ONLY==='1') {
    const {checkPhoneHistory}=await import('./reception-phone-history.mjs');
    await checkPhoneHistory({browser,context,base,psql,calls,errors});
@@ -170,7 +175,8 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByText(/Prenotazione registrata/).waitFor();
   assert.equal(psql('select count(*) from check_ins where registration_id=fw(107) and moment_id is not null;',true).trim(),'0');
   await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
-  await page.getByRole('button',{name:'Conferma ingresso',exact:true}).click();
+  await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Conferma ingresso',exact:true}).isDisabled(),true);
   await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Rimuovi ingresso',exact:true}).click();
   await page.getByRole('heading',{name:'Rimuovi ingresso',exact:true}).waitFor();
@@ -209,21 +215,20 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await overlay.getByText('Attenzione: leggi il messaggio sotto.').waitFor();
   assert.equal(await overlay.locator('[data-reception-tone]').getAttribute('data-reception-tone'),'yellow');
   const cameraCard=page.locator('[data-camera-result]');
-  // Correct duty: inspect does not stop the stream or implicitly check in.
+  // Correct duty: the single booked adult enters automatically without stopping the stream.
   await page.getByRole('button',{name:'Cambia incarico'}).click();
   await page.getByRole('button',{name:/Morning A/}).click();
   psql("update check_ins set cancelled_at=now() where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null;");
   await page.getByRole('button',{name:'Aggiorna conteggi'}).click();
   const frameBefore=await page.getByLabel('Anteprima fotocamera').boundingBox();
+  const enteredBefore=Number(psql('select count(*) from check_ins where moment_id=fw(403) and cancelled_at is null;',true).trim());
   await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
-  await cameraCard.getByText('✓ Iscrizione al Forum verificata.',{exact:true}).waitFor();
+  await cameraCard.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   const cameraCalls=await page.evaluate(()=>window.syntheticCameraCalls);
   const video=page.getByLabel('Anteprima fotocamera');
   assert.equal(await video.isVisible(),true);
   assert.equal(await video.evaluate(el=>el.srcObject.getVideoTracks()[0].readyState),'live');
-  assert.equal(psql('select count(*) from check_ins where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null;',true).trim(),'0');
-  const stats=page.getByRole('region',{name:'Statistiche dell’incarico'});
-  const enteredBefore=Number((await stats.innerText()).match(/(\d+) Entrati/)[1]);
+  assert.equal(psql('select count(*) from check_ins where registration_id=fw(107) and moment_id=fw(403) and cancelled_at is null;',true).trim(),'1');
   const {videoBox,overlayBox,cardBox}=await page.evaluate(()=>({
     videoBox:document.querySelector('video').getBoundingClientRect().toJSON(),
     overlayBox:document.querySelector('[data-camera-overlay]').getBoundingClientRect().toJSON(),
@@ -248,19 +253,17 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.equal(await page.locator('[data-camera-header]').getByRole('region',{name:'Statistiche dell’incarico'}).count(),1);
   assert.equal(await page.getByText('Gli ingressi registrati non indicano quante persone sono ancora nella sala.',{exact:true}).count(),0);
   await page.screenshot({path:'/tmp/pace-forum-camera-compact.png',fullPage:true});
-  await cameraCard.getByRole('button',{name:'Segna entrata',exact:true}).click();
+  assert.equal(await cameraCard.getByRole('button',{name:'Segna entrata',exact:true}).count(),0);
   await cameraCard.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   await page.waitForFunction(expected=>document.querySelector('[aria-label="Statistiche dell’incarico"]').textContent.includes(expected+' Entrati'),enteredBefore+1);
   assert.equal(await video.evaluate(el=>el.srcObject.getVideoTracks()[0].readyState),'live');
   assert.equal(await page.evaluate(()=>window.syntheticCameraCalls),cameraCalls);
   assert.equal(await page.getByRole('button',{name:'Scansiona un altro QR',exact:true}).count(),0);
-  await page.waitForFunction(()=>{
-    const overlay=document.querySelector('[data-camera-overlay]');
-    const opacity=Number(getComputedStyle(overlay).opacity);
-    return opacity>0 && opacity<0.8;
-  });
+  await page.waitForTimeout(2200);
+  assert.equal(await cameraCard.evaluate(el=>getComputedStyle(el).opacity),'1');
+  assert.equal(await cameraCard.evaluate(el=>el.inert),false);
   await page.screenshot({path:'/tmp/pace-forum-camera-overlay.png',fullPage:true});
-  await page.getByRole('heading',{name:'Synthetic 7 Queue',exact:true}).waitFor({state:'detached',timeout:4000});
+  await page.getByRole('heading',{name:'Synthetic 7 Queue',exact:true}).waitFor({state:'detached',timeout:12000});
   assert.equal(await video.evaluate(el=>el.srcObject.getVideoTracks()[0].readyState),'live');
   assert.equal(await page.evaluate(()=>window.syntheticCameraCalls),cameraCalls);
   // An unchanged QR in the stream must not reopen the dismissed card.
@@ -310,7 +313,8 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByText(/Prenotazione registrata/).waitFor();
   await page.getByLabel('Codice partecipante',{exact:true}).fill('F003');
   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
-  await page.getByRole('button',{name:'Conferma ingresso',exact:true}).click();
+  await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Conferma ingresso',exact:true}).isDisabled(),true);
   await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Cambia incarico'}).click();
   await page.getByRole('button',{name:/Cerimonia d’apertura · Prova/}).click();
@@ -343,7 +347,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByRole('button',{name:'Forum 1 · Prova Sala A fittizia'}).click();
   await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
   await page.getByRole('heading',{name:'Anna Prova',exact:true}).waitFor();
-  await page.getByRole('button',{name:'Segna entrata',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'Segna entrata',exact:true}).count(),0);
   await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:'/tmp/pace-forum-demo-phone.png',fullPage:true});

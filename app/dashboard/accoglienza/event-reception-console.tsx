@@ -51,7 +51,9 @@ export function EventReceptionConsole(props: Props) {
   const cameraCard = useRef<HTMLDivElement>(null);
   const locked = busy || session.isLocked();
   const cameraVisible = deviceMode === "phone" && !manual;
-  const fading = cameraVisible && !locked && state.phase === "result" && state.mode === "enter" && !!state.result && state.result.outcome !== "verified";
+  const automaticResult = !locked && state.phase === "result" && state.mode === "enter" && state.automaticEntry && state.result?.kind === "family" && state.result.persons.length === 1 && state.result.persons.every(person => !!person.checkedInAt);
+  const fading = cameraVisible && !state.automaticEntry && !locked && state.phase === "result" && state.mode === "enter" && !!state.result && state.result.outcome !== "verified";
+  const dismissAfter = automaticResult ? 10000 : fading ? 2000 : null;
   const result = state.phase === "blocked" ? null : state.result ?? entry;
   useEffect(() => { onBusy?.(locked || state.phase === "selection"); }, [locked, state.phase, onBusy]);
   useEffect(() => {
@@ -88,17 +90,21 @@ export function EventReceptionConsole(props: Props) {
   }, [locked]);
   useEffect(() => { if (entry && !cameraVisible) heading.current?.focus(); }, [entry, cameraVisible]);
 
-  const finishCameraResult = useEffectEvent(() => {
+  const finishResult = useEffectEvent((expected: VerifiedReception) => {
+    const current = session.snapshot();
+    // An old timer must never clear a newer scan, pending write or correction.
+    if (busyRef.current || current.phase !== "result" || current.mode !== "enter" || current.result !== expected) return;
     session.next();
     setEntry(null);
     props.onLookup?.(null);
     // Preserve the latch: a QR still in the frame must not reopen its card.
   });
   useEffect(() => {
-    if (!fading) return;
-    const timer = window.setTimeout(finishCameraResult, 2000);
+    if (dismissAfter === null || !state.result) return;
+    const expected = state.result;
+    const timer = window.setTimeout(() => finishResult(expected), dismissAfter);
     return () => window.clearTimeout(timer);
-  }, [fading, state.result]);
+  }, [dismissAfter, state.result]);
 
   useEffect(() => {
     if (!cameraVisible || !cameraHasResult) return;
@@ -109,12 +115,12 @@ export function EventReceptionConsole(props: Props) {
   }, [cameraVisible, cameraHasResult, state.lookup]);
 
   function changeBusy(value: boolean) { busyRef.current = value; setBusy(value); }
-  async function inspect(lookup: ReceptionCommand["lookup"], replace = false) {
+  async function inspect(lookup: ReceptionCommand["lookup"], replace = false, automaticPanelEntry = true) {
     if (busyRef.current || session.isLocked() || session.snapshot().phase === "selection" || session.snapshot().mode !== "enter") return;
     if (!replace && (!session.canScan() || entry)) return;
     if (verification || session.snapshot().lookup?.value !== lookup.value) setEntry(null);
-    if (replace) await session.inspectNext(lookup);
-    else await session.inspect(lookup);
+    if (replace) await session.inspectNext(lookup, automaticPanelEntry);
+    else await session.inspect(lookup, automaticPanelEntry);
     const found = session.snapshot().result;
     if (found) setEntry(found);
     props.onLookup?.(lookup);
@@ -163,7 +169,7 @@ export function EventReceptionConsole(props: Props) {
     </div>;
 
   const cameraNotice = (result || problem || state.phase === "pending") && <div className={`px-3 py-2 text-sm font-semibold ${RECEPTION_TONES[state.phase === "pending" ? "progress" : feedbackTone]}`} data-reception-tone={feedbackTone} role="status">
-    {state.phase === "pending" ? "Verifica in corso…" : (problem || missingTicket || missingEventEntry) ? "Attenzione: leggi il messaggio sotto." : verificationPerson ? verificationMessage : fading ? "✓ Ingresso registrato" : "QR letto · controlla la scheda ↓"}
+    {state.phase === "pending" ? "Verifica in corso…" : (problem || missingTicket || missingEventEntry) ? "Attenzione: leggi il messaggio sotto." : verificationPerson ? verificationMessage : automaticResult || fading ? "✓ Ingresso registrato" : "QR letto · controlla la scheda ↓"}
   </div>;
 
   const navigation = <div className={props.navigationAboveTitle ? "grid grid-cols-1 gap-3 text-sm sm:flex sm:flex-wrap" : "flex gap-3 text-sm"} aria-label="Postazione e incarico">
@@ -223,7 +229,7 @@ export function EventReceptionConsole(props: Props) {
       </summary>
       {state.recent.length === 0 ? <p className="border-t border-[var(--peace-border)] p-4 text-[var(--peace-muted)]">Nessuna lettura recente.</p> : <ul className="divide-y divide-[var(--peace-border)] border-t border-[var(--peace-border)] px-4">{state.recent.map(item => <li key={item.key} className="flex flex-wrap items-center justify-between gap-3 py-3">
         <span className="min-w-0 break-words font-medium">{item.result.kind === "family" ? `${item.result.persons[0]?.firstName} ${item.result.persons[0]?.lastName} · ${item.result.code}` : item.result.kind === "group" ? item.result.groupName : item.result.kind === "school" ? item.result.schoolName : item.result.label}</span>
-        <button type="button" className="btn-secondary min-h-11 shrink-0 px-4 text-sm" disabled={locked || state.phase === "selection" || correction} onClick={() => void inspect(item.lookup, true)}>Apri Scheda</button>
+        <button type="button" className="btn-secondary min-h-11 shrink-0 px-4 text-sm" disabled={locked || state.phase === "selection" || correction} onClick={() => void inspect(item.lookup, true, false)}>Apri Scheda</button>
       </li>)}</ul>}
     </details>
   </section>;

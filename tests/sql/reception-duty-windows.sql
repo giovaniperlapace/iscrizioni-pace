@@ -24,8 +24,8 @@ end $$;
 select save_ceremony(fw(200),fw(10),'opening',-1,'configure','{"location":"Window test","capacity":2,"startsAt":"2026-10-25T16:30","endsAt":"2026-10-25T19:00","state":"validated","attendancePart":"afternoon"}');
 do $$ declare opening jsonb; begin
  select c into opening from jsonb_array_elements(app.reception_duty_catalog(fw(200))) c where c->>'key'='opening';
- assert (opening->>'availableFrom')::timestamptz='2026-10-25 13:00 UTC'::timestamptz;
+ assert (opening->>'availableFrom')::timestamptz='2026-10-25 12:30 UTC'::timestamptz;
  assert (opening->>'availableUntil')::timestamptz='2026-10-25 19:30 UTC'::timestamptz;
 end $$;
 rollback;
-\echo PASS Rome windows 07:30/13:30/14:00, later Forum, final-day fallback, no fabricated ceremony, full authorized catalogue and server clock
+\echo PASS Rome windows 07:30/13:30, later Forum, final-day fallback, no fabricated ceremony, full authorized catalogue and server clock

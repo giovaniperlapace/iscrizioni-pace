@@ -83,6 +83,7 @@ try {
  }
  console.log(file('tests/sql/forum-waitlist.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/registration-verification.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
+ console.log(file('tests/sql/reception-morning-early.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/reception-duty-windows.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/forum-event-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/reception-relay-statistics.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));

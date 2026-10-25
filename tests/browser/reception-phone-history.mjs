@@ -72,8 +72,6 @@ export async function checkPhoneHistory({browser,context,base,psql,calls,errors}
    await page.getByRole('button',{name:/^Morning A/}).click();
    await page.getByRole('button',{name:'Inserisci il codice manualmente',exact:true}).click();
    await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');
-   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
-   await page.getByRole('button',{name:'Conferma ingresso',exact:true}).waitFor();
    let first=true;
    await page.route('**/api/forum-reception',async route=>{
     const body=route.request().postDataJSON();
@@ -84,7 +82,7 @@ export async function checkPhoneHistory({browser,context,base,psql,calls,errors}
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'unavailable'})});
    });
    const writesBefore=calls.filter(c=>c.name==='reception_panel_check_in'&&c.body.p_action==='enter').length;
-   await page.getByRole('button',{name:'Conferma ingresso',exact:true}).click();
+   await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
    await page.waitForFunction(()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Cambia incarico').disabled);
    await page.goBack();
    await page.waitForFunction(()=>!!history.state?.paceReceptionDuty?.key);

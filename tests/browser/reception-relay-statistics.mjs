@@ -6,7 +6,7 @@ export async function checkRelayStatistics({page,context,base,psql,calls,qrImage
  const refresh=page.getByRole('button',{name:'Aggiorna conteggi',exact:true});
  const assertOrder=async()=>assert.equal(await page.evaluate(()=>{
   const relay=document.querySelector('[aria-label="Disponibilità sale collegate"]');
-  const action=[...document.querySelectorAll('button')].find(b=>/Conferma ingresso|Segna entrata/.test(b.textContent));
+  const action=[...document.querySelectorAll('button')].find(b=>/Rimuovi ingresso/.test(b.textContent));
   const recent=[...document.querySelectorAll('summary')].find(b=>b.textContent.includes('Ultime letture'));
   return !!action && !!relay && !!recent && !!(action.compareDocumentPosition(relay)&Node.DOCUMENT_POSITION_FOLLOWING) && !!(relay.compareDocumentPosition(recent)&Node.DOCUMENT_POSITION_FOLLOWING);
  }),true);
@@ -15,10 +15,14 @@ export async function checkRelayStatistics({page,context,base,psql,calls,qrImage
  await page.getByRole('button',{name:/^Morning A/}).click();
  await panel.getByText('5',{exact:true}).waitFor();
  await panel.getByText('7 entrati / 5 prenotazioni',{exact:true}).waitFor();
- const primary=await page.getByRole('region',{name:'Statistiche dell’incarico'}).innerText();
+ const primaryBefore=await page.getByRole('region',{name:'Statistiche dell’incarico'}).innerText();
+ const before=calls.filter(x=>x.name==='reception_relay_room_statistics').length;
  await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');
  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
- await page.getByRole('button',{name:'Conferma ingresso',exact:true}).waitFor();
+ await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
+ await page.waitForFunction(before=>document.querySelector('[aria-label="Statistiche dell’incarico"]').innerText!==before,primaryBefore);
+ const primary=await page.getByRole('region',{name:'Statistiche dell’incarico'}).innerText();
+ assert.ok(calls.filter(x=>x.name==='reception_relay_room_statistics').length>before);
  await assertOrder();
  await page.screenshot({path:'/tmp/pace-relay-desktop.png',fullPage:true});
  psql('update check_ins set student_count=9 where school_booking_id=fw(9975);');
@@ -35,12 +39,12 @@ export async function checkRelayStatistics({page,context,base,psql,calls,qrImage
  await assertOrder();
  psql('grant execute on function reception_relay_room_statistics(uuid,uuid,uuid) to service_role;update check_ins set student_count=4 where school_booking_id=fw(9975);');
  await refresh.click();await panel.getByText('5',{exact:true}).waitFor();
- // Save automatically refreshes both summaries without merging their counts.
- const before=calls.filter(x=>x.name==='reception_relay_room_statistics').length;
- await page.getByRole('button',{name:'Conferma ingresso',exact:true}).click();
+ // A repeated inspection preserves the entry and the independent summaries.
+ await page.getByRole('button',{name:'Chiudi scheda',exact:true}).click();
+ await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');
+ await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
  await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
  await panel.getByText('5',{exact:true}).waitFor();
- assert.ok(calls.filter(x=>x.name==='reception_relay_room_statistics').length>before);
  await page.getByRole('button',{name:'Cambia incarico',exact:true}).click();
  await page.getByRole('button',{name:/^Morning B/}).click();
  await page.getByRole('region',{name:'Statistiche dell’incarico'}).getByText(/Iscritti/).waitFor();
@@ -68,7 +72,10 @@ export async function checkRelayStatistics({page,context,base,psql,calls,qrImage
  await page.getByRole('button',{name:/Telefono ·/}).click();
  await page.getByRole('button',{name:/^Morning A/}).click();
  await page.getByRole('button',{name:'Avvia fotocamera',exact:true}).click();
- await page.getByRole('button',{name:'Segna entrata',exact:true}).waitFor();
+ await page.getByText('✓ Ingresso confermato',{exact:true}).waitFor();
+ await page.locator('[data-camera-result]').waitFor({state:'detached'});
+ await page.getByRole('button',{name:'Apri Scheda',exact:true}).click();
+ await page.getByRole('button',{name:'Rimuovi ingresso',exact:true}).waitFor();
  await panel.getByText('5',{exact:true}).waitFor();
  await assertOrder();
  const cameraCalls=await page.evaluate(()=>window.syntheticCameraCalls);

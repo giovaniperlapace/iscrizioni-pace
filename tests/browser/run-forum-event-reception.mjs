@@ -20,7 +20,7 @@ mkdirSync(join(dir,'app/test-camera-recovery'),{recursive:true});
 copyFileSync('tests/browser/camera-recovery-fixture.tsx',join(dir,'app/test-camera-recovery/page.tsx'));
 mkdirSync(join(dir,'app/test-duty-labels'),{recursive:true});
 copyFileSync('tests/browser/reception-duty-labels.fixture',join(dir,'app/test-duty-labels/page.tsx'));
-const env={PHONE_HISTORY_ONLY:process.env.PHONE_HISTORY_ONLY,RELAY_STATS_ONLY:process.env.RELAY_STATS_ONLY,SCHOOL_QR_ONLY:process.env.SCHOOL_QR_ONLY,QR_TOKEN_ENCRYPTION_SECRET:'synthetic-school-browser',LC_ALL:'C',PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
+const env={AUTO_PANEL_ENTRY_ONLY:process.env.AUTO_PANEL_ENTRY_ONLY,PHONE_HISTORY_ONLY:process.env.PHONE_HISTORY_ONLY,RELAY_STATS_ONLY:process.env.RELAY_STATS_ONLY,SCHOOL_QR_ONLY:process.env.SCHOOL_QR_ONLY,QR_TOKEN_ENCRYPTION_SECRET:'synthetic-school-browser',LC_ALL:'C',PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
  NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:55490',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',
  SUPABASE_SERVICE_ROLE_KEY:'synthetic-service',NEXT_PUBLIC_APP_URL:'http://127.0.0.1:3198',EMAIL_DELIVERY_MODE:'log'};
 const log=openSync('/tmp/pace-forum-events-dev.log','w');
@@ -29,7 +29,11 @@ try {
  for(let attempt=0;attempt<60;attempt++){
   try {await fetch('http://127.0.0.1:3198/login');break;}catch {if(attempt===59)throw new Error('Synthetic Next server unavailable');await new Promise(resolve=>setTimeout(resolve,1000));}
  }
- if(process.env.RECEPTION_LABELS_ONLY) {
+ if(process.env.AUTO_PANEL_TIMING_ONLY) {
+  const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
+  const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+  try {const {checkAutomaticEntryTiming}=await import('./reception-auto-entry-timing.mjs');await checkAutomaticEntryTiming(browser,'http://127.0.0.1:3198');} finally {await browser.close();}
+ } else if(process.env.RECEPTION_LABELS_ONLY) {
   const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
   const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
   try {const {checkReceptionDutyLabels}=await import('./reception-duty-labels.mjs');await checkReceptionDutyLabels(browser,'http://127.0.0.1:3198');} finally {await browser.close();}

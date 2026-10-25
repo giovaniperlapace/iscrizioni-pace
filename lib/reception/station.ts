@@ -11,6 +11,7 @@ export type StationState = {
   result: VerifiedReception | null;
   lookup: ReceptionLookup | null;
   retry: ReceptionCommand | null;
+  automaticEntry: boolean;
   message: string;
   wrongForum?: boolean;
   problem?: Exclude<ReceptionResult["status"], "valid">;
@@ -27,6 +28,14 @@ const messages = {
   unavailable: "Esito da verificare. La scansione è sospesa: riprova la stessa richiesta senza ricaricare la pagina.",
 };
 export const EVENT_RECEPTION_DUTY = "event_entry" as const;
+
+// A successful Forum inspection verifies the booking. Never infer event
+// attendance from an absent field, or select a minor on the operator's behalf.
+export function isAutomaticPanelEntryCandidate(result: VerifiedReception) {
+  return result.kind === "family" && result.persons.length === 1 &&
+    result.persons[0].kind === "adult" && result.persons[0].eligible !== false &&
+    result.persons[0].eventCheckedIn === true;
+}
 
 // A stable QR is read once. A sustained sequence of empty frames rearms it;
 // short decoder gaps and camera restarts do not count as removal.
@@ -51,7 +60,7 @@ export class ScanLatch {
 // Synchronous state is also the interlock: two frames/clicks in the same render
 // cannot start two operations. No QR, identity or request is persisted locally.
 export class ReceptionStationSession {
-  private state: StationState = { recent: [], mode: "enter", phase: "ready", result: null, lookup: null, retry: null, message: "" };
+  private state: StationState = { recent: [], mode: "enter", phase: "ready", result: null, lookup: null, retry: null, automaticEntry: false, message: "" };
   private listeners = new Set<() => void>();
   private commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>;
   private requestId: () => string;
@@ -59,6 +68,7 @@ export class ReceptionStationSession {
   private active = true;
   private explicitPresence: boolean;
   private eventEntryOverride = false;
+  private automaticPanelEntry = false;
   private context: Pick<ReceptionCommand, "duty" | "panelId">;
   constructor(commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>, requestId: () => string, timeoutMs = 20000, context: Pick<ReceptionCommand, "duty" | "panelId"> = { duty: EVENT_RECEPTION_DUTY }, explicitPresence = false) {
     this.explicitPresence = explicitPresence && context.duty !== "room_assistance";
@@ -76,11 +86,11 @@ export class ReceptionStationSession {
   canScan() { return this.state.mode === "enter" && (this.explicitPresence ? ["ready", "error"] : ["ready", "result", "error"]).includes(this.state.phase); }
   setMode(mode: ReceptionMode) {
     if (this.isLocked() || ((this.context.duty === "room_assistance" || this.context.duty === "registration_check") && mode !== "enter")) return;
-    this.update({ mode, phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
+    this.update({ mode, phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null, automaticEntry: false });
   }
   next() {
     if (this.isLocked()) return;
-    this.update({ phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null });
+    this.update({ phase: "ready", result: null, lookup: null, message: "", problem: undefined, retry: null, automaticEntry: false });
   }
   selectPresence(overrideMissingEventEntry = false) {
     if (this.context.duty === "registration_check" || !this.explicitPresence || this.state.phase !== "result" || !this.state.result || this.state.result.kind === "room") return;
@@ -95,20 +105,21 @@ export class ReceptionStationSession {
     if (this.state.phase === "selection" && this.state.mode === "enter" && this.state.result?.kind === "group")
       this.update({ phase: "result", message: "Gruppo verificato. Nessuna presenza modificata." });
   }
-  async inspect(lookup: ReceptionLookup) {
+  async inspect(lookup: ReceptionLookup, automaticPanelEntry = false) {
     if (this.isLocked() || this.state.phase === "selection" || (this.explicitPresence && this.state.phase === "result" && this.state.mode === "enter")) return;
     const command = parseReceptionCommand({ ...this.context, action: "inspect", lookup });
+    this.automaticPanelEntry = automaticPanelEntry;
     this.update({ result: null, lookup: null, message: "", problem: undefined });
     if (!command) { this.update({ phase: "error", problem: "invalid", message: messages.invalid }); return; }
     this.update({ lookup: command.lookup });
     await this.run(command);
   }
-  async inspectNext(lookup: ReceptionLookup) {
+  async inspectNext(lookup: ReceptionLookup, automaticPanelEntry = false) {
     // USB readers can replace a completed event card, but never a write,
     // uncertain result or an explicit confirmation still awaiting a decision.
     if (!this.explicitPresence || this.isLocked() || this.state.phase === "selection" || this.state.mode !== "enter") return;
     this.next();
-    await this.inspect(lookup);
+    await this.inspect(lookup, automaticPanelEntry);
   }
   async editRecent(key: string) {
     if (this.isLocked() || this.state.phase === "selection") return;
@@ -173,7 +184,7 @@ export class ReceptionStationSession {
   }
   async retry() {
     if (this.state.phase !== "uncertain" || !this.state.retry) return;
-    await this.run(this.state.retry);
+    await this.run(this.state.retry, this.state.automaticEntry);
   }
   private async call(command: ReceptionCommand): Promise<ReceptionResult> {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -185,8 +196,8 @@ export class ReceptionStationSession {
     } catch { return { status: "unavailable" }; }
     finally { clearTimeout(timer); }
   }
-  private async run(command: ReceptionCommand) {
-    this.update({ phase: "pending", message: "", problem: undefined, retry: null });
+  private async run(command: ReceptionCommand, automaticEntry = false) {
+    this.update({ phase: "pending", message: "", problem: undefined, retry: null, automaticEntry });
     const response = await this.call(command);
     if (!this.active) return;
     if (response.status !== "valid") {
@@ -207,6 +218,13 @@ export class ReceptionStationSession {
         return;
       }
       if (this.explicitPresence && this.state.mode === "enter") {
+        if (this.automaticPanelEntry && this.context.duty === "panel_entry" &&
+          isAutomaticPanelEntryCandidate(response) && response.kind === "family" && !response.persons[0].checkedInAt) {
+          // Keep the pending interlock and the ordinary server-side booking,
+          // capacity and attendance checks. Retry retains this exact request.
+          await this.run({ ...this.context, lookup: command.lookup, action: "enter", requestId: this.requestId(), subjectIds: [response.persons[0].id] }, true);
+          return;
+        }
         this.update({ phase: "result", message: "Codice verificato. Nessuna presenza modificata." });
         return;
       }

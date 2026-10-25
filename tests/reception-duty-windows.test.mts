@@ -20,13 +20,13 @@ test("13:30 is an exact handover with no overlap or gap",()=>{
  assert.equal(isDutyAvailable(afternoon,t("2026-10-26T20:30:00+01:00")),false);
 });
 test("ceremonies are scoped to their day, including the Rome DST transition",()=>{
- const opening=duty("opening","2026-10-25T14:00:00+01:00","2026-10-25T20:30:00+01:00");
+ const opening=duty("opening","2026-10-25T13:30:00+01:00","2026-10-25T20:30:00+01:00");
  const closing=duty("closing","2026-10-27T13:30:00+01:00","2026-10-28T00:00:00+01:00");
- assert.equal(isDutyAvailable(opening,t("2026-10-25T12:59:59Z")),false);
- assert.equal(isDutyAvailable(opening,t("2026-10-25T13:00:00Z")),true);
+ assert.equal(isDutyAvailable(opening,t("2026-10-25T12:29:59Z")),false);
+ assert.equal(isDutyAvailable(opening,t("2026-10-25T12:30:00Z")),true);
  assert.equal(isDutyAvailable(closing,t("2026-10-26T13:30:00+01:00")),false);
  assert.equal(isDutyAvailable(closing,t("2026-10-27T13:30:00+01:00")),true);
- assert.match(formatDutyWindowTime(t("2026-10-25T13:00:00Z")),/14:00/);
+ assert.match(formatDutyWindowTime(t("2026-10-25T12:30:00Z")),/13:30/);
 });
 test("missing or invalid windows never reveal all assignments",()=>{
  for(const item of [{...morning,availableFrom:null},{...morning,availableUntil:undefined},duty("bad","x","y"),duty("reverse",morning.availableUntil!,morning.availableFrom!)]) {

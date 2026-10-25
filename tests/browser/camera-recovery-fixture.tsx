@@ -9,6 +9,7 @@ import type { ReceptionDuty } from "@/lib/reception/duties.server";
 const id = "11111111-1111-4111-8111-111111111111";
 export default function Fixture() {
   const [duty, setDuty] = useState<ReceptionDuty["duty"]>("ceremony_entry");
+  const [deviceMode, setDeviceMode] = useState<"phone" | "computer">("phone");
   const [scenario, setScenario] = useState("missing-ticket");
   const mode = useRef(scenario);
   const frame = useRef<string | null>(null);
@@ -51,6 +52,7 @@ export default function Fixture() {
     : duty === "event_entry" ? { key: duty, duty, title: "Incarico prova", room: null }
     : { key: duty, duty, panelId: duty === "ceremony_entry" ? "opening" : id, title: "Incarico prova", room: null };
   return <main className="app-page p-4">
+    <label>Postazione test<select aria-label="Postazione test" value={deviceMode} onChange={e => setDeviceMode(e.target.value as "phone" | "computer")}><option>phone</option><option>computer</option></select></label>
     <label>Incarico test<select aria-label="Incarico test" value={duty} onChange={e => setDuty(e.target.value as ReceptionDuty["duty"])}>{["ceremony_entry", "panel_entry", "registration_check", "event_entry", "room_assistance"].map(value => <option key={value}>{value}</option>)}</select></label>
     <label>Scenario test<select aria-label="Scenario test" value={scenario} onChange={e => { mode.current = e.target.value; setScenario(e.target.value); }}>{["missing-ticket", "normal", "invalid", "not-booked", "wrong-forum", "missing-event", "family", "school", "entered", "pending", "pending-write", "uncertain", "uncertain-write", "blocked", "conflict", "capacity", "denied"].map(value => <option key={value}>{value}</option>)}</select></label>
     <button onClick={() => { frame.current = "a".repeat(43); }}>QR A</button>
@@ -60,6 +62,6 @@ export default function Fixture() {
     <button onClick={() => oldCamera.current?.onCode("b".repeat(43))}>Callback obsoleta</button>
     <button onClick={() => pending.current?.()}>Completa richiesta</button>
     <output className="block break-all" data-calls>{JSON.stringify(calls)}</output><output data-starts>{starts}</output><output data-stops>{stops}</output>
-    <EventReceptionConsole key={duty} duty={context} deviceMode="phone" commandAction={commandAction} cameraSource={source}/>
+    <EventReceptionConsole key={`${duty}-${deviceMode}`} duty={context} deviceMode={deviceMode} commandAction={commandAction} cameraSource={source}/>
   </main>;
 }

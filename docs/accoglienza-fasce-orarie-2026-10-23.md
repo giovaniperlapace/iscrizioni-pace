@@ -4,7 +4,7 @@ Regola concordata per il selettore degli incarichi (Europe/Rome):
 
 - Forum del mattino: dalle 07:30 alle 13:30, anche quando iniziano più tardi.
 - Forum del pomeriggio: dalle 13:30, compreso il Forum che inizia alle 17:00.
-- Inaugurazione: dalle 14:00 nel giorno della cerimonia.
+- Inaugurazione: dalle 13:30 nel giorno della cerimonia (anticipo richiesto il 25 ottobre).
 - Finale: dalle 13:30 nel giorno conclusivo.
 - Pomeriggio e cerimonie terminano la disponibilità 90 minuti dopo la fine
   registrata, senza oltrepassare la mezzanotte del giorno relativo.
@@ -88,3 +88,49 @@ di collaudo. Commit e push su main autorizzati insieme al rilascio.
 Lettura finale READ ONLY: entrambe le versioni registrate, 54 operatori senza
 incarichi mancanti, 32 voci del catalogo con finestre valide e 52 audit del
 completamento. Nessuna scrittura operativa per la verifica finale.
+
+## Anticipo apertura — 25 ottobre 2026
+
+Su richiesta, incarico inaugurazione disponibile dalle 13:30 Europe/Rome.
+Migration `20261025130000_opening_reception_1330` applicata e registrata in
+produzione: sostituisce soltanto l'orario nella funzione corrente, con guardia
+sulla definizione attesa. Nessun cambiamento a incarichi, ingressi o altre fasce.
+Cinque test delle finestre e suite SQL/concorrenza Forum/eventi superati su
+PostgreSQL temporaneo; fixture browser allineata (browser non rieseguito).
+Backup completo verificato tramite indice e decodifica pg_restore:
+`/root/backups/iscrizioni-pace/production-before-opening-1330-1792928097952.dump`,
+SHA-256 `41853f97a4f07e0cc901b543b101568da42cfe7b828af0f998a645b2d68dc49a`.
+Lettura produzione conferma 25 ottobre 13:30–20:30 ora Roma.
+Nessun deployment applicativo necessario; nessun commit/push eseguito.
+
+## Anticipo incarichi del lunedì mattina — 25 ottobre 2026
+
+Su richiesta esplicita di attivarli già per la spiegazione agli operatori,
+applicata e registrata in produzione la migration `20261025180000`.
+I dieci incarichi del 26 ottobre mattina (Forum 1–8 e sale collegate di 1/3)
+sono selezionabili dal 25 ottobre alle 18:25 Europe/Rome; restano disponibili
+attraverso la mezzanotte fino al confine ordinario del 26 ottobre alle 13:30.
+La Cerimonia di Apertura conserva esattamente la propria fascia corrente,
+25 ottobre 13:30–20:30. Pomeriggio, martedì, finale e altri eventi invariati.
+
+L’eccezione è circoscritta all’UUID dell’evento e alla data canonica del 26
+ottobre, solo per i panel con inizio prima delle 12:00 di Roma. Nessuna nuova
+assegnazione, apertura pubblica delle prenotazioni, ingresso, email o modifica
+di permessi. Non serve un deployment applicativo: gli operatori con la pagina
+aperta devono ricaricarla per leggere il catalogo aggiornato.
+
+Backup completo, indice e lettura integrale pg_restore verificati:
+`/root/backups/iscrizioni-pace/production-before-morning-early-1792949214051.dump`,
+27.408.728 byte, permessi 600, SHA-256
+`5fa5649fb04b899b5945ac56828919c80efb51bb2e45e0b1e17ff65adb10ad11`.
+Applicazione e registrazione nella stessa transazione REPEATABLE READ, con
+confronto di tutte le 74 tabelle/274.094 righe, ACL e metadati di 242 funzioni,
+policy e trigger. Solo il corpo previsto del catalogo cambia. Confronto completo
+delle 32 voci prima/dopo: cambiano soltanto i dieci `availableFrom` attesi.
+
+Sei test unitari delle finestre, lint mirato e suite SQL/concorrenza su
+PostgreSQL temporaneo passati, compresa la nuova regressione sull’evento/data
+esatti, sulle sale collegate e sul mancato effetto sugli altri eventi.
+Lettura finale in produzione tramite il catalogo pubblico autenticato per tutti
+i 55 operatori Forum: dieci incarichi mattutini disponibili e Apertura conservata.
+Nessuna scansione reale di collaudo. Nessun nuovo commit/push in questo turno.

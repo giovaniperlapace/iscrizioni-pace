@@ -10,7 +10,8 @@ export async function checkCameraRecovery(browser, base) {
   await page.goto(base+'/test-camera-recovery');
   await page.getByLabel('Incarico test',{exact:true}).selectOption(duty);
   await scenario(mode);await btn('Avvia fotocamera').click();await btn('QR A').click();
-  await page.waitForFunction(()=>JSON.parse(document.querySelector('[data-calls]').textContent).length===1);
+  await page.waitForFunction(()=>JSON.parse(document.querySelector('[data-calls]').textContent).length>=1);
+  if(duty==='panel_entry'&&['normal','pending-write','uncertain-write','conflict','capacity'].includes(mode))await page.waitForFunction(()=>JSON.parse(document.querySelector('[data-calls]').textContent).length===2);
  };
  const suspend=async kind=>{
   if(kind==='button')await btn('Ferma fotocamera').click();
@@ -37,23 +38,25 @@ export async function checkCameraRecovery(browser, base) {
    ['registration_check',['normal','invalid']],['event_entry',['normal']],
   ])for(const mode of modes){
    await open(duty,mode);
+   const initialCalls=duty==='panel_entry'&&mode==='normal'?2:1;
    if(mode==='family')await page.locator('input[name=receptionSubjects]').last().check();
    for(const kind of ['button','hidden','pagehide','ended']){
     await restart(kind);
     await page.waitForTimeout(150);
-    assert.equal((await calls()).length,1,`${duty}/${mode}: restart preserves latch and never writes`);
+    assert.equal((await calls()).length,initialCalls,`${duty}/${mode}: restart preserves latch without additional writes`);
     if(mode==='family')assert.equal(await page.locator('input[name=receptionSubjects]:checked').count(),1,'explicit child selection preserved');
    }
    // A retired camera cannot replace the card with a late decoder callback.
    await btn('Callback obsoleta').click();await page.waitForTimeout(150);
-   assert.equal((await calls()).length,1,'stale source ignored');
+   assert.equal((await calls()).length,initialCalls,'stale source ignored');
    await scenario('normal');await btn('QR B').click();
    await page.getByRole('heading',{name:'Bruno Prova',exact:true}).waitFor();
-   assert.equal((await calls()).length,2);
-   assert.ok((await calls()).every(call=>call.action==='inspect'));
+   const expected=initialCalls+(duty==='panel_entry'?2:1);
+   await page.waitForFunction(expected=>JSON.parse(document.querySelector('[data-calls]').textContent).length===expected,expected);
+   assert.equal((await calls()).filter(call=>call.action==='enter').length,duty==='panel_entry'?(mode==='normal'?2:1):0);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   }
-  console.log('PASS camera restart: passive ceremony/Forum/verification/event outcomes × stop, hidden, pagehide, device end; latch, late callbacks, next QR, no writes');
+  console.log('PASS camera restart: ceremony/Forum/verification/event outcomes × stop, hidden, pagehide, device end; latch, late callbacks, next QR, automatic single Forum entry only');
 
   // A real lock still protects pending/uncertain reads and expired authorization.
   for(const mode of ['pending','uncertain','blocked']){
@@ -82,7 +85,7 @@ export async function checkCameraRecovery(browser, base) {
   await page.getByRole('heading',{name:'Bruno Prova',exact:true}).waitFor();
 
   for(const mode of ['pending-write','uncertain-write','conflict','capacity']){
-   await open('panel_entry',mode);await btn('Segna entrata').click();
+   await open('panel_entry',mode);
    await page.waitForFunction(()=>JSON.parse(document.querySelector('[data-calls]').textContent).length===2);
    await restart('hidden');await btn('QR B').click();await page.waitForTimeout(250);
    if(mode==='pending-write'||mode==='uncertain-write'){
@@ -91,12 +94,12 @@ export async function checkCameraRecovery(browser, base) {
     if(mode==='pending-write')await btn('Completa richiesta').click();
     else await btn('Riprova la stessa operazione').click();
     await page.getByRole('heading',{name:'Bruno Prova',exact:true}).waitFor();
-    const writes=(await calls()).filter(call=>call.action==='enter');
+    const writes=(await calls()).filter(call=>call.action==='enter'&&call.lookup.value==='a'.repeat(43));
     assert.equal(writes.length,mode==='uncertain-write'?2:1);
     if(writes.length===2)assert.deepEqual(writes[0],writes[1],'same idempotent retry');
    }else{
     await page.getByRole('heading',{name:'Bruno Prova',exact:true}).waitFor();
-    assert.equal((await calls()).filter(call=>call.action==='enter').length,1);
+    assert.equal((await calls()).filter(call=>call.action==='enter'&&call.lookup.value==='a'.repeat(43)).length,1);
    }
   }
   console.log('PASS pending/uncertain reads and writes, same-request retry, authorization block, school selection, conflict and full Forum recovery');
