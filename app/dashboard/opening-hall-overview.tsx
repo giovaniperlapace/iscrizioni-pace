@@ -46,7 +46,7 @@ export function OpeningHallOverview({ seats, sectors, claims, onBlock }: {
         </section>)}
       </div>
     </div>
-    {f && <button type="button" onClick={() => onBlock(f.id,'')} className="btn-secondary min-h-12 justify-self-start px-4">Settore F · sala collegata · {f.capacity} posti senza numerazione</button>}
+    {f && <button type="button" onClick={() => onBlock(f.id,'')} className="btn-secondary min-h-12 justify-self-start px-4">Settore {f.name} · {f.capacity} posti senza numerazione</button>}
     <p className="text-xs text-[var(--peace-muted)]">Schema delle sedute, non planimetria delle vie di esodo. Grigio: protocollo / non selezionabile; azzurro: libero; arancio: già riservato.</p>
   </div>;
 }

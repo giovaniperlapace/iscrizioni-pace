@@ -58,3 +58,25 @@ test("opened leader batch action still rejects missing membership before service
   const id = "11111111-1111-4111-8111-111111111111";
   assert.deepEqual(await exports.saveLeaderSectorBatch({ allocationId: id, requestId: id, revision: 1, subjects: [{ registrationId: id, childId: null }] }), { status: "forbidden" });
 });
+
+
+test("renamed relay stays separate from the main hall with 500 places and its canonical label", () => {
+  const { CeremonySectorMap } = load("app/dashboard/ceremony-sector-map.tsx");
+  const { OpeningHallOverview } = load("app/dashboard/opening-hall-overview.tsx");
+  const sectors = [
+    { id: "main", name: "A", layoutCode: "A", capacity: 400, remaining: 110 },
+    { id: "relay", name: "F: Sala Maschiella in collegamento", layoutCode: "F", capacity: 500, remaining: 489 },
+  ];
+  const desk = { sectors, active: null, allocations: [], nominees: [], claims: [], drafts: [] };
+  const html = renderToStaticMarkup(createElement(CeremonySectorMap, { desk, onSelect: () => {} }));
+  const sections = [...html.matchAll(/<section\b[^>]*>([\s\S]*?)<\/section>/g)];
+  assert.equal(sections.length, 2);
+  assert.doesNotMatch(sections[0][0], /Maschiella|data-sector="F"/);
+  assert.match(sections[1][0], /Settore F: Sala Maschiella in collegamento/);
+  assert.match(sections[1][0], /data-sector="F"/);
+  assert.equal((sections[1][0].match(/<rect\b/g) ?? []).length, 500);
+  assert.equal((html.match(/data-sector="F"/g) ?? []).length, 1);
+  const overview = renderToStaticMarkup(createElement(OpeningHallOverview, { sectors, seats: [], claims: [], onBlock: () => {} }));
+  assert.match(overview, /Settore F: Sala Maschiella in collegamento/);
+  assert.doesNotMatch(overview, /Settore F · sala collegata/);
+});

@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Inaugurazione: nome sala Maschiella — 2026-10-25
+
+- Preparato nome «Settore F: Sala Maschiella in collegamento»; nome DB senza
+  prefisso Settore, codice F e 500 posti conservati. Piantine usano layoutCode
+  per identificare F e nome canonico per i testi. Email storiche conservate.
+- Migration `20261025100000`, rilascio autorizzato: pubblicare prima il codice della
+  piantina, poi applicare dopo backup verificato e conferma production.
+  Commit/push autorizzati. 1.133 test, TypeScript, lint mirato e SQL/concorrenza
+  passati. Dettagli: `docs/inaugurazione-sala-maschiella-2026-10-25.md`.
+
 ## Accesso dopo la chiusura delle iscrizioni — 2026-10-25
 
 - Il flusso email iniziale identifica l’evento corrente senza applicare la

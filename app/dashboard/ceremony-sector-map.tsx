@@ -76,7 +76,7 @@ function SectorShape({
         viewBox={`-1 -1 ${width + 2} ${height + 2}`}
         aria-hidden="true"
         className="w-full"
-        data-sector={sector.name}
+        data-sector={sector.layoutCode ?? sector.name}
       >
         {dots.map((d) => (
           <rect
@@ -106,12 +106,12 @@ export const CeremonySectorMap = memo(function CeremonySectorMap({
   onSelect: (id: string) => void;
   disabled?: boolean;
 }) {
-  const f = desk.sectors.find((s) => s.name === "F");
+  const f = desk.sectors.find((s) => (s.layoutCode ?? s.name) === "F");
   const front = ["A1", "A", "A2"]
-    .map((name) => desk.sectors.find((s) => s.name === name))
+    .map((name) => desk.sectors.find((s) => (s.layoutCode ?? s.name) === name))
     .filter((s): s is Sector => !!s);
   const rest = desk.sectors.filter(
-    (s) => !["A1", "A", "A2", "F"].includes(s.name),
+    (s) => !["A1", "A", "A2", "F"].includes(s.layoutCode ?? s.name),
   );
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,3fr)_minmax(5.5rem,1fr)] items-start gap-2 sm:gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)]">
@@ -148,10 +148,10 @@ export const CeremonySectorMap = memo(function CeremonySectorMap({
       </section>
       {f && (
         <section
-          className="surface-card grid gap-3 p-2 sm:p-5"
-          aria-label="Sala collegata F"
+          className="surface-card grid min-w-0 gap-3 break-words p-2 sm:p-5"
+          aria-label={`Settore ${f.name}`}
         >
-          <h2 className="text-sm font-semibold sm:text-lg">Sala collegata F</h2>
+          <h2 className="text-sm font-semibold sm:text-lg">Settore {f.name}</h2>
           <p className="text-sm">{f.capacity} posti</p>
           <SectorShape
             sector={f}

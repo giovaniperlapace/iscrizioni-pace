@@ -72,6 +72,20 @@ try {
    }
    console.log('PASS relay capacity refuses unexpected configuration and rolls back completely');
   }
+  if(name==='20261025100000_opening_relay_sector_name.sql') {
+   const seed=readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0];
+   const setup=readFileSync('tests/sql/ceremony-sector-assignments.sql','utf8').split('-- BEGIN SECTOR TESTS')[0].replace(/^begin;/,'');
+   const preserved=readFileSync('tests/sql/opening-relay-capacity.sql','utf8').split('-- APPLY CAPACITY MIGRATION HERE')[0];
+   const capacity=readFileSync('supabase/migrations/20261024140000_opening_relay_capacity_500.sql','utf8');
+   const [before,after]=readFileSync('tests/sql/opening-relay-name.sql','utf8').split('-- APPLY NAME MIGRATION HERE');
+   const migration=readFileSync(join('supabase/migrations',name),'utf8');
+   try {
+    console.log(psql('begin;'+seed+setup+preserved+capacity+before+migration+after+migration+"do $$ begin assert (select count(*)=1 from audit_logs where action='ceremony.relay_sector_renamed');assert (select revision from ceremony_plans where kind='opening')=(select revision+1 from name_before);end $$;rollback;").split('\n').filter(line=>line.includes('PASS')).join('\n'));
+   } catch(e) {throw new Error(`Relay name regression: ${e.stderr}`);}
+   assert.throws(()=>psql('begin;'+seed+setup+capacity+"update ceremony_sectors set name='Changed' where layout_code='F';"+migration+'commit;'),error=>String(error.stderr).includes('Unexpected opening relay name'));
+   assert.equal(psql('select count(*) from ceremony_plans',true).trim(),'0');
+   console.log('PASS relay rename is idempotent and rejects unexpected names without partial changes');
+  }
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
