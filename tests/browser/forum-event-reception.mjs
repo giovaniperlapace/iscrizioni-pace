@@ -15,7 +15,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
  update panel_waitlist set status='cancelled' where status in ('waiting','offered');
  select set_reception_duties(fw(200),fw(11),fw(8),array[fw(403)::text,fw(404)::text,'opening'],app.reception_duty_keys(fw(200),fw(8)));
  insert into check_ins(event_id,registration_id,checked_in_by,source) values(fw(200),fw(107),fw(10),'manual');`);
- const functions=new Set(['has_panel_reception_duty','reception_duty_catalog','reception_target_statistics','reception_desk','reception_forum_routing','reception_panel_check_in','reception_ceremony_check_in','set_reception_duties','reception_event_check_in','reception_registration_check']);
+ const functions=new Set(['has_panel_reception_duty','reception_duty_catalog','reception_target_statistics','reception_relay_room_statistics','reception_desk','reception_forum_routing','reception_panel_check_in','reception_ceremony_check_in','set_reception_duties','reception_event_check_in','reception_registration_check']);
  const adapter=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');const url=new URL(req.url,'http://127.0.0.1');
   try {
@@ -108,6 +108,11 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await context.addCookies([{name:'sb-127-auth-token',value:'base64-'+Buffer.from(JSON.stringify(session)).toString('base64url'),url:base},{name:'iscrizioni_last_activity',value:String(Date.now()),url:base}]);
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
+  if(process.env.RELAY_STATS_ONLY==='1') {
+   const {checkRelayStatistics}=await import('./reception-relay-statistics.mjs');
+   await checkRelayStatistics({page,context,base,psql,calls,qrImage});
+   assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);return;
+  }
   if(process.env.SCHOOL_QR_ONLY==='1'){await checkSchoolFlow(page,context);assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);return;}
   const crossOrigin=await context.request.post(base+'/api/forum-reception',{headers:{Origin:'https://untrusted.invalid'},data:{operation:'statistics',eventId:fw(200),target:fw(403)}});
   assert.equal(crossOrigin.status(),403);

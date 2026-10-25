@@ -7,6 +7,8 @@ import type { ReceptionCommand, ReceptionLookup, ReceptionResult } from "@/lib/r
 import { DESK_MESSAGES, type DeskRequest, type DeskResult } from "@/lib/reception/forum-desk";
 import { EventReceptionConsole } from "../accoglienza/event-reception-console";
 import PendingLink from "@/components/pending-link";
+import { RelayRoomStatistics } from "../accoglienza/relay-room-statistics";
+import { parseRelayRoomStatistics, type RelayRoomStatistics as RelayRoom } from "@/lib/reception/relay-room-statistics";
 async function send(eventId: string, body: object) {
   try {
     const response=await fetch("/api/forum-reception",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({eventId,...body}),cache:"no-store",signal:AbortSignal.timeout(25000)});
@@ -87,24 +89,30 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
   const [scanBusy,setScanBusy]=useState(false);
   const [stats,setStats]=useState<{booked:number;entered:number}|null>(null);
   const [statsError,setStatsError]=useState(false);
+  const [relayRooms,setRelayRooms]=useState<RelayRoom[]|null>([]);
+  const [statsLoading,setStatsLoading]=useState(true);
   const [refresh,setRefresh]=useState(0);
   useEffect(()=>{if(duty.kind==="verification")return;let active=true;void requestAction(eventId,{operation:"statistics",target:duty.key}).then(result=>{
-    if(!active)return;if(result.status!=="ready" || !Number.isSafeInteger(result.booked)||!Number.isSafeInteger(result.entered)){setStatsError(true);setStats(null);}else {setStatsError(false);setStats(result);}
-  });return()=>{active=false;};},[eventId,duty.key,duty.kind,refresh,requestAction]);
+    if(!active)return;
+    setStatsLoading(false);
+    if(result.status!=="ready" || !Number.isSafeInteger(result.booked)||!Number.isSafeInteger(result.entered)){setStatsError(true);setStats(null);setRelayRooms(null);}
+    else {setStatsError(false);setStats(result);setRelayRooms(parseRelayRoomStatistics(result.relayRooms));}
+  }).catch(()=>{if(active){setStatsLoading(false);setStatsError(true);setStats(null);setRelayRooms(null);}});return()=>{active=false;};},[eventId,duty.key,duty.kind,refresh,requestAction]);
+  const refreshStatistics=useCallback(()=>{setStatsLoading(true);setRefresh(value=>value+1);},[]);
   const commandAction=useCallback(async(command:ReceptionCommand):Promise<ReceptionResult>=>{
     if(deskBusy)return {status:"invalid_request"};
     const result=await requestAction(eventId,{operation:"scan",command});
-    if(result.status==="valid" && command.action!=="inspect")setRefresh(value=>value+1);
+    if(result.status==="valid" && command.action!=="inspect")refreshStatistics();
     return result;
-  },[eventId,deskBusy,requestAction]);
+  },[eventId,deskBusy,requestAction,refreshStatistics]);
   const statistics = <section className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs" aria-label="Statistiche dell’incarico" aria-live="polite">
       {stats ? <><p><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p><strong>{stats.entered}</strong> Entrati</p></>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
-      <button className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-current/30 px-2 text-xs hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2" aria-label="Aggiorna conteggi" title="Aggiorna conteggi" onClick={()=>setRefresh(value=>value+1)}><RefreshCw size={16} aria-hidden="true" />Aggiorna conteggi</button>
+      <button className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-current/30 px-2 text-xs hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2" aria-label="Aggiorna conteggi" title="Aggiorna conteggi" onClick={refreshStatistics}><RefreshCw size={16} aria-hidden="true" />Aggiorna conteggi</button>
     </section>;
   return <div className="grid gap-4">
-    <div inert={deskBusy || undefined}><EventReceptionConsole statistics={duty.kind==="verification" ? <p className="text-xs">Iscrizione alla Preghiera per la pace · sola lettura</p> : statistics} navigationAboveTitle duty={duty.kind==="verification" ? {key:"registration_check",duty:"registration_check",title:duty.title,room:null} : {key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
+    <div inert={deskBusy || undefined}><EventReceptionConsole statistics={duty.kind==="verification" ? <p className="text-xs">Iscrizione alla Preghiera per la pace · sola lettura</p> : statistics} belowResult={duty.kind==="panel" ? <RelayRoomStatistics rooms={relayRooms} loading={statsLoading}/> : undefined} navigationAboveTitle duty={duty.kind==="verification" ? {key:"registration_check",duty:"registration_check",title:duty.title,room:null} : {key:duty.key,duty:duty.kind==="panel"?"panel_entry":"ceremony_entry",panelId:duty.key,title:duty.title,room:duty.room}} deviceMode={mode} commandAction={commandAction} onLookup={setLookup} onBusy={setScanBusy} onChangeDuty={deskBusy?undefined:onChangeDuty} onChangeMode={deskBusy?undefined:onChangeMode}/></div>
     {mode==="computer" && duty.kind!=="verification" && <section className="surface-card grid gap-3 p-5"><h2 className="text-lg font-semibold">Prenota un posto</h2><p className="text-sm">Leggi il codice della persona, poi assegna una prenotazione. L’ingresso si conferma separatamente.</p>
-      {lookup ? <Desk key={`${lookup.kind}:${lookup.value}`} {...{eventId,duty,lookup,requestAction}} disabled={scanBusy} onBusy={setDeskBusy} onSaved={()=>setRefresh(value=>value+1)}/> : <p className="text-sm text-slate-600">Inserisci o scansiona prima il codice.</p>}
+      {lookup ? <Desk key={`${lookup.kind}:${lookup.value}`} {...{eventId,duty,lookup,requestAction}} disabled={scanBusy} onBusy={setDeskBusy} onSaved={refreshStatistics}/> : <p className="text-sm text-slate-600">Inserisci o scansiona prima il codice.</p>}
       {canManage && <div className="flex flex-wrap gap-4 text-sm"><PendingLink href="/dashboard/manager?section=iscritti" className="underline">Gestione partecipanti</PendingLink><PendingLink href="/dashboard/manager/nuovo" className="underline">Inserisci un nuovo partecipante</PendingLink></div>}
     </section>}
   </div>;

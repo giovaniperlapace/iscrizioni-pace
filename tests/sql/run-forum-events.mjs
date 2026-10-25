@@ -66,6 +66,13 @@ try {
     rollback;`);
    console.log('PASS existing Forum and ceremony operators expanded, assistance-only and general roles unchanged, migration idempotent');
   }
+  if(name==='20261025190000_reception_relay_room_statistics.sql') {
+   const migration=readFileSync(join('supabase/migrations',name),'utf8').replace(/^begin;|^commit;/gm,'');
+   const after=readFileSync('tests/sql/registration-verification-preservation-after.sql','utf8').replaceAll('reception_registration_check(uuid,uuid,text,text)','reception_relay_room_statistics(uuid,uuid,uuid)');
+   psql('begin;'+readFileSync('tests/sql/registration-verification-preservation-before.sql','utf8')+migration+after+'commit;');
+   console.log('PASS relay statistics migration preserves all rows, existing functions/ACL, policies and triggers');
+   continue;
+  }
   if(name==='20261024160000_reception_registration_check.sql') {
    const migration=readFileSync(join('supabase/migrations',name),'utf8').replace(/^begin;|^commit;/gm,'');
    psql('begin;'+readFileSync('tests/sql/registration-verification-preservation-before.sql','utf8')+migration+readFileSync('tests/sql/registration-verification-preservation-after.sql','utf8')+'commit;');
@@ -78,6 +85,7 @@ try {
  console.log(file('tests/sql/registration-verification.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/reception-duty-windows.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/forum-event-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
+ console.log(file('tests/sql/reception-relay-statistics.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  console.log(file('tests/sql/school-qr-reception.sql').split('\n').filter(line=>line.startsWith('PASS ')).join('\n'));
  psql(`select set_reception_duties(fw(200),fw(11),fw(8),array[fw(406)::text]);
  select set_reception_duties(fw(200),fw(11),fw(9),array[fw(406)::text]);`);

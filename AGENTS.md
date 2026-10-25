@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Accoglienza Forum: disponibilità delle sale collegate — 2026-10-25
+
+- Dal Forum principale: sede e residuo fisico (capienza meno ingressi attivi),
+  separati dai conteggi principali. Riepilogo sotto la scheda QR completa e
+  le azioni, prima dello storico, su telefono/manuale/USB. Minori e scuole
+  conteggiati; pieno/errore espliciti, nessun posto inventato.
+- Relazione canonica, sola lettura service-only, evento/incarico verificati.
+  Aggiornamento esplicito e dopo operazioni, nessun polling; scheda e camera
+  conservate. Migration `20261025190000` applicata dopo backup verificato:
+  74 tabelle, 274.215 righe e 242 funzioni/ACL conservate.
+- 1.145 test sul commit, TypeScript, lint mirato, build e browser desktop/mobile
+  passati. Commit/push richiesti. Dettagli:
+  `docs/accoglienza-sale-collegate-disponibilita-2026-10-25.md`.
+
 ## Accoglienza: ripresa fotocamera senza soft lock — 2026-10-25
 
 - Avvio/arresto fotocamera indipendenti dal blocco delle operazioni: schede

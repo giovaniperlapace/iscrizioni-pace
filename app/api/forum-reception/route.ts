@@ -5,6 +5,7 @@ import { parseReceptionCommand } from "@/lib/reception/contracts";
 import { parseDeskRequest } from "@/lib/reception/forum-desk";
 import { validDutyKey } from "@/lib/reception/event-duties";
 import { hashQrToken } from "@/lib/qrcode/token";
+import { loadRelayRoomStatistics } from "@/lib/reception/relay-room-statistics.server";
 const reply = (body: unknown, status=200) => Response.json(body,{status,headers:{"Cache-Control":"private, no-store"}});
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
@@ -26,8 +27,11 @@ export async function POST(request: Request) {
       return reply(await executeReceptionCommand(db,createSupabaseServiceClient,command,event.id));
     }
     if(body.operation === "statistics" && validDutyKey(body.target)) {
-      const {data,error}=await createSupabaseServiceClient().rpc("reception_target_statistics",{p_event:event.id,p_actor:user.id,p_target:body.target});
-      return reply(error ? {status:error.code === "42501" ? "forbidden" : "unavailable"} : {status:"ready",...data});
+      const service=createSupabaseServiceClient();
+      const {data,error}=await service.rpc("reception_target_statistics",{p_event:event.id,p_actor:user.id,p_target:body.target});
+      if(error) return reply({status:error.code === "42501" ? "forbidden" : "unavailable"});
+      const relayRooms=["opening","closing"].includes(body.target) ? [] : await loadRelayRoomStatistics(service,event.id,user.id,body.target);
+      return reply({status:"ready",...data,relayRooms});
     }
     if(body.operation !== "desk") return reply({status:"invalid_request"},400);
     const command=parseDeskRequest(body.command);

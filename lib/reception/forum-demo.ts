@@ -2,7 +2,7 @@ import { parseReceptionCommand, type ReceptionResult, type ReceptionPerson } fro
 import { parseDeskRequest, type DeskResult } from "./forum-desk.ts";
 import { DEMO_DUTIES, DEMO_EVENT, DEMO_FORUM_ONE, DEMO_FORUM_TWO, DEMO_OPTION, DEMO_SAMPLES, demoId } from "./demo-samples.ts";
 
-type Stats = {status:"ready";booked:number;entered:number};
+type Stats = {status:"ready";booked:number;entered:number;relayRooms:[]};
 type Response = ReceptionResult | DeskResult | Stats;
 
 // A local training model, not a substitute for the real SQL permission/capacity checks.
@@ -17,7 +17,7 @@ export function createForumReceptionDemo() {
     return {...sample,bookings,entered,revisions:new Map<string,number>()};
   });
   const receipts=new Map<string,string>();
-  const stats=(target:string):Stats => ({status:"ready",
+  const stats=(target:string):Stats => ({status:"ready",relayRooms:[],
     booked:people.reduce((sum,p)=>sum+(p.bookings.get(target)?.length??0),0),
     entered:people.reduce((sum,p)=>sum+[...p.entered.keys()].filter(key=>key.startsWith(`${target}:`)).length,0),
   });

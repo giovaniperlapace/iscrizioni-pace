@@ -20,6 +20,7 @@ type Props = {
   commandAction: (command: ReceptionCommand) => Promise<ReceptionResult>;
   cameraSource?: CameraSource;
   statistics?: ReactNode;
+  belowResult?: ReactNode;
   navigationAboveTitle?: boolean;
   deviceMode?: "computer" | "phone";
   onChangeMode?: () => void;
@@ -196,8 +197,8 @@ export function EventReceptionConsole(props: Props) {
     </div>
     {!cameraVisible && !result && feedback}
     {!cameraVisible && resultCard}
-
     {result && scanHint}
+    {props.belowResult}
     {state.phase === "selection" && state.result && (state.result.kind === "family" || state.result.kind === "group") && state.mode === "cancel" && <PresenceRemovalDialog entryTerminology={entryTerminology}
       result={state.result} subjectIds={removalIds}
       onDismiss={() => session.closeSelection()}

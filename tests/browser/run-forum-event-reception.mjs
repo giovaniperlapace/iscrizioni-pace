@@ -18,7 +18,7 @@ copyFileSync('tests/browser/forum-reception-demo-page.fixture',join(dir,'app/tes
 cpSync('tests/fixtures/collaudo-forum-eventi',join(dir,'public/collaudo-forum-eventi'),{recursive:true});
 mkdirSync(join(dir,'app/test-camera-recovery'),{recursive:true});
 copyFileSync('tests/browser/camera-recovery-fixture.tsx',join(dir,'app/test-camera-recovery/page.tsx'));
-const env={SCHOOL_QR_ONLY:process.env.SCHOOL_QR_ONLY,QR_TOKEN_ENCRYPTION_SECRET:'synthetic-school-browser',LC_ALL:'C',PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
+const env={RELAY_STATS_ONLY:process.env.RELAY_STATS_ONLY,SCHOOL_QR_ONLY:process.env.SCHOOL_QR_ONLY,QR_TOKEN_ENCRYPTION_SECRET:'synthetic-school-browser',LC_ALL:'C',PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
  NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:55490',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',
  SUPABASE_SERVICE_ROLE_KEY:'synthetic-service',NEXT_PUBLIC_APP_URL:'http://127.0.0.1:3198',EMAIL_DELIVERY_MODE:'log'};
 const log=openSync('/tmp/pace-forum-events-dev.log','w');
