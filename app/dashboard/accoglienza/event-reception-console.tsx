@@ -180,7 +180,7 @@ export function EventReceptionConsole(props: Props) {
     <div hidden={!cameraVisible && (!!result || problem && state.phase !== "error")}>
       <div className={props.statistics ? "grid gap-4 p-4" : "surface-card grid gap-4 p-4"}>
         {!manual ? deviceMode === "computer" ? <ReceptionUsbScanner readOnly={verification} paused={locked || state.phase === "selection" || correction} onCode={value => void inspect({ kind: "qr", value }, true)} /> :
-          <ReceptionCamera themed={props.navigationAboveTitle} source={cameraSource} topOverlay={dutyHeader} overlay={cameraNotice} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || (!!entry && !verification)} onCode={value => {
+          <ReceptionCamera themed={props.navigationAboveTitle} source={cameraSource} topOverlay={dutyHeader} overlay={cameraNotice} overlayFading={fading} belowPreview={<>{resultCard}{!result && <div ref={cameraCard}>{feedback}</div>}</>} paused={locked || correction || state.phase === "selection" || fading} onCode={value => {
             if (!fading && !locked && !correction && state.phase !== "selection" && (session.canScan() || state.phase === "result") && latch.current.accept(value)) void inspect({ kind: "qr", value }, !!entry);
           }} onNoCode={() => { if ((!entry || verification) && !locked) latch.current.absent(); }} /> :
           <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void inspect({ kind: code.startsWith("G:") || code.length === 43 ? "qr" : "code", value: code }); setCode(""); }}>

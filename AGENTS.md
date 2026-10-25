@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Accoglienza: ripresa fotocamera senza soft lock — 2026-10-25
+
+- Avvio/arresto fotocamera indipendenti dal blocco delle operazioni: schede
+  senza biglietto, QR invalidi e altri esiti consultivi non impediscono la
+  ripresa dopo arresto, cambio app, pagehide o interruzione del dispositivo.
+- Nuove letture sospese durante richieste, esiti incerti, sessioni revocate,
+  conferme/correzioni e dissolvenza. Riavvio conserva scheda, minori selezionati,
+  latch e retry idempotente; callback di sorgenti fermate ignorate. Permessi
+  tardivi non scollegano lo stream avviato successivamente.
+- Nessuna migration o scrittura remota; verifiche e limiti in
+  `docs/accoglienza-ripresa-fotocamera-2026-10-25.md`.
+
 ## Cerimonie: selezione nominale Senza gruppo — 2026-10-25
 
 - «Senza gruppo» nel selettore dei gruppi per assegnazione nominale Admin/Manager.

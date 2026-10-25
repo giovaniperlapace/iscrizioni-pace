@@ -23,7 +23,9 @@ export const startQrCamera: CameraSource = async ({ video, facing, signal, onCod
     stopped = true;
     clearTimeout(timer);
     for (const track of stream.getTracks()) { track.onended = null; track.stop(); }
-    video.srcObject = null;
+    // A permission request can resolve after suspension and a later restart.
+    // Releasing that retired stream must not detach the current preview.
+    if (video.srcObject === stream) video.srcObject = null;
     canvas.width = canvas.height = 0;
     signal.removeEventListener("abort", stop);
   };

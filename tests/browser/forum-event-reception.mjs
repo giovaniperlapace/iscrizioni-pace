@@ -353,6 +353,8 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await checkSchoolFlow(page,context);
   assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);
   console.log('PASS original desktop/mobile page → HTTP → scoped SQL; booking distinct from presence, wrong Forum, counts, camera QR decode, switching, revocation, no overflow');
+  const {checkCameraRecovery}=await import('./camera-recovery.mjs');
+  await checkCameraRecovery(browser,base);
   const {checkDutyWindows}=await import('./reception-duty-windows.mjs');
   await checkDutyWindows(browser,base);
  } finally {await browser?.close();await new Promise(resolve=>adapter.close(resolve));}

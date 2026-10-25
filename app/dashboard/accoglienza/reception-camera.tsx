@@ -29,9 +29,9 @@ export function ReceptionCamera({ paused, themed = false, feedback, feedbackTone
   const [requested, setRequested] = useState(false);
   const [status, setStatus] = useState("Fotocamera pronta da avviare.");
   const [failed, setFailed] = useState(false);
-  const receive = useEffectEvent((value: string) => { if (!document.hidden) onCode(value); });
+  const receive = useEffectEvent((value: string) => { if (!document.hidden && !paused) onCode(value); });
 
-  const receiveEmpty = useEffectEvent(() => { if (!document.hidden) onNoCode(); });
+  const receiveEmpty = useEffectEvent(() => { if (!document.hidden && !paused) onNoCode(); });
 
   useEffect(() => {
     const suspend = () => {
@@ -57,7 +57,9 @@ export function ReceptionCamera({ paused, themed = false, feedback, feedbackTone
       controller.abort();
       setRequested(false); setFailed(true); setStatus(cameraErrorMessage(error));
     };
-    void source({ video: video.current, facing: "environment", signal: controller.signal, onCode: receive, onNoCode: receiveEmpty, onError: fail })
+    void source({ video: video.current, facing: "environment", signal: controller.signal,
+      onCode: value => { if (!controller.signal.aborted) receive(value); },
+      onNoCode: () => { if (!controller.signal.aborted) receiveEmpty(); }, onError: fail })
       .then(stop => {
         if (controller.signal.aborted) { stop(); return; }
         release = stop; setStatus("Fotocamera attiva. Inquadra il QR.");
@@ -77,9 +79,11 @@ export function ReceptionCamera({ paused, themed = false, feedback, feedbackTone
       {feedback && <p role="status" data-feedback-tone={feedbackTone} className={`pointer-events-none absolute inset-x-2 bottom-2 rounded-lg p-3 text-center font-semibold shadow-lg ${feedbackStyles[feedbackTone]}`}>{feedback}</p>}
     </div>
     {belowPreview}
-    <p role={failed ? "alert" : "status"} className="text-sm text-[var(--peace-ink)]">{paused ? "Lettura di nuovi QR in attesa del completamento dell’operazione." : status}</p>
+    <p role={failed ? "alert" : "status"} className="text-sm text-[var(--peace-ink)]">{requested && paused ? "Lettura di nuovi QR in attesa del completamento dell’operazione." : status}</p>
     <div className="flex flex-wrap gap-2">
-      <button type="button" className="btn-primary min-h-12 px-4" disabled={paused && !requested}
+      {/* Camera lifecycle is independent of the operation lock. Restarting the
+          preview must never clear a card, confirmation or uncertain request. */}
+      <button type="button" className="btn-primary min-h-12 px-4"
         onClick={() => {
           setRequested(!requested); setFailed(false);
           setStatus(requested ? "Fotocamera in pausa." : "Consenti la fotocamera se il browser lo richiede…");

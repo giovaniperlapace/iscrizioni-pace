@@ -38,6 +38,21 @@ test("permission accepted after switching away stops every track without decodin
   const started=startQrCamera({video:f.video,facing:"user",signal:controller.signal,onCode:()=>assert.fail("late decode"),onError:()=>{}});
   controller.abort();f.resolve();await started;assert.equal(f.stopped,1);assert.equal(f.video.srcObject,null);
 });
+test("late permission from an aborted start cannot detach the restarted camera",async t=>{
+  const f=await fixture(t,{delayed:true});const retired=new AbortController();
+  const started=startQrCamera({video:f.video,facing:"environment",signal:retired.signal,onCode:()=>assert.fail("late decode"),onError:()=>assert.fail("retired source error")});
+  retired.abort();
+  let currentStopped=0;
+  const track={stop(){currentStopped++;},onended:null as null|(()=>void)};
+  const currentStream={getTracks:()=>[track],getVideoTracks:()=>[track]};
+  Object.defineProperty(globalThis,"navigator",{configurable:true,value:{mediaDevices:{getUserMedia:async()=>currentStream}}});
+  const current=new AbortController();t.after(()=>current.abort());const codes:string[]=[];
+  await startQrCamera({video:f.video,facing:"environment",signal:current.signal,onCode:value=>codes.push(value),onError:()=>assert.fail("current source error")});
+  assert.deepEqual(codes,[token]);assert.equal(f.video.srcObject,currentStream);
+  f.resolve();await started;
+  assert.equal(f.stopped,1);assert.equal(currentStopped,0);assert.equal(f.video.srcObject,currentStream);
+  current.abort();assert.equal(currentStopped,1);assert.equal(f.video.srcObject,null);
+});
 test("permission rejection is recoverable and hardware-ended stream shuts down",async t=>{
   const f=await fixture(t);const controller=new AbortController();t.after(()=>controller.abort());let errors=0;
   await startQrCamera({video:f.video,facing:"user",signal:controller.signal,onCode:()=>{},onError:()=>{errors++;}});
