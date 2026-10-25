@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ForumReceptionWorkstation } from "../workstation";
+import { ForumReceptionWorkstation } from "@/app/dashboard/accoglienza-forum-eventi/workstation";
 import { createForumReceptionDemo } from "@/lib/reception/forum-demo";
 import { DEMO_DUTIES, DEMO_EVENT } from "@/lib/reception/demo-samples";
 

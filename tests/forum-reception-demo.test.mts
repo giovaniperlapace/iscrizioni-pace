@@ -11,7 +11,7 @@ const desk=(code:string,target=DEMO_FORUM_ONE,extra:object={})=>({operation:"des
 test("all nine delivered PNGs decode to distinct synthetic scanner tokens",async()=>{
  assert.equal(new Set(DEMO_SAMPLES.map(s=>s.token)).size,9);
  for(const s of DEMO_SAMPLES){
-  const {data,info}=await sharp(`public${s.image}`).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  const {data,info}=await sharp(`tests/fixtures${s.image}`).ensureAlpha().raw().toBuffer({resolveWithObject:true});
   assert.equal(jsQR(new Uint8ClampedArray(data),info.width,info.height)?.data,s.token);
   assert.match(s.token,/^[A-Za-z0-9_-]{43}$/);
  }

@@ -1,0 +1,7 @@
+import { ForumReceptionDemo } from "@/tests/browser/forum-reception-demo";
+export default function DemoFixture() {
+ return <main className="app-page"><div className="mx-auto grid max-w-5xl gap-5 px-4 py-6 sm:px-8">
+  <h1 className="text-2xl font-bold">Prova accoglienza forum ed eventi</h1>
+  <ForumReceptionDemo/>
+ </div></main>;
+}

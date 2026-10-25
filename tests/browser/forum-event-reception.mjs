@@ -131,12 +131,15 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByText('Ruolo assegnato. Gli altri incarichi sono stati conservati.',{exact:true}).waitFor();
   assert.equal(psql('select cardinality(app.reception_duty_keys(fw(200),fw(8)));',true).trim(),'8');
   actor=8;
+  const {checkPhoneEntry}=await import('./reception-phone-entry.mjs');
+  await checkPhoneEntry({browser,context,base,errors});
   const {checkRegistrationVerification}=await import('./registration-verification.mjs');
   await checkRegistrationVerification({page,context,base,psql,calls,setActor:value=>{actor=value;}});
   await page.goto(base+'/dashboard/accoglienza-forum-eventi');
   await page.getByRole('button',{name:/Computer ·/}).click();
   assert.equal(await page.locator('video').count(),0);
-  await page.getByLabel('Cerca incarico').fill('Morning A');
+  assert.equal(await page.getByLabel('Cerca incarico').count(),0);
+  assert.equal(await page.getByRole('link',{name:'Prova con QR fittizi',exact:true}).count(),0);
   await page.getByRole('button',{name:/Morning A/}).click();
   const sectionOrder=await page.evaluate(()=>{
     const mode=document.querySelector('[aria-label="Postazione e incarico"]');
@@ -273,7 +276,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   assert.equal(denied.status(),307);
   actor=11;
   await page.setViewportSize({width:1360,height:1000});
-  await page.goto(base+'/dashboard/accoglienza-forum-eventi/collaudo');
+  await page.goto(base+'/test-forum-demo');
   await page.getByRole('heading',{name:'Prova accoglienza forum ed eventi'}).waitFor();
   await page.getByRole('button',{name:/Computer ·/}).click();
   await page.getByRole('button',{name:'Forum 1 · Prova Sala A fittizia'}).click();
@@ -315,7 +318,7 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
 
   await page.getByRole('button',{name:'Ricomincia la prova'}).click();
   await page.setViewportSize({width:390,height:844});
-  const demoQr='data:image/png;base64,'+readFileSync('public/collaudo-forum-eventi/F001.png').toString('base64');
+  const demoQr='data:image/png;base64,'+readFileSync('tests/fixtures/collaudo-forum-eventi/F001.png').toString('base64');
   await page.evaluate(image=>{
    navigator.mediaDevices.getUserMedia=async()=>{
     const canvas=document.createElement('canvas');canvas.width=640;canvas.height=640;

@@ -171,11 +171,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const requiredRole = dashboardRoleFromPath(request.nextUrl.pathname);
-  // Managers may train before assigning themselves an operational duty.
-  // The training page still verifies the current-event manager scope server-side.
-  const managerReceptionDemo = request.nextUrl.pathname === "/dashboard/accoglienza-forum-eventi/collaudo" && availableRoles.has("manager");
-
-  if (requiredRole && !managerReceptionDemo && !isRoleAllowedForDashboard(requiredRole, availableRoles, hasReceptionAssignments)) {
+  if (requiredRole && !isRoleAllowedForDashboard(requiredRole, availableRoles, hasReceptionAssignments)) {
     const destination = ROLE_ROUTES[defaultRole];
     const redirectResponse = redirectPreservingCookies(
       new URL(destination, request.url),

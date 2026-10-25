@@ -14,11 +14,11 @@ export async function checkDutyWindows(browser,base) {
   await computer();
   await page.getByRole('button',{name:'Forum mattina Sala di prova',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Forum pomeriggio/}).count(),0);
-  await page.getByLabel('Cerca incarico').fill('mattina');
+  assert.equal(await page.getByLabel('Cerca incarico').count(),0);
   await page.clock.runFor(1000);
   await page.getByRole('button',{name:/Forum pomeriggio ore 17/}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Forum mattina/}).count(),0);
-  assert.equal(await page.getByLabel('Cerca incarico').inputValue(),'');
+  assert.equal(await page.getByLabel('Cerca incarico').count(),0);
   // New date: no Monday duties survive and the final ceremony replaces Tuesday morning.
   await scenario('tuesday');
   await page.getByRole('button',{name:/Forum martedì mattina/}).waitFor();
@@ -53,5 +53,5 @@ export async function checkDutyWindows(browser,base) {
   assert.deepEqual(errors,[]);assert.deepEqual(calls,[]);
   await context.close();
  }
- console.log('PASS desktop/mobile timed chooser: 07:30, 13:30, Sunday 14:00, final ceremony, search reset, active input preserved, non-Rome device and no polling');
+ console.log('PASS desktop/mobile timed chooser: 07:30, 13:30, Sunday 14:00, final ceremony, no search, active input preserved, non-Rome device and no polling');
 }

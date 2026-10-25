@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## Accoglienza Forum: avvio telefono e ritiro collaudo — 2026-10-25
+
+- Telefono rilevato lato server: direttamente agli incarichi, sola modalità
+  telefono, cambio incarico e fallback manuale conservati. Desktop/tablet con
+  scelta della postazione; rotazione non azzera l’operazione. Ricerca rimossa.
+- Prova con QR fittizi ritirata: niente link o asset pubblici; vecchio percorso
+  reindirizza alla dashboard con permessi ordinari. Fixture conservate soltanto
+  nei test locali, superando le precedenti istruzioni sulla prova pubblica.
+- Sale collegate: sei incarichi distinti dai Forum principali; Domus Letitiae
+  per 1/9/19, Serafico per 3/10/18. Lettura produzione conferma tutti e sei a
+  tutti i 54 operatori; prenotazioni, ingressi e conteggi separati, fasce uguali
+  ai rispettivi Forum. Nessuna modifica dati o migration.
+- 1.123 test, TypeScript, lint mirato, build isolata da npm ci, SQL/concorrenza
+  e browser desktop/mobile passati. Commit/push autorizzati; dettagli in
+  `docs/accoglienza-avvio-telefono-2026-10-25.md`.
+
 ## Accoglienza: verifica iscrizione e cornice scanner — 2026-10-24
 
 - «Verifica iscrizione» primo incarico, sempre disponibile agli operatori Forum/

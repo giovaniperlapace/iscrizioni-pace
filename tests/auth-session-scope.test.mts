@@ -45,12 +45,12 @@ function database(ownRole: string | null, secondaryLeader = false, panelDuty = f
 }
 
 const session = loadModule<{ getCurrentAuthContext: (db: ReturnType<typeof database>, requestedRole?: string) => Promise<{ eventRoles: unknown[]; dashboardPath: string }> }>("../lib/auth/session.ts", { "./roles": roles });
-test("proxy allows only the training page to unassigned managers and routes assigned reception operators correctly",async()=>{
+test("proxy requires an assignment also for retired training URLs and routes reception operators correctly",async()=>{
  const previous=[process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY];
  process.env.NEXT_PUBLIC_SUPABASE_URL="https://example.test";process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY="test";
  try {
   for(const [role,assigned,path,destination] of [
-   ["manager",false,"/dashboard/accoglienza-forum-eventi/collaudo",undefined],
+   ["manager",false,"/dashboard/accoglienza-forum-eventi/collaudo","/dashboard/manager"],
    ["manager",false,"/dashboard/accoglienza-forum-eventi","/dashboard/manager"],
    ["manager_viewer",false,"/dashboard/accoglienza-forum-eventi/collaudo","/dashboard/manager"],
    [null,true,"/dashboard","/dashboard/accoglienza-forum-eventi"],

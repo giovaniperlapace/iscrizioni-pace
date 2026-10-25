@@ -45,25 +45,21 @@ function useDutyClock(serverNow: number | undefined, choices: DutyOption[]) {
   return { now, readNow };
 }
 
-export function ForumReceptionWorkstation({eventId,choices:assignedChoices,canManage,requestAction=send,serverNow}:{eventId:string;choices:DutyOption[];canManage:boolean;requestAction?:ForumReceptionTransport;serverNow?:number}) {
+export function ForumReceptionWorkstation({eventId,choices:assignedChoices,canManage,requestAction=send,serverNow,phoneOnly=false}:{eventId:string;choices:DutyOption[];canManage:boolean;requestAction?:ForumReceptionTransport;serverNow?:number;phoneOnly?:boolean}) {
   const choices=useMemo(()=>[REGISTRATION_CHECK_DUTY,...assignedChoices.filter(item=>item.key!==REGISTRATION_CHECK_DUTY.key)],[assignedChoices]);
-  const [mode,setMode]=useState<"computer"|"phone"|null>(null);
+  const [selectedMode,setMode]=useState<"computer"|"phone"|null>(null);
+  const mode=phoneOnly ? "phone" : selectedMode;
   const [selected,setSelected]=useState<string|null>(serverNow === undefined && choices.length===1 ? choices[0].key : null);
-  const [query,setQuery]=useState("");
-  const [queryScope,setQueryScope]=useState("");
   const {now,readNow}=useDutyClock(serverNow,choices);
   const available=now === undefined ? choices : choices.filter(item=>isDutyAvailable(item,now));
-  const availableScope=available.map(item=>item.key).join(",");
-  const visibleQuery=queryScope===availableScope ? query : "";
   const duty=choices.find(item => item.key===selected);
   const next=now === undefined ? null : nextDutyWindow(choices,now);
-  const changeDuty=()=>{setSelected(null);setQuery("");};
+  const changeDuty=()=>setSelected(null);
   const chooseMode=(nextMode:"phone"|"computer")=>{
     const current=readNow();
     if(duty && current !== undefined && !isDutyAvailable(duty,current)) changeDuty();
     setMode(nextMode);
   };
-  if(!choices.length) return <div className="surface-card grid gap-3 p-5"><p>Nessun incarico assegnato per l’evento corrente.</p>{canManage && <PendingLink className="underline" href="/dashboard/manager?section=ruoli">Assegna gli incarichi in Utenti e ruoli</PendingLink>}</div>;
   if(!mode) return <section className="surface-card grid gap-4 p-5"><h2 className="text-xl font-semibold">Scegli la postazione</h2><div className="grid gap-3 sm:grid-cols-2">
     <button className="btn-secondary min-h-24 p-4 text-left" onClick={()=>chooseMode("phone")}><strong className="block">Telefono · scansione e ingressi</strong>Verifica iscrizioni, prenotazioni e biglietti all’ingresso.</button>
     <button className="btn-secondary min-h-24 p-4 text-left" onClick={()=>chooseMode("computer")}><strong className="block">Computer · iscrizioni e ingressi</strong>Inserisci il codice, prenota un posto disponibile e registra l’ingresso.</button>
@@ -71,22 +67,21 @@ export function ForumReceptionWorkstation({eventId,choices:assignedChoices,canMa
   if(!duty) return <section className="surface-card grid gap-4 p-5"><h2 className="text-xl font-semibold">Scegli l’incarico</h2><p>La fotocamera si aprirà dopo la scelta.</p>
     {serverNow !== undefined && <p className="text-sm text-[var(--peace-muted)]">Incarichi disponibili ora · ora di Roma. L’elenco si aggiorna automaticamente.</p>}
     {available.length ? <>
-      <label className="grid gap-1">Cerca incarico<input className="field min-h-12" value={visibleQuery} onChange={event=>{setQuery(event.target.value);setQueryScope(availableScope);}} placeholder="Nome dell’incarico o numero del Forum"/></label>
-      <div className="grid gap-2">{available.filter(item=>(item.title+" "+(item.room??"")).toLocaleLowerCase().includes(visibleQuery.toLocaleLowerCase())).map(item=><button key={item.key} className="btn-secondary min-h-16 p-3 text-left" onClick={()=>{
+      <div className="grid gap-2">{available.map(item=><button key={item.key} className="btn-secondary min-h-16 p-3 text-left" onClick={()=>{
         const current=readNow();
         if(current !== undefined && !isDutyAvailable(item,current)) return;
-        setSelected(item.key);setQuery("");
+        setSelected(item.key);
       }}><strong className="block">{item.title}</strong>{item.room}</button>)}</div>
     </> : <div role="status" className="grid gap-2"><p>Nessun incarico disponibile in questo momento.</p>{next && <p>Prossimo incarico: {next.duty.title}, dal {formatDutyWindowTime(next.from)}.</p>}</div>}
-    <button className="min-h-11 justify-self-start underline" onClick={()=>{changeDuty();setMode(null);}}>Cambia postazione</button>
+    {!phoneOnly && <button className="min-h-11 justify-self-start underline" onClick={()=>{changeDuty();setMode(null);}}>Cambia postazione</button>}
   </section>;
   return <>
     {now !== undefined && !isDutyAvailable(duty,now) && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3">La fascia di questo incarico è terminata. Concludi l’operazione in corso, poi scegli «Cambia incarico».</p>}
-    <ActiveStation key={`${mode}-${duty.key}`} {...{eventId,duty,mode,canManage,requestAction}} onChangeDuty={serverNow !== undefined || choices.length>1 ? changeDuty:undefined} onChangeMode={()=>setMode(null)}/>
+    <ActiveStation key={`${mode}-${duty.key}`} {...{eventId,duty,mode,canManage,requestAction}} onChangeDuty={serverNow !== undefined || choices.length>1 ? changeDuty:undefined} onChangeMode={phoneOnly?undefined:()=>setMode(null)}/>
   </>;
 }
 
-function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,onChangeMode}:{eventId:string;duty:DutyOption;mode:"phone"|"computer";canManage:boolean;requestAction:ForumReceptionTransport;onChangeDuty?:()=>void;onChangeMode:()=>void}) {
+function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,onChangeMode}:{eventId:string;duty:DutyOption;mode:"phone"|"computer";canManage:boolean;requestAction:ForumReceptionTransport;onChangeDuty?:()=>void;onChangeMode?:()=>void}) {
   const [lookup,setLookup]=useState<ReceptionLookup|null>(null);
   const [deskBusy,setDeskBusy]=useState(false);
   const [scanBusy,setScanBusy]=useState(false);
