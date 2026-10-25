@@ -2,13 +2,13 @@
 
 ## Inaugurazione: nome sala Maschiella — 2026-10-25
 
-- Preparato nome «Settore F: Sala Maschiella in collegamento»; nome DB senza
+- Nome «Settore F: Sala Maschiella in collegamento» in produzione; nome DB senza
   prefisso Settore, codice F e 500 posti conservati. Piantine usano layoutCode
   per identificare F e nome canonico per i testi. Email storiche conservate.
-- Migration `20261025100000`, rilascio autorizzato: pubblicare prima il codice della
-  piantina, poi applicare dopo backup verificato e conferma production.
-  Commit/push autorizzati. 1.133 test, TypeScript, lint mirato e SQL/concorrenza
-  passati. Dettagli: `docs/inaugurazione-sala-maschiella-2026-10-25.md`.
+- Codice `2ea8058` pubblicato e deployment READY verificato prima del backup
+  e della migration `20261025100000`, applicata/registrata in produzione.
+  74 tabelle, 260.891 righe e 240 funzioni/ACL controllate; revisione 2493.
+  1.133 test, TypeScript, lint mirato, build e SQL/concorrenza passati. Dettagli: `docs/inaugurazione-sala-maschiella-2026-10-25.md`.
 
 ## Accesso dopo la chiusura delle iscrizioni — 2026-10-25
 

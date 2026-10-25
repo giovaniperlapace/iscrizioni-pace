@@ -42,3 +42,28 @@ il deployment, poi applicare la migration dopo backup verificato e conferma
 dell'ambiente secondo `docs/supabase-workflow.md`. La vecchia piantina cerca
 il nome esatto F e non deve ricevere il nuovo nome prima dell'aggiornamento.
 Il bootstrap storico e le fixture iniziali restano invariati.
+
+
+## Rilascio completato — 25 ottobre 2026
+
+Codice `2ea805861a889ef1da375bdcea3c81c8413a710d` pubblicato su main.
+Deployment `dpl_GS8exWVtunCAE6iDeSKBS6H4cmEZ` verificato READY, target
+production, SHA corrispondente e dominio `registrationspeace.santegidio.org`
+associato senza errori. Home HTTP 200; dashboard anonima reindirizzata al login.
+Nessun log error/fatal per questo deployment nella finestra controllata.
+
+Solo dopo la verifica del deployment, backup completo sul server:
+`/root/backups/iscrizioni-pace/production-before-opening-relay-name-1792921558.dump`,
+25.897.809 byte, permessi 600; indice e decodifica completa con pg_restore riusciti.
+SHA-256: `82d45418aff67c80efeab9856b9f1327a781634f9f5182c8fc8ff92e06ea1ef5`.
+
+Applicazione e registrazione atomica di `20261025100000` tramite lo script
+production. La procedura con controlli aggiuntivi è stata prima collaudata su
+PostgreSQL temporaneo, con tutta la suite SQL/concorrenza. Nel rilascio:
+74 tabelle, 260.891 righe originarie e 240 definizioni/ACL di funzioni controllate;
+policy, trigger e permessi invariati. Confronto integrale dei dati estranei;
+per settore/piano consentiti soltanto nome e revisione, più un audit nuovo.
+
+Lettura finale READ ONLY: «Settore F: Sala Maschiella in collegamento», codice F,
+capienza/limite/quota 500, revisione 2492 → 2493, un audit di rinomina.
+Assegnazioni, bozze, mappe e coda email conservate; nessun invio di prova.
