@@ -215,3 +215,17 @@ test("waiting roster loads over 1000 requests and fails on a missing final page"
   assert.ok(h.pages.some(page => page.table === "panel_waitlist" && page.from === 1000));
   await assert.rejects(loadPanelRoster(fixture(overrides, "panel_waitlist", 1000).db, panelId, admin));
 });
+
+test("PDF groups use current membership for adults and selected children, including waiting families", async () => {
+  const groups = [{ id: "g1", event_id: "event", name: "Gruppo Roma" }, { id: "old", event_id: "event", name: "Vecchio gruppo" }];
+  const assignments = [{ id: "a", registration_id: "r", group_id: "g1", is_current: true }, { id: "z", registration_id: "r", group_id: "old", is_current: false }];
+  const overrides = { groups, participant_group_assignments: assignments };
+  const roster = (await loadPanelRoster(fixture(overrides).db, panelId, admin, true))!;
+  assert.deepEqual(roster.people.map(p => p.groupName), ["Gruppo Roma", "Gruppo Roma"]);
+  const waiting = (await loadPanelRoster(fixture({ ...overrides, moment_attendance_choices: [], panel_waitlist: [{ registration_id: "r", event_id: "event", panel_id: panelId, section_id: "seats", status: "waiting", sequence: 1, expires_at: null }] }).db, panelId, admin, true))!;
+  assert.deepEqual(waiting.waitlist.map(p => p.groupName), ["Gruppo Roma", "Gruppo Roma"]);
+  assert.equal((await loadPanelRoster(fixture().db, panelId, admin, true))!.people[0].groupName, "Senza gruppo");
+  await assert.rejects(loadPanelRoster(fixture(overrides, "participant_group_assignments").db, panelId, admin, true));
+  await assert.rejects(loadPanelRoster(fixture(overrides, "groups").db, panelId, admin, true));
+  await assert.rejects(loadPanelRoster(fixture({ ...overrides, groups: [{ id: "g1", event_id: "foreign", name: "Foreign" }] }).db, panelId, admin, true));
+});

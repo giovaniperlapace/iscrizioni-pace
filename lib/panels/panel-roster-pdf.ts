@@ -36,9 +36,9 @@ export async function writePanelRosterPdf(roster: PanelRoster, session: string, 
       drawRow(row);
     }
   };
-  const identity = (p: PanelRoster["people"][number]) => [`${p.lastName} ${p.firstName}`.trim(), p.kind, p.accompanyingAdult, p.code];
-  table("Iscritti confermati", ["Cognome e nome", "Tipo", "Accompagnatore", "Codice"], [185, 100, 155, 75], roster.people.map(identity));
-  table("Lista d’attesa (ordine di richiesta)", ["Cognome e nome", "Tipo", "Accompagnatore", "Stato"], [160, 85, 125, 145], roster.waitlist.map(p => [identity(p)[0], p.kind, p.accompanyingAdult, p.status === "offered" ? `Posto offerto, da confermare entro ${new Date(p.expiresAt!).toLocaleString("it-IT", { timeZone: "Europe/Rome" })}` : "In lista d’attesa"]));
+  const identity = (p: PanelRoster["people"][number]) => [`${p.lastName} ${p.firstName}`.trim(), p.groupName ?? "Senza gruppo", p.kind, p.accompanyingAdult, p.code];
+  table("Iscritti confermati", ["Cognome e nome", "Gruppo", "Tipo", "Accompagnatore", "Codice"], [140, 110, 75, 125, 65], roster.people.map(identity));
+  table("Lista d’attesa (ordine di richiesta)", ["Cognome e nome", "Gruppo", "Tipo", "Accompagnatore", "Stato"], [135, 105, 65, 100, 110], roster.waitlist.map(p => [identity(p)[0], p.groupName ?? "Senza gruppo", p.kind, p.accompanyingAdult, p.status === "offered" ? `Posto offerto, da confermare entro ${new Date(p.expiresAt!).toLocaleString("it-IT", { timeZone: "Europe/Rome" })}` : "In lista d’attesa"]));
   if (roster.schools.length) table("Prenotazioni scuole", ["Scuola / città", "Classe", "Studenti", "Accompagnatori"], [230, 135, 65, 85], roster.schools.map(s => [`${s.name} / ${s.city}`, s.classDescription, String(s.students), String(s.companions)]));
   const range = doc.bufferedPageRange();
   for (let i = 0; i < range.count; i++) { doc.switchToPage(i); doc.fontSize(8).fillColor("#666666").text(`Pagina ${i + 1} di ${range.count}`, 40, 782, { width: 515, align: "right", lineBreak: false }); }

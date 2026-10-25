@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     if (!selected.length) return new Response("Nessun Forum in questa sessione.", { status: 404, headers });
     const rosters = [];
     for (const panel of selected) {
-      const roster = await loadPanelRoster(service, panel.id, auth.eventRoles);
+      const roster = await loadPanelRoster(service, panel.id, auth.eventRoles, true);
       if (!roster) throw new Error("Forum unavailable");
       rosters.push(roster);
     }

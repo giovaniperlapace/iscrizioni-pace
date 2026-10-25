@@ -3,7 +3,7 @@ import type { EventUserRole } from "../auth/session.ts";
 import { loadAllRows, loadRowsForIds } from "../supabase/all-rows.ts";
 import { canViewPanelData } from "./management-access.ts";
 
-export type PanelRosterPerson = { id: string; firstName: string; lastName: string; kind: "Iscritto" | "Minore accompagnato"; accompanyingAdult: string; code: string };
+export type PanelRosterPerson = { id: string; firstName: string; lastName: string; kind: "Iscritto" | "Minore accompagnato"; accompanyingAdult: string; code: string; groupName?: string };
 export type PanelRoster = {
   panelId: string;
   title: string;
@@ -20,7 +20,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function isPanelRosterId(value: string): boolean { return uuid.test(value); }
 
 /** Auth and current-event scope are checked before any participant data is read. */
-export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles: EventUserRole[]): Promise<PanelRoster | null> {
+export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles: EventUserRole[], includeGroups = false): Promise<PanelRoster | null> {
   if (!canViewPanelData(roles)) throw new Error("Panel roster forbidden");
   if (!isPanelRosterId(panelId)) return null;
   const event = await db.from("events").select("id").eq("is_current", true).maybeSingle();
@@ -56,6 +56,17 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
     loadRowsForIds<{ id: string; first_name: string | null; last_name: string | null; public_code: string | null }>(registrations.data.map(row => row.participant_id), (ids, from, to) => db.from("participants").select("id,first_name,last_name,public_code").in("id", ids).order("id").range(from, to)),
     loadRowsForIds<{ id: string; registration_id: string; first_name: string; last_name: string; position: number }>(registrations.data.map(row => row.id), (ids, from, to) => db.from("registration_children").select("id,registration_id,first_name,last_name,position").in("registration_id", ids).order("id").range(from, to)),
   ]);
+  const groupByRegistration = new Map<string, string>();
+  if (includeGroups) {
+    const assignments = await loadRowsForIds<{ registration_id: string; group_id: string }>(registrations.data.map(row => row.id), (ids, from, to) => db.from("participant_group_assignments").select("registration_id,group_id").in("registration_id", ids).eq("is_current", true).order("id").range(from, to));
+    const groups = await loadRowsForIds<{ id: string; name: string }>(assignments.data.map(row => row.group_id), (ids, from, to) => db.from("groups").select("id,name").in("id", ids).eq("event_id", eventId).order("id").range(from, to));
+    const groupNames = new Map(groups.data.map(row => [row.id, row.name]));
+    for (const assignment of assignments.data) {
+      const name = groupNames.get(assignment.group_id);
+      if (!name) throw new Error("Incomplete panel group identities");
+      groupByRegistration.set(assignment.registration_id, name);
+    }
+  }
   const identities = new Map(participants.data.map(row => [row.id, row]));
   const childrenByRegistration = new Map<string, typeof children.data>();
   for (const child of children.data) {
@@ -76,6 +87,7 @@ export async function loadPanelRoster(db: SupabaseClient, panelId: string, roles
     const lastName = person.last_name?.trim() || "";
     const queued = queuedByRegistration.get(registration.id);
     const addPerson = (person: PanelRosterPerson) => {
+      if (includeGroups) person.groupName = groupByRegistration.get(registration.id) ?? "Senza gruppo";
       if (queued) waitlist.push({ ...person, status: queued.status, expiresAt: queued.status === "offered" ? queued.expires_at : null });
       else people.push(person);
     };

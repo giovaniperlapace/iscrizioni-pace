@@ -16,7 +16,7 @@ test("Sessioni determinate dall’orario di Roma, anche vicino al cambio di gior
 });
 
 test("ZIP con un PDF distinto per Forum, elenchi lunghi e Forum vuoti", async () => {
-  const people = Array.from({ length: 160 }, (_, i) => ({ id: String(i), firstName: "José André", lastName: `Rossi ${i}`, kind: "Iscritto" as const, accompanyingAdult: "", code: `TEST${i}` }));
+  const people = Array.from({ length: 160 }, (_, i) => ({ id: String(i), firstName: "José André", lastName: `Rossi ${i}`, kind: "Iscritto" as const, accompanyingAdult: "", code: `TEST${i}`, groupName: "Comunità di Sant’Egidio - Roma centro" }));
   const roster: PanelRoster = { panelId: "test", title: "1. Dialogo, solidarietà e pace: un titolo lungo per verificare la stampa", people, waitlist: [{ ...people[0], status: "offered", expiresAt: "2026-10-26T10:30:00Z" }], schools: [{ id: "school", name: "Scuola di prova", city: "Roma", classDescription: "Classe III", students: 20, companions: 2 }], guests: [], individualSeats: 160, schoolSeats: 22, reservedGuestSeats: 0 };
   const data = await writePanelRosterZip([roster, { ...roster, people: [], waitlist: [], schools: [], individualSeats: 0, schoolSeats: 0 }], "Lunedì mattina");
   const zip = await JSZip.loadAsync(data);
