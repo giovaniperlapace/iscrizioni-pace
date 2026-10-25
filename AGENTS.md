@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## Accoglienza: entrati/prenotazioni nelle sale collegate — 2026-10-25
+
+- Riepilogo sotto scheda/azioni e statistiche dell’incarico collegato: «x entrati / y prenotazioni». Capienza e posti rimanenti restano separati.
+- Prenotazioni dalla RPC canonica `reception_target_statistics`, inclusi minori e scuole; lettura autorizzata sul relativo incarico. Errore distinto da zero, dati fisici già noti conservati.
+- Nessuna migration o scrittura operativa. Test, TypeScript, lint mirato, build, SQL/concorrenza e browser 320–844px passati. Dettagli nel verbale disponibilità sale collegate.
+
 ## Accoglienza: nomi interni brevi per le sale collegate — 2026-10-25
 
 - «Collegata F1/F9/F19 · Domus» e «Collegata F3/F10/F18 · Serafico»

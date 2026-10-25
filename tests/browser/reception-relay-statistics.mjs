@@ -14,7 +14,7 @@ export async function checkRelayStatistics({page,context,base,psql,calls,qrImage
  await page.getByRole('button',{name:/Computer ·/}).click();
  await page.getByRole('button',{name:/^Morning A/}).click();
  await panel.getByText('5',{exact:true}).waitFor();
- await panel.getByText('7 entrati · Capienza 12',{exact:true}).waitFor();
+ await panel.getByText('7 entrati / 5 prenotazioni',{exact:true}).waitFor();
  const primary=await page.getByRole('region',{name:'Statistiche dell’incarico'}).innerText();
  await page.getByLabel('Codice partecipante',{exact:true}).fill('QQQ7');
  await page.getByRole('button',{name:'Leggi codice',exact:true}).click();
@@ -24,6 +24,7 @@ export async function checkRelayStatistics({page,context,base,psql,calls,qrImage
  psql('update check_ins set student_count=9 where school_booking_id=fw(9975);');
  await refresh.click();await panel.getByText('0',{exact:true}).waitFor();
  await panel.getByText('Capienza raggiunta',{exact:true}).waitFor();
+ await panel.getByText('12 entrati / 5 prenotazioni',{exact:true}).waitFor();
  assert.equal(await page.getByRole('region',{name:'Statistiche dell’incarico'}).innerText(),primary);
  await assertOrder();
  // Secondary RPC fails; the source statistics and selected person stay usable.

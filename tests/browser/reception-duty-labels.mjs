@@ -28,6 +28,7 @@ export async function checkReceptionDutyLabels(browser,base) {
     assert.equal(boxes.height,boxes.footer);assert.equal(boxes.height,80);assert.equal(boxes.horizontal,true);
     if(labels.includes(label))assert.equal(boxes.titleUncut,true,`${width}: complete short title fits`);
     const stats=page.getByRole('region',{name:'Statistiche dell’incarico'});
+    if(labels.includes(label)){assert.match(await stats.innerText(),/\d+ entrati \/\s*156 prenotazioni/);assert.doesNotMatch(await stats.innerText(),/Iscritti/);}
     const before=await stats.innerText();
     await stats.getByRole('button',{name:'Aggiorna conteggi',exact:true}).click();
     await page.waitForFunction(old=>document.querySelector('[aria-label="Statistiche dell’incarico"]').innerText!==old,before);

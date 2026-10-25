@@ -84,3 +84,31 @@ Nessun ingresso, prenotazione o invio reale di prova.
 Lettura live confermata sui sei collegamenti per tutti i 57 operatori attuali
 (342 incarichi principali): Domus Letitiae 156 e Serafico 110, ingressi zero
 al controllo. Registro migration verificato.
+
+## Aggiornamento: entrati / prenotazioni — 25 ottobre
+
+Su richiesta, sia il riepilogo sotto la scheda e le sue azioni sia le statistiche
+dell’incarico della sala collegata mostrano «x entrati / y prenotazioni».
+Capienza fisica e posti rimanenti rimangono distinti: il residuo continua a essere
+`max(0, capienza − entrati)`, indipendentemente dalle prenotazioni.
+
+Il loader riutilizza `reception_target_statistics` per ogni sala restituita dalla
+lettura autorizzata dei collegamenti. Prenotazioni e ingressi provengono dalla
+stessa lettura canonica dell’incarico collegato, con i controlli evento/operatore:
+partecipanti e minori prenotati, studenti e accompagnatori delle scuole.
+Se la lettura secondaria fallisce, le prenotazioni sono «non disponibili»;
+capienza e ingressi già letti rimangono utilizzabili. Mai un falso zero.
+Nessuna migration, nuova RPC, modifica delle prenotazioni o ingresso reale.
+
+Verifiche:
+
+- 1.149 test nella working tree (incluso il test locale preesistente degli
+  incarichi anticipati); TypeScript, lint mirato e build production passati in
+  copia isolata con npm ci. Manifest/lockfile del repository conservati.
+- PostgreSQL temporaneo, regressioni e concorrenza passati. Fixture con capienza
+  12, prenotazioni 5 e ingressi 7 per distinguere esplicitamente i tre dati.
+- Browser originale → API → SQL: «7 entrati / 5 prenotazioni», aggiornamento a
+  «12 entrati / 5 prenotazioni», residuo, errori/retry e posizione sotto le azioni.
+- Tutte le sei sale collegate a 320/360/390/844px: nomi brevi, conteggi e pulsante
+  aggiornamento visibili, bande da 80px conservate, nessun overflow. Anche titoli
+  lunghi dei Forum principali e delle cerimonie, cambio incarico e manuale.

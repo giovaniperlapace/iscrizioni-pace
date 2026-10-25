@@ -1,7 +1,8 @@
 insert into event_locations(id,event_id,name,max_capacity) values(fw(9971),fw(200),'Sala collegata sintetica',12);
 insert into event_moments(id,event_id,moment_type,title,starts_at,ends_at,location_id,publication_status,is_public)
  select fw(9970),event_id,'panel','Collegamento Morning A',starts_at,ends_at,fw(9971),'draft',false from event_moments where id=fw(403);
-insert into panel_seat_sections(id,event_id,panel_id,audience_type_id,capacity) values(fw(9972),fw(200),fw(9970),fw(300),12);
+insert into panel_seat_sections(id,event_id,panel_id,audience_type_id,capacity) values(fw(9972),fw(200),fw(9970),fw(300),7);
+insert into panel_seat_sections(id,event_id,panel_id,audience_type_id,capacity) values(fw(9976),fw(200),fw(9970),fw(301),5);
 update event_moments set publication_status='published',is_public=true where id=fw(9970);
 insert into panel_relay_rooms(panel_id,source_panel_id,phase) values(fw(9970),fw(403),'open');
 select set_reception_duties(fw(200),fw(11),fw(8),array[fw(403)::text]);
@@ -15,3 +16,6 @@ insert into check_ins(event_id,moment_id,school_booking_id,student_count,compani
  values(fw(200),fw(9970),fw(9975),4,1,fw(8),'manual');
 insert into check_ins(event_id,moment_id,registration_id,checked_in_by,source,cancelled_at)
  values(fw(200),fw(9970),fw(106),fw(8),'manual',now());
+
+insert into school_panel_reservations(event_id,booking_id,panel_id,seat_section_id,student_count,companion_count)
+ values(fw(200),fw(9975),fw(9970),fw(9976),4,1);

@@ -2,6 +2,7 @@
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isDutyAvailable, nextDutyWindow, nextDutyBoundary, formatDutyWindowTime } from "@/lib/reception/duty-windows";
+import { getForumRelayRoom } from "@/lib/events/assisi-2026-relay-rooms";
 import { receptionDutyTitle } from "@/lib/reception/duty-labels";
 import { REGISTRATION_CHECK_DUTY, type DutyOption } from "@/lib/reception/event-duties";
 import type { ReceptionCommand, ReceptionLookup, ReceptionResult } from "@/lib/reception/contracts";
@@ -117,8 +118,9 @@ function ActiveStation({eventId,duty,mode,canManage,requestAction,onChangeDuty,o
     if(result.status==="valid" && command.action!=="inspect")refreshStatistics();
     return result;
   },[eventId,deskBusy,requestAction,refreshStatistics]);
+  const linkedRoom=duty.kind==="panel" && !!getForumRelayRoom(duty.key);
   const statistics = <section className="mx-auto grid w-full max-w-sm grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-center text-xs" aria-label="Statistiche dell’incarico" aria-live="polite">
-      {stats ? <div className="flex min-w-0 flex-wrap justify-center gap-x-2"><p className="whitespace-nowrap"><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p className="whitespace-nowrap"><strong>{stats.entered}</strong> Entrati</p></div>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
+      {stats ? <div className="flex min-w-0 flex-wrap justify-center gap-x-2">{linkedRoom ? <><p className="whitespace-nowrap"><strong>{stats.entered}</strong> entrati /</p><p className="whitespace-nowrap"><strong>{stats.booked}</strong> prenotazioni</p></> : <><p className="whitespace-nowrap"><strong>{stats.booked}</strong> {duty.kind==="panel"?"Iscritti":"Assegnatari"}</p><p className="whitespace-nowrap"><strong>{stats.entered}</strong> Entrati</p></>}</div>:<p role={statsError?"alert":"status"}>{statsError?"Statistiche non disponibili.":"Caricamento statistiche…"}</p>}
       <button className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-current/30 px-2 text-xs hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2" aria-label="Aggiorna conteggi" title="Aggiorna conteggi" onClick={refreshStatistics}><RefreshCw size={16} aria-hidden="true" />Aggiorna conteggi</button>
     </section>;
   return <div className="grid gap-4">

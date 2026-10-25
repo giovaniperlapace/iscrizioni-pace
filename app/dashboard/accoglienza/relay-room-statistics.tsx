@@ -7,9 +7,10 @@ export function RelayRoomStatistics({rooms,loading}:{rooms:Room[]|null;loading:b
       ? <p role="alert" className="text-sm">Disponibilità della sala collegata non verificata. Premi «Aggiorna conteggi» per riprovare.</p>
       : rooms.map(room => <div key={room.panelId} className="grid gap-2">
         <p className="break-words font-semibold">{room.room ?? room.title}</p>
+        <p className="text-sm text-[var(--peace-muted)]">{room.entered} entrati / {room.booked === null ? "prenotazioni non disponibili" : `${room.booked} prenotazioni`}</p>
         {room.capacity === null ? <p className="text-sm">Capienza della sala non disponibile.</p> : <>
           <p className="flex flex-wrap items-baseline gap-x-2"><strong className={`text-2xl tabular-nums ${room.entered >= room.capacity ? "text-amber-800" : "text-[var(--peace-blue-800)]"}`}>{Math.max(0,room.capacity-room.entered)}</strong><span>posti rimanenti</span></p>
-          <p className="text-sm text-[var(--peace-muted)]">{room.entered} entrati · Capienza {room.capacity}</p>
+          <p className="text-sm text-[var(--peace-muted)]">Capienza {room.capacity}</p>
           {room.entered >= room.capacity && <p className="text-sm font-semibold text-amber-800">Capienza raggiunta</p>}
         </>}
       </div>)}
