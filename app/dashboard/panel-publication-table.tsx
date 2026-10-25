@@ -386,7 +386,7 @@ function CapacitySummary({ panel, compact = false }: { panel: PanelDraftRow; com
       {panel.sections.map(section => <p key={section.id} className="text-xs">
         {section.audienceName}: {section.bookingChannel === "internal_assignment"
           ? `${section.capacity} posti riservati`
-          : section.occupied === undefined ? "da verificare" : `${section.capacity - section.occupied} disponibili su ${section.capacity}`}
+          : section.occupied === undefined ? "da verificare" : `${section.capacity - section.occupied} posti disponibili su ${section.capacity}`}
       </p>)}
       {difference !== null && difference !== 0 ? <p className="text-xs">{difference > 0 ? `${difference} posti fuori dalle quote` : `${Math.abs(difference)} posti oltre capienza`}</p> : null}
     </div>
