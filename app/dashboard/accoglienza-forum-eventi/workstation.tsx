@@ -51,7 +51,7 @@ function useDutyClock(serverNow: number | undefined, choices: DutyOption[]) {
 }
 
 export function ForumReceptionWorkstation({eventId,choices:assignedChoices,canManage,requestAction=send,serverNow,phoneOnly=false}:{eventId:string;choices:DutyOption[];canManage:boolean;requestAction?:ForumReceptionTransport;serverNow?:number;phoneOnly?:boolean}) {
-  const choices=useMemo(()=>[REGISTRATION_CHECK_DUTY,...assignedChoices.filter(item=>item.key!==REGISTRATION_CHECK_DUTY.key).map(item=>({...item,title:receptionDutyTitle(item)}))],[assignedChoices]);
+  const choices=useMemo(()=>[REGISTRATION_CHECK_DUTY,...assignedChoices.filter(item=>item.key!==REGISTRATION_CHECK_DUTY.key).map(item=>({...item,title:receptionDutyTitle(item,assignedChoices)}))],[assignedChoices]);
   const [selectedMode,setMode]=useState<"computer"|"phone"|null>(null);
   const mode=phoneOnly ? "phone" : selectedMode;
   const [localSelected,setSelected]=useState<string|null>(serverNow === undefined && choices.length===1 ? choices[0].key : null);

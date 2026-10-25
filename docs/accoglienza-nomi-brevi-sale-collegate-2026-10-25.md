@@ -48,3 +48,19 @@ restano simmetriche, alte 80px; nessuna modifica a decoder o ciclo fotocamera.
 node --test tests/reception-duty-labels.test.mts
 RECEPTION_LABELS_ONLY=1 PLAYWRIGHT_MODULE=/percorso/playwright/index.mjs node tests/browser/run-forum-event-reception.mjs
 ```
+
+## Revisione richiesta: nome del Forum principale
+
+Il formato interno diventa «Collegata Fnumero · Nome del Forum principale»
+per tutte le sei sale. Il catalogo degli incarichi fornisce il titolo corrente
+del Forum individuato tramite sourceId canonico, senza il prefisso numerico.
+Se il catalogo non contiene il principale, viene utilizzato il nome incorporato
+nel titolo pubblico della collegata; senza nome disponibile resta «Collegata
+Fnumero». Sede, identità, prenotazioni e titoli pubblici restano invariati.
+
+Nome completo nel selettore e in modalità manuale; nella banda della fotocamera
+una riga con ellissi e attributo title completo, come per gli altri Forum.
+Contatori e pulsante aggiornamento mantengono lo spazio dedicato.
+Test di associazione e fallback, browser sulle sei sale con titoli lunghi a
+320/360/390/844px, TypeScript, lint mirato e build isolata verificati.
+Nessuna migration o scrittura operativa.

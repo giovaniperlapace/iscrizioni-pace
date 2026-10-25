@@ -3,6 +3,7 @@ import { ForumReceptionWorkstation } from "@/app/dashboard/accoglienza-forum-eve
 import { FORUM_RELAY_ROOMS } from "@/lib/events/assisi-2026-relay-rooms";
 import type { DutyOption } from "@/lib/reception/event-duties";
 const choices: DutyOption[] = [
+ ...FORUM_RELAY_ROOMS.map(room=>({key:room.sourceId,title:`${room.number} - Il titolo completo del Forum trasmesso in collegamento dalla sala principale`,room:"Sala principale",kind:"panel" as const})),
  ...FORUM_RELAY_ROOMS.map(room=>({key:room.id,title:`SALA COLLEGATA — SOLO IN ITALIANO — FORUM ${room.number} — Il titolo completo del Forum trasmesso in collegamento dalla sala principale`,room:room.venue+' — Assisi',kind:'panel' as const})),
  {key:'11111111-1111-4111-8111-111111111111',title:'Forum principale con un titolo molto lungo che non deve nascondere i dati degli ingressi',room:'Sala principale',kind:'panel'},
  {key:'opening',title:'Cerimonia di apertura con titolo esteso',room:null,kind:'ceremony'},

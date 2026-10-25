@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 export async function checkReceptionDutyLabels(browser,base) {
- const labels=['Collegata F1 · Domus','Collegata F3 · Serafico','Collegata F9 · Domus','Collegata F10 · Serafico','Collegata F18 · Serafico','Collegata F19 · Domus'];
+ const labels=[1,3,9,10,18,19].map(number=>`Collegata F${number} · Il titolo completo del Forum trasmesso in collegamento dalla sala principale`);
  for(const width of [320,360,390,844]){
   const context=await browser.newContext({viewport:{width,height:900},isMobile:true,hasTouch:true});
   try {
@@ -26,7 +26,7 @@ export async function checkReceptionDutyLabels(browser,base) {
     assert.equal(boxes.visible,true,`${width}: ${label} must keep every counter/button inside header`);
     assert.equal(boxes.scrollHeight,boxes.clientHeight,`${width}: no hidden scrolling for data`);
     assert.equal(boxes.height,boxes.footer);assert.equal(boxes.height,80);assert.equal(boxes.horizontal,true);
-    if(labels.includes(label))assert.equal(boxes.titleUncut,true,`${width}: complete short title fits`);
+    assert.equal(await title.getAttribute("title"),label);
     const stats=page.getByRole('region',{name:'Statistiche dell’incarico'});
     if(labels.includes(label)){assert.match(await stats.innerText(),/\d+ entrati \/\s*156 prenotazioni/);assert.doesNotMatch(await stats.innerText(),/Iscritti/);}
     const before=await stats.innerText();
@@ -42,5 +42,5 @@ export async function checkReceptionDutyLabels(browser,base) {
    assert.deepEqual(errors,[]);
   } finally {await context.close();}
  }
- console.log('PASS six short relay labels plus long main/ceremony titles: 320/360/390/844px, complete relay names, visible counters/refresh, symmetric 80px bands, manual and duty changes');
+ console.log('PASS six short relay labels plus long main/ceremony titles: 320/360/390/844px, source Forum titles, visible counters/refresh, symmetric 80px bands, manual and duty changes');
 }
