@@ -204,21 +204,26 @@ export async function startPublicEmailFlow(formData: FormData) {
 
   const supabase = createSupabaseServiceClient();
   const forum = await resolvePublicForumIntent(supabase, intent);
-  const { event } = await getPublicRegistrationOptions(supabase);
+  const eventId = await getCurrentOperationalEventId(supabase);
 
-  if (!event) {
+  if (!eventId) {
     redirect(homePath("error=no-event"));
   }
 
-  const exists = await hasExistingAppAccessForEmail(supabase, email, event.id);
+  const exists = await hasExistingAppAccessForEmail(supabase, email, eventId);
 
   if (!exists) {
+    // Registration dates gate new registrations, never existing account access.
+    const { event } = await getPublicRegistrationOptions(supabase);
+    if (!event || event.id !== eventId) {
+      redirect(homePath("error=no-event"));
+    }
     redirect(withForumIntent(`/registrazione?email=${encodeURIComponent(email)}`, forum));
   }
 
   const emailHash = hashEmailForAudit(email);
 
-  if (await hasRecentMagicLinkSend(supabase, event.id, emailHash)) {
+  if (await hasRecentMagicLinkSend(supabase, eventId, emailHash)) {
     redirect(homePath(forum ? "error=rate-limit" : "sent=magic-link"));
   }
 
@@ -228,10 +233,10 @@ export async function startPublicEmailFlow(formData: FormData) {
       email,
       `${appUrl}/auth/callback?redirect_to=${encodeURIComponent(forumBookingPath(forum))}`
     );
-    await logMagicLinkSent(supabase, event.id, emailHash);
+    await logMagicLinkSent(supabase, eventId, emailHash);
   } catch (error) {
     await logEmailFailure(supabase, {
-      eventId: event.id,
+      eventId,
       action: "email.magic_link_failed",
       email,
       error,

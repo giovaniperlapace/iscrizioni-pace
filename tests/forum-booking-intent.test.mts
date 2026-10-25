@@ -62,6 +62,7 @@ for (const mode of ["existing", "new", "limited", "failed", "closed"] as const) 
     resolvePublicForumIntent: async (_db: unknown, value: unknown) => mode === "closed" ? null : parseForumIntent(value),
     normalizeEmail: (value: unknown) => String(value), getAppUrl: () => "https://example.test", getIpAddress: async () => "synthetic",
     checkRateLimit: () => true, EMAIL_RATE_LIMIT: {}, createSupabaseServiceClient: () => ({}),
+    getCurrentOperationalEventId: async () => "current",
     getPublicRegistrationOptions: async () => ({ event: { id: "current" } }), hasExistingAppAccessForEmail: async () => mode !== "new",
     hashEmailForAudit: () => "synthetic", hasRecentMagicLinkSend: async () => mode === "limited",
     sendMagicLinkEmail: async (_db: unknown, _email: unknown, url: string) => { if (mode === "failed") throw new Error("synthetic failure"); sends.push(url); },
@@ -79,6 +80,47 @@ for (const mode of ["existing", "new", "limited", "failed", "closed"] as const) 
     assert.equal(sends.length, 0);
     assert.equal(url.searchParams.get("error"), mode === "limited" ? "rate-limit" : "failed");
     assert.equal(url.searchParams.get("forum"), forum);
+  }
+});
+
+for (const scenario of [
+  { name: "existing participant after closing", existing: true, current: "current", publicEvent: null, expected: "sent" },
+  { name: "existing operator before opening", existing: true, current: "current", publicEvent: null, expected: "sent" },
+  { name: "existing access while registrations are open", existing: true, current: "current", publicEvent: "current", expected: "sent" },
+  { name: "new email after closing", existing: false, current: "current", publicEvent: null, expected: "blocked" },
+  { name: "new email before opening or publication", existing: false, current: "current", publicEvent: null, expected: "blocked" },
+  { name: "cancelled or deleted registration without another role", existing: false, current: "current", publicEvent: null, expected: "blocked" },
+  { name: "new email while registrations are open", existing: false, current: "current", publicEvent: "current", expected: "registration" },
+  { name: "current event changed during the request", existing: false, current: "current", publicEvent: "other", expected: "blocked" },
+  { name: "no current event", existing: true, current: null, publicEvent: null, expected: "blocked" },
+]) test(`email access and registration opening are independent: ${scenario.name}`, async () => {
+  const sends: string[] = [], accessEvents: string[] = [], auditEvents: string[] = [];
+  let registrationReads = 0;
+  const action = loadFunction("../app/actions.ts", "startPublicEmailFlow", {
+    parseForumIntent, forumBookingPath, withForumIntent,
+    resolvePublicForumIntent: async () => null,
+    normalizeEmail: (value: unknown) => String(value), getAppUrl: () => "https://example.test", getIpAddress: async () => "synthetic",
+    checkRateLimit: () => true, EMAIL_RATE_LIMIT: {}, createSupabaseServiceClient: () => ({}),
+    getCurrentOperationalEventId: async () => scenario.current,
+    getPublicRegistrationOptions: async () => { registrationReads++; return { event: scenario.publicEvent ? { id: scenario.publicEvent } : null }; },
+    hasExistingAppAccessForEmail: async (_db: unknown, _email: string, eventId: string) => { accessEvents.push(eventId); return scenario.existing; },
+    hashEmailForAudit: () => "synthetic", hasRecentMagicLinkSend: async () => false,
+    sendMagicLinkEmail: async (_db: unknown, email: string) => { sends.push(email); },
+    logMagicLinkSent: async (_db: unknown, eventId: string) => { auditEvents.push(eventId); },
+    logEmailFailure: async () => assert.fail("Unexpected email failure"), getPublicEmailErrorMessage: () => "failed",
+    redirect: (path: string) => { throw new Redirect(path); },
+  });
+  const form = new FormData(); form.set("email", "test@example.test");
+  const url = await destination(action, form);
+  assert.deepEqual(accessEvents, scenario.current ? [scenario.current] : []);
+  assert.equal(registrationReads, scenario.current && !scenario.existing ? 1 : 0);
+  assert.deepEqual(sends, scenario.expected === "sent" ? ["test@example.test"] : []);
+  assert.deepEqual(auditEvents, scenario.expected === "sent" ? [scenario.current] : []);
+  if (scenario.expected === "sent") assert.equal(url.searchParams.get("sent"), "magic-link");
+  if (scenario.expected === "blocked") assert.equal(url.searchParams.get("error"), "no-event");
+  if (scenario.expected === "registration") {
+    assert.equal(url.pathname, "/registrazione");
+    assert.equal(url.searchParams.get("email"), "test@example.test");
   }
 });
 

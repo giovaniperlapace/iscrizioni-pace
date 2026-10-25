@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Accesso dopo la chiusura delle iscrizioni — 2026-10-25
+
+- Il flusso email iniziale identifica l’evento corrente senza applicare la
+  finestra delle nuove iscrizioni. Chi ha già accesso per iscrizione attiva,
+  ruolo o membership può richiedere il magic link anche a iscrizioni chiuse.
+- Solo le email senza accesso esistente passano dal controllo pubblico di
+  pubblicazione/apertura/scadenza, sullo stesso evento corrente. Creazione
+  iscrizioni, scope, rate limit, audit e destinazione Forum conservati.
+- Nessuna migration o modifica ai dati; prove email simulate. Verifiche e
+  stato del rilascio in `docs/accesso-iscrizioni-chiuse-2026-10-25.md`.
+
 ## Accoglienza Forum: avvio telefono e ritiro collaudo — 2026-10-25
 
 - Telefono rilevato lato server: direttamente agli incarichi, sola modalità
