@@ -61,7 +61,8 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   // Original QR component + both original scanner controls, HTTP/Server Action to SQL.
 
   const schoolToken='S'.repeat(43);
-  psql(`insert into school_booking_teachers(id,event_id,email,first_name,last_name,phone) values(fw(3996),fw(200),'school-browser@example.invalid','Teacher','Browser','+39000000');
+  psql(`update panel_seat_sections set capacity=40 where id=fw(550);
+    insert into school_booking_teachers(id,event_id,email,first_name,last_name,phone) values(fw(3996),fw(200),'school-browser@example.invalid','Teacher','Browser','+39000000');
     insert into school_bookings(id,event_id,teacher_id,school_name,school_city,class_description,student_count,companion_count,privacy_version,privacy_accepted_at)
       values(fw(3997),fw(200),fw(3996),'Scuola browser','Test','1A',10,2,'test',now());
     insert into school_booking_qr_tokens(booking_id,token_hash,token_encrypted) values(fw(3997),${lit(createHash('sha256').update(schoolToken).digest('hex'))},${lit(encryptQrToken(schoolToken))});
@@ -86,31 +87,32 @@ export async function checkForumReception(psql,base='http://127.0.0.1:3198') {
   await page.getByText('Compila entrambe le quantità, anche quando una è 0.',{exact:true}).waitFor();
   await confirmSchool.click();
   assert.equal(psql('select count(*) from check_ins where school_booking_id=fw(3997);',true).trim(),'0');
-  await page.locator('input[name="students"]').fill('8');await page.locator('input[name="companions"]').fill('3');
-  await page.getByText(/Massimo ammesso per questo Forum: 10 studenti e 2 accompagnatori/).waitFor();
-  await page.getByText(/Inserisci quantità intere da 0 a 10 studenti e da 0 a 2 accompagnatori/).waitFor();
+  await page.locator('input[name="students"]').fill('8');await page.locator('input[name="companions"]').fill('101');
+  await page.getByText(/Prenotati per questo Forum: 10 studenti e 2 accompagnatori/).waitFor();
+  await page.getByText(/Inserisci quantità intere da 0 a 1000 studenti e da 0 a 100 accompagnatori/).waitFor();
   await confirmSchool.click();
   assert.equal(await page.locator('input[name="companions"]').evaluate(el=>el.validity.rangeOverflow),true);
   assert.equal(psql('select count(*) from check_ins where school_booking_id=fw(3997);',true).trim(),'0');
   await page.locator('input[name="students"]').fill('0');await page.locator('input[name="companions"]').fill('0');
   await confirmSchool.click();
   assert.equal(psql('select count(*) from check_ins where school_booking_id=fw(3997);',true).trim(),'0');
-  await page.locator('input[name="students"]').fill('8');await page.locator('input[name="companions"]').fill('1');
+  await page.locator('input[name="students"]').fill('16');await page.locator('input[name="companions"]').fill('4');
+  await page.getByText(/Le quantità sono diverse da quelle previste/).waitFor();
   await page.screenshot({path:'/tmp/pace-school-counts-mobile.png',fullPage:true});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.getByRole('dialog').getByRole('button',{name:'Registra evento e ingresso al Forum',exact:true}).click();
-  await page.getByText(/8 studenti e 1 accompagnatori/).waitFor();
+  await page.getByText(/16 studenti e 4 accompagnatori/).waitFor();
   assert.equal(psql('select count(*) from check_ins where school_booking_id=fw(3997) and cancelled_at is null;',true).trim(),'2');
   assert.equal(calls.filter(x=>x.name==='reception_panel_check_in'&&x.body.p_reason==='school_event_entry').length,1);
   actor=10;
   await page.getByRole('button',{name:'Cambia scanner prova',exact:true}).click();
   await page.getByLabel('Scanner USB',{exact:true}).focus();await page.keyboard.type(schoolToken,{delay:1});await page.keyboard.press('Enter');
-  await page.getByText(/8 studenti e 1 accompagnatori/).waitFor();
+  await page.getByText(/16 studenti e 4 accompagnatori/).waitFor();
   assert.equal(await page.getByRole('button',{name:'Registra evento e ingresso al Forum',exact:true}).count(),0);
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:'/tmp/pace-school-event-desktop.png',fullPage:true});
   assert.equal(psql('select count(*) from check_ins where school_booking_id=fw(3997) and moment_id is null;',true).trim(),'1');
-  console.log('PASS school QR display/download and RLS denial; original USB scanner → HTTP → atomic event+Forum 8/10 students; event scanner sees same counts; mobile/desktop');
+  console.log('PASS school QR display/download and RLS denial; original USB scanner → HTTP → atomic event+Forum 16/10 students and 4/2 companions; event scanner sees same counts; mobile/desktop');
  };
  try {
   await new Promise(resolve=>adapter.listen(55490,'127.0.0.1',resolve));

@@ -48,3 +48,31 @@ SHA-256: `f1bdd79d81b2c0e3fa04170777b4e6bb5e35e9f7c3bd86db64325f93993f67db`.
 
 Codice `a911f19` produzione READY, alias del dominio verificato e login HTTP 200.
 Commit e push eseguiti su richiesta; nessuna modifica allo schema database.
+
+## Nuova regola richiesta: registrare i numeri effettivi anche se diversi
+
+L’utente ha chiarito che la conferma deve essere possibile anche con quantità
+superiori a quelle prenotate. Superata quindi la necessità di adeguare la
+prenotazione per consentire il check-in. Il precedente adeguamento puntuale
+resta nello storico; questa modifica non riscrive prenotazioni o ingressi.
+
+La UI mostra quantità prenotate e avviso non bloccante di differenza. I campi
+accettano interi 0–1000 studenti / 0–100 accompagnatori, totale positivo. La
+migration 20261026110000 modifica le sole guardie quantitative nelle RPC Forum
+ed evento e restituisce i conteggi prenotati Forum come riferimento. Non cambia
+firma, ACL, ruolo, incarico, QR, prenotazione obbligatoria, capienza fisica di
+settore/sala, revisione, audit, idempotenza, annullamenti o ricevute.
+Il primo ingresso congiunto registra i numeri effettivi in evento e Forum;
+l’evento già presente non viene modificato dalle successive operazioni Forum.
+
+Verifiche: 1.163 test, TypeScript e build da installazione isolata; lint mirato;
+SQL con quantità sopra prenotazione, correzione sopra conteggi evento,
+capienza insufficiente senza scritture, replay, concorrenza e prenotazioni
+invariate. Browser originale mobile/desktop: prenotati 10+2, confermati 16+4,
+API reale contro PostgreSQL temporaneo e lettura dell’ingresso generale.
+Il runner storico `run-reception-checks.mjs` si ferma su una migration
+preesistente con LOCK TABLE fuori transazione; la verifica delle RPC aggiornate
+è stata completata nel runner Forum corrente, inclusa accoglienza generale.
+
+Backup completo remoto custom 29.149.311 byte, modo 0600, pg_restore verificato;
+SHA-256 `619fc4f20c6d656af68f5e67172451d511b560c6d9f26d8913130623ec8d9225`.

@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Scuole: quantità effettive indipendenti dalla prenotazione — 2026-10-26
+
+- Su richiesta, accoglienza generale e Forum registrano studenti/accompagnatori
+  effettivi anche sopra i numeri prenotati. Differenza visibile, conferma esplicita;
+  nessun adeguamento automatico della prenotazione. Totale positivo e interi
+  0–1000 studenti / 0–100 accompagnatori, capienza fisica Forum e settore,
+  incarico, QR, prenotazione valida, audit/revisione/retry conservati.
+- Evento già registrato conservato nelle operazioni Forum; primo ingresso
+  congiunto scuole registra gli stessi numeri effettivi in evento e Forum.
+- Migration `20261026110000`, backup verificato; test SQL/concorrenza e browser
+  con prenotati 10+2 / effettivi 16+4, 1.163 test, TypeScript e build passati.
+  Dettagli: `docs/accoglienza-scuole-conferma-quantita-2026-10-26.md`.
+
 ## Forum: ingresso automatico del singolo iscritto — 2026-10-25
 
 - Nuova lettura camera/USB/manuale: singolo adulto prenotato, con accoglienza

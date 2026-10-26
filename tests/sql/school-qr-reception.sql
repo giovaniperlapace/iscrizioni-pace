@@ -35,36 +35,42 @@ do $$ declare v jsonb; n integer; begin
  v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64));
  assert v->>'status'='valid' and v->>'eventCheckedIn'='false';
  begin
-  perform reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2998),'{}',11,1,null,'school_event_entry');
-  raise exception 'Count bound ignored';
+  perform reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2998),'{}',-1,1,null,'school_event_entry');
+  raise exception 'Negative count accepted';
  exception when invalid_parameter_value then null;end;
+ assert not exists(select 1 from check_ins where school_booking_id=fw(2997));
+ assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(3099),'{}',26,4,null,'school_event_entry')->>'status'='capacity_exceeded';
  assert not exists(select 1 from check_ins where school_booking_id=fw(2997));
  begin
   perform reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'code','QQQ1','enter',fw(2998),array[fw(101)],null,null,null,'school_event_entry');
   raise exception 'Personal QR accepted school permission';
  exception when invalid_parameter_value then null;end;
- v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2998),'{}',8,1,null,'school_event_entry');
+ v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2998),'{}',16,4,null,'school_event_entry');
  assert v->>'status'='valid' and v->>'outcome'='saved' and v->>'eventCheckedIn'='true',v::text;
  assert (select count(*) from check_ins where school_booking_id=fw(2997) and cancelled_at is null)=2;
- assert (select student_count=8 and companion_count=1 from check_ins where school_booking_id=fw(2997) and moment_id is null);
+ assert (select student_count=16 and companion_count=4 from check_ins where school_booking_id=fw(2997) and moment_id is null);
  assert (select check_in_revision=1 from school_bookings where id=fw(2997));
- assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2998),'{}',8,1,null,'school_event_entry')->>'outcome'='replayed';
- assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2999),'{}',8,1,null,'school_event_entry')->>'outcome'='unchanged';
+ assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2998),'{}',16,4,null,'school_event_entry')->>'outcome'='replayed';
+ assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(2999),'{}',16,4,null,'school_event_entry')->>'outcome'='unchanged';
  assert (select check_in_revision=1 from school_bookings where id=fw(2997));
  assert (select count(*) from audit_logs where entity_id=fw(2997) and action='reception.school.event_from_forum')=1;
  -- A second Forum records its own actual count without counting this class twice at the event.
  assert reception_panel_check_in('panel_entry',fw(405),fw(200),fw(8),'qr',repeat('c',64),'enter',fw(3002),'{}',6,1,null,'school_event_entry')->>'status'='valid';
  assert (select count(*) from check_ins where school_booking_id=fw(2997) and moment_id is null)=1;
- assert (select student_count=8 from check_ins where school_booking_id=fw(2997) and moment_id is null);
+ assert (select student_count=16 from check_ins where school_booking_id=fw(2997) and moment_id is null);
  assert (select student_count=6 from check_ins where school_booking_id=fw(2997) and moment_id=fw(405));
  assert (select check_in_revision=1 from school_bookings where id=fw(2997));
+ assert (select student_count=10 and companion_count=2 from school_bookings where id=fw(2997));
+ assert (select student_count=10 and companion_count=2 from school_panel_reservations where booking_id=fw(2997) and panel_id=fw(401));
  -- Correcting/cancelling Forum attendance must not revoke general-event participation.
- v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'correct',fw(3000),'{}',7,1,(v->>'revision')::integer,'count_error');
+ v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'correct',fw(3000),'{}',15,5,(v->>'revision')::integer,'count_error');
  assert v->>'status'='valid';
- assert (select student_count=8 from check_ins where school_booking_id=fw(2997) and moment_id is null);
+ assert (select student_count=16 from check_ins where school_booking_id=fw(2997) and moment_id is null);
  v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('c',64),'cancel',fw(3001),'{}',null,null,(v->>'revision')::integer,'entry_cancelled');
  assert v->>'status'='valid';
  assert (select cancelled_at is null from check_ins where school_booking_id=fw(2997) and moment_id is null);
+ assert reception_event_check_in('event_entry',fw(200),fw(10),'qr',repeat('c',64),'correct',fw(3100),'{}',17,5,1,'count_error')->>'status'='valid';
+ assert (select student_count=17 and companion_count=5 from check_ins where school_booking_id=fw(2997) and moment_id is null);
  assert not has_function_privilege('authenticated','public.ensure_school_booking_qr(uuid,text,text)','EXECUTE');
  assert not has_table_privilege('authenticated','public.school_booking_email_deliveries','SELECT');
 end $$;

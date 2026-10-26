@@ -101,7 +101,7 @@ end $$;
 reset role;
 set constraints all immediate;
 \echo PASS distinct Forum/event entries, ceremony tickets/seats, explicit minors, atomic rejection, replay and revision, service-only RPC and scoped catalogue
--- Schools also require explicit override, retaining booked quantity bounds.
+-- Schools also require explicit override, retaining nonnegative quantity bounds.
 insert into school_booking_teachers(id,event_id,email,first_name,last_name,phone)
  values(fw(1996),fw(200),'override@example.invalid','Teacher','Override','+39000000');
 insert into school_bookings(id,event_id,teacher_id,school_name,school_city,class_description,student_count,companion_count,privacy_version,privacy_accepted_at)
@@ -116,8 +116,8 @@ do $$ declare v jsonb; begin
  assert v->>'status'='valid' and v->>'eventCheckedIn'='false' and (v->>'expectedStudents')::integer=10;
  assert reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1998),'{}',8,1)->>'status'='event_entry_required';
  begin
-  perform reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1999),'{}',11,1,null,'event_entry_override');
-  raise exception 'school count bound ignored';
+  perform reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1999),'{}',-1,1,null,'event_entry_override');
+  raise exception 'negative school count accepted';
  exception when invalid_parameter_value then null;end;
  v:=reception_panel_check_in('panel_entry',fw(401),fw(200),fw(8),'qr',repeat('b',64),'enter',fw(1998),'{}',8,1,null,'event_entry_override');
  assert v->>'status'='valid' and v->>'outcome'='saved';

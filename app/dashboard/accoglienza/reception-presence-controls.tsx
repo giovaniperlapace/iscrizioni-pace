@@ -34,7 +34,7 @@ export function PresenceSummary({ result }: { result: VerifiedReception }) {
   if (result.kind === "school") return <div className="grid gap-2 text-sm">
     {panel}
     <strong className="break-words">{result.schoolName} · {result.classDescription}</strong>
-    <p>{result.panel ? "Ammessi secondo prenotazione e ingresso evento:" : "Previsti:"} {result.expectedStudents} studenti e {result.expectedCompanions} accompagnatori.</p>
+    <p>{result.panel ? "Previsti dalla prenotazione:" : "Previsti:"} {result.expectedStudents} studenti e {result.expectedCompanions} accompagnatori.</p>
     <p>{result.checkedInAt ? `Ingresso registrato il ${date(result.checkedInAt)}: ${result.students} studenti e ${result.companions} accompagnatori.` : "Ingresso non registrato."}</p>
   </div>;
   return <div className="grid gap-2 text-sm">
@@ -84,7 +84,7 @@ export function PresenceSelection({ result, mode, onSubmit, onDismiss, entryTerm
   const familyValid = (result.kind !== "family" && result.kind !== "group") || selected.length > 0 || (mode === "correct" && result.persons.some(person => person.checkedInAt));
   const countsValid = result.kind !== "school" || mode === "cancel" || cancelSchool ||
     (students !== "" && companions !== "" && Number.isInteger(Number(students)) && Number.isInteger(Number(companions)) &&
-      Number(students) >= 0 && Number(students) <= result.expectedStudents && Number(companions) >= 0 && Number(companions) <= result.expectedCompanions && Number(students) + Number(companions) > 0);
+      Number(students) >= 0 && Number(students) <= 1000 && Number(companions) >= 0 && Number(companions) <= 100 && Number(students) + Number(companions) > 0);
   return <form className="grid gap-4" onSubmit={event => {
     event.preventDefault();
     if (!familyValid || !countsValid || (mode !== "enter" && !confirmed)) return;
@@ -101,11 +101,12 @@ export function PresenceSelection({ result, mode, onSubmit, onDismiss, entryTerm
       </label>)}
       <p className="text-sm">{mode === "correct" ? "L’ingresso delle persone deselezionate verrà annullato." : mode === "enter" ? "Gli ingressi già registrati restano validi anche se deselezionati." : "Si annullano solo gli ingressi selezionati."}</p>
     </fieldset> : mode !== "cancel" && !cancelSchool && <div className="grid gap-3 sm:grid-cols-2">
-      <p className="text-sm sm:col-span-2">{result.panel ? "Massimo ammesso per questo Forum" : "Quantità previste"}: {result.expectedStudents} studenti e {result.expectedCompanions} accompagnatori. Indica le persone effettivamente arrivate; se una categoria è assente, inserisci 0.</p>
-      <label className="grid gap-1 text-sm">{copy("Studenti presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="students" min={0} max={result.expectedStudents} step={1} required value={students} onChange={event => { setStudents(event.target.value); setConfirmed(false); }} /></label>
-      <label className="grid gap-1 text-sm">{copy("Accompagnatori presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="companions" min={0} max={result.expectedCompanions} step={1} required value={companions} onChange={event => { setCompanions(event.target.value); setConfirmed(false); }} /></label>
+      <p className="text-sm sm:col-span-2">{result.panel ? "Prenotati per questo Forum" : "Quantità previste"}: {result.expectedStudents} studenti e {result.expectedCompanions} accompagnatori. Indica le persone effettivamente arrivate; se una categoria è assente, inserisci 0.</p>
+      <label className="grid gap-1 text-sm">{copy("Studenti presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="students" min={0} max={1000} step={1} required value={students} onChange={event => { setStudents(event.target.value); setConfirmed(false); }} /></label>
+      <label className="grid gap-1 text-sm">{copy("Accompagnatori presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="companions" min={0} max={100} step={1} required value={companions} onChange={event => { setCompanions(event.target.value); setConfirmed(false); }} /></label>
     </div>}
-    {!countsValid && result.kind === "school" && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">{students === "" || companions === "" ? "Compila entrambe le quantità, anche quando una è 0." : `Inserisci quantità intere da 0 a ${result.expectedStudents} studenti e da 0 a ${result.expectedCompanions} accompagnatori, con almeno una persona in totale.${result.panel ? " I limiti del Forum rispettano la prenotazione e l’eventuale accoglienza generale già registrata." : ""}`}</p>}
+    {result.kind === "school" && mode !== "cancel" && !cancelSchool && countsValid && (Number(students) !== result.expectedStudents || Number(companions) !== result.expectedCompanions) && <p role="status" className="rounded-lg bg-sky-50 p-3 text-sm">Le quantità sono diverse da quelle previste. Confermando registri {Number(students)} studenti e {Number(companions)} accompagnatori effettivamente arrivati.{result.panel ? " La disponibilità della sala viene verificata alla conferma." : ""}</p>}
+    {!countsValid && result.kind === "school" && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">{students === "" || companions === "" ? "Compila entrambe le quantità, anche quando una è 0." : `Inserisci quantità intere da 0 a 1000 studenti e da 0 a 100 accompagnatori, con almeno una persona in totale.`}</p>}
     {mode === "correct" && result.kind === "school" && result.checkedInAt && <label className="flex min-h-14 items-center gap-3 text-sm">
       <input type="checkbox" className="h-6 w-6 shrink-0" checked={cancelSchool} onChange={event => { setCancelSchool(event.target.checked); setConfirmed(false); }} />Annulla tutto l’ingresso della scuola
     </label>}
