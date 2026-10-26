@@ -11,7 +11,7 @@ type BadgeIdentity = Pick<CampaignTemplateData, "firstName" | "lastName" | "grou
 const backgrounds = new Map<CampaignBadgeTemplate, Promise<Buffer>>();
 const font = path.join(process.cwd(), "lib/qrcode/fonts/NotoSans-Regular.ttf");
 
-export async function createCampaignBadge(data: BadgeIdentity, templateId: CampaignBadgeTemplate = CAMPAIGN_BADGE_TEMPLATE): Promise<{ pdf: Attachment; image: Attachment }> {
+export async function createCampaignBadgeImage(data: BadgeIdentity, templateId: CampaignBadgeTemplate = CAMPAIGN_BADGE_TEMPLATE) {
   const name = `${data.firstName} ${data.lastName}`.replace(/\s+/g, " ").trim();
   const group = data.groupName?.replace(/\s+/g, " ").trim() ?? "";
   if (!name) throw new Error("Nome del partecipante mancante per il badge.");
@@ -43,6 +43,11 @@ export async function createCampaignBadge(data: BadgeIdentity, templateId: Campa
   await fitText(name, 1237, 220, 80);
   await fitText(group, 1490, 123, 43);
   const jpeg = await sharp(await background).composite(layers).jpeg({ quality: 95, chromaSubsampling: "4:4:4" }).toBuffer();
+  return { jpeg, template };
+}
+
+export async function createCampaignBadge(data: BadgeIdentity, templateId: CampaignBadgeTemplate = CAMPAIGN_BADGE_TEMPLATE): Promise<{ pdf: Attachment; image: Attachment }> {
+  const { jpeg, template } = await createCampaignBadgeImage(data, templateId);
   // The PDF embeds the exact image shown in the message, at the original aspect ratio.
   const doc = new PDFDocument({ size: [282.3, 501.6], margin: 0, font,
     info: { Title: `Badge ${template.title}`, CreationDate: new Date("2026-10-26T00:00:00Z") } });

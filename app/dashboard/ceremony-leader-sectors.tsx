@@ -6,7 +6,7 @@ import type {
   PairTicketCommand,
 } from "@/lib/ceremonies/leader-tickets";
 import { leaderSectorSubjects } from "@/lib/ceremonies/leader-tickets";
-import { Check, Ticket, Users, X } from "lucide-react";
+import { Check, Download, Ticket, Users, X } from "lucide-react";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { SECTOR_COPY } from "@/lib/ceremonies/sector-copy";
 import {
@@ -14,6 +14,7 @@ import {
   type LeaderBatchCommand,
 } from "@/lib/ceremonies/sector-desk";
 import { CeremonyPersonalBadge } from "./ceremony-personal-badge";
+import { closingLeaderDownloadTickets, CLOSING_DOWNLOAD_COPY } from "@/lib/ceremonies/closing-leader-download";
 type Subject = { registrationId: string; childId: string | null; name: string };
 type Command = LeaderBatchCommand | PairTicketCommand;
 export function CeremonyLeaderSectors({
@@ -40,6 +41,7 @@ export function CeremonyLeaderSectors({
     [decisionPage, setDecisionPage] = useState(0),
     [selected, setSelected] = useState<Subject[]>([]);
   const [pending, setPending] = useState(false),
+    [downloading, setDownloading] = useState(false),
     [stale, setStale] = useState(false),
     [message, setMessage] = useState(""),
     [uncertain, setUncertain] = useState<Command | null>(null),
@@ -48,12 +50,43 @@ export function CeremonyLeaderSectors({
       names: string[];
     } | null>(null);
   const busy = useRef(false),
+    downloadRequest = useRef<AbortController | null>(null),
     dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => () => downloadRequest.current?.abort(), []);
   useEffect(() => {
     if (confirmation) dialog.current?.showModal();
   }, [confirmation]);
   const a = view.allocations.find((a) => a.id === allocation),
-    blocked = pending || stale || !!uncertain;
+    blocked = pending || downloading || stale || !!uncertain;
+  const downloadCopy = CLOSING_DOWNLOAD_COPY[locale];
+  const hasClosingTickets = closingLeaderDownloadTickets(view).length > 0;
+  async function downloadAll() {
+    if (blocked || downloadRequest.current) return;
+    const controller = new AbortController();
+    downloadRequest.current = controller;
+    setDownloading(true);
+    setMessage("");
+    try {
+      const response = await fetch("/dashboard/ceremonies/badges", { cache: "no-store", signal: controller.signal });
+      if (response.status === 404) { setMessage(downloadCopy.empty); return; }
+      if (!response.ok || !response.headers.get("Content-Type")?.startsWith("application/pdf")) throw Error("download_failed");
+      const blob = await response.blob();
+      if (controller.signal.aborted) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "cerimonia-finale-tutti-i-biglietti.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      if (!controller.signal.aborted) setMessage(c.failure);
+    } finally {
+      downloadRequest.current = null;
+      if (!controller.signal.aborted) setDownloading(false);
+    }
+  }
   const subjects = a ? leaderSectorSubjects(view, a) : [];
   const filtered = subjects.filter((p) =>
     `${p.name} ${p.code} ${p.parent ?? ""}`
@@ -163,11 +196,25 @@ export function CeremonyLeaderSectors({
         <p>{t.intro}</p>
         <button
           className="btn-secondary justify-self-start px-4 py-2"
-          disabled={pending || !!uncertain}
+          disabled={pending || downloading || !!uncertain}
           onClick={() => void reload()}
         >
           {c.refresh}
         </button>
+        {kind === "closing" && (
+          <div className="grid justify-items-start gap-2">
+            <button type="button" className="btn-primary inline-flex min-h-11 max-w-full items-center gap-2 px-4 py-2 text-left"
+              disabled={blocked || !hasClosingTickets} onClick={() => void downloadAll()}
+              aria-describedby="closing-download-help" aria-busy={downloading}>
+              <Download size={18} className="shrink-0" aria-hidden="true" />
+              <span>{downloading ? downloadCopy.preparing : downloadCopy.download}</span>
+            </button>
+            <p id="closing-download-help" className="text-sm text-[var(--peace-muted)]">
+              {hasClosingTickets ? downloadCopy.help : downloadCopy.empty}
+            </p>
+            {downloading && <p role="status">{downloadCopy.preparing}</p>}
+          </div>
+        )}
       </header>
       {message && <p role="status">{message}</p>}
       {uncertain && (

@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Cerimonia finale: download unico capogruppo — 2026-10-26
+
+- Pulsante nella scheda finale: tutti i biglietti nominali dei settori/gruppi
+  gestiti in un unico PDF, un biglietto per pagina identico al personale.
+  Comprende tutte le pagine, indipendentemente da selezione e ricerca.
+- Snapshot canonico autenticato, nomi correnti e soli minori con posto;
+  bozze/posti non abbinati esclusi. Download privato progressivo, sette lingue,
+  preparazione/errori e annullamento. Nessuna migration o nuova email.
+- 1.222 test, TypeScript, lint mirato, build isolata, browser 320/390/1440px
+  e PDF di 103 pagine verificati. Commit/push su main e verifica produzione
+  richiesti dall’utente; rilascio limitato al download unico.
+  Dettagli: `docs/cerimonia-finale-download-unico-capogruppo-2026-10-26.md`.
+
 ## Salvataggio completo Git e audit produzione — 2026-10-26
 
 - Per i rilasci successivi, verificare che ogni modifica applicativa da
