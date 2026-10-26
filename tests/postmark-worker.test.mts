@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { createHash } from "node:crypto";
+import { campaignAttachmentsForRecipient } from "../lib/email/campaign-badge.server.ts";
 
 function harness(failSave = false, exhaustBudget = false, recovery?: { results: object[]; pauseFails?: boolean }, audience: "group_leader" | "teacher" = "group_leader") {
   const states = new Map<string, string>();
@@ -41,6 +42,7 @@ function harness(failSave = false, exhaustBudget = false, recovery?: { results: 
   let now = 0;
   const source = ts.transpileModule(readFileSync(new URL("../lib/email/campaign-delivery.server.ts",import.meta.url),"utf8"), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   new Function("require","exports","Date",source)((id:string) => {
+    if(id.includes("campaign-badge.server"))return {campaignAttachmentsForRecipient};
     if(id==="node:crypto")return {createHash};
     if(id.includes("campaign-report"))return {emailHash:(email:string)=>createHash("sha256").update(email).digest("hex")};
     if(id.includes("config")) return {getEmailConfig:()=>({})};

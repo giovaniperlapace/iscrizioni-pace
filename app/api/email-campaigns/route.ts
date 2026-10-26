@@ -1,4 +1,6 @@
 import { parseForumOutreach } from "@/lib/panels/forum-outreach";
+import { campaignBadgeSelectionRequest } from "@/lib/email/campaign-badge";
+import { campaignAttachmentsForRecipient, campaignBadgePreviews } from "@/lib/email/campaign-badge.server";
 import { loadForumOutreachTargets } from "@/lib/panels/forum-outreach.server";
 import { suppressionWarnings } from "@/lib/email/postmark-reporting";
 import { canAccessPanelManagement, isPanelCampaign } from "@/lib/panels/management-access";
@@ -7,7 +9,7 @@ import { getEmailConfig } from "@/lib/email/config";
 import { randomUUID } from "node:crypto";
 import { after, NextResponse } from "next/server";
 import { getCurrentAuthContext, type EventUserRole } from "@/lib/auth/session";
-import { resolveSelectedCampaignRecipientIds } from "@/lib/email/campaign-selection";
+import { resolveSelectedCampaignRecipientIds, selectCampaignSample } from "@/lib/email/campaign-selection";
 import { renderCampaignTemplate, validateCampaignTemplate } from "@/lib/email/campaign-templates";
 import { campaignHtmlToText, renderSafeCampaignHtml } from "@/lib/email/campaign-html.server";
 import {
@@ -175,6 +177,17 @@ async function previewCampaign(
   const selectionOrder = new Map(
     [...selectedIds].map((recipientKey, index) => [recipientKey, index + 1])
   );
+  const badgeTemplates = campaignBadgeSelectionRequest(body.badgeTemplates, filters.audience, body.includePersonalizedBadge);
+  const snapshot = { ...filters, badgeTemplates };
+  const selectedSample = selectCampaignSample(recipients, selectedIds);
+  if (!selectedSample) throw new Error("Seleziona almeno un destinatario.");
+  const sample = await loadCampaignDeliveryData(
+    service, event.id, event.title, selectedSample,
+    canAccessPanelManagement(eventRoles, event.id), `${subject} ${message}`
+  );
+  // Render and validate before persisting a draft, including the common attachments.
+  const badgePreviews = await campaignBadgePreviews(snapshot, sample.templateData,
+    attachments.reduce((sum, attachment) => sum + attachment.file.size, 0));
   const templateId = clean(body.templateId, 80) || null;
   let templateVersion: number | null = null;
   if (templateId) {
@@ -183,7 +196,7 @@ async function previewCampaign(
   }
   const { data: campaign, error: campaignError } = await service.from("email_campaigns").insert({
     event_id: event.id, template_id: templateId, template_version: templateVersion, name,
-    subject_template: subject, body_template: message, filters_snapshot: filters,
+    subject_template: subject, body_template: message, filters_snapshot: snapshot,
     recipient_count: selectedIds.size, status: "draft", created_by: userId,
   }).select("id").single();
   if (campaignError || !campaign) throw new Error(campaignError?.message ?? "Impossibile creare l'anteprima.");
@@ -211,27 +224,16 @@ async function previewCampaign(
     await service.from("email_campaigns").delete().eq("id", campaign.id);
     throw cause;
   }
-  const selectedSample = recipients.find((recipient) =>
-    selectedIds.has(recipient.recipientKey)
-  );
-  if (!selectedSample) throw new Error("Seleziona almeno un destinatario.");
-  const sample = await loadCampaignDeliveryData(
-    service,
-    event.id,
-    event.title,
-    selectedSample,
-    canAccessPanelManagement(eventRoles, event.id),
-    `${subject} ${message}`
-  );
   const recipientPreviews = await loadCampaignRecipientPreviews(
     recipients,
     selectedIds,
     event.id,
     canAccessPanelManagement(eventRoles, event.id)
   );
-  await service.from("audit_logs").insert({ event_id: event.id, actor_user_id: userId, action: "email_campaign.preview_created", entity_table: "email_campaigns", entity_id: campaign.id, metadata: { recipient_count: selectedIds.size, filters, attachment_count: attachments.length } });
+  await service.from("audit_logs").insert({ event_id: event.id, actor_user_id: userId, action: "email_campaign.preview_created", entity_table: "email_campaigns", entity_id: campaign.id, metadata: { recipient_count: selectedIds.size, filters, attachment_count: attachments.length, badge_templates: badgeTemplates } });
   return NextResponse.json({
     campaignId: campaign.id,
+    badgePreviews,
     ...recipientSelectionSummary(recipientPreviews),
     testRecipientEmail: testEmail,
     sampleRecipientName: `${sample.templateData.firstName} ${sample.templateData.lastName}`.trim(),
@@ -332,9 +334,7 @@ async function updateCampaignRecipients(
     event.id,
     canAccessPanelManagement(eventRoles, event.id)
   );
-  const selectedSample = recipients.find((recipient) =>
-    selectedIds.has(recipient.recipientKey)
-  );
+  const selectedSample = selectCampaignSample(recipients, selectedIds);
   if (!selectedSample) throw new Error("Seleziona almeno un destinatario valido.");
   const sample = await loadCampaignDeliveryData(
     service,
@@ -350,6 +350,7 @@ async function updateCampaignRecipients(
   });
   return NextResponse.json({
     campaignId,
+    badgePreviews: await campaignBadgePreviews(campaign.filters_snapshot, sample.templateData),
     ...recipientSelectionSummary(recipientPreviews),
     testRecipientEmail: testEmail,
     sampleRecipientName: `${sample.templateData.firstName} ${sample.templateData.lastName}`.trim(),
@@ -410,11 +411,13 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     service,
     campaign.event_id,
     event?.title ?? "Evento",
-    recipients[0],
+    selectCampaignSample(recipients)!,
     true,
     `${campaign.subject_template} ${campaign.body_template}`
   );
-  const attachments = await loadCampaignAttachments(service, campaignId);
+  const attachments = await campaignAttachmentsForRecipient(
+    await loadCampaignAttachments(service, campaignId), campaign.filters_snapshot, sample.templateData
+  );
   if (action === "test") {
     const html = appendInlineImages(
       renderSafeCampaignHtml(campaign.body_template, sample.templateData),

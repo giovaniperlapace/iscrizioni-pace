@@ -1,4 +1,6 @@
 import { canAccessPanelManagement, isPanelCampaign } from "../lib/panels/management-access.ts";
+import { selectCampaignSample } from "../lib/email/campaign-selection.ts";
+import { campaignBadgePreviews } from "../lib/email/campaign-badge.server.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -77,6 +79,7 @@ function campaignFixture(fail?: (url: URL, method: string) => boolean) {
   const campaign = { id: "campaign", status: "ready", event_id: "event", test_sent_at: "previous-test" };
   const { db, calls } = database({ email_campaigns: [campaign], email_campaign_recipients: recipients }, fail);
   const update = fn("app/api/email-campaigns/route.ts", "updateCampaignRecipients", {
+    selectCampaignSample, campaignBadgePreviews,
     ...loaders, createSupabaseServiceClient: () => db, getCurrentOperationalEvent: async () => ({ id: "event" }),
     suppressionWarnings: async () => ({checked: true, recipients: []}),
     loadCampaignRecipientPreviews: async (rows: unknown[]) => rows,

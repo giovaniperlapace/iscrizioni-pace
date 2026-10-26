@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/*": ["./lib/qrcode/fonts/NotoSans-Regular.ttf"],
+    "/api/email-campaigns": ["./lib/email/assets/*-v1.png"],
+    "/api/cron/*": ["./lib/email/assets/*-v1.png"],
   },
 };
 

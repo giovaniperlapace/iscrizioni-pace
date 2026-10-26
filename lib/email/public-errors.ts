@@ -12,6 +12,11 @@ export type PublicCampaignError = {
 };
 
 const EXPECTED_CAMPAIGN_ERRORS = [
+  /^Opzione badge non valida\.$/,
+  /^Il badge personalizzato è disponibile per i partecipanti\.$/,
+  /^Nome del partecipante mancante per il badge\.$/,
+  /^Testo troppo lungo per il badge\.$/,
+  /^Con il badge gli allegati non possono superare complessivamente 6 MB\.$/,
   /^Nessun evento corrente configurato\.$/,
   /^I filtri non individuano destinatari raggiungibili\.$/,
   /^Nome, oggetto e messaggio sono obbligatori\.$/,

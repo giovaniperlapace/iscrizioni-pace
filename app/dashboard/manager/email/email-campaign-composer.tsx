@@ -10,6 +10,7 @@ import { ChevronDown, Eye, FileText, Image as ImageIcon, Mail, Paperclip, Plus, 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EMAIL_DELIVERY_COPY } from "@/lib/i18n/email-delivery";
+import { CAMPAIGN_BADGE_TEMPLATES, type CampaignBadgeTemplate } from "@/lib/email/campaign-badge";
 import { CAMPAIGN_TEMPLATE_FIELDS } from "@/lib/email/campaign-templates";
 import { CampaignRichTextEditor } from "./campaign-rich-text-editor";
 
@@ -60,6 +61,7 @@ type Preview = {
   sampleRecipientName: string;
   previewSubject: string;
   previewHtml: string;
+  badgePreviews?: Array<{ templateId: CampaignBadgeTemplate; label: string; fileName: string; sizeBytes: number; pdfBase64: string; imageBase64: string }>;
   recipients: RecipientRow[];
   attachments: Array<{
     fileName: string;
@@ -123,6 +125,8 @@ export function EmailCampaignComposer({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(() => forumOutreach ? initialRecipients.filter(recipient => recipient.selected).map(recipient => recipient.recipientKey) : []);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
+  const [badgeTemplates, setBadgeTemplates] = useState<CampaignBadgeTemplate[]>([]);
+  const includePersonalizedBadge = badgeTemplates.length > 0;
   const [testSent, setTestSent] = useState(false);
   const [showSendConfirmation, setShowSendConfirmation] = useState(false);
   const [notice, setNotice] = useState("");
@@ -286,6 +290,7 @@ export function EmailCampaignComposer({
       formData.set("message", message);
       formData.set("status", "active");
       formData.set("audience", audience);
+      formData.set("badgeTemplates", JSON.stringify(badgeTemplates));
       formData.set("panelId", panelFilter);
       if (forumOutreach) formData.set("forumOutreach", forumOutreach);
       formData.set("schoolName", schoolFilter);
@@ -350,6 +355,7 @@ export function EmailCampaignComposer({
   function changeAudience(nextAudience: "participants" | "group_leaders" | "teachers") {
     if (forumOutreach || nextAudience === audience) return;
     setAudience(nextAudience);
+    setBadgeTemplates([]);
     setSelectedRecipientIds([]);
     setRecipientSearch("");
     setGroupFilter("");
@@ -920,10 +926,11 @@ export function EmailCampaignComposer({
             <h3 className="text-lg font-bold">Aggiungi file o immagini</h3>
           </div>
           <p className="mt-1 text-sm text-[var(--peace-muted)]">
-            Fino a 5 file, massimo 5 MB ciascuno e 10 MB complessivi. Le immagini possono essere mostrate anche nel corpo dell’email.
+            Fino a 5 file, massimo 5 MB ciascuno. {includePersonalizedBadge ? "Massimo 6 MB complessivi, badge inclusi." : "Massimo 10 MB complessivi."} Le immagini possono essere mostrate anche nel corpo dell’email.
           </p>
         </div>
-        <label className="grid max-w-xl gap-2 text-sm font-semibold">
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+        <label className="grid min-w-0 gap-2 text-sm font-semibold">
           Scegli file
           <input
             type="file"
@@ -941,6 +948,27 @@ export function EmailCampaignComposer({
             }}
           />
         </label>
+        <fieldset className="grid min-w-0 gap-3">
+          <legend className="mb-2 text-sm font-semibold">Badge personalizzati</legend>
+          <p className="text-sm text-[var(--peace-muted)]">
+            Scegli uno o più badge. Ogni badge avrà nome, cognome e gruppo del partecipante,
+            nel corpo dell’email e in allegato PDF, anche nella prova.
+            {audience !== "participants" ? " Disponibili selezionando l’elenco Partecipanti." : " Se manca il gruppo, lo spazio resta vuoto."}
+          </p>
+          {CAMPAIGN_BADGE_TEMPLATES.map(template => (
+            <label key={template.id} className="flex items-start gap-3 rounded-md border border-[var(--peace-border)] p-3 text-sm font-semibold">
+              <input type="checkbox" className="mt-1" checked={badgeTemplates.includes(template.id)}
+                disabled={busy || audience !== "participants"}
+                onChange={(event) => {
+                  setBadgeTemplates(current => event.target.checked ? [...current, template.id] : current.filter(id => id !== template.id));
+                  resetPreview();
+                }} />
+              <span>{template.label}</span>
+            </label>
+          ))}
+          {includePersonalizedBadge ? <p className="text-xs text-[var(--peace-muted)]">Massimo 6 MB complessivi, tutti i badge inclusi.</p> : null}
+        </fieldset>
+        </div>
         {attachments.length ? (
           <div className="grid gap-2">
             {attachments.map((attachment) => {
@@ -981,7 +1009,7 @@ export function EmailCampaignComposer({
             })}
           </div>
         ) : (
-          <p className="rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">Nessun file allegato.</p>
+          <p className="rounded-md bg-[#f7fbfe] p-4 text-sm text-[var(--peace-muted)]">{includePersonalizedBadge ? "I badge selezionati saranno generati per ogni partecipante. Nessun altro file allegato." : "Nessun file allegato."}</p>
         )}
       </section>
 
@@ -1210,6 +1238,13 @@ export function EmailCampaignComposer({
               <p className="mt-1 font-bold">{preview.previewSubject}</p>
               <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">Messaggio</p>
               <div className="mt-2 rounded bg-white p-4 text-sm [&_h2]:text-xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6" dangerouslySetInnerHTML={{ __html: preview.previewHtml }} />
+              {preview.badgePreviews?.map(badge => (
+                <div key={badge.templateId} className="mt-3 rounded bg-white p-4">
+                  <p className="mb-3 text-sm font-semibold">Badge nel corpo dell’email · {badge.label}</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Private generated preview, never sent to the image optimizer. */}
+                  <img src={`data:image/jpeg;base64,${badge.imageBase64}`} alt={`Badge ${badge.label} di ${preview.sampleRecipientName}`} width={941} height={1672} className="h-auto w-full max-w-sm" />
+                </div>
+              ))}
               <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[var(--peace-muted)]">File e immagini</p>
               {preview.attachments.length ? (
                 <ul className="mt-2 grid gap-2">
@@ -1223,9 +1258,16 @@ export function EmailCampaignComposer({
                     </li>
                   ))}
                 </ul>
-              ) : (
+              ) : !preview.badgePreviews?.length ? (
                 <p className="mt-2 text-sm text-[var(--peace-muted)]">Nessun file allegato.</p>
-              )}
+              ) : null}
+              {preview.badgePreviews?.map(badge => (
+                <div key={badge.templateId} className="mt-3 rounded border border-[var(--peace-border)] bg-white p-3 text-sm">
+                  <p className="font-semibold">{badge.label} · {preview.sampleRecipientName}</p>
+                  <p className="mt-1 text-[var(--peace-muted)]">PDF personalizzato. {formatFileSize(badge.sizeBytes)}</p>
+                  <a className="btn-secondary mt-3 inline-flex" href={`data:application/pdf;base64,${badge.pdfBase64}`} download={badge.fileName}>Scarica PDF · {badge.label}</a>
+                </div>
+              ))}
             </div>
             <div className="mt-5 grid gap-4 rounded-md border border-[var(--peace-border)] p-4">
               <div className="rounded-md bg-[#f7fbfe] p-4 text-sm">
@@ -1336,6 +1378,7 @@ export function EmailCampaignComposer({
                     La campagna include {preview.attachments.length} file.
                   </p>
                 ) : null}
+                {preview.badgePreviews?.length ? <p className="mt-2 text-sm font-semibold">Badge personalizzati nel corpo dell’email e in allegato PDF: {preview.badgePreviews.map(badge => badge.label).join(", ")}.</p> : null}
                 <div className="mt-6 flex flex-wrap justify-end gap-3">
                   <button
                     type="button"

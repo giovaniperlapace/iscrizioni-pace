@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Campagne: badge personale nel messaggio e allegato — 2026-10-26
+
+- Estensione successiva: tre caselle indipendenti per Piazza Inferiore viola,
+  Prato Basilica superiore verde e Basilica Inferiore arancione; selezionabili
+  insieme. Anteprima/PDF/CID distinti, limite totale comprensivo di tutti i badge.
+  Nuove scelte in filters_snapshot.badgeTemplates; vecchia chiave singola
+  badgeTemplate compatibile per bozze/reinvii viola. Nessuna migration.
+
+- Casella facoltativa accanto ai file, per audience Partecipanti: badge Piazza
+  Inferiore viola con nome/cognome e gruppo nella fascia bianca; gruppo assente
+  vuoto. JPEG incorporato tramite CID e identico contenuto nel PDF allegato.
+- Anteprima visiva e download PDF, prova obbligatoria con badge, campione
+  deterministico e invalidazione dopo modifiche. File comuni conservati;
+  con badge massimo 6 MiB totali inclusi PDF/JPEG, senza badge limiti preesistenti.
+- Versione in filters_snapshot, copiata dai reinvii esistenti; nessuna migration.
+  Dati canonici del partecipante anche per recapito delegato, cache solo comuni;
+  errore lettura identità/gruppo blocca il messaggio. Asset versionato e font locali.
+- Rilascio production con commit/push autorizzato il 26 ottobre. Nessun invio
+  reale di prova o migration. 1.175 test, build, TypeScript e browser verificati.
+  Verifiche e limiti:
+  `docs/email-badge-personalizzato-2026-10-26.md`.
+
 ## Scuole: quantità effettive indipendenti dalla prenotazione — 2026-10-26
 
 - Su richiesta, accoglienza generale e Forum registrano studenti/accompagnatori

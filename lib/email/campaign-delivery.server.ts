@@ -1,4 +1,5 @@
 import { loadCampaignCeremonySectors } from "@/lib/email/campaign-ceremony-sectors.server";
+import { campaignAttachmentsForRecipient } from "@/lib/email/campaign-badge.server";
 import { emailHash } from "@/lib/email/campaign-report";
 import { getEmailConfig } from "@/lib/email/config";
 import { isCampaignRecipientOperational, RegistrationNotOperationalError } from "@/lib/email/campaign-eligibility";
@@ -40,6 +41,7 @@ type CampaignRow = {
   event_id: string;
   subject_template: string;
   body_template: string;
+  filters_snapshot: unknown;
   retry_of_campaign_id?: string | null;
   events: { title: string } | Array<{ title: string }> | null;
 };
@@ -107,7 +109,7 @@ async function processCampaignBlock(options: {
   const campaignIds = [...new Set(recipients.map((row) => row.campaign_id))];
   const { data: campaignRows, error: campaignsError } = await service
     .from("email_campaigns")
-    .select("id,event_id,subject_template,body_template,retry_of_campaign_id,events(title)")
+    .select("id,event_id,subject_template,body_template,filters_snapshot,retry_of_campaign_id,events(title)")
     .in("id", campaignIds);
   if (campaignsError) throw new Error(campaignsError.message);
   const campaigns = new Map(
@@ -145,7 +147,11 @@ async function processCampaignBlock(options: {
         attachmentLoad = loadCampaignAttachments(service, campaign.id);
         attachments.set(campaign.id, attachmentLoad);
       }
-      const campaignAttachments = await attachmentLoad;
+      // Only the common files are cached. Personal data belongs to this recipient,
+      // including when their message is routed to a delegated group leader.
+      const campaignAttachments = await campaignAttachmentsForRecipient(
+        await attachmentLoad, campaign.filters_snapshot, delivery.templateData
+      );
       const html = appendInlineImages(
         renderSafeCampaignHtml(campaign.body_template, delivery.templateData),
         campaignAttachments
@@ -382,7 +388,7 @@ export async function loadCampaignDeliveryData(
   if (!recipient.participantId || !recipient.registrationId) {
     throw new Error("Destinatario partecipante non valido.");
   }
-  const [{ data: participant }, { data: assignment }, { data: panelChoices }, email] = await Promise.all([
+  const [{ data: participant, error: participantError }, { data: assignment, error: assignmentError }, { data: panelChoices }, email] = await Promise.all([
     service
       .from("participants")
       .select("id,first_name,last_name,public_code")
@@ -403,6 +409,8 @@ export async function loadCampaignDeliveryData(
       .eq("event_moments.event_id", eventId) : Promise.resolve({ data: [] }),
     loadDeliveryEmail(service, recipient),
   ]);
+  if (participantError) throw participantError;
+  if (assignmentError) throw assignmentError;
   const group = relatedOne(assignment?.groups);
   if (!participant || !email) {
     throw new Error("Destinatario non più raggiungibile.");
