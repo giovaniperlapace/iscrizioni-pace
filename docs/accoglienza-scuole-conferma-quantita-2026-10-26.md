@@ -28,3 +28,23 @@ del repository. Integrati i due commit main già pubblicati sulla finestra della
 L’utente precisa 16 studenti e 4 accompagnatori: tutte le cinque prenotazioni
 attive prevedono meno di 4 accompagnatori. La correzione UI non autorizza quantità
 oltre prenotazione; richiesti scuola e Forum per risolvere il dato specifico.
+
+## Risoluzione del caso Forum 1
+
+L’utente ha identificato il Forum 1, con una sola prenotazione scuola attiva.
+Lettura canonica: prenotazione generale e Forum entrambe da 18 studenti e
+3 accompagnatori. Adeguate atomicamente a 16 studenti e 4 accompagnatori
+indicati dall’utente (21 → 20 posti), con lock su scuola, Forum e settore,
+guardie su stato/valori precedenti/evento corrente/assenza ingressi,
+validazione canonica di capienza e sovrapposizioni e audit
+`school_booking.operational_count_correction` con attore manutenzione esplicito.
+Nessuna identità operatore impersonata. QR e stato email confrontati e invariati.
+Verifica dopo commit DB: 16/4 sia nella scuola sia nella prenotazione Forum,
+zero ingressi attivi. L’operatore deve rileggere il QR e confermare l’arrivo.
+
+Backup completo remoto custom prima della correzione, accesso 0600,
+28.326.074 byte; elenco e decodifica integrale pg_restore verificati.
+SHA-256: `f1bdd79d81b2c0e3fa04170777b4e6bb5e35e9f7c3bd86db64325f93993f67db`.
+
+Codice `a911f19` produzione READY, alias del dominio verificato e login HTTP 200.
+Commit e push eseguiti su richiesta; nessuna modifica allo schema database.
