@@ -22,6 +22,7 @@ export type PublicationNotice = {
       nomineeId?: string;
       badgeCode?: string;
       groupName?: string | null;
+      communicationDelegated?: boolean;
     }[];
   };
 };

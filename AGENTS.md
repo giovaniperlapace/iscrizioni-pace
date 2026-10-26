@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Cerimonia finale: PDF orizzontali nel report capogruppo - 2026-10-26
+
+- Report cumulativo mantenuto, con un PDF per settore per le sole persone che
+  hanno delegato esplicitamente le comunicazioni al destinatario, nei gruppi
+  ancora autorizzati. Sette badge orizzontali colorati per A4, nome/cognome,
+  settore e gruppo; spazio di chiusura e contorni tratteggiati. Su richiesta,
+  nessuna istruzione di stampa/ritaglio né etichetta di chiusura in PDF o email.
+- Delega registrata prioritaria rispetto all'assegnatore; invalidità o perdita
+  dello scope non causano inoltri ad altri capigruppo. Email personale prioritaria,
+  minori espliciti, nomine attive e report senza delega conservati; i non delegati
+  non entrano nei PDF. Badge personali originali, sito e scanner invariati.
+- Migration `20261026170000`, solo funzioni; invii ancora disattivati. 1.205 test,
+  TypeScript, lint mirato, SQL/concorrenza e anteprime renderizzate verificati.
+  Postmark API_TEST accetta anche 1.005 delegati in tre PDF senza consegna reale.
+  Dettagli e stato rilascio:
+  `docs/cerimonia-finale-report-badge-orizzontali-2026-10-26.md`.
+
 ## Cerimonia finale: tre settori e badge — 2026-10-26
 
 - Nuova richiesta: Chiesa Basilica inferiore arancione 200, Piazza inferiore

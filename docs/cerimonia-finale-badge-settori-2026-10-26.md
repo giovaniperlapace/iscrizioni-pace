@@ -76,7 +76,9 @@ Al claim si ricontrollano nomine, minori, iscrizioni, contatto personale e scope
    Le notifiche pendenti dello stesso referente vengono raccolte nel report;
    le righe sorgenti conservano il suo identificativo per la verifica dell’esito.
    Nessun limite applicativo alle prime 1.000 persone. I badge sono scaricabili
-   dalla dashboard; il report non allega migliaia di PDF.
+   dalla dashboard. Estensione successiva: un PDF con badge orizzontali per
+   settore, limitato alle deleghe esplicite; vedere
+   `docs/cerimonia-finale-report-badge-orizzontali-2026-10-26.md`.
 3. Senza contatto personale né capogruppo corrente utilizzabile: fallimento
    esplicito, senza inventare un destinatario.
 

@@ -117,7 +117,7 @@ try {
   const closing=readFileSync('scripts/configure-closing-ceremony-2026-10-26.sql','utf8');
   const replacement=readFileSync('scripts/replace-closing-sectors-with-badges-2026-10-26.sql','utf8');
   const setup="begin;select set_config('app.closing_event',f(1)::text,true);select set_config('app.closing_actor',f(33)::text,true);";
-  for (const check of ['closing-badges','closing-badges-large','closing-badges-direct','closing-badges-capacity']) {
+  for (const check of ['closing-badges','closing-badges-large','closing-badges-direct','closing-badges-capacity','closing-leader-badge-strips']) {
    try {console.log(psql(setup+closing+replacement+readFileSync(`tests/sql/${check}.sql`,'utf8')+'rollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}
    catch(e){throw new Error(check+': '+e.stderr);}
   }

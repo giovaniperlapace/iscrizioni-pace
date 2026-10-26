@@ -20,6 +20,18 @@ begin
  assert notice->>'destinationEmail'='direct@example.invalid';
  assert notice->'payload'->'lines'->0->>'badgeCode'='CLOSING_PURPLE';
  assert claim_ceremony_publication_email() is null;
+ -- A Manager's direct nominal allocation has no allocation.group_id. A valid
+ -- communication delegate still gets the current group on its printable badge.
+ insert into groups(id,event_id,name) values(f(17800),f(1),'Direct delegated group');
+ insert into group_memberships(group_id,user_id,role,is_primary) values(f(17800),f(36),'capogruppo',true);
+ update participant_group_assignments set is_current=false where registration_id=f(10);
+ insert into participant_group_assignments(registration_id,group_id,is_current,source,status) values(f(10),f(17800),true,'manager','confirmed');
+ update registrations set source='capogruppo',created_by=f(36) where id=f(10);
+ insert into registration_questionnaire_answers(registration_id,event_id,questionnaire_version,answers) values(f(10),f(1),'direct-delegate',jsonb_build_object('contact',jsonb_build_object('useLeaderEmail',true,'communicationDelegateUserId',f(36))));
+ delete from participant_contacts where participant_id=f(20);
+ notice:=app.closing_leader_report_lines(p,f(36));
+ assert jsonb_array_length(notice)=2;
+ assert (select bool_and(x->>'communicationDelegated'='true' and x->>'groupId'=f(17800)::text and x->>'groupName'='Direct delegated group') from jsonb_array_elements(notice) x);
 end $$;
 reset role;
 select 'PASS closing Manager direct publication: drafts hidden, one family notice, personal PDF contract, revoked child removed before claim';

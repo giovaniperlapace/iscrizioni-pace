@@ -23,6 +23,9 @@ export function renderClosingBadgeEmail(notice: PublicationNotice, appUrl: strin
       : it ? "Ti è stato assegnato l’accesso al settore indicato. Trovi il badge personale in allegato PDF, da scaricare e mostrare all’ingresso, e nella tua iscrizione sul sito. La sistemazione nel settore è a riempimento." : "You have been assigned access to the sector shown below. Download your personal badge from the attached PDF and show it at the entrance. It is also available in your registration on the website. Places within the sector are filled on arrival.";
     const date = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Rome" });
     const paragraphs = [title, `${date.format(new Date(notice.payload.startsAt))} · ${notice.payload.location}`, intro];
+    if (report && notice.payload.lines.some(line => line.communicationDelegated === true)) paragraphs.push(it
+      ? "Per le persone che ti hanno delegato le comunicazioni trovi un PDF allegato per ogni settore interessato, con badge nominativi orizzontali. Gli allegati includono soltanto le persone con delega attiva nei tuoi gruppi."
+      : "For people who delegated their communications to you, a PDF is attached for each relevant sector, with horizontal personal badges. Attachments include only people with an active delegation in your groups.");
     if (report) {
       if (!notice.payload.snapshotAt) throw Error("report_snapshot_missing");
       paragraphs.push(`${it ? "Riepilogo aggiornato al" : "Snapshot as of"} ${date.format(new Date(notice.payload.snapshotAt))} (Roma)`);
