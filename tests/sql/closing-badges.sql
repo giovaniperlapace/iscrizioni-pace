@@ -41,10 +41,11 @@ begin
  assert get_ceremony_leader_tickets(f(1),f(36))->'allocations'->0->>'badgeCode'='CLOSING_ORANGE';
  assert app.ceremony_subject_seats(f(1),f(10))->0->>'badgeCode'='CLOSING_ORANGE';
  assert claim_ceremony_publication_email() is null;
- begin perform set_closing_badge_delivery(f(1),f(33),(select revision from ceremony_plans where id=p),'{}',true);raise exception 'enabled without instructions';exception when invalid_parameter_value then null;end;
- instructions:=jsonb_build_object('CLOSING_ORANGE',jsonb_build_object('it','Istruzione sintetica arancione','en','Synthetic orange instruction'),
-  'CLOSING_PURPLE',jsonb_build_object('it','Istruzione sintetica viola','en','Synthetic purple instruction'),
-  'CLOSING_GREEN',jsonb_build_object('it','Istruzione sintetica verde','en','Synthetic green instruction'));
+ begin perform set_closing_badge_delivery(f(1),f(33),(select revision from ceremony_plans where id=p),'[]',true);raise exception 'enabled with malformed settings';exception when invalid_parameter_value then null;end;
+ -- Approved email templates are independent from the separate instruction campaigns.
+ instructions:='{}'::jsonb;
+ assert app.closing_badge_instructions_valid(instructions);
+ assert set_closing_badge_delivery(f(1),f(33),-1,instructions,true)->>'status'='conflict';
  begin perform set_closing_badge_delivery(f(1),f(36),(select revision from ceremony_plans where id=p),instructions,true);raise exception 'leader enabled delivery';exception when insufficient_privilege then null;end;
  assert set_closing_badge_delivery(f(1),f(33),(select revision from ceremony_plans where id=p),instructions,true)->>'status'='saved';
  update ceremony_publication_emails set created_at=now()-interval '2 hours' where plan_id=p and user_id=f(36);
@@ -56,6 +57,7 @@ begin
  notice:=claim_ceremony_publication_email();
  assert notice->>'destinationEmail'='badge-person@example.invalid' and jsonb_array_length(notice->'payload'->'lines')=2,notice;
  assert notice->'payload'->>'badgeWorkflow'='true';
+ assert notice->'payload'->'instructions'='{}'::jsonb;
  notice:=claim_ceremony_publication_email();
  assert notice->>'userId'=f(36)::text and notice->'payload'->>'noticeType'='leader_contacts',notice;
  assert jsonb_array_length(notice->'payload'->'lines')=1 and notice->'payload'->'lines'->0->>'name'='Other Test',notice;
