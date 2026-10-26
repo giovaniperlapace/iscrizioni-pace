@@ -101,16 +101,18 @@ export function PresenceSelection({ result, mode, onSubmit, onDismiss, entryTerm
       </label>)}
       <p className="text-sm">{mode === "correct" ? "L’ingresso delle persone deselezionate verrà annullato." : mode === "enter" ? "Gli ingressi già registrati restano validi anche se deselezionati." : "Si annullano solo gli ingressi selezionati."}</p>
     </fieldset> : mode !== "cancel" && !cancelSchool && <div className="grid gap-3 sm:grid-cols-2">
+      <p className="text-sm sm:col-span-2">{result.panel ? "Massimo ammesso per questo Forum" : "Quantità previste"}: {result.expectedStudents} studenti e {result.expectedCompanions} accompagnatori. Indica le persone effettivamente arrivate; se una categoria è assente, inserisci 0.</p>
       <label className="grid gap-1 text-sm">{copy("Studenti presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="students" min={0} max={result.expectedStudents} step={1} required value={students} onChange={event => { setStudents(event.target.value); setConfirmed(false); }} /></label>
       <label className="grid gap-1 text-sm">{copy("Accompagnatori presenti")}<input className="field min-h-12" type="number" inputMode="numeric" name="companions" min={0} max={result.expectedCompanions} step={1} required value={companions} onChange={event => { setCompanions(event.target.value); setConfirmed(false); }} /></label>
     </div>}
+    {!countsValid && result.kind === "school" && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">{students === "" || companions === "" ? "Compila entrambe le quantità, anche quando una è 0." : `Inserisci quantità intere da 0 a ${result.expectedStudents} studenti e da 0 a ${result.expectedCompanions} accompagnatori, con almeno una persona in totale.${result.panel ? " I limiti del Forum rispettano la prenotazione e l’eventuale accoglienza generale già registrata." : ""}`}</p>}
     {mode === "correct" && result.kind === "school" && result.checkedInAt && <label className="flex min-h-14 items-center gap-3 text-sm">
       <input type="checkbox" className="h-6 w-6 shrink-0" checked={cancelSchool} onChange={event => { setCancelSchool(event.target.checked); setConfirmed(false); }} />Annulla tutto l’ingresso della scuola
     </label>}
     {mode === "correct" && (result.kind === "family" || result.kind === "group") && selected.length === 0 && result.persons.some(person => person.checkedInAt) && <p role="status" className="text-sm font-semibold">Salvando annullerai tutti gli ingressi attualmente registrati.</p>}
     {mode !== "enter" && <label className="flex min-h-14 items-center gap-3 text-sm"><input type="checkbox" name="confirmCorrection" className="h-6 w-6 shrink-0" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Confermo {(mode === "cancel" || cancelSchool || ((result.kind === "family" || result.kind === "group") && selected.length === 0)) ? "l’annullamento degli ingressi indicati" : copy("la correzione delle presenze indicate")}.</label>}
     <div className={`${result.kind === "group" ? "" : "sticky bottom-0"} flex flex-wrap gap-2 border-t border-[var(--peace-border)] bg-white py-3`}>
-      <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || !countsValid || (mode !== "enter" && !confirmed)}>{result.kind === "school" && result.panel && mode === "enter" && result.eventCheckedIn === false ? "Registra evento e ingresso al Forum" : copy(labels[mode])}</button>
+      <button className="btn-primary min-h-12 px-4" type="submit" disabled={!familyValid || (mode !== "enter" && !confirmed)}>{result.kind === "school" && result.panel && mode === "enter" && result.eventCheckedIn === false ? "Registra evento e ingresso al Forum" : copy(labels[mode])}</button>
       <button className="btn-secondary min-h-12 px-4" type="button" onClick={onDismiss}>Chiudi senza modifiche</button>
     </div>
   </form>;
