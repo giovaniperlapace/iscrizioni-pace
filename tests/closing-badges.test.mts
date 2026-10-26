@@ -26,15 +26,15 @@ test("closing badge capacities and localized colors are distinct from opening se
   assert.equal(parseCeremonySeatInfo([{ ...parsed[0], kind: "opening" }]), null);
 });
 
-test("personal closing mail is bilingual, escapes content, includes only assigned-sector instructions and requires approved text", () => {
+test("personal closing mail uses approved text and cutoff, escapes identity and places the badge before the farewell", () => {
   const mail = renderClosingBadgeEmail(notice, "https://example.invalid");
   assert.match(mail.html, /lang="it"[\s\S]*lang="en"/);
   assert.match(mail.html, /Ada &lt;Test&gt; &amp; Famiglia/);
-  assert.match(mail.text, /16:15/);
-  assert.match(mail.text, /PDF/);
-  assert.match(mail.text, /ISTRUZIONI SINTETICHE Arancione/);
-  assert.doesNotMatch(mail.text, /ISTRUZIONI SINTETICHE Verde|ISTRUZIONI SINTETICHE Viola/);
-  assert.throws(() => renderClosingBadgeEmail({ ...notice, payload: { ...notice.payload, instructions: {} } }, "https://example.invalid"), /instructions_missing/);
+  assert.equal(mail.text.split("\n\n---\n\n")[0], "Ciao Ada <Test> & Famiglia,\n\nl'immagine qui sotto è il biglietto di ingresso per partecipare alla cerimonia finale, lo trovi anche scaricabile in allegato a questa mail. Ti è stato assegnato il settore Chiesa Basilica inferiore. L’accesso sarà consentito entro le 14:30.\n\nBuona cerimonia finale!");
+  assert.match(mail.text, /Entry will be permitted until 14:30/);
+  assert.match(mail.html, /L’accesso sarà consentito entro le 14:30\.[\s\S]*src="cid:closing-badge-0@iscrizioni-pace"[\s\S]*Buona cerimonia finale!/);
+  assert.doesNotMatch(mail.text, /16:15|ISTRUZIONI SINTETICHE|dashboard/);
+  assert.deepEqual(renderClosingBadgeEmail({ ...notice, payload: { ...notice.payload, instructions: {} } }, "https://example.invalid"), mail);
 });
 
 test("family receives a downloadable PDF and unique inline badge for every explicit nominee", async () => {
@@ -46,9 +46,24 @@ test("family receives a downloadable PDF and unique inline badge for every expli
   assert.equal(new Set(pdfs.map(p => p.filename)).size, 3);
   assert.equal(new Set(images.map(p => p.cid)).size, 3);
   for (const pdf of pdfs) { assert.equal(pdf.content.subarray(0, 4).toString(), "%PDF"); assert.ok(!pdf.cid); }
-  for (const img of images) assert.ok(mail.html.includes(`src="cid:${img.cid}"`));
+  for (const [index, img] of images.entries()) {
+    assert.equal(mail.html.split(`src="cid:${img.cid}"`).length - 1, 2);
+    assert.ok(mail.html.indexOf(`Ciao Persona sintetica ${index},`) < mail.html.indexOf(`src="cid:${img.cid}"`));
+  }
   assert.doesNotMatch(mail.html, /src="https?:/);
   assert.ok(mail.attachments.reduce((n, a) => n + a.content.length, 0) < 6 * 1024 * 1024);
+});
+
+test("only Prato personal mail clarifies that seating is available in both languages", () => {
+  for (const sector of CLOSING_BADGE_SECTORS) {
+    const mail = renderClosingBadgeEmail({ ...notice, payload: { ...notice.payload, lines: [{ ...notice.payload.lines[0], sector: sector.name, badgeCode: sector.code }] } }, "https://example.invalid");
+    for (const body of [mail.text, mail.html]) {
+      if (sector.code === "CLOSING_GREEN") {
+        assert.match(body, /Nonostante il nome, anche nel settore Prato Basilica superiore ci saranno posti a sedere\./);
+        assert.match(body, /Despite its name, seating will also be available/);
+      } else assert.doesNotMatch(body, /posti a sedere|seating will/);
+    }
+  }
 });
 
 test("leader contact report includes all 1005 names without individual mail or attachment explosion", async () => {

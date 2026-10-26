@@ -85,3 +85,34 @@ Rilettura indipendente: revisione 29, tre settori/3.500 posti, zero nomine,
 assegnazioni o bozze; quattro notifiche storiche ancora accepted.
 Copia pulita dei soli file del rilascio da npm ci: **1.191 test**, TypeScript
 e build production passati; font locale presente nel bundle del cron.
+
+## Testo personale approvato — aggiornamento del 26 ottobre
+
+Il messaggio personale, comune alle nomine Manager e capogruppo, usa ora
+esattamente il testo italiano fornito dall'utente: saluto con nome/cognome,
+biglietto nell'immagine e in allegato, settore assegnato, accesso entro le
+14:30 e «Buona cerimonia finale!». Il badge CID compare prima del saluto finale;
+segue la traduzione inglese secondo il formato bilingue già richiesto.
+Per i minori esplicitamente assegnati ogni nominativo conserva il proprio
+testo, settore, immagine e PDF, nel messaggio indirizzato all'adulto.
+Solo per il badge verde, su successiva precisazione dell'utente: «Nonostante
+il nome, anche nel settore Prato Basilica superiore ci saranno posti a sedere»,
+con traduzione inglese. Gli altri due settori non contengono questa precisazione.
+Nessun orario di inizio, link dashboard o istruzione segnaposto aggiunto al testo.
+Il report cumulativo e gli allegati orizzontali del capogruppo restano invariati.
+
+Il renderer personale non richiede più le precedenti istruzioni segnaposto;
+il blocco effettivo degli invii resta nel claim database e non viene modificato.
+La consegna del testo non è stata interpretata come richiesta di avviare invii:
+impostazione `enabled=false` verificata in produzione, istruzioni DB ancora vuote.
+Nessuna migration, scrittura operativa, riaccodamento o email reale.
+
+Regressioni mirate: testo italiano esatto, escaping, orario 14:30, posizione CID,
+PDF distinti per famiglie e report invariati; TypeScript e lint mirato passati.
+Validazione ufficiale `POSTMARK_API_TEST` per tre settori, famiglia e report
+(anche 1.005 delegati con tre PDF): ErrorCode 0, nessuna consegna.
+Backup completo verificato prima del rilascio, 32.045.234 byte:
+`/root/backups/iscrizioni-pace/production-before-closing-mail-copy-1793044881788.dump`.
+SHA-256: `9a1e21d0c4ff420d47683386bb86f5bd40eda380f7c9153650b2e23bd51df058`.
+Copia pulita aggiornata con la precisazione Prato: **1.192 test**, TypeScript
+e build production passati. Test dedicato verifica la nota IT/EN solo sul verde.

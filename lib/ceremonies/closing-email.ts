@@ -13,6 +13,29 @@ export function renderClosingBadgeEmail(notice: PublicationNotice, appUrl: strin
     if (!badge) throw Error("closing_badge_sector_missing");
     return badge;
   });
+  if (!leader && !report) {
+    if (!notice.payload.lines.length) throw Error("invalid_badge_identity");
+    const sections = (["it", "en"] as const).map(locale => {
+      const it = locale === "it";
+      const parts = notice.payload.lines.map((line, index) => {
+        const greeting = it ? `Ciao ${line.name},` : `Hello ${line.name},`;
+        const body = it
+          ? `l'immagine qui sotto è il biglietto di ingresso per partecipare alla cerimonia finale, lo trovi anche scaricabile in allegato a questa mail. Ti è stato assegnato il settore ${line.sector}. L’accesso sarà consentito entro le 14:30.`
+          : `the image below is your admission ticket for the closing ceremony. You can also download it from the attachment to this email. You have been assigned the sector ${line.sector}. Entry will be permitted until 14:30.`;
+        const farewell = it ? "Buona cerimonia finale!" : "Enjoy the closing ceremony!";
+        const seating = line.badgeCode === "CLOSING_GREEN"
+          ? it ? "Nonostante il nome, anche nel settore Prato Basilica superiore ci saranno posti a sedere." : "Despite its name, seating will also be available in the Prato Basilica superiore sector."
+          : null;
+        return {
+          text: [greeting, body, ...(seating ? [seating] : []), farewell].join("\n\n"),
+          html: `<p>${escape(greeting)}</p><p>${escape(body)}</p>${seating ? `<p>${escape(seating)}</p>` : ""}<p><img src="cid:closing-badge-${index}@iscrizioni-pace" width="270" alt="${escape(`${it ? "Biglietto di ingresso" : "Admission ticket"} · ${line.name} · ${line.sector}`)}" style="display:block;max-width:100%;height:auto"></p><p>${farewell}</p>`,
+        };
+      });
+      return { text: parts.map(p => p.text).join("\n\n"), html: `<section lang="${locale}">${parts.map(p => p.html).join("")}</section>` };
+    });
+    return { subject: "Il tuo badge per la cerimonia finale / Your closing ceremony badge",
+      text: sections.map(s => s.text).join("\n\n---\n\n"), html: sections.map(s => s.html).join("<hr>") };
+  }
   const sections = (["it", "en"] as const).map(locale => {
     const it = locale === "it";
     const label = it ? "Italiano" : "English";

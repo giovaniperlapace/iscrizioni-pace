@@ -19,7 +19,6 @@ export async function prepareClosingBadgeEmail(notice: PublicationNotice, appUrl
       const cid = `closing-badge-${index}@iscrizioni-pace`;
       // Unique attachment names/CIDs for families, even when all have the same color.
       attachments.push({ ...badge.pdf, filename: `badge-${index + 1}-${sector.template}.pdf` }, { ...badge.image, cid, filename: `badge-${index + 1}.jpg` });
-      message.html += `<p><img src="cid:${cid}" width="270" alt="Badge ${index + 1}" style="display:block;max-width:100%;height:auto"></p>`;
     }
   }
   if (attachments.reduce((sum, file) => sum + file.content.length, 0) > 6 * 1024 * 1024) throw Error("closing_badges_too_large");
