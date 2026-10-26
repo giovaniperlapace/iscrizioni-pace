@@ -116,3 +116,14 @@ Backup completo verificato prima del rilascio, 32.045.234 byte:
 SHA-256: `9a1e21d0c4ff420d47683386bb86f5bd40eda380f7c9153650b2e23bd51df058`.
 Copia pulita aggiornata con la precisazione Prato: **1.192 test**, TypeScript
 e build production passati. Test dedicato verifica la nota IT/EN solo sul verde.
+
+## Report senza istruzioni — successiva richiesta del 26 ottobre
+
+Rimosse dal report capogruppo le sezioni delle istruzioni di accesso e ogni
+segnaposto, in italiano e inglese. L'introduzione precisa che le istruzioni
+arriveranno con una mail separata. Elenco persone, settori/colori, fotografia
+temporale, link dashboard e PDF per settore restano invariati.
+Il report viene renderizzato anche con `instructions` vuoto; il blocco degli
+invii nel database resta invariato, senza attivazione o invio reale.
+Anteprima rigenerata con tre persone sintetiche e tre allegati e verificata
+nel browser. Regressioni report/allegati, lint mirato e TypeScript verificati.
