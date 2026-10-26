@@ -1,5 +1,37 @@
 # AGENTS.md
 
+## Cerimonia finale: posti e protocollo — 2026-10-26
+
+- Ripristino dopo il deploy badge `95d20d1`, che non includeva la piantina.
+  Commit/push della piantina autorizzati per conservarla nei rilasci successivi.
+  Geometria e assegnazioni conservate; 1.179 test, TypeScript e lint passati.
+- Ultima disposizione richiesta, corretta dall’utente: A–D con tre blocchi
+  10×10 e uno di 10 file da 5 sedie; E uguale davanti, più tre blocchi
+  posteriori di 4 file da 10.
+  Esterno: dodici blocchi 10×10, quattro file di tre blocchi. Geometria fissa
+  con corridoi; simboli almeno grandi quanto l’apertura a parità di viewport.
+  La griglia adattiva resta al prato. Questa richiesta supera il precedente
+  limite d’altezza di 624px: non comprimere di nuovo i blocchi per rispettarlo.
+- Su successiva richiesta, piantina finale compatta dedicata: A–E in fasce,
+  esterno/prato affiancati, tutti i settori insieme anche su telefono. Stile
+  dell’inaugurazione conservato; protocollo grigio, prato con punti, capienze
+  e selezione invariati. Browser 320/390/1024/1440px, 1.163 test, TypeScript e
+  lint mirato passati. Stato pubblicazione nel verbale sotto.
+- Ulteriore correzione: simboli ingranditi con griglia adattiva alla larghezza
+  reale del riquadro, evitando spazio laterale vuoto. Altezza piantina entro
+  624px nei viewport verificati; quantità e vista d’insieme conservate.
+- Su richiesta esplicita, configurata direttamente in produzione: A/B/C/D 350
+  ciascuno, E 470, Esterno basilica superiore 1.200, Prato in piedi 1.000.
+  Totale 4.070; tutti i 350 di A riservati al protocollo/VIP, quota ordinaria
+  zero; 3.720 assegnabili, overbooking zero, assegnazioni per settore.
+- Piano validato per il 27 ottobre 16:15–19:30 Roma (fine confermata dall’utente),
+  Basilica di San Francesco, piazza inferiore e superiore. RPC Admin canoniche,
+  lock/revisione/audit e transazione unica dopo backup completo verificato.
+- 70 righe di configurazione preesistenti e 243 funzioni/ACL conservate.
+  Nessuna migration, email, nomina, commit/push o modifica del codice pubblicato.
+  SQL/concorrenza passati; limiti dei controlli applicativi generali e verbale:
+  `docs/cerimonia-finale-posti-2026-10-26.md`.
+
 ## Campagne: badge personale nel messaggio e allegato — 2026-10-26
 
 - Estensione successiva: tre caselle indipendenti per Piazza Inferiore viola,
