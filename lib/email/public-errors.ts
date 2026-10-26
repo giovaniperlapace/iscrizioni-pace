@@ -12,6 +12,9 @@ export type PublicCampaignError = {
 };
 
 const EXPECTED_CAMPAIGN_ERRORS = [
+  /^Settore della cerimonia finale non valido\.$/,
+  /^Il filtro settore richiede destinatari partecipanti\.$/,
+  /^Le assegnazioni della cerimonia finale sono cambiate\. Aggiorna i destinatari prima di inviare\.$/,
   /^Opzione badge non valida\.$/,
   /^Il badge personalizzato è disponibile per i partecipanti\.$/,
   /^Nome del partecipante mancante per il badge\.$/,

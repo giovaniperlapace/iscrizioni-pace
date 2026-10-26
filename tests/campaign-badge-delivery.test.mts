@@ -1,3 +1,4 @@
+import * as closingFilter from "../lib/email/campaign-closing-sector.server.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -9,13 +10,14 @@ import { renderCampaignTemplate } from "../lib/email/campaign-templates.ts";
 import { renderSafeCampaignHtml, campaignHtmlToText } from "../lib/email/campaign-html.server.ts";
 import type { SendEmailInput } from "../lib/email/smtp.ts";
 
-async function fixture(enabled: boolean, groupFailure = false, templates?: string[]) {
+async function fixture(enabled: boolean, groupFailure = false, templates?: string[], closingSector?: string) {
   const deliveries: SendEmailInput[] = [];
   const changes: Record<string, unknown>[] = [];
   const rows = ["ada", "jose"].map(name => ({ id: name, campaign_id: "campaign", recipient_key: name,
     recipient_type: "participant", participant_id: name, registration_id: name, delivery_kind: "delegated", delegate_user_id: "leader", status: "sending" }));
   const campaign = { id: "campaign", event_id: "event", subject_template: "Ciao {{nome}}", body_template: "<p>Benvenuto {{nome}}</p>",
     filters_snapshot: templates ? { badgeTemplates: templates } : enabled ? { badgeTemplate: CAMPAIGN_BADGE_TEMPLATE } : {}, events: { title: "Evento" } };
+  if (closingSector) Object.assign(campaign.filters_snapshot, { closingSector });
   const db = {
     rpc: async () => ({ data: rows }),
     storage: { from: () => ({ download: async () => ({ data: new Blob(["common attachment"]) }) }) },
@@ -34,6 +36,7 @@ async function fixture(enabled: boolean, groupFailure = false, templates?: strin
       };
       const query = {
         select() { return query; }, eq(key: string, value: unknown) { filters[key] = value; return query; },
+        is() { return query; }, range() { return Promise.resolve({ data: [], error: null }); },
         in() { return query; }, not() { return query; }, order() { return query; }, limit() { return query; },
         update(value: Record<string, unknown>) { mutation = true; changes.push(value); return query; }, insert() { mutation = true; return query; },
         single: async () => result(), maybeSingle: async () => table === "email_campaigns" ? ({ data: { retry_of_campaign_id: null } }) : result(),
@@ -47,6 +50,7 @@ async function fixture(enabled: boolean, groupFailure = false, templates?: strin
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   new Function("require", "exports", source)((id: string) => {
+    if (id.includes("campaign-closing-sector.server")) return closingFilter;
     if (id.includes("campaign-badge.server")) return badge;
     if (id === "node:crypto") return { createHash };
     if (id.includes("campaign-templates")) return { renderCampaignTemplate };
@@ -104,4 +108,10 @@ test("worker preserves three selected badges for every recipient and references 
       assert.ok(pdf.content.includes(image.content));
     }
   }
+});
+
+ test("queued sector campaigns skip people whose nominal assignment was revoked before sending", async () => {
+  const { result, deliveries, changes } = await fixture(false, false, undefined, "CLOSING_GREEN");
+  assert.equal(result.sent, 0); assert.equal(result.failed, 0); assert.equal(deliveries.length, 0);
+  assert.equal(changes.filter(change => change.status === "skipped" && change.error_code === "closing_sector_changed").length, 2);
 });

@@ -1,3 +1,4 @@
+import { filterCampaignClosingRecipients } from "../lib/email/campaign-closing-sector.server.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -64,6 +65,7 @@ test("current-event manager can load panel/school campaign recipients without de
     getCurrentOperationalEvent: async () => ({id: "event"}),
     assertCanManageCampaignEvent,
     campaignFilters: (body: unknown) => body,
+    filterCampaignClosingRecipients,
     resolveCampaignRecipients: async (eventId: string, filters: unknown) => {calls.push({eventId, filters}); return [{recipientKey: "teacher:synthetic"}];},
     suppressionWarnings: async () => ({checked: true, recipients: []}),
     loadCampaignRecipientPreviews: async (_recipients: unknown, _selection: unknown, eventId: string, allow: boolean) => {assert.equal(eventId, "event"); assert.equal(allow, true); return [];},

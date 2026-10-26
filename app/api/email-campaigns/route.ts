@@ -1,3 +1,4 @@
+import { campaignClosingSector, filterCampaignClosingRecipients, ClosingSectorChangedError } from "@/lib/email/campaign-closing-sector.server";
 import { parseForumOutreach } from "@/lib/panels/forum-outreach";
 import { campaignBadgeSelectionRequest } from "@/lib/email/campaign-badge";
 import { campaignAttachmentsForRecipient, campaignBadgePreviews } from "@/lib/email/campaign-badge.server";
@@ -131,7 +132,7 @@ async function previewRecipients(eventRoles: EventUserRole[], body: Record<strin
   if (!event) throw new Error("Nessun evento corrente configurato.");
   assertCanManageCampaignEvent(eventRoles, event.id);
   const filters = campaignFilters(body);
-  const recipients = await resolveCampaignRecipients(event.id, filters);
+  const recipients = await filterCampaignClosingRecipients(service, event.id, await resolveCampaignRecipients(event.id, filters), filters.closingSector);
   if (!recipients.length) throw new Error("I filtri non individuano destinatari raggiungibili.");
   const selectedIds = new Set<string>();
   const recipientPreviews = await loadCampaignRecipientPreviews(
@@ -165,7 +166,7 @@ async function previewCampaign(
   if (invalidTokens.length) throw new Error(`Variabili non supportate: ${invalidTokens.join(", ")}.`);
   validateIncomingAttachments(attachments);
   const filters = campaignFilters(body);
-  const recipients = await resolveCampaignRecipients(event.id, filters);
+  const recipients = await filterCampaignClosingRecipients(service, event.id, await resolveCampaignRecipients(event.id, filters), filters.closingSector);
   if (!recipients.length) throw new Error("I filtri non individuano destinatari raggiungibili.");
   const selectedValue = parseJsonStringArray(
     body.selectedRecipientKeys ?? body.selectedParticipantIds
@@ -283,7 +284,7 @@ async function updateCampaignRecipients(
     .select("recipient_key,recipient_type,participant_id,registration_id,recipient_user_id,delivery_kind,delegate_user_id,school_teacher_id")
     .eq("campaign_id", campaignId).order("id").range(from, to));
 
-  const recipients = (rows ?? []).map<Recipient>((row) => ({
+  const storedRecipients = (rows ?? []).map<Recipient>((row) => ({
     recipientKey: row.recipient_key,
     recipientType: row.recipient_type,
     participantId: row.participant_id,
@@ -293,13 +294,14 @@ async function updateCampaignRecipients(
     delegateUserId: row.delegate_user_id,
     schoolTeacherId: row.school_teacher_id,
   }));
-  if (!canAccessPanelManagement(eventRoles, event.id) && recipients.some(recipient => recipient.recipientType === "teacher")) return error("Accesso forum non consentito per questo evento.", 403);
+  if (!canAccessPanelManagement(eventRoles, event.id) && storedRecipients.some(recipient => recipient.recipientType === "teacher")) return error("Accesso forum non consentito per questo evento.", 403);
+  const recipients = await filterCampaignClosingRecipients(service, event.id, storedRecipients, campaign.filters_snapshot?.closingSector);
   const availableIds = new Set(recipients.map((recipient) => recipient.recipientKey));
   const selectedIds = new Set(selectedRecipientKeys.filter((id) => availableIds.has(id)));
   if (!selectedIds.size) throw new Error("Seleziona almeno un destinatario valido.");
 
   const includedIds = [...selectedIds];
-  const excludedIds = [...availableIds].filter((id) => !selectedIds.has(id));
+  const excludedIds = storedRecipients.map(r => r.recipientKey).filter((id) => !selectedIds.has(id));
   // Invalidate the previous test before the first batch. If a later write
   // fails, a partially updated selection must not remain ready to send.
   const { error: resetError } = await service.from("email_campaigns")
@@ -395,6 +397,8 @@ async function deliverCampaign(userId: string, testEmail: string, eventRoles: Ev
     })
   );
   if (!recipients.length) throw new Error("Non ci sono destinatari in attesa.");
+  const sectorRecipients = await filterCampaignClosingRecipients(service, campaign.event_id, recipients, campaign.filters_snapshot?.closingSector);
+  if (sectorRecipients.length !== recipients.length) throw new ClosingSectorChangedError();
   const outreach = parseForumOutreach(campaign.filters_snapshot?.forumOutreach);
   if (outreach) {
     const targets = await loadForumOutreachTargets(service, campaign.event_id, outreach, campaign.filters_snapshot?.panelId);
@@ -492,11 +496,14 @@ function recipientSelectionSummary(recipients: RecipientPreview[]) {
 }
 
 function campaignFilters(body: Record<string, unknown>) {
+  const closingSector = campaignClosingSector(body.closingSector);
+  if (closingSector && body.audience && body.audience !== "participants") throw new Error("Il filtro settore richiede destinatari partecipanti.");
   const forumOutreach = parseForumOutreach(body.forumOutreach);
   if (body.forumOutreach && !forumOutreach) throw new Error("Filtro Forum non valido.");
   if (forumOutreach && body.audience !== "participants") throw new Error("Il filtro Forum richiede destinatari partecipanti.");
   return {
     forumOutreach,
+    closingSector,
     groupId: clean(body.groupId, 80) || null,
     tagId: clean(body.tagId, 80) || null,
     serviceId: clean(body.serviceId, 80) || null,

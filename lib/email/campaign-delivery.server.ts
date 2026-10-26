@@ -1,3 +1,4 @@
+import { assertCampaignClosingRecipient, ClosingSectorChangedError } from "@/lib/email/campaign-closing-sector.server";
 import { loadCampaignCeremonySectors } from "@/lib/email/campaign-ceremony-sectors.server";
 import { campaignAttachmentsForRecipient } from "@/lib/email/campaign-badge.server";
 import { emailHash } from "@/lib/email/campaign-report";
@@ -157,6 +158,7 @@ async function processCampaignBlock(options: {
         campaignAttachments
       );
       if (!await isCampaignRecipientOperational(service, campaign.event_id, delivery.recipient)) throw new RegistrationNotOperationalError();
+      await assertCampaignClosingRecipient(service, campaign.event_id, delivery.recipient, campaign.filters_snapshot);
       if (campaign.retry_of_campaign_id && delivery.email.trim().toLowerCase() !== row.delivery_email_snapshot?.trim().toLowerCase()) {
         throw new EmailDeliveryError("retry_address_changed");
       }
@@ -181,6 +183,10 @@ async function processCampaignBlock(options: {
         attachments: campaignAttachments.map(emailAttachmentInput),
       } });
     } catch (error) {
+      if (error instanceof ClosingSectorChangedError) {
+        await service.from("email_campaign_recipients").update({ status: "skipped", error_code: "closing_sector_changed", processing_started_at: null }).eq("id", row.id);
+        return;
+      }
       if (error instanceof RegistrationNotOperationalError) {
         await service.from("email_campaign_recipients").update({ status: "skipped", error_code: "registration_deleted", processing_started_at: null }).eq("id", row.id);
         return;

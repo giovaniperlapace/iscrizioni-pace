@@ -1,5 +1,6 @@
 "use client";
 
+import { CLOSING_BADGE_SECTORS } from "@/lib/ceremonies/closing-badges";
 import type { ForumOutreach } from "@/lib/panels/forum-outreach";
 import { CampaignHistory } from "./campaign-history";
 import { ProgressButton } from "@/components/button-progress";
@@ -42,6 +43,7 @@ type RecipientRow = {
   panelIds: string[];
   schoolNames: string[];
   attendancePending?: boolean;
+  closingSectorCodes?: string[];
 };
 type AttachmentDraft = {
   id: string;
@@ -107,6 +109,7 @@ export function EmailCampaignComposer({
   const [message, setMessage] = useState("<p></p>");
   const [tokenToInsert, setTokenToInsert] = useState<string | null>(null);
   const [groupFilter, setGroupFilter] = useState("");
+  const [closingSectorFilter, setClosingSectorFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [panelFilter, setPanelFilter] = useState(
@@ -186,6 +189,7 @@ export function EmailCampaignComposer({
         audience === "teachers" ||
         !serviceFilter ||
         recipient.serviceIds.some((id) => serviceIds.has(id))) &&
+      (audience !== "participants" || !closingSectorFilter || recipient.closingSectorCodes?.includes(closingSectorFilter)) &&
       (audience !== "participants" || attendanceFilter === "all" ||
         (attendanceFilter === "pending" && recipient.attendancePending === true) ||
         (attendanceFilter === "communicated" && recipient.attendancePending === false)) &&
@@ -193,7 +197,7 @@ export function EmailCampaignComposer({
       (audience !== "teachers" || !schoolFilter || recipient.schoolNames.some((name) => normalizeRecipientSearch(name).includes(schoolSearch))) &&
       (!search || normalizeRecipientSearch(`${recipient.fullName} ${recipient.destinationEmail} ${recipient.schoolNames.join(" ")}`).includes(search))
     );
-  }, [forumOutreach, audience, attendanceFilter, groupFilter, groupMembershipFilter, groups, panelFilter, panels, recipientRows, recipientSearch, schoolFilter, serviceFilter, services, tagFilter, tags]);
+  }, [forumOutreach, audience, closingSectorFilter, attendanceFilter, groupFilter, groupMembershipFilter, groups, panelFilter, panels, recipientRows, recipientSearch, schoolFilter, serviceFilter, services, tagFilter, tags]);
   const selectedRecipientRows = useMemo(
     () => recipientRows.filter((recipient) =>
       selectedRecipientIdSet.has(recipient.recipientKey)
@@ -292,6 +296,7 @@ export function EmailCampaignComposer({
       formData.set("audience", audience);
       formData.set("badgeTemplates", JSON.stringify(badgeTemplates));
       formData.set("panelId", panelFilter);
+      formData.set("closingSector", closingSectorFilter);
       if (forumOutreach) formData.set("forumOutreach", forumOutreach);
       formData.set("schoolName", schoolFilter);
       formData.set("selectedRecipientKeys", JSON.stringify(selectedRecipientIds));
@@ -362,6 +367,7 @@ export function EmailCampaignComposer({
     setTagFilter("");
     setServiceFilter("");
     setPanelFilter("");
+    setClosingSectorFilter("");
     setSchoolFilter("");
     setGroupMembershipFilter("all");
     setAttendanceFilter("all");
@@ -706,6 +712,21 @@ export function EmailCampaignComposer({
             /> : null}
           {audience === "participants" ? (
             <>
+              <label className="grid gap-1 text-sm font-semibold" htmlFor="campaign-closing-sector">
+                Settore cerimonia finale
+                <select id="campaign-closing-sector" className="field font-normal" value={closingSectorFilter}
+                  onChange={event => {
+                    const value = event.target.value;
+                    const eligible = new Set(recipientRows.filter(row => !value || row.closingSectorCodes?.includes(value)).map(row => row.recipientKey));
+                    setClosingSectorFilter(value);
+                    setSelectedRecipientIds(ids => ids.filter(id => eligible.has(id)));
+                    resetPreview();
+                  }}>
+                  <option value="">Tutti i partecipanti</option>
+                  {CLOSING_BADGE_SECTORS.map(sector => <option key={sector.code} value={sector.code}>{sector.name} · {sector.color}</option>)}
+                </select>
+                <span className="text-xs font-normal text-[var(--peace-muted)]">Solo posti assegnati nominalmente e pubblicati. Seleziona i destinatari dall’elenco filtrato.</span>
+              </label>
               <label className="grid gap-1 text-sm font-semibold" htmlFor="campaign-attendance-filter">
                 Giorni di presenza
                 <select id="campaign-attendance-filter" className="field font-normal" value={attendanceFilter}

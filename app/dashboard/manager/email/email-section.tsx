@@ -1,3 +1,4 @@
+import { loadCampaignClosingAssignments } from "@/lib/email/campaign-closing-sector.server";
 import { parseForumOutreach } from "@/lib/panels/forum-outreach";
 import { sortForums } from "@/lib/panels/forum-order";
 import { isPanelCampaign } from "@/lib/panels/management-access";
@@ -125,6 +126,8 @@ export async function ManagerEmailSection({
     eventId,
     allowPanelManagement
   );
+  const closingAssignments = await loadCampaignClosingAssignments(service, eventId);
+  const recipientsWithSectors = initialRecipients.map(recipient => ({ ...recipient, closingSectorCodes: recipient.recipientType === "participant" && recipient.registrationId ? closingAssignments.get(recipient.registrationId) ?? [] : [] }));
   const locationNameById = new Map(
     (locations ?? []).map((location) => [location.id, location.name])
   );
@@ -154,7 +157,7 @@ export async function ManagerEmailSection({
         ].filter(Boolean).join(" · "),
       }))}
       initialPanelId={allowPanelManagement ? initialPanelId : null}
-      initialRecipients={initialRecipients}
+      initialRecipients={recipientsWithSectors}
       templates={(templates ?? []).filter(row => allowPanelManagement || !isPanelCampaign({ subject: row.subject, message: row.body_text })).map((row) => ({
         id: row.id,
         name: row.name,

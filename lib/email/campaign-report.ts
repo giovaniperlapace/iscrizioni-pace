@@ -92,6 +92,8 @@ export function reportOutcome(
       reason:
         row.error_code === "registration_deleted"
           ? "Iscrizione non più attiva"
+          : row.error_code === "closing_sector_changed"
+            ? "Posto della cerimonia finale revocato o settore cambiato"
           : "",
     };
   const complaint = events.find((e) => e.kind === "SpamComplaint");

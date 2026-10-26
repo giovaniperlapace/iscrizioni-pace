@@ -1,3 +1,4 @@
+import * as closingFilter from "../lib/email/campaign-closing-sector.server.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -42,6 +43,7 @@ function harness(failSave = false, exhaustBudget = false, recovery?: { results: 
   let now = 0;
   const source = ts.transpileModule(readFileSync(new URL("../lib/email/campaign-delivery.server.ts",import.meta.url),"utf8"), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   new Function("require","exports","Date",source)((id:string) => {
+    if(id.includes("campaign-closing-sector.server"))return closingFilter;
     if(id.includes("campaign-badge.server"))return {campaignAttachmentsForRecipient};
     if(id==="node:crypto")return {createHash};
     if(id.includes("campaign-report"))return {emailHash:(email:string)=>createHash("sha256").update(email).digest("hex")};
