@@ -132,9 +132,12 @@ for (const scenario of ["unauthenticated", "closed", "invalid", "database-failur
   assert.doesNotMatch(await response.text(), /secret/);
 });
 
-test("cron authenticates before either worker and isolates their failures", async () => {
-  let campaigns = 0, forums = 0, schools = 0, ceremonies = 0;
+for (const reminderEnabled of [false, true]) test(`cron authenticates and isolates workers with reminders enabled=${reminderEnabled}`, async () => {
+  let campaigns = 0, forums = 0, schools = 0, ceremonies = 0, reminders = 0, reminderReports = 0;
   const exports = loadModule("app/api/cron/email-campaigns/route.ts", {
+    "@/lib/panels/reminder-status": { forumRemindersEnabled: async () => reminderEnabled },
+    "@/lib/panels/reminder-report": { processForumReminderReports: async () => { reminderReports++; return {accepted:0}; } },
+    "@/lib/panels/reminder-delivery.server": { processDueForumReminders: async () => { reminders++; return {accepted:0}; } },
     "@/lib/panels/school-qr-delivery": { processSchoolQrEmails: async () => { schools++; return {accepted:0}; } },
     "@/lib/ceremonies/publication-delivery.server": { processDueCeremonyPublications: async () => { ceremonies++; return {accepted:0}; } },
     "@/lib/supabase/service": { createSupabaseServiceClient: () => ({}) },
@@ -144,9 +147,9 @@ test("cron authenticates before either worker and isolates their failures", asyn
   }, { process: { env: { CRON_SECRET: "synthetic-secret" } } });
   const get = exports.GET as (request: Request) => Promise<Response>;
   assert.equal((await get(new Request("http://127.0.0.1/api/cron/email-campaigns"))).status, 401);
-  assert.equal(campaigns, 0); assert.equal(forums, 0); assert.equal(schools, 0); assert.equal(ceremonies, 0);
+  assert.equal(campaigns, 0); assert.equal(forums, 0); assert.equal(schools, 0); assert.equal(ceremonies, 0); assert.equal(reminders, 0); assert.equal(reminderReports, 0);
   const response = await get(new Request("http://127.0.0.1/api/cron/email-campaigns", { headers: { authorization: "Bearer synthetic-secret" } }));
-  assert.equal(response.status, 500); assert.equal(campaigns, 1); assert.equal(forums, 1); assert.equal(schools, 1); assert.equal(ceremonies, 1);
+  assert.equal(response.status, 500); assert.equal(campaigns, 1); assert.equal(forums, 1); assert.equal(schools, 1); assert.equal(ceremonies, 1); assert.equal(reminders, reminderEnabled ? 1 : 0); assert.equal(reminderReports, reminderEnabled ? 1 : 0);
   assert.doesNotMatch(await response.text(), /private details/);
 });
 

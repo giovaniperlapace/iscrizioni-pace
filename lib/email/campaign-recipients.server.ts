@@ -77,7 +77,16 @@ export async function resolveCurrentParticipantRecipient(eventId: string, regist
   return (await resolveParticipantRecipients(eventId, "all", registrationId))[0] ?? null;
 }
 
-async function resolveParticipantRecipients(eventId: string, status: string, registrationId?: string) {
+/** Scoped batches reuse the canonical contact/delegation rules without a query per person. */
+export async function resolveCurrentParticipantRecipients(eventId: string, registrationIds: string[]) {
+  const result: CampaignRecipient[] = [];
+  for (let from = 0; from < registrationIds.length; from += QUERY_CHUNK_SIZE) {
+    result.push(...await resolveParticipantRecipients(eventId, "active", registrationIds.slice(from, from + QUERY_CHUNK_SIZE)));
+  }
+  return result;
+}
+
+async function resolveParticipantRecipients(eventId: string, status: string, registrationId?: string | string[]) {
   const service = createSupabaseServiceClient();
   const registrations = await loadEventRegistrations(eventId, status, registrationId);
   if (!registrations.length) return [];
@@ -537,7 +546,7 @@ export async function loadCampaignRecipientPreviews(
   );
 }
 
-async function loadEventRegistrations(eventId: string, status: string, registrationId?: string) {
+async function loadEventRegistrations(eventId: string, status: string, registrationId?: string | string[]) {
   const service = createSupabaseServiceClient();
   const result: RegistrationRow[] = [];
 
@@ -548,7 +557,8 @@ async function loadEventRegistrations(eventId: string, status: string, registrat
       .is("deleted_at", null)
       .eq("event_id", eventId)
       .order("submitted_at", { ascending: true }).order("id");
-    if (registrationId) query = query.eq("id", registrationId);
+    if (typeof registrationId === "string") query = query.eq("id", registrationId);
+    else if (registrationId) query = query.in("id", registrationId);
     if (status !== "all") {
       query =
         status === "active"

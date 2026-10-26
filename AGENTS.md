@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## Salvataggio completo Git e audit produzione — 2026-10-26
+
+- Per i rilasci successivi, verificare che ogni modifica applicativa da
+  pubblicare sia prima salvata in un commit e inviata al remoto; confrontare
+  poi lo SHA del deployment con il commit atteso. Evitare copie locali non versionate.
+- Su richiesta esplicita, tutti i sorgenti, test, script e documenti locali
+  inclusi nel commit/push, compresa la preparazione dei promemoria Forum.
+  Nessuna attivazione email o migration remota implicita.
+- Cron: promemoria e report Forum inattivi se la configurazione manca o nessun
+  evento è abilitato; errori reali distinti e altre code indipendenti.
+- Verificati i cinque rilasci manuali del 26 ottobre: unica funzionalità locale
+  esclusa dal successivo Git deploy era la piantina, recuperata in `e65fb37`.
+  Sorgenti applicativi del ripristino identici al commit, lockfile conservato.
+  Badge, PDF capogruppo, testo personale e filtro campagne già in main.
+- Dettagli, limiti e backup: `docs/git-production-audit-2026-10-26.md`.
+
 ## Cerimonia finale: PDF orizzontali nel report capogruppo - 2026-10-26
 
 - Report cumulativo mantenuto, con un PDF per settore per le sole persone che
@@ -86,6 +102,27 @@
   Nessuna migration, email, nomina, commit/push o modifica del codice pubblicato.
   SQL/concorrenza passati; limiti dei controlli applicativi generali e verbale:
   `docs/cerimonia-finale-posti-2026-10-26.md`.
+
+## Forum: promemoria due ore prima e report — 2026-10-26
+
+- Preparati localmente per prenotazioni personali/gruppi ai Forum e sale collegate:
+  sede/indirizzo canonici evidenti, orario Roma, sette lingue e minori selezionati.
+- Email personale prioritaria; soltanto deleghe esplicite al capogruppo ancora
+  autorizzato. Su chiarimento: un unico riepilogo per capogruppo e Forum, anche
+  oltre 1.000 persone; nessun invio singolo per ciascuna delega.
+- Su successiva richiesta, nessun link di consultazione nei promemoria e nessuna
+  immagine remota: istruzioni QR in sette lingue, copia già salvata/stampata,
+  minori con l’adulto e QR personale per ogni adulto anche nei gruppi.
+- Report automatico a registrationspeace@santegidio.org dopo la coda e verifica
+  Postmark, attesa minima cinque minuti. Accettazione/consegna/bounce/incerti
+  distinti; snapshot temporale esplicito, nessun reinvio automatico incerto.
+- Migration `20261026120000` con RLS, claim persistenti, unicità, ricontrollo
+  prenotazioni/famiglie/sedi; installazione disattivata, niente recupero retroattivo.
+  Nessuna migration remota, commit/push o invio reale in questa preparazione.
+- Verifica Postmark ufficiale con POSTMARK_API_TEST: personale, collegata,
+  riepilogo 1.005 persone e report accettati senza consegna né errore 300.
+  SQL/concorrenza, test applicativi e controlli in copia pulita; dettagli e
+  procedura di rilascio: `docs/forum-promemoria-2026-10-26.md`.
 
 ## Campagne: badge personale nel messaggio e allegato — 2026-10-26
 
