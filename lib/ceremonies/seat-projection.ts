@@ -1,5 +1,7 @@
 import { ceremonySeatLabel } from "./seat-label.ts";
+import { closingBadgeSector } from "./closing-badges.ts";
 export type CeremonySeatInfo = {
+  badgeCode?: string | null;
   kind: "opening" | "closing";
   sector: string;
   needsSeat: boolean;
@@ -20,6 +22,7 @@ export function parseCeremonySeatInfo(
       typeof x.sector !== "string" ||
       typeof x.needsSeat !== "boolean" ||
       typeof x.review !== "boolean" ||
+      (x.badgeCode != null && (x.kind !== "closing" || !closingBadgeSector(x.badgeCode))) ||
       (x.seat !== null &&
         (!x.seat ||
           typeof x.seat.id !== "string" ||
@@ -33,6 +36,7 @@ export function parseCeremonySeatInfo(
       sector: x.sector,
       needsSeat: x.needsSeat,
       review: x.review,
+      ...(x.badgeCode ? { badgeCode: x.badgeCode } : {}),
       seat:
         x.seat === null
           ? null
@@ -47,5 +51,7 @@ export function parseCeremonySeatInfo(
   return result;
 }
 export function ceremonySeatText(s: CeremonySeatInfo): string {
+  const badge = s.kind === "closing" && s.needsSeat ? closingBadgeSector(s.badgeCode) : null;
+  if (badge) return `Cerimonia finale · ${s.sector} · Badge ${badge.color}${s.review ? " · Da rivedere" : ""}`;
   return `${s.kind === "opening" ? "Inaugurazione" : "Cerimonia finale"} · ${s.needsSeat && s.seat ? ceremonySeatLabel(s.sector, s.seat) : `Settore ${s.sector} · ${s.needsSeat ? "Posto nel settore" : "Non serve un posto"}`}${s.review ? " · Da rivedere" : ""}`;
 }

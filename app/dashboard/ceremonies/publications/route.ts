@@ -41,7 +41,11 @@ async function access(request: Request) {
       .eq("state", "published")
       .limit(1);
     if (found.error) throw Error("unavailable");
-    if (!found.data?.length) throw Error("forbidden");
+    if (!found.data?.length) {
+      const notice = await db.from("ceremony_publication_emails").select("id").eq("plan_id", plan).eq("event_id", context.event.id).eq("publication_id", publication).limit(1);
+      if (notice.error) throw Error("unavailable");
+      if (!notice.data?.length) throw Error("forbidden");
+    }
   }
   return { url, plan: plan!, publication, db, eventId: context.event.id };
 }
@@ -75,7 +79,7 @@ export async function GET(request: Request) {
     if (drafts.error) throw Error("unavailable");
     const summaries = new Map<
       string,
-      { id: string; date: string; seats: number; emails: number }
+      { id: string; date: string; seats: number | null; emails: number }
     >();
     for (const d of drafts.data) {
       const row = summaries.get(d.publication_id) ?? {
@@ -84,10 +88,9 @@ export async function GET(request: Request) {
         seats: 0,
         emails: 0,
       };
-      row.seats += Number(d.data.quantity);
+      row.seats = (row.seats ?? 0) + Number(d.data.quantity);
       summaries.set(row.id, row);
     }
-    const selected = publication ?? summaries.keys().next().value ?? null;
     const result = await loadAllRows((from, to) =>
       db
         .from("ceremony_publication_emails")
@@ -101,11 +104,16 @@ export async function GET(request: Request) {
         .range(from, to),
     );
     if (result.error) throw Error("unavailable");
+    for (const r of result.data) {
+      const summary = summaries.get(r.publication_id) ?? { id: r.publication_id, date: r.created_at, seats: null, emails: 0 };
+      summary.emails++;
+      summaries.set(r.publication_id, summary);
+    }
+    const ordered = [...summaries.values()].sort((a, b) => b.date.localeCompare(a.date));
+    const selected = publication ?? ordered[0]?.id ?? null;
     const recipients: PublicationRecipient[] = [],
       counts: Record<string, number> = {};
     for (const r of result.data) {
-      const summary = summaries.get(r.publication_id);
-      if (summary) summary.emails++;
       if (r.publication_id !== selected) continue;
       const state = r.delivery_state ?? r.state;
       counts[state] = (counts[state] ?? 0) + 1;
@@ -114,6 +122,8 @@ export async function GET(request: Request) {
         name: r.payload.lines.map((l: { name: string }) => l.name).join(", "),
         recipient: r.recipient,
         kind: r.user_id ? "leader" : "personal",
+        contactReport: r.payload.noticeType === "leader_contacts",
+        peopleCount: r.payload.lines.length,
         state,
         reason: r.error_code,
         createdAt: r.created_at,
@@ -125,7 +135,7 @@ export async function GET(request: Request) {
       });
     }
     const report: PublicationReport = {
-      publications: [...summaries.values()],
+      publications: ordered,
       selected,
       counts,
       recipients,
@@ -146,7 +156,7 @@ export async function GET(request: Request) {
             ],
             ...recipients.map((r) => [
               r.name,
-              r.kind === "leader" ? "Capogruppo" : "Nominale",
+              r.contactReport ? "Capogruppo · persone da contattare" : r.kind === "leader" ? "Capogruppo" : "Nominale",
               r.recipient,
               PUBLICATION_EMAIL_LABELS[r.state] ?? r.state,
               r.reason,

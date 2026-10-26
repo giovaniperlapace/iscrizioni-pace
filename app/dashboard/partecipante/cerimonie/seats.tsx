@@ -4,6 +4,7 @@ import type { PersonalSeat } from "@/lib/ceremonies/distribution";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { SECTOR_COPY } from "@/lib/ceremonies/sector-copy";
 import { PERSONAL_CEREMONY_COPY } from "@/lib/ceremonies/personal-copy";
+import { CeremonyPersonalBadge } from "../../ceremony-personal-badge";
 
 export function PersonalCeremonySeats({ seats, locale, loading = false }: {
   seats: PersonalSeat[] | null;
@@ -28,6 +29,7 @@ export function PersonalCeremonySeats({ seats, locale, loading = false }: {
                 {seat.child && <p className="text-sm text-[var(--peace-muted)]">{c.child}</p>}
                 {seat.needsSeat ? <>
                   <p className="text-lg font-semibold text-[var(--peace-blue-800)]">{SECTOR_COPY[locale].sector} {seat.sector}</p>
+                  {seat.kind === "closing" && <CeremonyPersonalBadge nomineeId={seat.id} badgeCode={seat.badgeCode} name={seat.name} locale={locale} preview />}
                   <p className="text-sm text-[var(--peace-muted)]">{seat.location}</p>
                   <p className="text-sm">{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(seat.startsAt))}</p>
                 </> : <p>{c.noSeatState}</p>}

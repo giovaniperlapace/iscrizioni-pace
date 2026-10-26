@@ -1,5 +1,35 @@
 # AGENTS.md
 
+## Cerimonia finale: tre settori e badge — 2026-10-26
+
+- Nuova richiesta: Chiesa Basilica inferiore arancione 200, Piazza inferiore
+  viola 1.100, Prato Basilica superiore verde 2.200; totale 3.500, a riempimento.
+  Supera la geometria A–E/esterno/prato e il protocollo precedenti. Simboli
+  soltanto quantitativi, colori badge distinti dalla legenda stato posti.
+- Preparazione locale: PDF personale allegato e JPEG CID con nome/cognome;
+  badge nell’iscrizione, download protetto anche al capogruppo, settore/colore
+  nella proiezione del QR. Nome canonico e nomina attiva ricontrollati.
+- Pubblicazione invariata; abbinamenti capogruppo accodano atomicamente nuove
+  notifiche, email personale prioritaria. Senza email: report cumulativo al
+  capogruppo corrente, con tutte le persone da contattare, settori e istruzioni.
+  Famiglie/minori espliciti, scope, revisioni, audit e retry conservati.
+- Migration `20261026160000` e sostituzione configurazione separate. Invii del
+  nuovo layout disattivati finché non arrivano istruzioni approvate IT/EN per
+  tutti i settori; nessun testo operativo inventato. Postmark con token ufficiale
+  di test: tre badge PDF/CID, famiglia, riepilogo gruppo e report 1.005 persone
+  accettati senza errore 300 né consegna.
+- Commit/push e rilascio autorizzati dopo backup completo verificato. Prima
+  del rilascio sono comparse due assegnazioni pubblicate per Sant’Andrea:
+  20 posti B e 30 C, una nomina attiva e quattro email già accettate. L’utente
+  ha richiesto esplicitamente la revoca e ripartenza dai tre settori vuoti.
+  Revoca canonica e archivio integrale nell’audit; email/ricevute conservate.
+  Fotografia esatta degli ID e revisione blocca eventuali nuove operazioni.
+  Invii nuovi settori ancora disattivati. Dettagli e stato del rilascio:
+  `docs/cerimonia-finale-badge-settori-2026-10-26.md`.
+- 1.202 test, TypeScript, lint mirato, build production, SQL/concorrenza e browser
+  320/390/1024/1440px passati. Lint generale con tre errori preesistenti nel test
+  navigazione cerimonie, non modificato.
+
 ## Cerimonia finale: posti e protocollo — 2026-10-26
 
 - Ripristino dopo il deploy badge `95d20d1`, che non includeva la piantina.

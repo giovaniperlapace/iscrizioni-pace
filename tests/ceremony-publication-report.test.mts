@@ -104,6 +104,7 @@ const plan = "00000000-0000-4000-8000-000000000001",
 function loadRoute(
   mode: "allowed" | "forbidden" | "foreign" | "error",
   verifyFails = false,
+  leaderBatch = false,
 ) {
   const filters: [string, string, unknown][] = [];
   const updates: Record<string, unknown>[] = [];
@@ -111,8 +112,8 @@ function loadRoute(
   const row = {
     id: "mail",
     publication_id: pub,
-    user_id: null,
-    payload: { lines: [{ name: "=Synthetic" }] },
+    user_id: leaderBatch ? "leader" : null,
+    payload: { lines: [{ name: "=Synthetic" }], ...(leaderBatch ? { noticeType: "leader_contacts" } : {}) },
     recipient: "synthetic@example.invalid",
     state: "accepted",
     error_code: null,
@@ -153,7 +154,7 @@ function loadRoute(
           resolve({
             data:
               table === "ceremony_assignment_drafts"
-                ? [
+                ? leaderBatch ? [] : [
                     {
                       id: "draft",
                       publication_id: pub,
@@ -304,4 +305,18 @@ test("delivery refresh saves matched evidence and never changes send state or re
       );
     }
   }
+});
+
+test("leader assignment report is readable without a draft publication and keeps contact reports distinct", async () => {
+  const r = loadRoute("allowed", false, true);
+  const response = await r.exports.GET(new Request(`https://example.invalid/?planId=${plan}&publication=${pub}`));
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.selected, pub);
+  assert.deepEqual(result.publications, [{ id: pub, date: "2026-10-24T14:00:00Z", seats: null, emails: 1 }]);
+  assert.equal(result.recipients[0].contactReport, true);
+  assert.equal(result.recipients[0].peopleCount, 1);
+  assert.equal(result.recipients[0].name, "=Synthetic");
+  assert.ok(r.filters.some(([table, key, value]) => table === "ceremony_publication_emails" && key === "publication_id" && value === pub));
+  assert.equal(r.providerCalls(), 0);
 });

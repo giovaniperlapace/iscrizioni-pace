@@ -102,6 +102,40 @@ try {
   try {file(join('supabase/migrations',name));} catch(e) {throw new Error(`Migration ${name}: ${e.stderr}`);}
  }
  psql(readFileSync('tests/sql/reception-check-ins.sql','utf8').split('set role service_role;')[0]);
+ {
+  const closing=readFileSync('scripts/configure-closing-ceremony-2026-10-26.sql','utf8');
+  const setup="begin;select set_config('app.closing_event',f(1)::text,true);select set_config('app.closing_actor',f(33)::text,true);";
+  try {console.log(psql(setup+closing+readFileSync('tests/sql/closing-ceremony-layout.sql','utf8')+'rollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}
+  catch(e){throw new Error('Closing configuration: '+e.stderr);}
+  assert.throws(()=>psql(setup+closing+closing+'commit;'),e=>String(e.stderr).includes('Closing ceremony already configured'));
+  assert.equal(psql("select count(*) from ceremony_plans where kind='closing'",true).trim(),'0');
+  assert.throws(()=>psql(setup+"select set_config('app.closing_actor',f(31)::text,true);"+closing+'commit;'),e=>String(e.stderr).includes('insufficient_privilege'));
+  assert.equal(psql("select count(*) from ceremony_plans where kind='closing'",true).trim(),'0');
+  console.log('PASS closing configuration rejects duplicate execution and non-Admin without partial changes');
+ }
+ {
+  const closing=readFileSync('scripts/configure-closing-ceremony-2026-10-26.sql','utf8');
+  const replacement=readFileSync('scripts/replace-closing-sectors-with-badges-2026-10-26.sql','utf8');
+  const setup="begin;select set_config('app.closing_event',f(1)::text,true);select set_config('app.closing_actor',f(33)::text,true);";
+  for (const check of ['closing-badges','closing-badges-large','closing-badges-direct','closing-badges-capacity']) {
+   try {console.log(psql(setup+closing+replacement+readFileSync(`tests/sql/${check}.sql`,'utf8')+'rollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}
+   catch(e){throw new Error(check+': '+e.stderr);}
+  }
+  assert.throws(()=>psql(setup+closing+replacement+replacement+'commit;'),e=>String(e.stderr).includes('Unexpected closing layout'));
+  const existingDraft="insert into groups(id,event_id,name) values(f(17300),f(1),'Existing group');select manage_ceremony_drafts(f(1),f(31),(select id from ceremony_plans where kind='closing'),(select revision from ceremony_plans where kind='closing'),f(17301),'save',null,jsonb_build_object('action','group','sectorId',(select id from ceremony_sectors where layout_code='B' and plan_id=(select id from ceremony_plans where kind='closing')),'groupId',f(17300),'quantity',1,'seatIds','[]'::jsonb,'subjects','[]'::jsonb));";
+  assert.throws(()=>psql(setup+closing+existingDraft+replacement+'commit;'),e=>String(e.stderr).includes('Closing operational records exist'));
+  console.log('PASS closing replacement refuses existing drafts and repeated application without partial changes');
+  assert.equal(psql("select count(*) from ceremony_plans where kind='closing'",true).trim(),'0');
+  const archive=readFileSync('scripts/archive-closing-assignments-before-badges-2026-10-26.sql','utf8');
+  const [beforeReset,afterReset]=readFileSync('tests/sql/closing-badges-reset.sql','utf8').split('-- APPLY AUTHORIZED RESET AND REPLACEMENT HERE');
+  try {console.log(psql(setup+closing+beforeReset+archive+replacement+afterReset+'rollback;').split('\n').filter(line=>line.includes('PASS')).join('\n'));}
+  catch(e){throw new Error('Legacy reset: '+e.stderr);}
+  for(const changed of ["update ceremony_plans set revision=revision+1 where kind='closing';", "update ceremony_allocations set quantity=21 where quantity=20;", "update ceremony_publication_emails set state='queued';"]){
+   assert.throws(()=>psql(setup+closing+beforeReset+changed+archive+replacement+'commit;'),e=>String(e.stderr).includes('Closing reset snapshot changed'));
+   assert.equal(psql("select count(*) from ceremony_plans where kind='closing'",true).trim(),'0');
+  }
+  console.log('PASS legacy reset rejects changed revision, quantities or notification states without partial changes');
+ }
  for (const name of ['ceremony-allocations','ceremony-distribution','ceremony-seat-maps','opening-ceremony-layout','ceremony-seats-desk','ceremony-leader-pairing','ceremony-sector-assignments']) {
    try { console.log(file(`tests/sql/${name}.sql`).split('\n').filter(line=>line.includes('PASS')).join('\n')); }
    catch(e) {throw new Error(`${name}: ${e.stderr}`);}
@@ -220,6 +254,33 @@ try {
   assert.equal(psql(`select count(*) from ceremony_nominees where allocation_id='${allocation}' and revoked_at is null`,true).trim(),'1');
   console.log('PASS concurrent leader batches: one save, one conflict, group reserve consumed once');
 
+ }
+ {
+  const setup="begin;select set_config('app.closing_event',f(1)::text,true);select set_config('app.closing_actor',f(33)::text,true);";
+  psql(setup+readFileSync('scripts/configure-closing-ceremony-2026-10-26.sql','utf8')+readFileSync('scripts/replace-closing-sectors-with-badges-2026-10-26.sql','utf8')+`
+   insert into groups(id,event_id,name) values(f(17500),f(1),'Concurrent closing badges');
+   insert into group_memberships(group_id,user_id,role,is_primary) values(f(17500),f(36),'capogruppo',true);
+   update participant_group_assignments set is_current=false where registration_id in(f(10),f(11));
+   insert into participant_group_assignments(registration_id,group_id,is_current,source,status) values(f(10),f(17500),true,'manager','confirmed'),(f(11),f(17500),true,'manager','confirmed');
+   select assign_ceremony_seats(f(1),f(31),(select id from ceremony_plans where kind='closing'),(select revision from ceremony_plans where kind='closing'),f(17501),jsonb_build_object('action','group','sectorId',(select id from ceremony_sectors where layout_code='CLOSING_GREEN'),'groupId',f(17500),'quantity',2,'seatIds','[]'::jsonb));commit;`);
+  const plan=psql("select id from ceremony_plans where kind='closing'",true).trim();
+  const allocation=psql("select id from ceremony_allocations where group_id=f(17500)",true).trim();
+  const revision=Number(psql(`select revision from ceremony_plans where id='${plan}'`,true).trim());
+  const command=`set role service_role;select assign_ceremony_group_members(f(1),f(36),'${allocation}',${revision},f(17502),jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',null)))->>'status';`;
+  assert.deepEqual(await Promise.all([concurrent(command),concurrent(command)]),['saved','saved']);
+  assert.equal(psql(`select count(*) from ceremony_publication_emails where plan_id='${plan}'`,true).trim(),'1');
+  const nextRevision=Number(psql(`select revision from ceremony_plans where id='${plan}'`,true).trim());
+  const race=await Promise.all([0,1].map(i=>concurrent(`set role service_role;select assign_ceremony_group_members(f(1),f(36),'${allocation}',${nextRevision},f(${17503+i}),jsonb_build_array(jsonb_build_object('registrationId',f(${i?10:11}),'childId',${i?'f(40)':'null'})))->>'status';`)));
+  assert.deepEqual(race.sort(),['conflict','saved']);
+  assert.equal(psql(`select count(*) from ceremony_nominees where plan_id='${plan}' and revoked_at is null`,true).trim(),'2');
+  assert.equal(psql(`select count(*) from ceremony_publication_emails where plan_id='${plan}'`,true).trim(),'2');
+  psql(`update closing_ceremony_badge_settings set instructions=(select jsonb_object_agg(code,jsonb_build_object('it','Testo sintetico','en','Synthetic text')) from unnest(array['CLOSING_ORANGE','CLOSING_PURPLE','CLOSING_GREEN']) code),enabled=true where plan_id='${plan}';update ceremony_publication_emails set state='skipped' where plan_id<>'${plan}' and state='queued';`);
+  const claims=await Promise.all([concurrent('set role service_role;select claim_ceremony_publication_email();'),concurrent('set role service_role;select claim_ceremony_publication_email();')]);
+  assert.equal(claims.filter(Boolean).length,1);
+  assert.equal(JSON.parse(claims.find(Boolean)).payload.lines.length,2);
+  assert.equal(psql(`select count(*) from ceremony_publication_emails where plan_id='${plan}' and state='sending'`,true).trim(),'1');
+  assert.equal(psql(`select count(*) from ceremony_publication_emails where plan_id='${plan}' and state='skipped' and error_code='included_in_leader_report'`,true).trim(),'1');
+  console.log('PASS concurrent closing: identical batch queues once, final group place has one winner, concurrent workers claim one cumulative report');
  }
  console.log('PASS complete ceremony migrations and SQL regression on disposable PostgreSQL');
 } finally {

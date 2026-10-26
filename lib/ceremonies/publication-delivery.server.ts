@@ -24,6 +24,10 @@ export async function processDueCeremonyPublications() {
           notice.userId,
         ]);
         to = identities.get(notice.userId)?.email ?? undefined;
+      } else if (notice.payload.badgeWorkflow) {
+        // The atomic claim resolves the current personal contact and aggregates missing
+        // contacts into one leader report. Never send one delegated email per person.
+        to = notice.destinationEmail ?? undefined;
       } else if (notice.registrationId) {
         // Same current contact/delegation rules as individual campaign messages.
         const recipient = await resolveCurrentParticipantRecipient(
@@ -41,9 +45,12 @@ export async function processDueCeremonyPublications() {
         )[0]?.destinationEmail;
       }
       if (!to) throw Error("ceremony_email_contact_missing");
+      const message = notice.payload.badgeWorkflow
+        ? await (await import("./closing-email.server")).prepareClosingBadgeEmail(notice, appUrl)
+        : renderPublicationEmail(notice, appUrl);
       return {
         to,
-        ...renderPublicationEmail(notice, appUrl),
+        ...message,
         metadata: { ceremony_email_id: notice.id },
       };
     },

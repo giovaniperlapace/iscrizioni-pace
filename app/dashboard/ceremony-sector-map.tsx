@@ -4,6 +4,8 @@ import type { SeatsDesk } from "@/lib/ceremonies/seats-desk";
 import { openingSeatAddress } from "@/lib/ceremonies/seat-label";
 import { sectorCapacitySummary } from "@/lib/ceremonies/overbooking";
 import { closingSectorLayout } from "@/lib/ceremonies/closing-layout";
+import { CLOSING_BADGE_LAYOUT } from "@/lib/ceremonies/closing-badges";
+import { ClosingBadgeMap } from "./closing-badge-map";
 type Sector = SeatsDesk["sectors"][number];
 const colors = { free: "#dbeafe", reserved: "#d97706", nominal: "#16a34a", draft: "#8b5cf6", blocked: "#94a3b8" };
 function SectorShape({
@@ -137,6 +139,9 @@ export const CeremonySectorMap = memo(function CeremonySectorMap({
   onSelect: (id: string) => void;
   disabled?: boolean;
 }) {
+  if (desk.kind === "closing" && desk.layoutKey === CLOSING_BADGE_LAYOUT) {
+    return <ClosingBadgeMap desk={desk} onSelect={onSelect} disabled={disabled} />;
+  }
   if (desk.kind === "closing") {
     const mainCodes = ["A", "B", "C", "D", "E"];
     const main = mainCodes.flatMap(code => desk.sectors.filter(s => (s.layoutCode ?? s.name) === code));

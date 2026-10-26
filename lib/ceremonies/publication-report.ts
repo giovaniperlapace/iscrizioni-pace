@@ -11,7 +11,7 @@ export const PUBLICATION_EMAIL_LABELS: Record<string, string> = {
 export type PublicationSummary = {
   id: string;
   date: string;
-  seats: number;
+  seats: number | null;
   emails: number;
 };
 export type PublicationRecipient = {
@@ -19,6 +19,8 @@ export type PublicationRecipient = {
   name: string;
   recipient: string | null;
   kind: "personal" | "leader";
+  contactReport?: boolean;
+  peopleCount?: number;
   state: string;
   reason: string | null;
   createdAt: string;

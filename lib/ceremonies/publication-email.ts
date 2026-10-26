@@ -4,7 +4,12 @@ export type PublicationNotice = {
   eventId: string;
   userId: string | null;
   registrationId: string | null;
+  destinationEmail?: string | null;
   payload: {
+    badgeWorkflow?: boolean;
+    noticeType?: "leader_contacts";
+    snapshotAt?: string;
+    instructions?: Record<string, { it: string; en: string }>;
     kind: "opening" | "closing";
     title: string;
     startsAt: string;
@@ -15,6 +20,8 @@ export type PublicationNotice = {
       quantity?: number;
       groupId?: string;
       nomineeId?: string;
+      badgeCode?: string;
+      groupName?: string | null;
     }[];
   };
 };

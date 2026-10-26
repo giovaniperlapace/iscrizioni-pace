@@ -18,6 +18,7 @@ const reasons: Record<string, string> = {
     "Assegnazione revocata o destinatario non più abilitato",
   preparation_failed: "Preparazione dell’email non riuscita",
   interrupted: "Invio interrotto: esito da verificare",
+  included_in_leader_report: "Inclusa nel riepilogo al capogruppo; verifica l’esito del riepilogo",
 };
 export function CeremonyPublicationReport({
   planId,
@@ -131,7 +132,7 @@ export function CeremonyPublicationReport({
             <option value="">Ultima pubblicazione</option>
             {report?.publications.map((p) => (
               <option key={p.id} value={p.id}>
-                {date(p.date)} · {p.seats} posti · {p.emails} email
+                {date(p.date)} · {p.seats === null ? "Abbinamenti nominali" : `${p.seats} posti`} · {p.emails} email
               </option>
             ))}
           </select>
@@ -242,9 +243,9 @@ export function CeremonyPublicationReport({
                     className="border-b border-[var(--peace-border)] align-top"
                   >
                     <td className="min-w-40 py-3 pr-3">
-                      <strong>{r.name}</strong>
+                      <strong>{r.contactReport ? `${r.peopleCount} persone da contattare` : r.name}</strong>
                       <span className="block text-xs text-[var(--peace-muted)]">
-                        {r.kind === "leader"
+                        {r.contactReport ? "Capogruppo · riepilogo senza email personale" : r.kind === "leader"
                           ? "Capogruppo · posti da abbinare"
                           : "Assegnazione nominale"}
                       </span>

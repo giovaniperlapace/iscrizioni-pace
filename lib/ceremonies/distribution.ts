@@ -1,5 +1,6 @@
 import type { CeremonyKind } from "./contracts.ts";
 export type DistributionAllocation = {
+  badgeCode?: string | null;
   id: string;
   planId: string;
   kind: CeremonyKind;
@@ -39,6 +40,7 @@ export type DistributionView = {
   people: DistributionPerson[];
 };
 export type PersonalSeat = {
+  badgeCode?: string | null;
   seat?: { id: string; row: string; number: string; mapVersion: number } | null;
   mapAvailable?: boolean;
   id: string;

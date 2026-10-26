@@ -51,6 +51,11 @@ async function sendEmail(input: SendEmailInput, kind: "transactional" | "broadca
     throw new EmailDeliveryError("invalid_recipient");
   }
   if (!validMetadata(input.metadata)) throw new EmailDeliveryError("invalid_metadata");
+  if (!input.text.trim() && !input.html.trim()) throw new EmailDeliveryError("empty_body");
+  if (Buffer.byteLength(input.text) > 5_000_000 || Buffer.byteLength(input.html) > 5_000_000) throw new EmailDeliveryError("postmark_body_too_large");
+  if (input.attachments?.some(file => !file.content.length || !file.filename.trim() || !file.contentType.trim())) throw new EmailDeliveryError("invalid_attachment");
+  const payload = JSON.stringify(postmarkPayload(input, kind, config));
+  if (Buffer.byteLength(payload) > 9_000_000) throw new EmailDeliveryError("postmark_message_too_large");
   if (config.deliveryMode === "log") {
     // Never log magic links, email bodies, recipient addresses or attachments.
     console.info("[email:log]", { kind, attachments: input.attachments?.length || 0 });
@@ -66,7 +71,7 @@ async function sendEmail(input: SendEmailInput, kind: "transactional" | "broadca
         Accept: "application/json",
         "X-Postmark-Server-Token": config.serverToken,
       },
-      body: JSON.stringify(postmarkPayload(input, kind, config)),
+      body: payload,
       signal: AbortSignal.timeout(10_000),
     });
   } catch {

@@ -13,6 +13,7 @@ import {
   subjectKey,
   type LeaderBatchCommand,
 } from "@/lib/ceremonies/sector-desk";
+import { CeremonyPersonalBadge } from "./ceremony-personal-badge";
 type Subject = { registrationId: string; childId: string | null; name: string };
 type Command = LeaderBatchCommand | PairTicketCommand;
 export function CeremonyLeaderSectors({
@@ -499,6 +500,7 @@ export function CeremonyLeaderSectors({
                 >
                   <div>
                     <strong>{n.name}</strong>
+                    {a.kind === "closing" && n.needsSeat && <CeremonyPersonalBadge nomineeId={n.id} badgeCode={a.badgeCode} name={n.name} locale={locale} />}
                     <p>
                       {n.needsSeat ? `${t.sector} ${a.sector}` : c.noSeatState}
                     </p>

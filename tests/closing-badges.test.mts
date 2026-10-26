@@ -1,0 +1,83 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { CLOSING_BADGE_SECTORS, closingBadgeColor, closingBadgeSector, CLOSING_BADGE_COPY } from "../lib/ceremonies/closing-badges.ts";
+import { renderClosingBadgeEmail } from "../lib/ceremonies/closing-email.ts";
+import { prepareClosingBadgeEmail } from "../lib/ceremonies/closing-email.server.ts";
+import { ceremonySeatText, parseCeremonySeatInfo } from "../lib/ceremonies/seat-projection.ts";
+import type { PublicationNotice } from "../lib/ceremonies/publication-email.ts";
+import { sendTransactionalEmail, EmailDeliveryError } from "../lib/email/smtp.ts";
+
+const id = "00000000-0000-4000-8000-000000000001";
+const instructions = Object.fromEntries(CLOSING_BADGE_SECTORS.map(s => [s.code, { it: `ISTRUZIONI SINTETICHE ${s.color}`, en: `SYNTHETIC INSTRUCTIONS ${s.code}` }]));
+const notice: PublicationNotice = { id, claim: id, eventId: id, userId: null, registrationId: id,
+  payload: { kind: "closing", title: "Cerimonia finale", badgeWorkflow: true, startsAt: "2026-10-27T15:15:00Z", location: "Sede sintetica", instructions,
+    lines: [{ nomineeId: id, name: "Ada <Test> & Famiglia", sector: "Chiesa Basilica inferiore", badgeCode: "CLOSING_ORANGE" }] } };
+
+test("closing badge capacities and localized colors are distinct from opening sectors", () => {
+  assert.equal(CLOSING_BADGE_SECTORS.reduce((sum, s) => sum + s.capacity, 0), 3500);
+  assert.equal(closingBadgeSector("A"), null);
+  assert.equal(closingBadgeSector("PRATO"), null);
+  for (const locale of Object.keys(CLOSING_BADGE_COPY) as (keyof typeof CLOSING_BADGE_COPY)[]) {
+    for (const badge of CLOSING_BADGE_SECTORS) assert.ok(closingBadgeColor(badge.code, locale));
+  }
+  const parsed = parseCeremonySeatInfo([{ kind: "closing", sector: "Piazza inferiore", needsSeat: true, review: false, seat: null, badgeCode: "CLOSING_PURPLE" }]);
+  assert.ok(parsed); assert.match(ceremonySeatText(parsed[0]), /Piazza inferiore · Badge Viola/);
+  assert.equal(parseCeremonySeatInfo([{ ...parsed[0], badgeCode: "bogus" }]), null);
+  assert.equal(parseCeremonySeatInfo([{ ...parsed[0], kind: "opening" }]), null);
+});
+
+test("personal closing mail is bilingual, escapes content, includes only assigned-sector instructions and requires approved text", () => {
+  const mail = renderClosingBadgeEmail(notice, "https://example.invalid");
+  assert.match(mail.html, /lang="it"[\s\S]*lang="en"/);
+  assert.match(mail.html, /Ada &lt;Test&gt; &amp; Famiglia/);
+  assert.match(mail.text, /16:15/);
+  assert.match(mail.text, /PDF/);
+  assert.match(mail.text, /ISTRUZIONI SINTETICHE Arancione/);
+  assert.doesNotMatch(mail.text, /ISTRUZIONI SINTETICHE Verde|ISTRUZIONI SINTETICHE Viola/);
+  assert.throws(() => renderClosingBadgeEmail({ ...notice, payload: { ...notice.payload, instructions: {} } }, "https://example.invalid"), /instructions_missing/);
+});
+
+test("family receives a downloadable PDF and unique inline badge for every explicit nominee", async () => {
+  const family = { ...notice, payload: { ...notice.payload, lines: CLOSING_BADGE_SECTORS.map((s, i) => ({ nomineeId: `${id}-${i}`, name: `Persona sintetica ${i}`, sector: s.name, badgeCode: s.code })) } };
+  const mail = await prepareClosingBadgeEmail(family, "https://example.invalid");
+  const pdfs = mail.attachments.filter(file => file.contentType === "application/pdf");
+  const images = mail.attachments.filter(file => file.contentType === "image/jpeg");
+  assert.equal(pdfs.length, 3); assert.equal(images.length, 3);
+  assert.equal(new Set(pdfs.map(p => p.filename)).size, 3);
+  assert.equal(new Set(images.map(p => p.cid)).size, 3);
+  for (const pdf of pdfs) { assert.equal(pdf.content.subarray(0, 4).toString(), "%PDF"); assert.ok(!pdf.cid); }
+  for (const img of images) assert.ok(mail.html.includes(`src="cid:${img.cid}"`));
+  assert.doesNotMatch(mail.html, /src="https?:/);
+  assert.ok(mail.attachments.reduce((n, a) => n + a.content.length, 0) < 6 * 1024 * 1024);
+});
+
+test("leader contact report includes all 1005 names without individual mail or attachment explosion", async () => {
+  const report: PublicationNotice = { ...notice, userId: id, registrationId: null, payload: { ...notice.payload, noticeType: "leader_contacts", snapshotAt: "2026-10-26T15:00:00Z",
+    lines: Array.from({ length: 1005 }, (_, i) => ({ ...notice.payload.lines[0], name: `Persona sintetica ${i + 1}` })) } };
+  const mail = await prepareClosingBadgeEmail(report, "https://example.invalid");
+  assert.match(mail.text, /Persona sintetica 1005/);
+  assert.match(mail.text, /incaricato di contattarle/);
+  assert.match(mail.text, /Snapshot as of/);
+  assert.equal(mail.attachments.length, 0);
+  assert.match(mail.html, /capogruppo\/cerimonie/);
+  assert.ok(Buffer.byteLength(JSON.stringify(mail)) < 9_000_000);
+});
+
+test("group allocation notice requests nominal assignment and contains no personal badge", async () => {
+  const mail = await prepareClosingBadgeEmail({ ...notice, userId: id, registrationId: null, payload: { ...notice.payload, lines: [{ ...notice.payload.lines[0], name: "Gruppo prova", quantity: 200 }] } }, "https://example.invalid");
+  assert.match(mail.text, /200 posti/); assert.match(mail.text, /assegnali nominalmente/); assert.equal(mail.attachments.length, 0);
+});
+
+test("transactional transport refuses oversized encoded payload, empty attachment and invalid metadata before network", async () => {
+  const input = { to: "test@example.invalid", subject: "Test", text: "Test", html: "<p>Test</p>" };
+  const env = { ...process.env }; const fetch = globalThis.fetch;
+  try {
+    Object.assign(process.env, { EMAIL_DELIVERY_MODE: "postmark", POSTMARK_SERVER_TOKEN: "synthetic", EMAIL_FROM: "test@example.invalid", POSTMARK_TRANSACTIONAL_STREAM: "outbound" });
+    globalThis.fetch = async () => { throw Error("Network must not run"); };
+    for (const [change, code] of [
+      [{ attachments: [{ filename: "badge.pdf", content: Buffer.alloc(7_000_000), contentType: "application/pdf" }] }, "postmark_message_too_large"],
+      [{ attachments: [{ filename: "badge.pdf", content: Buffer.alloc(0), contentType: "application/pdf" }] }, "invalid_attachment"],
+      [{ metadata: { ceremony_publication_email_id: id } }, "invalid_metadata"],
+    ] as const) await assert.rejects(sendTransactionalEmail({ ...input, ...change, attachments: "attachments" in change ? [...change.attachments] : undefined }), (e: unknown) => e instanceof EmailDeliveryError && e.code === code);
+  } finally { globalThis.fetch = fetch; for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key]; Object.assign(process.env, env); }
+});

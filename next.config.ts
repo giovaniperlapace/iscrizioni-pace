@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     "/*": ["./lib/qrcode/fonts/NotoSans-Regular.ttf"],
     "/api/email-campaigns": ["./lib/email/assets/*-v1.png"],
     "/api/cron/*": ["./lib/email/assets/*-v1.png"],
+    "/dashboard/ceremonies/badge": ["./lib/email/assets/*-v1.png"],
   },
 };
 
