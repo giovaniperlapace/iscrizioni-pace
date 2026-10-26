@@ -24,7 +24,7 @@ export function renderClosingBadgeEmail(notice: PublicationNotice, appUrl: strin
           : `the image below is your admission ticket for the closing ceremony. You can also download it from the attachment to this email. You have been assigned the sector ${line.sector}. Entry will be permitted until 14:30.`;
         const farewell = it ? "Buona cerimonia finale!" : "Enjoy the closing ceremony!";
         const seating = line.badgeCode === "CLOSING_GREEN"
-          ? it ? "Nonostante il nome, anche nel settore Prato Basilica superiore ci saranno posti a sedere." : "Despite its name, seating will also be available in the Prato Basilica superiore sector."
+          ? it ? "Anche nel settore Prato Basilica superiore ci saranno posti a sedere." : "Seating will also be available in the Prato Basilica superiore sector."
           : null;
         return {
           text: [greeting, body, ...(seating ? [seating] : []), farewell].join("\n\n"),

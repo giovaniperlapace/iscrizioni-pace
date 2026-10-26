@@ -59,8 +59,8 @@ test("only Prato personal mail clarifies that seating is available in both langu
     const mail = renderClosingBadgeEmail({ ...notice, payload: { ...notice.payload, lines: [{ ...notice.payload.lines[0], sector: sector.name, badgeCode: sector.code }] } }, "https://example.invalid");
     for (const body of [mail.text, mail.html]) {
       if (sector.code === "CLOSING_GREEN") {
-        assert.match(body, /Nonostante il nome, anche nel settore Prato Basilica superiore ci saranno posti a sedere\./);
-        assert.match(body, /Despite its name, seating will also be available/);
+        assert.match(body, /Anche nel settore Prato Basilica superiore ci saranno posti a sedere\./);
+        assert.match(body, /Seating will also be available/);
       } else assert.doesNotMatch(body, /posti a sedere|seating will/);
     }
   }
