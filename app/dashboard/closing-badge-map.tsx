@@ -5,7 +5,7 @@ import { sectorCapacitySummary } from "@/lib/ceremonies/overbooking";
 import { CLOSING_BADGE_SECTORS } from "@/lib/ceremonies/closing-badges";
 
 // The dots are quantities, not addresses or a physical seating plan.
-const statusColors = { free: "#dbeafe", draft: "#8b5cf6", nominal: "#16a34a", group: "#d97706", blocked: "#94a3b8" };
+const statusColors = { free: "#dbeafe", draft: "#d2b48c", nominal: "#1e3a8a", group: "#facc15", blocked: "#94a3b8" };
 export function ClosingBadgeMap({ desk, onSelect, disabled }: { desk: SeatsDesk; onSelect: (id: string) => void; disabled: boolean }) {
   const container = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(50);
@@ -34,11 +34,11 @@ export function ClosingBadgeMap({ desk, onSelect, disabled }: { desk: SeatsDesk;
           {Array.from({ length: capacity }, (_, i) => <rect key={i} x={(i % columns) * 10 + 1} y={Math.floor(i / columns) * 10 + 1} width="7" height="7" rx="1"
             fill={i >= (sector.assignableLimit ?? capacity) ? statusColors.blocked : i < counts.nominal ? statusColors.nominal : i < counts.nominal + counts.groupPending ? statusColors.group : i < counts.nominal + counts.groupPending + counts.draft ? statusColors.draft : statusColors.free} />)}
         </svg>
-        <span className="text-xs text-slate-600">{counts.draft} in bozza · {counts.nominal} nominativi · {counts.groupPending} da abbinare</span>
+        <span className="text-xs text-slate-600">{counts.draft} in bozza · {counts.nominal} nominali assegnati · {counts.groupPending} da abbinare da parte del capogruppo</span>
         {counts.extra > 0 && <span className="text-xs font-semibold text-amber-900">Overbooking +{counts.extra} · {counts.usedExtra} impegnati</span>}
       </button>;
     })}
-    <p className="text-xs text-slate-600">Legenda posti: azzurro libero · viola in bozza · verde nominativo · arancio da abbinare · grigio riservato.</p>
+    <p className="text-xs text-slate-600">Legenda posti: azzurro libero · beige in bozza · blu scuro Nominali assegnati · giallo Da abbinare da parte del capogruppo · grigio riservato.</p>
     <p className="text-xs text-slate-600">I simboli rappresentano le quantità, senza indicare file o sedute. Accesso al settore con il badge del colore indicato; sistemazione a riempimento.</p>
   </div>;
 }
