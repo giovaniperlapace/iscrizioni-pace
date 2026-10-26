@@ -23,3 +23,17 @@ nuove pubblicazioni e gli abbinamenti del capogruppo.
 
 Gli artefatti operativi di questa attivazione sono conservati localmente in
 `output/closing-badges/activation/`. I promemoria Forum restano esclusi.
+
+## Esito produzione
+
+Codice `340d538` pubblicato READY sul dominio canonico prima dell’attivazione.
+Backup completo da 32.089.264 byte verificato; SHA-256
+`1fce3acef149403efdee6d7ef0130b5fe9faf4a323bd29a44b340e584655ed8e`.
+Migration applicata e registrata, 75 tabelle / 313.509 righe e metadati/ACL
+preesistenti di 256 funzioni verificati prima dell’abilitazione.
+RPC Admin conclusa con audit e revisione 37: `enabled=true`, istruzioni `{}`.
+Un primo tentativo sulla revisione 29 è stato interamente annullato per
+conflitto: durante il rilascio sono state pubblicate sei nuove notifiche.
+La ripresa ha letto la revisione corrente sotto lock senza alterare le
+assegnazioni. Il worker ordinario ha iniziato subito a elaborare la coda.
+Le quattro notifiche storiche accettate non sono state riaccodate.
