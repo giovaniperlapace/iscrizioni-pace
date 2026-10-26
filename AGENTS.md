@@ -6,7 +6,7 @@
   viola 1.100, Prato Basilica superiore verde 2.200; totale 3.500, a riempimento.
   Supera la geometria A–E/esterno/prato e il protocollo precedenti. Simboli
   soltanto quantitativi, colori badge distinti dalla legenda stato posti.
-- Preparazione locale: PDF personale allegato e JPEG CID con nome/cognome;
+- PDF personale allegato e JPEG CID con nome/cognome;
   badge nell’iscrizione, download protetto anche al capogruppo, settore/colore
   nella proiezione del QR. Nome canonico e nomina attiva ricontrollati.
 - Pubblicazione invariata; abbinamenti capogruppo accodano atomicamente nuove
@@ -24,11 +24,16 @@
   ha richiesto esplicitamente la revoca e ripartenza dai tre settori vuoti.
   Revoca canonica e archivio integrale nell’audit; email/ricevute conservate.
   Fotografia esatta degli ID e revisione blocca eventuali nuove operazioni.
-  Invii nuovi settori ancora disattivati. Dettagli e stato del rilascio:
+  Codice `bb354e5` production READY; migration `20261026160000` registrata
+  e configurazione applicata atomicamente, revisione 29, settori vuoti.
+  74 tabelle/312.639 righe esterne alla sostituzione conservate; metadati/ACL
+  delle 243 funzioni conservati. Invii disattivati e istruzioni vuote.
+  Nessun nuovo invio reale. Dettagli e stato del rilascio:
   `docs/cerimonia-finale-badge-settori-2026-10-26.md`.
 - 1.202 test, TypeScript, lint mirato, build production, SQL/concorrenza e browser
   320/390/1024/1440px passati. Lint generale con tre errori preesistenti nel test
-  navigazione cerimonie, non modificato.
+  navigazione cerimonie, non modificato. Copia pulita del rilascio: 1.188 test,
+  TypeScript e build passati; lockfile corretto per consentire npm ci.
 
 ## Cerimonia finale: posti e protocollo — 2026-10-26
 

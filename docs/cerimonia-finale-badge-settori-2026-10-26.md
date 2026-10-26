@@ -2,6 +2,13 @@
 
 ## Stato
 
+**Rilasciato in produzione**: codice `bb354e5`, deployment
+`dpl_9ZDGMwuaKa8gQiatHUUBBcEUxVMi` READY e dominio
+`registrationspeace.santegidio.org` verificati. Migration registrata e
+configurazione applicata atomicamente: revisione **29**, tre settori e quote
+200/1.100/2.200, zero assegnazioni/nomine/bozze, overbooking zero.
+**Email disattivate, istruzioni vuote; nessun nuovo invio reale.**
+
 Commit, push e rilascio production autorizzati esplicitamente dall’utente dopo
 il backup. Invii dei tre nuovi settori da mantenere disattivati fino ai testi
 definitivi. Il controllo iniziale (revisione 15) non trovava dati operativi;
@@ -149,15 +156,19 @@ tre dipendenze transitive mancanti nel lockfile pubblicato: inclusa la correzion
 locale già esistente, senza modifiche alle dipendenze dichiarate. **1.188 test**,
 TypeScript e build production della copia pulita passati.
 
-## Rilascio da completare
+## Rilascio eseguito e successiva attivazione
 
-1. Commit/push e pubblicazione del codice autorizzati, conservando
+1. Commit/push e pubblicazione del codice completati, conservando
    separatamente i lavori locali sui promemoria Forum.
-2. Backup completo verificato prima delle operazioni SQL. Fotografare dati,
-   funzioni, proprietari e ACL; nessun test operativo su iscritti reali.
-3. Applicare/registrare la migration dei badge. Non è dipendente dalla migration
+2. Backup completo verificato prima di commit/push e SQL. Guardie transazionali
+   confermano **74 tabelle e 312.639 righe esterne alla configurazione sostituita**
+   conservate, inclusi gli invii storici. Proprietari, ACL e RLS conservati;
+   metadati/ACL delle **243 funzioni preesistenti** conservati, modifiche limitate
+   ai due corpi previsti e ai quattro wrapper. I dati della finale revocata sono
+   archiviati integralmente nell’audit. Nessun test operativo su iscritti reali.
+3. Applicata/registrata la migration dei badge. Non è dipendente dalla migration
    locale dei promemoria Forum, che non va inclusa implicitamente.
-4. Eseguire prima `scripts/archive-closing-assignments-before-badges-2026-10-26.sql`
+4. Eseguito prima `scripts/archive-closing-assignments-before-badges-2026-10-26.sql`
    con `app.closing_reset_expected` uguale alla fotografia verificata delle sole
    assegnazioni autorizzate; poi
    `scripts/replace-closing-sectors-with-badges-2026-10-26.sql`, nella stessa
@@ -165,8 +176,15 @@ TypeScript e build production della copia pulita passati.
    timeout di lock/statement e verifica prima del commit. Il comando rifiuta
    qualunque ulteriore riga operativa e una seconda esecuzione; consente solo
    le notifiche storiche terminali dopo la revoca/archiviazione autorizzata.
-5. Verificare tre settori, quote 200/1.100/2.200, totale 3.500, orario Roma,
+5. Rilettura indipendente conferma tre settori, quote 200/1.100/2.200, totale 3.500, orario Roma,
    overbooking zero, inaugurazione invariata e invii ancora disattivati.
+   Le quattro notifiche precedenti sono ancora `accepted`, senza modifiche.
+   Homepage HTTP 200; gestione e download badge richiedono autenticazione.
 6. Solo dopo ricezione e approvazione dei testi, attivare con la RPC dedicata e
    controllare il report. Nessun ripristino globale del backup su un evento
    operativo e nessun reinvio automatico degli esiti incerti.
+
+La revoca autorizzata è verificata su PostgreSQL temporaneo: 50 posti e una
+nomina, archivio completo, email conservate; variazioni di revisione, quantità
+o stati bloccano tutto senza modifiche parziali. Anche le guardie effettive di
+preservazione usate nel rilascio sono passate nella regressione SQL.
