@@ -11,7 +11,10 @@
   dello scope non causano inoltri ad altri capigruppo. Email personale prioritaria,
   minori espliciti, nomine attive e report senza delega conservati; i non delegati
   non entrano nei PDF. Badge personali originali, sito e scanner invariati.
-- Migration `20261026170000`, solo funzioni; invii ancora disattivati. 1.205 test,
+- Codice `8a2ee7f` production READY, migration `20261026170000` registrata
+  dopo backup verificato. 75 tabelle/313.224 righe e metadati/ACL di 254 funzioni
+  conservati; invii disattivati, istruzioni vuote, nessun nuovo invio reale.
+  Copia pulita: 1.191 test, TypeScript e build. Working copy: 1.205 test,
   TypeScript, lint mirato, SQL/concorrenza e anteprime renderizzate verificati.
   Postmark API_TEST accetta anche 1.005 delegati in tre PDF senza consegna reale.
   Dettagli e stato rilascio:

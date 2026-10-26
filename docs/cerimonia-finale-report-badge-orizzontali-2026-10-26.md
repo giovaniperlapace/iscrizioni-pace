@@ -1,5 +1,10 @@
 # Report capogruppo con badge orizzontali - 26 ottobre 2026
 
+**In produzione**: commit `8a2ee7f`, deployment
+`dpl_8Fu19nLrNPCQ2JGGXwYfVWwU8zZG` READY sul dominio canonico.
+Migration applicata e registrata, invii ancora disattivati e istruzioni vuote.
+Nessun nuovo invio reale.
+
 ## Comportamento
 
 Il report resta cumulativo. Un PDF allegato per ciascun settore con persone
@@ -67,3 +72,16 @@ Backup verificato con elenco e decodifica integrale `pg_restore`, permessi 600,
 `/root/backups/iscrizioni-pace/production-before-closing-strips-1793043601867.dump`
 
 SHA-256: `d70b59c582964a87992c7f352e22a38bdd492837d114713cfb016ab70bdd0ebc`.
+
+Rilascio verificato: **75 tabelle e 313.224 righe** conservate integralmente;
+metadati/ACL delle **254 funzioni preesistenti** conservati, salvo i due corpi
+previsti. Due nuove funzioni service-only. Primo tentativo annullato prima del
+commit per confronto troppo restrittivo dell’offset interno del parametro
+predefinito; confronto corretto con `pg_get_expr`, valore e privilegi identici,
+regressione ripetuta e transazione successiva completata. Nessuna modifica
+parziale rimasta dal tentativo annullato.
+
+Rilettura indipendente: revisione 29, tre settori/3.500 posti, zero nomine,
+assegnazioni o bozze; quattro notifiche storiche ancora accepted.
+Copia pulita dei soli file del rilascio da npm ci: **1.191 test**, TypeScript
+e build production passati; font locale presente nel bundle del cron.
