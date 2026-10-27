@@ -6,7 +6,7 @@ import type {
   PairTicketCommand,
 } from "@/lib/ceremonies/leader-tickets";
 import { leaderSectorSubjects } from "@/lib/ceremonies/leader-tickets";
-import { Check, Download, Ticket, Users, X } from "lucide-react";
+import { Check, Download, LoaderCircle, Ticket, Users, X } from "lucide-react";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { SECTOR_COPY } from "@/lib/ceremonies/sector-copy";
 import {
@@ -41,6 +41,7 @@ export function CeremonyLeaderSectors({
     [decisionPage, setDecisionPage] = useState(0),
     [selected, setSelected] = useState<Subject[]>([]);
   const [pending, setPending] = useState(false),
+    [savedNeedsRefresh, setSavedNeedsRefresh] = useState(false),
     [downloading, setDownloading] = useState(false),
     [stale, setStale] = useState(false),
     [message, setMessage] = useState(""),
@@ -57,7 +58,7 @@ export function CeremonyLeaderSectors({
     if (confirmation) dialog.current?.showModal();
   }, [confirmation]);
   const a = view.allocations.find((a) => a.id === allocation),
-    blocked = pending || downloading || stale || !!uncertain;
+    blocked = pending || savedNeedsRefresh || downloading || stale || !!uncertain;
   const downloadCopy = CLOSING_DOWNLOAD_COPY[locale];
   const hasClosingTickets = closingLeaderDownloadTickets(view).length > 0;
   async function downloadAll() {
@@ -115,18 +116,26 @@ export function CeremonyLeaderSectors({
     try {
       setView(await refresh());
       setStale(false);
+      if (savedNeedsRefresh) {
+        setSavedNeedsRefresh(false);
+        setSelected([]);
+        setDecisionPage(0);
+        setMessage(c.saved);
+        setConfirmation(null);
+      }
     } catch {
       setStale(true);
-      setMessage(c.failure);
+      setMessage(`${savedNeedsRefresh ? c.saved + " " : ""}${c.failure}`);
     } finally {
       busy.current = false;
       setPending(false);
     }
   }
   async function execute(command: Command) {
-    if (busy.current) return;
+    if (busy.current || savedNeedsRefresh) return;
     busy.current = true;
     setPending(true);
+    setMessage("");
     let status: string;
     try {
       status = (
@@ -135,24 +144,32 @@ export function CeremonyLeaderSectors({
     } catch {
       status = "unavailable";
     }
-    setConfirmation(null);
-    setMessage(
+    const outcomeMessage =
       status in t
         ? t[status as keyof typeof t]
         : status in c
           ? c[status as keyof typeof c]
-          : c.unavailable,
-    );
-    if (status === "unavailable") setUncertain(command);
-    else {
+          : c.unavailable;
+    if (status === "unavailable") {
+      setUncertain(command);
+      setMessage(outcomeMessage);
+    } else {
       setUncertain(null);
-      if (status === "saved") setSelected([]);
+      if (status === "saved") setSavedNeedsRefresh(true);
       try {
         setView(await refresh());
         setStale(false);
+        setSavedNeedsRefresh(false);
+        if (status === "saved") {
+          setSelected([]);
+          setDecisionPage(0);
+        }
+        setMessage(outcomeMessage);
+        setConfirmation(null);
       } catch {
         setStale(true);
         setMessage(`${status === "saved" ? c.saved + " " : ""}${c.failure}`);
+        if (status !== "saved") setConfirmation(null);
       }
     }
     busy.current = false;
@@ -165,6 +182,7 @@ export function CeremonyLeaderSectors({
     name: string,
   ) {
     if (!a || blocked) return;
+    setMessage("");
     setConfirmation({
       names: [name],
       command: {
@@ -216,8 +234,8 @@ export function CeremonyLeaderSectors({
           </div>
         )}
       </header>
-      {message && <p role="status">{message}</p>}
-      {uncertain && (
+      {message && !confirmation && <p role="status">{message}</p>}
+      {uncertain && !confirmation && (
         <div role="alert">
           <p>{c.unavailable}</p>
           <button
@@ -517,7 +535,8 @@ export function CeremonyLeaderSectors({
                   a.state !== "validated" ||
                   a.numbered
                 }
-                onClick={() =>
+                onClick={() => {
+                  setMessage("");
                   setConfirmation({
                     names: selected.map((s) => s.name),
                     command: {
@@ -529,8 +548,8 @@ export function CeremonyLeaderSectors({
                         childId,
                       })),
                     },
-                  })
-                }
+                  });
+                }}
               >
                 {t.confirm}
               </button>
@@ -588,11 +607,19 @@ export function CeremonyLeaderSectors({
       {confirmation && (
         <dialog
           ref={dialog}
+          closedby={pending || savedNeedsRefresh ? "none" : "closerequest"}
+          onKeyDown={(e) => {
+            // Repeated Escape presses can bypass the browser's cancel event.
+            if (e.key === "Escape" && (busy.current || savedNeedsRefresh)) {
+              e.preventDefault();
+            }
+          }}
           onCancel={(e) => {
             e.preventDefault();
-            if (!pending) setConfirmation(null);
+            if (!busy.current && !savedNeedsRefresh) setConfirmation(null);
           }}
           aria-labelledby="leader-sector-confirm"
+          aria-busy={pending}
           className="fixed inset-0 z-50 m-auto max-h-[80dvh] w-[min(92vw,36rem)] overflow-y-auto rounded-xl border bg-white p-6 shadow-xl backdrop:bg-black/40"
         >
           <h2 id="leader-sector-confirm" className="text-lg font-semibold">
@@ -612,22 +639,42 @@ export function CeremonyLeaderSectors({
           </ul>
           {"action" in confirmation.command &&
             confirmation.command.action === "revoke" && <p>{t.revokeHelp}</p>}
+          {pending ? (
+            <p role="status" className="flex items-center gap-2">
+              <LoaderCircle
+                size={20}
+                className="animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              {c.loading}
+            </p>
+          ) : message && <p role="status">{message}</p>}
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               className="btn-primary px-4 py-2"
               disabled={pending}
-              onClick={() => void execute(confirmation.command)}
+              onClick={() =>
+                void (savedNeedsRefresh ? reload() : execute(confirmation.command))
+              }
             >
-              {"subjects" in confirmation.command
-                ? t.confirm
-                : confirmation.command.action === "revoke"
-                  ? c.confirm
-                  : c.noSeat}
+              {pending
+                ? c.loading
+                : savedNeedsRefresh
+                  ? c.refresh
+                  : uncertain
+                    ? c.retry
+                    : "subjects" in confirmation.command
+                      ? t.confirm
+                      : confirmation.command.action === "revoke"
+                        ? c.confirm
+                        : c.noSeat}
             </button>
             <button
               className="btn-secondary px-4 py-2"
-              disabled={pending}
-              onClick={() => setConfirmation(null)}
+              disabled={pending || savedNeedsRefresh}
+              onClick={() => {
+                if (!busy.current && !savedNeedsRefresh) setConfirmation(null);
+              }}
             >
               {t.cancel}
             </button>

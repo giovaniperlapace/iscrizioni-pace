@@ -1,5 +1,17 @@
 # AGENTS.md
 
+## Cerimonie capogruppo: attesa assegnazione multipla — 2026-10-27
+
+- Modale aperta e indicatore di lavoro fino al salvataggio atomico e alla
+  rilettura di tutti i nominativi/conteggi; chiusura insieme alla vista aggiornata.
+  Doppio invio, annullamento ed Esc ripetuto bloccati durante il lavoro.
+- Lettura fallita dopo salvataggio: solo aggiornamento, senza riscrittura.
+  Risposta incerta: retry con identico comando e request ID. Sette lingue.
+- 1.225 test, TypeScript, lint mirato, build isolata, SQL/concorrenza e browser
+  desktop/mobile con 103 soggetti su due pagine verificati. Commit/push richiesti
+  successivamente dall’utente; nessuna migration o scrittura operativa. Dettagli:
+  `docs/cerimonie-capogruppo-attesa-assegnazione-multipla-2026-10-27.md`.
+
 ## Cerimonie: aggiornamento piantina dopo pubblicazione — 2026-10-27
 
 - La rilettura della piantina dopo pubblicazione e dal pulsante Aggiorna usa
