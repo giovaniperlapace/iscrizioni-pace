@@ -13,6 +13,10 @@
   allegati eccessivi autorizzati. Esclusi recapiti soppressi e risultati incerti.
   Nessuna migration. 1.233 test e build isolata passati; diagnosi, verifiche e
   procedura: `docs/email-badge-sessioni-2026-10-27.md`.
+- `68c0bf8` production READY con SHA verificato; anteprima e prova browser
+  riuscite sulla Wi-Fi. Tre invii recuperati dalla coda, 11 badge ciascuno:
+  consegna ai server destinatari confermata e salvata nel report; audit e
+  backup privato conservati, nessun recupero dei recapiti soppressi.
 
 ## Cerimonie capogruppo: attesa assegnazione multipla — 2026-10-27
 

@@ -65,3 +65,26 @@ La normale coda ricontrolla nomine e recapiti correnti nel claim atomico.
 L’accettazione Postmark va distinta dalla consegna, senza reinvii automatici
 di risultati incerti. Evidenze private e messaggi originali sono in
 `output/wifi-diagnosi-2026-10-27/`, escluso da Git.
+
+## Rilascio e recupero completati
+
+- Commit applicativo `68c0bf80ddd23e39d7f29093c3c2c0b9d0cc6b2c` inviato
+  a `main`; deployment `dpl_uvXTkBmzYoiU9VjTvVrcN5LjbCGf` READY,
+  SHA verificato tramite API Vercel e dominio production assegnato.
+- Nel browser con Wi-Fi: anteprima corretta, badge verde e PDF da 344 KB;
+  prova al solo account dell’operatore accettata e consegnata alle 11:34:14
+  ora Roma, con immagine e PDF. Campagna tecnica annullata dopo la verifica,
+  con audit; nessun invio definitivo ai partecipanti e nessuna assegnazione
+  operativa modificata.
+- Backup privato delle tre righe e tre registrazioni audit prima del recupero.
+  Nuova verifica delle nomine e assenza di messaggi alternativi; aggiornamento
+  HTTPS condizionato a ID, stato fallito, errore originario, versione della riga
+  e assenza di destinatario/MessageID/accettazione. Tre righe riaccodate.
+  Il normale cron ha eseguito i claim e gli invii dal codice di produzione.
+- Tutti e tre i messaggi accettati tra le 11:34:55 e le 11:35:00 ora Roma;
+  ciascuno contiene 11 PDF e 11 immagini CID. Postmark conferma la consegna
+  ai server destinatari alle 11:35:04, 11:35:23 e 11:35:26.
+  Evidenze validate per MessageID, stream, destinatario ed evento Delivered,
+  quindi salvate nel report applicativo. Nessun esito incerto o nuovo errore.
+- I due rifiuti per recapito soppresso sono rimasti esclusi dal recupero.
+- Nei log production consultati dal rilascio non risultano errori runtime.
