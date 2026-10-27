@@ -7,6 +7,7 @@ import { startPublicEmailFlow } from "@/app/actions";
 import { EmailAccessForm } from "@/app/email-access-form";
 import { PublicPanelProgram } from "@/app/public-panel-program";
 import { EventIdentity, PeaceLineMark } from "@/components/event-identity";
+import { NextEditionAnnouncement } from "@/components/next-edition-announcement";
 import { getMessages } from "@/lib/i18n/messages";
 import type { PublicPanelProgramItem } from "@/lib/panels/public-program";
 import type { SupportedLocale } from "@/lib/i18n/config";
@@ -53,6 +54,7 @@ export function ProgramHome({ locale, panels, bookingsOpen, preview = false, ema
       <section className="event-gradient relative isolate scroll-mt-[4.75rem] overflow-hidden" id="personal-access">
         <PeaceLineMark className="absolute left-[78%] top-24 -z-10 h-36 w-[38rem] -translate-x-1/2 text-white/55 opacity-[0.18] sm:left-[72%] sm:top-28 sm:h-52 sm:opacity-20 lg:left-[68%] lg:w-[58rem] lg:opacity-[0.45]" />
         <div className="app-container flex min-h-[calc(100vh-4.75rem)] flex-col py-10 sm:py-12 lg:py-14">
+          <NextEditionAnnouncement locale={locale} />
           <div className="grid flex-1 content-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
               <EventIdentity inverted />
