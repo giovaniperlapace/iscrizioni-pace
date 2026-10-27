@@ -577,7 +577,7 @@ export default async function ManagerDashboardPage({
             navMode === "mini" ? "lg:grid-cols-[4.75rem_1fr]" : "lg:grid-cols-[11.5rem_1fr]",
           ].join(" ")}
         >
-          <ManagerSidebar kind={params.kind === "closing" ? "closing" : "opening"} activeSection={activeSection} navMode={navMode} report={statisticsReport} canManage={canManage} />
+          <ManagerSidebar kind={params.kind === "opening" ? "opening" : "closing"} activeSection={activeSection} navMode={navMode} report={statisticsReport} canManage={canManage} />
 
           <div className="grid min-w-0 gap-6">
             <GroupAssignmentReports dashboard="manager" eventId={currentEventId} />
@@ -782,7 +782,7 @@ export default async function ManagerDashboardPage({
 }
 
 function ManagerSidebar({
-  kind = "opening",
+  kind = "closing",
   activeSection,
   navMode,
   report,

@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Cerimonie: aggiornamento piantina dopo pubblicazione — 2026-10-27
+
+- La rilettura della piantina dopo pubblicazione e dal pulsante Aggiorna usa
+  un solo snapshot canonico, senza dipendere dalla directory degli iscritti.
+  Eliminata questa causa di mappa ferma alle bozze dopo pubblicazione riuscita.
+  Nelle modali resta il controllo di revisione comune a mappa e directory.
+- Errore di aggiornamento distinto dal risultato della pubblicazione, con
+  recupero tramite sola rilettura. Ruoli, evento e risposte private conservati.
+- Commit/push su main richiesti insieme al default della cerimonia finale.
+  Nessuna migration, operazione reale o nuovo invio. Verifiche e limiti: `docs/cerimonie-aggiornamento-piantina-2026-10-27.md`.
+
+## Cerimonie: finale predefinita per manager e capogruppo — 2026-10-27
+
+- Accesso senza `kind` alla gestione posti del manager e alla pagina cerimonie
+  capogruppo apre la cerimonia finale. `kind=opening` resta rispettato;
+  espansione/compressione menu manager conserva la cerimonia selezionata.
+- Default Admin conservato. Modifica applicativa locale, nessuna migration,
+  scrittura operativa o email. Test navigazione, rendering server dei default
+  e delle scelte esplicite, TypeScript e lint mirato verificati.
+
 ## Cerimonia finale: download unico capogruppo — 2026-10-26
 
 - Pulsante nella scheda finale: tutti i biglietti nominali dei settori/gruppi

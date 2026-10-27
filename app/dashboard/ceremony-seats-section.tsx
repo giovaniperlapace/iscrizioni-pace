@@ -10,7 +10,8 @@ import { manageCeremonyDrafts } from './ceremony-draft-actions';
 export async function CeremonySeatsSection({ params, dashboard, navMode }: { params: Record<string,string | undefined>; dashboard: 'admin'|'manager'; navMode: 'full'|'mini' }) {
   const context = await ceremonyContext(await createCeremonyManagerClient());
   if (!context?.canManage) return null;
-  const kind = params.kind === 'closing' ? 'closing' : 'opening';
+  const defaultKind = dashboard === 'manager' ? 'closing' : 'opening';
+  const kind = params.kind === 'opening' || params.kind === 'closing' ? params.kind : defaultKind;
   const service = createSupabaseServiceClient();
   const { data, error } = await service.rpc('get_ceremony_draft_desk', { p_event: context.event.id, p_actor: context.userId, p_kind: kind });
   if (error) throw Error('Impossibile caricare i posti delle cerimonie. Riprova.');

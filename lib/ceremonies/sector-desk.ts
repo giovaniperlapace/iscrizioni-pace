@@ -46,6 +46,7 @@ export type SectorDirectory = {
 export type SectorReadResult =
   | { status: "loaded"; desk: SeatsDesk; directory: SectorDirectory | null }
   | { status: "invalid" | "forbidden" | "unavailable" };
+export type SectorReadOptions = { mapOnly?: boolean };
 export type LeaderBatchCommand = {
   allocationId: string;
   revision: number;

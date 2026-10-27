@@ -34,6 +34,20 @@ export async function GET(request: NextRequest) {
         { status: "forbidden" },
         { status: 403, headers },
       );
+    // Publication and the overview need one canonical snapshot, independently
+    // of the participant directory and concurrent changes between its reads.
+    if (q.get("view") === "map") {
+      const desk = await service.rpc("get_ceremony_draft_desk", {
+        p_event: context.event.id,
+        p_actor: context.userId,
+        p_kind: plan.data.kind,
+      });
+      if (desk.error || !desk.data) throw Error("unavailable");
+      return NextResponse.json(
+        { status: "loaded", desk: desk.data, directory: null },
+        { headers },
+      );
+    }
     // Both RPCs take the event lock. Reject a mixed revision rather than display
     // counters assembled across a concurrent write.
     const directory = await service.rpc("get_ceremony_sector_directory", {

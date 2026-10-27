@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ k
   const auth = await getCurrentAuthContext(db, "capogruppo");
   if (!auth || auth.dashboardRole !== "capogruppo") redirect("/dashboard");
   const [locale, params, panelMode] = await Promise.all([getRequestLocale(), searchParams, getPanelReleaseMode(db)]);
-  const kind = params.kind === "closing" ? "closing" : "opening";
+  const kind = params.kind === "opening" ? "opening" : "closing";
   let view;
   try {
     view = await loadLeaderTickets(db, createSupabaseServiceClient);

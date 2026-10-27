@@ -9,6 +9,7 @@ import {
   type SectorDirectoryQuery,
   type SectorPerson,
   type SectorReadResult,
+  type SectorReadOptions,
 } from "@/lib/ceremonies/sector-desk";
 import type {
   HistoryQuery,
@@ -52,7 +53,7 @@ export function CeremonySectorWorkspace({
   save: (c: DeskCommand) => Promise<{ status: string }>;
   revoke: (c: RevokeAssignment) => Promise<{ status: string }>;
   manageDrafts?: (c: DraftCommand) => Promise<DraftResult>;
-  read?: (q: SectorDirectoryQuery) => Promise<SectorReadResult>;
+  read?: (q: SectorDirectoryQuery, options?: SectorReadOptions) => Promise<SectorReadResult>;
   loadHistory?: (q: HistoryQuery) => Promise<HistoryResult>;
 }) {
   const [extra, setExtra] = useState(0);
@@ -75,6 +76,7 @@ export function CeremonySectorWorkspace({
   const [saving, setSaving] = useState(false);
   const [stale, setStale] = useState(false);
   const [status, setStatus] = useState("");
+  const [refreshError, setRefreshError] = useState("");
   const [uncertain, setUncertain] = useState<DeskCommand | null>(null);
   const [revocation, setRevocation] = useState<Revocation | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -160,6 +162,7 @@ export function CeremonySectorWorkspace({
       const token = ++sequence.current;
       setLoading(true);
       setStale(true);
+      setRefreshError("");
       setDirectory(null);
       setSelected(null);
       try {
@@ -169,9 +172,9 @@ export function CeremonySectorWorkspace({
           withoutGroup: false,
           search: nextSearch,
           page,
-        });
+        }, { mapOnly: !activeSector });
         if (token !== sequence.current) return;
-        if (result.status !== "loaded" || !result.directory)
+        if (result.status !== "loaded" || (activeSector && !result.directory))
           throw Error(result.status);
         setDesk(result.desk);
         setExtra(result.desk.sectors.find(s => s.id === activeSector)?.overbooking ?? 0);
@@ -179,8 +182,10 @@ export function CeremonySectorWorkspace({
         setStale(false);
       } catch {
         if (token === sequence.current)
-          setStatus(
-            "Impossibile aggiornare disponibilità e iscritti. Premi Aggiorna per riprovare.",
+          setRefreshError(
+            activeSector
+              ? "Impossibile aggiornare disponibilità e iscritti. Premi Aggiorna per riprovare."
+              : "Piantina non aggiornata. Premi Aggiorna disponibilità per rileggere i posti pubblicati.",
           );
       } finally {
         if (token === sequence.current) setLoading(false);
@@ -408,6 +413,7 @@ export function CeremonySectorWorkspace({
         {[["Capienza reale", totals.physical], ["Impegnati, incluse bozze", totals.assigned], ["Overbooking previsto", `+${totals.extra}`], ["Ancora assegnabili", totals.remaining]].map(([label,value]) => <div key={label} className="surface-card p-4"><dt className="text-sm text-slate-600">{label}</dt><dd className="text-2xl font-semibold tabular-nums">{value}</dd></div>)}
       </dl>
       {!sectorId && status && <p role="status">{status}</p>}
+      {!sectorId && refreshError && <p role="alert">{refreshError}</p>}
       {manageDrafts && (
         <CeremonyDraftPanel
           desk={desk}
@@ -743,6 +749,7 @@ export function CeremonySectorWorkspace({
               {status}
             </p>
           )}
+          {refreshError && <p role="alert">{refreshError}</p>}
           {uncertain && (
             <button
               type="button"
