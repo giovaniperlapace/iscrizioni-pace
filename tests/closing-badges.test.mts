@@ -111,11 +111,11 @@ test("leader contact report includes all 1005 names without individual mail or a
   assert.match(mail.text, /Persona sintetica 1005/);
   assert.match(mail.text, /incaricato di contattarle/);
   assert.match(mail.text, /Snapshot as of/);
-  assert.match(mail.text, /arriveranno con una mail separata/);
+  assert.doesNotMatch(mail.text, /arriveranno con una mail separata|separate email/);
   assert.doesNotMatch(mail.html + mail.text, /Istruzioni di accesso ·|Entry instructions ·|ISTRUZIONI SINTETICHE|SYNTHETIC INSTRUCTIONS/);
   assert.deepEqual(renderClosingBadgeEmail({ ...report, payload: { ...report.payload, instructions: {} } }, "https://example.invalid"), renderClosingBadgeEmail(report, "https://example.invalid"));
   assert.equal(mail.attachments.length, 0);
-  assert.match(mail.html, /capogruppo\/cerimonie/);
+  assert.match(mail.html, /dashboard capogruppo/);
   assert.ok(Buffer.byteLength(JSON.stringify(mail)) < 9_000_000);
 });
 

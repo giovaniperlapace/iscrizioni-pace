@@ -28,7 +28,7 @@ for(const [name,payload] of [
  ['delegates-1005-three-pdfs',{...notice.payload,noticeType:'leader_contacts',snapshotAt:'2026-10-26T15:00:00Z',lines:Array.from({length:1005},(_,i)=>({name:`Persona sintetica ${i+1}`,nomineeId:`synthetic-${i}`,groupId:id,groupName:'Gruppo sintetico',communicationDelegated:true,sector:CLOSING_BADGE_SECTORS[i%3].name,badgeCode:CLOSING_BADGE_SECTORS[i%3].code}))}],
 ]){
  const email=await prepareClosingBadgeEmail({...notice,userId:id,registrationId:null,payload},'https://example.invalid');
- if(name==='delegates-1005-three-pdfs' && email.attachments.length!==3)throw Error('Expected three sector PDFs');
+ if(name==='delegates-1005-three-pdfs' && email.attachments.filter(file=>file.contentType==='application/pdf').length!==3)throw Error('Expected three sector PDFs');
  await sendTransactionalEmail({to:'synthetic@example.com',...email,metadata:{ceremony_email_id:id}});
  console.log(`PASS ${name}: Postmark ErrorCode 0; no delivery`);
 }

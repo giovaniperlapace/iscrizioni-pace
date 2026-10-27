@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { ClosingBadgeSheet } from "./closing-badge-sheet.ts";
 import path from "node:path";
 import { CLOSING_BADGE_SECTORS } from "./closing-badges.ts";
 import type { PublicationNotice } from "./publication-email.ts";
@@ -11,6 +12,10 @@ const clean = (value: string) => value.replace(/\s+/g, " ").trim();
 // Vector artwork and one embedded font keep even large groups small enough to
 // attach. These sheets contain only the delegate identities selected at claim.
 export async function createClosingLeaderBadgePdfs(notice: PublicationNotice): Promise<NonNullable<SendEmailInput["attachments"]>> {
+  return createClosingLeaderBadgeAttachments(notice, false);
+}
+
+export async function createClosingLeaderBadgeAttachments(notice: PublicationNotice, previews = true): Promise<NonNullable<SendEmailInput["attachments"]>> {
   if (!notice.userId || notice.registrationId || notice.payload.noticeType !== "leader_contacts" || !notice.payload.badgeWorkflow) throw Error("invalid_leader_badge_report");
   const lines = notice.payload.lines.filter(line => line.communicationDelegated === true);
   const seen = new Set<string>();
@@ -34,44 +39,36 @@ export async function createClosingLeaderBadgePdfs(notice: PublicationNotice): P
     const result = new Promise<Buffer>((resolve, reject) => {
       doc.on("data", chunk => chunks.push(chunk)); doc.on("end", () => resolve(Buffer.concat(chunks))); doc.on("error", reject);
     });
-    const fit = (value: string, x: number, y: number, width: number, height: number, max: number, min: number, color: string) => {
-      const text = clean(value);
-      for (let size = max; size >= min; size--) {
-        doc.fontSize(size);
-        const measured = doc.heightOfString(text, { width, lineGap: 0 });
-        if (measured <= height) {
-          doc.fillColor(color).text(text, x, y + (height - measured) / 2, { width, height, lineGap: 0 });
-          return;
-        }
-      }
-      throw Error("delegated_badge_text_too_long");
-    };
     const pages = Math.ceil(people.length / perPage);
     for (let page = 0; page < pages; page++) {
       doc.addPage();
+      const sheet = new ClosingBadgeSheet(doc, font, previews);
       const left = 28.35, width = doc.page.width - 2 * left;
-      doc.fillColor(sector.hex).rect(left, 25, 5, 37).fill();
-      doc.fillColor("#182230").fontSize(16).text(`Cerimonia finale - Badge ${sector.color}`, left + 15, 23, { width: width - 15, lineBreak: false });
-      doc.fontSize(10).fillColor("#455468").text(`${sector.name} | ${people.length} persone | ${ceremonyDate}`, left + 15, 47, { width: width - 15, lineBreak: false });
+      sheet.rect(left, 25, 5, 37, sector.hex);
+      sheet.text(`Cerimonia finale - Badge ${sector.color}`, left + 15, 23, 16, "#182230");
+      sheet.text(`${sector.name} | ${people.length} persone | ${ceremonyDate}`, left + 15, 47, 10, "#455468");
       for (const [row, person] of people.slice(page * perPage, (page + 1) * perPage).entries()) {
         const top = 80 + row * 70, height = 62, labelWidth = 166, closureWidth = 62;
-        doc.save().fillColor("#ffffff").rect(left, top, width, height).fill();
-        doc.fillColor(sector.hex).rect(left, top, labelWidth, height).fill();
-        doc.fontSize(8).fillColor("#ffffff").text(`BADGE ${sector.color.toUpperCase()}`, left + 10, top + 6, { width: labelWidth - 20, lineBreak: false });
-        fit(sector.name, left + 10, top + 21, labelWidth - 20, 34, 13, 9, "#ffffff");
+        sheet.rect(left, top, width, height, "#ffffff");
+        sheet.rect(left, top, labelWidth, height, sector.hex);
+        sheet.text(`BADGE ${sector.color.toUpperCase()}`, left + 10, top + 6, 8, "#ffffff");
+        sheet.fit(sector.name, left + 10, top + 21, labelWidth - 20, 34, 13, 9, "#ffffff");
         const nameLeft = left + labelWidth + 13, nameWidth = width - labelWidth - closureWidth - 26;
-        doc.fillColor(sector.hex).rect(left + labelWidth, top, width - labelWidth - closureWidth, 4).fill();
-        doc.fontSize(7).fillColor("#455468").text(`SANT'EGIDIO | CERIMONIA FINALE | ${ceremonyDate.toUpperCase()}`, nameLeft, top + 8, { width: nameWidth, lineBreak: false });
-        fit(person.name, nameLeft, top + 20, nameWidth, 29, 21, 9, "#182230");
-        if (person.groupName) fit(person.groupName, nameLeft, top + 50, nameWidth, 10, 7, 5, "#455468");
+        sheet.rect(left + labelWidth, top, width - labelWidth - closureWidth, 4, sector.hex);
+        sheet.text(`SANT'EGIDIO | CERIMONIA FINALE | ${ceremonyDate.toUpperCase()}`, nameLeft, top + 8, 7, "#455468");
+        sheet.fit(person.name, nameLeft, top + 20, nameWidth, 29, 21, 9, "#182230");
+        if (person.groupName) sheet.fit(person.groupName, nameLeft, top + 50, nameWidth, 10, 7, 5, "#455468");
         const closureLeft = left + width - closureWidth;
-        doc.fillColor("#f2f4f7").rect(closureLeft, top, closureWidth, height).fill();
-        doc.fillColor(sector.hex).rect(closureLeft, top, closureWidth, 4).fill();
-        doc.dash(2, { space: 3 }).strokeColor("#7c8797").lineWidth(0.45).rect(left, top, width, height).stroke();
-        doc.moveTo(closureLeft, top).lineTo(closureLeft, top + height).stroke(); doc.restore();
+        sheet.rect(closureLeft, top, closureWidth, height, "#f2f4f7");
+        sheet.rect(closureLeft, top, closureWidth, 4, sector.hex);
+        sheet.outline(left, top, width, height, closureLeft);
       }
-      doc.fontSize(7).fillColor("#455468").text(`Aggiornato al ${snapshotLabel} (Roma)`, left, 574, { width: width - 85, lineBreak: false });
-      doc.text(`${page + 1} / ${pages}`, left + width - 75, 574, { width: 75, align: "right", lineBreak: false });
+      sheet.text(`Aggiornato al ${snapshotLabel} (Roma)`, left, 574, 7, "#455468");
+      const pageLabel = `${page + 1} / ${pages}`;
+      doc.fontSize(7);
+      sheet.text(pageLabel, left + width - doc.widthOfString(pageLabel), 574, 7, "#455468");
+      if (previews) attachments.push({ filename: `riepilogo-${sector.color.toLowerCase()}-${page + 1}.png`,
+        contentType: "image/png", cid: `closing-leader-${sector.code}-${page + 1}@iscrizioni-pace`, content: await sheet.image(Math.min(perPage, people.length - page * perPage)) });
     }
     doc.end();
     attachments.push({ filename: `cerimonia-finale-badge-${sector.color.toLowerCase()}.pdf`, contentType: "application/pdf", content: await result });

@@ -2,7 +2,7 @@ import type { PublicationNotice } from "./publication-email.ts";
 import { closingBadgeSector, closingBadgeColor } from "./closing-badges.ts";
 const escape = (s: string) => s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
-export function renderClosingBadgeEmail(notice: PublicationNotice, appUrl: string) {
+export function renderClosingBadgeEmail(notice: PublicationNotice, appUrl: string, previews: { cid: string }[] = []) {
   if (!notice.payload.badgeWorkflow || notice.payload.kind !== "closing") throw Error("invalid_closing_notice");
   const report = notice.payload.noticeType === "leader_contacts";
   const leader = !!notice.userId;
@@ -39,26 +39,38 @@ export function renderClosingBadgeEmail(notice: PublicationNotice, appUrl: strin
   const sections = (["it", "en"] as const).map(locale => {
     const it = locale === "it";
     const label = it ? "Italiano" : "English";
-    const title = it ? "Cerimonia finale" : "Closing ceremony";
+    const title = it ? `Cerimonia finale${report ? "!" : ""}` : `Closing ceremony${report ? "!" : ""}`;
     const intro = report
-      ? it ? "Queste persone non hanno un indirizzo email personale. Sei incaricato di contattarle o cercarle di persona, consegnare il badge e comunicare le istruzioni di accesso, che arriveranno con una mail separata. Puoi scaricare i badge dalla dashboard capogruppo. Il riepilogo comprende le assegnazioni attive al momento indicato." : "These people do not have a personal email address. Please contact them or find them in person, provide their badge and share the entry instructions, which will arrive in a separate email. Download their badges from the group leader dashboard. This report includes active assignments at the indicated time."
+      ? it ? "Queste persone non hanno un indirizzo email personale. Sei incaricato di contattarle o cercarle per consegnare il badge. Puoi scaricare i badge dalla dashboard capogruppo." : "These people do not have a personal email address. Please contact them or find them to give them their badge. You can download the badges from the group leader dashboard."
       : leader ? it ? "Sono stati pubblicati posti per il tuo gruppo. Accedi alla dashboard capogruppo e assegnali nominalmente alle persone del gruppo, scegliendo esplicitamente gli eventuali minori." : "Places have been published for your group. Open the group leader dashboard and assign them to your members, explicitly selecting any children."
       : it ? "Ti è stato assegnato l’accesso al settore indicato. Trovi il badge personale in allegato PDF, da scaricare e mostrare all’ingresso, e nella tua iscrizione sul sito. La sistemazione nel settore è a riempimento." : "You have been assigned access to the sector shown below. Download your personal badge from the attached PDF and show it at the entrance. It is also available in your registration on the website. Places within the sector are filled on arrival.";
     const date = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Rome" });
     const paragraphs = [title, `${date.format(new Date(notice.payload.startsAt))} · ${notice.payload.location}`, intro];
     if (report && notice.payload.lines.some(line => line.communicationDelegated === true)) paragraphs.push(it
-      ? "Per le persone che ti hanno delegato le comunicazioni trovi un PDF allegato per ogni settore interessato, con badge nominativi orizzontali. Gli allegati includono soltanto le persone con delega attiva nei tuoi gruppi."
-      : "For people who delegated their communications to you, a PDF is attached for each relevant sector, with horizontal personal badges. Attachments include only people with an active delegation in your groups.");
+      ? "Per le persone che ti hanno delegato le comunicazioni trovi un PDF allegato per ogni settore interessato, con badge nominativi orizzontali."
+      : "For people who delegated their communications to you, a PDF is attached for each relevant sector, with horizontal personal badges.");
     if (report) {
       if (!notice.payload.snapshotAt) throw Error("report_snapshot_missing");
       paragraphs.push(`${it ? "Riepilogo aggiornato al" : "Snapshot as of"} ${date.format(new Date(notice.payload.snapshotAt))} (Roma)`);
     }
     const lines = notice.payload.lines.map((line, i) => `${line.name}${line.groupName ? ` · ${line.groupName}` : ""} · ${line.sector} · Badge ${closingBadgeColor(badges[i].code, locale)}${line.quantity === undefined ? "" : ` · ${line.quantity} ${it ? "posti" : "places"}`}`);
-    let html = `<section lang="${locale}"><h2>${label}</h2>${paragraphs.map(p => `<p>${escape(p)}</p>`).join("")}<ul>${lines.map(p => `<li>${escape(p)}</li>`).join("")}</ul>`;
+    let html = `<section lang="${locale}"><h2>${label}</h2>${paragraphs.map(p => `<p>${escape(p)}</p>`).join("")}`;
     const text = [label, ...paragraphs, ...lines];
-    const open = it ? "Apri Posti alle cerimonie" : "Open Ceremony places";
-    html += `<p><a href="${escape(url.href)}">${open}</a></p></section>`;
-    text.push(`${open}: ${url.href}`);
+    if (report) {
+      html += previews.map((preview, index) => `<img src="cid:${escape(preview.cid)}" width="842" alt="${it ? "Riepilogo badge" : "Badge summary"} ${index + 1}" style="display:block;width:100%;max-width:842px;height:auto;margin:0;border:0">`).join("");
+      // People without an explicit delegation remain in the contact report, but
+      // never acquire a badge image or PDF through this presentation change.
+      const withoutBadge = lines.filter((_, i) => notice.payload.lines[i].communicationDelegated !== true);
+      if (withoutBadge.length) html += `<p>${it ? "Persone da contattare senza badge allegato:" : "People to contact without an attached badge:"}</p>${withoutBadge.map(line => `<p>${escape(line)}</p>`).join("")}`;
+      const farewell = it ? "Buona cerimonia finale!" : "Enjoy the closing ceremony!";
+      html += `<p>${farewell}</p></section>`;
+      text.push(farewell);
+    } else {
+      html += `<ul>${lines.map(p => `<li>${escape(p)}</li>`).join("")}</ul>`;
+      const open = it ? "Apri Posti alle cerimonie" : "Open Ceremony places";
+      html += `<p><a href="${escape(url.href)}">${open}</a></p></section>`;
+      text.push(`${open}: ${url.href}`);
+    }
     return { text: text.join("\n\n"), html };
   });
   return { subject: report ? "Cerimonia finale: persone da contattare / Closing ceremony: people to contact"
