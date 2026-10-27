@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (
     hasSessionBeenInactive(cookieStore.get(LAST_ACTIVITY_COOKIE)?.value)
   ) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return expiredResponse();
   }
 

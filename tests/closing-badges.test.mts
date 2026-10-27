@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import sharp from "sharp";
+import { createCampaignBadge } from "../lib/email/campaign-badge.server.ts";
 import { CLOSING_BADGE_SECTORS, closingBadgeColor, closingBadgeSector, CLOSING_BADGE_COPY } from "../lib/ceremonies/closing-badges.ts";
 import { renderClosingBadgeEmail } from "../lib/ceremonies/closing-email.ts";
 import { prepareClosingBadgeEmail } from "../lib/ceremonies/closing-email.server.ts";
@@ -64,6 +66,42 @@ test("only Prato personal mail clarifies that seating is available in both langu
       } else assert.doesNotMatch(body, /posti a sedere|seating will/);
     }
   }
+});
+
+test("eleven family badges fit after compression without losing people, pixels, colors or PDF/inline correspondence", async () => {
+  const lines = Array.from({ length: 11 }, (_, i) => {
+    const sector = CLOSING_BADGE_SECTORS[i % CLOSING_BADGE_SECTORS.length];
+    return { nomineeId: `${id}-${i}`, name: `Persona sintetica ${i}`, sector: sector.name, badgeCode: sector.code };
+  });
+  const family = { ...notice, payload: { ...notice.payload, lines } };
+  const originals = [];
+  for (const line of lines) originals.push(await createCampaignBadge({ firstName: line.name, lastName: "", groupName: "" }, closingBadgeSector(line.badgeCode)!.template));
+  assert.ok(originals.reduce((n, b) => n + b.pdf.content.length + b.image.content.length, 0) > 6 * 1024 * 1024, "fixture reproduces the original failure");
+  const mail = await prepareClosingBadgeEmail(family, "https://example.invalid");
+  assert.equal(mail.attachments.length, 22);
+  assert.equal(new Set(mail.attachments.map(file => file.filename)).size, 22);
+  assert.ok(mail.attachments.reduce((n, a) => n + a.content.length, 0) < 6 * 1024 * 1024);
+  for (const [i, line] of lines.entries()) {
+    const [pdf, image] = mail.attachments.slice(i * 2, i * 2 + 2);
+    assert.ok(pdf.content.includes(image.content));
+    assert.ok(image.content.length < originals[i].image.content.length);
+    assert.equal(image.cid, `closing-badge-${i}@iscrizioni-pace`);
+    assert.equal(mail.html.split(`src="cid:${image.cid}"`).length - 1, 2);
+    assert.ok(mail.text.includes(line.name));
+    const metadata = await sharp(image.content).metadata();
+    assert.equal(metadata.width, 941); assert.equal(metadata.height, 1672);
+    const expected = await createCampaignBadge({ firstName: line.name, lastName: "", groupName: "" }, closingBadgeSector(line.badgeCode)!.template, { jpegQuality: 85 });
+    assert.deepEqual(image.content, expected.image.content);
+  }
+  const ordinary = await prepareClosingBadgeEmail({ ...notice, payload: { ...notice.payload, lines: [lines[0]] } }, "https://example.invalid");
+  assert.deepEqual(ordinary.attachments[1].content, originals[0].image.content, "ordinary mail retains original quality");
+});
+
+test("family compression still rejects duplicate identities and totals over the attachment limit", async () => {
+  const line = notice.payload.lines[0];
+  await assert.rejects(prepareClosingBadgeEmail({ ...notice, payload: { ...notice.payload, lines: [line, line] } }, "https://example.invalid"), /invalid_badge_identity/);
+  const lines = Array.from({ length: 22 }, (_, i) => ({ ...line, nomineeId: `${id}-${i}`, name: `Persona sintetica ${i}` }));
+  await assert.rejects(prepareClosingBadgeEmail({ ...notice, payload: { ...notice.payload, lines } }, "https://example.invalid"), /closing_badges_too_large/);
 });
 
 test("leader contact report includes all 1005 names without individual mail or attachment explosion", async () => {

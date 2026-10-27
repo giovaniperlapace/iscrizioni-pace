@@ -402,7 +402,7 @@ export async function loadCampaignDeliveryData(
       .single(),
     service
       .from("participant_group_assignments")
-      .select("groups(name)")
+      .select("groups!participant_group_assignments_group_id_fkey(name)")
       .eq("registration_id", recipient.registrationId)
       .eq("is_current", true)
       .maybeSingle(),

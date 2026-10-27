@@ -168,7 +168,7 @@ export async function setAppLocale(formData: FormData) {
 
 export async function logout() {
   const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   const cookieStore = await cookies();
   cookieStore.delete(LAST_ACTIVITY_COOKIE);
   cookieStore.delete(LAST_DASHBOARD_COOKIE);

@@ -96,7 +96,7 @@ export async function proxy(request: NextRequest) {
       request.cookies.get(LAST_ACTIVITY_COOKIE)?.value
     )
   ) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("error", "inactive");
     const loginResponse = redirectPreservingCookies(loginUrl, response);

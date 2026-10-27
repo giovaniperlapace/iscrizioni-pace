@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Anteprima campagne, badge famiglia e sessioni — 2026-10-27
+
+- Lettura gruppo con FK esplicita verso il gruppo corrente: risolve PGRST201
+  in anteprima/prova/consegna senza usare la provenienza dell’escalation.
+- Email personali finale: qualità JPEG 95 ordinaria, seconda generazione a 85
+  solo oltre 6 MiB; tutti i nominativi/PDF/CID e dimensioni conservati.
+  Limite finale obbligatorio; campagne e PDF capigruppo invariati.
+- Inattività e «Esci» usano `signOut({ scope: "local" })`: nessuna revoca
+  implicita degli altri dispositivi; timeout di 24 ore e controlli conservati.
+- Commit/push, produzione e recupero dei soli tre `preparation_failed` per
+  allegati eccessivi autorizzati. Esclusi recapiti soppressi e risultati incerti.
+  Nessuna migration. 1.233 test e build isolata passati; diagnosi, verifiche e
+  procedura: `docs/email-badge-sessioni-2026-10-27.md`.
+
 ## Cerimonie capogruppo: attesa assegnazione multipla — 2026-10-27
 
 - Modale aperta e indicatore di lavoro fino al salvataggio atomico e alla

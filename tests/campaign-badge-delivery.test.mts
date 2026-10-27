@@ -24,18 +24,25 @@ async function fixture(enabled: boolean, groupFailure = false, templates?: strin
     from(table: string) {
       const filters: Record<string, unknown> = {};
       let mutation = false;
+      let columns = "";
       const result = () => {
         let data: unknown = null;
         if (table === "email_campaigns") data = [campaign];
         if (table === "email_campaign_attachments") data = [{ file_name: "programma.txt", content_type: "text/plain", storage_path: "common", is_inline: false }];
         if (table === "participants") data = { first_name: filters.id === "ada" ? "Ada" : "José", last_name: "Test", public_code: "TEST" };
-        if (table === "participant_group_assignments") data = { groups: { name: filters.registration_id === "ada" ? "Roma" : "Madrid" } };
+        if (table === "participant_group_assignments") {
+          // Production has both the current group and the escalation-source FK.
+          if (columns === "groups(name)") return { data: null, error: { code: "PGRST201" } };
+          assert.equal(columns, "groups!participant_group_assignments_group_id_fkey(name)");
+          assert.equal(filters.is_current, true);
+          data = { groups: { name: filters.registration_id === "ada" ? "Roma" : "Madrid" } };
+        }
         if (table === "profiles") data = { email: "delegate@example.invalid" };
         if (table === "moment_attendance_choices") data = [];
         return { data, error: !mutation && groupFailure && table === "participant_group_assignments" ? new Error("group unavailable") : null, count: filters.status === "sent" ? 2 : 0 };
       };
       const query = {
-        select() { return query; }, eq(key: string, value: unknown) { filters[key] = value; return query; },
+        select(value: string) { columns = value; return query; }, eq(key: string, value: unknown) { filters[key] = value; return query; },
         is() { return query; }, range() { return Promise.resolve({ data: [], error: null }); },
         in() { return query; }, not() { return query; }, order() { return query; }, limit() { return query; },
         update(value: Record<string, unknown>) { mutation = true; changes.push(value); return query; }, insert() { mutation = true; return query; },
