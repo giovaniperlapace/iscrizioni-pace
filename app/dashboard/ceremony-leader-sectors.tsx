@@ -6,6 +6,7 @@ import type {
   PairTicketCommand,
 } from "@/lib/ceremonies/leader-tickets";
 import { leaderSectorSubjects } from "@/lib/ceremonies/leader-tickets";
+import { rebaseLeaderBatch } from "@/lib/ceremonies/leader-batch-retry";
 import { Check, Download, LoaderCircle, Ticket, Users, X } from "lucide-react";
 import { DISTRIBUTION_COPY } from "@/lib/ceremonies/distribution-copy";
 import { SECTOR_COPY } from "@/lib/ceremonies/sector-copy";
@@ -136,13 +137,43 @@ export function CeremonyLeaderSectors({
     busy.current = true;
     setPending(true);
     setMessage("");
-    let status: string;
-    try {
-      status = (
-        await ("subjects" in command ? saveMany(command) : save(command))
-      ).status;
-    } catch {
-      status = "unavailable";
+    let activeCommand = command;
+    async function submit() {
+      try {
+        return (await ("subjects" in activeCommand
+          ? saveMany(activeCommand)
+          : save(activeCommand))).status;
+      } catch {
+        return "unavailable";
+      }
+    }
+    let status = await submit();
+    let conflictView: LeaderTickets | null = null;
+    if (status === "conflict" && "subjects" in activeCommand) {
+      setUncertain(null);
+      try {
+        conflictView = await refresh();
+        setView(conflictView);
+        setStale(false);
+      } catch {
+        setStale(true);
+        setMessage(c.failure);
+        setConfirmation(null);
+        busy.current = false;
+        setPending(false);
+        return;
+      }
+      const retry = rebaseLeaderBatch(
+        activeCommand, view, conflictView, crypto.randomUUID(),
+      );
+      if (retry) {
+        // One bounded retry after a confirmed rejection. An uncertain result
+        // must retain this exact updated command for its idempotent replay.
+        activeCommand = retry;
+        conflictView = null;
+        setConfirmation((current) => current ? { ...current, command: retry } : null);
+        status = await submit();
+      }
     }
     const outcomeMessage =
       status in t
@@ -151,13 +182,13 @@ export function CeremonyLeaderSectors({
           ? c[status as keyof typeof c]
           : c.unavailable;
     if (status === "unavailable") {
-      setUncertain(command);
+      setUncertain(activeCommand);
       setMessage(outcomeMessage);
     } else {
       setUncertain(null);
       if (status === "saved") setSavedNeedsRefresh(true);
       try {
-        setView(await refresh());
+        setView(conflictView ?? await refresh());
         setStale(false);
         setSavedNeedsRefresh(false);
         if (status === "saved") {

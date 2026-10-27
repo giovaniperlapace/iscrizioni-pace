@@ -40,3 +40,41 @@ Preparazione iniziale locale, senza migration o operazioni reali.
 Commit e push su main richiesti successivamente dall’utente; rilascio tramite
 la normale integrazione Git di produzione, limitato a questa correzione.
 Modifiche preesistenti e concorrenti in altri file conservate.
+
+
+## Conferma necessaria due volte: revisione globale — 27 ottobre 2026
+
+Successiva segnalazione: aprire e confermare la modale non assegna al primo
+tentativo; ripetere l'intera sequenza funziona. Riprodotto nel browser:
+una modifica della revisione della cerimonia, anche causata da un altro
+settore/gruppo, produce `conflict`. Il precedente flusso aggiornava la vista
+ma terminava la conferma lasciando zero posti assegnati.
+
+Ora, soltanto dopo un `conflict` definitivo del lotto multiplo:
+
+1. Rilegge lo snapshot canonico senza chiudere la modale.
+2. Verifica che dotazione, settore, gruppo, quantità e occupazione siano
+   invariati; tutte le persone selezionate devono essere ancora presenti,
+   ammesse, riconoscibili e senza assegnazioni o scelte già registrate.
+3. Se è cambiata soltanto la revisione rilevante per il comando, ripete una
+   sola volta il lotto completo con la nuova revisione e un nuovo request ID.
+4. Un eventuale esito incerto conserva esattamente questo nuovo comando per
+   il retry idempotente. Un secondo conflitto non avvia ulteriori tentativi.
+5. Cambiamenti effettivi, lettura fallita o persone non più disponibili non
+   generano assegnazioni automatiche né eliminazioni silenziose dalla selezione.
+
+La RPC continua a verificare autonomamente autorizzazione, disponibilità,
+revisioni e atomicità sotto lock. Nessuna modifica al server o migration.
+Il test browser falliva prima della correzione sul conteggio `Assegnati: 0`,
+poi verifica `Assegnati: 103` con una sola conferma dell'utente, anche nel
+caso di risposta incerta del tentativo aggiornato. Provati conflitti ripetuti,
+dotazione modificata e errore nella rilettura. Cinque test funzionali coprono
+le guardie su dotazione, nomi, famiglia, scope, ammissibilità e duplicati.
+La regressione SQL riproduce inoltre il conflitto dopo un'assegnazione in
+un altro settore e verifica assenza di scritture/ricevuta prima del retry.
+
+Verifica di rilascio della correzione successiva: copia pulita dei soli file
+staged tramite `git archive`, `npm ci`, 1.229 test, TypeScript, lint mirato
+e build production passati. Dieci scenari browser e suite SQL/concorrenza
+passati; rilascio tramite commit/push su main nell'ambito dell'autorizzazione
+già ricevuta per questa correzione. Altre modifiche locali escluse.

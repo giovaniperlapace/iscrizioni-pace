@@ -7,6 +7,10 @@
   Doppio invio, annullamento ed Esc ripetuto bloccati durante il lavoro.
 - Lettura fallita dopo salvataggio: solo aggiornamento, senza riscrittura.
   Risposta incerta: retry con identico comando e request ID. Sette lingue.
+- Correzione successiva del doppio tentativo: su conflitto di revisione globale,
+  rilettura e un solo retry automatico se dotazione e tutti i selezionati sono
+  invariati. Nuovo request ID dopo rifiuto certo; risposta incerta conserva
+  esattamente il comando aggiornato. Nessuna selezione parziale o migration.
 - 1.225 test, TypeScript, lint mirato, build isolata, SQL/concorrenza e browser
   desktop/mobile con 103 soggetti su due pagine verificati. Commit/push richiesti
   successivamente dall’utente; nessuna migration o scrittura operativa. Dettagli:

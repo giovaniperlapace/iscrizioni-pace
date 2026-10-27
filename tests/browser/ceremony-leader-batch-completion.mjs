@@ -29,7 +29,7 @@ try {
   for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:3196/leader-completion-check')).ok)break;}catch{}if(i===59)throw Error('Server unavailable');await new Promise(r=>setTimeout(r,500));}
   const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
   browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
-  for(const scenario of ['slow-mobile','slow-desktop','read-failure','lost-response','capacity']) {
+  for(const scenario of ['slow-mobile','slow-desktop','read-failure','lost-response','capacity','revision-conflict','revision-conflict-lost','revision-keeps-changing','allocation-changed','conflict-read-failure']) {
     const page=await browser.newPage({viewport:{width:scenario==='slow-desktop'?1440:390,height:900}});page.setDefaultTimeout(20000);
     activePage=page;const errors=[];page.on('pageerror',e=>errors.push(e.message));
     const saveGate=gate(), readGate=gate(), saveStarted=gate(), readStarted=gate();
@@ -38,17 +38,22 @@ try {
       const command=route.request().postDataJSON();saves.push(command);saveStarted.release();await saveGate.promise;
       assert.equal(command.subjects.length,103,'all pages, including explicit child');
       if(scenario==='capacity')return route.fulfill({json:{status:'capacity'}});
-      if(saves.length===1){
+      if((scenario.startsWith('revision-conflict')||scenario==='allocation-changed'||scenario==='conflict-read-failure')&&saves.length===1||scenario==='revision-keeps-changing'){
+        savedView.allocations[0].revision++;
+        if(scenario==='allocation-changed')savedView.allocations[0].quantity=109;
+        return route.fulfill({json:{status:'conflict'}});
+      }
+      if(!savedView.nominees.length){
         savedView.allocations[0].used=command.subjects.length;
         savedView.allocations[0].revision++;
         savedView.nominees=command.subjects.map((s,i)=>({id:`n${i}`,allocationId:'a',...s,needsSeat:true,review:false,name:s.childId?'Minore sintetico':view.people.find(p=>p.registrationId===s.registrationId).name}));
         for(const s of command.subjects)savedView.people.find(p=>p.registrationId===s.registrationId).assigned.push({planId:'p',childId:s.childId,needsSeat:true});
       }
-      await route.fulfill({json:{status:scenario==='lost-response'&&saves.length===1?'unavailable':'saved'}});
+      await route.fulfill({json:{status:(scenario==='lost-response'&&saves.length===1)||(scenario==='revision-conflict-lost'&&saves.length===2)?'unavailable':'saved'}});
     });
     await page.route('**/batch-test/read',async route=>{
       reads++;readStarted.release();await readGate.promise;
-      await route.fulfill(scenario==='read-failure'&&reads===1?{status:503,body:'unavailable'}:{json:savedView});
+      await route.fulfill((scenario==='read-failure'||scenario==='conflict-read-failure')&&reads===1?{status:503,body:'unavailable'}:{json:savedView});
     });
     await page.goto('http://127.0.0.1:3196/leader-completion-check',{waitUntil:'networkidle'});
     await page.getByRole('radio').first().check();
@@ -79,6 +84,9 @@ try {
     if(scenario!=='lost-response')await checkBusy();
     assert.equal(await page.getByText('Modifica salvata.',{exact:true}).count(),0,'no success before refreshed view');
     readGate.release();
+    if(scenario==='revision-conflict-lost'){
+      await modal.getByRole('button',{name:'Riprova la stessa operazione',exact:true}).click();
+    }
     if(scenario==='read-failure'){
       const refresh=modal.getByRole('button',{name:'Aggiorna disponibilità',exact:true});await refresh.waitFor();
       assert.equal(await modal.getByRole('button',{name:'Annulla',exact:true}).isDisabled(),true);
@@ -86,7 +94,7 @@ try {
       await refresh.click();
     }
     await modal.waitFor({state:'detached'});
-    const expected=scenario==='capacity'?0:103;
+    const expected=['capacity','revision-keeps-changing','allocation-changed','conflict-read-failure'].includes(scenario)?0:103;
     assert.match(await page.getByRole('region',{name:'Posti ricevuti',exact:true}).innerText(),new RegExp(`Assegnati: ${expected}`));
     assert.equal(await page.getByRole('button',{name:'Revoca o annulla la scelta',exact:true}).count(),expected?100:0,'history updated when modal closes');
     if(expected){
@@ -94,12 +102,18 @@ try {
       assert.equal(await page.getByRole('button',{name:'Revoca o annulla la scelta',exact:true}).count(),3,'all 103 nominees in history');
       await page.getByText('Modifica salvata.',{exact:true}).waitFor();
     }else{
-      await page.getByText('Il settore scelto non ha abbastanza posti disponibili.',{exact:true}).waitFor();
+      await page.getByText(scenario==='capacity'?'Il settore scelto non ha abbastanza posti disponibili.':scenario==='conflict-read-failure'?'Impossibile caricare tutti i dati. Riprova.':'I posti ricevuti sono cambiati. Aggiorna e verifica prima di riprovare.',{exact:true}).waitFor();
       assert.equal(await page.getByRole('region',{name:'Biglietti da assegnare',exact:true}).getByRole('listitem').count(),103);
     }
-    assert.equal(reads,scenario==='read-failure'?2:1);
-    assert.equal(saves.length,scenario==='lost-response'?2:1);
-    if(saves.length===2)assert.deepEqual(saves[0],saves[1],'retry reuses the exact request');
+    assert.equal(reads,scenario==='read-failure'||scenario.startsWith('revision-')?2:1);
+    assert.equal(saves.length,scenario==='revision-conflict-lost'?3:scenario==='lost-response'||scenario==='revision-conflict'||scenario==='revision-keeps-changing'?2:1);
+    if(scenario==='lost-response')assert.deepEqual(saves[0],saves[1],'retry reuses the exact request');
+    if(scenario.startsWith('revision-conflict')){
+      assert.equal(saves[1].revision,2);
+      assert.notEqual(saves[0].requestId,saves[1].requestId);
+      assert.deepEqual(saves[0].subjects,saves[1].subjects,'no selected person dropped');
+      if(scenario==='revision-conflict-lost')assert.deepEqual(saves[1],saves[2],'uncertain retry uses the refreshed command');
+    }
     assert.deepEqual(errors,[]);
     console.log(`PASS ${scenario}: modal lifecycle, 103 selected subjects, history/counts, safe retry`);
     await page.close();

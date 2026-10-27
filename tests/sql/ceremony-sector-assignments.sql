@@ -54,6 +54,7 @@ do $$ declare p uuid; a uuid; b uuid; fa uuid; v jsonb; r jsonb; rev integer; re
  assert pair_test('revoke',null,null,null,(select id from ceremony_nominees where revoked_at is null))->>'status'='saved';
  select id into a from ceremony_sectors where name='A';select id into b from ceremony_sectors where name='B';
  select ca.id into fa from ceremony_allocations ca join ceremony_quotas q on q.id=ca.quota_id join ceremony_sectors s on s.id=q.sector_id where ca.group_id=f(7701) and s.name='F';
+ select revision into rev from ceremony_plans where id=p;
  -- A direct name must contribute to the same group summary as later group nominations.
  r:=assign_ceremony_seats(f(1),f(31),p,(select revision from ceremony_plans where id=p),f(7800),jsonb_build_object('action','assign','sectorId',a,'quantity',1,'seatIds','[]'::jsonb,'groupId',f(7701),'subjects',jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',null))));assert r->>'status'='saved',r;
  v:=get_ceremony_sector_directory(f(1),f(31),p,f(7701),'',1);
@@ -64,7 +65,15 @@ do $$ declare p uuid; a uuid; b uuid; fa uuid; v jsonb; r jsonb; rev integer; re
  r:=assign_ceremony_group_members(f(1),f(36),fa,(select revision from ceremony_plans where id=p),f(7801),jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',f(40)),jsonb_build_object('registrationId',f(10),'childId',f(41))));assert r->>'status'='capacity',r;
  assert (select count(*) from ceremony_nominees)=before_count;
  select ca.id into a from ceremony_allocations ca join ceremony_quotas q on q.id=ca.quota_id where ca.group_id=f(7701) and q.sector_id=b;
- select revision into rev from ceremony_plans where id=p;
+ -- The earlier assignment in another sector invalidates the page-wide revision.
+ -- First confirmation must reject without writing; a fresh snapshot permits the same complete batch.
+ r:=assign_ceremony_group_members(f(1),f(36),a,rev,f(7820),jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',f(40)),jsonb_build_object('registrationId',f(10),'childId',f(41))));
+ assert r->>'status'='conflict',r;
+ assert (select count(*) from ceremony_nominees)=before_count;
+ assert not exists(select 1 from ceremony_map_requests where request_id=f(7820));
+ v:=get_ceremony_leader_tickets(f(1),f(36));
+ select (item->>'revision')::integer into rev from jsonb_array_elements(v->'allocations') item where item->>'id'=a::text;
+ assert rev=(select revision from ceremony_plans where id=p);
  r:=assign_ceremony_group_members(f(1),f(36),a,rev,request,jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',f(40)),jsonb_build_object('registrationId',f(10),'childId',f(41))));assert r->>'status'='saved',r;
  assert assign_ceremony_group_members(f(1),f(36),a,rev,request,jsonb_build_array(jsonb_build_object('registrationId',f(10),'childId',f(40)),jsonb_build_object('registrationId',f(10),'childId',f(41))))->>'status'='saved';
  assert (select quantity from ceremony_allocations where id=a)=3;
