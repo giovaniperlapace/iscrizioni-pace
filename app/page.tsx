@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { ProgramHome } from "./program-home";
 import RegistrationHome from "./registration-home";
 import { getPanelReleaseMode } from "@/lib/panels/release";
@@ -34,10 +35,13 @@ export default async function Home({ searchParams }: HomeProps) {
     getRequestLocale(),
     createSupabaseServerClient(),
   ]);
+  // The static pause home bypasses middleware. In active mode, /login retains
+  // the existing inactivity checks and remembered-dashboard routing.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect("/login");
   const releaseMode = await getPanelReleaseMode(supabase);
   if (releaseMode !== "open") return <RegistrationHome searchParams={Promise.resolve(params)} />;
   const panels = await getPublicPanelProgram(supabase);
 
-  const { data: { user } } = await supabase.auth.getUser();
   return <ProgramHome forum={params.forum} authenticated={Boolean(user)} locale={locale} panels={panels} bookingsOpen={true} email={params.email} error={params.error} sent={params.sent} />;
 }

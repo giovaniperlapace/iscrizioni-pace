@@ -1,4 +1,5 @@
 "use client";
+import { isSitePaused } from "../site-pause";
 
 import { useEffect, useState } from "react";
 import type { ParticipantPanelCatalogRow } from "@/app/dashboard/partecipante/participant-panel-bookings";
@@ -9,6 +10,7 @@ export function useForumAvailability(registrationId: string, initialRows: Partic
   const [snapshot, setSnapshot] = useState({ source: initialRows, rows: initialRows });
   const [error, setError] = useState<"failed" | "forbidden" | null>(null);
   useEffect(() => {
+    if (isSitePaused()) return;
     let pending = false;
     const controller = new AbortController();
     async function refresh() {

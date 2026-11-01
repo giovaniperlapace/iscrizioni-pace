@@ -1,3 +1,4 @@
+import { isSitePaused } from "@/lib/site-pause";
 import { forumRemindersEnabled } from "@/lib/panels/reminder-status";
 import { processSchoolQrEmails } from "@/lib/panels/school-qr-delivery";
 import { processDueCeremonyPublications } from "@/lib/ceremonies/publication-delivery.server";
@@ -12,6 +13,7 @@ import { processDueCampaignDeliveries } from "@/lib/email/campaign-delivery.serv
 export const maxDuration = 300;
 
 export async function GET(request: Request) {
+  if (isSitePaused()) return NextResponse.json({ paused: true }, { headers: { "Cache-Control": "no-store" } });
   const secret = process.env.CRON_SECRET;
   const authorization = request.headers.get("authorization");
 

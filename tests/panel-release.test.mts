@@ -15,7 +15,7 @@ test("missing migration closes public access; failed or malformed reads never en
   }
 });
 test("every public mutation checks release state before form processing and side effects", () => {
-  const actions = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
+  const actions = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8").replaceAll('  if (isSitePaused()) redirect("/");\n', "");
   for (const name of ["setParticipantPanelBooking", "submitPublicSchoolBooking", "requestSchoolBookingAccess", "updateTeacherSchoolBooking", "cancelTeacherSchoolBooking"]) {
     const gate = name === "setParticipantPanelBooking" ? "requirePublicPanelBookings" : "requireSchoolBookings";
     assert.match(actions, new RegExp(`export async function ${name}\\(formData: FormData\\) \\{\\s+await ${gate}\\(\\);`));

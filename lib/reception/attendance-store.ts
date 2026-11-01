@@ -1,3 +1,4 @@
+import { isSitePaused } from "../site-pause.ts";
 import type { AttendanceSnapshot } from "./attendance.server.ts";
 import { subscribeEventAttendanceChanges } from "./attendance-events.ts";
 
@@ -50,7 +51,7 @@ export class EventAttendanceStore {
     this.active = true;
     void this.read();
     const unsubscribe = this.summaryOnly ? () => {} : subscribeEventAttendanceChanges(this.changed);
-    if (!this.summaryOnly) {
+    if (!this.summaryOnly && !isSitePaused()) {
       document.addEventListener("visibilitychange", this.resume);
       window.addEventListener("focus", this.resume);
       window.addEventListener("online", this.online);
@@ -102,7 +103,7 @@ export class EventAttendanceStore {
         this.request = null;
         this.update({ ...this.state, refreshing: false });
         if (revision !== this.revision && !this.blocked) void this.read();
-        else if (!this.summaryOnly && !this.blocked) this.timer = setTimeout(() => { void this.read(); }, ATTENDANCE_RECONCILE_MS);
+        else if (!isSitePaused() && !this.summaryOnly && !this.blocked) this.timer = setTimeout(() => { void this.read(); }, ATTENDANCE_RECONCILE_MS);
       }
     }
   }

@@ -1,3 +1,5 @@
+import { isSitePaused } from "@/lib/site-pause";
+import { redirect } from "next/navigation";
 import Link from "@/components/pending-link";
 
 import { EventIdentity } from "@/components/event-identity";
@@ -6,12 +8,14 @@ import { getRequestLocale } from "@/lib/i18n/server";
 
 type LoginPageProps = {
   searchParams: Promise<{
+    sent?: string;
     error?: string;
     redirectedFrom?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  if (isSitePaused()) redirect("/");
   const params = await searchParams;
   const locale = await getRequestLocale();
   const copy = getMessages(locale).login;

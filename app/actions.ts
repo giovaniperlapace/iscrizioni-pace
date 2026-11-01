@@ -1,4 +1,8 @@
 "use server";
+
+import { getStaffLoginPath } from "@/lib/auth/staff-login";
+import { isSitePaused } from "@/lib/site-pause";
+import { hasPausedSiteEmailAccess } from "@/lib/auth/paused-access";
 import { validForumChildIds } from "@/lib/panels/child-selection";
 import { parseForumIntent, forumBookingPath, withForumIntent } from "@/lib/panels/booking-intent";
 import { resolvePublicForumIntent } from "@/lib/panels/booking-intent.server";
@@ -190,7 +194,7 @@ function normalizeInternalReturnTo(value: FormDataEntryValue | null): string {
 export async function startPublicEmailFlow(formData: FormData) {
   const email = normalizeEmail(formData.get("email"));
   const intent = parseForumIntent(formData.get("forum"));
-  const homePath = (query: string) => `${withForumIntent(`/?${query}`, intent)}${intent ? "#personal-access" : ""}`;
+  const homePath = (query: string) => isSitePaused() ? `${getStaffLoginPath() ?? "/"}?${query}` : `${withForumIntent(`/?${query}`, intent)}${intent ? "#personal-access" : ""}`;
   const appUrl = getAppUrl();
   const ipAddress = await getIpAddress();
 
@@ -203,7 +207,11 @@ export async function startPublicEmailFlow(formData: FormData) {
   }
 
   const supabase = createSupabaseServiceClient();
-  const forum = await resolvePublicForumIntent(supabase, intent);
+  if (isSitePaused() && !(await hasPausedSiteEmailAccess(supabase, email))) {
+    // Same response for unknown accounts and suspended roles; no link is sent.
+    redirect(homePath("sent=magic-link"));
+  }
+  const forum = isSitePaused() ? null : await resolvePublicForumIntent(supabase, intent);
   const eventId = await getCurrentOperationalEventId(supabase);
 
   if (!eventId) {
@@ -231,7 +239,7 @@ export async function startPublicEmailFlow(formData: FormData) {
     await sendMagicLinkEmail(
       supabase,
       email,
-      `${appUrl}/auth/callback?redirect_to=${encodeURIComponent(forumBookingPath(forum))}`
+      `${appUrl}/auth/callback?redirect_to=${encodeURIComponent(isSitePaused() ? "/dashboard" : forumBookingPath(forum))}`
     );
     await logMagicLinkSent(supabase, eventId, emailHash);
   } catch (error) {
@@ -251,6 +259,7 @@ export async function startPublicEmailFlow(formData: FormData) {
 }
 
 export async function submitPublicRegistration(formData: FormData) {
+  if (isSitePaused()) redirect("/");
   const parsed = parseRegistrationForm(formData);
   const email = normalizeEmail(formData.get("email"));
   const intent = parseForumIntent(formData.get("forum"));
@@ -2111,6 +2120,7 @@ export async function saveSchoolBooking(formData: FormData) {
 }
 
 export async function submitPublicSchoolBooking(formData: FormData) {
+  if (isSitePaused()) redirect("/");
   await requireSchoolBookings();
   const parsed = parsePublicSchoolBookingForm(formData);
   const locale = normalizeLocale(String(formData.get("locale") ?? "")) ?? DEFAULT_LOCALE;
@@ -2160,6 +2170,7 @@ function getUnknownErrorMessage(error: unknown): string {
 }
 
 export async function requestSchoolBookingAccess(formData: FormData) {
+  if (isSitePaused()) redirect("/");
   await requireSchoolBookings();
   const email = normalizeEmail(formData.get("email"));
   const ipAddress = await getIpAddress();

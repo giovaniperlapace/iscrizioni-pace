@@ -1,3 +1,6 @@
+import { isStaffLoginPath } from "@/lib/auth/staff-login";
+import { isSitePaused } from "@/lib/site-pause";
+import { hasPausedSiteAccess } from "@/lib/auth/paused-access";
 import { hasPanelReceptionDuty } from "@/lib/reception/duties.server";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -45,11 +48,20 @@ function clearAppSessionCookies(response: NextResponse) {
 }
 
 export async function proxy(request: NextRequest) {
+  const paused = isSitePaused();
+  const staffLogin = paused && isStaffLoginPath(request.nextUrl.pathname);
+  const path = staffLogin ? "/login" : request.nextUrl.pathname;
+  if (paused && path === "/login" && !staffLogin) return NextResponse.redirect(new URL("/", request.url), 303);
+  if (path === "/api/cron/email-campaigns" || path === "/api/webhooks/postmark" || path === "/auth/callback") return NextResponse.next();
+  if (!paused && path !== "/login" && !path.startsWith("/dashboard")) return NextResponse.next();
+  if (paused && path !== "/login" && !path.startsWith("/dashboard") && !path.startsWith("/api/")) {
+    return NextResponse.redirect(new URL("/", request.url), 303);
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next();
+    return paused ? NextResponse.json({ error: "unavailable" }, { status: 503 }) : NextResponse.next();
   }
 
   const response = NextResponse.next({
@@ -77,13 +89,13 @@ export async function proxy(request: NextRequest) {
 
   if (error || !user) {
     if (
-      request.nextUrl.pathname === "/" ||
-      request.nextUrl.pathname === "/login"
+      path === "/" ||
+      path === "/login"
     ) {
       return response;
     }
 
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL(paused ? "/" : "/login", request.url);
     loginUrl.searchParams.set("redirectedFrom", request.nextUrl.pathname);
     const loginResponse = redirectPreservingCookies(loginUrl, response);
     clearSupabaseCookies(request, loginResponse);
@@ -97,13 +109,24 @@ export async function proxy(request: NextRequest) {
     )
   ) {
     await supabase.auth.signOut({ scope: "local" });
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL(paused ? "/" : "/login", request.url);
     loginUrl.searchParams.set("error", "inactive");
     const loginResponse = redirectPreservingCookies(loginUrl, response);
     clearSupabaseCookies(request, loginResponse);
     clearAppSessionCookies(loginResponse);
     return loginResponse;
   }
+
+  if (paused && !(await hasPausedSiteAccess(supabase, user.id))) {
+    const denied = path.startsWith("/api/")
+      ? NextResponse.json({ error: "site_paused" }, { status: 403, headers: { "Cache-Control": "private, no-store" } })
+      : NextResponse.redirect(new URL("/", request.url), 303);
+    clearSupabaseCookies(request, denied);
+    clearAppSessionCookies(denied);
+    return denied;
+  }
+  // API handlers retain their own role/scope checks after the pause gate.
+  if (path.startsWith("/api/")) return response;
 
   const [{ data: eventRoles }, { data: groupMemberships }, hasReceptionAssignments] = await Promise.all([
     supabase.from("event_user_roles").select("role").eq("user_id", user.id),
@@ -135,8 +158,8 @@ export async function proxy(request: NextRequest) {
       : pickFirstAllowedDashboard(availableRoles, hasReceptionAssignments);
 
   if (
-    request.nextUrl.pathname === "/" ||
-    request.nextUrl.pathname === "/login"
+    path === "/" ||
+    path === "/login"
   ) {
     const rememberedPath = sanitizeLastDashboardPath(
       request.cookies.get(LAST_DASHBOARD_COOKIE)?.value
@@ -223,5 +246,6 @@ function pickFirstAllowedDashboard(
 }
 
 export const config = {
-  matcher: ["/", "/login", "/dashboard/:path*"],
+  // The public home and static assets never invoke session middleware.
+  matcher: ["/((?!$|_next/|paused/|logos/|fonts/|images/|favicon.ico|api/cron/email-campaigns$|api/webhooks/postmark$).*)"],
 };

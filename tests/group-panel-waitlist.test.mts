@@ -11,7 +11,7 @@ const offer: ForumWaitlistOffer={id,claim:id,eventId:id,registrationId:id,panelI
 function load(file: string,deps: Record<string, unknown>,extra:Record<string,unknown>={}) {
   const code=ts.transpileModule(readFileSync(file,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const exports:Record<string, (...args:never[])=>unknown>={};
-  new Function("require","exports",...Object.keys(extra),code)((name:string)=>{assert.ok(name in deps,name);return deps[name];},exports,...Object.values(extra));
+  new Function("require","exports",...Object.keys(extra),code)((name:string)=>{if(name.includes("site-pause")) return {isSitePaused:()=>false};assert.ok(name in deps,name);return deps[name];},exports,...Object.values(extra));
   return exports;
 }
 for(const locale of ["it","en","fr","de","es","nl","uk"] as const) test(`leader email in ${locale} identifies participant and opens scoped dashboard without accepting`,()=>{

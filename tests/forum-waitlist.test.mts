@@ -38,6 +38,7 @@ function loadModule(file: string, dependencies: Record<string, unknown>, extra: 
   const code = ts.transpileModule(readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const exports: Record<string, (...args: never[]) => unknown> = {};
   new Function("require", "exports", ...Object.keys(extra), code)((name: string) => {
+    if (name.includes("site-pause")) return { isSitePaused: () => false };
     assert.ok(name in dependencies, name); return dependencies[name];
   }, exports, ...Object.values(extra));
   return exports;

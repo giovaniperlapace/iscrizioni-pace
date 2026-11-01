@@ -12,6 +12,9 @@ function loadModule<T>(path: string, dependencies: Record<string, unknown>) {
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports: Record<string, unknown> = {};
   new Function("require", "exports", js)((name: string) => {
+    if (name.includes("staff-login")) return { isStaffLoginPath: () => false };
+    if (name.includes("site-pause")) return { isSitePaused: () => false };
+    if (name.includes("paused-access")) return {};
     if (!(name in dependencies)) throw new Error(`Unexpected import: ${name}`);
     return dependencies[name];
   }, exports);

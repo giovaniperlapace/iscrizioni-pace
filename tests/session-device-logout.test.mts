@@ -39,6 +39,9 @@ function fixture(lastActivity: string) {
     const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     const exports: Record<string, (request: NextRequest) => Promise<NextResponse>> = {};
     new Function("require", "exports", js)((name: string) => {
+    if (name.includes("staff-login")) return { isStaffLoginPath: () => false };
+    if (name.includes("site-pause")) return { isSitePaused: () => false };
+    if (name.includes("paused-access")) return {};
       if (name in dependencies) return dependencies[name];
       // Unused server actions may import other modules, but must not execute them.
       return new Proxy({}, { get: () => { throw Error(`Unexpected dependency: ${name}`); } });

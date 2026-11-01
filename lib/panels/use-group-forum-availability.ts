@@ -1,10 +1,12 @@
 "use client";
+import { isSitePaused } from "../site-pause";
 import { useEffect, useState } from "react";
 import type { GroupPanelView } from "./group-bookings";
 
 export function useGroupForumAvailability(initialView: GroupPanelView, sectionId: string | null, paused: boolean) {
   const [snapshot, setSnapshot] = useState<{ source: GroupPanelView; view: GroupPanelView; error: "failed" | "forbidden" | null }>({ source: initialView, view: initialView, error: null });
   useEffect(() => {
+    if (isSitePaused()) return;
     if (paused) return;
     let pending = false;
     const controller = new AbortController();

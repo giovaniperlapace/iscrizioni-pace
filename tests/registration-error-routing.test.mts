@@ -14,6 +14,7 @@ for (const role of ["manager", "manager_viewer"]) {
       const email = "operator@example.test";
       const linked: unknown[] = [];
       const deps = {
+        isSitePaused: () => false,
         parseRegistrationForm: () => ({ ok: true, value: { email } }),
         parseForumIntent, withForumIntent, resolvePublicForumIntent: async () => null,
         normalizeEmail: () => email, getIpAddress: async () => "local",
@@ -39,6 +40,7 @@ for (const token of ["gruppo_roma", "", "//external.test"]) {
       const email = "name+test@example.test";
       let writes = 0;
       const dependencies = {
+        isSitePaused: () => false,
         ...links,
         parseRegistrationForm: () => failure === "validation" ? { ok: false, errors: ["Invalid data"] } : { ok: true, value: { email } },
         parseForumIntent, withForumIntent, resolvePublicForumIntent: async () => null,

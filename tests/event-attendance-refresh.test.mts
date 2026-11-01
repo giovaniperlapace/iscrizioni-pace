@@ -6,6 +6,9 @@ import { notifyEventAttendanceChanged } from '../lib/reception/attendance-events
 import { ReceptionStationSession } from '../lib/reception/station.ts';
 import type { ReceptionResult } from '../lib/reception/contracts.ts';
 
+// This suite covers the active edition; pause behavior has a dedicated suite.
+process.env.NEXT_PUBLIC_SITE_PAUSED = "false";
+
 const eventId = '11111111-1111-4111-8111-111111111111';
 const at = '2026-10-17T10:00:00Z';
 const snapshot = (entered = false) => ({ eventId, updatedAt: new Date().toISOString(),

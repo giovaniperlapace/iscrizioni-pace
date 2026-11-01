@@ -1,4 +1,5 @@
 "use client";
+import { isSitePaused } from "@/lib/site-pause";
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
@@ -17,6 +18,7 @@ export function SessionActivity() {
   const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const syncActivity = useCallback(async (force = false) => {
+    if (isSitePaused()) return;
     const now = Date.now();
 
     if (!force && now - lastSyncRef.current < ACTIVITY_SYNC_INTERVAL_MS) {
@@ -43,6 +45,7 @@ export function SessionActivity() {
     }
 
     logoutTimerRef.current = setTimeout(() => {
+      if (isSitePaused()) { window.location.replace("/login?error=inactive"); return; }
       void syncActivity(true);
     }, SESSION_IDLE_TIMEOUT_MS);
   }, [syncActivity]);

@@ -30,9 +30,9 @@ for (const email of ["leader@example.org", "leader+test&name@example.org", undef
     assert.equal(destination.pathname, "/registrazione");
     assert.equal(destination.searchParams.get("email"), email ?? null);
     assert.equal([...destination.searchParams.keys()].length, email ? 1 : 0);
-    // Home/login redirect authenticated users; registration is outside the proxy.
+    // With the pause disabled, the proxy lets public registration through.
     const proxy = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
-    assert.match(proxy, /matcher: \["\/", "\/login", "\/dashboard\/:path\*"\]/);
+    assert.ok(proxy.includes('if (!paused && path !== "/login" && !path.startsWith("/dashboard")) return NextResponse.next();'));
     const page = readFileSync(new URL("../app/registrazione/page.tsx", import.meta.url), "utf8");
     assert.match(page, /<RegistrationPageContent\s+searchParams=\{params\}/);
   });

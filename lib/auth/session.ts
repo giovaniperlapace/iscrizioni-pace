@@ -1,3 +1,5 @@
+import { isSitePaused } from "../site-pause.ts";
+import { hasPausedSiteAccess } from "./paused-access.ts";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { hasPanelReceptionDuty } from "../reception/duties.server";
@@ -41,6 +43,8 @@ export async function getCurrentAuthContext(
   if (userError || !user) {
     return null;
   }
+
+  if (isSitePaused() && !(await hasPausedSiteAccess(supabase, user.id))) return null;
 
   const [eventRoles, hasReceptionAssignments] = await Promise.all([
     getEventRolesForCurrentUser(supabase, user.id), hasPanelReceptionDuty(supabase),

@@ -16,6 +16,9 @@ function load(path: string, dependencies: Record<string, unknown>) {
   }).outputText;
   const exports: Record<string, Handler> = {};
   new Function("require", "exports", js)((name: string) => {
+    if (name.includes("staff-login")) return { isStaffLoginPath: () => false };
+    if (name.includes("site-pause")) return { isSitePaused: () => false };
+    if (name.includes("paused-access")) return {};
     assert.ok(name in dependencies, `Unexpected import: ${name}`);
     return dependencies[name];
   }, exports);

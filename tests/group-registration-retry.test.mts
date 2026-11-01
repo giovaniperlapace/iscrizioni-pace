@@ -8,6 +8,7 @@ import { buildRegistrationRetryPath } from "../lib/groups/registration-links.ts"
 import { normalizeEmail, parseRegistrationForm } from "../lib/registrations/validation.ts";
 
 function loadFunction(path: string, name: string, deps: Record<string, unknown>) {
+  deps = { isSitePaused: () => false, ...deps };
   const source = readFileSync(new URL(path, import.meta.url), "utf8");
   const ast = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const fn = ast.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === name);

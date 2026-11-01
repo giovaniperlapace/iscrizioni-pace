@@ -1,3 +1,5 @@
+import { isSitePaused } from "@/lib/site-pause";
+import { hasPausedSiteAccess } from "@/lib/auth/paused-access";
 import { getPanelReleaseMode } from "@/lib/panels/release";
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
@@ -127,6 +129,11 @@ async function completeAuthentication(request: NextRequest, params: URLSearchPar
     return redirectWithError(requestUrl, "session");
   }
 
+  if (isSitePaused() && !(await hasPausedSiteAccess(supabase, user.id))) {
+    await supabase.auth.signOut({ scope: "local" });
+    return NextResponse.redirect(new URL("/", requestUrl.origin), 303);
+  }
+
   if (verificationError) {
     logAuthCallbackIssue(requestUrl, "verification_ignored_with_session", {
       code: Boolean(code),
@@ -198,7 +205,7 @@ async function completeAuthentication(request: NextRequest, params: URLSearchPar
 }
 
 function redirectWithError(requestUrl: URL, reason: string): NextResponse {
-  const loginUrl = new URL("/login", requestUrl.origin);
+  const loginUrl = new URL(isSitePaused() ? "/" : "/login", requestUrl.origin);
   loginUrl.searchParams.set("error", reason);
   return NextResponse.redirect(loginUrl, 303);
 }

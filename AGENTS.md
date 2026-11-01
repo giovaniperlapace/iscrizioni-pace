@@ -1,5 +1,28 @@
 # AGENTS.md
 
+## Pausa dopo l’evento e home Genova — 2026-11-01
+
+- Modalità pausa predefinita (`NEXT_PUBLIC_SITE_PAUSED` diversa da `false`),
+  condivisa fra build, browser e server. Riapertura solo con nuovo build e
+  revisione delle code arretrate, mai riavvio implicito degli invii.
+- Home HTML/CSS/JS statica: palette, gradiente e PeaceLineMark originali,
+  Assisi 2026 e «Genova · Settembre 2027», senza giorni inventati. Sette lingue,
+  nessun database, polling o collegamento all’accesso riservato nella home.
+  `/login/<suffisso casuale>` da condividere direttamente, token server-only di
+  48 caratteri in `STAFF_LOGIN_TOKEN`, mai in Git/bundle pubblici. `/login`
+  senza suffisso chiuso. Solo admin globale e manager dell’evento
+  corrente; viewer, capigruppo, operatori e iscritti bloccati anche con sessione.
+- Timer remoto `pace-email-campaigns.timer` fermato e disabilitato su richiesta
+  il 1 novembre: stato verificato inactive/disabled, servizio inactive/dead.
+  Nessuna modifica al database o alle email già registrate. Commit/push su main
+  e rilascio richiesti dall’utente il 1 novembre; verificare SHA e stato READY.
+- Cron inattivo anche nell’app; disponibilità Forum, riconciliazione periodica
+  presenze e heartbeat attività sospesi. Letture manuali e timeout sicurezza
+  conservati. Foto/slideshow da aggiungere quando disponibili, come asset statici.
+- Procedura, verifiche e limiti: `docs/pausa-sito-genova-2026-11-01.md`.
+
+
+
 ## Anteprima campagne, badge famiglia e sessioni — 2026-10-27
 
 - Lettura gruppo con FK esplicita verso il gruppo corrente: risolve PGRST201
